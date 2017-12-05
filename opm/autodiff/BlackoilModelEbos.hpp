@@ -77,11 +77,6 @@ SET_BOOL_PROP(EclFlowProblem, ExportGlobalTransmissibility, true);
 // default in flow is to formulate the equations in surface volumes
 SET_BOOL_PROP(EclFlowProblem, BlackoilConserveSurfaceVolume, true);
 SET_BOOL_PROP(EclFlowProblem, UseVolumetricResidual, false);
-
-
-// SWATINIT is done by the flow part of flow_ebos. this can be removed once the legacy
-// code for fluid and satfunc handling gets fully retired.
-SET_BOOL_PROP(EclFlowProblem, EnableSwatinit, false);
 }}
 
 namespace Opm {
@@ -1133,7 +1128,7 @@ namespace Opm {
             return regionValues;
         }
 
-        SimulationDataContainer getSimulatorData ( const SimulationDataContainer& localState) const
+        SimulationDataContainer getSimulatorData ( const SimulationDataContainer& /*localState*/) const
         {
             typedef std::vector<double> VectorType;
 
@@ -1341,43 +1336,37 @@ namespace Opm {
                 // hack to make the intial output of rs and rv Ecl compatible.
                 // For cells with swat == 1 Ecl outputs; rs = rsSat and rv=rvSat, in all but the initial step
                 // where it outputs rs and rv values calculated by the initialization. To be compatible we overwrite
-                // rs and rv with the values passed by the localState.
+                // rs and rv with the values computed in the initially.
                 // Volume factors, densities and viscosities need to be recalculated with the updated rs and rv values.
                 if (ebosSimulator_.episodeIndex() < 0 && vapour_active && liquid_active ) {
 
-                    Rs[cellIdx] = localState.getCellData( BlackoilState::GASOILRATIO )[cellIdx];
-                    Rv[cellIdx] = localState.getCellData( BlackoilState::RV)[cellIdx];
+                    typedef Opm::CompositionalFluidState<Scalar, FluidSystem> ScalarFluidState;
+                    const ScalarFluidState& fs_updated = ebosSimulator().problem().initialFluidState(cellIdx);
 
-                    // copy the fluidstate and set the new rs and rv values
-                    auto fs_updated = fs;
-                    auto rs_eval = fs_updated.Rs();
-                    rs_eval.setValue( Rs[cellIdx] );
-                    fs_updated.setRs(rs_eval);
-                    auto rv_eval = fs_updated.Rv();
-                    rv_eval.setValue( Rv[cellIdx] );
-                    fs_updated.setRv(rv_eval);
+                    // use initial rs and rv values
+                    Rv[cellIdx] = Opm::BlackOil::getRv_<FluidSystem, Scalar, ScalarFluidState>(fs_updated,  intQuants.pvtRegionIndex());
+                    Rs[cellIdx] = Opm::BlackOil::getRs_<FluidSystem, Scalar, ScalarFluidState>(fs_updated,  intQuants.pvtRegionIndex());
 
                     //re-compute the volume factors, viscosities and densities.
                     rhoOil[cellIdx] = FluidSystem::density(fs_updated,
                                                            FluidSystem::oilPhaseIdx,
-                                                           intQuants.pvtRegionIndex()).value();
+                                                           intQuants.pvtRegionIndex());
                     rhoGas[cellIdx] = FluidSystem::density(fs_updated,
                                                            FluidSystem::gasPhaseIdx,
-                                                           intQuants.pvtRegionIndex()).value();
+                                                           intQuants.pvtRegionIndex());
 
                     bOil[cellIdx] = FluidSystem::inverseFormationVolumeFactor(fs_updated,
                                                            FluidSystem::oilPhaseIdx,
-                                                           intQuants.pvtRegionIndex()).value();
+                                                           intQuants.pvtRegionIndex());
                     bGas[cellIdx] = FluidSystem::inverseFormationVolumeFactor(fs_updated,
                                                            FluidSystem::gasPhaseIdx,
-                                                           intQuants.pvtRegionIndex()).value();
-
+                                                           intQuants.pvtRegionIndex());
                     muOil[cellIdx] = FluidSystem::viscosity(fs_updated,
                                                            FluidSystem::oilPhaseIdx,
-                                                           intQuants.pvtRegionIndex()).value();
+                                                           intQuants.pvtRegionIndex());
                     muGas[cellIdx] = FluidSystem::viscosity(fs_updated,
                                                            FluidSystem::gasPhaseIdx,
-                                                           intQuants.pvtRegionIndex()).value();
+                                                           intQuants.pvtRegionIndex());
 
                 }
             }

@@ -130,35 +130,33 @@ public:
     /// \param[in,out] timer       governs the requested reporting timesteps
     /// \param[in,out] state       state of reservoir: pressure, fluxes
     /// \return                    simulation report, with timing data
-    SimulatorReport run(SimulatorTimer& timer,
-                        ReservoirState& state)
+    SimulatorReport run(SimulatorTimer& timer)
     {
+
+        ReservoirState dummy_state(0,0,0);
+
         WellState prev_well_state;
 
         ExtraData extra;
 
         failureReport_ = SimulatorReport();
 
-        // communicate the initial solution to ebos
-        if (timer.initialStep()) {
-            convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
-            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-        }
-
         if (output_writer_.isRestart()) {
             // This is a restart, populate WellState and ReservoirState state objects from restart file
-            output_writer_.initFromRestartFile(phaseUsage_, grid(), state, prev_well_state, extra);
-            initHydroCarbonState(state, phaseUsage_, Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
-            initHysteresisParams(state);
+            ReservoirState stateInit(Opm::UgGridHelpers::numCells(grid()),
+                                     Opm::UgGridHelpers::numFaces(grid()),
+                                     phaseUsage_.num_phases);
+            output_writer_.initFromRestartFile(phaseUsage_, grid(), stateInit, prev_well_state, extra);
+            initHydroCarbonState(stateInit, phaseUsage_, Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
+            initHysteresisParams(stateInit);
             // communicate the restart solution to ebos
-            convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
+            convertInput(/*iterationIdx=*/0, stateInit, ebosSimulator_ );
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+            // Sync the overlap region of the inital solution. It was generated
+            // from the ReservoirState which has wrong values in the ghost region
+            // for some models (SPE9, Norne, Model 2)
+            ebosSimulator_.model().syncOverlap();
         }
-
-        // Sync the overlap region of the inital solution. It was generated
-        // from the ReservoirState which has wrong values in the ghost region
-        // for some models (SPE9, Norne, Model 2)
-        ebosSimulator_.model().syncOverlap();
 
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
@@ -227,7 +225,7 @@ public:
 
                 // No per cell data is written for initial step, but will be
                 // for subsequent steps, when we have started simulating
-                output_writer_.writeTimeStep( timer, state, well_model.wellState(), solver->model() );
+                output_writer_.writeTimeStep( timer, dummy_state, well_model.wellState(), solver->model() );
 
                 report.output_write_time += perfTimer.stop();
             }
@@ -263,14 +261,14 @@ public:
                         events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE, timer.currentStepNum());
-                stepReport = adaptiveTimeStepping->step( timer, *solver, state, wellStateDummy, event, output_writer_,
+                stepReport = adaptiveTimeStepping->step( timer, *solver, dummy_state, wellStateDummy, event, output_writer_,
                                                          output_writer_.requireFIPNUM() ? &fipnum_ : nullptr );
                 report += stepReport;
                 failureReport_ += adaptiveTimeStepping->failureReport();
             }
             else {
                 // solve for complete report step
-                stepReport = solver->step(timer, state, wellStateDummy);
+                stepReport = solver->step(timer, dummy_state, wellStateDummy);
                 report += stepReport;
                 failureReport_ += solver->failureReport();
 
@@ -298,13 +296,6 @@ public:
             // update timing.
             report.solver_time += solver_timer.secsSinceStart();
 
-            // We don't need the reservoir state anymore. It is just passed around to avoid
-            // code duplication. Pass empty state instead.
-            if (timer.initialStep()) {
-                ReservoirState stateTrivial(0,0,0);
-                state = stateTrivial;
-            }
-
             // Increment timer, remember well state.
             ++timer;
 
@@ -325,7 +316,7 @@ public:
             Dune::Timer perfTimer;
             perfTimer.start();
             const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
-            output_writer_.writeTimeStep( timer, state, well_model.wellState(), solver->model(), false, nextstep, report);
+            output_writer_.writeTimeStep( timer, dummy_state, well_model.wellState(), solver->model(), false, nextstep, report);
             report.output_write_time += perfTimer.stop();
 
         }
