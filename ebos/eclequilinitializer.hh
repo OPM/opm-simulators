@@ -48,7 +48,6 @@ NEW_PROP_TAG(FluidSystem);
 NEW_PROP_TAG(GridView);
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(MaterialLaw);
-NEW_PROP_TAG(EnableSwatinit);
 }
 
 /*!
@@ -87,62 +86,25 @@ class EclEquilInitializer
 public:
     template <class EclMaterialLawManager>
     EclEquilInitializer(const Simulator& simulator,
-                        EclMaterialLawManager& materialLawManager,
-                        bool enableSwatinit)
+                        EclMaterialLawManager& materialLawManager)
         : simulator_(simulator)
     {
         const auto& gridManager = simulator.gridManager();
-        const auto& deck = gridManager.deck();
-        const auto& eclState = gridManager.eclState();
-        const auto& equilGrid = gridManager.equilGrid();
 
         unsigned numElems = gridManager.grid().size(0);
-        unsigned numEquilElems = gridManager.equilGrid().size(0);
         unsigned numCartesianElems = gridManager.cartesianSize();
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-        typedef Opm::ThreePhaseMaterialTraits<double,
-                                              /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
-                                              /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-                                              /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> EquilTraits;
 
-        // create a separate instance of the material law manager just because opm-core
-        // only supports double as the type for scalars (but ebos may use float or quad)
-        std::vector<int> compressedToCartesianEquilElemIdx(numEquilElems);
-        std::vector<int> equilCartesianToCompressed( gridManager.equilCartesianSize(), -1 );
-
-        for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx)
-        {
-            unsigned int equilCartesianIdx = gridManager.equilCartesianIndex(equilElemIdx);
-            compressedToCartesianEquilElemIdx[equilElemIdx] = equilCartesianIdx;
-            equilCartesianToCompressed[ equilCartesianIdx ] = equilElemIdx;
-        }
-
-        Opm::EclMaterialLawManager<EquilTraits> equilMaterialLawManager =
-            Opm::EclMaterialLawManager<EquilTraits>();
-        equilMaterialLawManager.initFromDeck(deck, eclState, compressedToCartesianEquilElemIdx);
-
-        Opm::EQUIL::DeckDependent::InitialStateComputer<FluidSystem> initialState(equilMaterialLawManager,
+        Opm::EQUIL::DeckDependent::InitialStateComputer<FluidSystem> initialState(materialLawManager,
                                                                                   gridManager.eclState(),
-                                                                                  equilGrid,
-                                                                                  simulator.problem().gravity()[dimWorld - 1],
-                                                                                  enableSwatinit);
-
-
-        std::vector<int> localToEquilIndex( numElems, -1 );
-        for( unsigned int elemIdx = 0; elemIdx < numElems; ++elemIdx )
-        {
-            const int cartesianIndex = gridManager.cartesianIndex( elemIdx );
-            assert( equilCartesianToCompressed[ cartesianIndex ] >= 0 );
-            localToEquilIndex[ elemIdx ] = equilCartesianToCompressed[ cartesianIndex ];
-        }
+                                                                                  gridManager.grid(),
+                                                                                  simulator.problem().gravity()[dimWorld - 1]);
 
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numCartesianElems);
         for (unsigned int elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             unsigned cartesianElemIdx = gridManager.cartesianIndex(elemIdx);
             auto& fluidState = initialFluidStates_[cartesianElemIdx];
-
-            const unsigned int equilElemIdx = localToEquilIndex[ elemIdx ];
 
             // get the PVT region index of the current element
             unsigned regionIdx = simulator_.problem().pvtRegionIndex(elemIdx);
@@ -153,7 +115,7 @@ public:
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     S = 0.0;
                 else {
-                    S = initialState.saturation()[phaseIdx][equilElemIdx];
+                    S = initialState.saturation()[phaseIdx][elemIdx];
                 }
                 fluidState.setSaturation(phaseIdx, S);
             }
@@ -164,7 +126,7 @@ public:
 
             // set the phase pressures.
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                fluidState.setPressure(phaseIdx, initialState.press()[phaseIdx][equilElemIdx]);
+                fluidState.setPressure(phaseIdx, initialState.press()[phaseIdx][elemIdx]);
 
             // reset the phase compositions
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -178,7 +140,7 @@ public:
             if (FluidSystem::enableDissolvedGas()) {
                 // for gas and oil we have to translate surface volumes to mole fractions
                 // before we can set the composition in the fluid state
-                Scalar Rs = initialState.rs()[equilElemIdx];
+                Scalar Rs = initialState.rs()[elemIdx];
                 Scalar RsSat = FluidSystem::saturatedDissolutionFactor(fluidState, oilPhaseIdx, regionIdx);
 
                 if (Rs > RsSat)
@@ -194,7 +156,7 @@ public:
 
             // retrieve the surface volume of vaporized gas
             if (FluidSystem::enableVaporizedOil()) {
-                Scalar Rv = initialState.rv()[equilElemIdx];
+                Scalar Rv = initialState.rv()[elemIdx];
                 Scalar RvSat = FluidSystem::saturatedDissolutionFactor(fluidState, gasPhaseIdx, regionIdx);
 
                 if (Rv > RvSat)
@@ -206,16 +168,6 @@ public:
 
                 fluidState.setMoleFraction(gasPhaseIdx, oilCompIdx, xgO);
                 fluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1 - xgO);
-            }
-
-            // deal with the changed pressure scaling due to SWATINIT if SWATINIT is
-            // requested to be applied. this is quite hacky but hey it works!
-            if (enableSwatinit) {
-                const auto& equilScalingPoints =
-                    equilMaterialLawManager.oilWaterScaledEpsPointsDrainage(equilElemIdx);
-                auto& scalingPoints =
-                    materialLawManager.oilWaterScaledEpsPointsDrainage(elemIdx);
-                scalingPoints.setMaxPcnw(equilScalingPoints.maxPcnw());
             }
         }
     }
