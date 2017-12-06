@@ -85,6 +85,13 @@ macro (prereqs_hook)
 endmacro (prereqs_hook)
 
 macro (sources_hook)
+  if (NOT SuiteSparse_FOUND)
+    list (REMOVE_ITEM examples_SOURCES
+      ${PROJECT_SOURCE_DIR}/tutorials/tutorial2.cpp
+      ${PROJECT_SOURCE_DIR}/tutorials/tutorial3.cpp
+      ${PROJECT_SOURCE_DIR}/tutorials/tutorial4.cpp
+      )
+  endif()
 endmacro (sources_hook)
 
 macro (fortran_hook)
