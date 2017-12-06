@@ -28,16 +28,23 @@ namespace Opm
     {
     public:
         static const int MaxNumPhases = 3;
-        // enum ComponentIndex { Water = 0, Oil = 1, Gas = 2 };
-        enum PhaseIndex { Aqua = 0, Liquid = 1, Vapour = 2, Energy = 3 };
 
+        // "Crypto phases" are "phases" (or rather "conservation quantities") in the
+        // sense that they can be active or not and canonical indices can be translated
+        // to and from active ones. That said, they are not considered by num_phases or
+        // MaxNumPhases. The crypto phases which are currently implemented are solvent,
+        // polymer and energy.
+        static const int NumCryptoPhases = 3;
+
+        // enum ComponentIndex { Water = 0, Oil = 1, Gas = 2 };
+        enum PhaseIndex { Aqua = 0, Liquid = 1, Vapour = 2, Solvent = 3, Polymer = 4, Energy = 5 };
     };
 
     struct PhaseUsage : public BlackoilPhases
     {
         int num_phases;
-        int phase_used[MaxNumPhases + 1];
-        int phase_pos[MaxNumPhases + 1];
+        int phase_used[MaxNumPhases + NumCryptoPhases];
+        int phase_pos[MaxNumPhases + NumCryptoPhases];
         bool has_solvent;
         bool has_polymer;
         bool has_energy;

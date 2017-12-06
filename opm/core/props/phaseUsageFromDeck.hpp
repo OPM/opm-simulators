@@ -1,3 +1,4 @@
+
 /*
   Copyright 2012 SINTEF ICT, Applied Mathematics.
 
@@ -36,23 +37,18 @@ namespace Opm
     inline PhaseUsage phaseUsageFromDeck(const Opm::EclipseState& eclipseState)
     {
         PhaseUsage pu;
-        std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases, 0);
+        std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases + BlackoilPhases::NumCryptoPhases, 0);
 
         const auto& phase = eclipseState.runspec().phases();
         // Discover phase usage.
-        if (phase.active(Phase::WATER)) {
-            pu.phase_used[BlackoilPhases::Aqua] = 1;
-        }
-        if (phase.active(Phase::OIL)) {
-            pu.phase_used[BlackoilPhases::Liquid] = 1;
-        }
-        if (phase.active(Phase::GAS)) {
-            pu.phase_used[BlackoilPhases::Vapour] = 1;
-        }
+        pu.phase_used[BlackoilPhases::Aqua] = phase.active(Phase::WATER);
+        pu.phase_used[BlackoilPhases::Liquid] = phase.active(Phase::OIL);
+        pu.phase_used[BlackoilPhases::Vapour] = phase.active(Phase::GAS);
+
         pu.num_phases = 0;
         int numActivePhases = 0;
         for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
-            if (!pu.phase_used[numActivePhases]) {
+            if (!pu.phase_used[phaseIdx]) {
                 pu.phase_pos[phaseIdx] = -1;
             }
             else {
@@ -74,16 +70,32 @@ namespace Opm
         }
 
         // Add solvent info
-        pu.has_solvent = false;
-        if (phase.active(Phase::SOLVENT)) {
-            pu.has_solvent = true;
+        pu.has_solvent = phase.active(Phase::SOLVENT);
+        if (pu.has_solvent) {
+            // this is quite a hack: even though solvent is not considered as in
+            // MaxNumPhases and pu.num_phases because this would break a lot of
+            // assumptions in old code, it is nevertheless an index to be translated
+            // to. solvent and solvent are even larger hacks because not even this can be
+            // done for them.
+            pu.phase_pos[BlackoilPhases::Solvent] = numActivePhases;
+            ++ numActivePhases;
         }
+        else
+            pu.phase_pos[BlackoilPhases::Solvent] = -1;
 
-        // Add polyme info
-        pu.has_polymer = false;
-        if (phase.active(Phase::POLYMER)) {
-            pu.has_polymer = true;
+        // Add polymer info
+        pu.has_polymer = phase.active(Phase::POLYMER);
+        if (pu.has_polymer) {
+            // this is quite a hack: even though polymer is not considered as in
+            // MaxNumPhases and pu.num_phases because this would break a lot of
+            // assumptions in old code, it is nevertheless an index to be translated
+            // to. polymer and solvent are even larger hacks because not even this can be
+            // done for them.
+            pu.phase_pos[BlackoilPhases::Polymer] = numActivePhases;
+            ++ numActivePhases;
         }
+        else
+            pu.phase_pos[BlackoilPhases::Polymer] = -1;
 
         // Add energy info
         pu.has_energy = phase.active(Phase::ENERGY);
@@ -96,6 +108,9 @@ namespace Opm
             pu.phase_pos[BlackoilPhases::Energy] = numActivePhases;
             ++ numActivePhases;
         }
+        else
+            pu.phase_pos[BlackoilPhases::Energy] = -1;
+
         return pu;
     }
 
@@ -104,30 +119,26 @@ namespace Opm
     inline PhaseUsage phaseUsageFromDeck(const Opm::Deck& deck)
     {
         PhaseUsage pu;
-        std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases, 0);
+        std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases + BlackoilPhases::NumCryptoPhases, 0);
 
         Runspec runspec( deck );
         const auto& phase = runspec.phases();
 
         // Discover phase usage.
-        if (phase.active( Phase::WATER )) {
-            pu.phase_used[BlackoilPhases::Aqua] = 1;
-        }
-        if (phase.active( Phase::OIL )) {
-            pu.phase_used[BlackoilPhases::Liquid] = 1;
-        }
-        if (phase.active( Phase::GAS )) {
-            pu.phase_used[BlackoilPhases::Vapour] = 1;
-        }
+        pu.phase_used[BlackoilPhases::Aqua] = phase.active(Phase::WATER);
+        pu.phase_used[BlackoilPhases::Liquid] = phase.active(Phase::OIL);
+        pu.phase_used[BlackoilPhases::Vapour] = phase.active(Phase::GAS);
+
         pu.num_phases = 0;
-        for (int i = 0; i < BlackoilPhases::MaxNumPhases; ++i) {
-            if (pu.phase_used[i]) {
-                pu.phase_pos[i] = pu.num_phases;
-                pu.num_phases += 1;
+        int numActivePhases = 0;
+        for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
+            if (!pu.phase_used[phaseIdx]) {
+                pu.phase_pos[phaseIdx] = -1;
             }
             else {
-                //Set to ridiculous value on purpose: should never be used
-                pu.phase_pos[i] = 2000000000;
+                pu.phase_pos[phaseIdx] = numActivePhases;
+                ++ numActivePhases;
+                pu.num_phases = numActivePhases;
             }
         }
 
@@ -143,19 +154,46 @@ namespace Opm
         }
 
         // Add solvent info
-        pu.has_solvent = false;
-        if (phase.active(Phase::SOLVENT)) {
-            pu.has_solvent = true;
+        pu.has_solvent = phase.active(Phase::SOLVENT);
+        if (pu.has_solvent) {
+            // this is quite a hack: even though solvent is not considered as in
+            // MaxNumPhases and pu.num_phases because this would break a lot of
+            // assumptions in old code, it is nevertheless an index to be translated
+            // to. solvent and solvent are even larger hacks because not even this can be
+            // done for them.
+            pu.phase_pos[BlackoilPhases::Solvent] = numActivePhases;
+            ++ numActivePhases;
         }
+        else
+            pu.phase_pos[BlackoilPhases::Solvent] = -1;
 
-        // Add polyme info
-        pu.has_polymer = false;
-        if (phase.active(Phase::POLYMER)) {
-            pu.has_polymer = true;
+        // Add polymer info
+        pu.has_polymer = phase.active(Phase::POLYMER);
+        if (pu.has_polymer) {
+            // this is quite a hack: even though polymer is not considered as in
+            // MaxNumPhases and pu.num_phases because this would break a lot of
+            // assumptions in old code, it is nevertheless an index to be translated
+            // to. polymer and solvent are even larger hacks because not even this can be
+            // done for them.
+            pu.phase_pos[BlackoilPhases::Polymer] = numActivePhases;
+            ++ numActivePhases;
         }
+        else
+            pu.phase_pos[BlackoilPhases::Polymer] = -1;
 
         // Add energy info
         pu.has_energy = phase.active(Phase::ENERGY);
+        if (pu.has_energy) {
+            // this is quite a hack: even though energy is not considered as in
+            // MaxNumPhases and pu.num_phases because this would break a lot of
+            // assumptions in old code, it is nevertheless an index to be translated
+            // to. polymer and solvent are even larger hacks because not even this can be
+            // done for them.
+            pu.phase_pos[BlackoilPhases::Energy] = numActivePhases;
+            ++ numActivePhases;
+        }
+        else
+            pu.phase_pos[BlackoilPhases::Energy] = -1;
 
         return pu;
     }
