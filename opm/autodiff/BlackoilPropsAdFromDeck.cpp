@@ -342,7 +342,9 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             TEval.setValue(T.value()[i]);
 
             if (cond[i].hasFreeGas()) {
-                muEval = FluidSystem::oilPvt().saturatedViscosity(pvtRegionIdx, TEval, pEval);
+                const Eval& RsSatEval =
+                    FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx, TEval, pEval);
+                muEval = FluidSystem::oilPvt().viscosity(pvtRegionIdx, TEval, pEval, RsSatEval);
             }
             else {
                 if (phase_usage_.phase_used[Gas]) {
@@ -409,7 +411,10 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             TEval.setValue(T.value()[i]);
 
             if (cond[i].hasFreeOil()) {
-                muEval = FluidSystem::gasPvt().saturatedViscosity(pvtRegionIdx, TEval, pEval);
+                const Eval& RvSatEval =
+                    FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx, TEval, pEval);
+
+                muEval = FluidSystem::gasPvt().viscosity(pvtRegionIdx, TEval, pEval, RvSatEval);
             }
             else {
                 RvEval.setValue(rv.value()[i]);
@@ -523,7 +528,9 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
             //RS/RV only makes sense when gas phase is active
             if (cond[i].hasFreeGas()) {
-                bEval = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
+                const Eval& RsSatEval =
+                    FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx, TEval, pEval);
+                bEval = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RsSatEval);
             }
             else {
                 if (rs.size() == 0) {
@@ -595,7 +602,9 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             TEval.setValue(T.value()[i]);
 
             if (cond[i].hasFreeOil()) {
-                bEval = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
+                const Eval& RvSatEval =
+                    FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx, TEval, pEval);
+                bEval = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RvSatEval);
             }
             else {
                 RvEval.setValue(rv.value()[i]);
