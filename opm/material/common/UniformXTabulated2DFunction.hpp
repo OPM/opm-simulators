@@ -99,25 +99,25 @@ public:
     /*!
      * \brief Returns the minimum of the Y coordinate of the sampling points for a given column.
      */
-    Scalar yMin(size_t i) const
+    Scalar yMin(unsigned i) const
     { return std::get<1>(samples_.at(i).front()); }
 
     /*!
      * \brief Returns the maximum of the Y coordinate of the sampling points for a given column.
      */
-    Scalar yMax(size_t i) const
+    Scalar yMax(unsigned i) const
     { return std::get<1>(samples_.at(i).back()); }
 
     /*!
      * \brief Returns the number of sampling points in Y direction a given column.
      */
-    size_t numY(size_t i) const
+    size_t numY(unsigned i) const
     { return samples_.at(i).size(); }
 
     /*!
      * \brief Return the position on the x-axis of the i-th interval.
      */
-    Scalar iToX(size_t i) const
+    Scalar iToX(unsigned i) const
     {
         assert(0 <= i && i < numX());
 
@@ -127,7 +127,7 @@ public:
     /*!
      * \brief Return the position on the y-axis of the j-th interval.
       */
-    Scalar jToY(size_t i, size_t j) const
+    Scalar jToY(unsigned i, unsigned j) const
     {
         assert(0 <= i && i < numX());
         assert(0 <= j && size_t(j) < samples_[i].size());
@@ -137,98 +137,119 @@ public:
 
     /*!
      * \brief Return the interval index of a given position on the x-axis.
-     *
-     * This method returns a *floating point* number. The integer part
-     * should be interpreted as interval, the decimal places are the
-     * position of the x value between the i-th and the (i+1)-th
-     * sample point.
-      */
+     */
     template <class Evaluation>
-    Evaluation xToI(const Evaluation& x, bool extrapolate OPM_OPTIM_UNUSED = false) const
+    unsigned xSegmentIndex(const Evaluation& x, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
         assert(extrapolate || (xMin() <= x && x <= xMax()));
 
         // we need at least two sampling points!
         assert(xPos_.size() >= 2);
 
-        size_t segmentIdx;
         if (x <= xPos_[1])
-            segmentIdx = 0;
+            return 0;
         else if (x >= xPos_[xPos_.size() - 2])
-            segmentIdx = xPos_.size() - 2;
+            return xPos_.size() - 2;
         else {
+            assert(xPos_.size() >= 3);
+
             // bisection
-            segmentIdx = 1;
-            size_t upperIdx = xPos_.size() - 2;
-            while (segmentIdx + 1 < upperIdx) {
-                size_t pivotIdx = (segmentIdx + upperIdx) / 2;
+            unsigned lowerIdx = 1;
+            unsigned upperIdx = xPos_.size() - 2;
+            while (lowerIdx + 1 < upperIdx) {
+                unsigned pivotIdx = (lowerIdx + upperIdx) / 2;
                 if (x < xPos_[pivotIdx])
                     upperIdx = pivotIdx;
                 else
-                    segmentIdx = pivotIdx;
+                    lowerIdx = pivotIdx;
             }
 
-            assert(xPos_[segmentIdx] <= x);
-            assert(x <= xPos_[segmentIdx + 1]);
+            return lowerIdx;
         }
+    }
 
+    /*!
+     * \brief Return the relative position of an x value in an intervall
+     *
+     * The returned value can be larger than 1 or smaller than zero if it is outside of
+     * the range of the segment. In particular this happens for the extrapolation case.
+     */
+    template <class Evaluation>
+    Evaluation xToAlpha(const Evaluation& x, unsigned segmentIdx) const
+    {
         Scalar x1 = xPos_[segmentIdx];
         Scalar x2 = xPos_[segmentIdx + 1];
-        return Scalar(segmentIdx) + (x - x1)/(x2 - x1);
+        return (x - x1)/(x2 - x1);
     }
 
     /*!
      * \brief Return the interval index of a given position on the y-axis.
-     *
-     * This method returns a *floating point* number. The integer part
-     * should be interpreted as interval, the decimal places are the
-     * position of the y value between the j-th and the (j+1)-th
-     * sample point.
      */
     template <class Evaluation>
-    Evaluation yToJ(size_t i, const Evaluation& y, bool extrapolate OPM_OPTIM_UNUSED = false) const
+    unsigned ySegmentIndex(const Evaluation& y, unsigned xSampleIdx, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
-        assert(0 <= i && i < numX());
-        const auto& colSamplePoints = samples_.at(i);
+        assert(0 <= xSampleIdx && xSampleIdx < numX());
+        const auto& colSamplePoints = samples_.at(xSampleIdx);
 
-        assert(extrapolate || (yMin(i) <= y && y <= yMax(i)));
+        assert(colSamplePoints.size() >= 2);
+        assert(extrapolate || (yMin(xSampleIdx) <= y && y <= yMax(xSampleIdx)));
 
-        Scalar y1;
-        Scalar y2;
+        if (y <= std::get<1>(colSamplePoints[1]))
+            return 0;
+        else if (y >= std::get<1>(colSamplePoints[colSamplePoints.size() - 2]))
+            return colSamplePoints.size() - 2;
+        else {
+            assert(colSamplePoints.size() >= 3);
 
-        // interval halving
-        size_t lowerIdx = 0;
-        size_t upperIdx = colSamplePoints.size() - 1;
-        size_t pivotIdx = (lowerIdx + upperIdx) / 2;
-        while (lowerIdx + 1 < upperIdx) {
-            if (y < std::get<1>(colSamplePoints[pivotIdx]))
-                upperIdx = pivotIdx;
-            else
-                lowerIdx = pivotIdx;
-            pivotIdx = (lowerIdx + upperIdx) / 2;
+            // bisection
+            unsigned lowerIdx = 1;
+            unsigned upperIdx = colSamplePoints.size() - 2;
+            while (lowerIdx + 1 < upperIdx) {
+                unsigned pivotIdx = (lowerIdx + upperIdx) / 2;
+                if (y < std::get<1>(colSamplePoints[pivotIdx]))
+                    upperIdx = pivotIdx;
+                else
+                    lowerIdx = pivotIdx;
+            }
+
+            return lowerIdx;
         }
+    }
 
-        y1 = std::get<1>(colSamplePoints[lowerIdx]);
-        y2 = std::get<1>(colSamplePoints[lowerIdx + 1]);
+    /*!
+     * \brief Return the relative position of an y value in an interval
+     *
+     * The returned value can be larger than 1 or smaller than zero if it is outside of
+     * the range of the segment. In particular this happens for the extrapolation case.
+     */
+    template <class Evaluation>
+    Evaluation yToBeta(const Evaluation& y, unsigned xSampleIdx, unsigned ySegmentIdx) const
+    {
+        assert(0 <= xSampleIdx && xSampleIdx < numX());
+        assert(0 <= ySegmentIdx && ySegmentIdx < numY(xSampleIdx) - 1);
 
-        assert(y1 <= y || (extrapolate && lowerIdx == 0));
-        assert(y <= y2 || (extrapolate && lowerIdx == colSamplePoints.size() - 2));
+        const auto& colSamplePoints = samples_.at(xSampleIdx);
 
-        return Scalar(lowerIdx) + (y - y1)/(y2 - y1);
+        Scalar y1 = std::get<1>(colSamplePoints[ySegmentIdx]);
+        Scalar y2 = std::get<1>(colSamplePoints[ySegmentIdx + 1]);
+
+        return (y - y1)/(y2 - y1);
     }
 
     /*!
      * \brief Returns true iff a coordinate lies in the tabulated range
      */
-    bool applies(Scalar x, Scalar y) const
+    template <class Evaluation>
+    bool applies(const Evaluation& x, const Evaluation& y) const
     {
         if (x < xMin() || xMax() < x)
             return false;
 
-        Scalar i = xToI(x, /*extrapolate=*/false);
-        const auto& col1SamplePoints = samples_.at(unsigned(i));
-        const auto& col2SamplePoints = samples_.at(unsigned(i));
-        Scalar alpha = i - static_cast<int>(i);
+        unsigned i = xSegmentIndex(x, /*extrapolate=*/false);
+        Scalar alpha = xToAlpha(Opm::decay<Scalar>(x), i);
+
+        const auto& col1SamplePoints = samples_.at(i);
+        const auto& col2SamplePoints = samples_.at(i + 1);
 
         Scalar minY =
                 alpha*std::get<1>(col1SamplePoints.front()) +
@@ -250,7 +271,7 @@ public:
     Evaluation eval(const Evaluation& x, const Evaluation& y, bool extrapolate=false) const
     {
 #ifndef NDEBUG
-        if (!extrapolate && !applies(Opm::scalarValue(x), Opm::scalarValue(y))) {
+        if (!extrapolate && !applies(x, y)) {
             OPM_THROW(NumericalProblem,
                       "Attempt to get undefined table value (" << x << ", " << y << ")");
         };
@@ -258,37 +279,23 @@ public:
 
         // bi-linear interpolation: first, calculate the x and y indices in the lookup
         // table ...
-        Evaluation alpha = xToI(x, extrapolate);
-        size_t i =
-            static_cast<size_t>(std::max(0, std::min(static_cast<int>(numX()) - 2,
-                                                     static_cast<int>(Opm::scalarValue(alpha)))));
-        alpha -= i;
+        unsigned i = xSegmentIndex(x, extrapolate);
+        const Evaluation& alpha = xToAlpha(x, i);
 
-        Evaluation beta1;
-        Evaluation beta2;
-
-        beta1 = yToJ(i, y, extrapolate);
-        beta2 = yToJ(i + 1, y, extrapolate);
-
-        size_t j1 = static_cast<size_t>(std::max(0, std::min(static_cast<int>(numY(i)) - 2,
-                                                             static_cast<int>(Opm::scalarValue(beta1)))));
-        size_t j2 = static_cast<size_t>(std::max(0, std::min(static_cast<int>(numY(i + 1)) - 2,
-                                                             static_cast<int>(Opm::scalarValue(beta2)))));
-
-        beta1 -= j1;
-        beta2 -= j2;
+        unsigned j1 = ySegmentIndex(y, i, extrapolate);
+        unsigned j2 = ySegmentIndex(y, i + 1, extrapolate);
+        const Evaluation& beta1 = yToBeta(y, i, j1);
+        const Evaluation& beta2 = yToBeta(y, i + 1, j2);
 
         // evaluate the two function values for the same y value ...
-        Evaluation s1, s2;
-        s1 = valueAt(i, j1)*(1.0 - beta1) + valueAt(i, j1 + 1)*beta1;
-        s2 = valueAt(i + 1, j2)*(1.0 - beta2) + valueAt(i + 1, j2 + 1)*beta2;
+        const Evaluation& s1 = valueAt(i, j1)*(1.0 - beta1) + valueAt(i, j1 + 1)*beta1;
+        const Evaluation& s2 = valueAt(i + 1, j2)*(1.0 - beta2) + valueAt(i + 1, j2 + 1)*beta2;
 
         Valgrind::CheckDefined(s1);
         Valgrind::CheckDefined(s2);
 
-        // ... and finally combine them using x the position
-        Evaluation result;
-        result = s1*(1.0 - alpha) + s2*alpha;
+        // ... and combine them using the x position
+        const Evaluation& result = s1*(1.0 - alpha) + s2*alpha;
         Valgrind::CheckDefined(result);
 
         return result;
