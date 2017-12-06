@@ -156,8 +156,6 @@ public:
             this->resizeScalarBuffer_(oilVaporizationFactor_, bufferType);
         if (gasFormationVolumeFactorOutput_())
             this->resizeScalarBuffer_(gasFormationVolumeFactor_, bufferType);
-        if (saturatedOilFormationVolumeFactorOutput_())
-            this->resizeScalarBuffer_(saturatedOilFormationVolumeFactor_, bufferType);
         if (oilSaturationPressureOutput_())
             this->resizeScalarBuffer_(oilSaturationPressure_, bufferType);
     }
@@ -217,11 +215,6 @@ public:
                     1.0/FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
                 Opm::Valgrind::CheckDefined(gasFormationVolumeFactor_[globalDofIdx]);
             }
-            if (saturatedOilFormationVolumeFactorOutput_()) {
-                saturatedOilFormationVolumeFactor_[globalDofIdx] =
-                    1.0/FluidSystem::template saturatedInverseFormationVolumeFactor<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
-                Opm::Valgrind::CheckDefined(saturatedOilFormationVolumeFactor_[globalDofIdx]);
-            }
             if (oilSaturationPressureOutput_()) {
                 oilSaturationPressure_[globalDofIdx] =
                     FluidSystem::template saturationPressure<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
@@ -274,10 +267,6 @@ public:
             // no unit conversion required
             this->commitScalarBuffer_(writer, "BG", gasFormationVolumeFactor_, bufferType);
         }
-        if (saturatedOilFormationVolumeFactorOutput_()) {
-            // no unit conversion required
-            this->commitScalarBuffer_(writer, "BOSAT", saturatedOilFormationVolumeFactor_, bufferType);
-        }
         if (oilSaturationPressureOutput_()) {
             deckUnits.siToDeck(oilSaturationPressure_, DeckUnits::pressure);
             this->commitScalarBuffer_(writer, "PSAT", oilSaturationPressure_);
@@ -315,14 +304,6 @@ private:
             EWOMS_GET_PARAM(TypeTag, bool, EclOutputWriteOilVaporizationFactor);
     }
 
-    static bool saturatedOilFormationVolumeFactorOutput_()
-    {
-        return
-            FluidSystem::phaseIsActive(oilPhaseIdx) &&
-            FluidSystem::phaseIsActive(gasPhaseIdx) &&
-            EWOMS_GET_PARAM(TypeTag, bool, EclOutputWriteOilFormationVolumeFactor);
-    }
-
     static bool oilSaturationPressureOutput_()
     {
         return
@@ -336,7 +317,6 @@ private:
     ScalarBuffer gasDissolutionFactor_;
     ScalarBuffer oilVaporizationFactor_;
     ScalarBuffer gasFormationVolumeFactor_;
-    ScalarBuffer saturatedOilFormationVolumeFactor_;
     ScalarBuffer oilSaturationPressure_;
 };
 } // namespace Ewoms
