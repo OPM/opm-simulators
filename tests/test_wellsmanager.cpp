@@ -172,7 +172,8 @@ void check_controls_epoch3(struct WellControls ** ctrls) {
     // The new producer
     const struct WellControls * ctrls1 = ctrls[1];
     // Note: controls include default (1 atm) BHP control.
-    BOOST_CHECK_EQUAL(6, well_controls_get_num(ctrls1));
+    // and also an ORAT control
+    BOOST_CHECK_EQUAL(2, well_controls_get_num(ctrls1));
 }
 
 BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
