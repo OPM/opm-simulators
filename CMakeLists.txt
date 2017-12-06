@@ -24,33 +24,26 @@ project("opm-simulators" C CXX)
 # Sibling build
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 
-function(perform_sibling_search)
-  # guess the sibling dir
-  get_filename_component(_leaf_dir_name ${PROJECT_BINARY_DIR} NAME)
-  get_filename_component(_parent_full_dir ${PROJECT_BINARY_DIR} DIRECTORY)
-  get_filename_component(_parent_dir_name ${_parent_full_dir} NAME)
-  get_filename_component(_modules_dir ${_parent_full_dir} DIRECTORY)
-  foreach(MOD ${ARGV})
-    # dune-common dune-geometry dune-grid dune-localfunctions dune-istl opm-common libecl opm-parser opm-grid opm-data opm-core opm-output opm-material ewoms)
-    # do not overwrite the location of a module if it was explicitly
-    # specified by the user
-    if(${MOD}_DIR)
-      continue()
-    endif()
+# guess the sibling dir
+get_filename_component(_leaf_dir_name ${PROJECT_BINARY_DIR} NAME)
+get_filename_component(_parent_full_dir ${PROJECT_BINARY_DIR} DIRECTORY)
+get_filename_component(_parent_dir_name ${_parent_full_dir} NAME)
+get_filename_component(_modules_dir ${_parent_full_dir} DIRECTORY)
+foreach(MOD dune-common dune-geometry dune-grid dune-localfunctions dune-istl opm-common libecl opm-parser opm-grid opm-data opm-core opm-output opm-material ewoms)
+	# do not overwrite the location of a module if it was explicitly
+	# specified by the user
+	if(${MOD}_DIR)
+		continue()
+	endif()
 
-    # Try various possible locations for the build directory of the dependency
-    foreach(BUILD_DIR "${_leaf_dir_name}" "build-cmake" "build" "../${MOD}-build" "../build-${MOD}" "../build" ".")
-      if(EXISTS "${_modules_dir}/${MOD}/${BUILD_DIR}/${MOD}-config.cmake")
-        set(${MOD}_DIR ${_modules_dir}/${MOD}/${BUILD_DIR} PARENT_SCOPE)
-        break()
-      endif()
-    endforeach()
-  endforeach()
-endfunction(perform_sibling_search)
-
-if(SIBLING_SEARCH)
-  perform_sibling_search(dune-common dune-geometry dune-grid dune-localfunctions dune-istl opm-common libecl opm-parser opm-grid opm-data opm-core opm-output opm-material ewoms)
-endif()
+	# Try various possible locations for the build directory of the dependency
+	foreach(BUILD_DIR "${_leaf_dir_name}" "build-cmake" "build" "../${MOD}-build" "../build-${MOD}" "../build" ".")
+		if(EXISTS "${_modules_dir}/${MOD}/${BUILD_DIR}/${MOD}-config.cmake")
+			set(${MOD}_DIR ${_modules_dir}/${MOD}/${BUILD_DIR} PARENT_SCOPE)
+			break()
+		endif()
+	endforeach()
+endforeach()
 
 if(dune-common_DIR AND NOT IS_DIRECTORY ${dune-common_DIR})
   message(WARNING "Value ${dune-common_DIR} passed to variable"
@@ -103,13 +96,8 @@ opm_export_cmake_modules()
 # thank you!
 dune_enable_all_packages()
 
-# add libopmsimulators.a and specify that it encompasses all source files
-# which are located somewhere beneath the "opm" directory. Note that
-# if the tests and the source files of the library were intermingled,
-# this would be not so easy, i.e. it would require a separate
-# CMakeLists.txt file in each subdirectory and a call to
-# add_subdirectory() for each of them.
-opm_recursive_add_library("opmsimulators" "opm")
+# add source files from CMakeLists_files.cmake to library and create executables
+opm_add_library_and_executables("opmsimulators")
 
 # download Eigen if user doesn't have the correct version
 if (NOT EIGEN3_FOUND)
@@ -124,24 +112,6 @@ if (NOT EIGEN3_FOUND)
         include_directories (${CMAKE_BINARY_DIR}/eigen3-installed/include/eigen3)
         add_dependencies (opmsimulators Eigen3)
 endif (NOT EIGEN3_FOUND)
-
-# read the list of components from this file (in the project directory);
-# it should set various lists with the names of the files to include
-include (CMakeLists_files.cmake)
-
-# add executables from list of executables
-foreach( FILE_NAME ${EXAMPLE_SOURCE_FILES} )
-  # extract executable name
-  get_filename_component(EXEC_NAME ${FILE_NAME} NAME_WE)
-  opm_add_application( ${EXEC_NAME} SOURCES ${FILE_NAME} )
-endforeach()
-
-# add tests from list of test files
-foreach( FILE_NAME ${TEST_SOURCE_FILES} )
-  # extract executable name
-  get_filename_component(EXEC_NAME ${FILE_NAME} NAME_WE)
-  opm_add_test( ${EXEC_NAME} LIBRARIES "${Boost_LIBRARIES}" INCLUDE_DIRS "${Boost_INCLUDE_DIRS}")
-endforeach()
 
 if(opm-data_FOUND)
   include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
