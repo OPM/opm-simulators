@@ -1157,17 +1157,19 @@ namespace Opm
                         visc[gaspos] =
                             FluidSystem::gasPvt().viscosity(pvt_region_index, temperature, seg_pressure, rv);
                     } else { // no oil exists
+                        const EvalWell Rs(0.0);
                         b[gaspos] =
-                            FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                            FluidSystem::gasPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, Rs);
                         visc[gaspos] =
-                            FluidSystem::gasPvt().saturatedViscosity(pvt_region_index, temperature, seg_pressure);
+                            FluidSystem::gasPvt().viscosity(pvt_region_index, temperature, seg_pressure, Rs);
                     }
                 } else { // no Liquid phase
                     // it is the same with zero mix_s[Oil]
+                    const EvalWell Rv(0.0);
                     b[gaspos] =
-                        FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                        FluidSystem::gasPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, Rv);
                     visc[gaspos] =
-                        FluidSystem::gasPvt().saturatedViscosity(pvt_region_index, temperature, seg_pressure);
+                        FluidSystem::gasPvt().viscosity(pvt_region_index, temperature, seg_pressure, Rv);
                 }
             }
 
@@ -1191,17 +1193,19 @@ namespace Opm
                         visc[oilpos] =
                             FluidSystem::oilPvt().viscosity(pvt_region_index, temperature, seg_pressure, rs);
                     } else { // no oil exists
+                        const EvalWell Rs(0.0);
                         b[oilpos] =
-                            FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                            FluidSystem::oilPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, Rs);
                         visc[oilpos] =
-                            FluidSystem::oilPvt().saturatedViscosity(pvt_region_index, temperature, seg_pressure);
+                            FluidSystem::oilPvt().viscosity(pvt_region_index, temperature, seg_pressure, Rs);
                     }
                 } else { // no Liquid phase
                     // it is the same with zero mix_s[Oil]
+                    const EvalWell Rv(0.0);
                     b[oilpos] =
-                        FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                        FluidSystem::oilPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, Rv);
                     visc[oilpos] =
-                        FluidSystem::oilPvt().saturatedViscosity(pvt_region_index, temperature, seg_pressure);
+                        FluidSystem::oilPvt().viscosity(pvt_region_index, temperature, seg_pressure, Rv);
                 }
             }
 
