@@ -79,25 +79,11 @@ dune_project()
 # include the OPM cmake macros
 include(OpmMacros)
 
-# find the packages needed to compile the module
-find_package(Boost COMPONENTS unit_test_framework REQUIRED)
-
 find_package(PlainOpmData)
 find_package(OpmOutputUtils)
 
-# recursively mark all header files beneath the "opm" directory for
-# installation.
-opm_recusive_export_all_headers("opm")
-
-# the cmake modules get a special treatment
-opm_export_cmake_modules()
-
-# we want all features detected by the build system to be enabled,
-# thank you!
-dune_enable_all_packages()
-
 # add source files from CMakeLists_files.cmake to library and create executables
-opm_add_library_and_executables("opmsimulators")
+opm_add_headers_library_and_executables("opmsimulators")
 
 # download Eigen if user doesn't have the correct version
 if (NOT EIGEN3_FOUND)
