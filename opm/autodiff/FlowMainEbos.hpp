@@ -539,6 +539,8 @@ namespace Opm
                                            schedule(),
                                            summaryConfig()));
                 eclIO_->writeInitial(computeLegacySimProps_(), int_vectors, nnc_);
+                Problem& problem = ebosProblem();
+                problem.setEclIO(std::move(eclIO_));
             }
         }
 
@@ -550,13 +552,10 @@ namespace Opm
             // create output writer after grid is distributed, otherwise the parallel output
             // won't work correctly since we need to create a mapping from the distributed to
             // the global view
-            output_writer_.reset(new OutputWriter(grid(),
-                                                  param_,
-                                                  eclState(),
-                                                  schedule(),
-                                                  summaryConfig(),
-                                                  std::move(eclIO_),
-                                                  Opm::phaseUsageFromDeck(deck())) );
+
+            output_writer_.reset(new OutputWriter(*ebosSimulator_,
+                                                   param_));
+
         }
 
         // Run the simulator.
