@@ -1002,7 +1002,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    computeAverageFormationFactor(std::vector<double>& B_avg) const
+    computeAverageFormationFactor(std::vector<Scalar>& B_avg) const
     {
         const int np = numPhases();
 

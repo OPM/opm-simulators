@@ -77,15 +77,15 @@ namespace Opm
         typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
         typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
+        typedef typename GET_PROP_TYPE(TypeTag, Scalar)      Scalar;
 
         static const int numEq = BlackoilIndices::numEq;
-        typedef double Scalar;
 
         typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
         typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
         typedef Dune::BlockVector<VectorBlockType> BVector;
-        typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
+        typedef DenseAd::Evaluation<Scalar, /*size=*/numEq> Eval;
 
         typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
@@ -161,7 +161,7 @@ namespace Opm
             }
         };
 
-        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const = 0;
+        virtual ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg) const = 0;
 
         virtual void solveEqAndUpdateWellState(WellState& well_state) = 0;
 

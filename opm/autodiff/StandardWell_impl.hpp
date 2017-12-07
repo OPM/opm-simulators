@@ -1327,7 +1327,7 @@ namespace Opm
     template<typename TypeTag>
     typename StandardWell<TypeTag>::ConvergenceReport
     StandardWell<TypeTag>::
-    getWellConvergence(const std::vector<double>& B_avg) const
+    getWellConvergence(const std::vector<Scalar>& B_avg) const
     {
         const int np = number_of_phases_;
 

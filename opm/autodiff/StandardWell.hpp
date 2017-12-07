@@ -135,7 +135,7 @@ namespace Opm
         virtual void updateWellStateWithTarget(WellState& well_state) const;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const;
+        virtual ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg) const;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const;

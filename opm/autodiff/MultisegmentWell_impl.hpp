@@ -410,7 +410,7 @@ namespace Opm
     template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::ConvergenceReport
     MultisegmentWell<TypeTag>::
-    getWellConvergence(const std::vector<double>& B_avg) const
+    getWellConvergence(const std::vector<Scalar>& B_avg) const
     {
         assert(int(B_avg.size()) == num_components_);
 
@@ -1715,8 +1715,8 @@ namespace Opm
             // in this stage, but, should we?
             // We should try to avoid hard-code values in the code.
             // If we want to use the real one, we need to find a way to get them.
-            // const std::vector<double> B {0.8, 0.8, 0.008};
-            const std::vector<double> B {0.5, 0.5, 0.005};
+            // const std::vector<Scalar> B {0.8, 0.8, 0.008};
+            const std::vector<Scalar> B {0.5, 0.5, 0.005};
 
             const ConvergenceReport report = getWellConvergence(B);
 

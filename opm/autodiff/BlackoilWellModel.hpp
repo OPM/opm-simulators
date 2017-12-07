@@ -209,7 +209,7 @@ namespace Opm {
             void computeRepRadiusPerfLength(const Grid& grid);
 
 
-            void computeAverageFormationFactor(std::vector<double>& B_avg) const;
+            void computeAverageFormationFactor(std::vector<Scalar>& B_avg) const;
 
             void applyVREPGroupControl();
 
