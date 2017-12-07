@@ -97,7 +97,7 @@ namespace Opm
         // TODO: for more efficient implementation, we should have EvalReservoir, EvalWell, and EvalRerservoirAndWell
         //                                                         EvalR (Eval), EvalW, EvalRW
         // TODO: for now, we only use one type to save some implementation efforts, while improve later.
-        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
+        typedef DenseAd::Evaluation<Scalar, /*size=*/numEq + numWellEq> EvalWell;
 
         MultisegmentWell(const Well* well, const int time_step, const Wells* wells,
                          const ModelParameters& param,
@@ -124,7 +124,7 @@ namespace Opm
         virtual void updateWellStateWithTarget(WellState& well_state) const;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const;
+        virtual ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg) const;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const;

@@ -104,8 +104,8 @@ namespace Opm {
         typedef typename GET_PROP_TYPE(TypeTag, Indices)           Indices;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)       MaterialLaw;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+        typedef typename GET_PROP_TYPE(TypeTag, Scalar)            Scalar;
 
-        typedef double Scalar;
         static const int numEq = Indices::numEq;
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
@@ -398,13 +398,13 @@ namespace Opm {
                 if (elem.partitionType() != Dune::InteriorEntity)
                     continue;
 
-		unsigned globalElemIdx = elemMapper.index(elem);
+                unsigned globalElemIdx = elemMapper.index(elem);
                 const auto& priVarsNew = ebosSimulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
 
                 Scalar pressureNew;
-		pressureNew = priVarsNew[Indices::pressureSwitchIdx];
+                pressureNew = priVarsNew[Indices::pressureSwitchIdx];
 
-		Scalar saturationsNew[FluidSystem::numPhases] = { 0.0 };
+                Scalar saturationsNew[FluidSystem::numPhases] = { 0.0 };
                 Scalar oilSaturationNew = 1.0;
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSaturationIdx];
@@ -447,7 +447,7 @@ namespace Opm {
 
                 for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
                     Scalar tmp = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
-		    resultDelta += tmp*tmp;
+                    resultDelta += tmp*tmp;
                     resultDenom += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
                 }
             }
@@ -455,9 +455,9 @@ namespace Opm {
             resultDelta = gridView.comm().sum(resultDelta);
             resultDenom = gridView.comm().sum(resultDenom);
 
-	    if (resultDenom > 0.0)
-	      return resultDelta/resultDenom;
-	    return 0.0;
+            if (resultDenom > 0.0)
+                return resultDelta/resultDenom;
+            return 0.0;
         }
 
 
@@ -619,15 +619,15 @@ namespace Opm {
                 PrimaryVariables& priVars = solution[ cell_idx ];
 
                 const double& dp = dx[cell_idx][Indices::pressureSwitchIdx];
-                double& p = priVars[Indices::pressureSwitchIdx];
+                Scalar& p = priVars[Indices::pressureSwitchIdx];
                 const double& dp_rel_max = dpMaxRel();
                 const int sign_dp = dp > 0 ? 1: -1;
                 p -= sign_dp * std::min(std::abs(dp), std::abs(p)*dp_rel_max);
                 p = std::max(p, 0.0);
 
                 // Saturation updates.
-                const double dsw = active_[Water] ? dx[cell_idx][Indices::waterSaturationIdx] : 0.0;
-                const double dxvar = active_[Gas] ? dx[cell_idx][Indices::compositionSwitchIdx] : 0.0;
+                const double dsw = active_[Water] ? dx[cell_idx][Indices::waterSaturationIdx] : Scalar(0);
+                const double dxvar = active_[Gas] ? dx[cell_idx][Indices::compositionSwitchIdx] : Scalar(0);
 
                 double dso = 0.0;
                 double dsg = 0.0;
@@ -648,10 +648,10 @@ namespace Opm {
                 }
 
                 // solvent
-                const double dss = has_solvent_ ? dx[cell_idx][Indices::solventSaturationIdx] : 0.0;
+                const double dss = has_solvent_ ? dx[cell_idx][Indices::solventSaturationIdx] : Scalar(0);
 
                 // polymer
-                const double dc = has_polymer_ ? dx[cell_idx][Indices::polymerConcentrationIdx] : 0.0;
+                const double dc = has_polymer_ ? dx[cell_idx][Indices::polymerConcentrationIdx] : Scalar(0);
 
                 // oil
                 dso = - (dsw + dsg + dss);
@@ -670,24 +670,24 @@ namespace Opm {
                 }
 
                 if (active_[Water]) {
-                    double& sw = priVars[Indices::waterSaturationIdx];
+                    Scalar& sw = priVars[Indices::waterSaturationIdx];
                     sw -= satScaleFactor * dsw;
                 }
 
                 if (active_[Gas]) {
                      if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
-                           double& sg = priVars[Indices::compositionSwitchIdx];
+                           Scalar& sg = priVars[Indices::compositionSwitchIdx];
                            sg -= satScaleFactor * dsg;
                      }
                 }
 
                 if (has_solvent_) {
-                    double& ss = priVars[Indices::solventSaturationIdx];
+                    Scalar& ss = priVars[Indices::solventSaturationIdx];
                     ss -= satScaleFactor * dss;
                     ss = std::min(std::max(ss, 0.0),1.0);
                 }
                 if (has_polymer_) {
-                    double& c = priVars[Indices::polymerConcentrationIdx];
+                    Scalar& c = priVars[Indices::polymerConcentrationIdx];
                     c -= satScaleFactor * dc;
                     c = std::max(c, 0.0);
                 }
@@ -696,12 +696,13 @@ namespace Opm {
                 if (active_[Gas] && active_[Oil] ) {
                     unsigned pvtRegionIdx = ebosSimulator_.problem().pvtRegionIndex(cell_idx);
                     const double drmaxrel = drMaxRel();
+                    const Scalar T0 = 300.0;
                     if (has_disgas_) {
                         if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs) {
                             Scalar RsSat =
-                                FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx, 300.0, p);
+                                FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx, T0, p);
 
-                            double& rs = priVars[Indices::compositionSwitchIdx];
+                            Scalar& rs = priVars[Indices::compositionSwitchIdx];
                             rs -= ((drs<0)?-1:1)*std::min(std::abs(drs), RsSat*drmaxrel);
                             rs = std::max(rs, 0.0);
                         }
@@ -710,9 +711,9 @@ namespace Opm {
                     if (has_vapoil_) {
                         if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
                             Scalar RvSat =
-                                FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx, 300.0, p);
+                                FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx, T0, p);
 
-                            double& rv = priVars[Indices::compositionSwitchIdx];
+                            Scalar& rv = priVars[Indices::compositionSwitchIdx];
                             rv -= ((drv<0)?-1:1)*std::min(std::abs(drv), RvSat*drmaxrel);
                             rv = std::max(rv, 0.0);
                         }
@@ -1141,6 +1142,7 @@ namespace Opm {
 
             SimulationDataContainer simData( numCells, 0, num_phases );
 
+
             //Get shorthands for water, oil, gas
             const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
             const int liquid_active = phaseUsage.phase_used[Opm::PhaseUsage::Liquid];
@@ -1266,14 +1268,28 @@ namespace Opm {
 
                 const auto& matLawManager = ebosSimulator().problem().materialLawManager();
                 if (matLawManager->enableHysteresis()) {
-                    matLawManager->oilWaterHysteresisParams(
-                            pcSwMdc_ow[cellIdx],
-                            krnSwMdc_ow[cellIdx],
-                            cellIdx);
-                    matLawManager->gasOilHysteresisParams(
-                            pcSwMdc_go[cellIdx],
-                            krnSwMdc_go[cellIdx],
-                            cellIdx);
+                    {
+                        // convert to Scalar and back
+                        Scalar pcSwMdc_ow_cell  = pcSwMdc_ow[cellIdx];
+                        Scalar krnSwMdc_ow_cell = krnSwMdc_ow[cellIdx];
+                        matLawManager->oilWaterHysteresisParams(
+                                pcSwMdc_ow_cell,
+                                krnSwMdc_ow_cell,
+                                cellIdx);
+                        pcSwMdc_ow[cellIdx]  = pcSwMdc_ow_cell;
+                        krnSwMdc_ow[cellIdx] = krnSwMdc_ow_cell;
+                    }
+                    {
+                        // convert to Scalar and back
+                        Scalar pcSwMdc_go_cell  = pcSwMdc_go[cellIdx];
+                        Scalar krnSwMdc_go_cell = krnSwMdc_go[cellIdx];
+                        matLawManager->gasOilHysteresisParams(
+                                pcSwMdc_go_cell,
+                                krnSwMdc_go_cell,
+                                cellIdx);
+                        pcSwMdc_go[cellIdx]  = pcSwMdc_go_cell;
+                        krnSwMdc_go[cellIdx] = krnSwMdc_go_cell;
+                    }
                 }
 
                 if (aqua_active) {
