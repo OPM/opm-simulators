@@ -54,13 +54,11 @@
 #include "eclwellmanager.hh"
 #include "eclequilinitializer.hh"
 #include "eclwriter.hh"
-#include "eclsummarywriter.hh"
 #include "ecloutputblackoilmodule.hh"
 #include "ecltransmissibility.hh"
 #include "eclthresholdpressure.hh"
 #include "ecldummygradientcalculator.hh"
 #include "eclfluxmodule.hh"
-#include "ecldeckunits.hh"
 
 #include <ewoms/common/pffgridvector.hh>
 #include <ewoms/models/blackoil/blackoilmodel.hh>
@@ -80,12 +78,15 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+
+#include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <boost/date_time.hpp>
 
@@ -205,9 +206,6 @@ SET_BOOL_PROP(EclBaseProblem, EnableVtkOutput, false);
 // ... but enable the ECL output by default
 SET_BOOL_PROP(EclBaseProblem, EnableEclOutput, true);
 
-// also enable the summary output.
-SET_BOOL_PROP(EclBaseProblem, EnableEclSummaryOutput, true);
-
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
 SET_BOOL_PROP(EclBaseProblem, EnableIntensiveQuantityCache, true);
@@ -292,10 +290,12 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
             /*enableTemperature=*/true> InitialFluidState;
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Ewoms::EclSummaryWriter<TypeTag> EclSummaryWriter;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
     typedef EclWriter<TypeTag> EclWriterType;
+
+    typedef typename GridView::template Codim<0>::Iterator ElementIterator;
+
 
     struct RockParams {
         Scalar referencePressure;
@@ -309,8 +309,6 @@ public:
     static void registerParameters()
     {
         ParentType::registerParameters();
-
-        Ewoms::EclOutputBlackOilModule<TypeTag>::registerParameters();
 
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWriteAllSolutions,
                              "Write all solutions to disk instead of only the ones for the "
@@ -330,20 +328,17 @@ public:
         , transmissibilities_(simulator.gridManager())
         , thresholdPressures_(simulator)
         , wellManager_(simulator)
-        , deckUnits_(simulator)
         , eclWriter_( EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput)
                         ? new EclWriterType(simulator) : nullptr )
-        , summaryWriter_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
     {
-        // add the output module for the Ecl binary output
-        simulator.model().addOutputModule(new Ewoms::EclOutputBlackOilModule<TypeTag>(simulator));
-
-        // Tell the solvent module to initialize its internal data structures
+        // Tell the extra modules to initialize its internal data structures
         const auto& gridManager = simulator.gridManager();
         SolventModule::initFromDeck(gridManager.deck(), gridManager.eclState());
         PolymerModule::initFromDeck(gridManager.deck(), gridManager.eclState());
 
+        // Hack to compute the initial thpressure values for restarts
+        restartApplied = false;
     }
 
     /*!
@@ -502,14 +497,6 @@ public:
     {
         if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
             wellManager_.beginTimeStep();
-
-            // this is a little hack to write the initial condition, which we need to do
-            // before the first time step has finished.
-            static bool initialWritten = false;
-            if (this->simulator().episodeIndex() == 0 && !initialWritten) {
-                summaryWriter_.write(wellManager_, /*isInitial=*/true);
-                initialWritten = true;
-            }
         }
     }
 
@@ -548,9 +535,6 @@ public:
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
             wellManager_.endTimeStep();
-
-            // write the summary information after each time step
-            summaryWriter_.write(wellManager_);
         }
 
         // we no longer need the initial soluiton
@@ -613,28 +597,41 @@ public:
      */
     void writeOutput(bool verbose = true)
     {
-        // calculate the time _after_ the time was updated
         Scalar t = this->simulator().time() + this->simulator().timeStepSize();
 
-        // prepare the ECL and the VTK writers
-        if ( eclWriter_ )
-            eclWriter_->beginWrite(t);
+        Opm::data::Wells dw;
+        if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
+            using rt = Opm::data::Rates::opt;
+            for (unsigned wellIdx = 0; wellIdx < wellManager_.numWells(); ++wellIdx) {
+                const auto& well = wellManager_.well(wellIdx);
+                auto& wellOut = dw[ well->name() ];
 
+                wellOut.bhp = well->bottomHolePressure();
+                wellOut.thp = well->tubingHeadPressure();
+                wellOut.temperature = 0;
+                wellOut.rates.set( rt::wat, well->surfaceRate(waterPhaseIdx) );
+                wellOut.rates.set( rt::oil, well->surfaceRate(oilPhaseIdx) );
+                wellOut.rates.set( rt::gas, well->surfaceRate(gasPhaseIdx) );
+            }
+        }
+        Scalar totalSolverTime = 0.0;
+        Scalar nextstep = this->simulator().timeStepSize();
+        Opm::data::Solution fip;
+        writeOutput(dw, t, false, totalSolverTime, nextstep, fip, verbose);
+    }
+
+    void writeOutput(const Opm::data::Wells& dw, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep, const Opm::data::Solution& fip, bool verbose = true)
+    {
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
         ParentType::writeOutput(verbose);
 
+        // output using eclWriter if enabled
         if ( eclWriter_ ) {
-            this->model().appendOutputFields(*eclWriter_);
-            eclWriter_->endWrite();
+            eclWriter_->writeOutput(dw, t, substep, totalSolverTime, nextstep, fip);
         }
-    }
 
-    /*!
-     * \brief Returns the object which converts between SI and deck units.
-     */
-    const EclDeckUnits<TypeTag>& deckUnits() const
-    { return deckUnits_; }
+    }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
@@ -960,6 +957,7 @@ public:
      */
     void initialSolutionApplied()
     {
+
         if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
             // initialize the wells. Note that this needs to be done after initializing the
             // intrinsic permeabilities and the after applying the initial solution because
@@ -967,10 +965,23 @@ public:
             wellManager_.init(this->simulator().gridManager().eclState(), this->simulator().gridManager().schedule());
         }
 
+        // the initialSolutionApplied is called recursively by readEclRestartSolution_()
+        // in order to setup the inital threshold pressures correctly
+        if (restartApplied)
+            return;
+
         // let the object for threshold pressures initialize itself. this is done only at
         // this point, because determining the threshold pressures may require to access
         // the initial solution.
         thresholdPressures_.finishInit();
+
+        const auto& eclState = this->simulator().gridManager().eclState();
+        const auto& initconfig = eclState.getInitConfig();
+        if(initconfig.restartRequested()) {
+            restartApplied = true;
+            this->simulator().setEpisodeIndex(initconfig.getRestartStep());
+            readEclRestartSolution_();
+        }
 
         // release the memory of the EQUIL grid since it's no longer needed after this point
         this->simulator().gridManager().releaseEquilGrid();
@@ -1012,6 +1023,13 @@ public:
     const InitialFluidState& initialFluidState(unsigned globalDofIdx ) const {
         return initialFluidStates_[globalDofIdx];
     }
+
+    void setEclIO(std::unique_ptr<Opm::EclipseIO>&& eclIO) {
+        eclWriter_->setEclIO(std::move(eclIO));
+    }
+
+    const Opm::EclipseIO& eclIO() const
+    {return eclWriter_->eclIO();}
 
 private:
     Scalar cellCenterDepth( const Element& element ) const
@@ -1205,14 +1223,15 @@ private:
     void readInitialCondition_()
     {
         const auto& gridManager = this->simulator().gridManager();
-        const auto& deck = gridManager.deck();
 
+        const auto& deck = gridManager.deck();
         if (!deck.hasKeyword("EQUIL"))
             readExplicitInitialCondition_();
         else
             readEquilInitialCondition_();
 
         readBlackoilExtentionsInitialConditions_();
+
     }
 
 
@@ -1233,6 +1252,35 @@ private:
             auto& elemFluidState = initialFluidStates_[elemIdx];
             elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
         }
+    }
+
+    void readEclRestartSolution_()
+    {
+        // since the EquilInitializer provides fluid states that are consistent with the
+        // black-oil model, we can use naive instead of mass conservative determination
+        // of the primary variables.
+        useMassConservativeInitialCondition_ = false;
+
+        eclWriter_->restartBegin();
+
+        size_t numElems = this->model().numGridDof();
+        initialFluidStates_.resize(numElems);
+        if (enableSolvent)
+            solventSaturation_.resize(numElems,0.0);
+
+        if (enablePolymer)
+            polymerConcentration_.resize(numElems,0.0);
+
+        for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            auto& elemFluidState = initialFluidStates_[elemIdx];
+            eclWriter_->eclOutputModule().initHysteresisParams(this->simulator(), elemIdx);
+            eclWriter_->eclOutputModule().assignToFluidState(elemFluidState, elemIdx);
+            if (enableSolvent)
+                 solventSaturation_[elemIdx] = eclWriter_->eclOutputModule().getSolventSaturation(elemIdx);
+            if (enablePolymer)
+                 polymerConcentration_[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
+        }
+        this->model().applyInitialSolution();
     }
 
     void readExplicitInitialCondition_()
@@ -1572,12 +1620,12 @@ private:
 
     EclWellManager<TypeTag> wellManager_;
 
-    EclDeckUnits<TypeTag> deckUnits_;
-
     std::unique_ptr< EclWriterType > eclWriter_;
-    EclSummaryWriter summaryWriter_;
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
+
+    bool restartApplied;
+
 };
 } // namespace Ewoms
 

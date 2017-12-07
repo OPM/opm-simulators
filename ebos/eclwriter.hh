@@ -30,11 +30,12 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
-#include "ertwrappers.hh"
 #include "collecttoiorank.hh"
+#include "ecloutputblackoilmodule.hh"
 
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include <ewoms/io/baseoutputwriter.hh>
+#include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/common/Valgrind.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -58,302 +59,169 @@ NEW_PROP_TAG(EnableEclOutput);
 template <class TypeTag>
 class EclWriter;
 
-template <class TypeTag, class GridManagerType>
-class EclWriterHelper
-{
-    friend class EclWriter<TypeTag>;
-
-    static void writeHeaders_(EclWriter<TypeTag>& writer)
-    {
-        typedef typename GET_PROP_TYPE(TypeTag, Discretization) Discretization;
-        if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
-            OPM_THROW(std::logic_error,
-                      "Ecl binary output only works for the element centered "
-                      "finite volume discretization.");
-
-#if ! HAVE_ERT
-        OPM_THROW(std::logic_error,
-                  "Ecl binary output requires the ERT libraries");
-#else
-        // set the index of the first time step written to 0...
-        writer.reportStepIdx_ = 0;
-
-        char* egridRawFileName = ecl_util_alloc_filename(/*outputDir=*/"./",
-                                                         writer.caseName().c_str(),
-                                                         ECL_EGRID_FILE,
-                                                         /*formatted=*/false, // -> write binary output
-                                                         writer.reportStepIdx_);
-        std::string egridFileName(egridRawFileName);
-        std::free(egridRawFileName);
-
-        ErtGrid ertGrid(writer.simulator_.gridManager().eclState().getInputGrid(),
-                        writer.simulator_.gridManager().grid(),
-                        writer.simulator_.gridManager().cartesianIndexMapper(),
-                        writer.simulator_.problem().deckUnits());
-        ertGrid.write(egridFileName, writer.reportStepIdx_);
-#endif
-    }
-};
 
 /*!
  * \ingroup EclBlackOilSimulator
  *
- * \brief Implements writing Ecl binary output files.
+ * \brief Collects necessary output values and pass it to opm-output.
  *
  * Caveats:
- * - For this class to do do anything meaningful, you need to have the
- *   ERT libraries with development headers installed and the ERT
- *   build system test must pass sucessfully.
+ * - For this class to do do anything meaningful, you will have to
+ *   have the OPM module opm-output.
  * - The only DUNE grid which is currently supported is Dune::CpGrid
- *   from the OPM module "opm-core". Using another grid won't
+ *   from the OPM module "opm-grid". Using another grid won't
  *   fail at compile time but you will provoke a fatal exception as
  *   soon as you try to write an ECL output file.
  * - This class requires to use the black oil model with the element
  *   centered finite volume discretization.
- * - MPI-parallel computations are not (yet?) supported.
  */
 template <class TypeTag>
-class EclWriter : public BaseOutputWriter
+class EclWriter
 {
-    typedef typename GET_PROP_TYPE(TypeTag, VertexMapper) VertexMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, GridManager) GridManager;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef typename GridView::template Codim<0>::Entity Element;
+    typedef typename GridView::template Codim<0>::Iterator ElementIterator;
 
 
     typedef CollectDataToIORank< GridManager > CollectDataToIORankType;
 
-    typedef BaseOutputWriter::ScalarBuffer ScalarBuffer;
-    typedef BaseOutputWriter::VectorBuffer VectorBuffer;
-    typedef BaseOutputWriter::TensorBuffer TensorBuffer;
+    typedef std::vector<Scalar> ScalarBuffer;
 
-    friend class EclWriterHelper<TypeTag, GridManager>;
 
 public:
     EclWriter(const Simulator& simulator)
         : simulator_(simulator)
-        , gridView_(simulator_.gridView())
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
-        , elementMapper_(gridView_, Dune::mcmgElementLayout())
-        , vertexMapper_(gridView_, Dune::mcmgVertexLayout())
-#else
-        , elementMapper_(gridView_)
-        , vertexMapper_(gridView_)
-#endif
+        , eclOutputModule_(simulator)
         , collectToIORank_( simulator_.gridManager() )
     {
-        reportStepIdx_ = 0;
+        Grid globalGrid = simulator_.gridManager().grid();
+        globalGrid.switchToGlobalView();
+        eclIO_.reset(new Opm::EclipseIO(simulator_.gridManager().eclState(),
+                                        Opm::UgGridHelpers::createEclipseGrid( globalGrid , simulator_.gridManager().eclState().getInputGrid() ),
+                                        simulator_.gridManager().schedule(),
+                                        simulator_.gridManager().summaryConfig()));
     }
 
     ~EclWriter()
     { }
 
-    /*!
-     * \brief Returns the name of the simulation.
-     *
-     * This is the prefix of the files written to disk.
-     */
-    std::string caseName() const
-    { return boost::to_upper_copy(simulator_.problem().name()); }
-
-    /*!
-     * \brief Updates the internal data structures after mesh
-     *        refinement.
-     *
-     * If the grid changes between two calls of beginWrite(), this
-     * method _must_ be called before the second beginWrite()!
-     */
-    void gridChanged()
-    {
-        elementMapper_.update();
-        vertexMapper_.update();
+    void setEclIO(std::unique_ptr<Opm::EclipseIO>&& eclIO) {
+        eclIO_ = std::move(eclIO);
     }
+
+    const Opm::EclipseIO& eclIO() const
+    {return *eclIO_;}
 
     /*!
-     * \brief Called whenever a new time step must be written.
+     * \brief collect and pass data and pass it to eclIO writer
      */
-    void beginWrite(double t OPM_UNUSED)
+    void writeOutput(const Opm::data::Wells& dw, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep, const Opm::data::Solution& fip)
     {
-        if (enableEclOutput_() && reportStepIdx_ == 0 && collectToIORank_.isIORank() )
-            EclWriterHelper<TypeTag, GridManager>::writeHeaders_(*this);
-    }
 
-    /*
-     * \brief Add a vertex-centered scalar field to the output.
-     *
-     * For the EclWriter, this method is a no-op which throws a
-     * std::logic_error exception
-     */
-    void attachScalarVertexData(ScalarBuffer& buf OPM_UNUSED, std::string name OPM_UNUSED)
-    {
-        OPM_THROW(std::logic_error,
-                  "The EclWriter can only write element based quantities!");
-    }
+        #if !HAVE_OPM_OUTPUT
+                OPM_THROW(std::runtime_error,
+                          "Opm-output must be available to write ECL output!");
+        #else
 
-    /*
-     * \brief Add a vertex-centered vector field to the output.
-     *
-     * For the EclWriter, this method is a no-op which throws a
-     * std::logic_error exception
-     */
-    void attachVectorVertexData(VectorBuffer& buf OPM_UNUSED, std::string name OPM_UNUSED)
-    {
-        OPM_THROW(std::logic_error,
-                  "The EclWriter can only write element based quantities!");
-    }
+        int episodeIdx = simulator_.episodeIndex() + 1;
+        const auto& gridView = simulator_.gridManager().gridView();
+        int numElements = gridView.size(/*codim=*/0);
+        bool log = collectToIORank_.isIORank();
+        eclOutputModule_.allocBuffers(numElements, episodeIdx, simulator_.gridManager().eclState().getRestartConfig(), log);
 
-    /*
-     * \brief Add a vertex-centered tensor field to the output.
-     */
-    void attachTensorVertexData(TensorBuffer& buf OPM_UNUSED, std::string name OPM_UNUSED)
-    {
-        OPM_THROW(std::logic_error,
-                  "The EclWriter can only write element based quantities!");
-    }
-
-    /*!
-     * \brief Add a scalar quantity to the output.
-     *
-     * The buffer must exist at least until the call to endWrite()
-     * finishes. Modifying the buffer between the call to this method
-     * and endWrite() results in _undefined behavior_.
-     */
-    void attachScalarElementData(ScalarBuffer& buf, std::string name)
-    {
-        attachedBuffers_.push_back(std::pair<std::string, ScalarBuffer*>(name, &buf));
-    }
-
-    /*
-     * \brief Add a element-centered vector field to the output.
-     *
-     * For the EclWriter, this method is a no-op which throws a
-     * std::logic_error exception
-     */
-    void attachVectorElementData(VectorBuffer& buf OPM_UNUSED, std::string name OPM_UNUSED)
-    {
-        OPM_THROW(std::logic_error,
-                  "Currently, the EclWriter can only write scalar quantities!");
-    }
-
-    /*
-     * \brief Add a element-centered tensor field to the output.
-     */
-    void attachTensorElementData(TensorBuffer& buf OPM_UNUSED, std::string name OPM_UNUSED)
-    {
-        OPM_THROW(std::logic_error,
-                  "Currently, the EclWriter can only write scalar quantities!");
-    }
-
-    /*!
-     * \brief Finalizes the current writer.
-     *
-     * This means that everything will be written to disk, except if
-     * the onlyDiscard argument is true. In this case, no output is
-     * written but the 'janitorial' jobs at the end of a time step are
-     * still done.
-     */
-    void endWrite(bool onlyDiscard = false)
-    {
-        if (onlyDiscard || !enableEclOutput_() || !simulator_.episodeWillBeOver()) {
-            // detach all buffers
-            attachedBuffers_.clear();
-            return;
+        ElementContext elemCtx(simulator_);
+        ElementIterator elemIt = gridView.template begin</*codim=*/0>();
+        const ElementIterator& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            eclOutputModule_.processElement(elemCtx);
         }
+        eclOutputModule_.outputErrorLog();
 
-#if !HAVE_ERT
-        OPM_THROW(std::runtime_error,
-                  "The ERT libraries must be available to write ECL output!");
-#else
-
-        // collect all data to I/O rank and store in attachedBuffers_
-        // this also reorders the data such that it fits the underlying eclGrid
-        collectToIORank_.collect( attachedBuffers_ );
+        // collect all data to I/O rank and assign to sol
+        Opm::data::Solution localCellData = fip;
+        eclOutputModule_.assignToSolution(localCellData);
+        collectToIORank_.collect(localCellData);
 
         // write output on I/O rank
         if (collectToIORank_.isIORank()) {
-            ErtRestartFile restartFile(simulator_, reportStepIdx_);
-            restartFile.writeHeader(simulator_, reportStepIdx_);
 
-            ErtSolution solution(restartFile);
-            auto bufIt = attachedBuffers_.begin();
-            const auto& bufEndIt = attachedBuffers_.end();
-            for (; bufIt != bufEndIt; ++ bufIt) {
-                const std::string& name = bufIt->first;
-                const ScalarBuffer& buffer = *bufIt->second;
+            std::map<std::string, std::vector<double>> extraRestartData;
+            std::map<std::string, double> miscSummaryData;
 
-                std::shared_ptr<const ErtKeyword<float>>
-                    bufKeyword(new ErtKeyword<float>(name, buffer));
-                solution.add(bufKeyword);
+            // Add suggested next timestep to extra data.
+            extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextstep);
+
+            // Add TCPU if simulatorReport is not defaulted.
+            if (totalSolverTime != 0.0) {
+                miscSummaryData["TCPU"] = totalSolverTime;
             }
+
+            const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
+            eclIO_->writeTimeStep(episodeIdx,
+                                  substep,
+                                  t,
+                                  cellData,
+                                  dw,
+                                  miscSummaryData,
+                                  extraRestartData,
+                                  false);
         }
 
-        // detach all buffers
-        attachedBuffers_.clear();
-
-        // next time we take the next report step
-        ++ reportStepIdx_;
 #endif
     }
 
-    /*!
-     * \brief Write the multi-writer's state to a restart file.
-     */
-    template <class Restarter>
-    void serialize(Restarter& res)
-    {
-        res.serializeSectionBegin("EclWriter");
-        res.serializeStream() << reportStepIdx_ << "\n";
-        res.serializeSectionEnd();
+    void restartBegin() {
+        std::map<std::string, Opm::RestartKey> solution_keys {{"PRESSURE" , Opm::RestartKey(Opm::UnitSystem::measure::pressure)},
+                                                         {"SWAT" , Opm::RestartKey(Opm::UnitSystem::measure::identity)},
+                                                         {"SGAS" , Opm::RestartKey(Opm::UnitSystem::measure::identity)},
+                                                         {"TEMP" , Opm::RestartKey(Opm::UnitSystem::measure::temperature)},
+                                                         {"RS" , Opm::RestartKey(Opm::UnitSystem::measure::gas_oil_ratio)},
+                                                         {"RV" , Opm::RestartKey(Opm::UnitSystem::measure::oil_gas_ratio)},
+                                                         {"SOMAX", {Opm::UnitSystem::measure::identity, false}},
+                                                         {"PCSWM_OW", {Opm::UnitSystem::measure::identity, false}},
+                                                         {"KRNSW_OW", {Opm::UnitSystem::measure::identity, false}},
+                                                         {"PCSWM_GO", {Opm::UnitSystem::measure::identity, false}},
+                                                         {"KRNSW_GO", {Opm::UnitSystem::measure::identity, false}}};
+
+        std::map<std::string, bool> extra_keys {
+            {"OPMEXTRA" , false}
+        };
+
+        unsigned episodeIdx = simulator_.episodeIndex();
+        const auto& gridView = simulator_.gridManager().gridView();
+        unsigned numElements = gridView.size(/*codim=*/0);
+        eclOutputModule_.allocBuffers(numElements, episodeIdx, simulator_.gridManager().eclState().getRestartConfig(), false);
+
+        auto restart_values = eclIO_->loadRestart(solution_keys, extra_keys);
+        for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
+            unsigned globalIdx = collectToIORank_.localIdxToGlobalIdx(elemIdx);
+            eclOutputModule_.setRestart(restart_values.solution, elemIdx, globalIdx);
+        }
     }
 
-    /*!
-     * \brief Read the multi-writer's state from a restart file.
-     */
-    template <class Restarter>
-    void deserialize(Restarter& res)
-    {
-        res.deserializeSectionBegin("EclWriter");
-        res.deserializeStream() >> reportStepIdx_;
-        res.deserializeSectionEnd();
+
+    const EclOutputBlackOilModule<TypeTag>& eclOutputModule() const {
+        return eclOutputModule_;
     }
+
 
 private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
 
-    // make sure the field is well defined if running under valgrind
-    // and make sure that all values can be displayed by paraview
-    void sanitizeBuffer_(std::vector<float>& b)
-    {
-        static bool warningPrinted = false;
-        for (size_t i = 0; i < b.size(); ++i) {
-            Opm::Valgrind::CheckDefined(b[i]);
-
-            if (!warningPrinted && !std::isfinite(b[i])) {
-                std::cerr << "WARNING: data field written to disk contains non-finite entries!\n";
-                warningPrinted = true;
-            }
-
-            // set values which are too small to 0 to avoid possible
-            // problems
-            if (std::abs(b[i]) < std::numeric_limits<float>::min()) {
-                b[i] = 0.0;
-            }
-        }
-    }
-
     const Simulator& simulator_;
-    const GridView gridView_;
-
-    ElementMapper elementMapper_;
-    VertexMapper vertexMapper_;
+    EclOutputBlackOilModule<TypeTag> eclOutputModule_;
     CollectDataToIORankType collectToIORank_;
+    std::unique_ptr<Opm::EclipseIO> eclIO_;
 
-    double curTime_;
-    unsigned reportStepIdx_;
-
-    std::list<std::pair<std::string, ScalarBuffer*> > attachedBuffers_;
 };
 } // namespace Ewoms
 
