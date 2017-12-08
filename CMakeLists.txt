@@ -199,6 +199,9 @@ include(OpmMacros)
 find_package(PlainOpmData)
 find_package(OpmOutputUtils)
 
+# find the packages needed to compile the unit tests
+find_package(Boost COMPONENTS unit_test_framework REQUIRED)
+
 # add source files from CMakeLists_files.cmake to library and create executables
 opm_add_headers_library_and_executables("opmsimulators")
 
