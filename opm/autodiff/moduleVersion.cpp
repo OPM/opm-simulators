@@ -17,8 +17,13 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
+
 #include <opm/autodiff/moduleVersion.hpp>
+
+#ifndef OPM_SIMULATORS_VERSION
 #include "project-version.h"
+#endif
 
 namespace Opm
 {
@@ -27,7 +32,12 @@ namespace Opm
     /// (for a release branch) or "2016.04-pre" (for a master branch).
     std::string moduleVersionName()
     {
+#ifndef OPM_SIMULATORS_VERSION
         return PROJECT_VERSION_NAME;
+#else
+        return OPM_SIMULATORS_VERSION;
+#endif
+
     }
 
     /// Return a (short) git hash for the current version of the
@@ -35,7 +45,11 @@ namespace Opm
     /// "debug" for Debug builds.
     std::string moduleVersionHash()
     {
+#ifndef OPM_SIMULATORS_VERSION
         return PROJECT_VERSION_HASH;
+#else
+        return "";
+#endif
     }
 
     /// Return a string containing both the name and hash, if N is the
@@ -43,7 +57,11 @@ namespace Opm
     /// "2016.04-pre (f15be17)" or "2016.04-pre (debug)".
     std::string moduleVersion()
     {
+#ifndef OPM_SIMULATORS_VERSION
         return PROJECT_VERSION;
+#else
+        return OPM_SIMULATORS_VERSION;
+#endif
     }
 
 } // namespace Opm
