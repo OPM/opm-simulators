@@ -27,8 +27,6 @@
 #ifndef VAN_GENUCHTEN_PARAMS_HPP
 #define VAN_GENUCHTEN_PARAMS_HPP
 
-#include <cassert>
-
 #include <opm/material/common/EnsureFinalized.hpp>
 
 namespace Opm {
