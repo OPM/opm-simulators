@@ -58,6 +58,13 @@ class WaterPvtThermal
     typedef WaterPvtMultiplexer<Scalar, /*enableThermal=*/false> IsothermalPvt;
 
 public:
+    WaterPvtThermal()
+    {
+        enableThermalDensity_ = false;
+        enableThermalViscosity_ = false;
+        enableEnthalpy_ = false;
+    }
+
     ~WaterPvtThermal()
     { delete isothermalPvt_; }
 
@@ -81,6 +88,7 @@ public:
 
         enableThermalDensity_ = deck.hasKeyword("WATDENT");
         enableThermalViscosity_ = deck.hasKeyword("VISCREF");
+        enableEnthalpy_ = deck.hasKeyword("SPECHEAT");
 
         unsigned numRegions = isothermalPvt_->numRegions();
         setNumRegions(numRegions);
@@ -115,6 +123,39 @@ public:
                 viscrefPress_[regionIdx] = viscrefRecord.getItem("REFERENCE_PRESSURE").getSIDouble(0);
             }
         }
+
+        if (deck.hasKeyword("SPECHEAT")) {
+            // the specific enthalpy of liquid water. be aware that ecl only specifies the heat capacity
+            // (via the SPECHEAT keyword) and we need to integrate it ourselfs to get the
+            // enthalpy
+            for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                const auto& specHeatTable = tables.getSpecheatTables()[regionIdx];
+                const auto& temperatureColumn = specHeatTable.getColumn("TEMPERATURE");
+                const auto& cpWaterColumn = specHeatTable.getColumn("CP_WATER");
+
+                std::vector<double> hSamples(temperatureColumn.size());
+
+                Scalar h = temperatureColumn[0]*cpWaterColumn[0];
+                for (size_t i = 0;; ++i) {
+                    hSamples[i] = h;
+
+                    if (i >= temperatureColumn.size() - 1)
+                        break;
+
+                    // integrate to the heat capacity from the current sampling point to the next
+                    // one. this leads to a quadratic polynomial.
+                    Scalar h0 = cpWaterColumn[i];
+                    Scalar h1 = cpWaterColumn[i + 1];
+                    Scalar T0 = temperatureColumn[i];
+                    Scalar T1 = temperatureColumn[i + 1];
+                    Scalar m = (h1 - h0)/(T1 - T0);
+                    Scalar deltaH = 0.5*m*(T1*T1 - T0*T0) + h0*(T1 - T0);
+                    h += deltaH;
+                }
+
+                enthalpyCurves_[regionIdx].setXYContainers(temperatureColumn.vectorCopy(), hSamples);
+            }
+        }
     }
 #endif // HAVE_OPM_PARSER
 
@@ -133,6 +174,7 @@ public:
         watdentRefTemp_.resize(numRegions);
         watdentCT1_.resize(numRegions);
         watdentCT2_.resize(numRegions);
+        enthalpyCurves_.resize(numRegions);
     }
 
     /*!
@@ -155,6 +197,24 @@ public:
 
     size_t numRegions() const
     { return pvtwRefPress_.size(); }
+
+        /*!
+     * \brief Returns the specific enthalpy [J/kg] of water given a set of parameters.
+     */
+    template <class Evaluation>
+    Evaluation enthalpy(unsigned regionIdx,
+                        const Evaluation& temperature,
+                        const Evaluation& pressure OPM_UNUSED) const
+    {
+        if (!enableEnthalpy_)
+            OPM_THROW(std::runtime_error,
+                      "Requested the enthalpy of oil but it is disabled");
+
+        // compute the specific enthalpy for the specified tempature. We use linear
+        // interpolation here despite the fact that the underlying heat capacities are
+        // piecewise linear (which leads to a quadratic function)
+        return enthalpyCurves_[regionIdx].eval(temperature, /*extrapolate=*/true);
+    }
 
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
@@ -194,7 +254,10 @@ public:
         Scalar cT2 = watdentCT2_[regionIdx];
         const Evaluation& Y = temperature - TRef;
 
-        return ((1 - X)*(1 + cT1*Y + cT2*Y*Y))/BwRef;
+        // this is inconsistent with the density calculation of water in the isothermal
+        // case (it misses the quadratic pressure term), but it is the equation given in
+        // the documentation.
+        return 1.0/(((1 - X)*(1 + cT1*Y + cT2*Y*Y))*BwRef);
     }
 
 private:
@@ -216,8 +279,12 @@ private:
 
     std::vector<TabulatedOneDFunction> watvisctCurves_;
 
+    // piecewise linear curve representing the enthalpy of water
+    std::vector<TabulatedOneDFunction> enthalpyCurves_;
+
     bool enableThermalDensity_;
     bool enableThermalViscosity_;
+    bool enableEnthalpy_;
 };
 
 } // namespace Opm

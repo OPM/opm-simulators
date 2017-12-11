@@ -58,6 +58,13 @@ class OilPvtThermal
     typedef OilPvtMultiplexer<Scalar, /*enableThermal=*/false> IsothermalPvt;
 
 public:
+    OilPvtThermal()
+    {
+        enableThermalDensity_ = false;
+        enableThermalViscosity_ = false;
+        enableEnthalpy_ = false;
+    }
+
     ~OilPvtThermal()
     { delete isothermalPvt_; }
 
@@ -79,8 +86,9 @@ public:
         //////
         const auto& tables = eclState.getTableManager();
 
-        enableThermalDensity_ = deck.hasKeyword("THERMEX1");
+        enableThermalDensity_ = deck.hasKeyword("OILDENT");
         enableThermalViscosity_ = deck.hasKeyword("VISCREF");
+        enableEnthalpy_ = deck.hasKeyword("SPECHEAT");
 
         unsigned numRegions = isothermalPvt_->numRegions();
         setNumRegions(numRegions);
@@ -116,17 +124,51 @@ public:
             }
         }
 
-        // quantities required for density. note that we just always use the values
-        // for the first EOS. (since EOS != PVT region.)
-        refTemp_ = 0.0;
-        if (deck.hasKeyword("THERMEX1")) {
-            int oilCompIdx = deck.getKeyword("OCOMPIDX").getRecord(0).getItem("OIL_COMPONENT_INDEX").get< int >(0) - 1;
+        // temperature dependence of oil density
+        if (enableThermalDensity_) {
+            const auto& oildentKeyword = deck.getKeyword("OILDENT");
 
-            // always use the values of the first EOS
-            refTemp_ = deck.getKeyword("TREF").getRecord(0).getItem("TEMPERATURE").getSIDouble(oilCompIdx);
-            refPress_ = deck.getKeyword("PREF").getRecord(0).getItem("PRESSURE").getSIDouble(oilCompIdx);
-            refC_ = deck.getKeyword("CREF").getRecord(0).getItem("COMPRESSIBILITY").getSIDouble(oilCompIdx);
-            thermex1_ = deck.getKeyword("THERMEX1").getRecord(0).getItem("EXPANSION_COEFF").getSIDouble(oilCompIdx);
+            assert(oildentKeyword.size() == numRegions);
+            for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                const auto& oildentRecord = oildentKeyword.getRecord(regionIdx);
+
+                oildentRefTemp_[regionIdx] = oildentRecord.getItem("REFERENCE_TEMPERATURE").getSIDouble(0);
+                oildentCT1_[regionIdx] = oildentRecord.getItem("EXPANSION_COEFF_LINEAR").getSIDouble(0);
+                oildentCT2_[regionIdx] = oildentRecord.getItem("EXPANSION_COEFF_QUADRATIC").getSIDouble(0);
+            }
+        }
+
+        if (deck.hasKeyword("SPECHEAT")) {
+            // the specific enthalpy of liquid oil. be aware that ecl only specifies the
+            // heat capacity (via the SPECHEAT keyword) and we need to integrate it
+            // ourselfs to get the enthalpy
+            for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                const auto& specheatTable = tables.getSpecheatTables()[regionIdx];
+                const auto& temperatureColumn = specheatTable.getColumn("TEMPERATURE");
+                const auto& cpOilColumn = specheatTable.getColumn("CP_OIL");
+
+                std::vector<double> hSamples(temperatureColumn.size());
+
+                Scalar h = temperatureColumn[0]*cpOilColumn[0];
+                for (size_t i = 0;; ++i) {
+                    hSamples[i] = h;
+
+                    if (i >= temperatureColumn.size() - 1)
+                        break;
+
+                    // integrate to the heat capacity from the current sampling point to the next
+                    // one. this leads to a quadratic polynomial.
+                    Scalar h0 = cpOilColumn[i];
+                    Scalar h1 = cpOilColumn[i + 1];
+                    Scalar T0 = temperatureColumn[i];
+                    Scalar T1 = temperatureColumn[i + 1];
+                    Scalar m = (h1 - h0)/(T1 - T0);
+                    Scalar deltaH = 0.5*m*(T1*T1 - T0*T0) + h0*(T1 - T0);
+                    h += deltaH;
+                }
+
+                enthalpyCurves_[regionIdx].setXYContainers(temperatureColumn.vectorCopy(), hSamples);
+            }
         }
     }
 #endif // HAVE_OPM_PARSER
@@ -140,6 +182,7 @@ public:
         viscrefPress_.resize(numRegions);
         viscrefRs_.resize(numRegions);
         viscRef_.resize(numRegions);
+        enthalpyCurves_.resize(numRegions);
     }
 
     /*!
@@ -162,6 +205,25 @@ public:
 
     size_t numRegions() const
     { return viscrefRs_.size(); }
+
+    /*!
+     * \brief Returns the specific enthalpy [J/kg] of oil given a set of parameters.
+     */
+    template <class Evaluation>
+    Evaluation enthalpy(unsigned regionIdx,
+                        const Evaluation& temperature,
+                        const Evaluation& pressure OPM_UNUSED,
+                        const Evaluation& Rs OPM_UNUSED) const
+    {
+        if (!enableEnthalpy_)
+            OPM_THROW(std::runtime_error,
+                      "Requested the enthalpy of oil but it is disabled");
+
+        // compute the specific enthalpy for the specified tempature. We use linear
+        // interpolation here despite the fact that the underlying heat capacities are
+        // piecewise linear (which leads to a quadratic function)
+        return enthalpyCurves_[regionIdx].eval(temperature, /*extrapolate=*/true);
+    }
 
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
@@ -210,16 +272,18 @@ public:
     {
         const auto& b =
             isothermalPvt_->inverseFormationVolumeFactor(regionIdx, temperature, pressure, Rs);
+
         if (!enableThermalDensity())
             return b;
 
-        // we use equation (3.208) from the Eclipse 2011.1 Reference Manual, but we
-        // calculate rho_ref using the isothermal keyword instead of using the value for
-        // the components, so the oil compressibility is already dealt with there. Note
-        // that we only do the part for the oil component here, the part for dissolved
-        // gas is ignored so far.
-        const auto& alpha = 1.0/(1 + thermex1_*(temperature - refTemp_));
-        return alpha*b;
+        // we use the same approach as for the for water here, but with the OPM-specific
+        // OILDENT keyword.
+        Scalar TRef = oildentRefTemp_[regionIdx];
+        Scalar cT1 = oildentCT1_[regionIdx];
+        Scalar cT2 = oildentCT2_[regionIdx];
+        const Evaluation& Y = temperature - TRef;
+
+        return b/(1 + (cT1 + cT2*Y)*Y);
     }
 
     /*!
@@ -232,16 +296,18 @@ public:
     {
         const auto& b =
             isothermalPvt_->saturatedInverseFormationVolumeFactor(regionIdx, temperature, pressure);
+
         if (!enableThermalDensity())
             return b;
 
-        // we use equation (3.208) from the Eclipse 2011.1 Reference Manual, but we
-        // calculate rho_ref using the isothermal keyword instead of using the value for
-        // the components, so the oil compressibility is already dealt with there. Note
-        // that we only do the part for the oil component here, the part for dissolved
-        // gas is ignored so far.
-        const auto& alpha = 1.0/(1 + thermex1_*(temperature - refTemp_));
-        return alpha*b;
+        // we use the same approach as for the for water here, but with the OPM-specific
+        // OILDENT keyword.
+        Scalar TRef = oildentRefTemp_[regionIdx];
+        Scalar cT1 = oildentCT1_[regionIdx];
+        Scalar cT2 = oildentCT2_[regionIdx];
+        const Evaluation& Y = temperature - TRef;
+
+        return b/(1 + (cT1 + cT2*Y)*Y);
     }
 
     /*!
@@ -295,16 +361,17 @@ private:
     std::vector<Scalar> viscrefRs_;
     std::vector<Scalar> viscRef_;
 
-    // The PVT properties needed for temperature dependence of the density. This is
-    // specified as one value per EOS in the manual, but we unconditionally use the
-    // expansion coefficient of the first EOS...
-    Scalar refTemp_;
-    Scalar refPress_;
-    Scalar refC_;
-    Scalar thermex1_;
+    // The PVT properties needed for temperature dependence of the density.
+    std::vector<Scalar> oildentRefTemp_;
+    std::vector<Scalar> oildentCT1_;
+    std::vector<Scalar> oildentCT2_;
+
+    // piecewise linear curve representing the enthalpy of oil
+    std::vector<TabulatedOneDFunction> enthalpyCurves_;
 
     bool enableThermalDensity_;
     bool enableThermalViscosity_;
+    bool enableEnthalpy_;
 };
 
 } // namespace Opm

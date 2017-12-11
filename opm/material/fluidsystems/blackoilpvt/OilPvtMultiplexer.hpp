@@ -127,9 +127,7 @@ public:
         if (!enableOil)
             return;
 
-        if (enableThermal
-            && (deck.hasKeyword("THERMEX1")
-                || deck.hasKeyword("VISCREF")))
+        if (enableThermal && (deck.hasKeyword("THERMAL") || deck.hasKeyword("TEMP")))
             setApproach(ThermalOilPvt);
         else if (deck.hasKeyword("PVCDO"))
             setApproach(ConstantCompressibilityOilPvt);
@@ -151,6 +149,16 @@ public:
      */
     unsigned numRegions() const
     { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.numRegions()); return 1; }
+
+    /*!
+     * \brief Returns the specific enthalpy [J/kg] oil given a set of parameters.
+     */
+    template <class Evaluation>
+    Evaluation enthalpy(unsigned regionIdx,
+                        const Evaluation& temperature,
+                        const Evaluation& pressure,
+                        const Evaluation& Rs) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.enthalpy(regionIdx, temperature, pressure, Rs)); return 0; }
 
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.

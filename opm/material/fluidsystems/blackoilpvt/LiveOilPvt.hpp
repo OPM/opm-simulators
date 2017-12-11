@@ -409,6 +409,19 @@ public:
     { return inverseOilBMuTable_.size(); }
 
     /*!
+     * \brief Returns the specific enthalpy [J/kg] of oil given a set of parameters.
+     */
+    template <class Evaluation>
+    Evaluation enthalpy(unsigned regionIdx OPM_UNUSED,
+                        const Evaluation& temperature OPM_UNUSED,
+                        const Evaluation& pressure OPM_UNUSED,
+                        const Evaluation& Rs OPM_UNUSED) const
+    {
+        OPM_THROW(std::runtime_error,
+                  "Requested the enthalpy of oil but the thermal option is not enabled");
+    }
+
+    /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
     template <class Evaluation>

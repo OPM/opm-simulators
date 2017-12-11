@@ -121,9 +121,7 @@ public:
         if (!enableGas)
             return;
 
-        if (enableThermal
-            && (deck.hasKeyword("TREF")
-                || deck.hasKeyword("GASVISCT")))
+        if (enableThermal && (deck.hasKeyword("THERMAL") || deck.hasKeyword("TEMP")))
             setApproach(ThermalGasPvt);
         else if (deck.hasKeyword("PVTG"))
             setApproach(WetGasPvt);
@@ -164,6 +162,16 @@ public:
      */
     unsigned numRegions() const
     { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.numRegions()); return 1; }
+
+    /*!
+     * \brief Returns the specific enthalpy [J/kg] of gas given a set of parameters.
+     */
+    template <class Evaluation>
+    Evaluation enthalpy(unsigned regionIdx,
+                        const Evaluation& temperature,
+                        const Evaluation& pressure,
+                        const Evaluation& Rv) const
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.enthalpy(regionIdx, temperature, pressure, Rv)); return 0; }
 
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
