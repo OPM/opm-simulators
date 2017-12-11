@@ -38,7 +38,8 @@
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/material/heatconduction/Somerton.hpp>
+#include <opm/material/thermal/SomertonHeatConductionLaw.hpp>
+#include <opm/material/thermal/ConstantSolidHeatCapLaw.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 #include <opm/common/Unused.hpp>
 
@@ -96,8 +97,12 @@ private:
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::Somerton<FluidSystem, Scalar> type;
+    typedef Opm::SomertonHeatConductionLaw<FluidSystem, Scalar> type;
 };
+
+// set the heat law for the solid phase
+SET_TYPE_PROP(WaterAirBaseProblem, SolidEnergyLaw,
+              Opm::ConstantSolidHeatCapLaw<typename GET_PROP_TYPE(TypeTag, Scalar)>);
 
 // Set the fluid system. in this case, we use the one which describes
 // air and water
@@ -206,8 +211,8 @@ class WaterAirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLaw) HeatConductionLaw;
     typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLawParams) HeatConductionLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, SolidEnergyLawParams) SolidEnergyLawParams;
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
@@ -263,6 +268,11 @@ public:
         // parameters for the somerton law of heat conduction
         computeHeatCondParams_(fineHeatCondParams_, finePorosity_);
         computeHeatCondParams_(coarseHeatCondParams_, coarsePorosity_);
+
+        // assume the volumetric heat capacity of granite
+        solidHeatLawParams_.setSolidHeatCapacity(790.0 // specific heat capacity of granite [J / (kg K)]
+                                                      * 2700.0); // density of granite [kg/m^3]
+        solidHeatLawParams_.finalize();
     }
 
     /*!
@@ -348,26 +358,25 @@ public:
     }
 
     /*!
-     * \copydoc FvBaseMultiPhaseProblem::heatCapacitySolid
+     * \brief Return the parameters for the heat storage law of the rock
      *
      * In this case, we assume the rock-matrix to be granite.
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context& context OPM_UNUSED,
-                             unsigned spaceIdx OPM_UNUSED,
-                             unsigned timeIdx OPM_UNUSED) const
-    {
-        return
-            790 // specific heat capacity of granite [J / (kg K)]
-            * 2700; // density of granite [kg/m^3]
-    }
+    const SolidEnergyLawParams&
+    solidHeatLawParams(const Context& context OPM_UNUSED,
+                       unsigned spaceIdx OPM_UNUSED,
+                       unsigned timeIdx OPM_UNUSED) const
+    { return solidHeatLawParams_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::heatConductionParams
      */
     template <class Context>
     const HeatConductionLawParams&
-    heatConductionParams(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
+    heatConductionLawParams(const Context& context,
+                            unsigned spaceIdx,
+                            unsigned timeIdx) const
     {
         const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -570,6 +579,7 @@ private:
 
     HeatConductionLawParams fineHeatCondParams_;
     HeatConductionLawParams coarseHeatCondParams_;
+    SolidEnergyLawParams solidHeatLawParams_;
 
     Scalar maxDepth_;
     Scalar eps_;

@@ -34,7 +34,7 @@
 #include <opm/material/fluidmatrixinteractions/ThreePhaseParkerVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
-#include <opm/material/heatconduction/Somerton.hpp>
+#include <opm/material/thermal/SomertonHeatConductionLaw.hpp>
 #include <opm/common/Valgrind.hpp>
 #include <opm/common/Unused.hpp>
 
@@ -104,7 +104,7 @@ private:
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::Somerton<FluidSystem, Scalar> type;
+    typedef Opm::SomertonHeatConductionLaw<FluidSystem, Scalar> type;
 };
 
 // The default for the end time of the simulation
