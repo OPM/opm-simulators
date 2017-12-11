@@ -195,6 +195,14 @@ public:
             ++ numActivePhases_;
         }
 
+        // set the surface conditions using the STCOND keyword
+        if (deck.hasKeyword("STCOND")) {
+            auto stcondKeyword = deck.getKeyword("STCOND");
+
+            surfaceTemperature = stcondKeyword.getRecord(0).getItem("TEMPERATURE").getSIDouble(0);
+            surfacePressure = stcondKeyword.getRecord(0).getItem("PRESSURE").getSIDouble(0);
+        }
+
         // The reservoir temperature does not really belong into the table manager. TODO:
         // change this in opm-parser
         setReservoirTemperature(eclState.getTableManager().rtemp());
@@ -246,6 +254,8 @@ public:
         enableDissolvedGas_ = true;
         enableVaporizedOil_ = false;
 
+        surfaceTemperature = 273.15 + 15.56; // [K]
+        surfacePressure = 1.01325e5; // [Pa]
         numActivePhases_ = numPhases;
         std::fill(&phaseIsActive_[0], &phaseIsActive_[numPhases], true);
 
@@ -356,10 +366,10 @@ public:
     static const unsigned gasPhaseIdx = 2;
 
     //! The pressure at the surface
-    static const Scalar surfacePressure;
+    static Scalar surfacePressure;
 
     //! The temperature at the surface
-    static const Scalar surfaceTemperature;
+    static Scalar surfaceTemperature;
 
     //! \copydoc BaseFluidSystem::phaseName
     static const char* phaseName(unsigned phaseIdx)
@@ -1246,12 +1256,12 @@ template <class Scalar>
 bool BlackOil<Scalar>::phaseIsActive_[numPhases];
 
 template <class Scalar>
-const Scalar
-BlackOil<Scalar>::surfaceTemperature = 273.15 + 15.56; // [K]
+Scalar
+BlackOil<Scalar>::surfaceTemperature; // [K]
 
 template <class Scalar>
-const Scalar
-BlackOil<Scalar>::surfacePressure = 101325.0; // [Pa]
+Scalar
+BlackOil<Scalar>::surfacePressure; // [Pa]
 
 template <class Scalar>
 Scalar
