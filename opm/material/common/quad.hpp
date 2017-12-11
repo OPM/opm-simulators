@@ -26,14 +26,6 @@
  * \brief This file provides the infrastructure to use quad-precision
  *        floating point values in the numerical models.
  */
-#if HAVE_DUNE_COMMON
-#ifdef DUNE_CLASSNAME_HH
-#error "Due to some trickery required for the linker, this file must be included _before_ Dune's classname.hh!"
-#endif
-
-#include <dune/common/classname.hh>
-#endif // HAVE_DUNE_COMMON
-
 #if !defined OPM_COMMON_QUAD_HPP && HAVE_QUAD
 #define OPM_COMMON_QUAD_HPP
 
@@ -331,14 +323,14 @@ inline bool isinf(quad val)
 
 } // namespace std
 
-#if HAVE_DUNE_COMMON
 // specialize Dune::className for __float128 since it former does not work properly with
 // __float128 (this is mainly the fault of GCC/libstdc++)
+#include <dune/common/classname.hh>
+
 namespace Dune {
 template <>
 inline std::string className<__float128>()
 { return "quad"; }
 } // namespace Dune
-#endif // HAVE_DUNE_COMMON
 
 #endif // OPM_COMMON_QUAD_HPP
