@@ -35,7 +35,7 @@
 #include <opm/material/fluidsystems/H2OAirMesityleneFluidSystem.hpp>
 #include <opm/material/fluidmatrixinteractions/ThreePhaseParkerVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
-#include <opm/material/heatconduction/Somerton.hpp>
+#include <opm/material/thermal/SomertonHeatConductionLaw.hpp>
 #include <opm/material/constraintsolvers/MiscibleMultiPhaseComposition.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/common/Valgrind.hpp>
@@ -104,7 +104,7 @@ private:
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::Somerton<FluidSystem, Scalar> type;
+    typedef Opm::SomertonHeatConductionLaw<FluidSystem, Scalar> type;
 };
 
 // The default for the end time of the simulation
