@@ -1,15 +1,13 @@
 /*
-<<<<<<< HEAD
   File adapted from BlackoilWellModel.hpp
 
   Copyright 2017 TNO - Heat Transfer & Fluid Dynamics, Modelling & Optimization of the Subsurface
   Copyright 2017 Statoil ASA.
-=======
   Copyright 2016 SINTEF ICT, Applied Mathematics.
   Copyright 2016 - 2017 Statoil ASA.
   Copyright 2017 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2016 - 2017 IRIS AS
->>>>>>> 9ccee28... First addition of the class BlackoilAquiferModel.
+
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -62,7 +60,6 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmatrix.hh>
 
-
 #include <opm/material/densead/Math.hpp>
 
 
@@ -73,7 +70,6 @@ namespace Opm {
         class BlackoilAquiferModel {
         
         public:
-
 
             // ---------      Types      ---------
             typedef BlackoilModelParameters ModelParameters;
@@ -155,6 +151,7 @@ namespace Opm {
             void updateConnectionIntensiveQuantities() const;
 
             void calculateExplicitQuantities();
+
 
             // The number of components in the model.
             int numComponents() const;
