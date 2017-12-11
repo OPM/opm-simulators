@@ -22,12 +22,12 @@
 */
 /*!
  * \file
- * \copydoc Opm::Somerton
+ * \copydoc Opm::SomertonHeatConductionLaw
  */
-#ifndef OPM_SOMERTON_HPP
-#define OPM_SOMERTON_HPP
+#ifndef OPM_SOMERTON_HEAT_CONDUCTION_LAW_HPP
+#define OPM_SOMERTON_HEAT_CONDUCTION_LAW_HPP
 
-#include "SomertonParams.hpp"
+#include "SomertonHeatConductionLawParams.hpp"
 
 #include <opm/material/common/Spline.hpp>
 
@@ -59,8 +59,8 @@ namespace Opm
  */
 template <class FluidSystem,
           class ScalarT,
-          class ParamsT = SomertonParams<FluidSystem::numPhases, ScalarT> >
-class Somerton
+          class ParamsT = SomertonHeatConductionLawParams<FluidSystem::numPhases, ScalarT> >
+class SomertonHeatConductionLaw
 {
     enum { numPhases = FluidSystem::numPhases };
 
@@ -86,7 +86,7 @@ public:
      * phase \f$\alpha\f$ and \f$S_\alpha\f$ is the saturation of
      * phase \f$\alpha\f$.
      */
-    template <class FluidState, class Evaluation = Scalar>
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation heatConductivity(const Params& params,
                                        const FluidState& fluidState)
     {

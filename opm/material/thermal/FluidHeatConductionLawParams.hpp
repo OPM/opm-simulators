@@ -24,24 +24,24 @@
  * \file
  * \copydoc Opm::FluidHeatConductionParams
  */
-#ifndef OPM_FLUID_HEAT_CONDUCTION_PARAMS_HPP
-#define OPM_FLUID_HEAT_CONDUCTION_PARAMS_HPP
+#ifndef OPM_FLUID_HEAT_CONDUCTION_LAW_PARAMS_HPP
+#define OPM_FLUID_HEAT_CONDUCTION_LAW_PARAMS_HPP
 
 namespace Opm {
 /*!
  * \brief Parameters for the heat conduction law which just takes the conductivity of a given fluid phase.
  */
 template <class ScalarT>
-class FluidHeatConductionParams
+class FluidHeatConductionLawParams
 {
     // do not copy!
-    FluidHeatConductionParams(const FluidHeatConductionParams&)
+    FluidHeatConductionLawParams(const FluidHeatConductionLawParams&)
     {}
 
 public:
     typedef ScalarT Scalar;
 
-    FluidHeatConductionParams()
+    FluidHeatConductionLawParams()
     { }
 
 };

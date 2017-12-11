@@ -22,46 +22,46 @@
 */
 /*!
  * \file
- * \copydoc Opm::DummyHeatConductionLaw
+ * \copydoc Opm::ConstantSolidHeatCapLawParams
  */
-#ifndef OPM_DUMMY_HEATCONDUCTION_LAW_HPP
-#define OPM_DUMMY_HEATCONDUCTION_LAW_HPP
+#ifndef OPM_CONSTANT_SOLID_HEAT_CAP_LAW_PARAMS_HPP
+#define OPM_CONSTANT_SOLID_HEAT_CAP_LAW_PARAMS_HPP
 
-#include <opm/common/Unused.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/material/common/EnsureFinalized.hpp>
 
-namespace Opm
-{
+namespace Opm {
+
 /*!
- * \ingroup material
- *
- * \brief Implements a dummy law for heat conduction to which isothermal models
- *        can fall back to.
- *
- * If any method of this law is called, it throws std::logic_error.
+ * \brief The default implementation of a parameter object for the
+ *        solid energy storage law which assumes constant heat capacity.
  */
 template <class ScalarT>
-class DummyHeatConductionLaw
+class ConstantSolidHeatCapLawParams : public EnsureFinalized
 {
 public:
-    typedef int Params;
     typedef ScalarT Scalar;
 
+    ConstantSolidHeatCapLawParams(const ConstantSolidHeatCapLawParams&) = default;
+
+    ConstantSolidHeatCapLawParams()
+    { }
+
     /*!
-     * \brief Given a fluid state, return the effective heat conductivity [W/m^2 / (K/m)] of the porous
-     *        medium.
-     *
-     * If this method is called an exception is thrown at run time.
+     * \brief Set the specific heat capacity of the solid matrix [J/(m^3 K)].
      */
-    template <class FluidState, class Evaluation = Scalar>
-    static Scalar heatConductivity(const Params& params OPM_UNUSED,
-                                   const FluidState& fluidState OPM_UNUSED)
-    {
-        OPM_THROW(std::logic_error,
-                   "No heat conduction law specified!");
-    }
+    void setSolidHeatCapacity(Scalar value)
+    { solidHeatCapacity_ = value; }
+
+    /*!
+     * \brief Return the specific heat capacity of the solid matrix  [J/(m^3 K)].
+     */
+    Scalar solidHeatCapacity() const
+    { EnsureFinalized::check(); return solidHeatCapacity_; }
+
+private:
+    Scalar solidHeatCapacity_;
 };
+
 } // namespace Opm
 
 #endif

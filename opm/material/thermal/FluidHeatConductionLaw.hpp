@@ -24,10 +24,10 @@
  * \file
  * \copydoc Opm::FluidHeatConduction
  */
-#ifndef OPM_FLUID_HEAT_CONDUCTION_HPP
-#define OPM_FLUID_HEAT_CONDUCTION_HPP
+#ifndef OPM_FLUID_HEAT_CONDUCTION_LAW_HPP
+#define OPM_FLUID_HEAT_CONDUCTION_LAW_HPP
 
-#include "FluidConductionParams.hpp"
+#include "FluidHeatConductionLawParams.hpp"
 
 #include <opm/material/common/Spline.hpp>
 
@@ -42,8 +42,8 @@ namespace Opm {
 template <class FluidSystem,
           class ScalarT,
           int phaseIdx,
-          class ParamsT = FluidHeatConductionParams<ScalarT> >
-class FluidHeatConduction
+          class ParamsT = FluidHeatConductionLawParams<ScalarT> >
+class FluidHeatConductionLaw
 {
 public:
     typedef ParamsT Params;
