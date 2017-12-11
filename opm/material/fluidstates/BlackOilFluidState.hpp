@@ -28,12 +28,26 @@
 #ifndef OPM_BLACK_OIL_FLUID_STATE_HH
 #define OPM_BLACK_OIL_FLUID_STATE_HH
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+#include <opm/material/common/HasMemberGeneratorMacros.hpp>
+
 #include <opm/common/Valgrind.hpp>
 #include <opm/common/Unused.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/ConditionalStorage.hpp>
 
 namespace Opm {
+OPM_GENERATE_HAS_MEMBER(pvtRegionIndex, ) // Creates 'HasMember_pvtRegionIndex<T>'.
+
+template <class FluidState>
+unsigned getPvtRegionIndex_(typename std::enable_if<HasMember_pvtRegionIndex<FluidState>::value, const FluidState&>::type fluidState)
+{ return fluidState.pvtRegionIndex(); }
+
+template <class FluidState>
+unsigned getPvtRegionIndex_(typename std::enable_if<!HasMember_pvtRegionIndex<FluidState>::value, const FluidState&>::type fluidState OPM_UNUSED)
+{ return 0; }
+
 /*!
  * \brief Implements a "tailor-made" fluid state class for the black-oil model.
  *
@@ -41,7 +55,10 @@ namespace Opm {
  * model. Further quantities are computed "on the fly" and are accessing them is thus
  * relatively slow.
  */
-template <class ScalarT, class FluidSystem>
+template <class ScalarT,
+          class FluidSystem,
+          bool enableTemperature = false,
+          bool enableEnergy = false>
 class BlackOilFluidState
 {
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -73,11 +90,18 @@ public:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             Opm::Valgrind::CheckDefined(saturation_[phaseIdx]);
             Opm::Valgrind::CheckDefined(pressure_[phaseIdx]);
+            Opm::Valgrind::CheckDefined(density_[phaseIdx]);
             Opm::Valgrind::CheckDefined(invB_[phaseIdx]);
+
+            if (enableEnergy)
+                Opm::Valgrind::CheckDefined((*enthalpy_)[phaseIdx]);
         }
 
         Opm::Valgrind::CheckDefined(Rs_);
         Opm::Valgrind::CheckDefined(Rv_);
+
+        if (enableTemperature || enableEnergy)
+            Opm::Valgrind::CheckDefined(*temperature_);
 #endif // NDEBUG
     }
 
@@ -86,9 +110,26 @@ public:
      *        state.
      */
     template <class FluidState>
-    void assign(const FluidState& fs OPM_UNUSED)
+    void assign(const FluidState& fs)
     {
-        assert(false); // not yet implemented
+        if (enableTemperature || enableEnergy)
+            setTemperature(fs.temperature(/*phaseIdx=*/0));
+
+        setPvtRegionIndex(getPvtRegionIndex_<FluidState>(fs));
+        setRs(Opm::BlackOil::getRs_<FluidSystem, Scalar, FluidState>(fs, /*regionIdx=*/0));
+        setRv(Opm::BlackOil::getRv_<FluidSystem, Scalar, FluidState>(fs, /*regionIdx=*/0));
+
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            setSaturation(phaseIdx, fs.saturation(phaseIdx));
+            setPressure(phaseIdx, fs.saturation(phaseIdx));
+            setDensity(phaseIdx, fs.density(phaseIdx));
+
+            if (enableEnergy)
+                setEnthalpy(phaseIdx, fs.enthalpy(phaseIdx));
+
+            OPM_THROW(Opm::NotImplemented,
+                      "Setting the inverse reservoir formation volume factors");
+        }
     }
 
     /*!
@@ -113,10 +154,31 @@ public:
     { saturation_[phaseIdx] = S; }
 
     /*!
-     * \brief Set the inverse reservoir formation volume factor of a fluid phase [-].
+     * \brief Set the temperature [K]
      *
-     * This quantity is very specific to the black-oil model.
+     * If neither the enableTemperature nor the enableEnergy template arguments are set
+     * to true, this method will throw an exception!
      */
+    void setTemperature(const Scalar& value)
+    {
+        assert(enableTemperature || enableEnergy);
+
+        (*temperature_) = value;
+    }
+
+    /*!
+     * \brief Set the specific enthalpy [J/kg] of a given fluid phase.
+     *
+     * If the enableEnergy template argument is not set to true, this method will throw
+     * an exception!
+     */
+    void setEnthalpy(unsigned phaseIdx, const Scalar& value)
+    {
+        assert(enableTemperature || enableEnergy);
+
+        (*enthalpy_)[phaseIdx] = value;
+    }
+
     void setInvB(unsigned phaseIdx, const Scalar& b)
     { invB_[phaseIdx] = b; }
 
@@ -155,7 +217,14 @@ public:
      * \brief Return the temperature [K]
      */
     const Scalar& temperature(unsigned phaseIdx OPM_UNUSED) const
-    { return temperature_; }
+    {
+        if (!enableTemperature && !enableEnergy) {
+            static Scalar tmp(FluidSystem::reservoirTemperature(pvtRegionIdx_));
+            return tmp;
+        }
+
+        return *temperature_;
+    }
 
     /*!
      * \brief Return the inverse formation volume factor of a fluid phase [-].
@@ -197,12 +266,30 @@ public:
     unsigned short pvtRegionIndex() const
     { return pvtRegionIdx_; }
 
+    /*!
      * \brief Return the density [kg/m^3] of a given fluid phase.
-     */
+      */
     Scalar density(unsigned phaseIdx) const
     { return density_[phaseIdx]; }
 
     /*!
+     * \brief Return the specific enthalpy [J/kg] of a given fluid phase.
+     *
+     * If the EnableEnergy property is not set to true, this method will throw an
+     * exception!
+     */
+    const Scalar& enthalpy(unsigned phaseIdx) const
+    { return (*enthalpy_)[phaseIdx]; }
+
+    /*!
+     * \brief Return the specific internal energy [J/kg] of a given fluid phase.
+     *
+     * If the EnableEnergy property is not set to true, this method will throw an
+     * exception!
+     */
+    Scalar internalEnergy(unsigned phaseIdx OPM_UNUSED) const
+    { return (*enthalpy_)[phaseIdx] - pressure(phaseIdx)/density(phaseIdx); }
+
     //////
     // slow methods
     //////
@@ -352,7 +439,8 @@ public:
     }
 
 private:
-    static const Scalar temperature_;
+    Opm::ConditionalStorage<enableTemperature || enableEnergy, Scalar> temperature_;
+    Opm::ConditionalStorage<enableEnergy, std::array<Scalar, numPhases> > enthalpy_;
     std::array<Scalar, numPhases> pressure_;
     std::array<Scalar, numPhases> saturation_;
     std::array<Scalar, numPhases> invB_;
@@ -361,10 +449,6 @@ private:
     Scalar Rv_;
     unsigned short pvtRegionIdx_;
 };
-
-template <class Scalar, class FluidSystem>
-const Scalar BlackOilFluidState<Scalar, FluidSystem>::temperature_ =
-    FluidSystem::surfaceTemperature;
 
 } // namespace Opm
 
