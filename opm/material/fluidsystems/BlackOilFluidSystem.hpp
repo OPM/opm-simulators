@@ -496,7 +496,7 @@ public:
     { return referenceDensity_[regionIdx][phaseIdx]; }
 
     /****************************************
-     * thermodynamic quantities (generic version, only isothermal)
+     * thermodynamic quantities (generic version)
      ****************************************/
     //! \copydoc BaseFluidSystem::density
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
@@ -525,6 +525,12 @@ public:
                              unsigned phaseIdx)
     { return viscosity<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
 
+    //! \copydoc BaseFluidSystem::enthalpy
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
+    static LhsEval enthalpy(const FluidState& fluidState,
+                            const ParameterCache<ParamCacheEval>& paramCache,
+                            unsigned phaseIdx)
+    { return enthalpy<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
 
     /****************************************
      * thermodynamic quantities (black-oil specific version: Note that the PVT region
@@ -948,6 +954,27 @@ public:
             // since water is always assumed to be immiscible in the black-oil model,
             // there is no "saturated water"
             return waterPvt_->viscosity(regionIdx, T, p);
+        }
+
+        OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
+    }
+
+    //! \copydoc BaseFluidSystem::enthalpy
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval enthalpy(const FluidState& fluidState,
+                            unsigned phaseIdx,
+                            unsigned regionIdx)
+    {
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(0 <= regionIdx && regionIdx <= numRegions());
+
+        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        switch (phaseIdx) {
+        case oilPhaseIdx: return oilPvt_->enthalpy(regionIdx, T, p, Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx));
+        case gasPhaseIdx: return gasPvt_->enthalpy(regionIdx, T, p, Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx));
+        case waterPhaseIdx: return waterPvt_->enthalpy(regionIdx, T, p);
+        default: OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
         }
 
         OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
