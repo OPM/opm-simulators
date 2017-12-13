@@ -251,18 +251,7 @@ public:
     template <class Evaluation>
     Evaluation eval(const Evaluation& x, bool extrapolate = false) const
     {
-        if (!extrapolate && !applies(x))
-            OPM_THROW(Opm::NumericalProblem,
-                      "Tried to evaluate a tabulated function outside of its range");
-
-        size_t segIdx;
-
-        if (extrapolate && x < xValues_.front())
-            segIdx = 0;
-        else if (extrapolate && x > xValues_.back())
-            segIdx = numSamples() - 2;
-        else
-            segIdx = findSegmentIndex_(Opm::scalarValue(x));
+        size_t segIdx = findSegmentIndex_(x, extrapolate);
 
         Scalar x0 = xValues_[segIdx];
         Scalar x1 = xValues_[segIdx + 1];
@@ -287,13 +276,7 @@ public:
     template <class Evaluation>
     Evaluation evalDerivative(const Evaluation& x, bool extrapolate = false) const
     {
-        if (!extrapolate && !applies(x)) {
-            OPM_THROW(Opm::NumericalProblem,
-                      "Tried to evaluate a derivative of a tabulated"
-                      " function outside of its range");
-        }
-
-        unsigned segIdx = findSegmentIndex_(Opm::scalarValue(x));
+        unsigned segIdx = findSegmentIndex_(x, extrapolate);
         return evalDerivative_(x, segIdx);
     }
 
@@ -313,15 +296,7 @@ public:
      */
     template <class Evaluation>
     Evaluation evalSecondDerivative(const Evaluation& x, bool extrapolate = false) const
-    {
-        if (!extrapolate && !applies(x)) {
-            OPM_THROW(Opm::NumericalProblem,
-                      "Tried to evaluate a second derivative of a tabulated "
-                      " function outside of its range");
-        }
-
-        return 0.0;
-    }
+    { return 0.0; }
 
     /*!
      * \brief Evaluate the function's third derivative at a given position.
@@ -339,15 +314,7 @@ public:
      */
     template <class Evaluation>
     Evaluation evalThirdDerivative(const Evaluation& x, bool extrapolate = false) const
-    {
-        if (!extrapolate && !applies(x)) {
-            OPM_THROW(Opm::NumericalProblem,
-                      "Tried to evaluate a third derivative of a tabulated "
-                      " function outside of its range");
-        }
-
-        return 0.0;
-    }
+    { return 0.0; }
 
     /*!
      * \brief Returns 1 if the function is monotonically increasing, -1
@@ -374,7 +341,7 @@ public:
             x0 = xMin();
         };
 
-        size_t i = findSegmentIndex_(x0);
+        size_t i = findSegmentIndex_(x0, extrapolate);
         if (xValues_[i + 1] >= x1) {
             // interval is fully contained within a single function
             // segment
@@ -389,7 +356,7 @@ public:
 
         // make sure that the segments which are completly in the
         // interval [x0, x1] all exhibit the same monotonicity.
-        size_t iEnd = findSegmentIndex_(x1);
+        size_t iEnd = findSegmentIndex_(x1, extrapolate);
         for (; i < iEnd - 1; ++i) {
             updateMonotonicity_(i, r);
             if (!r)
@@ -473,8 +440,13 @@ public:
     }
 
 private:
-    size_t findSegmentIndex_(Scalar x) const
+    template <class Evaluation>
+    size_t findSegmentIndex_(const Evaluation& x, bool extrapolate = false) const
     {
+        if (!extrapolate && !applies(x))
+            OPM_THROW(Opm::NumericalProblem,
+                      "Tried to evaluate a tabulated function outside of its range");
+
         // we need at least two sampling points!
         assert(xValues_.size() >= 2);
 
@@ -484,19 +456,19 @@ private:
             return xValues_.size() - 2;
         else {
             // bisection
-            size_t segmentIdx = 1;
+            size_t lowerIdx = 1;
             size_t upperIdx = xValues_.size() - 2;
-            while (segmentIdx + 1 < upperIdx) {
-                size_t pivotIdx = (segmentIdx + upperIdx) / 2;
+            while (lowerIdx + 1 < upperIdx) {
+                size_t pivotIdx = (lowerIdx + upperIdx) / 2;
                 if (x < xValues_[pivotIdx])
                     upperIdx = pivotIdx;
                 else
-                    segmentIdx = pivotIdx;
+                    lowerIdx = pivotIdx;
             }
 
-            assert(xValues_[segmentIdx] <= x);
-            assert(x <= xValues_[segmentIdx + 1]);
-            return segmentIdx;
+            assert(xValues_[lowerIdx] <= x);
+            assert(x <= xValues_[lowerIdx + 1]);
+            return lowerIdx;
         }
     }
 

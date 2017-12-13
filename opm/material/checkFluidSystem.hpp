@@ -179,13 +179,6 @@ public:
         return  this->base().saturation(phaseIdx);
     }
 
-    auto phaseIsPresent(unsigned phaseIdx) const
-        -> decltype(this->base().phaseIsPresent(phaseIdx))
-    {
-        assert(false);
-        return  this->base().phaseIsPresent(phaseIdx);
-    }
-
     auto fugacity(unsigned phaseIdx, unsigned compIdx) const
         -> decltype(this->base().fugacity(phaseIdx, compIdx))
     {
@@ -261,7 +254,6 @@ void checkFluidState(const BaseFluidState& fs)
         val = fs.molarVolume(/*phaseIdx=*/0);
         val = fs.density(/*phaseIdx=*/0);
         val = fs.saturation(/*phaseIdx=*/0);
-        bool b OPM_UNUSED = fs.phaseIsPresent(/*phaseIdx=*/0);
         val = fs.fugacity(/*phaseIdx=*/0, /*compIdx=*/0);
         val = fs.fugacityCoefficient(/*phaseIdx=*/0, /*compIdx=*/0);
         val = fs.enthalpy(/*phaseIdx=*/0);

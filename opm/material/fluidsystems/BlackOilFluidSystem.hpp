@@ -529,43 +529,49 @@ public:
         assert(0 <= phaseIdx && phaseIdx <= numPhases);
         assert(0 <= regionIdx && regionIdx <= numRegions());
 
+        const LhsEval& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+
         switch (phaseIdx) {
         case oilPhaseIdx: {
-            if (!enableDissolvedGas()) {
-                // immiscible oil
-                const auto& bo = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
-                return referenceDensity(phaseIdx, regionIdx)*bo;
+            if (enableDissolvedGas()) {
+                // miscible oil
+                const LhsEval& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
+                const LhsEval& bo = oilPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rs);
+
+                return
+                    bo*referenceDensity(oilPhaseIdx, regionIdx)
+                    + Rs*bo*referenceDensity(gasPhaseIdx, regionIdx);
             }
 
-            // miscible oil
-            const auto& bo = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
-            const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
+            // immiscible oil
+            const LhsEval Rs(0.0);
+            const auto& bo = oilPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rs);
 
-            return
-                bo*referenceDensity(oilPhaseIdx, regionIdx)
-                + Rs*bo*referenceDensity(gasPhaseIdx, regionIdx);
+            return referenceDensity(phaseIdx, regionIdx)*bo;
         }
 
         case gasPhaseIdx: {
-            if (!enableVaporizedOil()) {
-                // immiscible gas
-                const auto& bg = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
-                return bg*referenceDensity(phaseIdx, regionIdx);
+            if (enableVaporizedOil()) {
+                // miscible gas
+                const LhsEval& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
+                const LhsEval& bg = gasPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rv);
+
+                return
+                    bg*referenceDensity(gasPhaseIdx, regionIdx)
+                    + Rv*bg*referenceDensity(oilPhaseIdx, regionIdx);
             }
 
-            // miscible gas
-            const auto& bg = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
-            const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
-
-            return
-                bg*referenceDensity(gasPhaseIdx, regionIdx)
-                + Rv*bg*referenceDensity(oilPhaseIdx, regionIdx);
+            // immiscible gas
+            const LhsEval Rv(0.0);
+            const auto& bg = gasPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rv);
+            return bg*referenceDensity(phaseIdx, regionIdx);
         }
 
         case waterPhaseIdx:
             return
                 referenceDensity(waterPhaseIdx, regionIdx)
-                *inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, waterPhaseIdx, regionIdx);
+                * waterPvt_->inverseFormationVolumeFactor(regionIdx, T, p);
         }
 
         OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
@@ -586,43 +592,50 @@ public:
         assert(0 <= phaseIdx && phaseIdx <= numPhases);
         assert(0 <= regionIdx && regionIdx <= numRegions());
 
+        const auto& p = fluidState.pressure(phaseIdx);
+        const auto& T = fluidState.temperature(phaseIdx);
+
         switch (phaseIdx) {
         case oilPhaseIdx: {
-            if (!enableDissolvedGas()) {
-                // immiscible oil
-                const auto& bo = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
-                return referenceDensity(phaseIdx, regionIdx)*bo;
+            if (enableDissolvedGas()) {
+                // miscible oil
+                const LhsEval& Rs = saturatedDissolutionFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
+                const LhsEval& bo = oilPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rs);
+
+                return
+                    bo*referenceDensity(oilPhaseIdx, regionIdx)
+                    + Rs*bo*referenceDensity(gasPhaseIdx, regionIdx);
             }
 
-            // miscible oil
-            const auto& bo = saturatedInverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
-            const auto& Rs = saturatedDissolutionFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
-
-            return
-                bo*referenceDensity(oilPhaseIdx, regionIdx)
-                + Rs*bo*referenceDensity(gasPhaseIdx, regionIdx);
+            // immiscible oil
+            const LhsEval Rs(0.0);
+            const LhsEval& bo = oilPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rs);
+            return referenceDensity(phaseIdx, regionIdx)*bo;
         }
 
         case gasPhaseIdx: {
-            if (!enableVaporizedOil()) {
-                // immiscible gas
-                const auto& bg = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
-                return referenceDensity(phaseIdx, regionIdx)*bg;
+            if (enableVaporizedOil()) {
+                // miscible gas
+                const LhsEval& Rv = saturatedDissolutionFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
+                const LhsEval& bg = gasPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rv);
+
+                return
+                    bg*referenceDensity(gasPhaseIdx, regionIdx)
+                    + Rv*bg*referenceDensity(oilPhaseIdx, regionIdx);
             }
 
-            // miscible gas
-            const auto& bg = saturatedInverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
-            const auto& Rv = saturatedDissolutionFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
+            // immiscible gas
+            const LhsEval Rv(0.0);
+            const LhsEval& bg = gasPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rv);
 
-            return
-                bg*referenceDensity(gasPhaseIdx, regionIdx)
-                + Rv*bg*referenceDensity(oilPhaseIdx, regionIdx);
+            return referenceDensity(phaseIdx, regionIdx)*bg;
+
         }
 
         case waterPhaseIdx:
             return
                 referenceDensity(waterPhaseIdx, regionIdx)
-                *saturatedInverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, waterPhaseIdx, regionIdx);
+                *inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, waterPhaseIdx, regionIdx);
         }
 
         OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
@@ -650,12 +663,14 @@ public:
         switch (phaseIdx) {
         case oilPhaseIdx: {
             if (enableDissolvedGas()) {
-                if (fluidState.phaseIsPresent(gasPhaseIdx)) {
+                const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
+                if (fluidState.saturation(gasPhaseIdx) > 0.0
+                    && Rs >= (1.0 - 1e-10)*oilPvt_->saturatedGasDissolutionFactor(regionIdx, Opm::scalarValue(T), Opm::scalarValue(p)))
+                {
                     if (fluidState.saturation(gasPhaseIdx) < 1e-4) {
                         // here comes the relatively expensive case: first calculate and then
                         // interpolate between the saturated and undersaturated quantities to
                         // avoid a discontinuity
-                        const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                         const auto& alpha = Opm::decay<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
                         const auto& bSat = oilPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
                         const auto& bUndersat = oilPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rs);
@@ -665,7 +680,6 @@ public:
                     return oilPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
                 }
 
-                const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                 return oilPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rs);
             }
 
@@ -674,12 +688,14 @@ public:
         }
         case gasPhaseIdx: {
             if (enableVaporizedOil()) {
-                if (fluidState.phaseIsPresent(oilPhaseIdx)) {
+                const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
+                if (fluidState.saturation(oilPhaseIdx) > 0.0
+                    && Rv >= (1.0 - 1e-10)*gasPvt_->saturatedOilVaporizationFactor(regionIdx, Opm::scalarValue(T), Opm::scalarValue(p)))
+                {
                     if (fluidState.saturation(oilPhaseIdx) < 1e-4) {
                         // here comes the relatively expensive case: first calculate and then
                         // interpolate between the saturated and undersaturated quantities to
                         // avoid a discontinuity
-                        const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                         const auto& alpha = Opm::decay<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
                         const auto& bSat = gasPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
                         const auto& bUndersat = gasPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rv);
@@ -689,7 +705,6 @@ public:
                     return gasPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
                 }
 
-                const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                 return gasPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rv);
             }
 
@@ -863,18 +878,20 @@ public:
         assert(0 <= phaseIdx && phaseIdx <= numPhases);
         assert(0 <= regionIdx && regionIdx <= numRegions());
 
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
 
         switch (phaseIdx) {
         case oilPhaseIdx: {
             if (enableDissolvedGas()) {
-                if (fluidState.phaseIsPresent(gasPhaseIdx)) {
+                const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
+                if (fluidState.saturation(gasPhaseIdx) > 0.0
+                    && Rs >= (1.0 - 1e-10)*oilPvt_->saturatedGasDissolutionFactor(regionIdx, Opm::scalarValue(T), Opm::scalarValue(p)))
+                {
                     if (fluidState.saturation(gasPhaseIdx) < 1e-4) {
                         // here comes the relatively expensive case: first calculate and then
                         // interpolate between the saturated and undersaturated quantities to
                         // avoid a discontinuity
-                        const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                         const auto& alpha = Opm::decay<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
                         const auto& muSat = oilPvt_->saturatedViscosity(regionIdx, T, p);
                         const auto& muUndersat = oilPvt_->viscosity(regionIdx, T, p, Rs);
@@ -884,7 +901,6 @@ public:
                     return oilPvt_->saturatedViscosity(regionIdx, T, p);
                 }
 
-                const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                 return oilPvt_->viscosity(regionIdx, T, p, Rs);
             }
 
@@ -894,12 +910,14 @@ public:
 
         case gasPhaseIdx: {
             if (enableVaporizedOil()) {
-                if (fluidState.phaseIsPresent(oilPhaseIdx)) {
+                const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
+                if (fluidState.saturation(oilPhaseIdx) > 0.0
+                    && Rv >= (1.0 - 1e-10)*gasPvt_->saturatedOilVaporizationFactor(regionIdx, Opm::scalarValue(T), Opm::scalarValue(p)))
+                {
                     if (fluidState.saturation(oilPhaseIdx) < 1e-4) {
                         // here comes the relatively expensive case: first calculate and then
                         // interpolate between the saturated and undersaturated quantities to
                         // avoid a discontinuity
-                        const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                         const auto& alpha = Opm::decay<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
                         const auto& muSat = gasPvt_->saturatedViscosity(regionIdx, T, p);
                         const auto& muUndersat = gasPvt_->viscosity(regionIdx, T, p, Rv);
@@ -909,7 +927,6 @@ public:
                     return gasPvt_->saturatedViscosity(regionIdx, T, p);
                 }
 
-                const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                 return gasPvt_->viscosity(regionIdx, T, p, Rv);
             }
 
