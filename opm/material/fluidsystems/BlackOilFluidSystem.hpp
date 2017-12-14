@@ -195,6 +195,14 @@ public:
             ++ numActivePhases_;
         }
 
+        // set the surface conditions using the STCOND keyword
+        if (deck.hasKeyword("STCOND")) {
+            auto stcondKeyword = deck.getKeyword("STCOND");
+
+            surfaceTemperature = stcondKeyword.getRecord(0).getItem("TEMPERATURE").getSIDouble(0);
+            surfacePressure = stcondKeyword.getRecord(0).getItem("PRESSURE").getSIDouble(0);
+        }
+
         // The reservoir temperature does not really belong into the table manager. TODO:
         // change this in opm-parser
         setReservoirTemperature(eclState.getTableManager().rtemp());
@@ -246,6 +254,8 @@ public:
         enableDissolvedGas_ = true;
         enableVaporizedOil_ = false;
 
+        surfaceTemperature = 273.15 + 15.56; // [K]
+        surfacePressure = 1.01325e5; // [Pa]
         numActivePhases_ = numPhases;
         std::fill(&phaseIsActive_[0], &phaseIsActive_[numPhases], true);
 
@@ -356,10 +366,10 @@ public:
     static const unsigned gasPhaseIdx = 2;
 
     //! The pressure at the surface
-    static const Scalar surfacePressure;
+    static Scalar surfacePressure;
 
     //! The temperature at the surface
-    static const Scalar surfaceTemperature;
+    static Scalar surfaceTemperature;
 
     //! \copydoc BaseFluidSystem::phaseName
     static const char* phaseName(unsigned phaseIdx)
@@ -486,7 +496,7 @@ public:
     { return referenceDensity_[regionIdx][phaseIdx]; }
 
     /****************************************
-     * thermodynamic quantities (generic version, only isothermal)
+     * thermodynamic quantities (generic version)
      ****************************************/
     //! \copydoc BaseFluidSystem::density
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
@@ -515,6 +525,12 @@ public:
                              unsigned phaseIdx)
     { return viscosity<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
 
+    //! \copydoc BaseFluidSystem::enthalpy
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
+    static LhsEval enthalpy(const FluidState& fluidState,
+                            const ParameterCache<ParamCacheEval>& paramCache,
+                            unsigned phaseIdx)
+    { return enthalpy<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
 
     /****************************************
      * thermodynamic quantities (black-oil specific version: Note that the PVT region
@@ -943,6 +959,27 @@ public:
         OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
     }
 
+    //! \copydoc BaseFluidSystem::enthalpy
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval enthalpy(const FluidState& fluidState,
+                            unsigned phaseIdx,
+                            unsigned regionIdx)
+    {
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(0 <= regionIdx && regionIdx <= numRegions());
+
+        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        switch (phaseIdx) {
+        case oilPhaseIdx: return oilPvt_->enthalpy(regionIdx, T, p, Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx));
+        case gasPhaseIdx: return gasPvt_->enthalpy(regionIdx, T, p, Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx));
+        case waterPhaseIdx: return waterPvt_->enthalpy(regionIdx, T, p);
+        default: OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
+        }
+
+        OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
+    }
+
     /*!
      * \brief Returns the dissolution factor \f$R_\alpha\f$ of a saturated fluid phase
      *
@@ -1246,12 +1283,12 @@ template <class Scalar>
 bool BlackOil<Scalar>::phaseIsActive_[numPhases];
 
 template <class Scalar>
-const Scalar
-BlackOil<Scalar>::surfaceTemperature = 273.15 + 15.56; // [K]
+Scalar
+BlackOil<Scalar>::surfaceTemperature; // [K]
 
 template <class Scalar>
-const Scalar
-BlackOil<Scalar>::surfacePressure = 101325.0; // [Pa]
+Scalar
+BlackOil<Scalar>::surfacePressure; // [Pa]
 
 template <class Scalar>
 Scalar

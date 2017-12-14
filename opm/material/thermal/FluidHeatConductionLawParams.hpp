@@ -22,46 +22,30 @@
 */
 /*!
  * \file
- * \copydoc Opm::DummyHeatConductionLaw
+ * \copydoc Opm::FluidHeatConductionParams
  */
-#ifndef OPM_DUMMY_HEATCONDUCTION_LAW_HPP
-#define OPM_DUMMY_HEATCONDUCTION_LAW_HPP
+#ifndef OPM_FLUID_HEAT_CONDUCTION_LAW_PARAMS_HPP
+#define OPM_FLUID_HEAT_CONDUCTION_LAW_PARAMS_HPP
 
-#include <opm/common/Unused.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
-
-namespace Opm
-{
+namespace Opm {
 /*!
- * \ingroup material
- *
- * \brief Implements a dummy law for heat conduction to which isothermal models
- *        can fall back to.
- *
- * If any method of this law is called, it throws std::logic_error.
+ * \brief Parameters for the heat conduction law which just takes the conductivity of a given fluid phase.
  */
 template <class ScalarT>
-class DummyHeatConductionLaw
+class FluidHeatConductionLawParams
 {
+    // do not copy!
+    FluidHeatConductionLawParams(const FluidHeatConductionLawParams&)
+    {}
+
 public:
-    typedef int Params;
     typedef ScalarT Scalar;
 
-    /*!
-     * \brief Given a fluid state, return the effective heat conductivity [W/m^2 / (K/m)] of the porous
-     *        medium.
-     *
-     * If this method is called an exception is thrown at run time.
-     */
-    template <class FluidState, class Evaluation = Scalar>
-    static Scalar heatConductivity(const Params& params OPM_UNUSED,
-                                   const FluidState& fluidState OPM_UNUSED)
-    {
-        OPM_THROW(std::logic_error,
-                   "No heat conduction law specified!");
-    }
+    FluidHeatConductionLawParams()
+    { }
+
 };
+
 } // namespace Opm
 
 #endif

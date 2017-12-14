@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::SomertonParams
+ * \copydoc Opm::SomertonHeatConductionLawParams
  */
-#ifndef OPM_SOMERTON_PARAMS_HPP
-#define OPM_SOMERTON_PARAMS_HPP
+#ifndef OPM_SOMERTON_HEAT_CONDUCTION_LAW_PARAMS_HPP
+#define OPM_SOMERTON_HEAT_CONDUCTION_LAW_PARAMS_HPP
 
 #include <cassert>
 
@@ -33,19 +33,19 @@ namespace Opm {
 
 /*!
  * \brief The default implementation of a parameter object for the
- *        Somerton heatconduction law.
+ *        Somerton heat conduction law.
  */
 template <unsigned numPhases, class ScalarT>
-class SomertonParams
+class SomertonHeatConductionLawParams
 {
     // do not copy!
-    SomertonParams(const SomertonParams&)
+    SomertonHeatConductionLawParams(const SomertonHeatConductionLawParams&)
     {}
 
 public:
     typedef ScalarT Scalar;
 
-    SomertonParams()
+    SomertonHeatConductionLawParams()
     { }
 
     /*!

@@ -22,46 +22,46 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidHeatConduction
+ * \copydoc Opm::EclHeatcrLaw
  */
-#ifndef OPM_FLUID_HEAT_CONDUCTION_HPP
-#define OPM_FLUID_HEAT_CONDUCTION_HPP
+#ifndef OPM_ECL_HEATCR_LAW_HPP
+#define OPM_ECL_HEATCR_LAW_HPP
 
-#include "FluidConductionParams.hpp"
+#include "EclHeatcrLawParams.hpp"
 
-#include <opm/material/common/Spline.hpp>
+#include <opm/material/densead/Math.hpp>
 
-#include <algorithm>
-
-namespace Opm {
+namespace Opm
+{
 /*!
  * \ingroup material
  *
- * \brief Implements a heat conduction law which just takes the conductivity of a given fluid phase.
+ * \brief Implements the volumetric interior energy relations of rock used by ECL.
+ *
+ * This class uses the approach defined via keywords HEATCR, HEATCRT and STCOND.
  */
-template <class FluidSystem,
-          class ScalarT,
-          int phaseIdx,
-          class ParamsT = FluidHeatConductionParams<ScalarT> >
-class FluidHeatConduction
+template <class ScalarT,
+          class FluidSystem,
+          class ParamsT = EclHeatcrLawParams<ScalarT> >
+class EclHeatcrLaw
 {
 public:
     typedef ParamsT Params;
     typedef typename Params::Scalar Scalar;
 
     /*!
-     * \brief Given a fluid state, return the effective heat conductivity [W/m^2 / (K/m)] of the porous
-     *        medium.
+     * \brief Given a fluid state, compute the volumetric internal energy of the rock [W/m^3].
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation heatConductivity(const Params& params OPM_UNUSED,
-                                       const FluidState& fluidState)
+    static Evaluation solidInternalEnergy(const Params& params, const FluidState& fluidState)
     {
-        typename FluidSystem::template ParameterCache<Evaluation> paramCache;
-        paramCache.updatePhase(fluidState, phaseIdx);
-        return FluidSystem::template thermalConductivity<FluidState, Evaluation>(fluidState,
-                                                                                 paramCache,
-                                                                                 phaseIdx);
+        const Evaluation& T = fluidState.temperature(/*phaseIdx=*/0);
+        const Evaluation& deltaT = T - params.referenceTemperature();
+
+        Scalar C0 = params.referenceRockHeatCapacity();
+        Scalar C1 = params.dRockHeatCapacity_dT();
+
+        return deltaT*(C0 + deltaT*C1 / 2.0);
     }
 };
 } // namespace Opm

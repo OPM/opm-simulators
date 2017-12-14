@@ -22,30 +22,42 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidHeatConductionParams
+ * \copydoc Opm::EclSpecrockLaw
  */
-#ifndef OPM_FLUID_HEAT_CONDUCTION_PARAMS_HPP
-#define OPM_FLUID_HEAT_CONDUCTION_PARAMS_HPP
+#ifndef OPM_ECL_SPECROCK_LAW_HPP
+#define OPM_ECL_SPECROCK_LAW_HPP
 
-namespace Opm {
-/*!
- * \brief Parameters for the heat conduction law which just takes the conductivity of a given fluid phase.
- */
-template <class ScalarT>
-class FluidHeatConductionParams
+#include "EclSpecrockLawParams.hpp"
+
+#include <opm/material/densead/Math.hpp>
+
+namespace Opm
 {
-    // do not copy!
-    FluidHeatConductionParams(const FluidHeatConductionParams&)
-    {}
-
+/*!
+ * \ingroup material
+ *
+ * \brief Implements the volumetric interior energy relations of rock used by ECL.
+ *
+ * This class uses the approach defined via SPECROCK keyword.
+ */
+template <class ScalarT,
+          class ParamsT = EclSpecrockLawParams<ScalarT> >
+class EclSpecrockLaw
+{
 public:
-    typedef ScalarT Scalar;
+    typedef ParamsT Params;
+    typedef typename Params::Scalar Scalar;
 
-    FluidHeatConductionParams()
-    { }
-
+    /*!
+     * \brief Given a fluid state, compute the volumetric internal energy of the rock [W/m^3].
+     */
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation solidInternalEnergy(const Params& params, const FluidState& fluidState)
+    {
+        const auto& T = fluidState.temperature(/*phaseIdx=*/0);
+        return params.internalEnergyFunction().eval(T, /*extrapolate=*/true);
+    }
 };
-
 } // namespace Opm
 
 #endif

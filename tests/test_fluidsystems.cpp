@@ -43,6 +43,8 @@
 #include <opm/material/fluidsystems/H2OAirMesityleneFluidSystem.hpp>
 #include <opm/material/fluidsystems/H2OAirXyleneFluidSystem.hpp>
 
+#include <opm/material/thermal/FluidHeatConductionLaw.hpp>
+
 // include all fluid states
 #include <opm/material/fluidstates/PressureOverlayFluidState.hpp>
 #include <opm/material/fluidstates/SaturationOverlayFluidState.hpp>

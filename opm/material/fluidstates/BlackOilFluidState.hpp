@@ -28,19 +28,37 @@
 #ifndef OPM_BLACK_OIL_FLUID_STATE_HH
 #define OPM_BLACK_OIL_FLUID_STATE_HH
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+#include <opm/material/common/HasMemberGeneratorMacros.hpp>
+
 #include <opm/common/Valgrind.hpp>
 #include <opm/common/Unused.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/ConditionalStorage.hpp>
 
 namespace Opm {
+OPM_GENERATE_HAS_MEMBER(pvtRegionIndex, ) // Creates 'HasMember_pvtRegionIndex<T>'.
+
+template <class FluidState>
+unsigned getPvtRegionIndex_(typename std::enable_if<HasMember_pvtRegionIndex<FluidState>::value, const FluidState&>::type fluidState)
+{ return fluidState.pvtRegionIndex(); }
+
+template <class FluidState>
+unsigned getPvtRegionIndex_(typename std::enable_if<!HasMember_pvtRegionIndex<FluidState>::value, const FluidState&>::type fluidState OPM_UNUSED)
+{ return 0; }
+
 /*!
- * \brief Implements a "taylor-made" fluid state class for the black-oil model.
+ * \brief Implements a "tailor-made" fluid state class for the black-oil model.
  *
- * I.e., it only uses quantities which are available in the ECL blackoil model. Further
- * quantities are computed "on the fly" and are accessing them is thus relatively slow.
+ * I.e., it uses exactly the same quantities which are used by the ECL blackoil
+ * model. Further quantities are computed "on the fly" and are accessing them is thus
+ * relatively slow.
  */
-template <class ScalarT, class FluidSystem>
+template <class ScalarT,
+          class FluidSystem,
+          bool enableTemperature = false,
+          bool enableEnergy = false>
 class BlackOilFluidState
 {
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -72,11 +90,18 @@ public:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             Opm::Valgrind::CheckDefined(saturation_[phaseIdx]);
             Opm::Valgrind::CheckDefined(pressure_[phaseIdx]);
+            Opm::Valgrind::CheckDefined(density_[phaseIdx]);
             Opm::Valgrind::CheckDefined(invB_[phaseIdx]);
+
+            if (enableEnergy)
+                Opm::Valgrind::CheckDefined((*enthalpy_)[phaseIdx]);
         }
 
         Opm::Valgrind::CheckDefined(Rs_);
         Opm::Valgrind::CheckDefined(Rv_);
+
+        if (enableTemperature || enableEnergy)
+            Opm::Valgrind::CheckDefined(*temperature_);
 #endif // NDEBUG
     }
 
@@ -85,19 +110,74 @@ public:
      *        state.
      */
     template <class FluidState>
-    void assign(const FluidState& fs OPM_UNUSED)
+    void assign(const FluidState& fs)
     {
-        assert(false); // not yet implemented
+        if (enableTemperature || enableEnergy)
+            setTemperature(fs.temperature(/*phaseIdx=*/0));
+
+        setPvtRegionIndex(getPvtRegionIndex_<FluidState>(fs));
+        setRs(Opm::BlackOil::getRs_<FluidSystem, Scalar, FluidState>(fs, /*regionIdx=*/0));
+        setRv(Opm::BlackOil::getRv_<FluidSystem, Scalar, FluidState>(fs, /*regionIdx=*/0));
+
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            setSaturation(phaseIdx, fs.saturation(phaseIdx));
+            setPressure(phaseIdx, fs.saturation(phaseIdx));
+            setDensity(phaseIdx, fs.density(phaseIdx));
+
+            if (enableEnergy)
+                setEnthalpy(phaseIdx, fs.enthalpy(phaseIdx));
+
+            OPM_THROW(Opm::NotImplemented,
+                      "Setting the inverse reservoir formation volume factors");
+        }
     }
 
+    /*!
+     * \brief Set the index of the fluid region
+     *
+     * This determines which tables are used to compute the quantities that are computed
+     * on the fly.
+     */
     void setPvtRegionIndex(unsigned newPvtRegionIdx)
     { pvtRegionIdx_ = static_cast<unsigned short>(newPvtRegionIdx); }
 
+    /*!
+     * \brief Set the pressure of a fluid phase [-].
+     */
     void setPressure(unsigned phaseIdx, const Scalar& p)
     { pressure_[phaseIdx] = p; }
 
+    /*!
+     * \brief Set the saturation of a fluid phase [-].
+     */
     void setSaturation(unsigned phaseIdx, const Scalar& S)
     { saturation_[phaseIdx] = S; }
+
+    /*!
+     * \brief Set the temperature [K]
+     *
+     * If neither the enableTemperature nor the enableEnergy template arguments are set
+     * to true, this method will throw an exception!
+     */
+    void setTemperature(const Scalar& value)
+    {
+        assert(enableTemperature || enableEnergy);
+
+        (*temperature_) = value;
+    }
+
+    /*!
+     * \brief Set the specific enthalpy [J/kg] of a given fluid phase.
+     *
+     * If the enableEnergy template argument is not set to true, this method will throw
+     * an exception!
+     */
+    void setEnthalpy(unsigned phaseIdx, const Scalar& value)
+    {
+        assert(enableTemperature || enableEnergy);
+
+        (*enthalpy_)[phaseIdx] = value;
+    }
 
     void setInvB(unsigned phaseIdx, const Scalar& b)
     { invB_[phaseIdx] = b; }
@@ -105,39 +185,118 @@ public:
     void setDensity(unsigned phaseIdx, const Scalar& rho)
     { density_[phaseIdx] = rho; }
 
+    /*!
+     * \brief Set the gas dissolution factor [m^3/m^3] of the oil phase.
+     *
+     * This quantity is very specific to the black-oil model.
+     */
     void setRs(const Scalar& newRs)
     { Rs_ = newRs; }
 
+    /*!
+     * \brief Set the oil vaporization factor [m^3/m^3] of the gas phase.
+     *
+     * This quantity is very specific to the black-oil model.
+     */
     void setRv(const Scalar& newRv)
     { Rv_ = newRv; }
 
+    /*!
+     * \brief Return the pressure of a fluid phase [Pa]
+     */
     const Scalar& pressure(unsigned phaseIdx) const
     { return pressure_[phaseIdx]; }
 
+    /*!
+     * \brief Return the saturation of a fluid phase [-]
+     */
     const Scalar& saturation(unsigned phaseIdx) const
     { return saturation_[phaseIdx]; }
 
+    /*!
+     * \brief Return the temperature [K]
+     */
     const Scalar& temperature(unsigned phaseIdx OPM_UNUSED) const
-    { return temperature_; }
+    {
+        if (!enableTemperature && !enableEnergy) {
+            static Scalar tmp(FluidSystem::reservoirTemperature(pvtRegionIdx_));
+            return tmp;
+        }
 
+        return *temperature_;
+    }
+
+    /*!
+     * \brief Return the inverse formation volume factor of a fluid phase [-].
+     *
+     * This factor expresses the change of density of a pure phase due to increased
+     * pressure and temperature at reservoir conditions compared to surface conditions.
+     */
     const Scalar& invB(unsigned phaseIdx) const
     { return invB_[phaseIdx]; }
 
+    /*!
+     * \brief Return the gas dissulition factor of oil [m^3/m^3].
+     *
+     * I.e., the amount of gas which is present in the oil phase in terms of cubic meters
+     * of gas at surface conditions per cubic meter of liquid oil at surface
+     * conditions. This method is specific to the black-oil model.
+     */
     const Scalar& Rs() const
     { return Rs_; }
 
+    /*!
+     * \brief Return the oil vaporization factor of gas [m^3/m^3].
+     *
+     * I.e., the amount of oil which is present in the gas phase in terms of cubic meters
+     * of liquid oil at surface conditions per cubic meter of gas at surface
+     * conditions. This method is specific to the black-oil model.
+     */
     const Scalar& Rv() const
     { return Rv_; }
 
+    /*!
+     * \brief Return the PVT region where the current fluid state is assumed to be part of.
+     *
+     * This is an ECL specfic concept. It is basically a kludge to account for the fact
+     * that the fluids components treated by the black-oil model exhibit different
+     * compositions in different parts of the reservoir, while the black-oil model always
+     * treats them as "oil", "gas" and "water".
+     */
     unsigned short pvtRegionIndex() const
     { return pvtRegionIdx_; }
+
+    /*!
+     * \brief Return the density [kg/m^3] of a given fluid phase.
+      */
+    Scalar density(unsigned phaseIdx) const
+    { return density_[phaseIdx]; }
+
+    /*!
+     * \brief Return the specific enthalpy [J/kg] of a given fluid phase.
+     *
+     * If the EnableEnergy property is not set to true, this method will throw an
+     * exception!
+     */
+    const Scalar& enthalpy(unsigned phaseIdx) const
+    { return (*enthalpy_)[phaseIdx]; }
+
+    /*!
+     * \brief Return the specific internal energy [J/kg] of a given fluid phase.
+     *
+     * If the EnableEnergy property is not set to true, this method will throw an
+     * exception!
+     */
+    Scalar internalEnergy(unsigned phaseIdx OPM_UNUSED) const
+    { return (*enthalpy_)[phaseIdx] - pressure(phaseIdx)/density(phaseIdx); }
 
     //////
     // slow methods
     //////
-    Scalar density(unsigned phaseIdx) const
-    { return density_[phaseIdx]; }
 
+    /*!
+     * \brief Return the molar density of a fluid phase [mol/m^3].
+     */
     Scalar molarDensity(unsigned phaseIdx) const
     {
         const auto& rho = density(phaseIdx);
@@ -151,24 +310,23 @@ public:
 
     }
 
+    /*!
+     * \brief Return the molar volume of a fluid phase [m^3/mol].
+     *
+     * This is equivalent to the inverse of the molar density.
+     */
     Scalar molarVolume(unsigned phaseIdx) const
     { return 1.0/molarDensity(phaseIdx); }
 
+    /*!
+     * \brief Return the dynamic viscosity of a fluid phase [Pa s].
+     */
     Scalar viscosity(unsigned phaseIdx) const
     { return FluidSystem::viscosity(*this, phaseIdx, pvtRegionIdx_); }
 
-    Scalar enthalpy(unsigned phaseIdx OPM_UNUSED) const
-    {
-        OPM_THROW(Opm::NotImplemented,
-                  "The black-oil model does not support energy conservation yet.");
-    }
-
-    Scalar internalEnergy(unsigned phaseIdx OPM_UNUSED) const
-    {
-        OPM_THROW(Opm::NotImplemented,
-                  "The black-oil model does not support energy conservation yet.");
-    }
-
+    /*!
+     * \brief Return the mass fraction of a component in a fluid phase [-].
+     */
     Scalar massFraction(unsigned phaseIdx, unsigned compIdx) const
     {
         switch (phaseIdx) {
@@ -204,6 +362,9 @@ public:
                   "Invalid phase or component index!");
     }
 
+    /*!
+     * \brief Return the mole fraction of a component in a fluid phase [-].
+     */
     Scalar moleFraction(unsigned phaseIdx, unsigned compIdx) const
     {
         switch (phaseIdx) {
@@ -243,9 +404,15 @@ public:
                   "Invalid phase or component index!");
     }
 
+    /*!
+     * \brief Return the partial molar density of a component in a fluid phase [mol / m^3].
+     */
     Scalar molarity(unsigned phaseIdx, unsigned compIdx) const
     { return moleFraction(phaseIdx, compIdx)*molarDensity(phaseIdx); }
 
+    /*!
+     * \brief Return the partial molar density of a fluid phase [kg / mol].
+     */
     Scalar averageMolarMass(unsigned phaseIdx) const
     {
         Scalar result(0.0);
@@ -254,9 +421,15 @@ public:
         return result;
     }
 
+    /*!
+     * \brief Return the fugacity coefficient of a component in a fluid phase [-].
+     */
     Scalar fugacityCoefficient(unsigned phaseIdx, unsigned compIdx) const
     { return FluidSystem::fugacityCoefficient(*this, phaseIdx, compIdx, pvtRegionIdx_); }
 
+    /*!
+     * \brief Return the fugacity of a component in a fluid phase [Pa].
+     */
     Scalar fugacity(unsigned phaseIdx, unsigned compIdx) const
     {
         return
@@ -266,7 +439,8 @@ public:
     }
 
 private:
-    static const Scalar temperature_;
+    Opm::ConditionalStorage<enableTemperature || enableEnergy, Scalar> temperature_;
+    Opm::ConditionalStorage<enableEnergy, std::array<Scalar, numPhases> > enthalpy_;
     std::array<Scalar, numPhases> pressure_;
     std::array<Scalar, numPhases> saturation_;
     std::array<Scalar, numPhases> invB_;
@@ -275,10 +449,6 @@ private:
     Scalar Rv_;
     unsigned short pvtRegionIdx_;
 };
-
-template <class Scalar, class FluidSystem>
-const Scalar BlackOilFluidState<Scalar, FluidSystem>::temperature_ =
-    FluidSystem::surfaceTemperature;
 
 } // namespace Opm
 
