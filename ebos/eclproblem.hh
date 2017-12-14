@@ -287,7 +287,10 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef BlackOilSolventModule<TypeTag> SolventModule;
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
 
-    typedef Opm::CompositionalFluidState<Scalar, FluidSystem> ScalarFluidState;
+    typedef Opm::BlackOilFluidState<Scalar,
+            FluidSystem,
+            /*enableTemperature=*/true> InitialFluidState;
+
     typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Ewoms::EclSummaryWriter<TypeTag> EclSummaryWriter;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
@@ -1008,7 +1011,7 @@ public:
     { return wellManager_; }
 
     // temporary solution to facilitate output of initial state from flow
-    const ScalarFluidState& initialFluidState(unsigned globalDofIdx ) const {
+    const InitialFluidState& initialFluidState(unsigned globalDofIdx ) const {
         return initialFluidStates_[globalDofIdx];
     }
 
@@ -1314,7 +1317,7 @@ private:
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto& dofFluidState = initialFluidStates_[dofIdx];
 
-            int pvtRegionIdx = pvtRegionIndex(dofIdx);
+            dofFluidState.setPvtRegionIndex(pvtRegionIndex(dofIdx));
             size_t cartesianDofIdx = gridManager.cartesianIndex(dofIdx);
             assert(0 <= cartesianDofIdx);
             assert(cartesianDofIdx <= numCartesianCells);
@@ -1354,69 +1357,16 @@ private:
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 dofFluidState.setPressure(phaseIdx, oilPressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
 
-            //////
-            // set compositions
-            //////
+            if (FluidSystem::enableDissolvedGas())
+                dofFluidState.setRs(rsData[cartesianDofIdx]);
+            else
+                dofFluidState.setRs(0.0);
 
-            // reset all mole fractions to 0
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
-                    dofFluidState.setMoleFraction(phaseIdx, compIdx, 0.0);
+            if (FluidSystem::enableVaporizedOil())
+                dofFluidState.setRv(rvData[cartesianDofIdx]);
+            else
+                dofFluidState.setRv(0.0);
 
-            // by default, assume immiscibility for all phases
-            dofFluidState.setMoleFraction(waterPhaseIdx, waterCompIdx, 1.0);
-            dofFluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1.0);
-            dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1.0);
-
-            if (FluidSystem::enableDissolvedGas()) {
-                Scalar RsSat = FluidSystem::saturatedDissolutionFactor(dofFluidState, oilPhaseIdx, pvtRegionIdx);
-                Scalar RsReal = rsData[cartesianDofIdx];
-
-                if (RsReal > RsSat) {
-                    std::array<int, 3> ijk;
-                    gridManager.cartesianCoordinate(dofIdx, ijk);
-                    std::cerr << "Warning: The specified amount gas (R_s = " << RsReal << ") is more"
-                              << " than the maximium\n"
-                              << "         amount which can be dissolved in oil"
-                              << " (R_s,max=" << RsSat << ")"
-                              << " for cell (" << ijk[0] << ", " << ijk[1] << ", " << ijk[2] << ")."
-                              << " Using maximimum.\n";
-                    RsReal = RsSat;
-                }
-
-                // calculate the initial oil phase composition in terms of mole fractions
-                Scalar XoGReal = FluidSystem::convertRsToXoG(RsReal, pvtRegionIdx);
-                Scalar xoGReal = FluidSystem::convertXoGToxoG(XoGReal, pvtRegionIdx);
-
-                // finally, set the oil-phase composition
-                dofFluidState.setMoleFraction(oilPhaseIdx, gasCompIdx, xoGReal);
-                dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1.0 - xoGReal);
-            }
-
-            if (FluidSystem::enableVaporizedOil()) {
-                Scalar RvSat = FluidSystem::saturatedDissolutionFactor(dofFluidState, gasPhaseIdx, pvtRegionIdx);
-                Scalar RvReal = rvData[cartesianDofIdx];
-
-                if (RvReal > RvSat) {
-                    std::array<int, 3> ijk;
-                    gridManager.cartesianCoordinate(dofIdx, ijk);
-                    std::cerr << "Warning: The specified amount oil (R_v = " << RvReal << ") is more"
-                              << " than the maximium\n"
-                              << "         amount which can be dissolved in gas"
-                              << " (R_v,max=" << RvSat << ")"
-                              << " for cell (" << ijk[0] << ", " << ijk[1] << ", " << ijk[2] << ")."
-                              << " Using maximimum.\n";
-                    RvReal = RvSat;
-                }
-
-                // calculate the initial gas phase composition in terms of mole fractions
-                Scalar XgOReal = FluidSystem::convertRvToXgO(RvReal, pvtRegionIdx);
-                Scalar xgOReal = FluidSystem::convertXgOToxgO(XgOReal, pvtRegionIdx);
-
-                // finally, set the gas-phase composition
-                dofFluidState.setMoleFraction(gasPhaseIdx, oilCompIdx, xgOReal);
-                dofFluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1.0 - xgOReal);
-            }
         }
     }
     void readBlackoilExtentionsInitialConditions_()
@@ -1616,7 +1566,7 @@ private:
     std::vector<Scalar> maxPolymerAdsorption_;
 
     bool useMassConservativeInitialCondition_;
-    std::vector<ScalarFluidState> initialFluidStates_;
+    std::vector<InitialFluidState> initialFluidStates_;
 
     std::vector<Scalar> polymerConcentration_;
     std::vector<Scalar> solventSaturation_;

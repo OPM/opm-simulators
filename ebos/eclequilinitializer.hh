@@ -30,7 +30,7 @@
 
 #include <ewoms/common/propertysystem.hh>
 
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 
 // the ordering of these includes matters. do not touch it if you're not prepared to deal
@@ -69,7 +69,9 @@ class EclEquilInitializer
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
 
-    typedef Opm::CompositionalFluidState<Scalar, FluidSystem> ScalarFluidState;
+    typedef Opm::BlackOilFluidState<Scalar,
+    FluidSystem,
+    /*enableTemperature=*/true> ScalarFluidState;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
@@ -108,19 +110,29 @@ public:
 
             // get the PVT region index of the current element
             unsigned regionIdx = simulator_.problem().pvtRegionIndex(elemIdx);
+            fluidState.setPvtRegionIndex(regionIdx);
 
             // set the phase saturations
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                Scalar S;
-                if (!FluidSystem::phaseIsActive(phaseIdx))
-                    S = 0.0;
-                else {
-                    S = initialState.saturation()[phaseIdx][elemIdx];
-                }
-                fluidState.setSaturation(phaseIdx, S);
+                if (FluidSystem::phaseIsActive(phaseIdx))
+                    fluidState.setSaturation(phaseIdx, initialState.saturation()[phaseIdx][elemIdx]);
+                else
+                    fluidState.setSaturation(phaseIdx, 0.0);
             }
 
+            if (FluidSystem::enableDissolvedGas())
+                fluidState.setRs(initialState.rs()[elemIdx]);
+            else
+                fluidState.setRs(0.0);
+
+            if (FluidSystem::enableVaporizedOil())
+                fluidState.setRv(initialState.rv()[elemIdx]);
+            else
+                fluidState.setRv(0.0);
+
+
             // set the temperature
+            // TODO Get the temperature from the initialState
             Scalar T = FluidSystem::surfaceTemperature;
             fluidState.setTemperature(T);
 
@@ -128,47 +140,6 @@ public:
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 fluidState.setPressure(phaseIdx, initialState.press()[phaseIdx][elemIdx]);
 
-            // reset the phase compositions
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
-                    fluidState.setMoleFraction(phaseIdx, compIdx, 0.0);
-
-            // the composition of the water phase is simple: it only consists of the
-            // water component.
-            fluidState.setMoleFraction(waterPhaseIdx, waterCompIdx, 1.0);
-
-            if (FluidSystem::enableDissolvedGas()) {
-                // for gas and oil we have to translate surface volumes to mole fractions
-                // before we can set the composition in the fluid state
-                Scalar Rs = initialState.rs()[elemIdx];
-                Scalar RsSat = FluidSystem::saturatedDissolutionFactor(fluidState, oilPhaseIdx, regionIdx);
-
-                if (Rs > RsSat)
-                    Rs = RsSat;
-
-                // convert the Rs factor to mole fraction dissolved gas in oil
-                Scalar XoG = FluidSystem::convertRsToXoG(Rs, regionIdx);
-                Scalar xoG = FluidSystem::convertXoGToxoG(XoG, regionIdx);
-
-                fluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1 - xoG);
-                fluidState.setMoleFraction(oilPhaseIdx, gasCompIdx, xoG);
-            }
-
-            // retrieve the surface volume of vaporized gas
-            if (FluidSystem::enableVaporizedOil()) {
-                Scalar Rv = initialState.rv()[elemIdx];
-                Scalar RvSat = FluidSystem::saturatedDissolutionFactor(fluidState, gasPhaseIdx, regionIdx);
-
-                if (Rv > RvSat)
-                    Rv = RvSat;
-
-                // convert the Rs factor to mole fraction dissolved gas in oil
-                Scalar XgO = FluidSystem::convertRvToXgO(Rv, regionIdx);
-                Scalar xgO = FluidSystem::convertXgOToxgO(XgO, regionIdx);
-
-                fluidState.setMoleFraction(gasPhaseIdx, oilCompIdx, xgO);
-                fluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1 - xgO);
-            }
         }
     }
 
