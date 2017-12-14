@@ -41,12 +41,31 @@ namespace Opm {
 OPM_GENERATE_HAS_MEMBER(pvtRegionIndex, ) // Creates 'HasMember_pvtRegionIndex<T>'.
 
 template <class FluidState>
-unsigned getPvtRegionIndex_(typename std::enable_if<HasMember_pvtRegionIndex<FluidState>::value, const FluidState&>::type fluidState)
+unsigned getPvtRegionIndex_(typename std::enable_if<HasMember_pvtRegionIndex<FluidState>::value,
+                                                    const FluidState&>::type fluidState)
 { return fluidState.pvtRegionIndex(); }
 
 template <class FluidState>
-unsigned getPvtRegionIndex_(typename std::enable_if<!HasMember_pvtRegionIndex<FluidState>::value, const FluidState&>::type fluidState OPM_UNUSED)
+unsigned getPvtRegionIndex_(typename std::enable_if<!HasMember_pvtRegionIndex<FluidState>::value,
+                                                    const FluidState&>::type fluidState OPM_UNUSED)
 { return 0; }
+
+OPM_GENERATE_HAS_MEMBER(invB, ) // Creates 'HasMember_invB<T>'.
+
+template <class FluidState>
+auto
+getInvB_(typename std::enable_if<HasMember_pvtRegionIndex<FluidState>::value,
+                                 const FluidState&>::type fluidState,
+         unsigned phaseIdx)
+-> decltype(fluidState.invB(phaseIdx))
+{ return fluidState.invB(phaseIdx); }
+
+template <class FluidState>
+typename FluidState::Scalar
+getInvB_(typename std::enable_if<!HasMember_pvtRegionIndex<FluidState>::value,
+                                 const FluidState&>::type fluidState OPM_UNUSED,
+         unsigned phaseIdx OPM_UNUSED)
+{ return 0.0; }
 
 /*!
  * \brief Implements a "tailor-made" fluid state class for the black-oil model.
@@ -121,14 +140,13 @@ public:
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             setSaturation(phaseIdx, fs.saturation(phaseIdx));
-            setPressure(phaseIdx, fs.saturation(phaseIdx));
+            setPressure(phaseIdx, fs.pressure(phaseIdx));
             setDensity(phaseIdx, fs.density(phaseIdx));
 
             if (enableEnergy)
                 setEnthalpy(phaseIdx, fs.enthalpy(phaseIdx));
 
-            OPM_THROW(Opm::NotImplemented,
-                      "Setting the inverse reservoir formation volume factors");
+            setInvB(phaseIdx, getInvB_<FluidState>(fs, phaseIdx));
         }
     }
 
@@ -179,9 +197,15 @@ public:
         (*enthalpy_)[phaseIdx] = value;
     }
 
+    /*!
+     * \ brief Set the inverse formation volume factor of a fluid phase
+     */
     void setInvB(unsigned phaseIdx, const Scalar& b)
     { invB_[phaseIdx] = b; }
 
+    /*!
+     * \ brief Set the density of a fluid phase
+     */
     void setDensity(unsigned phaseIdx, const Scalar& rho)
     { density_[phaseIdx] = rho; }
 
