@@ -37,7 +37,7 @@
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/material/heatconduction/Somerton.hpp>
+#include <opm/material/thermal/SomertonHeatConductionLaw.hpp>
 #include <opm/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
@@ -97,7 +97,7 @@ private:
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::Somerton<FluidSystem, Scalar> type;
+    typedef Opm::SomertonHeatConductionLaw<FluidSystem, Scalar> type;
 };
 
 // Enable gravity
