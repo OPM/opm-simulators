@@ -1340,12 +1340,11 @@ namespace Opm {
                 // Volume factors, densities and viscosities need to be recalculated with the updated rs and rv values.
                 if (ebosSimulator_.episodeIndex() < 0 && vapour_active && liquid_active ) {
 
-                    typedef Opm::CompositionalFluidState<Scalar, FluidSystem> ScalarFluidState;
-                    const ScalarFluidState& fs_updated = ebosSimulator().problem().initialFluidState(cellIdx);
+                    const auto& fs_updated = ebosSimulator().problem().initialFluidState(cellIdx);
 
                     // use initial rs and rv values
-                    Rv[cellIdx] = Opm::BlackOil::getRv_<FluidSystem, Scalar, ScalarFluidState>(fs_updated,  intQuants.pvtRegionIndex());
-                    Rs[cellIdx] = Opm::BlackOil::getRs_<FluidSystem, Scalar, ScalarFluidState>(fs_updated,  intQuants.pvtRegionIndex());
+                    Rv[cellIdx] = fs_updated.Rv();
+                    Rs[cellIdx] = fs_updated.Rs();
 
                     //re-compute the volume factors, viscosities and densities.
                     rhoOil[cellIdx] = FluidSystem::density(fs_updated,
