@@ -152,7 +152,6 @@ namespace Opm {
 
             void calculateExplicitQuantities();
 
-
             // The number of components in the model.
             int numComponents() const;
 
