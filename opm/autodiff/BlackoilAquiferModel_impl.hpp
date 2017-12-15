@@ -294,60 +294,15 @@ namespace Opm {
         const auto& deck = ebosSimulator.gridManager().deck();
         const auto& eclState = ebosSimulator.gridManager().eclState();
         
-        if (!deck.hasKeyword("AQUCT")){
-            std::cout << "Nothing is shown! Where is AQUCT!????" << std::endl;
-        }
+        // Get all the carter tracy aquifer properties data and put it in aquifers vector
+        AquiferCT aquiferct = AquiferCT(eclState,deck);
 
-        const auto& aquctKeyword = deck.getKeyword("AQUCT");
-        std::vector<AQUCT_params> aquctParams;
-        // Resize the parameter vector container based on row entries in aquct
-        // We do the same for aquifers too because number of aquifers is assumed to be for each entry in aquct
-        aquctParams.resize(aquctKeyword.size());
-        // aquifers.resize(aquctKeyword.size());
+        std::vector<AquiferCT::AQUCT_data> aquifersData = aquiferct.getAquifers();
 
-        const int tableID = 0;
-
-        std::cout << "Parsing AQUCT stuff" << std::endl;
-        for (size_t aquctRecordIdx = 0; aquctRecordIdx < aquctKeyword.size(); ++ aquctRecordIdx) 
+        for (auto aquiferData = aquifersData.begin(); aquiferData != aquifersData.end(); ++aquiferData)
         {
-            const auto& aquctRecord = aquctKeyword.getRecord(aquctRecordIdx);
-
-            aquctParams.at(aquctRecordIdx).aquiferID = aquctRecord.getItem("AQUIFER_ID").template get<int>(0);
-            aquctParams.at(aquctRecordIdx).h = aquctRecord.getItem("THICKNESS_AQ").template get<double>(0);
-            aquctParams.at(aquctRecordIdx).phi_aq = aquctRecord.getItem("PORO_AQ").template get<double>(0);
-            aquctParams.at(aquctRecordIdx).d0 = aquctRecord.getItem("DAT_DEPTH").getSIDouble(0);
-            aquctParams.at(aquctRecordIdx).C_t = aquctRecord.getItem("C_T").template get<double>(0);
-            aquctParams.at(aquctRecordIdx).r_o = aquctRecord.getItem("RAD").getSIDouble(0);
-            aquctParams.at(aquctRecordIdx).k_a = aquctRecord.getItem("PERM_AQ").getSIDouble(0);
-            aquctParams.at(aquctRecordIdx).theta = aquctRecord.getItem("INFLUENCE_ANGLE").template get<double>(0);
-            aquctParams.at(aquctRecordIdx).c1 = 0.008527; // We are using SI
-            aquctParams.at(aquctRecordIdx).c2 = 6.283;
-            aquctParams.at(aquctRecordIdx).inftableID = aquctRecord.getItem("TABLE_NUM_INFLUENCE_FN").template get<int>(0) - 1;
-            aquctParams.at(aquctRecordIdx).pvttableID = aquctRecord.getItem("TABLE_NUM_WATER_PRESS").template get<int>(0) - 1;
-
-            std::cout << aquctParams.at(aquctRecordIdx).inftableID << std::endl;
-            // Get the correct influence table values
-            const auto& aqutabTable = eclState.getTableManager().getAqutabTables().getTable(aquctParams.at(aquctRecordIdx).inftableID);
-            const auto& aqutab_tdColumn = aqutabTable.getColumn(0);
-            const auto& aqutab_piColumn = aqutabTable.getColumn(1);
-            aquctParams.at(aquctRecordIdx).td = aqutab_tdColumn.vectorCopy();
-            aquctParams.at(aquctRecordIdx).pi = aqutab_piColumn.vectorCopy();
-
-            // We determine the cell perforation here.
-            int cellID = 10 + aquctRecordIdx;
-
-            aquctParams.at(aquctRecordIdx).cell_id = cellID;
-
-            // We do not have mu_w as it has to be calculated from pvttable
-            aquifers.push_back(Aquifer_object( aquctParams.at(aquctRecordIdx) ));
+            aquifers.push_back( AquiferCarterTracy<TypeTag> (*aquiferData, numComponents(), gravity_ ) );
         }
-
-        // I want to deliberately add another aquifer
-        aquifers.push_back( Aquifer_object(99) );
-
-        // aquifers_ = aquifers;
-
-        return aquifers;
     }
 
 } // namespace Opm
