@@ -692,6 +692,10 @@ namespace Opm {
                     c = std::max(c, 0.0);
                 }
 
+                // not primary variables have changed update the intensive quantities
+                //if(FluidSystem::enableRateLimmitedDissolvedGas()){
+                //    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                //}
                 // Update rs and rv
                 if (active_[Gas] && active_[Oil] ) {
                     unsigned pvtRegionIdx = ebosSimulator_.problem().pvtRegionIndex(cell_idx);
@@ -700,7 +704,6 @@ namespace Opm {
                         if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs) {
                             Scalar RsSat =
                                 FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx, 300.0, p);
-
                             double& rs = priVars[Indices::compositionSwitchIdx];
                             rs -= ((drs<0)?-1:1)*std::min(std::abs(drs), RsSat*drmaxrel);
                             rs = std::max(rs, 0.0);
@@ -721,9 +724,9 @@ namespace Opm {
 
                // Add an epsilon to make it harder to switch back immediately after the primary variable was changed.
                 if (wasSwitched_[cell_idx])
-                    wasSwitched_[cell_idx] = priVars.adaptPrimaryVariables(ebosProblem, cell_idx, 1e-5);
+                    wasSwitched_[cell_idx] = priVars.adaptPrimaryVariables(ebosProblem, cell_idx, elemCtx,1e-5);
                 else
-                    wasSwitched_[cell_idx] = priVars.adaptPrimaryVariables(ebosProblem, cell_idx);
+                    wasSwitched_[cell_idx] = priVars.adaptPrimaryVariables(ebosProblem, cell_idx, elemCtx);
 
                 if (wasSwitched_[cell_idx])
                     ++numSwitched;
