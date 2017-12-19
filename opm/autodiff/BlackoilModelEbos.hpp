@@ -1259,7 +1259,7 @@ namespace Opm {
 
                 temperature[cellIdx] = fs.temperature(FluidSystem::oilPhaseIdx).value();
 
-                somax[cellIdx] = ebosSimulator().model().maxOilSaturation(cellIdx);
+                somax[cellIdx] = ebosSimulator().problem().maxOilSaturation(cellIdx);
 
                 const auto& matLawManager = ebosSimulator().problem().materialLawManager();
                 if (matLawManager->enableHysteresis()) {
