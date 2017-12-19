@@ -50,6 +50,7 @@ class SimulatorFullyImplicitBlackoilEbos
 {
 public:
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef typename GET_PROP_TYPE(TypeTag, Model) EwomsModel;// eworms is to separate it from the Model defined below
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
@@ -565,7 +566,8 @@ protected:
         const VectorType& somax = state.getCellData( "SOMAX" );
 
         for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
-            ebosSimulator_.model().setMaxOilSaturation(somax[cellIdx], cellIdx);
+            //ebosSimulator_.model().setMaxOilSaturation(somax[cellIdModel::prevRsx], cellIdx);
+            ebosSimulator_.model().setCellValue(somax[cellIdx],  cellIdx, EwomsModel::soMax);
         }
 
         if (ebosSimulator_.problem().materialLawManager()->enableHysteresis()) {
