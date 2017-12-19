@@ -271,14 +271,14 @@ public:
 
             }
             if (gasDissolutionFactor_.size() > 0) {
-                Scalar SoMax = elemCtx.model().maxOilSaturation(globalDofIdx);
+                Scalar SoMax = elemCtx.problem().maxOilSaturation(globalDofIdx);
                 gasDissolutionFactor_[globalDofIdx] =
                     FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx, SoMax);
                 Opm::Valgrind::CheckDefined(gasDissolutionFactor_[globalDofIdx]);
 
             }
             if (oilVaporizationFactor_.size() > 0) {
-                Scalar SoMax = elemCtx.model().maxOilSaturation(globalDofIdx);
+                Scalar SoMax = elemCtx.problem().maxOilSaturation(globalDofIdx);
                 oilVaporizationFactor_[globalDofIdx] =
                     FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx, SoMax);
                 Opm::Valgrind::CheckDefined(oilVaporizationFactor_[globalDofIdx]);
@@ -375,7 +375,7 @@ public:
             }
 
             if (soMax_.size() > 0)
-                soMax_[globalDofIdx] = elemCtx.simulator().model().maxOilSaturation(globalDofIdx);
+                soMax_[globalDofIdx] = elemCtx.simulator().problem().maxOilSaturation(globalDofIdx);
 
             const auto& matLawManager = elemCtx.simulator().problem().materialLawManager();
             if (matLawManager->enableHysteresis()) {
@@ -723,7 +723,7 @@ public:
     void initHysteresisParams(Simulator& simulator, unsigned elemIdx) const {
 
         if (soMax_.size() > 0)
-            simulator.model().setMaxOilSaturation(soMax_[elemIdx], elemIdx);
+            simulator.problem().setMaxOilSaturation(soMax_[elemIdx], elemIdx);
 
         if (simulator.problem().materialLawManager()->enableHysteresis()) {
             auto matLawManager = simulator.problem().materialLawManager();
