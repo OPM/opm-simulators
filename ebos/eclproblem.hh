@@ -358,10 +358,16 @@ public:
         if (!deck.hasKeyword("NOGRAV") && EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
             this->gravity_[dim - 1] = 9.80665;
 
+        // this is actually not fully correct: the latest occurence of VAPPARS and DRSDT
+        // or DRVDT up to the current time step in the schedule section counts, presence
+        // of VAPPARS alone is not sufficient to disable DR[SV]DT. TODO: implment support
+        // for this in opm-parser's Schedule object"
+        bool hasVappars = deck.hasKeyword("VAPPARS");
+
         // deal with DRSDT
         maxDRsDt_ = 0.0;
         maxDRs_ = -1.0;
-        if (deck.hasKeyword("DRSDT")) {
+        if (!hasVappars && deck.hasKeyword("DRSDT")) {
             const auto& drsdtKeyword = deck.getKeyword("DRSDT");
             maxDRsDt_ = drsdtKeyword.getRecord(0).getItem("DRSDT_MAX").getSIDouble(0);
             size_t numDof = this->model().numGridDof();
@@ -371,7 +377,7 @@ public:
         // deal with DRVDT
         maxDRvDt_ = 0.0;
         maxDRv_ = -1.0;
-        if (deck.hasKeyword("DRVDT")) {
+        if (!hasVappars && deck.hasKeyword("DRVDT")) {
             const auto& drvdtKeyword = deck.getKeyword("DVSDT");
             maxDRvDt_ = drvdtKeyword.getRecord(0).getItem("DRVDT_MAX").getSIDouble(0);
             size_t numDof = this->model().numGridDof();
