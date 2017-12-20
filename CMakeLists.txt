@@ -15,7 +15,7 @@
 ###########################################################################
 
 # Mandatory call to project
-project(opm-material CXX)
+project(opm-material C CXX)
 
 cmake_minimum_required (VERSION 2.8)
 
