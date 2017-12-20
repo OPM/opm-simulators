@@ -92,6 +92,7 @@
 
 #include <vector>
 #include <string>
+#include <algorithm>
 
 namespace Ewoms {
 template <class TypeTag>
@@ -385,6 +386,12 @@ public:
             maxDRsDt_ = drsdtKeyword.getRecord(0).getItem("DRSDT_MAX").getSIDouble(0);
             size_t numDof = this->model().numGridDof();
             lastRs_.resize(numDof, 0.0);
+
+            std::string drsdtFlag =
+                drsdtKeyword.getRecord(0).getItem("Option").getTrimmedString(0);
+            std::transform(drsdtFlag.begin(), drsdtFlag.end(), drsdtFlag.begin(), ::toupper);
+
+            dRsDtOnlyFreeGas_ = (drsdtFlag == "FREE");
         }
 
         // deal with DRVDT
@@ -1198,11 +1205,14 @@ private:
 
                 typedef typename std::decay<decltype(fs) >::type FluidState;
 
-                lastRs_[compressedDofIdx] =
-                    Opm::BlackOil::template getRs_<FluidSystem,
-                                                   Scalar,
-                                                   FluidState>(fs,
-                                                               iq.pvtRegionIndex());
+                if (!dRsDtOnlyFreeGas_ || fs.saturation(gasPhaseIdx) > 1e-5)
+                    lastRs_[compressedDofIdx] =
+                        Opm::BlackOil::template getRs_<FluidSystem,
+                                                       Scalar,
+                                                       FluidState>(fs,
+                                                                   iq.pvtRegionIndex());
+                else
+                    lastRs_[compressedDofIdx] = 1e4;
             }
         }
 
@@ -1817,6 +1827,7 @@ private:
     std::vector<Scalar> solventSaturation_;
 
     bool drsdtActive_; // if no, VAPPARS *might* be active
+    bool dRsDtOnlyFreeGas_; // apply the DRSDT rate limit only to cells that exhibit free gas
     std::vector<Scalar> lastRs_;
     Scalar maxDRsDt_;
     Scalar maxDRs_;
