@@ -73,7 +73,7 @@ namespace Opm
     void BlackoilModelParameters::reset()
     {
         // default values for the solver parameters
-        dp_max_rel_      = 1.0;
+        dp_max_rel_      = 0.3;
         ds_max_          = 0.2;
         dr_max_rel_      = 1.0e9;
         dbhp_max_rel_    = 1.0;
