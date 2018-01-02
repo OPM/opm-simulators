@@ -29,11 +29,9 @@
 #ifndef EWOMS_EQUILIBRATIONHELPERS_HH
 #define EWOMS_EQUILIBRATIONHELPERS_HH
 
-#include <opm/core/utility/linearInterpolation.hpp>
-#include <opm/core/utility/RegionMapping.hpp>
-
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 
+#include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
@@ -193,8 +191,7 @@ public:
          const std::vector<double>& depth,
          const std::vector<double>& rs)
         : pvtRegionIdx_(pvtRegionIdx)
-        , depth_(depth)
-        , rs_(rs)
+        , rsVsDepth_(depth, rs)
     {
     }
 
@@ -222,14 +219,19 @@ public:
         if (sat_gas > 0.0) {
             return satRs(press, temp);
         } else {
-            return std::min(satRs(press, temp), Opm::linearInterpolationNoExtrapolation(depth_, rs_, depth));
+            if (rsVsDepth_.xMin() > depth)
+                return rsVsDepth_.valueAt(0);
+            else if (rsVsDepth_.xMax() < depth)
+                return rsVsDepth_.valueAt(rsVsDepth_.numSamples() - 1);
+            return std::min(satRs(press, temp), rsVsDepth_.eval(depth, /*extrapolate=*/false));
         }
     }
 
 private:
+    typedef Opm::Tabulated1DFunction<double> RsVsDepthFunc;
+
     const int pvtRegionIdx_;
-    std::vector<double> depth_; /**< Depth nodes */
-    std::vector<double> rs_;    /**< Dissolved gas-oil ratio */
+    RsVsDepthFunc rsVsDepth_;
 
     double satRs(const double press, const double temp) const
     {
@@ -257,8 +259,7 @@ public:
          const std::vector<double>& depth,
          const std::vector<double>& rv)
         : pvtRegionIdx_(pvtRegionIdx)
-        , depth_(depth)
-        , rv_(rv)
+        , rvVsDepth_(depth, rv)
     {
     }
 
@@ -286,14 +287,19 @@ public:
         if (std::abs(sat_oil) > 1e-16) {
             return satRv(press, temp);
         } else {
-            return std::min(satRv(press, temp), Opm::linearInterpolationNoExtrapolation(depth_, rv_, depth));
+            if (rvVsDepth_.xMin() > depth)
+                return rvVsDepth_.valueAt(0);
+            else if (rvVsDepth_.xMax() < depth)
+                return rvVsDepth_.valueAt(rvVsDepth_.numSamples() - 1);
+            return std::min(satRv(press, temp), rvVsDepth_.eval(depth, /*extrapolate=*/false));
         }
     }
 
 private:
+    typedef Opm::Tabulated1DFunction<double> RvVsDepthFunc;
+
     const int pvtRegionIdx_;
-    std::vector<double> depth_; /**< Depth nodes */
-    std::vector<double> rv_;    /**< Vaporized oil-gas ratio */
+    RvVsDepthFunc rvVsDepth_;
 
     double satRv(const double press, const double temp) const
     {
