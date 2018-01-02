@@ -675,7 +675,7 @@ double satFromPc(const MaterialLawManager& materialLawManager,
     assert(f0 > 0 && f1 < 0);
 
     const int maxIter = 60;
-    const double tol = 1e-6;
+    const double tol = 1e-10;
 
     // regula falsi with the "Pegasus" method to avoid stagnation
     for (int iter = 0; iter < maxIter; ++ iter) {
@@ -784,7 +784,7 @@ double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
     assert(f0 > 0.0 && f1 < 0.0);
 
     const int maxIter = 60;
-    const double tol = 1e-6;
+    const double tol = 1e-10;
 
     // regula falsi with the "Pegasus" method to avoid stagnation
     for (int iter = 0; iter < maxIter; ++ iter) {
