@@ -580,9 +580,9 @@ phasePressures(const Grid&             grid,
     int ncell = 0;
     {
         // This code is only supported in three space dimensions
-        assert (Opm::UgGridHelpers::dimensions(grid) == 3);
+        assert (Grid::dimensionworld == 3);
 
-        const int nd = Opm::UgGridHelpers::dimensions(grid);
+        const int nd = Grid::dimensionworld;
 
         // Define vertical span as
         //
@@ -867,7 +867,7 @@ std::vector<double> computeRs(const Grid& grid,
                               const Miscibility::RsFunction& rs_func,
                               const std::vector<double> gas_saturation)
 {
-    assert(Opm::UgGridHelpers::dimensions(grid) == 3);
+    assert(Grid::dimensionworld == 3);
     std::vector<double> rs(cells.size());
     int count = 0;
     for (auto it = cells.begin(); it != cells.end(); ++it, ++count) {
@@ -900,7 +900,7 @@ equilnum(const Opm::EclipseState& eclipseState,
 {
     std::vector<int> eqlnum;
     if (eclipseState.get3DProperties().hasDeckIntGridProperty("EQLNUM")) {
-        const int nc = Opm::UgGridHelpers::numCells(grid);
+        const int nc = grid.size(/*codim=*/0);
         eqlnum.resize(nc);
         const std::vector<int>& e =
             eclipseState.get3DProperties().getIntGridProperty("EQLNUM").getData();
@@ -913,7 +913,7 @@ equilnum(const Opm::EclipseState& eclipseState,
     else {
         // No explicit equilibration region.
         // All cells in region zero.
-        eqlnum.assign(Opm::UgGridHelpers::numCells(grid), 0);
+        eqlnum.assign(grid.size(/*codim=*/0), 0);
     }
 
     return eqlnum;
@@ -930,17 +930,17 @@ public:
                          const bool applySwatInit = true
         )
         : pp_(FluidSystem::numPhases,
-              std::vector<double>(Opm::UgGridHelpers::numCells(grid))),
+              std::vector<double>(grid.size(/*codim=*/0))),
           sat_(FluidSystem::numPhases,
-               std::vector<double>(Opm::UgGridHelpers::numCells(grid))),
-          rs_(Opm::UgGridHelpers::numCells(grid)),
-          rv_(Opm::UgGridHelpers::numCells(grid))
+               std::vector<double>(grid.size(/*codim=*/0))),
+          rs_(grid.size(/*codim=*/0)),
+          rv_(grid.size(/*codim=*/0))
     {
         //Check for presence of kw SWATINIT
         if (eclipseState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT") && applySwatInit) {
             const std::vector<double>& swat_init_ecl = eclipseState.
                 get3DProperties().getDoubleGridProperty("SWATINIT").getData();
-            const int nc = Opm::UgGridHelpers::numCells(grid);
+            const int nc = grid.size(/*codim=*/0);
             swat_init_.resize(nc);
             const int* gc = Opm::UgGridHelpers::globalCell(grid);
             for (int c = 0; c < nc; ++c) {
@@ -1064,7 +1064,7 @@ private:
     void setRegionPvtIdx(const Grid& grid, const Opm::EclipseState& eclipseState, const RMap& reg) {
 
         std::vector<int> cellPvtRegionIdx;
-        extractPvtTableIndex(cellPvtRegionIdx, eclipseState, Opm::UgGridHelpers::numCells(grid), Opm::UgGridHelpers::globalCell(grid));
+        extractPvtTableIndex(cellPvtRegionIdx, eclipseState, grid.size(/*codim=*/0), Opm::UgGridHelpers::globalCell(grid));
         for (const auto& r : reg.activeRegions()) {
             const auto& cells = reg.cells(r);
             const int cell = *(cells.begin());
