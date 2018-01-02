@@ -390,8 +390,6 @@ public:
             int numElements = gridView.size(/*codim=*/0);
             maxPolymerAdsorption_.resize(numElements, 0.0);
         }
-
-
     }
 
     void prefetch(const Element& elem) const
