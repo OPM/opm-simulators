@@ -858,4 +858,4 @@ inline bool isConstPc(const MaterialLawManager& materialLawManager,
 } // namespace Equil
 } // namespace Ewoms
 
-#endif // EWOMS_EQUILIBRATIONHELPERS_HEADER_INCLUDED
+#endif // EWOMS_EQUILIBRATIONHELPERS_HH
