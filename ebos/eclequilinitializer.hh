@@ -93,10 +93,10 @@ public:
         unsigned numCartesianElems = gridManager.cartesianSize();
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
-        EQUIL::DeckDependent::InitialStateComputer<FluidSystem> initialState(materialLawManager,
-                                                                             gridManager.eclState(),
-                                                                             gridManager.grid(),
-                                                                             simulator.problem().gravity()[dimWorld - 1]);
+        EQUIL::DeckDependent::InitialStateComputer<TypeTag> initialState(materialLawManager,
+                                                                         gridManager.eclState(),
+                                                                         gridManager.grid(),
+                                                                         simulator.problem().gravity()[dimWorld - 1]);
 
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numCartesianElems);

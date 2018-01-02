@@ -26,13 +26,14 @@
  * \brief Routines that actually solve the ODEs that emerge from the hydrostatic
  *        equilibrium problem
  */
-#ifndef EWOMS_INITSTATEEQUIL_HEADER_INCLUDED
-#define EWOMS_INITSTATEEQUIL_HEADER_INCLUDED
+#ifndef EWOMS_INITSTATEEQUIL_HH
+#define EWOMS_INITSTATEEQUIL_HH
 
 #include "EquilibrationHelpers.hpp"
 #include "RegionMapping.hpp"
 
-#include <opm/core/utility/extractPvtTableIndex.hpp>
+#include <ewoms/common/propertysystem.hh>
+
 #include <dune/grid/cpgrid/GridHelpers.hpp>
 
 #include <opm/parser/eclipse/Units/Units.hpp>
@@ -292,10 +293,10 @@ assign(const Grid&                         grid    ,
     }
 }
 
-template <                     class FluidSystem,
-                               class Grid,
-                               class Region,
-                               class CellRange>
+template <class FluidSystem,
+          class Grid,
+          class Region,
+          class CellRange>
 void
 water(const Grid&                 grid     ,
       const Region&               reg   ,
@@ -919,10 +920,15 @@ equilnum(const Opm::EclipseState& eclipseState,
     return eqlnum;
 }
 
-template<class FluidSystem>
-class InitialStateComputer {
+template<class TypeTag>
+class InitialStateComputer
+{
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+
 public:
-    template<class MaterialLawManager, class Grid>
+    template<class MaterialLawManager>
     InitialStateComputer(MaterialLawManager& materialLawManager,
                          const Opm::EclipseState& eclipseState,
                          const Grid&                        grid    ,
@@ -1060,11 +1066,26 @@ private:
     Vec rv_;
     Vec swat_init_;
 
-    template<class Grid, class RMap>
-    void setRegionPvtIdx(const Grid& grid, const Opm::EclipseState& eclipseState, const RMap& reg) {
+    template<class RMap>
+    void setRegionPvtIdx(const Grid& grid, const Opm::EclipseState& eclState, const RMap& reg)
+    {
+        size_t numCompressed = grid.size(/*codim=*/0);
+        const auto* globalCell = Opm::UgGridHelpers::globalCell(grid);
+        std::vector<int> cellPvtRegionIdx(numCompressed);
 
-        std::vector<int> cellPvtRegionIdx;
-        extractPvtTableIndex(cellPvtRegionIdx, eclipseState, grid.size(/*codim=*/0), Opm::UgGridHelpers::globalCell(grid));
+        //Get the PVTNUM data
+        const std::vector<int>& pvtnumData = eclState.get3DProperties().getIntGridProperty("PVTNUM").getData();
+
+        // Convert PVTNUM data into an array of indices for compressed cells. Remember
+        // that Eclipse uses Fortran-style indices which start at 1 instead of 0, so we
+        // need to subtract 1.
+        for (size_t cellIdx = 0; cellIdx < numCompressed; ++ cellIdx) {
+            size_t cartesianCellIdx = globalCell[cellIdx];
+            assert(cartesianCellIdx < pvtnumData.size());
+            size_t pvtRegionIdx = pvtnumData[cartesianCellIdx] - 1;
+            cellPvtRegionIdx[cellIdx] = pvtRegionIdx;
+        }
+
         for (const auto& r : reg.activeRegions()) {
             const auto& cells = reg.cells(r);
             const int cell = *(cells.begin());
@@ -1072,7 +1093,7 @@ private:
         }
     }
 
-    template <class RMap, class MaterialLawManager, class Grid>
+    template <class RMap, class MaterialLawManager>
     void
     calcPressSatRsRv(const RMap&                       reg  ,
                      const std::vector< Opm::EquilRecord >& rec  ,

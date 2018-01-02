@@ -26,8 +26,8 @@
  * \brief Auxiliary routines that to solve the ODEs that emerge from the hydrostatic
  *        equilibrium problem
  */
-#ifndef EWOMS_EQUILIBRATIONHELPERS_HEADER_INCLUDED
-#define EWOMS_EQUILIBRATIONHELPERS_HEADER_INCLUDED
+#ifndef EWOMS_EQUILIBRATIONHELPERS_HH
+#define EWOMS_EQUILIBRATIONHELPERS_HH
 
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
