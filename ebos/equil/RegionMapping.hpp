@@ -26,8 +26,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace Ewoms
-{
+namespace Ewoms {
 
 /**
  * Forward and reverse mappings between cells and
@@ -40,8 +39,9 @@ namespace Ewoms
  *                'valueType', 'size_type', and
  *                'const_iterator'.
  */
-template < class Region = std::vector<int> >
-class RegionMapping {
+template <class Region = std::vector<int>>
+class RegionMapping
+{
 public:
     /**
      * Constructor.
@@ -80,7 +80,8 @@ public:
         typedef CellIter iterator;
         typedef CellIter const_iterator;
 
-        Range() {};
+        Range()
+        {};
 
         Range(const CellIter& beg, const CellIter& en)
             : begin_(beg)
@@ -116,8 +117,8 @@ public:
      * \param[in] c Active cell
      * \return Region to which @c c belongs.
      */
-    RegionId
-    region(const CellId c) const { return reg_[c]; }
+    RegionId region(const CellId c) const
+    { return reg_[c]; }
 
     const std::vector<RegionId>&
     activeRegions() const
@@ -133,8 +134,8 @@ public:
      * \return Range of active cells in region @c r.  Empty if @c r is
      * not an active region.
      */
-    Range
-    cells(const RegionId r) const {
+    Range cells(const RegionId r) const
+    {
         const auto id = rev_.binid.find(r);
 
         if (id == rev_.binid.end()) {
@@ -192,7 +193,7 @@ private:
 
             for (decltype(p.size()) i = 1, sz = p.size(); i < sz; ++i) {
                 p[0] += p[i];
-                p[i]  = p[0] - p[i];
+                p[i] = p[0] - p[i];
             }
 
             assert (p[0] == static_cast<Pos>(reg.size()));
@@ -201,8 +202,8 @@ private:
             {
                 CellId i = 0;
                 for (const auto& r : reg) {
-                    auto& pos  = p[ binid[r] + 1 ];
-                    c[ pos++ ] = i++;
+                    auto& pos = p[binid[r] + 1];
+                    c[pos++] = i++;
                 }
             }
 
