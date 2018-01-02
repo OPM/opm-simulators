@@ -251,17 +251,23 @@ public:
      */
     static void initBegin(size_t numPvtRegions)
     {
+        isInitialized_ = false;
+
         enableDissolvedGas_ = true;
         enableVaporizedOil_ = false;
 
+        oilPvt_ = nullptr;
+        gasPvt_ = nullptr;
+        waterPvt_ = nullptr;
+
         surfaceTemperature = 273.15 + 15.56; // [K]
         surfacePressure = 1.01325e5; // [Pa]
+        setReservoirTemperature(surfaceTemperature);
+
         numActivePhases_ = numPhases;
         std::fill(&phaseIsActive_[0], &phaseIsActive_[numPhases], true);
 
         resizeArrays_(numPvtRegions);
-
-        setReservoirTemperature(surfaceTemperature);
     }
 
     /*!

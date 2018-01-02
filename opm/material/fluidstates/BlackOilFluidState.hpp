@@ -52,20 +52,28 @@ unsigned getPvtRegionIndex_(typename std::enable_if<!HasMember_pvtRegionIndex<Fl
 
 OPM_GENERATE_HAS_MEMBER(invB, ) // Creates 'HasMember_invB<T>'.
 
-template <class FluidState>
-auto
-getInvB_(typename std::enable_if<HasMember_pvtRegionIndex<FluidState>::value,
-                                 const FluidState&>::type fluidState,
-         unsigned phaseIdx)
--> decltype(fluidState.invB(phaseIdx))
-{ return fluidState.invB(phaseIdx); }
+template <class FluidState, class FluidSystem, class LhsEval>
+LhsEval getInvB_(typename std::enable_if<HasMember_pvtRegionIndex<FluidState>::value,
+                                         const FluidState&>::type fluidState,
+                 unsigned phaseIdx)
+{ return Opm::decay<LhsEval>(fluidState.invB(phaseIdx)); }
 
-template <class FluidState>
-typename FluidState::Scalar
-getInvB_(typename std::enable_if<!HasMember_pvtRegionIndex<FluidState>::value,
-                                 const FluidState&>::type fluidState OPM_UNUSED,
-         unsigned phaseIdx OPM_UNUSED)
-{ return 0.0; }
+template <class FluidState, class FluidSystem, class LhsEval>
+LhsEval getInvB_(typename std::enable_if<!HasMember_pvtRegionIndex<FluidState>::value,
+                                         const FluidState&>::type fluidState,
+                 unsigned phaseIdx)
+{
+    const auto& rho = fluidState.density(phaseIdx);
+    const auto& Xsolvent =
+        fluidState.massFraction(phaseIdx, FluidSystem::solventComponentIndx(phaseIdx));
+
+    unsigned pvtRegionIdx = getPvtRegionIndex_(fluidState);
+    return
+        Opm::decay<LhsEval>(rho)
+        *Opm::decay<LhsEval>(Xsolvent)
+        /FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
+
+}
 
 /*!
  * \brief Implements a "tailor-made" fluid state class for the black-oil model.
@@ -146,7 +154,7 @@ public:
             if (enableEnergy)
                 setEnthalpy(phaseIdx, fs.enthalpy(phaseIdx));
 
-            setInvB(phaseIdx, getInvB_<FluidState>(fs, phaseIdx));
+            setInvB(phaseIdx, getInvB_<FluidState, FluidSystem, Scalar>(fs, phaseIdx));
         }
     }
 
