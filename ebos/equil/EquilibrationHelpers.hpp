@@ -1,7 +1,6 @@
+// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// vi: set et ts=4 sw=4 sts=4:
 /*
-  Copyright 2014 SINTEF ICT, Applied Mathematics.
-  Copyright 2017 IRIS
-
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -16,10 +15,19 @@
 
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
-*/
 
-#ifndef OPM_EQUILIBRATIONHELPERS_HEADER_INCLUDED
-#define OPM_EQUILIBRATIONHELPERS_HEADER_INCLUDED
+  Consult the COPYING file in the top-level source directory of this
+  module for the precise wording of the license and the list of
+  copyright holders.
+*/
+/**
+ * \file
+ *
+ * \brief Auxiliary routines that to solve the ODEs that emerge from the hydrostatic
+ *        equilibrium problem
+ */
+#ifndef EWOMS_EQUILIBRATIONHELPERS_HEADER_INCLUDED
+#define EWOMS_EQUILIBRATIONHELPERS_HEADER_INCLUDED
 
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
@@ -73,9 +81,7 @@ namespace Opm
 
 ---- end of synopsis of EquilibrationHelpers.hpp ----
 */
-
-
-namespace Opm
+namespace Ewoms
 {
     /**
      * Types and routines that collectively implement a basic
@@ -217,7 +223,7 @@ namespace Opm
                     if (sat_gas > 0.0) {
                         return satRs(press, temp);
                     } else {
-                        return std::min(satRs(press, temp), linearInterpolationNoExtrapolation(depth_, rs_, depth));
+                        return std::min(satRs(press, temp), Opm::linearInterpolationNoExtrapolation(depth_, rs_, depth));
                     }
                 }
 
@@ -281,7 +287,7 @@ namespace Opm
                     if (std::abs(sat_oil) > 1e-16) {
                         return satRv(press, temp);
                     } else {
-                        return std::min(satRv(press, temp), linearInterpolationNoExtrapolation(depth_, rv_, depth));
+                        return std::min(satRv(press, temp), Opm::linearInterpolationNoExtrapolation(depth_, rv_, depth));
                     }
                 }
 
@@ -465,7 +471,7 @@ namespace Opm
              * \param[in] rv      Calculator of vapourised oil-gas ratio.
              * \param[in] pvtRegionIdx The pvt region index
              */
-            EquilReg(const EquilRecord& rec,
+            EquilReg(const Opm::EquilRecord& rec,
                      std::shared_ptr<Miscibility::RsFunction> rs,
                      std::shared_ptr<Miscibility::RsFunction> rv,
                      const int pvtIdx)
@@ -542,7 +548,7 @@ namespace Opm
 
 
         private:
-            EquilRecord rec_;     /**< Equilibration data */
+            Opm::EquilRecord rec_;     /**< Equilibration data */
             std::shared_ptr<Miscibility::RsFunction> rs_;      /**< RS calculator */
             std::shared_ptr<Miscibility::RsFunction> rv_;      /**< RV calculator */
             const int pvtIdx_;
@@ -671,7 +677,7 @@ namespace Opm
                 const int max_iter = 60;
                 const double tol = 1e-6;
                 int iter_used = -1;
-                typedef RegulaFalsi<ThrowOnError> ScalarSolver;
+                typedef Opm::RegulaFalsi<Opm::ThrowOnError> ScalarSolver;
                 const double sol = ScalarSolver::solve(f, std::min(s0, s1), std::max(s0, s1), max_iter, tol, iter_used);
                 return sol;
             }
@@ -753,7 +759,7 @@ namespace Opm
                 const int max_iter = 30;
                 const double tol = 1e-6;
                 int iter_used = -1;
-                typedef RegulaFalsi<ThrowOnError> ScalarSolver;
+                typedef Opm::RegulaFalsi<Opm::ThrowOnError> ScalarSolver;
                 const double sol = ScalarSolver::solve(f, smin, smax, max_iter, tol, iter_used);
                 return sol;
             }
@@ -793,7 +799,6 @@ namespace Opm
         }
 
     } // namespace Equil
-} // namespace Opm
+} // namespace Ewoms
 
-
-#endif // OPM_EQUILIBRATIONHELPERS_HEADER_INCLUDED
+#endif // EWOMS_EQUILIBRATIONHELPERS_HEADER_INCLUDED

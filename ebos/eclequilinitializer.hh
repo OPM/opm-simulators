@@ -28,16 +28,12 @@
 #ifndef EWOMS_ECL_EQUIL_INITIALIZER_HH
 #define EWOMS_ECL_EQUIL_INITIALIZER_HH
 
+#include "equil/initStateEquil.hpp"
+
 #include <ewoms/common/propertysystem.hh>
 
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-
-// the ordering of these includes matters. do not touch it if you're not prepared to deal
-// with some trouble!
-#include <dune/grid/cpgrid/GridHelpers.hpp>
-#include <opm/core/simulator/initStateEquil.hpp>
-
 
 #include <vector>
 
@@ -97,10 +93,10 @@ public:
         unsigned numCartesianElems = gridManager.cartesianSize();
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
-        Opm::EQUIL::DeckDependent::InitialStateComputer<FluidSystem> initialState(materialLawManager,
-                                                                                  gridManager.eclState(),
-                                                                                  gridManager.grid(),
-                                                                                  simulator.problem().gravity()[dimWorld - 1]);
+        EQUIL::DeckDependent::InitialStateComputer<FluidSystem> initialState(materialLawManager,
+                                                                             gridManager.eclState(),
+                                                                             gridManager.grid(),
+                                                                             simulator.problem().gravity()[dimWorld - 1]);
 
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numCartesianElems);

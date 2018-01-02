@@ -1,9 +1,6 @@
+// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// vi: set et ts=4 sw=4 sts=4:
 /*
-  Copyright 2014 SINTEF ICT, Applied Mathematics.
-  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
-  Copyright 2015 NTNU
-  Copyright 2017 IRIS
-
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -18,13 +15,21 @@
 
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
-*/
 
-#ifndef OPM_INITSTATEEQUIL_IMPL_HEADER_INCLUDED
-#define OPM_INITSTATEEQUIL_IMPL_HEADER_INCLUDED
+  Consult the COPYING file in the top-level source directory of this
+  module for the precise wording of the license and the list of
+  copyright holders.
+*/
+/**
+ * \file
+ *
+ * \brief Routines that actually solve the ODEs that emerge from the hydrostatic
+ *        equilibrium problem
+ */
+#ifndef EWOMS_INITSTATEEQUIL_IMPL_HEADER_INCLUDED
+#define EWOMS_INITSTATEEQUIL_IMPL_HEADER_INCLUDED
 
 #include <opm/core/grid.h>
-#include <opm/core/grid/GridHelpers.hpp>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
@@ -33,7 +38,7 @@
 #include <functional>
 #include <vector>
 
-namespace Opm
+namespace Ewoms
 {
     namespace Details {
         template <class RHS>
@@ -257,7 +262,7 @@ namespace Opm
                 {
                     assert (c < p.size());
 
-                    const double z = UgGridHelpers::cellCenterDepth(G, *ci);
+                    const double z = Opm::UgGridHelpers::cellCenterDepth(G, *ci);
                     p[c] = (z < split) ? f[up](z) : f[down](z);
                 }
             }
@@ -519,9 +524,9 @@ namespace Opm
             int ncell = 0;
             {
                 // This code is only supported in three space dimensions
-                assert (UgGridHelpers::dimensions(G) == 3);
+                assert (Opm::UgGridHelpers::dimensions(G) == 3);
 
-                const int nd = UgGridHelpers::dimensions(G);
+                const int nd = Opm::UgGridHelpers::dimensions(G);
 
                 // Define vertical span as
                 //
@@ -536,8 +541,8 @@ namespace Opm
                 // imposes the requirement that cell centroids are all
                 // within this vertical span.  That requirement is not
                 // checked.
-                auto cell2Faces = UgGridHelpers::cell2Faces(G);
-                auto faceVertices = UgGridHelpers::face2Vertices(G);
+                auto cell2Faces = Opm::UgGridHelpers::cell2Faces(G);
+                auto faceVertices = Opm::UgGridHelpers::face2Vertices(G);
 
                 for (typename CellRange::const_iterator
                          ci = cells.begin(), ce = cells.end();
@@ -551,7 +556,7 @@ namespace Opm
                         for (auto i = faceVertices[*fi].begin(), e = faceVertices[*fi].end();
                              i != e; ++i)
                         {
-                            const double z = UgGridHelpers::vertexCoordinates(G, *i)[nd-1];
+                            const double z = Opm::UgGridHelpers::vertexCoordinates(G, *i)[nd-1];
 
                             if (z < span[0]) { span[0] = z; }
                             if (z > span[1]) { span[1] = z; }
@@ -637,7 +642,7 @@ namespace Opm
                 double sw = 0.0;
                 if (water) {
                     if (isConstPc<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager,FluidSystem::waterPhaseIdx, cell)){
-                        const double cellDepth  =  UgGridHelpers::cellCenterDepth(G,
+                        const double cellDepth  =  Opm::UgGridHelpers::cellCenterDepth(G,
                                                                             cell);
                         sw = satFromDepth<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager,cellDepth,reg.zwoc(),waterpos,cell,false);
                         phase_saturations[waterpos][local_index] = sw;
@@ -657,7 +662,7 @@ namespace Opm
                 double sg = 0.0;
                 if (gas) {
                     if (isConstPc<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager,FluidSystem::gasPhaseIdx,cell)){
-                        const double cellDepth  = UgGridHelpers::cellCenterDepth(G,
+                        const double cellDepth  = Opm::UgGridHelpers::cellCenterDepth(G,
                                                                                         cell);
                         sg = satFromDepth<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager,cellDepth,reg.zgoc(),gaspos,cell,true);
                         phase_saturations[gaspos][local_index] = sg;
@@ -773,11 +778,11 @@ namespace Opm
                                       const Miscibility::RsFunction& rs_func,
                                       const std::vector<double> gas_saturation)
         {
-            assert(UgGridHelpers::dimensions(grid) == 3);
+            assert(Opm::UgGridHelpers::dimensions(grid) == 3);
             std::vector<double> rs(cells.size());
             int count = 0;
             for (auto it = cells.begin(); it != cells.end(); ++it, ++count) {
-                const double depth = UgGridHelpers::cellCenterDepth(grid, *it);
+                const double depth = Opm::UgGridHelpers::cellCenterDepth(grid, *it);
                 rs[count] = rs_func(depth, oil_pressure[count], temperature[count], gas_saturation[count]);
             }
             return rs;

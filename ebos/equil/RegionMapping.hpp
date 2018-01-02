@@ -1,6 +1,6 @@
+// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// vi: set et ts=4 sw=4 sts=4:
 /*
-  Copyright 2014 SINTEF ICT, Applied Mathematics.
-
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -15,17 +15,20 @@
 
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
-*/
 
-#ifndef OPM_REGIONMAPPING_HEADER_INCLUDED
-#define OPM_REGIONMAPPING_HEADER_INCLUDED
+  Consult the COPYING file in the top-level source directory of this
+  module for the precise wording of the license and the list of
+  copyright holders.
+*/
+#ifndef OPM_REGIONMAPPING_HH
+#define OPM_REGIONMAPPING_HH
 
 #include <boost/range.hpp>
 
 #include <unordered_map>
 #include <vector>
 
-namespace Opm
+namespace Ewoms
 {
 
     /**

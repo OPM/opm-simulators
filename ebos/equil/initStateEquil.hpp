@@ -1,9 +1,6 @@
+// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// vi: set et ts=4 sw=4 sts=4:
 /*
-  Copyright 2014 SINTEF ICT, Applied Mathematics.
-  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
-  Copyright 2015 NTNU
-  Copyright 2017 IRIS
-
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -18,15 +15,25 @@
 
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+
+  Consult the COPYING file in the top-level source directory of this
+  module for the precise wording of the license and the list of
+  copyright holders.
 */
+/**
+ * \file
+ *
+ * \brief Routines that actually solve the ODEs that emerge from the hydrostatic
+ *        equilibrium problem
+ */
+#ifndef EWOMS_INITSTATEEQUIL_HEADER_INCLUDED
+#define EWOMS_INITSTATEEQUIL_HEADER_INCLUDED
 
-#ifndef OPM_INITSTATEEQUIL_HEADER_INCLUDED
-#define OPM_INITSTATEEQUIL_HEADER_INCLUDED
+#include "EquilibrationHelpers.hpp"
+#include "RegionMapping.hpp"
 
-#include <opm/core/grid/GridHelpers.hpp>
-#include <opm/core/simulator/EquilibrationHelpers.hpp>
-#include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/utility/extractPvtTableIndex.hpp>
+#include <dune/grid/cpgrid/GridHelpers.hpp>
 
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -49,14 +56,7 @@
 #include <utility>
 #include <vector>
 
-/**
- * \file
- * Facilities for an ECLIPSE-style equilibration-based
- * initialisation scheme (keyword 'EQUIL').
- */
-struct UnstructuredGrid;
-
-namespace Opm
+namespace Ewoms
 {
 
 
@@ -112,7 +112,7 @@ namespace Opm
         phasePressures(const Grid&             G,
                        const Region&           reg,
                        const CellRange&        cells,
-                       const double            grav = unit::gravity);
+                       const double            grav = Opm::unit::gravity);
 
 
 
@@ -189,7 +189,7 @@ namespace Opm
 
         namespace DeckDependent {
             inline
-            std::vector<EquilRecord>
+            std::vector<Opm::EquilRecord>
             getEquil(const Opm::EclipseState& state)
             {
                 const auto& init = state.getInitConfig();
@@ -210,11 +210,11 @@ namespace Opm
             {
                 std::vector<int> eqlnum;
                 if (eclipseState.get3DProperties().hasDeckIntGridProperty("EQLNUM")) {
-                    const int nc = UgGridHelpers::numCells(G);
+                    const int nc = Opm::UgGridHelpers::numCells(G);
                     eqlnum.resize(nc);
                     const std::vector<int>& e = 
                         eclipseState.get3DProperties().getIntGridProperty("EQLNUM").getData();
-                    const int* gc = UgGridHelpers::globalCell(G);
+                    const int* gc = Opm::UgGridHelpers::globalCell(G);
                     for (int cell = 0; cell < nc; ++cell) {
                         const int deck_pos = (gc == NULL) ? cell : gc[cell];
                         eqlnum[cell] = e[deck_pos] - 1;
@@ -223,7 +223,7 @@ namespace Opm
                 else {
                     // No explicit equilibration region.
                     // All cells in region zero.
-                    eqlnum.assign(UgGridHelpers::numCells(G), 0);
+                    eqlnum.assign(Opm::UgGridHelpers::numCells(G), 0);
                 }
 
                 return eqlnum;
@@ -236,33 +236,33 @@ namespace Opm
                 InitialStateComputer(MaterialLawManager& materialLawManager,
                                      const Opm::EclipseState& eclipseState,
                                      const Grid&                        G    ,
-                                     const double grav = unit::gravity,
+                                     const double grav = Opm::unit::gravity,
                                      const bool applySwatInit = true
                                      )
                     : pp_(FluidSystem::numPhases,
-                          std::vector<double>(UgGridHelpers::numCells(G))),
+                          std::vector<double>(Opm::UgGridHelpers::numCells(G))),
                       sat_(FluidSystem::numPhases,
-                          std::vector<double>(UgGridHelpers::numCells(G))),
-                      rs_(UgGridHelpers::numCells(G)),
-                      rv_(UgGridHelpers::numCells(G))
+                          std::vector<double>(Opm::UgGridHelpers::numCells(G))),
+                      rs_(Opm::UgGridHelpers::numCells(G)),
+                      rv_(Opm::UgGridHelpers::numCells(G))
                 {
                     //Check for presence of kw SWATINIT
                     if (eclipseState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT") && applySwatInit) {
                         const std::vector<double>& swat_init_ecl = eclipseState.
                                 get3DProperties().getDoubleGridProperty("SWATINIT").getData();
-                        const int nc = UgGridHelpers::numCells(G);
+                        const int nc = Opm::UgGridHelpers::numCells(G);
                         swat_init_.resize(nc);
-                        const int* gc = UgGridHelpers::globalCell(G);
+                        const int* gc = Opm::UgGridHelpers::globalCell(G);
                         for (int c = 0; c < nc; ++c) {
                             const int deck_pos = (gc == NULL) ? c : gc[c];
                             swat_init_[c] = swat_init_ecl[deck_pos];
                         }
                     }
                     // Get the equilibration records.
-                    const std::vector<EquilRecord> rec = getEquil(eclipseState);
+                    const std::vector<Opm::EquilRecord> rec = getEquil(eclipseState);
                     const auto& tables = eclipseState.getTableManager();
                     // Create (inverse) region mapping.
-                    const RegionMapping<> eqlmap(equilnum(eclipseState, G));
+                    const Ewoms::RegionMapping<> eqlmap(equilnum(eclipseState, grid));
                     const int invalidRegion = -1;
                     regionPvtIdx_.resize(rec.size(), invalidRegion);
                     setRegionPvtIdx(G, eclipseState, eqlmap);
@@ -270,7 +270,7 @@ namespace Opm
                     // Create Rs functions.
                     rs_func_.reserve(rec.size());
                     if (FluidSystem::enableDissolvedGas()) {
-                        const TableContainer& rsvdTables = tables.getRsvdTables();
+                        const Opm::TableContainer& rsvdTables = tables.getRsvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             if (eqlmap.cells(i).empty())
                             {
@@ -282,7 +282,7 @@ namespace Opm
                                 if (rsvdTables.size() <= 0 ) {
                                     OPM_THROW(std::runtime_error, "Cannot initialise: RSVD table not available.");
                                 }
-                                const RsvdTable& rsvdTable = rsvdTables.getTable<RsvdTable>(i);
+                                const Opm::RsvdTable& rsvdTable = rsvdTables.getTable<Opm::RsvdTable>(i);
                                 std::vector<double> depthColumn = rsvdTable.getColumn("DEPTH").vectorCopy();
                                 std::vector<double> rsColumn = rsvdTable.getColumn("RS").vectorCopy();
                                 rs_func_.push_back(std::make_shared<Miscibility::RsVD<FluidSystem>>(pvtIdx,
@@ -307,7 +307,7 @@ namespace Opm
 
                     rv_func_.reserve(rec.size());
                     if (FluidSystem::enableVaporizedOil()) {
-                        const TableContainer& rvvdTables = tables.getRvvdTables();
+                        const Opm::TableContainer& rvvdTables = tables.getRvvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             if (eqlmap.cells(i).empty())
                             {
@@ -320,7 +320,7 @@ namespace Opm
                                     OPM_THROW(std::runtime_error, "Cannot initialise: RVVD table not available.");
                                 }
 
-                                const RvvdTable& rvvdTable = rvvdTables.getTable<RvvdTable>(i);
+                                const Opm::RvvdTable& rvvdTable = rvvdTables.getTable<Opm::RvvdTable>(i);
                                 std::vector<double> depthColumn = rvvdTable.getColumn("DEPTH").vectorCopy();
                                 std::vector<double> rvColumn = rvvdTable.getColumn("RV").vectorCopy();
                                 rv_func_.push_back(std::make_shared<Miscibility::RvVD<FluidSystem>>(pvtIdx,
@@ -374,7 +374,7 @@ namespace Opm
                 void setRegionPvtIdx(const Grid& G, const Opm::EclipseState& eclipseState, const RMap& reg) {
 
                     std::vector<int> cellPvtRegionIdx;
-                    extractPvtTableIndex(cellPvtRegionIdx, eclipseState, UgGridHelpers::numCells(G), UgGridHelpers::globalCell(G));
+                    extractPvtTableIndex(cellPvtRegionIdx, eclipseState, Opm::UgGridHelpers::numCells(G), Opm::UgGridHelpers::globalCell(G));
                     for (const auto& r : reg.activeRegions()) {
                         const auto& cells = reg.cells(r);
                         const int cell = *(cells.begin());
@@ -385,7 +385,7 @@ namespace Opm
                 template <class RMap, class MaterialLawManager, class Grid>
                 void
                 calcPressSatRsRv(const RMap&                       reg  ,
-                                 const std::vector< EquilRecord >& rec  ,
+                                 const std::vector< Opm::EquilRecord >& rec  ,
                                  MaterialLawManager& materialLawManager,
                                  const Grid&                       G    ,
                                  const double grav)
@@ -394,8 +394,8 @@ namespace Opm
                         const auto& cells = reg.cells(r);
                         if (cells.empty())
                         {
-                            OpmLog::warning("Equilibration region " + std::to_string(r + 1) 
-                                            + " has no active cells");
+                            Opm::OpmLog::warning("Equilibration region " + std::to_string(r + 1) 
+                                                 + " has no active cells");
                             continue;
                         }
 
@@ -441,6 +441,6 @@ namespace Opm
     } // namespace EQUIL
 } // namespace Opm
 
-#include <opm/core/simulator/initStateEquil_impl.hpp>
+#include "initStateEquil_impl.hpp"
 
 #endif // OPM_INITSTATEEQUIL_HEADER_INCLUDED
