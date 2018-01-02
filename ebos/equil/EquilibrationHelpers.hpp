@@ -65,14 +65,14 @@
   inline double satFromPc(const MaterialLawManager& materialLawManager,
   const int phase,
   const int cell,
-  const double target_pc,
+  const double targetPc,
   const bool increasing = false)
   template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
   inline double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
   const int phase1,
   const int phase2,
   const int cell,
-  const double target_pc)
+  const double targetPc)
   } // namespace Equil
   } // namespace Opm
 
@@ -214,9 +214,9 @@ public:
     operator()(const double depth,
                const double press,
                const double temp,
-               const double sat_gas = 0.0) const
+               const double satGas = 0.0) const
     {
-        if (sat_gas > 0.0) {
+        if (satGas > 0.0) {
             return satRs(press, temp);
         } else {
             if (rsVsDepth_.xMin() > depth)
@@ -282,9 +282,9 @@ public:
     operator()(const double depth,
                const double press,
                const double temp,
-               const double sat_oil = 0.0 ) const
+               const double satOil = 0.0 ) const
     {
-        if (std::abs(sat_oil) > 1e-16) {
+        if (std::abs(satOil) > 1e-16) {
             return satRv(press, temp);
         } else {
             if (rvVsDepth_.xMin() > depth)
@@ -313,9 +313,9 @@ private:
  * as function of depth and pressure as follows:
  *
  *   1. The Rs at the gas-oil contact is equal to the
- *      saturated Rs value, Rs_sat_contact.
+ *      saturated Rs value, RsSatContact.
  *
- *   2. The Rs elsewhere is equal to Rs_sat_contact, but
+ *   2. The Rs elsewhere is equal to RsSatContact, but
  *      constrained to the saturated value as given by the
  *      local pressure.
  *
@@ -329,13 +329,13 @@ public:
      * Constructor.
      *
      * \param[in] pvtRegionIdx The pvt region index
-     * \param[in] p_contact  oil pressure at the contact
+     * \param[in] pContact  oil pressure at the contact
      * \param[in] T_contact  temperature at the contact
      */
-    RsSatAtContact(const int pvtRegionIdx, const double p_contact,  const double T_contact)
+    RsSatAtContact(const int pvtRegionIdx, const double pContact,  const double T_contact)
         : pvtRegionIdx_(pvtRegionIdx)
     {
-        rs_sat_contact_ = satRs(p_contact, T_contact);
+        rsSatContact_ = satRs(pContact, T_contact);
     }
 
     /**
@@ -357,18 +357,18 @@ public:
     operator()(const double /* depth */,
                const double press,
                const double temp,
-               const double sat_gas = 0.0) const
+               const double satGas = 0.0) const
     {
-        if (sat_gas > 0.0) {
+        if (satGas > 0.0) {
             return satRs(press, temp);
         } else {
-            return std::min(satRs(press, temp), rs_sat_contact_);
+            return std::min(satRs(press, temp), rsSatContact_);
         }
     }
 
 private:
     const int pvtRegionIdx_;
-    double rs_sat_contact_;
+    double rsSatContact_;
 
     double satRs(const double press, const double temp) const
     {
@@ -382,9 +382,9 @@ private:
  * as function of depth and pressure as follows:
  *
  *   1. The Rv at the gas-oil contact is equal to the
- *      saturated Rv value, Rv_sat_contact.
+ *      saturated Rv value, RvSatContact.
  *
- *   2. The Rv elsewhere is equal to Rv_sat_contact, but
+ *   2. The Rv elsewhere is equal to RvSatContact, but
  *      constrained to the saturated value as given by the
  *      local pressure.
  *
@@ -398,13 +398,13 @@ public:
      * Constructor.
      *
      * \param[in] pvtRegionIdx The pvt region index
-     * \param[in] p_contact  oil pressure at the contact
+     * \param[in] pContact  oil pressure at the contact
      * \param[in] T_contact  temperature at the contact
      */
-    RvSatAtContact(const int pvtRegionIdx, const double p_contact, const double T_contact)
+    RvSatAtContact(const int pvtRegionIdx, const double pContact, const double T_contact)
         :pvtRegionIdx_(pvtRegionIdx)
     {
-        rv_sat_contact_ = satRv(p_contact, T_contact);
+        rvSatContact_ = satRv(pContact, T_contact);
     }
 
     /**
@@ -426,18 +426,18 @@ public:
     operator()(const double /*depth*/,
                const double press,
                const double temp,
-               const double sat_oil = 0.0) const
+               const double satOil = 0.0) const
     {
-        if (sat_oil > 0.0) {
+        if (satOil > 0.0) {
             return satRv(press, temp);
         } else {
-            return std::min(satRv(press, temp), rv_sat_contact_);
+            return std::min(satRv(press, temp), rvSatContact_);
         }
     }
 
 private:
     const int pvtRegionIdx_;
-    double rv_sat_contact_;
+    double rvSatContact_;
 
     double satRv(const double press, const double temp) const
     {
@@ -517,7 +517,7 @@ public:
      *
      * \return P_o - P_w at WOC.
      */
-    double pcow_woc() const { return this->rec_.waterOilContactCapillaryPressure(); }
+    double pcowWoc() const { return this->rec_.waterOilContactCapillaryPressure(); }
 
     /**
      * Depth of gas-oil contact.
@@ -529,7 +529,7 @@ public:
      *
      * \return P_g - P_o at GOC.
      */
-    double pcgo_goc() const { return this->rec_.gasOilContactCapillaryPressure(); }
+    double pcgoGoc() const { return this->rec_.gasOilContactCapillaryPressure(); }
 
 
     /**
@@ -563,18 +563,18 @@ private:
 
 /// Functor for inverting capillary pressure function.
 /// Function represented is
-///   f(s) = pc(s) - target_pc
+///   f(s) = pc(s) - targetPc
 template <class FluidSystem,  class MaterialLaw, class MaterialLawManager>
 struct PcEq
 {
     PcEq(const MaterialLawManager& materialLawManager,
          const int phase,
          const int cell,
-         const double target_pc)
+         const double targetPc)
         : materialLawManager_(materialLawManager),
           phase_(phase),
           cell_(cell),
-          target_pc_(target_pc)
+          targetPc_(targetPc)
     {
 
     }
@@ -592,13 +592,13 @@ struct PcEq
         MaterialLaw::capillaryPressures(pc, matParams, fluidState);
         double sign = (phase_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
         double pcPhase = pc[FluidSystem::oilPhaseIdx] + sign *  pc[phase_];
-        return pcPhase - target_pc_;
+        return pcPhase - targetPc_;
     }
 private:
     const MaterialLawManager& materialLawManager_;
     const int phase_;
     const int cell_;
-    const double target_pc_;
+    const double targetPc_;
 };
 
 template <class FluidSystem, class MaterialLawManager>
@@ -660,15 +660,15 @@ template <class FluidSystem, class MaterialLaw, class MaterialLawManager >
 inline double satFromPc(const MaterialLawManager& materialLawManager,
                         const int phase,
                         const int cell,
-                        const double target_pc,
+                        const double targetPc,
                         const bool increasing = false)
 {
     // Find minimum and maximum saturations.
     double s0 = increasing ? maxSaturations<FluidSystem>(materialLawManager, phase, cell) : minSaturations<FluidSystem>(materialLawManager, phase, cell);
     double s1 = increasing ? minSaturations<FluidSystem>(materialLawManager, phase, cell) : maxSaturations<FluidSystem>(materialLawManager, phase, cell);
 
-    // Create the equation f(s) = pc(s) - target_pc
-    const PcEq<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase, cell, target_pc);
+    // Create the equation f(s) = pc(s) - targetPc
+    const PcEq<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase, cell, targetPc);
     double f0 = f(s0);
     double f1 = f(s1);
 
@@ -716,7 +716,7 @@ inline double satFromPc(const MaterialLawManager& materialLawManager,
 
 /// Functor for inverting a sum of capillary pressure functions.
 /// Function represented is
-///   f(s) = pc1(s) + pc2(1 - s) - target_pc
+///   f(s) = pc1(s) + pc2(1 - s) - targetPc
 template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
 struct PcEqSum
 {
@@ -724,12 +724,12 @@ struct PcEqSum
             const int phase1,
             const int phase2,
             const int cell,
-            const double target_pc)
+            const double targetPc)
         : materialLawManager_(materialLawManager),
           phase1_(phase1),
           phase2_(phase2),
           cell_(cell),
-          target_pc_(target_pc)
+          targetPc_(targetPc)
     {
     }
     double operator()(double s) const
@@ -750,14 +750,14 @@ struct PcEqSum
         double pc1 = pc[FluidSystem::oilPhaseIdx] + sign1 *  pc[phase1_];
         double sign2 = (phase2_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
         double pc2 = pc[FluidSystem::oilPhaseIdx] + sign2 *  pc[phase2_];
-        return pc1 + pc2 - target_pc_;
+        return pc1 + pc2 - targetPc_;
     }
 private:
     const MaterialLawManager& materialLawManager_;
     const int phase1_;
     const int phase2_;
     const int cell_;
-    const double target_pc_;
+    const double targetPc_;
 };
 
 
@@ -771,14 +771,14 @@ inline double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
                               const int phase1,
                               const int phase2,
                               const int cell,
-                              const double target_pc)
+                              const double targetPc)
 {
     // Find minimum and maximum saturations.
     double s0 = minSaturations<FluidSystem>(materialLawManager, phase1, cell);
     double s1 = maxSaturations<FluidSystem>(materialLawManager, phase1, cell);
 
-    // Create the equation f(s) = pc1(s) + pc2(1-s) - target_pc
-    const PcEqSum<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase1, phase2, cell, target_pc);
+    // Create the equation f(s) = pc1(s) + pc2(1-s) - targetPc
+    const PcEqSum<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase1, phase2, cell, targetPc);
     double f0 = f(s0);
     double f1 = f(s1);
     if (f0 <= 0.0)

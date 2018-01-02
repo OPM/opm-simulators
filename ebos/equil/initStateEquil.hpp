@@ -143,10 +143,10 @@ class Water {
 public:
     Water(const double   temp,
           const int      pvtRegionIdx,
-          const double   norm_grav)
+          const double   normGrav)
         : temp_(temp)
         , pvtRegionIdx_(pvtRegionIdx)
-        , g_(norm_grav)
+        , g_(normGrav)
     {
     }
 
@@ -177,11 +177,11 @@ public:
     Oil(const double   temp,
         const RS&      rs,
         const int      pvtRegionIdx,
-        const double   norm_grav)
+        const double   normGrav)
         : temp_(temp)
         , rs_(rs)
         , pvtRegionIdx_(pvtRegionIdx)
-        , g_(norm_grav)
+        , g_(normGrav)
     {
     }
 
@@ -224,11 +224,11 @@ public:
     Gas(const double   temp,
         const RV&      rv,
         const int      pvtRegionIdx,
-        const double   norm_grav)
+        const double   normGrav)
         : temp_(temp)
         , rv_(rv)
         , pvtRegionIdx_(pvtRegionIdx)
-        , g_(norm_grav)
+        , g_(normGrav)
     {
     }
 
@@ -302,7 +302,7 @@ water(const Grid&                 grid     ,
       const Region&               reg   ,
       const std::array<double,2>& span  ,
       const double                grav  ,
-      double&                     po_woc,
+      double&                     poWoc,
       const CellRange&            cells ,
       std::vector<double>&        press )
 {
@@ -319,7 +319,7 @@ water(const Grid&                 grid     ,
         p0 = reg.pressure();
     } else {
         z0 = reg.zwoc();
-        p0 = po_woc - reg.pcow_woc(); // Water pressure at contact
+        p0 = poWoc - reg.pcowWoc(); // Water pressure at contact
     }
 
     std::array<double,2> up   = {{ z0, span[0] }};
@@ -338,7 +338,7 @@ water(const Grid&                 grid     ,
 
     if (reg.datum() > reg.zwoc()) {
         // Return oil pressure at contact
-        po_woc = wpress[0](reg.zwoc()) + reg.pcow_woc();
+        poWoc = wpress[0](reg.zwoc()) + reg.pcowWoc();
     }
 }
 
@@ -353,8 +353,8 @@ oil(const Grid&                 grid     ,
     const double                grav  ,
     const CellRange&            cells ,
     std::vector<double>&        press ,
-    double&                     po_woc,
-    double&                     po_goc)
+    double&                     poWoc,
+    double&                     poGoc)
 {
     using PhasePressODE::Oil;
     typedef Oil<FluidSystem, typename Region::CalcDissolution> ODE;
@@ -365,12 +365,12 @@ oil(const Grid&                 grid     ,
 
     double z0;
     double p0;
-    if (reg.datum() > reg.zwoc()) {//Datum in water zone, po_woc given
+    if (reg.datum() > reg.zwoc()) {//Datum in water zone, poWoc given
         z0 = reg.zwoc();
-        p0 = po_woc;
-    } else if (reg.datum() < reg.zgoc()) {//Datum in gas zone, po_goc given
+        p0 = poWoc;
+    } else if (reg.datum() < reg.zgoc()) {//Datum in gas zone, poGoc given
         z0 = reg.zgoc();
-        p0 = po_goc;
+        p0 = poGoc;
     } else { //Datum in oil zone
         z0 = reg.datum();
         p0 = reg.pressure();
@@ -391,14 +391,14 @@ oil(const Grid&                 grid     ,
     assign(grid, opress, z0, cells, press);
 
     const double woc = reg.zwoc();
-    if      (z0 > woc) { po_woc = opress[0](woc); } // WOC above datum
-    else if (z0 < woc) { po_woc = opress[1](woc); } // WOC below datum
-    else               { po_woc = p0;             } // WOC *at*  datum
+    if      (z0 > woc) { poWoc = opress[0](woc); } // WOC above datum
+    else if (z0 < woc) { poWoc = opress[1](woc); } // WOC below datum
+    else               { poWoc = p0;             } // WOC *at*  datum
 
     const double goc = reg.zgoc();
-    if      (z0 > goc) { po_goc = opress[0](goc); } // GOC above datum
-    else if (z0 < goc) { po_goc = opress[1](goc); } // GOC below datum
-    else               { po_goc = p0;             } // GOC *at*  datum
+    if      (z0 > goc) { poGoc = opress[0](goc); } // GOC above datum
+    else if (z0 < goc) { poGoc = opress[1](goc); } // GOC below datum
+    else               { poGoc = p0;             } // GOC *at*  datum
 }
 
 template <class FluidSystem,
@@ -410,7 +410,7 @@ gas(const Grid&                 grid     ,
     const Region&               reg   ,
     const std::array<double,2>& span  ,
     const double                grav  ,
-    double&                     po_goc,
+    double&                     poGoc,
     const CellRange&            cells ,
     std::vector<double>&        press )
 {
@@ -428,7 +428,7 @@ gas(const Grid&                 grid     ,
         p0 = reg.pressure();
     } else {
         z0 = reg.zgoc();
-        p0 = po_goc + reg.pcgo_goc(); // Gas pressure at contact
+        p0 = poGoc + reg.pcgoGoc(); // Gas pressure at contact
     }
 
     std::array<double,2> up   = {{ z0, span[0] }};
@@ -447,7 +447,7 @@ gas(const Grid&                 grid     ,
 
     if (reg.datum() < reg.zgoc()) {
         // Return oil pressure at contact
-        po_goc = gpress[1](reg.zgoc()) - reg.pcgo_goc();
+        poGoc = gpress[1](reg.zgoc()) - reg.pcgoGoc();
     }
 }
 } // namespace PhasePressure
@@ -472,57 +472,57 @@ equilibrateOWG(const Grid&                         grid,
     const int gaspos = FluidSystem::gasPhaseIdx;
 
     if (reg.datum() > reg.zwoc()) { // Datum in water zone
-        double po_woc = -1;
-        double po_goc = -1;
+        double poWoc = -1;
+        double poGoc = -1;
 
         if (water) {
-            PhasePressure::water<FluidSystem>(grid, reg, span, grav, po_woc,
+            PhasePressure::water<FluidSystem>(grid, reg, span, grav, poWoc,
                                               cells, press[ waterpos ]);
         }
 
         if (oil) {
             PhasePressure::oil<FluidSystem>(grid, reg, span, grav, cells,
-                                            press[ oilpos ], po_woc, po_goc);
+                                            press[ oilpos ], poWoc, poGoc);
         }
 
         if (gas) {
-            PhasePressure::gas<FluidSystem>(grid, reg, span, grav, po_goc,
+            PhasePressure::gas<FluidSystem>(grid, reg, span, grav, poGoc,
                                             cells, press[ gaspos ]);
         }
     } else if (reg.datum() < reg.zgoc()) { // Datum in gas zone
-        double po_woc = -1;
-        double po_goc = -1;
+        double poWoc = -1;
+        double poGoc = -1;
 
         if (gas) {
-            PhasePressure::gas<FluidSystem>(grid, reg, span, grav, po_goc,
+            PhasePressure::gas<FluidSystem>(grid, reg, span, grav, poGoc,
                                             cells, press[ gaspos ]);
         }
 
         if (oil) {
             PhasePressure::oil<FluidSystem>(grid, reg, span, grav, cells,
-                                            press[ oilpos ], po_woc, po_goc);
+                                            press[ oilpos ], poWoc, poGoc);
         }
 
         if (water) {
-            PhasePressure::water<FluidSystem>(grid, reg, span, grav, po_woc,
+            PhasePressure::water<FluidSystem>(grid, reg, span, grav, poWoc,
                                               cells, press[ waterpos ]);
         }
     } else { // Datum in oil zone
-        double po_woc = -1;
-        double po_goc = -1;
+        double poWoc = -1;
+        double poGoc = -1;
 
         if (oil) {
             PhasePressure::oil<FluidSystem>(grid, reg, span, grav, cells,
-                                            press[ oilpos ], po_woc, po_goc);
+                                            press[ oilpos ], poWoc, poGoc);
         }
 
         if (water) {
-            PhasePressure::water<FluidSystem>(grid, reg, span, grav, po_woc,
+            PhasePressure::water<FluidSystem>(grid, reg, span, grav, poWoc,
                                               cells, press[ waterpos ]);
         }
 
         if (gas) {
-            PhasePressure::gas<FluidSystem>(grid, reg, span, grav, po_goc,
+            PhasePressure::gas<FluidSystem>(grid, reg, span, grav, poGoc,
                                             cells, press[ gaspos ]);
         }
     }
@@ -621,7 +621,7 @@ phasePressures(const Grid&             grid,
             }
         }
     }
-    const int np = FluidSystem::numPhases;  //reg.phaseUsage().num_phases;
+    const int np = FluidSystem::numPhases;  //reg.phaseUsage().numPhases;
 
     typedef std::vector<double> pval;
     std::vector<pval> press(np, pval(ncell, 0.0));
@@ -676,9 +676,9 @@ temperature(const Grid&             /* G */,
  * \param[in] cells           Range that spans the cells of the current
  *                            equilibration region.
  * \param[in] materialLawManager   The MaterialLawManager from opm-material
- * \param[in] swat_init       A vector of initial water saturations.
+ * \param[in] swatInit       A vector of initial water saturations.
  *                            The capillary pressure is scaled to fit these values
- * \param[in] phase_pressures Phase pressures, one vector for each active phase,
+ * \param[in] phasePressures Phase pressures, one vector for each active phase,
  *                            of pressure values in each cell in the current
  *                            equilibration region.
  * \return                    Phase saturations, one vector for each phase, each containing
@@ -690,14 +690,14 @@ phaseSaturations(const Grid&             grid,
                  const Region&           reg,
                  const CellRange&        cells,
                  MaterialLawManager& materialLawManager,
-                 const std::vector<double> swat_init,
-                 std::vector< std::vector<double> >& phase_pressures)
+                 const std::vector<double> swatInit,
+                 std::vector< std::vector<double> >& phasePressures)
 {
     if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
         OPM_THROW(std::runtime_error, "Cannot initialise: not handling water-gas cases.");
     }
 
-    std::vector< std::vector<double> > phase_saturations = phase_pressures; // Just to get the right size.
+    std::vector< std::vector<double> > phaseSaturations = phasePressures; // Just to get the right size.
 
     // Adjust oil pressure according to gas saturation and cap pressure
     typedef Opm::SimpleModularFluidState<double,
@@ -721,8 +721,8 @@ phaseSaturations(const Grid&             grid,
     const int oilpos = FluidSystem::oilPhaseIdx;
     const int waterpos = FluidSystem::waterPhaseIdx;
     const int gaspos = FluidSystem::gasPhaseIdx;
-    std::vector<double>::size_type local_index = 0;
-    for (typename CellRange::const_iterator ci = cells.begin(); ci != cells.end(); ++ci, ++local_index) {
+    std::vector<double>::size_type localIndex = 0;
+    for (typename CellRange::const_iterator ci = cells.begin(); ci != cells.end(); ++ci, ++localIndex) {
         const int cell = *ci;
         const auto& scaledDrainageInfo =
             materialLawManager.oilWaterScaledEpsInfoDrainage(cell);
@@ -736,17 +736,17 @@ phaseSaturations(const Grid&             grid,
                 const double cellDepth  =  Opm::UgGridHelpers::cellCenterDepth(grid,
                                                                                cell);
                 sw = satFromDepth<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager,cellDepth,reg.zwoc(),waterpos,cell,false);
-                phase_saturations[waterpos][local_index] = sw;
+                phaseSaturations[waterpos][localIndex] = sw;
             }
             else{
-                const double pcov = phase_pressures[oilpos][local_index] - phase_pressures[waterpos][local_index];
-                if (swat_init.empty()) { // Invert Pc to find sw
+                const double pcov = phasePressures[oilpos][localIndex] - phasePressures[waterpos][localIndex];
+                if (swatInit.empty()) { // Invert Pc to find sw
                     sw = satFromPc<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager, waterpos, cell, pcov);
-                    phase_saturations[waterpos][local_index] = sw;
+                    phaseSaturations[waterpos][localIndex] = sw;
                 } else { // Scale Pc to reflect imposed sw
-                    sw = swat_init[cell];
+                    sw = swatInit[cell];
                     sw = materialLawManager.applySwatinit(cell, pcov, sw);
-                    phase_saturations[waterpos][local_index] = sw;
+                    phaseSaturations[waterpos][localIndex] = sw;
                 }
             }
         }
@@ -756,14 +756,14 @@ phaseSaturations(const Grid&             grid,
                 const double cellDepth  = Opm::UgGridHelpers::cellCenterDepth(grid,
                                                                               cell);
                 sg = satFromDepth<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager,cellDepth,reg.zgoc(),gaspos,cell,true);
-                phase_saturations[gaspos][local_index] = sg;
+                phaseSaturations[gaspos][localIndex] = sg;
             }
             else{
                 // Note that pcog is defined to be (pg - po), not (po - pg).
-                const double pcog = phase_pressures[gaspos][local_index] - phase_pressures[oilpos][local_index];
+                const double pcog = phasePressures[gaspos][localIndex] - phasePressures[oilpos][localIndex];
                 const double increasing = true; // pcog(sg) expected to be increasing function
                 sg = satFromPc<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager, gaspos, cell, pcog, increasing);
-                phase_saturations[gaspos][local_index] = sg;
+                phaseSaturations[gaspos][localIndex] = sg;
             }
         }
         if (gas && water && (sg + sw > 1.0)) {
@@ -771,17 +771,17 @@ phaseSaturations(const Grid&             grid,
             // zones can lead to unphysical saturations when
             // treated as above. Must recalculate using gas-water
             // capillary pressure.
-            const double pcgw = phase_pressures[gaspos][local_index] - phase_pressures[waterpos][local_index];
-            if (! swat_init.empty()) {
+            const double pcgw = phasePressures[gaspos][localIndex] - phasePressures[waterpos][localIndex];
+            if (! swatInit.empty()) {
                 // Re-scale Pc to reflect imposed sw for vanishing oil phase.
                 // This seems consistent with ecl, and fails to honour
-                // swat_init in case of non-trivial gas-oil cap pressure.
+                // swatInit in case of non-trivial gas-oil cap pressure.
                 sw = materialLawManager.applySwatinit(cell, pcgw, sw);
             }
             sw = satFromSumOfPcs<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager, waterpos, gaspos, cell, pcgw);
             sg = 1.0 - sw;
-            phase_saturations[waterpos][local_index] = sw;
-            phase_saturations[gaspos][local_index] = sg;
+            phaseSaturations[waterpos][localIndex] = sw;
+            phaseSaturations[gaspos][localIndex] = sg;
             if ( water ) {
                 fluidState.setSaturation(FluidSystem::waterPhaseIdx, sw);
             }
@@ -794,12 +794,12 @@ phaseSaturations(const Grid&             grid,
             double pC[/*numPhases=*/3] = { 0.0, 0.0, 0.0 };
             MaterialLaw::capillaryPressures(pC, matParams, fluidState);
             double pcGas = pC[FluidSystem::oilPhaseIdx] + pC[FluidSystem::gasPhaseIdx];
-            phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pcGas;
+            phasePressures[oilpos][localIndex] = phasePressures[gaspos][localIndex] - pcGas;
         }
-        phase_saturations[oilpos][local_index] = 1.0 - sw - sg;
+        phaseSaturations[oilpos][localIndex] = 1.0 - sw - sg;
 
         // Adjust phase pressures for max and min saturation ...
-        double threshold_sat = 1.0e-6;
+        double thresholdSat = 1.0e-6;
 
         double so = 1.0;
         double pC[FluidSystem::numPhases] = { 0.0, 0.0, 0.0 };
@@ -815,31 +815,31 @@ phaseSaturations(const Grid&             grid,
         }
         fluidState.setSaturation(FluidSystem::oilPhaseIdx, so);
 
-        if (water && sw > scaledDrainageInfo.Swu-threshold_sat ) {
+        if (water && sw > scaledDrainageInfo.Swu-thresholdSat ) {
             fluidState.setSaturation(FluidSystem::waterPhaseIdx, scaledDrainageInfo.Swu);
             MaterialLaw::capillaryPressures(pC, matParams, fluidState);
             double pcWat = pC[FluidSystem::oilPhaseIdx] - pC[FluidSystem::waterPhaseIdx];
-            phase_pressures[oilpos][local_index] = phase_pressures[waterpos][local_index] + pcWat;
-        } else if (gas && sg > scaledDrainageInfo.Sgu-threshold_sat) {
+            phasePressures[oilpos][localIndex] = phasePressures[waterpos][localIndex] + pcWat;
+        } else if (gas && sg > scaledDrainageInfo.Sgu-thresholdSat) {
             fluidState.setSaturation(FluidSystem::gasPhaseIdx, scaledDrainageInfo.Sgu);
             MaterialLaw::capillaryPressures(pC, matParams, fluidState);
             double pcGas = pC[FluidSystem::oilPhaseIdx] + pC[FluidSystem::gasPhaseIdx];
-            phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pcGas;
+            phasePressures[oilpos][localIndex] = phasePressures[gaspos][localIndex] - pcGas;
         }
-        if (gas && sg < scaledDrainageInfo.Sgl+threshold_sat) {
+        if (gas && sg < scaledDrainageInfo.Sgl+thresholdSat) {
             fluidState.setSaturation(FluidSystem::gasPhaseIdx, scaledDrainageInfo.Sgl);
             MaterialLaw::capillaryPressures(pC, matParams, fluidState);
             double pcGas = pC[FluidSystem::oilPhaseIdx] + pC[FluidSystem::gasPhaseIdx];
-            phase_pressures[gaspos][local_index] = phase_pressures[oilpos][local_index] + pcGas;
+            phasePressures[gaspos][localIndex] = phasePressures[oilpos][localIndex] + pcGas;
         }
-        if (water && sw < scaledDrainageInfo.Swl+threshold_sat) {
+        if (water && sw < scaledDrainageInfo.Swl+thresholdSat) {
             fluidState.setSaturation(FluidSystem::waterPhaseIdx, scaledDrainageInfo.Swl);
             MaterialLaw::capillaryPressures(pC, matParams, fluidState);
             double pcWat = pC[FluidSystem::oilPhaseIdx] - pC[FluidSystem::waterPhaseIdx];
-            phase_pressures[waterpos][local_index] = phase_pressures[oilpos][local_index] - pcWat;
+            phasePressures[waterpos][localIndex] = phasePressures[oilpos][localIndex] - pcWat;
         }
     }
-    return phase_saturations;
+    return phaseSaturations;
 }
 
 /**
@@ -855,25 +855,25 @@ phaseSaturations(const Grid&             grid,
  * \param[in] grid            Grid.
  * \param[in] cells           Range that spans the cells of the current
  *                            equilibration region.
- * \param[in] oil_pressure    Oil pressure for each cell in range.
+ * \param[in] oilPressure    Oil pressure for each cell in range.
  * \param[in] temperature     Temperature for each cell in range.
- * \param[in] rs_func         Rs as function of pressure and depth.
+ * \param[in] rsFunc         Rs as function of pressure and depth.
  * \return                    Rs values, one for each cell in the 'cells' range.
  */
 template <class Grid, class CellRangeType>
 std::vector<double> computeRs(const Grid& grid,
                               const CellRangeType& cells,
-                              const std::vector<double> oil_pressure,
+                              const std::vector<double> oilPressure,
                               const std::vector<double>& temperature,
-                              const Miscibility::RsFunction& rs_func,
-                              const std::vector<double> gas_saturation)
+                              const Miscibility::RsFunction& rsFunc,
+                              const std::vector<double> gasSaturation)
 {
     assert(Grid::dimensionworld == 3);
     std::vector<double> rs(cells.size());
     int count = 0;
     for (auto it = cells.begin(); it != cells.end(); ++it, ++count) {
         const double depth = Opm::UgGridHelpers::cellCenterDepth(grid, *it);
-        rs[count] = rs_func(depth, oil_pressure[count], temperature[count], gas_saturation[count]);
+        rs[count] = rsFunc(depth, oilPressure[count], temperature[count], gasSaturation[count]);
     }
     return rs;
 }
@@ -907,8 +907,8 @@ equilnum(const Opm::EclipseState& eclipseState,
             eclipseState.get3DProperties().getIntGridProperty("EQLNUM").getData();
         const int* gc = Opm::UgGridHelpers::globalCell(grid);
         for (int cell = 0; cell < nc; ++cell) {
-            const int deck_pos = (gc == NULL) ? cell : gc[cell];
-            eqlnum[cell] = e[deck_pos] - 1;
+            const int deckPos = (gc == NULL) ? cell : gc[cell];
+            eqlnum[cell] = e[deckPos] - 1;
         }
     }
     else {
@@ -944,14 +944,14 @@ public:
     {
         //Check for presence of kw SWATINIT
         if (eclipseState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT") && applySwatInit) {
-            const std::vector<double>& swat_init_ecl = eclipseState.
+            const std::vector<double>& swatInitEcl = eclipseState.
                 get3DProperties().getDoubleGridProperty("SWATINIT").getData();
             const int nc = grid.size(/*codim=*/0);
-            swat_init_.resize(nc);
+            swatInit_.resize(nc);
             const int* gc = Opm::UgGridHelpers::globalCell(grid);
             for (int c = 0; c < nc; ++c) {
-                const int deck_pos = (gc == NULL) ? c : gc[c];
-                swat_init_[c] = swat_init_ecl[deck_pos];
+                const int deckPos = (gc == NULL) ? c : gc[c];
+                swatInit_[c] = swatInitEcl[deckPos];
             }
         }
         // Get the equilibration records.
@@ -964,13 +964,13 @@ public:
         setRegionPvtIdx(grid, eclipseState, eqlmap);
 
         // Create Rs functions.
-        rs_func_.reserve(rec.size());
+        rsFunc_.reserve(rec.size());
         if (FluidSystem::enableDissolvedGas()) {
             const Opm::TableContainer& rsvdTables = tables.getRsvdTables();
             for (size_t i = 0; i < rec.size(); ++i) {
                 if (eqlmap.cells(i).empty())
                 {
-                    rs_func_.push_back(std::shared_ptr<Miscibility::RsVD<FluidSystem>>());
+                    rsFunc_.push_back(std::shared_ptr<Miscibility::RsVD<FluidSystem>>());
                     continue;
                 }
                 const int pvtIdx = regionPvtIdx_[i];
@@ -981,7 +981,7 @@ public:
                     const Opm::RsvdTable& rsvdTable = rsvdTables.getTable<Opm::RsvdTable>(i);
                     std::vector<double> depthColumn = rsvdTable.getColumn("DEPTH").vectorCopy();
                     std::vector<double> rsColumn = rsvdTable.getColumn("RS").vectorCopy();
-                    rs_func_.push_back(std::make_shared<Miscibility::RsVD<FluidSystem>>(pvtIdx,
+                    rsFunc_.push_back(std::make_shared<Miscibility::RsVD<FluidSystem>>(pvtIdx,
                                                                                         depthColumn , rsColumn));
                 } else {
                     if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
@@ -990,24 +990,24 @@ public:
                                   "datum depth must be at the gas-oil-contact. "
                                   "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
                     }
-                    const double p_contact = rec[i].datumDepthPressure();
-                    const double T_contact = 273.15 + 20; // standard temperature for now
-                    rs_func_.push_back(std::make_shared<Miscibility::RsSatAtContact<FluidSystem>>(pvtIdx, p_contact, T_contact));
+                    const double pContact = rec[i].datumDepthPressure();
+                    const double TContact = 273.15 + 20; // standard temperature for now
+                    rsFunc_.push_back(std::make_shared<Miscibility::RsSatAtContact<FluidSystem>>(pvtIdx, pContact, TContact));
                 }
             }
         } else {
             for (size_t i = 0; i < rec.size(); ++i) {
-                rs_func_.push_back(std::make_shared<Miscibility::NoMixing>());
+                rsFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
             }
         }
 
-        rv_func_.reserve(rec.size());
+        rvFunc_.reserve(rec.size());
         if (FluidSystem::enableVaporizedOil()) {
             const Opm::TableContainer& rvvdTables = tables.getRvvdTables();
             for (size_t i = 0; i < rec.size(); ++i) {
                 if (eqlmap.cells(i).empty())
                 {
-                    rv_func_.push_back(std::shared_ptr<Miscibility::RvVD<FluidSystem>>());
+                    rvFunc_.push_back(std::shared_ptr<Miscibility::RvVD<FluidSystem>>());
                     continue;
                 }
                 const int pvtIdx = regionPvtIdx_[i];
@@ -1019,7 +1019,7 @@ public:
                     const Opm::RvvdTable& rvvdTable = rvvdTables.getTable<Opm::RvvdTable>(i);
                     std::vector<double> depthColumn = rvvdTable.getColumn("DEPTH").vectorCopy();
                     std::vector<double> rvColumn = rvvdTable.getColumn("RV").vectorCopy();
-                    rv_func_.push_back(std::make_shared<Miscibility::RvVD<FluidSystem>>(pvtIdx,
+                    rvFunc_.push_back(std::make_shared<Miscibility::RvVD<FluidSystem>>(pvtIdx,
                                                                                         depthColumn , rvColumn));
 
                 } else {
@@ -1029,14 +1029,14 @@ public:
                                   "datum depth must be at the gas-oil-contact. "
                                   "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
                     }
-                    const double p_contact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
-                    const double T_contact = 273.15 + 20; // standard temperature for now
-                    rv_func_.push_back(std::make_shared<Miscibility::RvSatAtContact<FluidSystem>>(pvtIdx ,p_contact, T_contact));
+                    const double pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
+                    const double TContact = 273.15 + 20; // standard temperature for now
+                    rvFunc_.push_back(std::make_shared<Miscibility::RvSatAtContact<FluidSystem>>(pvtIdx ,pContact, TContact));
                 }
             }
         } else {
             for (size_t i = 0; i < rec.size(); ++i) {
-                rv_func_.push_back(std::make_shared<Miscibility::NoMixing>());
+                rvFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
             }
         }
 
@@ -1057,14 +1057,14 @@ public:
 
 private:
     typedef EquilReg EqReg;
-    std::vector< std::shared_ptr<Miscibility::RsFunction> > rs_func_;
-    std::vector< std::shared_ptr<Miscibility::RsFunction> > rv_func_;
+    std::vector< std::shared_ptr<Miscibility::RsFunction> > rsFunc_;
+    std::vector< std::shared_ptr<Miscibility::RsFunction> > rvFunc_;
     std::vector<int> regionPvtIdx_;
     PVec pp_;
     PVec sat_;
     Vec rs_;
     Vec rv_;
-    Vec swat_init_;
+    Vec swatInit_;
 
     template<class RMap>
     void setRegionPvtIdx(const Grid& grid, const Opm::EclipseState& eclState, const RMap& reg)
@@ -1110,11 +1110,11 @@ private:
                 continue;
             }
 
-            const EqReg eqreg(rec[r], rs_func_[r], rv_func_[r], regionPvtIdx_[r]);
+            const EqReg eqreg(rec[r], rsFunc_[r], rvFunc_[r], regionPvtIdx_[r]);
 
             PVec pressures = phasePressures<FluidSystem>(grid, eqreg, cells, grav);
             const std::vector<double>& temp = temperature(grid, eqreg, cells);
-            const PVec sat = phaseSaturations<FluidSystem>(grid, eqreg, cells, materialLawManager, swat_init_, pressures);
+            const PVec sat = phaseSaturations<FluidSystem>(grid, eqreg, cells, materialLawManager, swatInit_, pressures);
 
             const int np = FluidSystem::numPhases;
             for (int p = 0; p < np; ++p) {
@@ -1126,10 +1126,10 @@ private:
             if (oil && gas) {
                 const int oilpos = FluidSystem::oilPhaseIdx;
                 const int gaspos = FluidSystem::gasPhaseIdx;
-                const Vec rs_vals = computeRs(grid, cells, pressures[oilpos], temp, *(rs_func_[r]), sat[gaspos]);
-                const Vec rv_vals = computeRs(grid, cells, pressures[gaspos], temp, *(rv_func_[r]), sat[oilpos]);
-                copyFromRegion(rs_vals, cells, rs_);
-                copyFromRegion(rv_vals, cells, rv_);
+                const Vec rsVals = computeRs(grid, cells, pressures[oilpos], temp, *(rsFunc_[r]), sat[gaspos]);
+                const Vec rvVals = computeRs(grid, cells, pressures[gaspos], temp, *(rvFunc_[r]), sat[oilpos]);
+                copyFromRegion(rsVals, cells, rs_);
+                copyFromRegion(rvVals, cells, rv_);
             }
         }
     }

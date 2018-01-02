@@ -37,7 +37,7 @@ namespace Ewoms
  * \tparam Region Type of a forward region mapping.  Expected
  *                to provide indexed access through
  *                operator[]() as well as inner types
- *                'value_type', 'size_type', and
+ *                'valueType', 'size_type', and
  *                'const_iterator'.
  */
 template < class Region = std::vector<int> >
