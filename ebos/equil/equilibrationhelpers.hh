@@ -29,12 +29,14 @@
 #ifndef EWOMS_EQUILIBRATIONHELPERS_HH
 #define EWOMS_EQUILIBRATIONHELPERS_HH
 
-#include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
-
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+
+// due to a bug in Equil.hpp, cstddef must be included before Equil.hpp
+#include <cstddef>
+#include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 
 #include <memory>
 
