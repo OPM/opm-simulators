@@ -31,7 +31,6 @@
 
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
-#include <opm/core/utility/RootFinders.hpp>
 
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 
@@ -606,12 +605,10 @@ double minSaturations(const MaterialLawManager& materialLawManager, const int ph
     case FluidSystem::waterPhaseIdx :
     {
         return scaledDrainageInfo.Swl;
-        break;
     }
     case FluidSystem::gasPhaseIdx :
     {
         return scaledDrainageInfo.Sgl;
-        break;
     }
     case FluidSystem::oilPhaseIdx :
     {
@@ -661,26 +658,53 @@ inline double satFromPc(const MaterialLawManager& materialLawManager,
                         const bool increasing = false)
 {
     // Find minimum and maximum saturations.
-    const double s0 = increasing ? maxSaturations<FluidSystem>(materialLawManager, phase, cell) : minSaturations<FluidSystem>(materialLawManager, phase, cell);
-    const double s1 = increasing ? minSaturations<FluidSystem>(materialLawManager, phase, cell) : maxSaturations<FluidSystem>(materialLawManager, phase, cell);
+    double s0 = increasing ? maxSaturations<FluidSystem>(materialLawManager, phase, cell) : minSaturations<FluidSystem>(materialLawManager, phase, cell);
+    double s1 = increasing ? minSaturations<FluidSystem>(materialLawManager, phase, cell) : maxSaturations<FluidSystem>(materialLawManager, phase, cell);
 
     // Create the equation f(s) = pc(s) - target_pc
     const PcEq<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase, cell, target_pc);
-    const double f0 = f(s0);
-    const double f1 = f(s1);
+    double f0 = f(s0);
+    double f1 = f(s1);
 
-    if (f0 <= 0.0) {
+    if (f0 <= 0.0)
         return s0;
-    } else if (f1 > 0.0) {
+    else if (f1 >= 0.0)
         return s1;
-    } else {
-        const int max_iter = 60;
-        const double tol = 1e-6;
-        int iter_used = -1;
-        typedef Opm::RegulaFalsi<Opm::ThrowOnError> ScalarSolver;
-        const double sol = ScalarSolver::solve(f, std::min(s0, s1), std::max(s0, s1), max_iter, tol, iter_used);
-        return sol;
+
+    assert(f0 > 0 && f1 < 0);
+
+    const int maxIter = 60;
+    const double tol = 1e-6;
+
+    // regula falsi with the "Pegasus" method to avoid stagnation
+    for (int iter = 0; iter < maxIter; ++ iter) {
+        // determine the pivot
+        double s = (s1*f0 - s0*f1)/(f0 - f1);
+
+        // adapt the interval
+        double fs = f(s);
+        if (fs == 0.0)
+            return s;
+        else if ((fs > 0.0) == (f0 > 0.0)) {
+            // update interval and reverse
+            s0 = s1;
+            f0 = f1;
+        }
+        else
+            // "Pegasus" method
+            f0 *= f1/(f1 + fs);
+
+        s1 = s;
+        f1 = fs;
+
+        // check for convergence
+        if (std::abs(s1 - s0) < tol)
+            return (s1 + s0)/2;
     }
+
+    OPM_THROW(std::runtime_error,
+              "Could not find solution for PcEq = 0.0 after " << maxIter
+              << " iterations.");
 }
 
 
@@ -744,25 +768,52 @@ inline double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
                               const double target_pc)
 {
     // Find minimum and maximum saturations.
-    const double smin = minSaturations<FluidSystem>(materialLawManager, phase1, cell);
-    const double smax = maxSaturations<FluidSystem>(materialLawManager, phase1, cell);
+    double s0 = minSaturations<FluidSystem>(materialLawManager, phase1, cell);
+    double s1 = maxSaturations<FluidSystem>(materialLawManager, phase1, cell);
 
     // Create the equation f(s) = pc1(s) + pc2(1-s) - target_pc
     const PcEqSum<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase1, phase2, cell, target_pc);
-    const double f0 = f(smin);
-    const double f1 = f(smax);
-    if (f0 <= 0.0) {
-        return smin;
-    } else if (f1 > 0.0) {
-        return smax;
-    } else {
-        const int max_iter = 30;
-        const double tol = 1e-6;
-        int iter_used = -1;
-        typedef Opm::RegulaFalsi<Opm::ThrowOnError> ScalarSolver;
-        const double sol = ScalarSolver::solve(f, smin, smax, max_iter, tol, iter_used);
-        return sol;
+    double f0 = f(s0);
+    double f1 = f(s1);
+    if (f0 <= 0.0)
+        return s0;
+    else if (f1 >= 0.0)
+        return s1;
+
+    assert(f0 > 0.0 && f1 < 0.0);
+
+    const int maxIter = 60;
+    const double tol = 1e-6;
+
+    // regula falsi with the "Pegasus" method to avoid stagnation
+    for (int iter = 0; iter < maxIter; ++ iter) {
+        // determine the pivot
+        double s = (s1*f0 - s0*f1)/(f0 - f1);
+
+        // adapt the interval
+        double fs = f(s);
+        if (fs == 0.0)
+            return s;
+        else if ((fs > 0.0) == (f0 > 0.0)) {
+            // update interval and reverse
+            s0 = s1;
+            f0 = f1;
+        }
+        else
+            // "Pegasus" method
+            f0 *= f1 / (f1 + fs);
+
+        s1 = s;
+        f1 = fs;
+
+        // check for convergence
+        if (std::abs(s1 - s0) < tol)
+            return (s1 + s0)/2;
     }
+
+    OPM_THROW(std::runtime_error,
+              "Could not find solution for PcEqSum = 0.0 after " << maxIter
+              << " iterations.");
 }
 
 /// Compute saturation from depth. Used for constant capillary pressure function
