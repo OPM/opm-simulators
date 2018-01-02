@@ -29,8 +29,8 @@
 #ifndef EWOMS_INITSTATEEQUIL_HH
 #define EWOMS_INITSTATEEQUIL_HH
 
-#include "EquilibrationHelpers.hpp"
-#include "RegionMapping.hpp"
+#include "equilibrationhelpers.hh"
+#include "regionmapping.hh"
 
 #include <ewoms/common/propertysystem.hh>
 

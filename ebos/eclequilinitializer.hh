@@ -28,7 +28,7 @@
 #ifndef EWOMS_ECL_EQUIL_INITIALIZER_HH
 #define EWOMS_ECL_EQUIL_INITIALIZER_HH
 
-#include "equil/initStateEquil.hpp"
+#include "equil/initstateequil.hh"
 
 #include <ewoms/common/propertysystem.hh>
 
