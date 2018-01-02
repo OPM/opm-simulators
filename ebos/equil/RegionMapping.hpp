@@ -23,8 +23,6 @@
 #ifndef OPM_REGIONMAPPING_HH
 #define OPM_REGIONMAPPING_HH
 
-#include <boost/range.hpp>
-
 #include <unordered_map>
 #include <vector>
 
@@ -76,7 +74,41 @@ namespace Ewoms
          */
         typedef typename std::vector<CellId>::const_iterator CellIter;
 
-        typedef boost::iterator_range<CellIter> Range;
+        class Range
+        {
+        public:
+            typedef CellIter iterator;
+            typedef CellIter const_iterator;
+
+            Range() {};
+
+            Range(const CellIter& beg, const CellIter& en)
+                : begin_(beg)
+                , end_(en)
+            {};
+
+            Range(const Range&) = default;
+
+            CellIter& begin() { return begin_; }
+            const CellIter& begin() const { return begin_; }
+
+            const CellIter& end() const { return end_; }
+
+            bool empty() const
+            { return begin_ == end_; }
+
+            size_t size() const
+            {
+                size_t ret = 0;
+                for (CellIter it = begin(); it != end(); ++it)
+                    ++ret;
+
+                return ret;
+            }
+        private:
+            CellIter begin_;
+            CellIter end_;
+        };
 
         /**
          * Compute region number of given active cell.
