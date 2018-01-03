@@ -124,7 +124,11 @@ void writeTetrahedronSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
     typedef Ewoms::VcfvStencil<Scalar, GridView> Stencil;
     typedef typename Stencil :: Mapper Mapper;
 
-    Mapper mapper( gridView );
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
+    Mapper mapper(gridView, Dune::mcmgVertexLayout());
+#else
+    Mapper mapper(gridView);
+#endif
     Stencil stencil(gridView, mapper);
 
     auto eIt = gridView.template begin<0>();
@@ -155,7 +159,7 @@ void writeTetrahedronSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
                 ++cornerOffset;
             }
 
-            gf2.insertElement(Dune::GeometryType(Dune::GeometryType::cube, dim),
+            gf2.insertElement(Dune::GeometryType(/*topologyId=*/(1 << dim) - 1, dim),
                               vertexIndices);
         }
     }
@@ -182,7 +186,8 @@ void testTetrahedron()
         gf.insertVertex(pos);
     }
     std::vector<unsigned int> v = { 0, 1, 2, 3 };
-    gf.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, dim), v);
+    // in Dune >= 2.6 topologyIds seem to be opaque integers. WTF!?
+    gf.insertElement(Dune::GeometryType(/*topologyId=*/0, dim), v);
     auto *grid = gf.createGrid();
 
     // write the sub-control volumes to a VTK file.
@@ -205,8 +210,14 @@ void writeCubeSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
 
     GridFactory2 gf2;
     const auto &gridView = grid.leafView();
+
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
+    typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> VertexMapper;
+    VertexMapper vertexMapper(gridView, Dune::mcmgVertexLayout());
+#else
     typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGVertexLayout> VertexMapper;
     VertexMapper vertexMapper(gridView);
+#endif
     Stencil stencil(gridView, vertexMapper);
     auto eIt = gridView.template begin<0>();
     const auto &eEndIt = gridView.template end<0>();
@@ -236,7 +247,7 @@ void writeCubeSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
                 ++cornerOffset;
             }
 
-            gf2.insertElement(Dune::GeometryType(Dune::GeometryType::cube, dim),
+            gf2.insertElement(Dune::GeometryType(/*topologyId=*/(1 << dim) - 1, dim),
                               vertexIndices);
         }
     }
@@ -270,7 +281,8 @@ void testCube()
         gf.insertVertex(pos);
     }
     std::vector<unsigned int> v = { 0, 1, 2, 3, 4, 5, 6, 7 };
-    gf.insertElement(Dune::GeometryType(Dune::GeometryType::cube, dim), v);
+    // in Dune >= 2.6 topologyIds seem to be opaque integers. WTF!?
+    gf.insertElement(Dune::GeometryType((1 << dim) - 1, dim), v);
     auto *grid = gf.createGrid();
 
     // write the sub-control volumes to a VTK file.
@@ -304,7 +316,11 @@ void testQuadrature()
     typedef Ewoms::VcfvStencil<Scalar, GridView> Stencil;
     typedef typename Stencil :: Mapper Mapper;
 
-    Mapper mapper( gridView );
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
+    Mapper mapper(gridView, Dune::mcmgVertexLayout());
+#else
+    Mapper mapper(gridView);
+#endif
     Stencil stencil(gridView, mapper);
     for (; eIt != eEndIt; ++eIt) {
         const auto &elemGeom = eIt->geometry();
