@@ -45,7 +45,8 @@
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/material/heatconduction/Somerton.hpp>
+#include <opm/material/thermal/SomertonHeatConductionLaw.hpp>
+#include <opm/material/thermal/ConstantSolidHeatCapLaw.hpp>
 #include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Dnapl.hpp>
@@ -135,8 +136,12 @@ private:
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::Somerton<FluidSystem, Scalar> type;
+    typedef Opm::SomertonHeatConductionLaw<FluidSystem, Scalar> type;
 };
+
+// set the heat law for the solid phase
+SET_TYPE_PROP(FractureProblem, SolidEnergyLaw,
+              Opm::ConstantSolidHeatCapLaw<typename GET_PROP_TYPE(TypeTag, Scalar)>);
 
 // Disable gravity
 SET_BOOL_PROP(FractureProblem, EnableGravity, false);
@@ -186,6 +191,7 @@ class FractureProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
     typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLawParams) HeatConductionLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, SolidEnergyLawParams) SolidEnergyLawParams;
     typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
     enum {
@@ -273,7 +279,7 @@ public:
         fractureWidth_ = 1e-3; // [m]
 
         // parameters for the somerton law of heat conduction
-        computeHeatCondParams_(heatCondParams_, matrixPorosity_);
+        initThermalParams_(heatCondParams_, matrixPorosity_);
     }
 
     /*!
@@ -414,28 +420,26 @@ public:
     { return fractureWidth_; }
 
     /*!
-     * \copydoc FvBaseMultiPhaseProblem::heatConductionParams
-     */
-    template <class Context>
-    const HeatConductionLawParams &
-    heatConductionParams(const Context& context OPM_UNUSED,
-                         unsigned spaceIdx OPM_UNUSED,
-                         unsigned timeIdx OPM_UNUSED) const
-    { return heatCondParams_; }
-
-    /*!
-     * \copydoc FvBaseMultiPhaseProblem::heatCapacitySolid
+     * \brief Return the parameters for the heat storage law of the rock
      *
      * In this case, we assume the rock-matrix to be granite.
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context& context OPM_UNUSED,
-                             unsigned spaceIdx OPM_UNUSED,
-                             unsigned timeIdx OPM_UNUSED) const
-    {
-        return 790     // specific heat capacity of granite [J / (kg K)]
-               * 2700; // density of granite [kg/m^3]
-    }
+    const SolidEnergyLawParams&
+    solidHeatLawParams(const Context& context OPM_UNUSED,
+                       unsigned spaceIdx OPM_UNUSED,
+                       unsigned timeIdx OPM_UNUSED) const
+    { return solidHeatLawParams_; }
+
+    /*!
+     * \copydoc FvBaseMultiPhaseProblem::heatConductionParams
+     */
+    template <class Context>
+    const HeatConductionLawParams &
+    heatConductionLawParams(const Context& context OPM_UNUSED,
+                            unsigned spaceIdx OPM_UNUSED,
+                            unsigned timeIdx OPM_UNUSED) const
+    { return heatCondParams_; }
 
     // \}
 
@@ -577,8 +581,13 @@ private:
     bool onUpperBoundary_(const GlobalPosition& pos) const
     { return pos[1] > this->boundingBoxMax()[1] - eps_; }
 
-    void computeHeatCondParams_(HeatConductionLawParams& params, Scalar poro)
+    void initThermalParams_(HeatConductionLawParams& params, Scalar poro)
     {
+        // assume the volumetric heat capacity of granite
+        solidHeatLawParams_.setSolidHeatCapacity(790.0 // specific heat capacity of granite [J / (kg K)]
+                                                 * 2700.0); // density of granite [kg/m^3]
+        solidHeatLawParams_.finalize();
+
         Scalar lambdaGranite = 2.8; // [W / (K m)]
 
         // create a Fluid state which has all phases present
@@ -625,6 +634,7 @@ private:
     MaterialLawParams matrixMaterialParams_;
 
     HeatConductionLawParams heatCondParams_;
+    SolidEnergyLawParams solidHeatLawParams_;
 
     Scalar temperature_;
     Scalar eps_;
