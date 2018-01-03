@@ -58,6 +58,12 @@
 #include <vector>
 
 namespace Ewoms {
+namespace Properties {
+NEW_PROP_TAG(Simulator);
+NEW_PROP_TAG(Grid);
+NEW_PROP_TAG(FluidSystem);
+} // namespace Properties
+
 /**
  * Types and routines that collectively implement a basic
  * ECLIPSE-style equilibration-based initialisation scheme.
