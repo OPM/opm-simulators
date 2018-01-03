@@ -40,7 +40,7 @@ namespace Opm
         using typename Base::FluidSystem;
         using typename Base::ModelParameters;
         using typename Base::MaterialLaw;
-        using typename Base::BlackoilIndices;
+        using typename Base::Indices;
         using typename Base::RateConverterType;
 
 
@@ -61,7 +61,7 @@ namespace Opm
         // TODO: the following system looks not rather flexible. Looking into all kinds of possibilities
         // TODO: gas is always there? how about oil water case?
         // Is it gas oil two phase case?
-        static const bool gasoil = numEq == 2 && (BlackoilIndices::compositionSwitchIdx >= 0);
+        static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
         static const int GTotal = 0;
         static const int WFrac = gasoil? -1000: 1;
         static const int GFrac = gasoil? 1 : 2;
@@ -106,7 +106,6 @@ namespace Opm
                          const int num_components);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
-                          const std::vector<bool>* active_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
                           const int num_cells);
@@ -187,11 +186,10 @@ namespace Opm
         using Base::num_components_;
 
         // protected functions from the Base class
-        using Base::active;
         using Base::phaseUsage;
         using Base::name;
-        using Base::flowPhaseToEbosPhaseIdx;
         using Base::flowPhaseToEbosCompIdx;
+        using Base::ebosCompIdxToFlowCompIdx;
         using Base::getAllowCrossFlow;
         using Base::scalingFactor;
 
@@ -284,7 +282,7 @@ namespace Opm
 
         // fraction value of the primary variables
         // should we just use member variables to store them instead of calculating them again and again
-        EvalWell volumeFraction(const int seg, const int comp_idx) const;
+        EvalWell volumeFraction(const int seg, const unsigned comp_idx) const;
 
         // F_p / g_p, the basic usage of this value is because Q_p = G_t * F_p / G_p
         EvalWell volumeFractionScaled(const int seg, const int comp_idx) const;

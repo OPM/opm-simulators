@@ -113,13 +113,11 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     init(const PhaseUsage* phase_usage_arg,
-         const std::vector<bool>* active_arg,
          const std::vector<double>& /* depth_arg */,
          const double gravity_arg,
          const int /* num_cells */)
     {
         phase_usage_ = phase_usage_arg;
-        active_ = active_arg;
         gravity_ = gravity_arg;
     }
 
@@ -186,21 +184,6 @@ namespace Opm
 
 
 
-
-    template<typename TypeTag>
-    const std::vector<bool>&
-    WellInterface<TypeTag>::
-    active() const
-    {
-        assert(active_);
-
-        return *active_;
-    }
-
-
-
-
-
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
@@ -233,39 +216,32 @@ namespace Opm
     flowPhaseToEbosCompIdx( const int phaseIdx ) const
     {
         const auto& pu = phaseUsage();
-        if (active()[Water] && pu.phase_pos[Water] == phaseIdx)
-            return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx)
-            return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx)
-            return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
+            return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
+            return Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
+            return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
 
         // for other phases return the index
         return phaseIdx;
     }
 
-
-
-
     template<typename TypeTag>
     int
     WellInterface<TypeTag>::
-    flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
+    ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const
     {
         const auto& pu = phaseUsage();
-        if (active()[Water] && pu.phase_pos[Water] == phaseIdx) {
-            return FluidSystem::waterPhaseIdx;
-        }
-        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx) {
-            return FluidSystem::oilPhaseIdx;
-        }
-        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx) {
-            return FluidSystem::gasPhaseIdx;
-        }
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == compIdx)
+            return pu.phase_pos[Water];
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == compIdx)
+            return pu.phase_pos[Oil];
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == compIdx)
+            return pu.phase_pos[Gas];
 
-        assert(phaseIdx < 3);
         // for other phases return the index
-        return phaseIdx;
+        return compIdx;
     }
 
 
@@ -461,7 +437,7 @@ namespace Opm
         const int np = number_of_phases_;
 
         if (econ_production_limits.onMinOilRate()) {
-            assert(active()[Oil]);
+            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
             const double oil_rate = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Oil ] ];
             const double min_oil_rate = econ_production_limits.minOilRate();
             if (std::abs(oil_rate) < min_oil_rate) {
@@ -470,7 +446,7 @@ namespace Opm
         }
 
         if (econ_production_limits.onMinGasRate() ) {
-            assert(active()[Gas]);
+            assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
             const double gas_rate = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Gas ] ];
             const double min_gas_rate = econ_production_limits.minGasRate();
             if (std::abs(gas_rate) < min_gas_rate) {
@@ -479,8 +455,8 @@ namespace Opm
         }
 
         if (econ_production_limits.onMinLiquidRate() ) {
-            assert(active()[Oil]);
-            assert(active()[Water]);
+            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+            assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
             const double oil_rate = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Oil ] ];
             const double water_rate = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Water ] ];
             const double liquid_rate = oil_rate + water_rate;
@@ -517,8 +493,8 @@ namespace Opm
         const Opm::PhaseUsage& pu = phaseUsage();
         const int well_number = index_of_well_;
 
-        assert(active()[Oil]);
-        assert(active()[Water]);
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
 
         const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
         const double water_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Water ] ];
@@ -854,11 +830,11 @@ namespace Opm
             return distr[phaseIdx];
         }
         const auto& pu = phaseUsage();
-        if (active()[Water] && pu.phase_pos[Water] == phaseIdx)
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
             return 1.0;
-        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx)
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
             return 1.0;
-        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx)
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
             return 0.01;
         if (has_solvent && phaseIdx == contiSolventEqIdx )
             return 0.01;

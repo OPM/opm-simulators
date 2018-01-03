@@ -74,11 +74,11 @@ namespace Opm
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-        typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
+        typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
         typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
 
-        static const int numEq = BlackoilIndices::numEq;
+        static const int numEq = Indices::numEq;
         typedef double Scalar;
 
         typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
@@ -91,8 +91,8 @@ namespace Opm
 
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
-        static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
-        static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
+        static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
+        static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
 
         // For the conversion between the surface volume rate and resrevoir voidage rate
         using RateConverterType = RateConverter::
@@ -123,7 +123,6 @@ namespace Opm
         void setVFPProperties(const VFPProperties* vfp_properties_arg);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
-                          const std::vector<bool>* active_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
                           const int num_cells);
@@ -269,8 +268,6 @@ namespace Opm
 
         bool getAllowCrossFlow() const;
 
-        const std::vector<bool>* active_;
-
         const VFPProperties* vfp_properties_;
 
         double gravity_;
@@ -284,13 +281,11 @@ namespace Opm
 
         const int num_components_;
 
-        const std::vector<bool>& active() const;
-
         const PhaseUsage& phaseUsage() const;
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
 
-        int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
+        int ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const;
 
         double wsolvent() const;
 
