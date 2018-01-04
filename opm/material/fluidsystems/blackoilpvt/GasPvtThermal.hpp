@@ -131,7 +131,14 @@ public:
 
                 std::vector<double> hSamples(temperatureColumn.size());
 
-                Scalar h = temperatureColumn[0]*cpGasColumn[0];
+                // the specific enthalpy of vaporization. since ECL does not seem to
+                // feature a proper way to specify this quantity, we use the value for
+                // methane. A proper model would also need to consider the enthalpy
+                // change due to dissolution, i.e. the enthalpies of the gas and oil
+                // phases should depend on the phase composition
+                const Scalar hVap = 480.6e3; // [J / kg]
+
+                Scalar h = temperatureColumn[0]*cpGasColumn[0] + hVap;
                 for (size_t i = 0;; ++i) {
                     hSamples[i] = h;
 
