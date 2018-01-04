@@ -31,7 +31,11 @@
 
 #include <opm/parser/eclipse/Units/Units.hpp>
 
+#if HAVE_DUNE_FEM
+#include <dune/fem/misc/mpimanager.hh>
+#else
 #include <dune/common/parallel/mpihelper.hh>
+#endif
 
 #include <array>
 #include <iostream>
@@ -993,7 +997,11 @@ void test_DeckWithSwatinit()
 
 int main(int argc, char** argv)
 {
+#if HAVE_DUNE_FEM
+    Dune::Fem::MPIManager::initialize(argc, argv);
+#else
     Dune::MPIHelper::instance(argc, argv);
+#endif
 
     typedef TTAG(TestEquilTypeTag) TypeTag;
     Ewoms::registerAllParameters_<TypeTag>();
