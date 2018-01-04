@@ -69,6 +69,7 @@ function(add_test_compare_restarted_simulation)
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
+                           0
                TEST_ARGS ${TEST_ARGS})
 endfunction()
 
@@ -99,6 +100,37 @@ function(add_test_compare_parallel_simulation)
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
+               TEST_ARGS ${TEST_ARGS})
+endfunction()
+
+
+###########################################################################
+# TEST: add_test_compare_parallel_restarted_simulation
+###########################################################################
+
+# Input:
+#   - casename: basename (no extension)
+#
+# Details:
+#   - This test class compares the output from a restarted parallel simulation
+#     to that of a non-restarted parallel simulation.
+function(add_test_compare_parallel_restarted_simulation)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL)
+  set(multiValueArgs TEST_ARGS)
+  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
+  set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+  set(TEST_ARGS ${OPM_DATA_ROOT}/${PARAM_CASENAME}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
+
+  opm_add_test(compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
+               EXE_NAME ${PARAM_SIMULATOR}
+               DRIVER_ARGS ${OPM_DATA_ROOT}/${PARAM_CASENAME} ${RESULT_PATH}
+                           ${CMAKE_BINARY_DIR}/bin
+                           ${PARAM_FILENAME}
+                           ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
+                           ${COMPARE_SUMMARY_COMMAND}
+                           ${COMPARE_ECL_COMMAND}
+                           1
                TEST_ARGS ${TEST_ARGS})
 endfunction()
 
