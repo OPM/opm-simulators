@@ -12,7 +12,7 @@ namespace Opm {
         , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
         , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
     {
-        const auto& eclState = ebosSimulator_.gridManager().eclState();
+        const auto& eclState = ebosSimulator_.vanguard().eclState();
         phase_usage_ = phaseUsageFromDeck(eclState);
 
         active_.resize(phase_usage_.MaxNumPhases, false);
@@ -38,17 +38,17 @@ namespace Opm {
     void
     BlackoilAquiferModel<TypeTag>:: beginTimeStep() 
     {
-        // Right now it doesn't do shit.
+
     }
 
     // called at the end of a time step
     template<typename TypeTag>
     void
-    BlackoilAquiferModel<TypeTag>:: timeStepSucceeded()
+    BlackoilAquiferModel<TypeTag>:: timeStepSucceeded(const SimulatorTimerInterface& timer)
     {
         for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
         {
-            aquifer->after_time_step();
+            aquifer->after_time_step(timer);
         }
     }
 
@@ -57,7 +57,7 @@ namespace Opm {
     void
     BlackoilAquiferModel<TypeTag>:: beginReportStep(const int time_step) 
     {
-        // Right now it doesn't do shit.
+
     }
 
     // called at the end of a report step
@@ -65,14 +65,7 @@ namespace Opm {
     void
     BlackoilAquiferModel<TypeTag>:: endReportStep() 
     {
-        // Right now it just spits out the constants for each aquifers
-        // We are using the simple integer indexing for the aquifers
-        for (int i = 0; i < numAquifers(); ++i)
-        {
-            std::cout << "Aquifer[" << i << "]"
-                      << " : Tc = " << aquifers()[i].time_constant()
-                      << ", beta = " << aquifers()[i].aquifer_influx_constant() << std::endl;
-        }
+
     }
 
     // Get the last report step
@@ -80,9 +73,6 @@ namespace Opm {
     const SimulatorReport& 
     BlackoilAquiferModel<TypeTag>:: lastReport() const 
     {
-        for (auto i = aquifers_.begin(); i != aquifers_.end(); ++i){
-            (*i).print_private_members();
-        }
         return last_report_;
     }
 
@@ -93,7 +83,6 @@ namespace Opm {
               const int iterationIdx                )
     {
         last_report_ = SimulatorReport();
-        
         // We need to update the reservoir pressures connected to the aquifer
         updateConnectionIntensiveQuantities();
 
@@ -103,35 +92,14 @@ namespace Opm {
             prepareTimeStep(timer);
         }
 
-        if (iterationIdx == 0) {
-            calculateExplicitQuantities();
-        }
-
         if (param_.solve_aquifereq_initially_ && iterationIdx == 0) {
             // solve the aquifer equations as a pre-processing step
             last_report_ = solveAquiferEq(timer);
         }
-
         assembleAquiferEq(timer);
-
         last_report_.converged = true;
     }
 
-    // Protected function: Update the primary variables
-    template<typename TypeTag>
-    void
-    BlackoilAquiferModel<TypeTag>:: updatePrimaryVariables() 
-    {
-        // Right now it doesn't do shit.
-    }
-
-    // Protected function: Init the primary variables
-    template<typename TypeTag>
-    void
-    BlackoilAquiferModel<TypeTag>:: initPrimaryVariablesEvaluation() const 
-    {
-        // Right now it doesn't do shit.
-    }
 
     template<typename TypeTag>
     void
@@ -147,17 +115,6 @@ namespace Opm {
             elemCtx.updatePrimaryStencil(*elemIt);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         }
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilAquiferModel<TypeTag>:: calculateExplicitQuantities()
-    {
-        // for (auto aqui = aquifers_.begin(); aqui!= aquifers_.end(); ++aqui)
-        // {
-        //     std::cout << "calculateExplicitQuantities: Aquifer id = " << aqui->aquiferID() << std::endl;
-        //     aqui->calculateExplicitQuantities(ebosSimulator_);
-        // }
     }
 
 
@@ -200,28 +157,8 @@ namespace Opm {
     int
     BlackoilAquiferModel<TypeTag>:: numPhases() const
     {
-        // Not implemented yet!!!!!!!!!!!!
         const auto& pu = phase_usage_;
         return pu.num_phases;
-    }
-
-
-    // Protected function: returns the phase index in ebos
-    template<typename TypeTag>
-    int
-    BlackoilAquiferModel<TypeTag>:: flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
-    {
-        const auto& pu = phase_usage_;
-        if (active_[Water] && pu.phase_pos[Water] == phaseIdx)
-            return FluidSystem::waterPhaseIdx;
-        if (active_[Oil] && pu.phase_pos[Oil] == phaseIdx)
-            return FluidSystem::oilPhaseIdx;
-        if (active_[Gas] && pu.phase_pos[Gas] == phaseIdx)
-            return FluidSystem::gasPhaseIdx;
-
-        assert(phaseIdx < 3);
-        // for other phases return the index
-        return phaseIdx;
     }
 
     // Protected function which calls the individual aquifer models
@@ -231,7 +168,6 @@ namespace Opm {
     {
         for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
         {
-            std::cout << "assembleAquiferEq: Aquifer id = " << aquifer->aquiferID() << std::endl;
             aquifer->assembleAquiferEq(ebosSimulator_, timer);
         }
     }
@@ -261,47 +197,27 @@ namespace Opm {
     // Initialize the aquifers in the deck
     template<typename TypeTag>
     void
-    BlackoilAquiferModel<TypeTag>:: init(const Simulator& ebosSimulator, std::vector< AquiferCarterTracy<TypeTag> >& aquifers)//, std::vector< AquiferCarterTracy<TypeTag> >& aquifers)
+    BlackoilAquiferModel<TypeTag>:: init(const Simulator& ebosSimulator, std::vector< AquiferCarterTracy<TypeTag> >& aquifers)
     {
-        const auto& deck = ebosSimulator.gridManager().deck();
-        const auto& eclState = ebosSimulator.gridManager().eclState();
+        updateConnectionIntensiveQuantities();
+        const auto& deck = ebosSimulator.vanguard().deck();
+        const auto& eclState = ebosSimulator.vanguard().eclState();
         
         // Get all the carter tracy aquifer properties data and put it in aquifers vector
         AquiferCT aquiferct = AquiferCT(eclState,deck);
+        Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
 
         std::vector<AquiferCT::AQUCT_data> aquifersData = aquiferct.getAquifers();
-        std::vector<AquiferCT::AQUANCON_data> aquanconData = aquiferct.getAquancon();
+        std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
 
-        // for (auto aquiferData = aquifersData.begin(); aquiferData != aquifersData.end(); ++aquiferData)
-        // {
-            
-        // }
+        assert( aquifersData.size() == aquifer_connect.size() );
 
-        auto ita = aquifersData.cbegin();
-        auto f_lambda = [&] (AquiferCT::AQUANCON_data i) {
-            aquifers.push_back( AquiferCarterTracy<TypeTag> (*ita++, i, numComponents(), gravity_ ) );
-        };
-        std::for_each( aquanconData.cbegin(), aquanconData.cend(), f_lambda );
-    }
 
-    // Begin the hack to initialize the aquifers in the deck
-    template<typename TypeTag>
-    std::vector< AquiferCarterTracy<TypeTag> >
-    BlackoilAquiferModel<TypeTag>:: hack_init(const Simulator& ebosSimulator)//, std::vector< AquiferCarterTracy<TypeTag> >& aquifers)
-    {
-        std::vector< AquiferCarterTracy<TypeTag> > aquifers;
-        /** Begin hack!!!!! */
-        const auto& deck = ebosSimulator.gridManager().deck();
-        const auto& eclState = ebosSimulator.gridManager().eclState();
-        
-        // Get all the carter tracy aquifer properties data and put it in aquifers vector
-        AquiferCT aquiferct = AquiferCT(eclState,deck);
-
-        std::vector<AquiferCT::AQUCT_data> aquifersData = aquiferct.getAquifers();
-
-        for (auto aquiferData = aquifersData.begin(); aquiferData != aquifersData.end(); ++aquiferData)
+        for (int i = 0; i < aquifersData.size(); ++i)
         {
-            aquifers.push_back( AquiferCarterTracy<TypeTag> (*aquiferData, numComponents(), gravity_ ) );
+            aquifers.push_back( 
+                                 AquiferCarterTracy<TypeTag> (aquifersData.at(i), aquifer_connection.at(i), numComponents(), gravity_, ebosSimulator_) 
+                              );
         }
     }
 

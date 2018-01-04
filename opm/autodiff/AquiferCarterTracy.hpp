@@ -23,6 +23,7 @@
 
 #include <Eigen/QR>
 #include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
 #include <opm/autodiff/BlackoilAquiferModel.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
@@ -30,10 +31,12 @@
 
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <string>
 #include <memory>
 #include <vector>
+#include <algorithm>
 #include <map>
 #include <cassert>
 
@@ -65,8 +68,13 @@ namespace Opm
             typedef double Scalar;
 
             typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
+            typedef Opm::BlackOilFluidState<Eval, FluidSystem> FluidState;
+            typedef typename FluidSystem::WaterPvt WaterPvt;
 
             typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
+
+
+
 
             static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
             static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
@@ -74,35 +82,16 @@ namespace Opm
             static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
 
 
-            AquiferCarterTracy(const std::vector<int>& cell_id)
-            : phi_aq_ (1.0), //
-              C_t_ (1.0), //
-              r_o_ (1.0), //
-              k_a_ (1.0), //
-              c1_ (1.0),
-              h_ (1.0), //
-              theta_ (1.0), //
-              c2_ (1.0), //
-              d0_ (1.0),
-              cell_idx_ (cell_id)
-            {
-                mu_w_ = 1e-3;
-                aqutab_td_.push_back(1.0);
-                aqutab_pi_.push_back(1.0);
-                aquiferID_ = 1;
-                inftableID_ = 1;
-                pvttableID_ = 1;
-                init_quantities();
-            }
-
-            explicit AquiferCarterTracy( const AquiferCT::AQUCT_data& params, const AquiferCT::AQUANCON_data& aquanconParams, 
-                                         const int numComponents, const Scalar gravity                                        )
+            explicit AquiferCarterTracy( const AquiferCT::AQUCT_data& params, const Aquancon::AquanconOutput& connection,
+                                         const int numComponents, const Scalar gravity, const Simulator& ebosSimulator    )
             : phi_aq_ (params.phi_aq), //
               C_t_ (params.C_t), //
               r_o_ (params.r_o), //
               k_a_ (params.k_a), //
               c1_ (params.c1),
               h_ (params.h), //
+              p0_defaulted_ (params.p0_defaulted),
+              pa0_ (params.p0),
               theta_ (params.theta), //
               c2_ (params.c2), //
               d0_ (params.d0),
@@ -111,12 +100,11 @@ namespace Opm
               aquiferID_ (params.aquiferID),
               inftableID_ (params.inftableID),
               pvttableID_ (params.pvttableID),
-              cell_idx_ (params.cell_id),
               num_components_ (numComponents),
-              gravity_ (gravity)
+              gravity_ (gravity),
+              ebos_simulator_ (ebosSimulator)
             {
-                mu_w_ = 1e-3;
-                init_quantities(aquanconParams);
+                init_quantities(connection);
             }
 
             inline const PhaseUsage&
@@ -127,79 +115,35 @@ namespace Opm
                 return *phase_usage_;
             }
 
-            inline int
-            flowPhaseToEbosCompIdx( const int phaseIdx ) const
-            {
-                const auto& pu = phaseUsage();
-                if (pu.phase_pos[Water] == phaseIdx)
-                    return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-                if (pu.phase_pos[Oil] == phaseIdx)
-                    return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-                if (pu.phase_pos[Gas] == phaseIdx)
-                    return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-
-                // for other phases return the index
-                return phaseIdx;
-            }
-
-            inline int
-            flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
-            {
-                const auto& pu = phaseUsage();
-                if (pu.phase_pos[Water] == phaseIdx) {
-                    return FluidSystem::waterPhaseIdx;
-                }
-                if (pu.phase_pos[Oil] == phaseIdx) {
-                    return FluidSystem::oilPhaseIdx;
-                }
-                if (pu.phase_pos[Gas] == phaseIdx) {
-                    return FluidSystem::gasPhaseIdx;
-                }
-
-                assert(phaseIdx < 3);
-                // for other phases return the index
-                return phaseIdx;
-            }
-
-            inline void calculateExplicitQuantities(const Simulator& ebosSimulator)
-            {
-                std::cout << "In CarterTracy<calculateExplicitQuantities>: I am aquifer #" << aquiferID_ << std::endl;
-            }
 
             inline void assembleAquiferEq(Simulator& ebosSimulator, const SimulatorTimerInterface& timer)
             {
-                std::cout << "In CarterTracy<assembleAquiferEq>: I am aquifer #" << aquiferID_ << std::endl;
-                // resAqui_ = 0.0;
                 dt_ = timer.currentStepLength();
                 auto& ebosJac = ebosSimulator.model().linearizer().matrix();
                 auto& ebosResid = ebosSimulator.model().linearizer().residual();
 
-                // TODO: it probably can be static member for StandardWell
-                const double volume = 0.002831684659200; // 0.1 cu ft;
 
                 auto cellID = cell_idx_.begin();
+
                 size_t idx;
                 for ( idx = 0; cellID != cell_idx_.end(); ++cellID, ++idx )
                 {
                     Eval qinflow = 0.0;
                     // We are dereferencing the value of IntensiveQuantities because cachedIntensiveQuantities return a const pointer to
                     // IntensiveQuantities of that particular cell_id
-                    const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(*cellID, /*timeIdx=*/ 0));
+                    const IntensiveQuantities intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(*cellID, /*timeIdx=*/ 0));
                     // This is the pressure at td + dt
                     get_current_Pressure_cell(pressure_current_,idx,intQuants);
                     get_current_density_cell(rhow_,idx,intQuants);
                     calculate_inflow_rate(idx, timer);
-                    qinflow = Qai_[idx];
-                    ebosResid[*cellID][flowPhaseToEbosCompIdx(FluidSystem::waterPhaseIdx)] -= qinflow.value();
+                    qinflow = Qai_.at(idx);
+                    ebosResid[*cellID][(FluidSystem::waterCompIdx)] -= qinflow.value();
 
                     for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) 
                     {
                         // also need to consider the efficiency factor when manipulating the jacobians.
-                        ebosJac[*cellID][*cellID][flowPhaseToEbosCompIdx(FluidSystem::waterPhaseIdx)][pvIdx] -= qinflow.derivative(pvIdx);
+                        ebosJac[*cellID][*cellID][(FluidSystem::waterCompIdx)][pvIdx] -= qinflow.derivative(pvIdx);
                     }
-                    std::cout << "In CarterTracy<assembleAquiferEq>: I am aquifer #" << aquiferID_
-                              // << " -> P_wat[t+dt] = " << pressure_current_[idx] << std::endl
-                              << " Qai[t+dt] = " << Qai_[idx] << std::endl;
                 }
             }
 
@@ -214,50 +158,19 @@ namespace Opm
                 }
             }
 
-            inline void after_time_step()
+            inline void after_time_step(const SimulatorTimerInterface& timer)
             {
                 for (auto Qai = Qai_.begin(); Qai != Qai_.end(); ++Qai)
                 {
-                    W_flux_ += (*Qai);
-                }
-                std::cout << "Aquifer # " << aquiferID_ << ": My cumulative flux = " << W_flux_ << std::endl;
-            }
-
-            /* Made into public for testing only!!!!!!. Must be protected */
-            inline const Scalar time_constant() const
-            {
-                Scalar Tc = mu_w_*phi_aq_*C_t_*r_o_*r_o_/(k_a_*c1_);
-                return Tc;
-            }
-
-            /* Made into public for testing only!!!!!!. Must be protected */
-            inline const Scalar aquifer_influx_constant() const
-            {
-                Scalar beta = c2_*h_*theta_*phi_aq_*C_t_*r_o_*r_o_;
-                return beta;
-            }
-
-            // This is another hack to get the face area only for SPE1.
-            // Ideally it should be a map which given a cell_id, it returns the area fraction
-            inline const double area_fraction(const int i)
-            {
-                return 1000.0*20.0*0.092903/(1000.0*1000.0*0.092903*2 + 1000.0*20.0*0.092903*4);
-            }
-
-            inline void print_private_members() const
-            {
-                std::cout << "Aquifer CT #" << aquiferID_ << std::endl;
-                auto ita = aqutab_td_.cbegin();
-                auto f_lambda = [&ita] (double i) {std::cout << *ita++ << "    " << i << std::endl;};
-                std::for_each( aqutab_pi_.cbegin(), aqutab_pi_.cend(), f_lambda );
-
-                for (auto i = coeff_.begin(); i != coeff_.end(); ++i )
-                {
-                    std::cout << "Coeff = " << *i << std::endl;
+                    W_flux_ += (*Qai)*timer.currentStepLength();
                 }
             }
 
-            /* Made into public for testing only!!!!!!. Must be protected */
+            inline const double area_fraction(const size_t i)
+            {
+                return alphai_.at(i);
+            }
+
             inline const std::vector<int> cell_id() const
             {
                 return cell_idx_;
@@ -269,9 +182,9 @@ namespace Opm
             }
 
 
-
-        protected:
+        private:
             const PhaseUsage* phase_usage_;
+            const Simulator& ebos_simulator_;
 
 
             // Aquifer ID, and other IDs
@@ -279,14 +192,17 @@ namespace Opm
             int num_components_;
 
             // Grid variables
-            std::vector<int> cell_idx_;
+
+            std::vector<size_t> cell_idx_;
+            std::vector<Scalar> faceArea_connected_;
 
             // Quantities at each grid id
             std::vector<Scalar> cell_depth_;
-            std::vector<Scalar> pressure_previous_;
-            std::vector<Scalar> pressure_current_;
-            std::vector<Scalar> Qai_;
-            std::vector<Scalar> rhow_;
+            std::vector<Eval> pressure_previous_;
+            std::vector<Eval> pressure_current_;
+            std::vector<Eval> Qai_;
+            std::vector<Eval> rhow_;
+            std::vector<Scalar> alphai_;
 
             // Variables constants
             Scalar mu_w_ , //water viscosity
@@ -304,8 +220,9 @@ namespace Opm
             std::vector<Scalar> aqutab_td_, aqutab_pi_;
 
             // Cumulative flux
-            Scalar W_flux_, dt_, pa0_, gravity_;
-
+            Scalar dt_, pa0_, gravity_;
+            bool p0_defaulted_;
+            Eval W_flux_;
             // Also return the polynomial fit
             std::vector<Scalar> coeff_;
             
@@ -316,7 +233,7 @@ namespace Opm
             inline void polynomial_fit( const std::vector<Scalar> &X, const std::vector<Scalar> &y, 
                                         std::vector<Scalar> &coeff, int order, bool bias) const
             {
-                int colNum = (bias)? order + 1 : order;
+                size_t colNum = (bias)? order + 1 : order;
                 Eigen::MatrixXd A(X.size(), colNum);
                 Eigen::VectorXd y_mapped = Eigen::VectorXd::Map(&y.front(), y.size());
                 Eigen::VectorXd result;
@@ -337,62 +254,202 @@ namespace Opm
                     coeff[i] = result[i];
             }
 
-            inline void init_quantities(const AquiferCT::AQUANCON_data& aquanconParams)
+            inline void get_influence_table_values(Scalar& pitd, Scalar& pitd_prime, const Scalar& td)
             {
+                // http://kluge.in-chemnitz.de/opensource/spline/
+            }
+
+            inline void init_quantities(const Aquancon::AquanconOutput& connection)
+            {
+                // We reset the cumulative flux at the start of any simulation, so, W_flux = 0
                 W_flux_ = 0.;
-                // pa0_ is the initial aquifer water pressure. Must be calculated from equilibrium if left default,
-                // or we get the information from the deck Hacked to make it at 45e6 Pa
-                pa0_ = 45e6;
+
+                // We next get our connections to the aquifer and initialize these quantities using the initialize_connections function
+                initialize_connections(connection);
+
+                calculate_aquifer_condition();
 
                 pressure_previous_.resize(cell_idx_.size(), 0.);
                 pressure_current_.resize(cell_idx_.size(), 0.);
-                // We hack the cell depth values for now. We can actually get it from elementcontext pos
-                cell_depth_.resize(cell_idx_.size(), d0_); 
-                rhow_.resize(cell_idx_.size(), 998.0); 
-                Qai_.resize(cell_idx_.size(), 0.);
+                Qai_.resize(cell_idx_.size(), 0.0);
 
-                polynomial_fit(aqutab_td_, aqutab_pi_, coeff_, 2, true);
+                polynomial_fit(aqutab_td_, aqutab_pi_, coeff_, 1, true);
             }
 
-            inline void get_current_Pressure_cell(std::vector<Scalar>& pressure_water, const int idx, const IntensiveQuantities& intQuants)
+            inline void get_current_Pressure_cell(std::vector<Eval>& pressure_water, const int idx, const IntensiveQuantities& intQuants)
             {
                 const auto& fs = intQuants.fluidState();
-                pressure_water[idx] = fs.pressure(FluidSystem::waterPhaseIdx).value();
+                pressure_water.at(idx) = fs.pressure(FluidSystem::waterPhaseIdx);
             }
 
-            inline void get_current_density_cell(std::vector<Scalar>& rho_water, const int idx, const IntensiveQuantities& intQuants)
+            inline void get_current_density_cell(std::vector<Eval>& rho_water, const int idx, const IntensiveQuantities& intQuants)
             {
                 const auto& fs = intQuants.fluidState();
-                rho_water[idx] = fs.density(FluidSystem::waterPhaseIdx).value();
+                rho_water.at(idx) = fs.density(FluidSystem::waterPhaseIdx);
             }
 
             inline Scalar dpai(int idx)
             {
-                Scalar dp = pa0_ - rhow_[idx]*gravity_*(cell_depth_[idx] - d0_) - pressure_previous_[idx];
+                Scalar dp = pa0_ + rhow_.at(idx).value()*gravity_*(cell_depth_.at(idx) - d0_) - pressure_previous_.at(idx).value();
                 return dp;
             }
 
+            // This function implements Eqs 5.8 and 5.9 of the EclipseTechnicalDescription
             inline void calculate_a_b_constants(Scalar& a, Scalar& b, const int idx, const SimulatorTimerInterface& timer)
             {
-                // This function implements Eqs 5.8 and 5.9 of the EclipseTechnicalDescription
                 Scalar beta = aquifer_influx_constant();
                 Scalar Tc = time_constant();
                 Scalar td_plus_dt = (timer.currentStepLength() + timer.simulationTimeElapsed()) / Tc;
                 Scalar td = timer.simulationTimeElapsed() / Tc;
-                Scalar PItdprime = coeff_[1] + 2.0*coeff_[2]*(td_plus_dt);
-                Scalar PItd = coeff_[0] + coeff_[1]*td_plus_dt + coeff_[2]*td_plus_dt*td_plus_dt;
-                a = 1.0/Tc * ( (beta * dpai(idx)) - (W_flux_ * PItdprime) ) / ( PItd - td*PItdprime );
-                b = beta / Tc / ( PItd - td*PItdprime);
+
+                Scalar PItdprime = coeff_.at(1);
+                Scalar PItd = coeff_.at(0) + coeff_.at(1)*td_plus_dt;
+                a = 1.0/Tc * ( (beta * dpai(idx)) - (W_flux_.value() * PItdprime) ) / ( PItd - td*PItdprime );
+                b = beta / (Tc * ( PItd - td*PItdprime));
             }
 
+            // This function implements Eq 5.7 of the EclipseTechnicalDescription       
             inline void calculate_inflow_rate(int idx, const SimulatorTimerInterface& timer)
             {
                 Scalar a, b;
                 calculate_a_b_constants(a,b,idx,timer);
-                // This function implements Eq 5.7 of the EclipseTechnicalDescription
-                Qai_[idx] = area_fraction(idx)*( a - b * ( pressure_current_[idx] - pressure_previous_[idx] ) );
+                Qai_.at(idx) = area_fraction(idx)*( a - b * ( pressure_current_.at(idx) - pressure_previous_.at(idx).value() ) );
             }
-            
+
+            inline const Scalar time_constant() const
+            {
+                Scalar Tc = mu_w_*phi_aq_*C_t_*r_o_*r_o_/(k_a_*c1_);
+                return Tc;
+            }
+
+            inline const Scalar aquifer_influx_constant() const
+            {
+                Scalar beta = c2_*h_*theta_*phi_aq_*C_t_*r_o_*r_o_;
+                return beta;
+            }
+
+            // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer
+            inline void initialize_connections(const Aquancon::AquanconOutput& connection)
+            {
+                const auto& eclState = ebos_simulator_.vanguard().eclState();
+                const auto& ugrid = ebos_simulator_.vanguard().grid();
+                const auto& grid = eclState.getInputGrid();
+
+                cell_idx_ = connection.global_index;
+
+                assert( cell_idx_ == connection.global_index);
+                assert( (cell_idx_.size() == connection.influx_coeff.size()) );
+                assert( (connection.influx_coeff.size() == connection.influx_multiplier.size()) );
+                assert( (connection.influx_multiplier.size() == connection.reservoir_face_dir.size()) );
+
+                // We hack the cell depth values for now. We can actually get it from elementcontext pos
+                cell_depth_.resize(cell_idx_.size(), d0_);
+                alphai_.resize(cell_idx_.size(), 1.0);
+                faceArea_connected_.resize(cell_idx_.size(),0.0);
+
+                auto cell2Faces = Opm::UgGridHelpers::cell2Faces(ugrid);
+                auto faceCells  = Opm::AutoDiffGrid::faceCells(ugrid);
+
+                // Translate the C face tag into the enum used by opm-parser's TransMult class
+                Opm::FaceDir::DirEnum faceDirection;
+
+                // denom_face_areas is the sum of the areas connected to an aquifer
+                Scalar denom_face_areas = 0.;
+                for (size_t idx = 0; idx < cell_idx_.size(); ++idx)
+                {
+                    auto cellFacesRange = cell2Faces[cell_idx_.at(idx)];
+                    
+                    for(auto cellFaceIter = cellFacesRange.begin(); cellFaceIter != cellFacesRange.end(); ++cellFaceIter)
+                    {
+                        // The index of the face in the compressed grid
+                        const int faceIdx = *cellFaceIter;
+
+                        // the logically-Cartesian direction of the face
+                        const int faceTag = Opm::UgGridHelpers::faceTag(ugrid, cellFaceIter);
+
+                        
+                        if (faceTag == 0) // left
+                            faceDirection = Opm::FaceDir::XMinus;
+                        else if (faceTag == 1) // right
+                            faceDirection = Opm::FaceDir::XPlus;
+                        else if (faceTag == 2) // back
+                            faceDirection = Opm::FaceDir::YMinus;
+                        else if (faceTag == 3) // front
+                            faceDirection = Opm::FaceDir::YPlus;
+                        else if (faceTag == 4) // bottom
+                            faceDirection = Opm::FaceDir::ZMinus;
+                        else if (faceTag == 5) // top
+                            faceDirection = Opm::FaceDir::ZPlus;
+
+                        if (faceDirection == connection.reservoir_face_dir.at(idx))
+                        {
+                            faceArea_connected_.at(idx) = Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
+                            denom_face_areas += faceArea_connected_.at(idx);
+                        }
+                    }
+                    auto cellCenter = grid.getCellCenter(cell_idx_.at(idx));
+                    cell_depth_.at(idx) = cellCenter[2];
+                }
+
+                for (size_t idx = 0; idx < cell_idx_.size(); ++idx)
+                {
+                    alphai_.at(idx) = faceArea_connected_.at(idx)/denom_face_areas;
+                }
+            }
+
+            inline void calculate_aquifer_condition()
+            {
+
+                int pvttableIdx = pvttableID_ - 1;
+                
+                rhow_.resize(cell_idx_.size(),0.);
+                
+                if (p0_defaulted_)
+                {
+                   pa0_ = calculate_reservoir_equilibrium(rhow_);
+                }
+
+                // Initialize a FluidState object first
+                FluidState fs_aquifer;
+                // We use the temperature of the first cell connected to the aquifer
+                // Here we copy the fluidstate of the first cell, so we do not accidentally mess up the reservoir fs
+                fs_aquifer.assign( ebos_simulator_.model().cachedIntensiveQuantities(cell_idx_.at(0), /*timeIdx=*/ 0)->fluidState() );
+                Eval temperature_aq, pa0_mean;
+                temperature_aq = fs_aquifer.temperature(0);
+                pa0_mean = pa0_;
+
+                // rho_mean = FluidSystem::referenceDensity(waterPhaseIdx, pvttableIdx)
+                //             *FluidSystem::waterPvt().inverseFormationVolumeFactor(pvttableIdx, temperature_aq, pa0_mean);
+
+                Eval mu_w_aquifer = FluidSystem::waterPvt().viscosity(pvttableIdx, temperature_aq, pa0_mean);
+                std::cout << "Pa0 = " << pa0_mean << ", viscosity = " << mu_w_aquifer.value() << std::endl;
+
+                mu_w_ = mu_w_aquifer.value();
+
+            }
+
+            // This function is for calculating the aquifer properties from equilibrium state with the reservoir
+            inline Scalar calculate_reservoir_equilibrium(std::vector<Eval>& rho_water_reservoir)
+            {
+                // Since the global_indices are the reservoir index, we just need to extract the fluidstate at those indices
+                std::vector<Scalar> water_pressure_reservoir, pw_aquifer;
+
+                for (size_t idx = 0; idx < cell_idx_.size(); ++idx)
+                {
+                    size_t cellIDx = cell_idx_.at(idx);
+                    const auto& intQuants = *(ebos_simulator_.model().cachedIntensiveQuantities(cellIDx, /*timeIdx=*/ 0));
+                    const auto& fs = intQuants.fluidState();
+                    
+                    water_pressure_reservoir.push_back( fs.pressure(FluidSystem::waterPhaseIdx).value() );
+                    rho_water_reservoir.at(idx) = fs.density(FluidSystem::waterPhaseIdx);
+                    pw_aquifer.push_back( (water_pressure_reservoir.at(idx) - rho_water_reservoir.at(idx).value()*gravity_*(cell_depth_.at(idx) - d0_))*area_fraction(idx) );
+                }
+
+                // We take the average of the calculated equilibrium pressures.
+                Scalar aquifer_pres_avg = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), 0.)/pw_aquifer.size();
+                return aquifer_pres_avg;
+            }
+
 
     }; // class AquiferCarterTracy
 

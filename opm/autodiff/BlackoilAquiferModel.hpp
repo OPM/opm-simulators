@@ -3,11 +3,6 @@
 
   Copyright 2017 TNO - Heat Transfer & Fluid Dynamics, Modelling & Optimization of the Subsurface
   Copyright 2017 Statoil ASA.
-  Copyright 2016 SINTEF ICT, Applied Mathematics.
-  Copyright 2016 - 2017 Statoil ASA.
-  Copyright 2017 Dr. Blatt - HPC-Simulation-Software & Services
-  Copyright 2016 - 2017 IRIS AS
-
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -40,6 +35,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 #include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
 
 #include <opm/core/simulator/SimulatorReport.hpp>
 
@@ -49,7 +45,6 @@
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/RateConverter.hpp>
-
 #include <opm/autodiff/AquiferCarterTracy.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -86,8 +81,6 @@ namespace Opm {
             static const int numEq = BlackoilIndices::numEq;
             static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
 
-            typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
-
             typedef AquiferCarterTracy<TypeTag> Aquifer_object;
 
             BlackoilAquiferModel(Simulator& ebosSimulator,
@@ -102,7 +95,7 @@ namespace Opm {
             // called at the beginning of a time step
             void beginTimeStep();
             // called at the end of a time step
-            void timeStepSucceeded();
+            void timeStepSucceeded(const SimulatorTimerInterface& timer);
 
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
@@ -117,7 +110,7 @@ namespace Opm {
                 return ebosSimulator_;
             }
 
-            /// Hack function to get what I need from parser
+            // This initialization function is used to connect the parser objects with the ones needed by AquiferCarterTracy
             void init(const Simulator& ebosSimulator, std::vector<Aquifer_object>& aquifers);
 
         protected:
@@ -141,16 +134,8 @@ namespace Opm {
 
             SimulatorReport last_report_;
 
-            const Schedule& schedule() const
-            { return ebosSimulator_.gridManager().schedule(); }
-
-            void updatePrimaryVariables();
-
-            void initPrimaryVariablesEvaluation() const;
 
             void updateConnectionIntensiveQuantities() const;
-
-            void calculateExplicitQuantities();
 
             // The number of components in the model.
             int numComponents() const;
@@ -158,8 +143,6 @@ namespace Opm {
             int numAquifers() const;
 
             int numPhases() const;
-
-            int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
             void assembleAquiferEq(const SimulatorTimerInterface& timer);
 
