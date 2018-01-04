@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::EclSolidHeatLawMultiplexerParams
+ * \copydoc Opm::EclSolidEnergyLawMultiplexerParams
  */
-#ifndef OPM_ECL_SOLID_HEAT_LAW_MULTIPLEXER_PARAMS_HPP
-#define OPM_ECL_SOLID_HEAT_LAW_MULTIPLEXER_PARAMS_HPP
+#ifndef OPM_ECL_SOLID_ENERGY_LAW_MULTIPLEXER_PARAMS_HPP
+#define OPM_ECL_SOLID_ENERGY_LAW_MULTIPLEXER_PARAMS_HPP
 
 #include "EclHeatcrLawParams.hpp"
 #include "EclSpecrockLawParams.hpp"
@@ -41,7 +41,7 @@ namespace Opm {
  *        ECL thermal law.
  */
 template <class ScalarT>
-class EclSolidHeatLawMultiplexerParams : public EnsureFinalized
+class EclSolidEnergyLawMultiplexerParams : public EnsureFinalized
 {
     typedef void* ParamPointerType;
 
@@ -58,12 +58,12 @@ public:
     typedef Opm::EclHeatcrLawParams<ScalarT> HeatcrLawParams;
     typedef Opm::EclSpecrockLawParams<ScalarT> SpecrockLawParams;
 
-    EclSolidHeatLawMultiplexerParams(const EclSolidHeatLawMultiplexerParams&) = default;
+    EclSolidEnergyLawMultiplexerParams(const EclSolidEnergyLawMultiplexerParams&) = default;
 
-    EclSolidHeatLawMultiplexerParams()
+    EclSolidEnergyLawMultiplexerParams()
     { solidEnergyApproach_ = undefinedApproach; }
 
-    ~EclSolidHeatLawMultiplexerParams()
+    ~EclSolidEnergyLawMultiplexerParams()
     { destroy_(); }
 
     void setSolidEnergyApproach(SolidEnergyApproach newApproach)
@@ -74,7 +74,7 @@ public:
         switch (solidEnergyApproach()) {
         case undefinedApproach:
             OPM_THROW(std::logic_error,
-                      "Cannot set the approach for solid heat storage to 'undefined'!");
+                      "Cannot set the approach for solid energy storage to 'undefined'!");
 
         case heatcrApproach:
             realParams_ = new HeatcrLawParams;

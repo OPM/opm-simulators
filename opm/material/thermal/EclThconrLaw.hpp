@@ -36,7 +36,7 @@ namespace Opm
 /*!
  * \ingroup material
  *
- * \brief Implements the total heat conductivity and rock enthalpy relations used by ECL.
+ * \brief Implements the total thermal conductivity relations specified by the ECL THCONR.
  */
 template <class ScalarT,
           class FluidSystem,
@@ -48,16 +48,16 @@ public:
     typedef typename Params::Scalar Scalar;
 
     /*!
-     * \brief Given a fluid state, return the total heat conductivity [W/m^2 / (K/m)] of the porous
+     * \brief Given a fluid state, return the total thermal conductivity [W/m^2 / (K/m)] of the porous
      *        medium.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation heatConductivity(const Params& params,
-                                       const FluidState& fluidState)
+    static Evaluation thermalConductivity(const Params& params,
+                                          const FluidState& fluidState)
     {
         // THCONR + THCONSF approach.
-        Scalar lambdaRef = params.referenceTotalHeatConductivity();
-        Scalar alpha = params.dTotalHeatConductivity_dSg();
+        Scalar lambdaRef = params.referenceTotalThermalConductivity();
+        Scalar alpha = params.dTotalThermalConductivity_dSg();
 
         static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
         const Evaluation& Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));

@@ -31,11 +31,11 @@
 #ifndef OPM_ECL_THERMAL_LAW_MANAGER_HPP
 #define OPM_ECL_THERMAL_LAW_MANAGER_HPP
 
-#include "EclSolidHeatLawMultiplexer.hpp"
-#include "EclSolidHeatLawMultiplexerParams.hpp"
+#include "EclSolidEnergyLawMultiplexer.hpp"
+#include "EclSolidEnergyLawMultiplexerParams.hpp"
 
-#include "EclHeatConductionLawMultiplexer.hpp"
-#include "EclHeatConductionLawMultiplexerParams.hpp"
+#include "EclThermalConductionLawMultiplexer.hpp"
+#include "EclThermalConductionLawMultiplexerParams.hpp"
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -56,18 +56,18 @@ template <class Scalar, class FluidSystem>
 class EclThermalLawManager
 {
 public:
-    typedef EclSolidHeatLawMultiplexer<Scalar, FluidSystem> SolidHeatLaw;
-    typedef typename SolidHeatLaw::Params SolidHeatLawParams;
-    typedef typename SolidHeatLawParams::HeatcrLawParams HeatcrLawParams;
-    typedef typename SolidHeatLawParams::SpecrockLawParams SpecrockLawParams;
+    typedef EclSolidEnergyLawMultiplexer<Scalar, FluidSystem> SolidEnergyLaw;
+    typedef typename SolidEnergyLaw::Params SolidEnergyLawParams;
+    typedef typename SolidEnergyLawParams::HeatcrLawParams HeatcrLawParams;
+    typedef typename SolidEnergyLawParams::SpecrockLawParams SpecrockLawParams;
 
-    typedef EclHeatConductionLawMultiplexer<Scalar, FluidSystem> HeatConductionLaw;
-    typedef typename HeatConductionLaw::Params HeatConductionLawParams;
+    typedef EclThermalConductionLawMultiplexer<Scalar, FluidSystem> ThermalConductionLaw;
+    typedef typename ThermalConductionLaw::Params ThermalConductionLawParams;
 
     EclThermalLawManager()
     {
-        solidEnergyApproach_ = SolidHeatLawParams::undefinedApproach;
-        heatCondApproach_ = HeatConductionLawParams::undefinedApproach;
+        solidEnergyApproach_ = SolidEnergyLawParams::undefinedApproach;
+        thermalConductivityApproach_ = ThermalConductionLawParams::undefinedApproach;
     }
 
     void initFromDeck(const Opm::Deck& deck,
@@ -93,23 +93,23 @@ public:
             initNullCond_(deck, eclState, compressedToCartesianElemIdx);
     }
 
-    const SolidHeatLawParams& solidHeatLawParams(unsigned elemIdx) const
+    const SolidEnergyLawParams& solidEnergyLawParams(unsigned elemIdx) const
     {
         switch (solidEnergyApproach_) {
-        case SolidHeatLawParams::heatcrApproach:
-            assert(0 <= elemIdx && elemIdx <  solidHeatLawParams_.size());
-            return solidHeatLawParams_[elemIdx];
+        case SolidEnergyLawParams::heatcrApproach:
+            assert(0 <= elemIdx && elemIdx <  solidEnergyLawParams_.size());
+            return solidEnergyLawParams_[elemIdx];
 
-        case SolidHeatLawParams::specrockApproach:
+        case SolidEnergyLawParams::specrockApproach:
         {
             assert(0 <= elemIdx && elemIdx <  elemToSatnumIdx_.size());
             unsigned satnumIdx = elemToSatnumIdx_[elemIdx];
-            assert(0 <= satnumIdx && satnumIdx <  solidHeatLawParams_.size());
-            return solidHeatLawParams_[satnumIdx];
+            assert(0 <= satnumIdx && satnumIdx <  solidEnergyLawParams_.size());
+            return solidEnergyLawParams_[satnumIdx];
         }
 
-        case SolidHeatLawParams::nullApproach:
-            return solidHeatLawParams_[0];
+        case SolidEnergyLawParams::nullApproach:
+            return solidEnergyLawParams_[0];
 
         default:
             OPM_THROW(std::runtime_error,
@@ -118,33 +118,33 @@ public:
         }
     }
 
-    const HeatConductionLawParams& heatConductionLawParams(unsigned elemIdx) const
+    const ThermalConductionLawParams& thermalConductionLawParams(unsigned elemIdx) const
     {
-        switch (heatCondApproach_) {
-        case HeatConductionLawParams::thconrApproach:
-        case HeatConductionLawParams::thcApproach:
-            assert(0 <= elemIdx && elemIdx <  heatConductionLawParams_.size());
-            return heatConductionLawParams_[elemIdx];
+        switch (thermalConductivityApproach_) {
+        case ThermalConductionLawParams::thconrApproach:
+        case ThermalConductionLawParams::thcApproach:
+            assert(0 <= elemIdx && elemIdx <  thermalConductionLawParams_.size());
+            return thermalConductionLawParams_[elemIdx];
 
-        case HeatConductionLawParams::nullApproach:
-            return heatConductionLawParams_[0];
+        case ThermalConductionLawParams::nullApproach:
+            return thermalConductionLawParams_[0];
 
         default:
             OPM_THROW(std::runtime_error,
-                      "Attempting to retrieve heat conduction parameters without "
+                      "Attempting to retrieve thermal conduction parameters without "
                       "a known approach being defined by the deck.");
         }
     }
 
 private:
     /*!
-     * \brief Initialize the parameters for the rock heat law using using HEATCR and friends.
+     * \brief Initialize the parameters for the solid energy law using using HEATCR and friends.
      */
     void initHeatcr_(const Opm::Deck& deck,
                      const Opm::EclipseState& eclState,
                      const std::vector<int>& compressedToCartesianElemIdx)
     {
-        solidEnergyApproach_ = SolidHeatLawParams::heatcrApproach;
+        solidEnergyApproach_ = SolidEnergyLawParams::heatcrApproach;
 
         const auto& props = eclState.get3DProperties();
 
@@ -156,15 +156,15 @@ private:
         HeatcrLawParams::setReferenceTemperature(FluidSystem::surfaceTemperature);
 
         unsigned numElems = compressedToCartesianElemIdx.size();
-        solidHeatLawParams_.resize(numElems);
+        solidEnergyLawParams_.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             int cartElemIdx = compressedToCartesianElemIdx[elemIdx];
 
-            auto& elemParam = solidHeatLawParams_[elemIdx];
+            auto& elemParam = solidEnergyLawParams_[elemIdx];
 
-            elemParam.setSolidEnergyApproach(SolidHeatLawParams::heatcrApproach);
+            elemParam.setSolidEnergyApproach(SolidEnergyLawParams::heatcrApproach);
 
-            auto& heatcrElemParams = elemParam.template getRealParams<SolidHeatLawParams::heatcrApproach>();
+            auto& heatcrElemParams = elemParam.template getRealParams<SolidEnergyLawParams::heatcrApproach>();
             heatcrElemParams.setReferenceRockHeatCapacity(heatcrData[cartElemIdx]);
             heatcrElemParams.setDRockHeatCapacity_dT(heatcrtData[cartElemIdx]);
             heatcrElemParams.finalize();
@@ -174,13 +174,13 @@ private:
     }
 
     /*!
-     * \brief Initialize the parameters for the rock heat law using using SPECROCK and friends.
+     * \brief Initialize the parameters for the solid energy law using using SPECROCK and friends.
      */
     void initSpecrock_(const Opm::Deck& deck,
                        const Opm::EclipseState& eclState,
                        const std::vector<int>& compressedToCartesianElemIdx)
     {
-        solidEnergyApproach_ = SolidHeatLawParams::specrockApproach;
+        solidEnergyApproach_ = SolidEnergyLawParams::specrockApproach;
 
         // initialize the element index -> SATNUM index mapping
         const auto& props = eclState.get3DProperties();
@@ -197,15 +197,15 @@ private:
         // internalize the SPECROCK table
         unsigned numSatRegions = eclState.runspec().tabdims().getNumSatTables();
         const auto& tableManager = eclState.getTableManager();
-        solidHeatLawParams_.resize(numSatRegions);
+        solidEnergyLawParams_.resize(numSatRegions);
         for (unsigned satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
             const auto& specrockTable = tableManager.getSpecrockTables()[satnumIdx];
 
-            auto& multiplexerParams = solidHeatLawParams_[satnumIdx];
+            auto& multiplexerParams = solidEnergyLawParams_[satnumIdx];
 
-            multiplexerParams.setSolidEnergyApproach(SolidHeatLawParams::specrockApproach);
+            multiplexerParams.setSolidEnergyApproach(SolidEnergyLawParams::specrockApproach);
 
-            auto& specrockParams = multiplexerParams.template getRealParams<SolidHeatLawParams::specrockApproach>();
+            auto& specrockParams = multiplexerParams.template getRealParams<SolidEnergyLawParams::specrockApproach>();
             const auto& temperatureColumn = specrockTable.getColumn("TEMPERATURE");
             const auto& cpRockColumn = specrockTable.getColumn("CP_ROCK");
             specrockParams.setHeatCapacities(temperatureColumn, cpRockColumn);
@@ -216,26 +216,26 @@ private:
     }
 
     /*!
-     * \brief Set the heat capacity of rock to 0
+     * \brief Specify the solid energy law by setting heat capacity of rock to 0
      */
     void initNullRockEnergy_(const Opm::Deck& deck,
                       const Opm::EclipseState& eclState,
                       const std::vector<int>& compressedToCartesianElemIdx)
     {
-        solidEnergyApproach_ = SolidHeatLawParams::nullApproach;
+        solidEnergyApproach_ = SolidEnergyLawParams::nullApproach;
 
-        solidHeatLawParams_.resize(1);
-        solidHeatLawParams_[0].finalize();
+        solidEnergyLawParams_.resize(1);
+        solidEnergyLawParams_[0].finalize();
     }
 
     /*!
-     * \brief Initialize the parameters for the heat conduction law using THCONR and friends.
+     * \brief Initialize the parameters for the thermal conduction law using THCONR and friends.
      */
     void initThconr_(const Opm::Deck& deck,
                      const Opm::EclipseState& eclState,
                      const std::vector<int>& compressedToCartesianElemIdx)
     {
-        heatCondApproach_ = HeatConductionLawParams::thconrApproach;
+        thermalConductivityApproach_ = ThermalConductionLawParams::thconrApproach;
 
         const auto& props = eclState.get3DProperties();
 
@@ -243,17 +243,17 @@ private:
         const std::vector<double>& thconsfData = props.getDoubleGridProperty("THCONSF").getData();
 
         unsigned numElems = compressedToCartesianElemIdx.size();
-        heatConductionLawParams_.resize(numElems);
+        thermalConductionLawParams_.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             int cartElemIdx = compressedToCartesianElemIdx[elemIdx];
 
-            auto& elemParams = heatConductionLawParams_[elemIdx];
+            auto& elemParams = thermalConductionLawParams_[elemIdx];
 
-            elemParams.setHeatConductionApproach(HeatConductionLawParams::thconrApproach);
+            elemParams.setThermalConductionApproach(ThermalConductionLawParams::thconrApproach);
 
-            auto& thconrElemParams = elemParams.template getRealParams<HeatConductionLawParams::thconrApproach>();
-            thconrElemParams.setReferenceTotalHeatConductivity(thconrData[cartElemIdx]);
-            thconrElemParams.setDTotalHeatConductivity_dSg(thconsfData[cartElemIdx]);
+            auto& thconrElemParams = elemParams.template getRealParams<ThermalConductionLawParams::thconrApproach>();
+            thconrElemParams.setReferenceTotalThermalConductivity(thconrData[cartElemIdx]);
+            thconrElemParams.setDTotalThermalConductivity_dSg(thconsfData[cartElemIdx]);
             thconrElemParams.finalize();
 
             elemParams.finalize();
@@ -261,13 +261,13 @@ private:
     }
 
     /*!
-     * \brief Initialize the parameters for the heat conduction law using THCROCK and friends.
+     * \brief Initialize the parameters for the thermal conduction law using THCROCK and friends.
      */
     void initThc_(const Opm::Deck& deck,
                   const Opm::EclipseState& eclState,
                   const std::vector<int>& compressedToCartesianElemIdx)
     {
-        heatCondApproach_ = HeatConductionLawParams::thcApproach;
+        thermalConductivityApproach_ = ThermalConductionLawParams::thcApproach;
 
         const auto& props = eclState.get3DProperties();
 
@@ -278,15 +278,15 @@ private:
         const std::vector<double>& poroData = props.getDoubleGridProperty("PORO").getData();
 
         unsigned numElems = compressedToCartesianElemIdx.size();
-        heatConductionLawParams_.resize(numElems);
+        thermalConductionLawParams_.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             int cartElemIdx = compressedToCartesianElemIdx[elemIdx];
 
-            auto& elemParams = heatConductionLawParams_[elemIdx];
+            auto& elemParams = thermalConductionLawParams_[elemIdx];
 
-            elemParams.setHeatConductionApproach(HeatConductionLawParams::thcApproach);
+            elemParams.setThermalConductionApproach(ThermalConductionLawParams::thcApproach);
 
-            auto& thcElemParams = elemParams.template getRealParams<HeatConductionLawParams::thcApproach>();
+            auto& thcElemParams = elemParams.template getRealParams<ThermalConductionLawParams::thcApproach>();
             thcElemParams.setPorosity(poroData[cartElemIdx]);
             thcElemParams.setThcrock(thcrockData[cartElemIdx]);
             thcElemParams.setThcoil(thcoilData[cartElemIdx]);
@@ -299,26 +299,26 @@ private:
     }
 
     /*!
-     * \brief Disable heat conductivity
+     * \brief Disable thermal conductivity
      */
     void initNullCond_(const Opm::Deck& deck,
                        const Opm::EclipseState& eclState,
                        const std::vector<int>& compressedToCartesianElemIdx)
     {
-        heatCondApproach_ = HeatConductionLawParams::nullApproach;
+        thermalConductivityApproach_ = ThermalConductionLawParams::nullApproach;
 
-        heatConductionLawParams_.resize(1);
-        heatConductionLawParams_[0].finalize();
+        thermalConductionLawParams_.resize(1);
+        thermalConductionLawParams_[0].finalize();
     }
 
 private:
-    typename HeatConductionLawParams::HeatConductionApproach heatCondApproach_;
-    typename SolidHeatLawParams::SolidEnergyApproach solidEnergyApproach_;
+    typename ThermalConductionLawParams::ThermalConductionApproach thermalConductivityApproach_;
+    typename SolidEnergyLawParams::SolidEnergyApproach solidEnergyApproach_;
 
     std::vector<unsigned> elemToSatnumIdx_;
 
-    std::vector<SolidHeatLawParams> solidHeatLawParams_;
-    std::vector<HeatConductionLawParams> heatConductionLawParams_;
+    std::vector<SolidEnergyLawParams> solidEnergyLawParams_;
+    std::vector<ThermalConductionLawParams> thermalConductionLawParams_;
 };
 } // namespace Opm
 

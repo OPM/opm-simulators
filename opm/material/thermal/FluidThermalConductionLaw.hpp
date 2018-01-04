@@ -22,12 +22,12 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidHeatConduction
+ * \copydoc Opm::FluidThermalConduction
  */
-#ifndef OPM_FLUID_HEAT_CONDUCTION_LAW_HPP
-#define OPM_FLUID_HEAT_CONDUCTION_LAW_HPP
+#ifndef OPM_FLUID_THERMAL_CONDUCTION_LAW_HPP
+#define OPM_FLUID_THERMAL_CONDUCTION_LAW_HPP
 
-#include "FluidHeatConductionLawParams.hpp"
+#include "FluidThermalConductionLawParams.hpp"
 
 #include <opm/material/common/Spline.hpp>
 
@@ -37,25 +37,25 @@ namespace Opm {
 /*!
  * \ingroup material
  *
- * \brief Implements a heat conduction law which just takes the conductivity of a given fluid phase.
+ * \brief Implements a thermal conduction law which just takes the conductivity of a given fluid phase.
  */
 template <class FluidSystem,
           class ScalarT,
           int phaseIdx,
-          class ParamsT = FluidHeatConductionLawParams<ScalarT> >
-class FluidHeatConductionLaw
+          class ParamsT = FluidThermalConductionLawParams<ScalarT> >
+class FluidThermalConductionLaw
 {
 public:
     typedef ParamsT Params;
     typedef typename Params::Scalar Scalar;
 
     /*!
-     * \brief Given a fluid state, return the effective heat conductivity [W/m^2 / (K/m)] of the porous
+     * \brief Given a fluid state, return the effective thermal conductivity [W/m^2 / (K/m)] of the porous
      *        medium.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation heatConductivity(const Params& params OPM_UNUSED,
-                                       const FluidState& fluidState)
+    static Evaluation thermalConductivity(const Params& params OPM_UNUSED,
+                                          const FluidState& fluidState)
     {
         typename FluidSystem::template ParameterCache<Evaluation> paramCache;
         paramCache.updatePhase(fluidState, phaseIdx);
