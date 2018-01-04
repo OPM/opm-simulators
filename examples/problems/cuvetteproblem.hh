@@ -35,7 +35,8 @@
 #include <opm/material/fluidsystems/H2OAirMesityleneFluidSystem.hpp>
 #include <opm/material/fluidmatrixinteractions/ThreePhaseParkerVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
-#include <opm/material/thermal/SomertonHeatConductionLaw.hpp>
+#include <opm/material/thermal/ConstantSolidHeatCapLaw.hpp>
+#include <opm/material/thermal/SomertonThermalConductionLaw.hpp>
 #include <opm/material/constraintsolvers/MiscibleMultiPhaseComposition.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/common/Valgrind.hpp>
@@ -95,8 +96,12 @@ public:
     typedef Opm::ThreePhaseParkerVanGenuchten<Traits> type;
 };
 
-// Set the heat conduction law
-SET_PROP(CuvetteBaseProblem, HeatConductionLaw)
+// set the energy storage law for the solid phase
+SET_TYPE_PROP(CuvetteBaseProblem, SolidEnergyLaw,
+              Opm::ConstantSolidHeatCapLaw<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+
+// Set the thermal conduction law
+SET_PROP(CuvetteBaseProblem, ThermalConductionLaw)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -104,7 +109,7 @@ private:
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::SomertonHeatConductionLaw<FluidSystem, Scalar> type;
+    typedef Opm::SomertonThermalConductionLaw<FluidSystem, Scalar> type;
 };
 
 // The default for the end time of the simulation
@@ -155,8 +160,8 @@ class CuvetteProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLaw) HeatConductionLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLawParams) HeatConductionLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, ThermalConductionLawParams) ThermalConductionLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, SolidEnergyLawParams) SolidEnergyLawParams;
     typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
@@ -264,8 +269,13 @@ public:
         fineMaterialParams_.finalize();
         coarseMaterialParams_.finalize();
 
-        // initialize parameters for the heat conduction law
-        computeHeatCondParams_(heatCondParams_, finePorosity_);
+        // initialize parameters for the thermal conduction law
+        computeThermalCondParams_(thermalCondParams_, finePorosity_);
+
+        // assume constant volumetric heat capacity and granite
+        solidEnergyLawParams_.setSolidHeatCapacity(790.0 // specific heat capacity of granite [J / (kg K)]
+                                                   * 2700.0); // density of granite [kg/m^3]
+        solidEnergyLawParams_.finalize();
 
         initInjectFluidState_();
     }
@@ -365,26 +375,14 @@ public:
     }
 
     /*!
-     * \copydoc FvBaseMultiPhaseProblem::heatConductionParams
+     * \copydoc FvBaseMultiPhaseProblem::thermalConductionParams
      */
     template <class Context>
-    const HeatConductionLawParams &
-    heatConductionParams(const Context& context OPM_UNUSED,
+    const ThermalConductionLawParams &
+    thermalConductionParams(const Context& context OPM_UNUSED,
                          unsigned spaceIdx OPM_UNUSED,
                          unsigned timeIdx OPM_UNUSED) const
-    { return heatCondParams_; }
-
-    /*!
-     * \copydoc FvBaseMultiPhaseProblem::heatCapacitySolid
-     */
-    template <class Context>
-    Scalar heatCapacitySolid(const Context& context OPM_UNUSED,
-                             unsigned spaceIdx OPM_UNUSED,
-                             unsigned timeIdx OPM_UNUSED) const
-    {
-        return 850     // specific heat capacity [J / (kg K)]
-               * 2650; // density of sand [kg/m^3]
-    }
+    { return thermalCondParams_; }
 
     //! \}
 
@@ -563,7 +561,7 @@ private:
         }
     }
 
-    void computeHeatCondParams_(HeatConductionLawParams& params, Scalar poro)
+    void computeThermalCondParams_(ThermalConductionLawParams& params, Scalar poro)
     {
         Scalar lambdaGranite = 2.8; // [W / (K m)]
 
@@ -627,7 +625,8 @@ private:
     MaterialLawParams fineMaterialParams_;
     MaterialLawParams coarseMaterialParams_;
 
-    HeatConductionLawParams heatCondParams_;
+    ThermalConductionLawParams thermalCondParams_;
+    SolidEnergyLawParams solidEnergyLawParams_;
 
     Opm::CompositionalFluidState<Scalar, FluidSystem> injectFluidState_;
 

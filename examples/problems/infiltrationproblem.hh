@@ -34,7 +34,6 @@
 #include <opm/material/fluidmatrixinteractions/ThreePhaseParkerVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
-#include <opm/material/thermal/SomertonHeatConductionLaw.hpp>
 #include <opm/common/Valgrind.hpp>
 #include <opm/common/Unused.hpp>
 
@@ -93,18 +92,6 @@ private:
 
 public:
     typedef Opm::ThreePhaseParkerVanGenuchten<Traits> type;
-};
-
-// Set the heat conduction law
-SET_PROP(InfiltrationBaseProblem, HeatConductionLaw)
-{
-private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-
-public:
-    // define the material law parameterized by absolute saturations
-    typedef Opm::SomertonHeatConductionLaw<FluidSystem, Scalar> type;
 };
 
 // The default for the end time of the simulation
@@ -317,20 +304,6 @@ public:
                       unsigned spaceIdx OPM_UNUSED,
                       unsigned timeIdx OPM_UNUSED) const
     { return materialParams_; }
-
-    /*!
-     * \copydoc FvBaseMultiPhaseProblem::heatCapacitySolid
-     *
-     * In this case, we assume the rock-matrix to be quartz.
-     */
-    template <class Context>
-    Scalar heatCapacitySolid(const Context& context OPM_UNUSED,
-                             unsigned spaceIdx OPM_UNUSED,
-                             unsigned timeIdx OPM_UNUSED) const
-    {
-        return 850.     // specific heat capacity [J / (kg K)]
-               * 2650.; // density of sand [kg/m^3]
-    }
 
     //! \}
 
