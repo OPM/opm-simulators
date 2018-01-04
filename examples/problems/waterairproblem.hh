@@ -38,8 +38,8 @@
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/material/thermal/SomertonHeatConductionLaw.hpp>
 #include <opm/material/thermal/ConstantSolidHeatCapLaw.hpp>
+#include <opm/material/thermal/SomertonThermalConductionLaw.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 #include <opm/common/Unused.hpp>
 
@@ -88,8 +88,8 @@ public:
     typedef Opm::EffToAbsLaw<EffMaterialLaw> type;
 };
 
-// Set the heat conduction law
-SET_PROP(WaterAirBaseProblem, HeatConductionLaw)
+// Set the thermal conduction law
+SET_PROP(WaterAirBaseProblem, ThermalConductionLaw)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -97,10 +97,10 @@ private:
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::SomertonHeatConductionLaw<FluidSystem, Scalar> type;
+    typedef Opm::SomertonThermalConductionLaw<FluidSystem, Scalar> type;
 };
 
-// set the heat law for the solid phase
+// set the energy storage law for the solid phase
 SET_TYPE_PROP(WaterAirBaseProblem, SolidEnergyLaw,
               Opm::ConstantSolidHeatCapLaw<typename GET_PROP_TYPE(TypeTag, Scalar)>);
 
@@ -211,7 +211,7 @@ class WaterAirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLawParams) HeatConductionLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, ThermalConductionLawParams) ThermalConductionLawParams;
     typedef typename GET_PROP_TYPE(TypeTag, SolidEnergyLawParams) SolidEnergyLawParams;
 
     typedef typename GridView::ctype CoordScalar;
@@ -265,14 +265,14 @@ public:
         fineMaterialParams_.finalize();
         coarseMaterialParams_.finalize();
 
-        // parameters for the somerton law of heat conduction
-        computeHeatCondParams_(fineHeatCondParams_, finePorosity_);
-        computeHeatCondParams_(coarseHeatCondParams_, coarsePorosity_);
+        // parameters for the somerton law of thermal conduction
+        computeThermalCondParams_(fineThermalCondParams_, finePorosity_);
+        computeThermalCondParams_(coarseThermalCondParams_, coarsePorosity_);
 
-        // assume the volumetric heat capacity of granite
-        solidHeatLawParams_.setSolidHeatCapacity(790.0 // specific heat capacity of granite [J / (kg K)]
-                                                      * 2700.0); // density of granite [kg/m^3]
-        solidHeatLawParams_.finalize();
+        // assume constant volumetric heat capacity and granite
+        solidEnergyLawParams_.setSolidHeatCapacity(790.0 // specific heat capacity of granite [J / (kg K)]
+                                                   * 2700.0); // density of granite [kg/m^3]
+        solidEnergyLawParams_.finalize();
     }
 
     /*!
@@ -358,30 +358,30 @@ public:
     }
 
     /*!
-     * \brief Return the parameters for the heat storage law of the rock
+     * \brief Return the parameters for the energy storage law of the rock
      *
      * In this case, we assume the rock-matrix to be granite.
      */
     template <class Context>
     const SolidEnergyLawParams&
-    solidHeatLawParams(const Context& context OPM_UNUSED,
-                       unsigned spaceIdx OPM_UNUSED,
-                       unsigned timeIdx OPM_UNUSED) const
-    { return solidHeatLawParams_; }
+    solidEnergyLawParams(const Context& context OPM_UNUSED,
+                         unsigned spaceIdx OPM_UNUSED,
+                         unsigned timeIdx OPM_UNUSED) const
+    { return solidEnergyLawParams_; }
 
     /*!
-     * \copydoc FvBaseMultiPhaseProblem::heatConductionParams
+     * \copydoc FvBaseMultiPhaseProblem::thermalConductionParams
      */
     template <class Context>
-    const HeatConductionLawParams&
-    heatConductionLawParams(const Context& context,
+    const ThermalConductionLawParams&
+    thermalConductionLawParams(const Context& context,
                             unsigned spaceIdx,
                             unsigned timeIdx) const
     {
         const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
-            return fineHeatCondParams_;
-        return coarseHeatCondParams_;
+            return fineThermalCondParams_;
+        return coarseThermalCondParams_;
     }
 
     //! \}
@@ -530,7 +530,7 @@ private:
         CFRP::solve(fs, paramCache, liquidPhaseIdx, /*setViscosity=*/false,  /*setEnthalpy=*/true);
     }
 
-    void computeHeatCondParams_(HeatConductionLawParams& params, Scalar poro)
+    void computeThermalCondParams_(ThermalConductionLawParams& params, Scalar poro)
     {
         Scalar lambdaGranite = 2.8; // [W / (K m)]
 
@@ -577,9 +577,9 @@ private:
     MaterialLawParams fineMaterialParams_;
     MaterialLawParams coarseMaterialParams_;
 
-    HeatConductionLawParams fineHeatCondParams_;
-    HeatConductionLawParams coarseHeatCondParams_;
-    SolidEnergyLawParams solidHeatLawParams_;
+    ThermalConductionLawParams fineThermalCondParams_;
+    ThermalConductionLawParams coarseThermalCondParams_;
+    SolidEnergyLawParams solidEnergyLawParams_;
 
     Scalar maxDepth_;
     Scalar eps_;
