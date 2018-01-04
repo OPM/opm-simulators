@@ -190,8 +190,8 @@ public:
             auto auxMod = std::make_shared<WellConnectionAuxiliaryModule<TypeTag> >(schedule(), grid());
             ebosSimulator_.model().addAuxiliaryModule(auxMod);
         }
+
         AquiferModel aquifer_model(ebosSimulator_, model_param_, terminal_output_);
-        // aquifer_model.hack_init(ebosSimulator_);
 
         // Main simulation loop.
         while (!timer.done()) {
