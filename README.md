@@ -1,5 +1,4 @@
-# Open Porous Media Simulators and Automatic Differentiation Library [![Build Status](https://travis-ci.org/OPM/opm-simulators.svg?branch=master)](https://travis-ci.org/OPM/opm-simulators)
-
+# Open Porous Media Simulators and Automatic Differentiation Library
 
 CONTENT
 -------
