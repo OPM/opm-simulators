@@ -22,12 +22,12 @@
 */
 /*!
  * \file
- * \copydoc Opm::EclSolidHeatLawMultiplexer
+ * \copydoc Opm::EclSolidEnergyLawMultiplexer
  */
-#ifndef OPM_ECL_SOLID_HEAT_LAW_MULTIPLEXER_HPP
-#define OPM_ECL_SOLID_HEAT_LAW_MULTIPLEXER_HPP
+#ifndef OPM_ECL_SOLID_ENERGY_LAW_MULTIPLEXER_HPP
+#define OPM_ECL_SOLID_ENERGY_LAW_MULTIPLEXER_HPP
 
-#include "EclSolidHeatLawMultiplexerParams.hpp"
+#include "EclSolidEnergyLawMultiplexerParams.hpp"
 
 #include "EclHeatcrLaw.hpp"
 #include "EclSpecrockLaw.hpp"
@@ -40,12 +40,12 @@ namespace Opm
 /*!
  * \ingroup material
  *
- * \brief Implements the total heat conductivity and rock enthalpy relations used by ECL.
+ * \brief Provides the energy storage relation of rock
  */
 template <class ScalarT,
           class FluidSystem,
-          class ParamsT = EclSolidHeatLawMultiplexerParams<ScalarT>>
-class EclSolidHeatLawMultiplexer
+          class ParamsT = EclSolidEnergyLawMultiplexerParams<ScalarT>>
+class EclSolidEnergyLawMultiplexer
 {
     enum { numPhases = FluidSystem::numPhases };
 

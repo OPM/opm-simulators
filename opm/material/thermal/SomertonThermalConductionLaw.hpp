@@ -22,12 +22,12 @@
 */
 /*!
  * \file
- * \copydoc Opm::SomertonHeatConductionLaw
+ * \copydoc Opm::SomertonThermalConductionLaw
  */
-#ifndef OPM_SOMERTON_HEAT_CONDUCTION_LAW_HPP
-#define OPM_SOMERTON_HEAT_CONDUCTION_LAW_HPP
+#ifndef OPM_SOMERTON_THERMAL_CONDUCTION_LAW_HPP
+#define OPM_SOMERTON_THERMAL_CONDUCTION_LAW_HPP
 
-#include "SomertonHeatConductionLawParams.hpp"
+#include "SomertonThermalConductionLawParams.hpp"
 
 #include <opm/material/common/Spline.hpp>
 
@@ -36,13 +36,13 @@
 
 #include <algorithm>
 
-namespace Opm
-{
+namespace Opm {
+
 /*!
  * \ingroup material
  *
- * \brief Implements the Somerton law of heat conductivity in a
- * porous medium.
+ * \brief Implements the Somerton law of thermal conductivity in a
+ *        porous medium.
  *
  * See:
  *
@@ -59,8 +59,8 @@ namespace Opm
  */
 template <class FluidSystem,
           class ScalarT,
-          class ParamsT = SomertonHeatConductionLawParams<FluidSystem::numPhases, ScalarT> >
-class SomertonHeatConductionLaw
+          class ParamsT = SomertonThermalConductionLawParams<FluidSystem::numPhases, ScalarT> >
+class SomertonThermalConductionLaw
 {
     enum { numPhases = FluidSystem::numPhases };
 
@@ -69,7 +69,7 @@ public:
     typedef typename Params::Scalar Scalar;
 
     /*!
-     * \brief Given a fluid state, return the effective heat conductivity [W/m^2 / (K/m)] of the porous
+     * \brief Given a fluid state, return the effective thermal conductivity [W/m^2 / (K/m)] of the porous
      *        medium.
      *
      * For two phases, the Somerton law is given by:
@@ -80,14 +80,14 @@ public:
      \sqrt{S_n}(\lambda_{ful,n} - \lambda_{vac})
      \f]
      *
-     * where \f$\lambda_{vac}\f$ is the heat conductivity of the
-     * porous medium at vacuum, \f$\lambda_{ful,\alpha}\f$ is the heat
+     * where \f$\lambda_{vac}\f$ is the thermal conductivity of the
+     * porous medium at vacuum, \f$\lambda_{ful,\alpha}\f$ is the thermal
      * conductivty of the porous medium if it is fully saturated by
      * phase \f$\alpha\f$ and \f$S_\alpha\f$ is the saturation of
      * phase \f$\alpha\f$.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation heatConductivity(const Params& params,
+    static Evaluation thermalConductivity(const Params& params,
                                        const FluidState& fluidState)
     {
         Valgrind::CheckDefined(params.vacuumLambda());

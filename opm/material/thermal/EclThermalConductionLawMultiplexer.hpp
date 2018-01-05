@@ -22,16 +22,16 @@
 */
 /*!
  * \file
- * \copydoc Opm::EclHeatConductionLawMultiplexer
+ * \copydoc Opm::EclThermalConductionLawMultiplexer
  */
-#ifndef OPM_ECL_HEAT_CONDUCTION_LAW_MULTIPLEXER_HPP
-#define OPM_ECL_HEAT_CONDUCTION_LAW_MULTIPLEXER_HPP
+#ifndef OPM_ECL_THERMAL_CONDUCTION_LAW_MULTIPLEXER_HPP
+#define OPM_ECL_THERMAL_CONDUCTION_LAW_MULTIPLEXER_HPP
 
-#include "EclHeatConductionLawMultiplexerParams.hpp"
+#include "EclThermalConductionLawMultiplexerParams.hpp"
 
 #include "EclThconrLaw.hpp"
 #include "EclThcLaw.hpp"
-#include "NullHeatConductionLaw.hpp"
+#include "NullThermalConductionLaw.hpp"
 
 #include <opm/material/densead/Math.hpp>
 
@@ -40,18 +40,18 @@ namespace Opm
 /*!
  * \ingroup material
  *
- * \brief Implements the total heat conductivity and rock enthalpy relations used by ECL.
+ * \brief Implements the total thermal conductivity and rock enthalpy relations used by ECL.
  */
 template <class ScalarT,
           class FluidSystem,
-          class ParamsT = EclHeatConductionLawMultiplexerParams<ScalarT>>
-class EclHeatConductionLawMultiplexer
+          class ParamsT = EclThermalConductionLawMultiplexerParams<ScalarT>>
+class EclThermalConductionLawMultiplexer
 {
     enum { numPhases = FluidSystem::numPhases };
 
     typedef Opm::EclThconrLaw<ScalarT, FluidSystem, typename ParamsT::ThconrLawParams> ThconrLaw;
     typedef Opm::EclThcLaw<ScalarT, typename ParamsT::ThcLawParams> ThcLaw;
-    typedef Opm::NullHeatConductionLaw<ScalarT> NullLaw;
+    typedef Opm::NullThermalConductionLaw<ScalarT> NullLaw;
 
 public:
     typedef ParamsT Params;
@@ -61,24 +61,24 @@ public:
      * \brief Given a fluid state, compute the volumetric internal energy of the rock [W/m^3].
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation heatConductivity(const Params& params,
+    static Evaluation thermalConductivity(const Params& params,
                                        const FluidState& fluidState)
     {
-        switch (params.heatConductionApproach()) {
+        switch (params.thermalConductionApproach()) {
         case Params::thconrApproach:
             // relevant ECL keywords: THCONR and THCONSF
-            return ThconrLaw::heatConductivity(params.template getRealParams<Params::thconrApproach>(), fluidState);
+            return ThconrLaw::thermalConductivity(params.template getRealParams<Params::thconrApproach>(), fluidState);
 
         case Params::thcApproach:
             // relevant ECL keywords: THCROCK, THCOIL, THCGAS and THCWATER
-            return ThcLaw::heatConductivity(params.template getRealParams<Params::thcApproach>(), fluidState);
+            return ThcLaw::thermalConductivity(params.template getRealParams<Params::thcApproach>(), fluidState);
 
         case Params::nullApproach:
             // relevant ECL keywords: none or none recognized
-            return NullLaw::heatConductivity(0, fluidState);
+            return NullLaw::thermalConductivity(0, fluidState);
 
         default:
-            OPM_THROW(std::logic_error, "Invalid heat conductivity approach: " << params.heatConductionApproach());
+            OPM_THROW(std::logic_error, "Invalid thermal conductivity approach: " << params.thermalConductionApproach());
         }
     }
 };

@@ -33,7 +33,7 @@ namespace Opm {
 
 /*!
  * \brief The default implementation of a parameter object for the
- *        heat conduction law based on the THC* keywords from ECL.
+ *        thermal conduction law based on the THC* keywords from ECL.
  */
 template <class ScalarT>
 class EclThcLawParams : public EnsureFinalized

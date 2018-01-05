@@ -36,9 +36,9 @@ namespace Opm
 /*!
  * \ingroup material
  *
- * \brief Implements the total heat conductivity and rock enthalpy relations used by ECL.
+ * \brief Implements the total thermal conductivity and rock enthalpy relations used by ECL.
  *
- * This is the heat conduction law based on the THCROCK, THCOIL, THCGAS and THCWATER
+ * This is the thermal conduction law based on the THCROCK, THCOIL, THCGAS and THCWATER
  * keywords.
  */
 template <class ScalarT,
@@ -50,19 +50,19 @@ public:
     typedef typename Params::Scalar Scalar;
 
     /*!
-     * \brief Given a fluid state, return the total heat conductivity [W/m^2 / (K/m)] of the porous
+     * \brief Given a fluid state, return the total thermal conductivity [W/m^2 / (K/m)] of the porous
      *        medium.
       */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation heatConductivity(const Params& params,
-                                       const FluidState& fluidState)
+    static Evaluation thermalConductivity(const Params& params,
+                                          const FluidState& fluidState)
     {
         // The thermal conductivity approach based on the THC* keywords.
 
         // let's assume that the porosity of the rock at standard condition is meant
         Scalar poro = params.porosity();
 
-        // IMO this approach is very questionable because the total heat conductivity
+        // IMO this approach is very questionable because the total thermal conductivity
         // should at least depend on the current solution's phase saturation. Since ECL
         // is king, let's follow their lead and throw ourselfs down the cliff of obvious
         // incorrectness.

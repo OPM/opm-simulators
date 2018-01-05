@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::SomertonHeatConductionLawParams
+ * \copydoc Opm::SomertonThermalConductionLawParams
  */
-#ifndef OPM_SOMERTON_HEAT_CONDUCTION_LAW_PARAMS_HPP
-#define OPM_SOMERTON_HEAT_CONDUCTION_LAW_PARAMS_HPP
+#ifndef OPM_SOMERTON_THERMAL_CONDUCTION_LAW_PARAMS_HPP
+#define OPM_SOMERTON_THERMAL_CONDUCTION_LAW_PARAMS_HPP
 
 #include <cassert>
 
@@ -33,23 +33,23 @@ namespace Opm {
 
 /*!
  * \brief The default implementation of a parameter object for the
- *        Somerton heat conduction law.
+ *        Somerton thermal conduction law.
  */
 template <unsigned numPhases, class ScalarT>
-class SomertonHeatConductionLawParams
+class SomertonThermalConductionLawParams
 {
     // do not copy!
-    SomertonHeatConductionLawParams(const SomertonHeatConductionLawParams&)
+    SomertonThermalConductionLawParams(const SomertonThermalConductionLawParams&)
     {}
 
 public:
     typedef ScalarT Scalar;
 
-    SomertonHeatConductionLawParams()
+    SomertonThermalConductionLawParams()
     { }
 
     /*!
-     * \brief Return the "fully saturated" heat conductivity of the
+     * \brief Return the "fully saturated" thermal conductivity of the
      *        porous medium [W/m^2 / (K/m)].
      *
      * In this context "fully saturated" means that the whole pore
@@ -63,7 +63,7 @@ public:
     }
 
     /*!
-     * \brief Set the "fully saturated" heat conductivity of the
+     * \brief Set the "fully saturated" thermal conductivity of the
      *        porous medium [W/m^2 / (K/m)].
      *
      * In this context "fully saturated" means that the whole pore
@@ -78,7 +78,7 @@ public:
     }
 
     /*!
-     * \brief Return the heat conductivity of the porous medium at
+     * \brief Return the thermal conductivity of the porous medium at
      *        vacuum [W/m^2 / (K/m)].
      */
     Scalar vacuumLambda() const
@@ -87,7 +87,7 @@ public:
     }
 
     /*!
-     * \brief Set the "fully saturated" heat conductivity of the
+     * \brief Set the "fully saturated" thermal conductivity of the
      *        porous medium [W/m^2 / (K/m)].
      *
      * In this context "fully saturated" means that the whole pore

@@ -33,7 +33,7 @@ namespace Opm {
 
 /*!
  * \brief The default implementation of a parameter object for the
- *        heat conduction law based on the THCONR keyword from ECL.
+ *        thermal conduction law based on the THCONR keyword from ECL.
  */
 template <class ScalarT>
 class EclThconrLawParams : public EnsureFinalized
@@ -47,32 +47,32 @@ public:
     { }
 
     /*!
-     * \brief Set the total heat conductivity [J/m^2 / (K/m)] of at Sg = 0
+     * \brief Set the total thermal conductivity [J/m^2 / (K/m)] of at Sg = 0
      */
-    void setReferenceTotalHeatConductivity(Scalar value)
-    { referenceTotalHeatConductivity_ = value; }
+    void setReferenceTotalThermalConductivity(Scalar value)
+    { referenceTotalThermalConductivity_ = value; }
 
     /*!
-     * \brief The total heat conductivity [J/m^2 / (K/m)] of at Sg = 0
+     * \brief The total thermal conductivity [J/m^2 / (K/m)] of at Sg = 0
      */
-    Scalar referenceTotalHeatConductivity() const
-    { EnsureFinalized::check(); return referenceTotalHeatConductivity_; }
+    Scalar referenceTotalThermalConductivity() const
+    { EnsureFinalized::check(); return referenceTotalThermalConductivity_; }
 
     /*!
-     * \brief Set the gas saturation dependence of heat conductivity [-]
+     * \brief Set the gas saturation dependence of thermal conductivity [-]
      */
-    void setDTotalHeatConductivity_dSg(Scalar value)
-    { dTotalHeatConductivity_dSg_ = value; }
+    void setDTotalThermalConductivity_dSg(Scalar value)
+    { dTotalThermalConductivity_dSg_ = value; }
 
     /*!
-     * \brief The gas saturation dependence of heat conductivity [-]
+     * \brief The gas saturation dependence of thermal conductivity [-]
      */
-    Scalar dTotalHeatConductivity_dSg() const
-    { EnsureFinalized::check(); return dTotalHeatConductivity_dSg_; }
+    Scalar dTotalThermalConductivity_dSg() const
+    { EnsureFinalized::check(); return dTotalThermalConductivity_dSg_; }
 
 private:
-    Scalar referenceTotalHeatConductivity_;
-    Scalar dTotalHeatConductivity_dSg_;
+    Scalar referenceTotalThermalConductivity_;
+    Scalar dTotalThermalConductivity_dSg_;
 };
 
 } // namespace Opm

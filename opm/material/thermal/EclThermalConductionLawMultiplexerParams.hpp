@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::EclHeatConductivtyLawMultiplexerParams
+ * \copydoc Opm::EclThermalConductionLawMultiplexerParams
  */
-#ifndef OPM_ECL_HEAT_CONDUCTION_LAW_MULTIPLEXER_PARAMS_HPP
-#define OPM_ECL_HEAT_CONDUCTION_LAW_MULTIPLEXER_PARAMS_HPP
+#ifndef OPM_ECL_THERMAL_CONDUCTION_LAW_MULTIPLEXER_PARAMS_HPP
+#define OPM_ECL_THERMAL_CONDUCTION_LAW_MULTIPLEXER_PARAMS_HPP
 
 #include "EclThconrLawParams.hpp"
 #include "EclThcLawParams.hpp"
@@ -41,14 +41,14 @@ namespace Opm {
  *        ECL thermal law.
  */
 template <class ScalarT>
-class EclHeatConductionLawMultiplexerParams : public EnsureFinalized
+class EclThermalConductionLawMultiplexerParams : public EnsureFinalized
 {
     typedef void* ParamPointerType;
 
 public:
     typedef ScalarT Scalar;
 
-    enum HeatConductionApproach {
+    enum ThermalConductionApproach {
         undefinedApproach,
         thconrApproach, // keywords: THCONR, THCONSF
         thcApproach, // keywords: THCROCK, THCOIL, THCGAS, THCWATER
@@ -58,23 +58,23 @@ public:
     typedef Opm::EclThconrLawParams<ScalarT> ThconrLawParams;
     typedef Opm::EclThcLawParams<ScalarT> ThcLawParams;
 
-    EclHeatConductionLawMultiplexerParams(const EclHeatConductionLawMultiplexerParams&) = default;
+    EclThermalConductionLawMultiplexerParams(const EclThermalConductionLawMultiplexerParams&) = default;
 
-    EclHeatConductionLawMultiplexerParams()
-    { heatConductionApproach_ = undefinedApproach; }
+    EclThermalConductionLawMultiplexerParams()
+    { thermalConductionApproach_ = undefinedApproach; }
 
-    ~EclHeatConductionLawMultiplexerParams()
+    ~EclThermalConductionLawMultiplexerParams()
     { destroy_(); }
 
-    void setHeatConductionApproach(HeatConductionApproach newApproach)
+    void setThermalConductionApproach(ThermalConductionApproach newApproach)
     {
         destroy_();
 
-        heatConductionApproach_ = newApproach;
-        switch (heatConductionApproach()) {
+        thermalConductionApproach_ = newApproach;
+        switch (thermalConductionApproach()) {
         case undefinedApproach:
             OPM_THROW(std::logic_error,
-                      "Cannot set the approach for heat conduction to 'undefined'!");
+                      "Cannot set the approach for thermal conduction to 'undefined'!");
 
         case thconrApproach:
             realParams_ = new ThconrLawParams;
@@ -90,47 +90,47 @@ public:
         }
     }
 
-    HeatConductionApproach heatConductionApproach() const
-    { return heatConductionApproach_; }
+    ThermalConductionApproach thermalConductionApproach() const
+    { return thermalConductionApproach_; }
 
     // get the parameter object for the THCONR case
-    template <HeatConductionApproach approachV>
+    template <ThermalConductionApproach approachV>
     typename std::enable_if<approachV == thconrApproach, ThconrLawParams>::type&
     getRealParams()
     {
-        assert(heatConductionApproach() == approachV);
+        assert(thermalConductionApproach() == approachV);
         return *static_cast<ThconrLawParams*>(realParams_);
     }
 
-    template <HeatConductionApproach approachV>
+    template <ThermalConductionApproach approachV>
     typename std::enable_if<approachV == thconrApproach, const ThconrLawParams>::type&
     getRealParams() const
     {
-        assert(heatConductionApproach() == approachV);
+        assert(thermalConductionApproach() == approachV);
         return *static_cast<const ThconrLawParams*>(realParams_);
     }
 
     // get the parameter object for the THC* case
-    template <HeatConductionApproach approachV>
+    template <ThermalConductionApproach approachV>
     typename std::enable_if<approachV == thcApproach, ThcLawParams>::type&
     getRealParams()
     {
-        assert(heatConductionApproach() == approachV);
+        assert(thermalConductionApproach() == approachV);
         return *static_cast<ThcLawParams*>(realParams_);
     }
 
-    template <HeatConductionApproach approachV>
+    template <ThermalConductionApproach approachV>
     typename std::enable_if<approachV == thcApproach, const ThcLawParams>::type&
     getRealParams() const
     {
-        assert(heatConductionApproach() == approachV);
+        assert(thermalConductionApproach() == approachV);
         return *static_cast<const ThcLawParams*>(realParams_);
     }
 
 private:
     void destroy_()
     {
-        switch (heatConductionApproach()) {
+        switch (thermalConductionApproach()) {
         case undefinedApproach:
             break;
 
@@ -146,10 +146,10 @@ private:
             break;
         }
 
-        heatConductionApproach_ = undefinedApproach;
+        thermalConductionApproach_ = undefinedApproach;
     }
 
-    HeatConductionApproach heatConductionApproach_;
+    ThermalConductionApproach thermalConductionApproach_;
     ParamPointerType realParams_;
 };
 
