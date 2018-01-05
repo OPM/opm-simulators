@@ -523,7 +523,7 @@ public:
         }
 
         bool doInvalidate = updateHysteresis_();
-        doInvalidate = updateMaxOilSaturation_();
+        doInvalidate = doInvalidate || updateMaxOilSaturation_();
 
         if (GET_PROP_VALUE(TypeTag, EnablePolymer))
             updateMaxPolymerAdsorption_();
@@ -542,12 +542,11 @@ public:
      */
     void beginTimeStep()
     {
-        if (!lastRs_.empty()) {
+        if (drsdtActive_)
             // DRSDT is enabled
             maxDRs_ = maxDRsDt_*this->simulator().timeStepSize();
-        }
 
-        if (!lastRv_.empty())
+        if (drvdtActive_)
             // DRVDT is enabled
             maxDRv_ = maxDRvDt_*this->simulator().timeStepSize();
 
