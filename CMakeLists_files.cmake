@@ -67,7 +67,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow_ebos_solvent.cpp
   opm/simulators/ensureDirectoryExists.cpp
   opm/simulators/SimulatorCompressibleTwophase.cpp
-  opm/simulators/SimulatorIncompTwophase.cpp
   opm/simulators/WellSwitchingLogger.cpp
   opm/simulators/vtk/writeVtkData.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
@@ -118,7 +117,6 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/flow_reorder.cpp
   examples/flow_sequential.cpp
   examples/flow.cpp
-  examples/sim_2p_incomp.cpp
   examples/sim_2p_incomp_ad.cpp
   examples/sim_2p_comp_reorder.cpp
   examples/sim_simple.cpp
@@ -257,7 +255,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/ensureDirectoryExists.hpp
   opm/simulators/ParallelFileMerger.hpp
   opm/simulators/SimulatorCompressibleTwophase.hpp
-  opm/simulators/SimulatorIncompTwophase.hpp
   opm/simulators/thresholdPressures.hpp
   opm/simulators/WellSwitchingLogger.hpp
   opm/simulators/vtk/writeVtkData.hpp
