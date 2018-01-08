@@ -143,7 +143,7 @@ namespace Opm
                               double injected[2], double produced[2],
                               double init_satvol[2])
     {
-        std::cout.precision(5);
+        os.precision(5);
         const int width = 18;
         os << "\nVolume balance report (all numbers relative to total pore volume).\n";
         os << "    Saturated volumes:     "
