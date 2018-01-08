@@ -49,7 +49,6 @@
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/transport/reorder/TransportSolverTwophaseReorder.hpp>
-#include <opm/core/transport/implicit/TransportSolverTwophaseImplicit.hpp>
 #include <opm/autodiff/TransportSolverTwophaseAd.hpp>
 #include <opm/simulators/ensureDirectoryExists.hpp>
 
@@ -329,21 +328,6 @@ namespace Opm
                                                                    param.getDefault("nl_tolerance", 1e-9),
                                                                    param.getDefault("nl_maxiter", 30)));
 
-        } else if (transport_solver_type_ == "implicit") {
-            if (rock_comp_props && rock_comp_props->isActive()) {
-                OPM_THROW(std::runtime_error, "The implicit transport solver cannot handle rock compressibility.");
-            }
-            if (use_segregation_split_) {
-                OPM_THROW(std::runtime_error, "The implicit transport solver is not set up to use segregation splitting.");
-            }
-            std::vector<double> porevol;
-            computePorevolume(grid, props.porosity(), porevol);
-            tsolver_.reset(new Opm::TransportSolverTwophaseImplicit(grid,
-                                                                    props,
-                                                                    porevol,
-                                                                    gravity,
-                                                                    psolver_.getHalfTrans(),
-                                                                    param));
         } else if (transport_solver_type_ == "ad") {
             if (rock_comp_props && rock_comp_props->isActive()) {
                 OPM_THROW(std::runtime_error, "The implicit ad transport solver cannot handle rock compressibility.");
