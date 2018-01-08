@@ -102,22 +102,20 @@ try
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
-    Opm::Parser parser;
+    std::shared_ptr< EclipseState > eclipseState;
+    std::shared_ptr< Schedule > schedule;
     std::unique_ptr<GridManager> grid;
     std::unique_ptr<IncompPropertiesInterface> props;
     std::unique_ptr<RockCompressibility> rock_comp;
     std::unique_ptr<TwophaseState> state;
-    std::shared_ptr< EclipseState > eclipseState;
-    std::shared_ptr< Schedule > schedule;
-
-    // bool check_well_controls = false;
-    // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     if (use_deck) {
+        Parser parser;
+        ParseContext parseContext;
+        parseContext.update(ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN);
         std::string deck_filename = param.get<std::string>("deck_filename");
-        Opm::ParseContext parseContext;
         auto deck = parser.parseFile(deck_filename, parseContext);
-        eclipseState.reset(new EclipseState(deck , parseContext));
+        eclipseState.reset(new EclipseState(deck, parseContext));
         schedule.reset( new Schedule(deck,
                                      eclipseState->getInputGrid(),
                                      eclipseState->get3DProperties(),
@@ -131,8 +129,6 @@ try
 
             // Rock and fluid init
             props.reset(new IncompPropertiesFromDeck(deck, *eclipseState, ug_grid));
-            // check_well_controls = param.getDefault("check_well_controls", false);
-            // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
 
             state.reset( new TwophaseState(  UgGridHelpers::numCells( ug_grid ) , UgGridHelpers::numFaces( ug_grid )));
             // Rock compressibility.
