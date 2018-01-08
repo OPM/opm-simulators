@@ -81,6 +81,7 @@ try
 {
     using namespace Opm;
 
+    OpmLog::setupSimpleDefaultLogging(false, true, 10);
     std::cout << "\n================    Test program for weakly compressible two-phase flow     ===============\n\n";
     ParameterGroup param(argc, argv, false);
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
