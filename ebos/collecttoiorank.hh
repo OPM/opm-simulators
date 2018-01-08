@@ -198,10 +198,14 @@ namespace Ewoms
                     typedef typename GridManager::EquilGrid::LeafGridView EquilGridView;
                     const EquilGridView equilGridView = gridManager.equilGrid().leafGridView() ;
 
-                    typedef Dune::MultipleCodimMultipleGeomTypeMapper< EquilGridView, Dune::MCMGElementLayout>
-                        EquilElementMapper;
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
+                    typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView> EquilElementMapper;
+                    EquilElementMapper equilElemMapper(equilGridView, Dune::mcmgElementLayout());
+#else
+                    typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView, Dune::MCMGElementLayout> EquilElementMapper;
+                    EquilElementMapper equilElemMapper(equilGridView);
+#endif
 
-                    EquilElementMapper equilElemMapper( equilGridView );
 
                     // the I/O rank needs a picture of the global grid, here we
                     // use equilGrid which represents a view on the global grid
@@ -242,10 +246,13 @@ namespace Ewoms
                 typedef typename GridManager::GridView LocalGridView;
                 const LocalGridView localGridView = gridManager.gridView() ;
 
-                typedef Dune::MultipleCodimMultipleGeomTypeMapper< LocalGridView, Dune::MCMGElementLayout>
-                    ElementMapper;
-
-                ElementMapper elemMapper( localGridView );
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
+                typedef Dune::MultipleCodimMultipleGeomTypeMapper<LocalGridView> ElementMapper;
+                ElementMapper elemMapper(localGridView, Dune::mcmgElementLayout());
+#else
+                typedef Dune::MultipleCodimMultipleGeomTypeMapper<LocalGridView, Dune::MCMGElementLayout> ElementMapper;
+                ElementMapper elemMapper(localGridView);
+#endif
 
                 for( auto it = localGridView.template begin< 0, Dune::Interior_Partition >(),
                      end = localGridView.template end< 0, Dune::Interior_Partition >(); it != end; ++it )

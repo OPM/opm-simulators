@@ -134,8 +134,13 @@ public:
     EclWriter(const Simulator& simulator)
         : simulator_(simulator)
         , gridView_(simulator_.gridView())
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
+        , elementMapper_(gridView_, Dune::mcmgElementLayout())
+        , vertexMapper_(gridView_, Dune::mcmgVertexLayout())
+#else
         , elementMapper_(gridView_)
         , vertexMapper_(gridView_)
+#endif
         , collectToIORank_( simulator_.gridManager() )
     {
         reportStepIdx_ = 0;

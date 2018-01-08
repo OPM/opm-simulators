@@ -35,14 +35,17 @@
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
+
+#include <dune/grid/CpGrid.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
+
+#include <dune/grid/common/mcmgmapper.hh>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-
-#include <dune/grid/CpGrid.hpp>
 
 #include <array>
 #include <vector>
@@ -109,7 +112,11 @@ public:
         const auto& eclState = gridManager_.eclState();
         const auto& eclGrid = eclState.getInputGrid();
         auto& transMult = eclState.getTransMult();
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
+        ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
+#else
         ElementMapper elemMapper(gridView);
+#endif
 
         // get the ntg values, the ntg values are modified for the cells merged with minpv
         std::vector<double> ntg;
