@@ -849,6 +849,97 @@ void test_DeckWithRSVDAndRVVD()
     }
 }
 
+
+void test_DeckWithPBVDAndPDVD()
+{
+    typedef typename TTAG(TestEquilTypeTag) TypeTag;
+    auto simulator = initSimulator<TypeTag>("data/equil_pbvd_and_pdvd.DATA");
+    const auto& eclipseState = simulator->gridManager().eclState();
+    Opm::GridManager gm(eclipseState.getInputGrid());
+    const UnstructuredGrid& grid = *(gm.c_grid());
+
+    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->gridManager().grid(), 9.80665);
+    const auto& pressures = comp.press();
+    REQUIRE(pressures.size() == 3);
+    REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
+
+    const int first = 0, last = grid.number_of_cells - 1;
+    // The relative tolerance is too loose to be very useful,
+    // but the answer we are checking is the result of an ODE
+    // solver, and it is unclear if we should check it against
+    // the true answer or something else.
+    const double reltol = 1.0e-6;
+    CHECK_CLOSE(pressures[0][first], 14821552, reltol);
+    CHECK_CLOSE(pressures[0][last],  15479828, reltol);
+    CHECK_CLOSE(pressures[1][first], 14911552, reltol);
+    CHECK_CLOSE(pressures[1][last],  15489828, reltol);
+
+    const auto& sats = comp.saturation();
+    // std::cout << "Saturations:\n";
+    // for (const auto& sat : sats) {
+    //     for (const double s : sat) {
+    //         std::cout << s << ' ';
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+    const std::vector<double> s_opm[3]{ // opm
+        { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2426402656423233, 0.5383705390740118, 0.7844998821510003, 0.9152832369551807, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 0,   0,   0,   0,   0,   0,   0,   0,          0, 0.1817779931230221, 0.08471676304481934, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7573597343576767, 0.4616294609259882, 0.03372212472597758,    0,          0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    };
+
+    for (int phase = 0; phase < 3; ++phase) {
+        REQUIRE(sats[phase].size() == s_opm[phase].size());
+        for (size_t i = 0; i < s_opm[phase].size(); ++i) {
+            //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
+            CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
+        }
+    }
+
+    const auto& rs = comp.rs();
+    const std::vector<double> rs_opm { // opm
+        74.55776480956456,
+        74.6008507125663,
+        74.6439680789467,
+        74.68711693934459,
+        74.73029732443825,
+        74.77350926494491,
+        74.81675279162118,
+        74.86802321984302,
+        74.96677993174352,
+        75.09034523640406,
+        75, 75, 75,75,75, 75, 75, 75, 75, 75 };
+
+    const auto& rv = comp.rv();
+    const std::vector<double> rv_opm {
+        0.0002488465888573874,
+        0.0002491051042753978,
+        0.0002493638084736803,
+        0.0002496227016360676,
+        0.0002498817839466295,
+        0.00025,
+        0.00025,
+        0.00025,
+        0.00025,
+        0.000251180039180951,
+        0.0002522295187440788,
+        0.0002275000000000001,
+        0.0002125,
+        0.0001975,
+        0.0001825,
+        0.0001675,
+        0.0001525,
+        0.0001375,
+        0.0001225,
+        0.0001075};
+
+    for (size_t i = 0; i < rv_opm.size(); ++i) {
+        CHECK_CLOSE(rs[i], rs_opm[i], reltol);
+        CHECK_CLOSE(rv[i], rv_opm[i], reltol);
+    }
+}
+
 void test_DeckWithSwatinit()
 {
 #if 0
@@ -1016,6 +1107,7 @@ int main(int argc, char** argv)
     test_DeckWithLiveOil();
     test_DeckWithLiveGas();
     test_DeckWithRSVDAndRVVD();
+    test_DeckWithPBVDAndPDVD();
     //test_DeckWithSwatinit();
 
     return 0;
