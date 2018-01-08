@@ -241,6 +241,138 @@ private:
     }
 };
 
+/**
+ * Type that implements "dissolved gas-oil ratio"
+ * tabulated as a function of depth policy.  Data
+ * typically from keyword 'PBVD'.
+ */
+template <class FluidSystem>
+class PBVD : public RsFunction
+{
+public:
+    /**
+     * Constructor.
+     *
+     * \param[in] pvtRegionIdx The pvt region index
+     * \param[in] depth Depth nodes.
+     * \param[in] pbub Bubble-point pressure at @c depth.
+     */
+    PBVD(const int pvtRegionIdx,
+         const std::vector<double>& depth,
+         const std::vector<double>& pbub)
+        : pvtRegionIdx_(pvtRegionIdx)
+        , pbubVsDepth_(depth, pbub)
+    {}
+
+    /**
+     * Function call.
+     *
+     * \param[in] depth Depth at which to calculate RS
+     * value.
+     *
+     * \param[in] Pressure in the cell
+     *
+     * \param[in] temp Temperature at which to calculate RS
+     * value.
+     *
+     * \return Dissolved gas-oil ratio (RS) at depth @c
+     * depth and pressure @c press.
+     */
+    double operator()(const double depth,
+                      const double cellPress,
+                      const double temp,
+                      const double satGas = 0.0) const
+    {
+        double press = cellPress;
+        if (satGas <= 0.0) {
+            if (pbubVsDepth_.xMin() > depth)
+                press = pbubVsDepth_.valueAt(0);
+            else if (pbubVsDepth_.xMax() < depth)
+                press = pbubVsDepth_.valueAt(pbubVsDepth_.numSamples() - 1);
+            else
+                press = pbubVsDepth_.eval(depth, /*extrapolate=*/false);
+        }
+        return satRs(std::min(press, cellPress), temp);
+    }
+
+private:
+    typedef Opm::Tabulated1DFunction<double> PbubVsDepthFunc;
+
+    const int pvtRegionIdx_;
+    PbubVsDepthFunc pbubVsDepth_;
+
+    double satRs(const double press, const double temp) const
+    {
+        return FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx_, temp, press);
+    }
+};
+
+/**
+ * Type that implements "vaporized oil-gas ratio"
+ * tabulated as a function of depth policy.  Data
+ * taken from keyword 'PDVD'.
+ */
+template <class FluidSystem>
+class PDVD : public RsFunction
+{
+public:
+    /**
+     * Constructor.
+     *
+     * \param[in] pvtRegionIdx The pvt region index
+     * \param[in] depth Depth nodes.
+     * \param[in] pbub Dew-point pressure at @c depth.
+     */
+    PDVD(const int pvtRegionIdx,
+         const std::vector<double>& depth,
+         const std::vector<double>& pdew)
+        : pvtRegionIdx_(pvtRegionIdx)
+        , pdewVsDepth_(depth, pdew)
+    {}
+
+    /**
+     * Function call.
+     *
+     * \param[in] depth Depth at which to calculate RV
+     * value.
+     *
+     * \param[in] cellPress Pressure in the cell
+     *
+     * \param[in] temp Temperature at which to calculate RV
+     * value.
+     *
+     * \return Vaporized oil-gas ratio (RV) at depth @c
+     * depth and pressure @c press.
+     */
+    double operator()(const double depth,
+                      const double cellPress,
+                      const double temp,
+                      const double satOil = 0.0) const
+    {
+        double press = cellPress;
+        if (satOil <= 0.0) {
+            if (pdewVsDepth_.xMin() > depth)
+                press = pdewVsDepth_.valueAt(0);
+            else if (pdewVsDepth_.xMax() < depth)
+                press = pdewVsDepth_.valueAt(pdewVsDepth_.numSamples() - 1);
+            else
+                press = pdewVsDepth_.eval(depth, /*extrapolate=*/false);
+        }
+        return satRv(std::min(press, cellPress), temp);
+    }
+
+private:
+    typedef Opm::Tabulated1DFunction<double> PdewVsDepthFunc;
+
+    const int pvtRegionIdx_;
+    PdewVsDepthFunc pdewVsDepth_;
+
+    double satRv(const double press, const double temp) const
+    {
+        return FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp, press);
+    }
+};
+
 
 /**
  * Type that implements "vaporized oil-gas ratio"
