@@ -161,6 +161,8 @@ struct EclEpsScalingPointsInfo
     Scalar Sogl; // oil for the gas-oil system
 
     // critical water and gas saturations
+    Scalar krCriticalEps; // relative permeability below which a saturation is considered
+                          // to be critical
     Scalar Swcr; // oil
     Scalar Sgcr; // gas
     Scalar Sowcr; // oil for the oil-water system
@@ -222,6 +224,15 @@ struct EclEpsScalingPointsInfo
                          const Opm::EclipseState& eclState,
                          unsigned satRegionIdx)
     {
+        // determine the value of the relative permeability below which the corresponding
+        // saturation is considered to be critical
+        krCriticalEps = Opm::ParserKeywords::TOLCRIT::VALUE::defaultValue;
+        if (deck.hasKeyword("TOLCRIT")) {
+            const Opm::DeckKeyword& tolcritKeyword = deck.getKeyword("TOLCRIT");
+
+            krCriticalEps = tolcritKeyword.getRecord(0).getItem("VALUE").getSIDouble(0);
+        }
+
         const auto& tables = eclState.getTableManager();
         const TableContainer&  swofTables = tables.getSwofTables();
         const TableContainer&  sgofTables = tables.getSgofTables();
@@ -423,7 +434,7 @@ private:
         // critical gas saturation
         Sgcr = 0.0;
         for (size_t rowIdx = 0; rowIdx < sgofTable.numRows(); ++ rowIdx) {
-            if (sgofTable.getKrgColumn()[rowIdx] > 0.0)
+            if (sgofTable.getKrgColumn()[rowIdx] > krCriticalEps)
                 break;
 
             Sgcr = sgofTable.getSgColumn()[rowIdx];
@@ -435,7 +446,7 @@ private:
              rowIdx >= 0;
              -- rowIdx)
         {
-            if (sgofTable.getKrogColumn()[static_cast<size_t>(rowIdx)] > 0.0)
+            if (sgofTable.getKrogColumn()[static_cast<size_t>(rowIdx)] > krCriticalEps)
                 break;
 
             Sogcr = 1.0 - sgofTable.getSgColumn()[static_cast<size_t>(rowIdx)];
@@ -465,7 +476,7 @@ private:
              rowIdx >= 0;
              -- rowIdx)
         {
-            if (slgofTable.getKrgColumn()[static_cast<size_t>(rowIdx)] > 0.0)
+            if (slgofTable.getKrgColumn()[static_cast<size_t>(rowIdx)] > krCriticalEps)
                 break;
 
             Sgcr = 1 - slgofTable.getSlColumn()[static_cast<size_t>(rowIdx)];
@@ -474,7 +485,7 @@ private:
         // critical oil saturation of gas-oil system
         Sogcr = 0.0;
         for (size_t rowIdx = 0; rowIdx < slgofTable.numRows(); ++ rowIdx) {
-            if (slgofTable.getKrogColumn()[rowIdx] > 0.0)
+            if (slgofTable.getKrogColumn()[rowIdx] > krCriticalEps)
                 break;
 
             Sogcr = slgofTable.getSlColumn()[rowIdx];
@@ -501,7 +512,7 @@ private:
         // critical water saturation
         Swcr = 0.0;
         for (size_t rowIdx = 0; rowIdx < swofTable.numRows(); ++ rowIdx) {
-            if (swofTable.getKrwColumn()[rowIdx] > 0.0)
+            if (swofTable.getKrwColumn()[rowIdx] > krCriticalEps)
                 break;
 
             Swcr = swofTable.getSwColumn()[rowIdx];
@@ -513,7 +524,7 @@ private:
              rowIdx >= 0;
              -- rowIdx)
         {
-            if (swofTable.getKrowColumn()[static_cast<size_t>(rowIdx)] > 0.0)
+            if (swofTable.getKrowColumn()[static_cast<size_t>(rowIdx)] > krCriticalEps)
                 break;
 
             Sowcr = 1.0 - swofTable.getSwColumn()[static_cast<size_t>(rowIdx)];
@@ -538,7 +549,7 @@ private:
         // critical water saturation
         Swcr = 0.0;
         for (size_t rowIdx = 0; rowIdx < swfnTable.numRows(); ++ rowIdx) {
-            if (swfnTable.getKrwColumn()[rowIdx] > 0)
+            if (swfnTable.getKrwColumn()[rowIdx] > krCriticalEps)
                 break;
 
             Swcr = swfnTable.getSwColumn()[rowIdx];
@@ -563,7 +574,7 @@ private:
         // critical gas saturation
         Sgcr = 0.0;
         for (size_t rowIdx = 0; rowIdx < sgfnTable.numRows(); ++ rowIdx) {
-            if (sgfnTable.getKrgColumn()[rowIdx] > 0)
+            if (sgfnTable.getKrgColumn()[rowIdx] > krCriticalEps)
                 break;
 
             Sgcr = sgfnTable.getSgColumn()[rowIdx];
@@ -588,9 +599,9 @@ private:
         // critical oil saturation of oil-water system
         Sowcr = 0.0;
         for (size_t rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
-            if (sof3Table.getKrowColumn()[rowIdx] > 0) {
+            if (sof3Table.getKrowColumn()[rowIdx] > krCriticalEps) {
                 break;
-            };
+            }
 
             Sowcr = sof3Table.getSoColumn()[rowIdx];
         }
@@ -598,7 +609,7 @@ private:
         // critical oil saturation of gas-oil system
         Sogcr = 0.0;
         for (size_t rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
-            if (sof3Table.getKrogColumn()[rowIdx] > 0)
+            if (sof3Table.getKrogColumn()[rowIdx] > krCriticalEps)
                 break;
 
             Sogcr = sof3Table.getSoColumn()[rowIdx];
@@ -618,13 +629,13 @@ private:
         // maximum oil saturations
         Sowu = sof2Table.getSoColumn().back();
 
-        // critical oil saturation of oil-water system or
-        // critical oil saturation of gas-oil system
+        // critical oil saturation of oil-water system or critical oil saturation of
+        // gas-oil system
         Sowcr = 0.0;
         for (size_t rowIdx = 0 ; rowIdx < sof2Table.numRows(); ++ rowIdx) {
-            if (sof2Table.getKroColumn()[rowIdx] > 0) {
+            if (sof2Table.getKroColumn()[rowIdx] > krCriticalEps) {
                 break;
-            };
+            }
 
             Sowcr = sof2Table.getSoColumn()[rowIdx];
         }
