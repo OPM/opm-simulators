@@ -509,7 +509,7 @@ public:
     }
 
     /*!
-     * \brief Add all buffers to data::Solution.
+     * \brief Move all buffers to data::Solution.
      */
     void assignToSolution(Opm::data::Solution& sol)
     {
@@ -517,101 +517,101 @@ public:
             return;
 
         if ( oilPressure_.size() > 0 ) {
-            sol.insert( "PRESSURE", Opm::UnitSystem::measure::pressure, oilPressure_, Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert( "PRESSURE", Opm::UnitSystem::measure::pressure, std::move(oilPressure_), Opm::data::TargetType::RESTART_SOLUTION);
         }
 
         if ( temperature_.size() > 0 ) {
-            sol.insert( "TEMP", Opm::UnitSystem::measure::temperature, temperature_, Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert( "TEMP", Opm::UnitSystem::measure::temperature, std::move(temperature_), Opm::data::TargetType::RESTART_SOLUTION);
         }
 
         if (saturationsOutput_()) {
             if( FluidSystem::phaseIsActive(waterPhaseIdx) && saturation_[waterPhaseIdx].size()>0 ) {
-                sol.insert( "SWAT", Opm::UnitSystem::measure::identity, saturation_[waterPhaseIdx], Opm::data::TargetType::RESTART_SOLUTION );
+                sol.insert( "SWAT", Opm::UnitSystem::measure::identity, std::move(saturation_[waterPhaseIdx]), Opm::data::TargetType::RESTART_SOLUTION );
             }
             if( FluidSystem::phaseIsActive(gasPhaseIdx) && saturation_[gasPhaseIdx].size()>0) {
-                sol.insert( "SGAS", Opm::UnitSystem::measure::identity, saturation_[gasPhaseIdx], Opm::data::TargetType::RESTART_SOLUTION );
+                sol.insert( "SGAS", Opm::UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), Opm::data::TargetType::RESTART_SOLUTION );
             }
         }
         if ( gasDissolutionFactor_.size() > 0 ) {
-            sol.insert( "RSSAT", Opm::UnitSystem::measure::gas_oil_ratio, gasDissolutionFactor_, Opm::data::TargetType::RESTART_AUXILIARY );
+            sol.insert( "RSSAT", Opm::UnitSystem::measure::gas_oil_ratio, std::move(gasDissolutionFactor_), Opm::data::TargetType::RESTART_AUXILIARY );
 
         }
         if ( oilVaporizationFactor_.size() > 0 ) {
-            sol.insert( "RVSAT", Opm::UnitSystem::measure::oil_gas_ratio, oilVaporizationFactor_ , Opm::data::TargetType::RESTART_AUXILIARY );
+            sol.insert( "RVSAT", Opm::UnitSystem::measure::oil_gas_ratio, std::move(oilVaporizationFactor_) , Opm::data::TargetType::RESTART_AUXILIARY );
         }
         if (rs_.size() > 0 ) {
-            sol.insert( "RS", Opm::UnitSystem::measure::gas_oil_ratio, rs_, Opm::data::TargetType::RESTART_SOLUTION );
+            sol.insert( "RS", Opm::UnitSystem::measure::gas_oil_ratio, std::move(rs_), Opm::data::TargetType::RESTART_SOLUTION );
 
         }
         if (rv_.size() > 0 ) {
-            sol.insert( "RV", Opm::UnitSystem::measure::oil_gas_ratio, rv_ , Opm::data::TargetType::RESTART_SOLUTION );
+            sol.insert( "RV", Opm::UnitSystem::measure::oil_gas_ratio, std::move(rv_) , Opm::data::TargetType::RESTART_SOLUTION );
         }
         if (invBOutput_()) {
             if( FluidSystem::phaseIsActive(waterPhaseIdx) && invB_[waterPhaseIdx].size() > 0 ) {
-                sol.insert( "1OVERBW", Opm::UnitSystem::measure::water_inverse_formation_volume_factor, invB_[waterPhaseIdx], Opm::data::TargetType::RESTART_AUXILIARY );
+                sol.insert( "1OVERBW", Opm::UnitSystem::measure::water_inverse_formation_volume_factor, std::move(invB_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
             }
             if( FluidSystem::phaseIsActive(oilPhaseIdx)  && invB_[oilPhaseIdx].size() > 0 ) {
-                sol.insert( "1OVERBO", Opm::UnitSystem::measure::oil_inverse_formation_volume_factor, invB_[oilPhaseIdx], Opm::data::TargetType::RESTART_AUXILIARY );
+                sol.insert( "1OVERBO", Opm::UnitSystem::measure::oil_inverse_formation_volume_factor, std::move(invB_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
             }
             if( FluidSystem::phaseIsActive(gasPhaseIdx) && invB_[gasPhaseIdx].size() > 0 ) {
-                sol.insert( "1OVERBG", Opm::UnitSystem::measure::gas_inverse_formation_volume_factor, invB_[gasPhaseIdx], Opm::data::TargetType::RESTART_AUXILIARY );
+                sol.insert( "1OVERBG", Opm::UnitSystem::measure::gas_inverse_formation_volume_factor, std::move(invB_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
             }
         }
         if (densityOutput_()) {
             if( FluidSystem::phaseIsActive(waterPhaseIdx) && density_[waterPhaseIdx].size() > 0 ) {
-                sol.insert( "WAT_DEN", Opm::UnitSystem::measure::density, density_[waterPhaseIdx], Opm::data::TargetType::RESTART_AUXILIARY );
+                sol.insert( "WAT_DEN", Opm::UnitSystem::measure::density, std::move(density_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
             }
             if( FluidSystem::phaseIsActive(oilPhaseIdx) && density_[oilPhaseIdx].size() > 0 ) {
-                sol.insert( "OIL_DEN", Opm::UnitSystem::measure::density, density_[oilPhaseIdx], Opm::data::TargetType::RESTART_AUXILIARY );
+                sol.insert( "OIL_DEN", Opm::UnitSystem::measure::density, std::move(density_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
             }
             if( FluidSystem::phaseIsActive(gasPhaseIdx) && density_[gasPhaseIdx].size() > 0 ) {
-                sol.insert( "GAS_DEN", Opm::UnitSystem::measure::density, density_[gasPhaseIdx], Opm::data::TargetType::RESTART_AUXILIARY );
+                sol.insert( "GAS_DEN", Opm::UnitSystem::measure::density, std::move(density_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
             }
         }
         if (viscosityOutput_()) {
             if( FluidSystem::phaseIsActive(waterPhaseIdx) && viscosity_[waterPhaseIdx].size() > 0 ) {
-                sol.insert( "WAT_VISC", Opm::UnitSystem::measure::viscosity, viscosity_[waterPhaseIdx], Opm::data::TargetType::RESTART_AUXILIARY);
+                sol.insert( "WAT_VISC", Opm::UnitSystem::measure::viscosity, std::move(viscosity_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
             }
             if( FluidSystem::phaseIsActive(oilPhaseIdx) && viscosity_[oilPhaseIdx].size() > 0 ) {
-                sol.insert( "OIL_VISC", Opm::UnitSystem::measure::viscosity, viscosity_[oilPhaseIdx], Opm::data::TargetType::RESTART_AUXILIARY);
+                sol.insert( "OIL_VISC", Opm::UnitSystem::measure::viscosity, std::move(viscosity_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
             }
             if( FluidSystem::phaseIsActive(gasPhaseIdx) && viscosity_[gasPhaseIdx].size() > 0 ) {
-                sol.insert( "GAS_VISC", Opm::UnitSystem::measure::viscosity, viscosity_[gasPhaseIdx], Opm::data::TargetType::RESTART_AUXILIARY );
+                sol.insert( "GAS_VISC", Opm::UnitSystem::measure::viscosity, std::move(viscosity_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
             }
         }
         if (relativePermeabilityOutput_()) {
             if( FluidSystem::phaseIsActive(waterPhaseIdx) && relativePermeability_[waterPhaseIdx].size() > 0) {
-                sol.insert( "WATKR", Opm::UnitSystem::measure::identity, relativePermeability_[waterPhaseIdx], Opm::data::TargetType::RESTART_AUXILIARY);
+                sol.insert( "WATKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
             }
             if( FluidSystem::phaseIsActive(oilPhaseIdx)&& relativePermeability_[oilPhaseIdx].size() > 0 ) {
-                sol.insert( "OILKR", Opm::UnitSystem::measure::identity, relativePermeability_[oilPhaseIdx], Opm::data::TargetType::RESTART_AUXILIARY);
+                sol.insert( "OILKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
             }
             if( FluidSystem::phaseIsActive(gasPhaseIdx)&& relativePermeability_[gasPhaseIdx].size() > 0 ) {
-                sol.insert( "GASKR", Opm::UnitSystem::measure::identity, relativePermeability_[gasPhaseIdx], Opm::data::TargetType::RESTART_AUXILIARY);
+                sol.insert( "GASKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
             }
         }
 
         if (hysteresisOutput_()) {
-            sol.insert ("PCSWM_OW", Opm::UnitSystem::measure::identity, pcSwMdcOw_, Opm::data::TargetType::RESTART_AUXILIARY);
-            sol.insert ("KRNSW_OW", Opm::UnitSystem::measure::identity, krnSwMdcOw_, Opm::data::TargetType::RESTART_AUXILIARY);
-            sol.insert ("PCSWM_GO", Opm::UnitSystem::measure::identity, pcSwMdcGo_, Opm::data::TargetType::RESTART_AUXILIARY);
-            sol.insert ("KRNSW_GO", Opm::UnitSystem::measure::identity, krnSwMdcGo_, Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert ("PCSWM_OW", Opm::UnitSystem::measure::identity, std::move(pcSwMdcOw_), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert ("KRNSW_OW", Opm::UnitSystem::measure::identity, std::move(krnSwMdcOw_), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert ("PCSWM_GO", Opm::UnitSystem::measure::identity, std::move(pcSwMdcGo_), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert ("KRNSW_GO", Opm::UnitSystem::measure::identity, std::move(krnSwMdcGo_), Opm::data::TargetType::RESTART_AUXILIARY);
         }
 
         if (soMaxOutput_())
-            sol.insert ("SOMAX", Opm::UnitSystem::measure::identity, soMax_, Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("SOMAX", Opm::UnitSystem::measure::identity, std::move(soMax_), Opm::data::TargetType::RESTART_SOLUTION);
 
         if (solventOutput_())
-            sol.insert ("SSOL", Opm::UnitSystem::measure::identity, sSol_, Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("SSOL", Opm::UnitSystem::measure::identity, std::move(sSol_), Opm::data::TargetType::RESTART_SOLUTION);
 
         if (polymerOutput_())
-            sol.insert ("POLYMER", Opm::UnitSystem::measure::identity, cPolymer_, Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("POLYMER", Opm::UnitSystem::measure::identity, std::move(cPolymer_), Opm::data::TargetType::RESTART_SOLUTION);
 
         if (dewPointPressureOutput_() && dewPointPressure_.size() > 0)
-            sol.insert ("PDEW", Opm::UnitSystem::measure::pressure, dewPointPressure_, Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert ("PDEW", Opm::UnitSystem::measure::pressure, std::move(dewPointPressure_), Opm::data::TargetType::RESTART_AUXILIARY);
 
         if (bubbelPointPressureOutput_() && bubblePointPressure_.size() > 0)
-            sol.insert ("PBUB", Opm::UnitSystem::measure::pressure, bubblePointPressure_, Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert ("PBUB", Opm::UnitSystem::measure::pressure, std::move(bubblePointPressure_), Opm::data::TargetType::RESTART_AUXILIARY);
 
 }
 
