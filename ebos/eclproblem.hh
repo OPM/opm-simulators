@@ -1211,7 +1211,7 @@ private:
                                                        FluidState>(fs,
                                                                    iq.pvtRegionIndex());
                 else
-                    lastRs_[compressedDofIdx] = 1e4;
+                    lastRs_[compressedDofIdx] = std::numeric_limits<Scalar>::infinity();
             }
         }
 
