@@ -45,6 +45,8 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RsvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RvvdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PbvdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PdvdTable.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/data/SimulationDataContainer.hpp>
 
@@ -974,7 +976,6 @@ public:
         // Create Rs functions.
         rsFunc_.reserve(rec.size());
         if (FluidSystem::enableDissolvedGas()) {
-            const Opm::TableContainer& rsvdTables = tables.getRsvdTables();
             for (size_t i = 0; i < rec.size(); ++i) {
                 if (eqlmap.cells(i).empty()) {
                     rsFunc_.push_back(std::shared_ptr<Miscibility::RsVD<FluidSystem>>());
@@ -982,14 +983,26 @@ public:
                 }
                 const int pvtIdx = regionPvtIdx_[i];
                 if (!rec[i].liveOilInitConstantRs()) {
-                    if (rsvdTables.size() <= 0) {
-                        OPM_THROW(std::runtime_error, "Cannot initialise: RSVD table not available.");
+                    const Opm::TableContainer& rsvdTables = tables.getRsvdTables();
+                    const Opm::TableContainer& pbvdTables = tables.getPbvdTables();
+                    if (rsvdTables.size() > 0) {
+
+                        const Opm::RsvdTable& rsvdTable = rsvdTables.getTable<Opm::RsvdTable>(i);
+                        std::vector<double> depthColumn = rsvdTable.getColumn("DEPTH").vectorCopy();
+                        std::vector<double> rsColumn = rsvdTable.getColumn("RS").vectorCopy();
+                        rsFunc_.push_back(std::make_shared<Miscibility::RsVD<FluidSystem>>(pvtIdx,
+                                                                                           depthColumn, rsColumn));
+                    } else if (pbvdTables.size() > 0) {
+                        const Opm::PbvdTable& pbvdTable = pbvdTables.getTable<Opm::PbvdTable>(i);
+                        std::vector<double> depthColumn = pbvdTable.getColumn("DEPTH").vectorCopy();
+                        std::vector<double> pbubColumn = pbvdTable.getColumn("PBUB").vectorCopy();
+                        rsFunc_.push_back(std::make_shared<Miscibility::PBVD<FluidSystem>>(pvtIdx,
+                                                                                           depthColumn, pbubColumn));
+
+                    } else {
+                        OPM_THROW(std::runtime_error, "Cannot initialise: RSVD or PBVD table not available.");
                     }
-                    const Opm::RsvdTable& rsvdTable = rsvdTables.getTable<Opm::RsvdTable>(i);
-                    std::vector<double> depthColumn = rsvdTable.getColumn("DEPTH").vectorCopy();
-                    std::vector<double> rsColumn = rsvdTable.getColumn("RS").vectorCopy();
-                    rsFunc_.push_back(std::make_shared<Miscibility::RsVD<FluidSystem>>(pvtIdx,
-                                                                                       depthColumn, rsColumn));
+
                 }
                 else {
                     if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
@@ -1012,7 +1025,6 @@ public:
 
         rvFunc_.reserve(rec.size());
         if (FluidSystem::enableVaporizedOil()) {
-            const Opm::TableContainer& rvvdTables = tables.getRvvdTables();
             for (size_t i = 0; i < rec.size(); ++i) {
                 if (eqlmap.cells(i).empty()) {
                     rvFunc_.push_back(std::shared_ptr<Miscibility::RvVD<FluidSystem>>());
@@ -1020,16 +1032,24 @@ public:
                 }
                 const int pvtIdx = regionPvtIdx_[i];
                 if (!rec[i].wetGasInitConstantRv()) {
-                    if (rvvdTables.size() <= 0) {
-                        OPM_THROW(std::runtime_error, "Cannot initialise: RVVD table not available.");
+                    const Opm::TableContainer& rvvdTables = tables.getRvvdTables();
+                    const Opm::TableContainer& pdvdTables = tables.getPdvdTables();
+
+                    if (rvvdTables.size() > 0) {
+                        const Opm::RvvdTable& rvvdTable = rvvdTables.getTable<Opm::RvvdTable>(i);
+                        std::vector<double> depthColumn = rvvdTable.getColumn("DEPTH").vectorCopy();
+                        std::vector<double> rvColumn = rvvdTable.getColumn("RV").vectorCopy();
+                        rvFunc_.push_back(std::make_shared<Miscibility::RvVD<FluidSystem>>(pvtIdx,
+                                                                                           depthColumn, rvColumn));
+                    } else if (pdvdTables.size() > 0) {
+                        const Opm::PdvdTable& pdvdTable = pdvdTables.getTable<Opm::PdvdTable>(i);
+                        std::vector<double> depthColumn = pdvdTable.getColumn("DEPTH").vectorCopy();
+                        std::vector<double> pdewColumn = pdvdTable.getColumn("PDEW").vectorCopy();
+                        rvFunc_.push_back(std::make_shared<Miscibility::PDVD<FluidSystem>>(pvtIdx,
+                                                                                           depthColumn, pdewColumn));
+                    } else {
+                        OPM_THROW(std::runtime_error, "Cannot initialise: RVVD or PDCD table not available.");
                     }
-
-                    const Opm::RvvdTable& rvvdTable = rvvdTables.getTable<Opm::RvvdTable>(i);
-                    std::vector<double> depthColumn = rvvdTable.getColumn("DEPTH").vectorCopy();
-                    std::vector<double> rvColumn = rvvdTable.getColumn("RV").vectorCopy();
-                    rvFunc_.push_back(std::make_shared<Miscibility::RvVD<FluidSystem>>(pvtIdx,
-                                                                                       depthColumn, rvColumn));
-
                 }
                 else {
                     if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
