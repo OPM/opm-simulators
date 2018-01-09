@@ -90,66 +90,83 @@ public:
      * \brief Allocate memory for the scalar fields we would like to
      *        write to ECL output files
      */
-    void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const Opm::RestartConfig& restartConfig, const bool log)
+    void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const Opm::RestartConfig& restartConfig, const bool substep, const bool log)
     {
+
+        if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
+            return;
+
         std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
         for (auto& keyValue : rstKeywords) {
             keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
         }
 
-        if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx))
+                continue;
+
+            saturation_[phaseIdx].resize(bufferSize,0.0);
+        }
+
+        oilPressure_.resize(bufferSize,0.0);
+        temperature_.resize(bufferSize,0.0);
+
+        // Output the same as legacy
+        // TODO: Only needed if DISGAS or VAPOIL
+        if (true)
+            rs_.resize(bufferSize,0.0);
+        if (true)
+            rv_.resize(bufferSize,0.0);
+
+        if (GET_PROP_VALUE(TypeTag, EnableSolvent)) {
+            sSol_.resize(bufferSize,0.0);
+        }
+        if (GET_PROP_VALUE(TypeTag, EnablePolymer)) {
+            cPolymer_.resize(bufferSize,0.0);
+        }
+
+        // Output the same as legacy
+        // TODO: Only needed if Vappars or hysteresis.
+        soMax_.resize(bufferSize,0.0);
+        pcSwMdcOw_.resize(bufferSize,0.0);
+        krnSwMdcOw_.resize(bufferSize,0.0);
+        pcSwMdcGo_.resize(bufferSize,0.0);
+        krnSwMdcGo_.resize(bufferSize,0.0);
+
+        // Only provide RESTART_AUXILIARY if it is asked for by the user
+        if (!restartConfig.getWriteRestartFile(reportStepNum) || substep)
             return;
 
-        if (saturationsOutput_()) {
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
-                saturation_[phaseIdx].resize(bufferSize,0.0);
-        }
-        if (pressuresOutput_()) {
-            oilPressure_.resize(bufferSize,0.0);
-        }
-        if (temperatureOutput_()) {
-            temperature_.resize(bufferSize,0.0);
-        }
-
-        if (gasDissolutionFactorOutput_() && rstKeywords["RSSAT"] > 0) {
-            rstKeywords["RSSAT"] = 0;
-            gasDissolutionFactor_.resize(bufferSize,0.0);
-        }
-        if (oilVaporizationFactorOutput_() && rstKeywords["RVSAT"] > 0) {
-            rstKeywords["RVSAT"] = 0;
-            oilVaporizationFactor_.resize(bufferSize,0.0);
-        }
-
-        if (gasFormationVolumeFactorOutput_())
-            gasFormationVolumeFactor_.resize(bufferSize,0.0);
-        if (saturatedOilFormationVolumeFactorOutput_())
-            saturatedOilFormationVolumeFactor_.resize(bufferSize,0.0);
-        if (oilSaturationPressureOutput_())
-            oilSaturationPressure_.resize(bufferSize,0.0);
-
-        if (rsOutput_())
-            rs_.resize(bufferSize,0.0);
-        if (rvOutput_())
-            rv_.resize(bufferSize,0.0);
-        if (invBOutput_()) {
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["BW"] > 0)
-            {
-                rstKeywords["BW"] = 0;
-                invB_[waterPhaseIdx].resize(bufferSize,0.0);
+        // Output the same as legacy
+        // TODO: Only needed if DISGAS or VAPOIL
+        if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+            if (rstKeywords["RSSAT"] > 0) {
+                rstKeywords["RSSAT"] = 0;
+                gasDissolutionFactor_.resize(bufferSize,0.0);
             }
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && rstKeywords["BO"] > 0)
-            {
-                rstKeywords["BO"] = 0;
-                invB_[oilPhaseIdx].resize(bufferSize,0.0);
-            }
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && rstKeywords["BG"] > 0)
-            {
-                rstKeywords["BG"] = 0;
-                invB_[gasPhaseIdx].resize(bufferSize,0.0);
+            if (rstKeywords["RVSAT"] > 0) {
+                rstKeywords["RVSAT"] = 0;
+                oilVaporizationFactor_.resize(bufferSize,0.0);
             }
         }
 
-        if (densityOutput_() && rstKeywords["DEN"] > 0) {
+        if (FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["BW"] > 0)
+        {
+            rstKeywords["BW"] = 0;
+            invB_[waterPhaseIdx].resize(bufferSize,0.0);
+        }
+        if (FluidSystem::phaseIsActive(oilPhaseIdx) && rstKeywords["BO"] > 0)
+        {
+            rstKeywords["BO"] = 0;
+            invB_[oilPhaseIdx].resize(bufferSize,0.0);
+        }
+        if (FluidSystem::phaseIsActive(gasPhaseIdx) && rstKeywords["BG"] > 0)
+        {
+            rstKeywords["BG"] = 0;
+            invB_[gasPhaseIdx].resize(bufferSize,0.0);
+        }
+
+        if (rstKeywords["DEN"] > 0) {
             rstKeywords["DEN"] = 0;
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx))
@@ -157,59 +174,42 @@ public:
                 density_[phaseIdx].resize(bufferSize,0.0);
             }
         }
-        if (viscosityOutput_()) {
-            const bool hasVWAT = (rstKeywords["VISC"] > 0) || (rstKeywords["VWAT"] > 0);
-            const bool hasVOIL = (rstKeywords["VISC"] > 0) || (rstKeywords["VOIL"] > 0);
-            const bool hasVGAS = (rstKeywords["VISC"] > 0) || (rstKeywords["VGAS"] > 0);
-            rstKeywords["VISC"] = 0;
+        const bool hasVWAT = (rstKeywords["VISC"] > 0) || (rstKeywords["VWAT"] > 0);
+        const bool hasVOIL = (rstKeywords["VISC"] > 0) || (rstKeywords["VOIL"] > 0);
+        const bool hasVGAS = (rstKeywords["VISC"] > 0) || (rstKeywords["VGAS"] > 0);
+        rstKeywords["VISC"] = 0;
 
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && hasVWAT)
-            {
-                rstKeywords["VWAT"] = 0;
-                viscosity_[waterPhaseIdx].resize(bufferSize,0.0);
-            }
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && hasVOIL > 0)
-            {
-                rstKeywords["VOIL"] = 0;
-                viscosity_[oilPhaseIdx].resize(bufferSize,0.0);
-            }
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && hasVGAS > 0)
-            {
-                rstKeywords["VGAS"] = 0;
-                viscosity_[gasPhaseIdx].resize(bufferSize,0.0);
-            }
+        if (FluidSystem::phaseIsActive(waterPhaseIdx) && hasVWAT)
+        {
+            rstKeywords["VWAT"] = 0;
+            viscosity_[waterPhaseIdx].resize(bufferSize,0.0);
         }
-        if (relativePermeabilityOutput_()) {
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["KRW"] > 0)
-            {
-                rstKeywords["KRW"] = 0;
-                relativePermeability_[waterPhaseIdx].resize(bufferSize,0.0);
-            }
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && rstKeywords["KRO"] > 0)
-            {
-                rstKeywords["KRO"] = 0;
-                relativePermeability_[oilPhaseIdx].resize(bufferSize,0.0);
-            }
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && rstKeywords["KRG"] > 0)
-            {
-                rstKeywords["KRG"] = 0;
-                relativePermeability_[gasPhaseIdx].resize(bufferSize,0.0);
-            }
+        if (FluidSystem::phaseIsActive(oilPhaseIdx) && hasVOIL > 0)
+        {
+            rstKeywords["VOIL"] = 0;
+            viscosity_[oilPhaseIdx].resize(bufferSize,0.0);
         }
-        if (solventOutput_()) {
-            sSol_.resize(bufferSize,0.0);
-        }
-        if (polymerOutput_()) {
-            cPolymer_.resize(bufferSize,0.0);
+        if (FluidSystem::phaseIsActive(gasPhaseIdx) && hasVGAS > 0)
+        {
+            rstKeywords["VGAS"] = 0;
+            viscosity_[gasPhaseIdx].resize(bufferSize,0.0);
         }
 
-        // TODO: Only needed if Vappars or hysteresis.
-        // Now: Output the same as legacy
-        soMax_.resize(bufferSize,0.0);
-        pcSwMdcOw_.resize(bufferSize,0.0);
-        krnSwMdcOw_.resize(bufferSize,0.0);
-        pcSwMdcGo_.resize(bufferSize,0.0);
-        krnSwMdcGo_.resize(bufferSize,0.0);
+        if (FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["KRW"] > 0)
+        {
+            rstKeywords["KRW"] = 0;
+            relativePermeability_[waterPhaseIdx].resize(bufferSize,0.0);
+        }
+        if (FluidSystem::phaseIsActive(oilPhaseIdx) && rstKeywords["KRO"] > 0)
+        {
+            rstKeywords["KRO"] = 0;
+            relativePermeability_[oilPhaseIdx].resize(bufferSize,0.0);
+        }
+        if (FluidSystem::phaseIsActive(gasPhaseIdx) && rstKeywords["KRG"] > 0)
+        {
+            rstKeywords["KRG"] = 0;
+            relativePermeability_[gasPhaseIdx].resize(bufferSize,0.0);
+        }
 
         if (rstKeywords["PBPD"] > 0)  {
             rstKeywords["PBPD"] = 0;
@@ -231,6 +231,12 @@ public:
 
         failedCellsPb_.clear();
         failedCellsPd_.clear();
+
+        // Not supported in flow legacy
+        if (false)
+            saturatedOilFormationVolumeFactor_.resize(bufferSize,0.0);
+        if (false)
+            oilSaturationPressure_.resize(bufferSize,0.0);
     }
 
     /*!
@@ -251,15 +257,14 @@ public:
             unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
             unsigned pvtRegionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
 
-            if (saturationsOutput_()) {
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                    if (saturation_[phaseIdx].size() == 0)
-                        continue;
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                if (saturation_[phaseIdx].size() == 0)
+                    continue;
 
-                    saturation_[phaseIdx][globalDofIdx] = Toolbox::value(fs.saturation(phaseIdx));
-                    Opm::Valgrind::CheckDefined(saturation_[phaseIdx][globalDofIdx]);
-                }
+                saturation_[phaseIdx][globalDofIdx] = Toolbox::value(fs.saturation(phaseIdx));
+                Opm::Valgrind::CheckDefined(saturation_[phaseIdx][globalDofIdx]);
             }
+
             if (oilPressure_.size() > 0) {
                 oilPressure_[globalDofIdx] = Toolbox::value(fs.pressure(oilPhaseIdx));
                 Opm::Valgrind::CheckDefined(oilPressure_[globalDofIdx]);
@@ -308,44 +313,36 @@ public:
                 Opm::Valgrind::CheckDefined(rv_[globalDofIdx]);
             }
 
-            if (invBOutput_()) {
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                    if (invB_[phaseIdx].size() == 0)
-                        continue;
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                if (invB_[phaseIdx].size() == 0)
+                    continue;
 
-                    invB_[phaseIdx][globalDofIdx] = Toolbox::value(fs.invB(phaseIdx));
-                    Opm::Valgrind::CheckDefined(invB_[phaseIdx][globalDofIdx]);
-                }
+                invB_[phaseIdx][globalDofIdx] = Toolbox::value(fs.invB(phaseIdx));
+                Opm::Valgrind::CheckDefined(invB_[phaseIdx][globalDofIdx]);
             }
 
-            if (densityOutput_()) {
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                    if (density_[phaseIdx].size() == 0)
-                        continue;
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                if (density_[phaseIdx].size() == 0)
+                    continue;
 
-                    density_[phaseIdx][globalDofIdx] = Toolbox::value(fs.density(phaseIdx));
-                    Opm::Valgrind::CheckDefined(density_[phaseIdx][globalDofIdx]);
-                }
+                density_[phaseIdx][globalDofIdx] = Toolbox::value(fs.density(phaseIdx));
+                Opm::Valgrind::CheckDefined(density_[phaseIdx][globalDofIdx]);
             }
 
-            if (viscosityOutput_()) {
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                    if (viscosity_[phaseIdx].size() == 0)
-                        continue;
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                if (viscosity_[phaseIdx].size() == 0)
+                    continue;
 
-                    viscosity_[phaseIdx][globalDofIdx] = Toolbox::value(fs.viscosity(phaseIdx));
-                    Opm::Valgrind::CheckDefined(viscosity_[phaseIdx][globalDofIdx]);
-                }
+                viscosity_[phaseIdx][globalDofIdx] = Toolbox::value(fs.viscosity(phaseIdx));
+                Opm::Valgrind::CheckDefined(viscosity_[phaseIdx][globalDofIdx]);
             }
 
-            if (relativePermeabilityOutput_()) {
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                    if (relativePermeability_[phaseIdx].size() == 0)
-                        continue;
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                if (relativePermeability_[phaseIdx].size() == 0)
+                    continue;
 
-                    relativePermeability_[phaseIdx][globalDofIdx] = Toolbox::value(intQuants.relativePermeability(phaseIdx));
-                    Opm::Valgrind::CheckDefined(relativePermeability_[phaseIdx][globalDofIdx]);
-                }
+                relativePermeability_[phaseIdx][globalDofIdx] = Toolbox::value(intQuants.relativePermeability(phaseIdx));
+                Opm::Valgrind::CheckDefined(relativePermeability_[phaseIdx][globalDofIdx]);
             }
 
             if (sSol_.size() > 0) {
@@ -380,13 +377,15 @@ public:
             if (soMax_.size() > 0)
                 soMax_[globalDofIdx] = elemCtx.simulator().model().maxOilSaturation(globalDofIdx);
 
-            if (hysteresisOutput_()) {
-                const auto& matLawManager = elemCtx.simulator().problem().materialLawManager();
-                if (matLawManager->enableHysteresis()) {
+            const auto& matLawManager = elemCtx.simulator().problem().materialLawManager();
+            if (matLawManager->enableHysteresis()) {
+                if (pcSwMdcOw_.size() > 0 && krnSwMdcOw_.size() > 0) {
                     matLawManager->oilWaterHysteresisParams(
                                 pcSwMdcOw_[globalDofIdx],
                                 krnSwMdcOw_[globalDofIdx],
                                 globalDofIdx);
+                }
+                if (pcSwMdcGo_.size() > 0 && krnSwMdcGo_.size() > 0) {
                     matLawManager->gasOilHysteresisParams(
                                 pcSwMdcGo_[globalDofIdx],
                                 krnSwMdcGo_[globalDofIdx],
@@ -405,8 +404,11 @@ public:
                 const auto& fs_initial = elemCtx.simulator().problem().initialFluidState(globalDofIdx);
 
                 // use initial rs and rv values
-                rv_[globalDofIdx] = fs_initial.Rv();
-                rs_[globalDofIdx] = fs_initial.Rs();
+                if (rv_.size() > 0)
+                    rv_[globalDofIdx] = fs_initial.Rv();
+
+                if (rs_.size() > 0)
+                    rs_[globalDofIdx] = fs_initial.Rs();
 
                 // re-compute the volume factors, viscosities and densities if asked for
                 if (density_[oilPhaseIdx].size() > 0)
@@ -449,7 +451,7 @@ public:
         std::vector<int> displPb, displPd, recvLenPb, recvLenPd;
         const auto& comm = simulator_.gridView().comm();
 
-        if ( isIORank() )
+        if ( isIORank_() )
         {
             displPb.resize(comm.size()+1, 0);
             displPd.resize(comm.size()+1, 0);
@@ -463,7 +465,7 @@ public:
         std::partial_sum(recvLenPd.begin(), recvLenPd.end(), displPd.begin()+1);
         std::vector<int> globalFailedCellsPb, globalFailedCellsPd;
 
-        if ( isIORank() )
+        if ( isIORank_() )
         {
             globalFailedCellsPb.resize(displPb.back());
             globalFailedCellsPd.resize(displPd.back());
@@ -524,14 +526,13 @@ public:
             sol.insert( "TEMP", Opm::UnitSystem::measure::temperature, std::move(temperature_), Opm::data::TargetType::RESTART_SOLUTION);
         }
 
-        if (saturationsOutput_()) {
-            if( FluidSystem::phaseIsActive(waterPhaseIdx) && saturation_[waterPhaseIdx].size()>0 ) {
-                sol.insert( "SWAT", Opm::UnitSystem::measure::identity, std::move(saturation_[waterPhaseIdx]), Opm::data::TargetType::RESTART_SOLUTION );
-            }
-            if( FluidSystem::phaseIsActive(gasPhaseIdx) && saturation_[gasPhaseIdx].size()>0) {
-                sol.insert( "SGAS", Opm::UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), Opm::data::TargetType::RESTART_SOLUTION );
-            }
+        if( FluidSystem::phaseIsActive(waterPhaseIdx) && saturation_[waterPhaseIdx].size() > 0 ) {
+            sol.insert( "SWAT", Opm::UnitSystem::measure::identity, std::move(saturation_[waterPhaseIdx]), Opm::data::TargetType::RESTART_SOLUTION );
         }
+        if( FluidSystem::phaseIsActive(gasPhaseIdx) && saturation_[gasPhaseIdx].size() > 0) {
+            sol.insert( "SGAS", Opm::UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), Opm::data::TargetType::RESTART_SOLUTION );
+        }
+
         if ( gasDissolutionFactor_.size() > 0 ) {
             sol.insert( "RSSAT", Opm::UnitSystem::measure::gas_oil_ratio, std::move(gasDissolutionFactor_), Opm::data::TargetType::RESTART_AUXILIARY );
 
@@ -539,78 +540,78 @@ public:
         if ( oilVaporizationFactor_.size() > 0 ) {
             sol.insert( "RVSAT", Opm::UnitSystem::measure::oil_gas_ratio, std::move(oilVaporizationFactor_) , Opm::data::TargetType::RESTART_AUXILIARY );
         }
-        if (rs_.size() > 0 ) {
+        if ( rs_.size() > 0 ) {
             sol.insert( "RS", Opm::UnitSystem::measure::gas_oil_ratio, std::move(rs_), Opm::data::TargetType::RESTART_SOLUTION );
 
         }
         if (rv_.size() > 0 ) {
             sol.insert( "RV", Opm::UnitSystem::measure::oil_gas_ratio, std::move(rv_) , Opm::data::TargetType::RESTART_SOLUTION );
         }
-        if (invBOutput_()) {
-            if( FluidSystem::phaseIsActive(waterPhaseIdx) && invB_[waterPhaseIdx].size() > 0 ) {
-                sol.insert( "1OVERBW", Opm::UnitSystem::measure::water_inverse_formation_volume_factor, std::move(invB_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
-            }
-            if( FluidSystem::phaseIsActive(oilPhaseIdx)  && invB_[oilPhaseIdx].size() > 0 ) {
-                sol.insert( "1OVERBO", Opm::UnitSystem::measure::oil_inverse_formation_volume_factor, std::move(invB_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
-            }
-            if( FluidSystem::phaseIsActive(gasPhaseIdx) && invB_[gasPhaseIdx].size() > 0 ) {
-                sol.insert( "1OVERBG", Opm::UnitSystem::measure::gas_inverse_formation_volume_factor, std::move(invB_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
-            }
+        if (invB_[waterPhaseIdx].size() > 0 ) {
+            sol.insert( "1OVERBW", Opm::UnitSystem::measure::water_inverse_formation_volume_factor, std::move(invB_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
         }
-        if (densityOutput_()) {
-            if( FluidSystem::phaseIsActive(waterPhaseIdx) && density_[waterPhaseIdx].size() > 0 ) {
-                sol.insert( "WAT_DEN", Opm::UnitSystem::measure::density, std::move(density_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
-            }
-            if( FluidSystem::phaseIsActive(oilPhaseIdx) && density_[oilPhaseIdx].size() > 0 ) {
-                sol.insert( "OIL_DEN", Opm::UnitSystem::measure::density, std::move(density_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
-            }
-            if( FluidSystem::phaseIsActive(gasPhaseIdx) && density_[gasPhaseIdx].size() > 0 ) {
-                sol.insert( "GAS_DEN", Opm::UnitSystem::measure::density, std::move(density_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
-            }
+        if (invB_[oilPhaseIdx].size() > 0 ) {
+            sol.insert( "1OVERBO", Opm::UnitSystem::measure::oil_inverse_formation_volume_factor, std::move(invB_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
         }
-        if (viscosityOutput_()) {
-            if( FluidSystem::phaseIsActive(waterPhaseIdx) && viscosity_[waterPhaseIdx].size() > 0 ) {
-                sol.insert( "WAT_VISC", Opm::UnitSystem::measure::viscosity, std::move(viscosity_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
-            }
-            if( FluidSystem::phaseIsActive(oilPhaseIdx) && viscosity_[oilPhaseIdx].size() > 0 ) {
-                sol.insert( "OIL_VISC", Opm::UnitSystem::measure::viscosity, std::move(viscosity_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
-            }
-            if( FluidSystem::phaseIsActive(gasPhaseIdx) && viscosity_[gasPhaseIdx].size() > 0 ) {
-                sol.insert( "GAS_VISC", Opm::UnitSystem::measure::viscosity, std::move(viscosity_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
-            }
-        }
-        if (relativePermeabilityOutput_()) {
-            if( FluidSystem::phaseIsActive(waterPhaseIdx) && relativePermeability_[waterPhaseIdx].size() > 0) {
-                sol.insert( "WATKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
-            }
-            if( FluidSystem::phaseIsActive(oilPhaseIdx)&& relativePermeability_[oilPhaseIdx].size() > 0 ) {
-                sol.insert( "OILKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
-            }
-            if( FluidSystem::phaseIsActive(gasPhaseIdx)&& relativePermeability_[gasPhaseIdx].size() > 0 ) {
-                sol.insert( "GASKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
-            }
+        if (invB_[gasPhaseIdx].size() > 0 ) {
+            sol.insert( "1OVERBG", Opm::UnitSystem::measure::gas_inverse_formation_volume_factor, std::move(invB_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
         }
 
-        if (hysteresisOutput_()) {
+        if (density_[waterPhaseIdx].size() > 0 ) {
+            sol.insert( "WAT_DEN", Opm::UnitSystem::measure::density, std::move(density_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
+        }
+        if (density_[oilPhaseIdx].size() > 0 ) {
+            sol.insert( "OIL_DEN", Opm::UnitSystem::measure::density, std::move(density_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
+        }
+        if (density_[gasPhaseIdx].size() > 0 ) {
+            sol.insert( "GAS_DEN", Opm::UnitSystem::measure::density, std::move(density_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
+        }
+
+        if (viscosity_[waterPhaseIdx].size() > 0 ) {
+            sol.insert( "WAT_VISC", Opm::UnitSystem::measure::viscosity, std::move(viscosity_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+        }
+        if (viscosity_[oilPhaseIdx].size() > 0 ) {
+            sol.insert( "OIL_VISC", Opm::UnitSystem::measure::viscosity, std::move(viscosity_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+        }
+        if (viscosity_[gasPhaseIdx].size() > 0 ) {
+            sol.insert( "GAS_VISC", Opm::UnitSystem::measure::viscosity, std::move(viscosity_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY );
+        }
+
+        if (relativePermeability_[waterPhaseIdx].size() > 0) {
+            sol.insert( "WATKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+        }
+        if (relativePermeability_[oilPhaseIdx].size() > 0 ) {
+            sol.insert( "OILKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+        }
+        if (relativePermeability_[gasPhaseIdx].size() > 0 ) {
+            sol.insert( "GASKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+        }
+
+        if (pcSwMdcOw_.size() > 0 )
             sol.insert ("PCSWM_OW", Opm::UnitSystem::measure::identity, std::move(pcSwMdcOw_), Opm::data::TargetType::RESTART_AUXILIARY);
-            sol.insert ("KRNSW_OW", Opm::UnitSystem::measure::identity, std::move(krnSwMdcOw_), Opm::data::TargetType::RESTART_AUXILIARY);
-            sol.insert ("PCSWM_GO", Opm::UnitSystem::measure::identity, std::move(pcSwMdcGo_), Opm::data::TargetType::RESTART_AUXILIARY);
-            sol.insert ("KRNSW_GO", Opm::UnitSystem::measure::identity, std::move(krnSwMdcGo_), Opm::data::TargetType::RESTART_AUXILIARY);
-        }
 
-        if (soMaxOutput_())
+        if (krnSwMdcOw_.size() > 0)
+            sol.insert ("KRNSW_OW", Opm::UnitSystem::measure::identity, std::move(krnSwMdcOw_), Opm::data::TargetType::RESTART_AUXILIARY);
+
+        if (pcSwMdcGo_.size() > 0)
+            sol.insert ("PCSWM_GO", Opm::UnitSystem::measure::identity, std::move(pcSwMdcGo_), Opm::data::TargetType::RESTART_AUXILIARY);
+
+        if (krnSwMdcGo_.size() > 0)
+            sol.insert ("KRNSW_GO", Opm::UnitSystem::measure::identity, std::move(krnSwMdcGo_), Opm::data::TargetType::RESTART_AUXILIARY);
+
+        if (soMax_.size() > 0)
             sol.insert ("SOMAX", Opm::UnitSystem::measure::identity, std::move(soMax_), Opm::data::TargetType::RESTART_SOLUTION);
 
-        if (solventOutput_())
+        if (sSol_.size() > 0)
             sol.insert ("SSOL", Opm::UnitSystem::measure::identity, std::move(sSol_), Opm::data::TargetType::RESTART_SOLUTION);
 
-        if (polymerOutput_())
+        if (cPolymer_.size() > 0)
             sol.insert ("POLYMER", Opm::UnitSystem::measure::identity, std::move(cPolymer_), Opm::data::TargetType::RESTART_SOLUTION);
 
-        if (dewPointPressureOutput_() && dewPointPressure_.size() > 0)
+        if (dewPointPressure_.size() > 0)
             sol.insert ("PDEW", Opm::UnitSystem::measure::pressure, std::move(dewPointPressure_), Opm::data::TargetType::RESTART_AUXILIARY);
 
-        if (bubbelPointPressureOutput_() && bubblePointPressure_.size() > 0)
+        if (bubblePointPressure_.size() > 0)
             sol.insert ("PBUB", Opm::UnitSystem::measure::pressure, std::move(bubblePointPressure_), Opm::data::TargetType::RESTART_AUXILIARY);
 
 }
@@ -681,15 +682,14 @@ public:
     void assignToFluidState(FluidState& fs, unsigned elemIdx) const 
     {
 
-        if (saturationsOutput_()) {
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
-                    continue;
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            if (saturation_[phaseIdx].size() == 0)
+                continue;
 
-                fs.setSaturation(phaseIdx, saturation_[phaseIdx][elemIdx]);
-            }
+            fs.setSaturation(phaseIdx, saturation_[phaseIdx][elemIdx]);
         }
-        if (pressuresOutput_()) {
+
+        if (oilPressure_.size() > 0) {
 
             // this assumes that capillary pressures only depend on the phase saturations
             // and possibly on temperature. (this is always the case for ECL problems.)
@@ -707,48 +707,52 @@ public:
             }
         }
 
-        if (temperatureOutput_()) {
+        if (temperature_.size() > 0) {
             fs.setTemperature( temperature_[elemIdx]);
         }
 
-        if (rsOutput_()) {
+        if (rs_.size() > 0) {
            fs.setRs(rs_[elemIdx]);
 
         }
-        if (rvOutput_()) {
+        if (rv_.size() > 0) {
            fs.setRv(rv_[elemIdx]);
         }
     }
 
     void initHysteresisParams(Simulator& simulator, unsigned elemIdx) const {
 
-        if (soMaxOutput_())
+        if (soMax_.size() > 0)
             simulator.model().setMaxOilSaturation(soMax_[elemIdx], elemIdx);
 
         if (simulator.problem().materialLawManager()->enableHysteresis()) {
             auto matLawManager = simulator.problem().materialLawManager();
 
+            if (pcSwMdcOw_.size() > 0 && krnSwMdcOw_.size() > 0) {
                 matLawManager->setOilWaterHysteresisParams(
-                        pcSwMdcOw_[elemIdx],
-                        krnSwMdcOw_[elemIdx],
-                        elemIdx);
+                            pcSwMdcOw_[elemIdx],
+                            krnSwMdcOw_[elemIdx],
+                            elemIdx);
+            }
+            if (pcSwMdcGo_.size() > 0 && krnSwMdcGo_.size() > 0) {
                 matLawManager->setGasOilHysteresisParams(
-                        pcSwMdcGo_[elemIdx],
-                        krnSwMdcGo_[elemIdx],
-                        elemIdx);
+                            pcSwMdcGo_[elemIdx],
+                            krnSwMdcGo_[elemIdx],
+                            elemIdx);
+            }
         }
 
     }
 
     Scalar getSolventSaturation(unsigned elemIdx) const {
-        if(solventOutput_())
+        if(sSol_.size() > 0)
             return sSol_[elemIdx];
 
         return 0;
     }
 
     Scalar getPolymerConcentration(unsigned elemIdx) const {
-        if(polymerOutput_())
+        if(cPolymer_.size() > 0)
             return cPolymer_[elemIdx];
 
         return 0;
@@ -756,119 +760,8 @@ public:
 
 
 private:
-    // This should be cleaned up.
-    // For now output the same as legacy
-    // to make the tests pass
-    static bool saturationsOutput_()
-    { return true; }
 
-    static bool pressuresOutput_()
-    { return true; }
-
-    static bool temperatureOutput_()
-    {
-        return true;
-    }
-
-    static bool solventOutput_()
-    {
-        return GET_PROP_VALUE(TypeTag, EnableSolvent);
-    }
-
-    static bool polymerOutput_()
-    {
-        return GET_PROP_VALUE(TypeTag, EnablePolymer);
-    }
-
-    static bool gasDissolutionFactorOutput_()
-    {
-        return true;        
-        //FluidSystem::enableDissolvedGas();
-    }
-
-    static bool gasFormationVolumeFactorOutput_()
-    {
-        return
-            FluidSystem::phaseIsActive(oilPhaseIdx) &&
-            FluidSystem::phaseIsActive(gasPhaseIdx);
-    }
-
-    static bool oilVaporizationFactorOutput_()
-    {
-        return true;
-            //FluidSystem::enableVaporizedOil();
-    }
-
-    static bool saturatedOilFormationVolumeFactorOutput_()
-    {
-        return
-            FluidSystem::phaseIsActive(oilPhaseIdx) &&
-            FluidSystem::phaseIsActive(gasPhaseIdx);
-    }
-
-    static bool oilSaturationPressureOutput_()
-    {
-        return
-            FluidSystem::phaseIsActive(oilPhaseIdx) &&
-            FluidSystem::phaseIsActive(gasPhaseIdx);
-    }
-
-    static bool rsOutput_()
-    {
-        // Output the same as legacy
-        return true; //FluidSystem::enableDissolvedGas();
-
-    }
-
-    static bool rvOutput_()
-    {
-        // Output the same as legacy
-        return true;//FluidSystem::enableVaporizedOil();
-    }
-
-
-    static bool invBOutput_()
-    {
-        return true;
-    }
-
-    static bool densityOutput_()
-    {
-        return true;
-    }
-
-    static bool viscosityOutput_()
-    {
-        return true;
-    }
-
-
-    static bool relativePermeabilityOutput_()
-    {
-        return true;
-    }
-
-    static bool soMaxOutput_()
-    {
-        return true;
-    }
-
-    static bool hysteresisOutput_()
-    {
-        return true;
-    }
-
-    static bool dewPointPressureOutput_()
-    {
-        return true;
-    }
-
-    static bool bubbelPointPressureOutput_()
-    {
-        return true;
-    }
-
-    bool isIORank() const
+    bool isIORank_() const
     {
         const auto& comm = simulator_.gridView().comm();
         return comm.rank() == 0;

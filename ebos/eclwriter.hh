@@ -132,7 +132,7 @@ public:
         const auto& gridView = simulator_.gridManager().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
-        eclOutputModule_.allocBuffers(numElements, episodeIdx, simulator_.gridManager().eclState().getRestartConfig(), log);
+        eclOutputModule_.allocBuffers(numElements, episodeIdx, simulator_.gridManager().eclState().getRestartConfig(), substep, log);
 
         ElementContext elemCtx(simulator_);
         ElementIterator elemIt = gridView.template begin</*codim=*/0>();
@@ -199,7 +199,7 @@ public:
         unsigned episodeIdx = simulator_.episodeIndex();
         const auto& gridView = simulator_.gridManager().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
-        eclOutputModule_.allocBuffers(numElements, episodeIdx, simulator_.gridManager().eclState().getRestartConfig(), false);
+        eclOutputModule_.allocBuffers(numElements, episodeIdx, simulator_.gridManager().eclState().getRestartConfig(), true, false);
 
         auto restart_values = eclIO_->loadRestart(solution_keys, extra_keys);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
