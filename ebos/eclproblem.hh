@@ -1204,7 +1204,7 @@ private:
 
                 typedef typename std::decay<decltype(fs) >::type FluidState;
 
-                if (!dRsDtOnlyFreeGas_ || fs.saturation(gasPhaseIdx) > 1e-5)
+                if (!dRsDtOnlyFreeGas_ || fs.saturation(gasPhaseIdx) > freeGasMinSaturation_)
                     lastRs_[compressedDofIdx] =
                         Opm::BlackOil::template getRs_<FluidSystem,
                                                        Scalar,
@@ -1835,6 +1835,7 @@ private:
     std::vector<Scalar> lastRv_;
     Scalar maxDRvDt_;
     Scalar maxDRv_;
+    constexpr static Scalar freeGasMinSaturation_ = 1e-7;
 
     bool vapparsActive_; // if no, DRSDT and/or DRVDT *might* be active
     std::vector<Scalar> maxOilSaturation_;
