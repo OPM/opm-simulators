@@ -148,7 +148,8 @@ public:
         // collect all data to I/O rank and assign to sol
         Opm::data::Solution localCellData = fip;
         eclOutputModule_.assignToSolution(localCellData);
-        collectToIORank_.collect(localCellData);
+        if (collectToIORank_.isParallel())
+            collectToIORank_.collect(localCellData);
 
         // write output on I/O rank
         if (collectToIORank_.isIORank()) {
