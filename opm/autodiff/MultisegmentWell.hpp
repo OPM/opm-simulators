@@ -254,6 +254,17 @@ namespace Opm
 
         std::vector<double> segment_depth_diffs_;
 
+        // for now, it is only used for spiral ICD segments
+        // for simplicity of implementation, we keep a value for all the segments,
+        // defaulted to be 1.
+        // when eventually, we found it is possible to calculate it in the parser,
+        // we can address it and process it in the parser.
+        // the difficult part to make it addressed  in the parser, is the requirement
+        // of completion lengths, considering the possiblity of PINCH.
+        // when it is clear that it should be done in the parser, we will move it to
+        // the parser. Technically, it should belong to the SpiralICD class.
+        std::vector<double> flow_scaling_factors_;
+
         void initMatrixAndVectors(const int num_cells) const;
 
         // protected functions
@@ -346,6 +357,12 @@ namespace Opm
                                             const double dt,
                                             WellState& well_state,
                                             bool only_wells);
+
+        void assembleSICDPressureEq(const int seg) const;
+
+        void calculaeFlowScalingFactors();
+
+        double segmentLength(const int seg) const;
     };
 
 }

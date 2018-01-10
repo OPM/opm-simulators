@@ -43,6 +43,7 @@ namespace Opm
     , segment_viscosities_(numberOfSegments(), 0.0)
     , segment_mass_rates_(numberOfSegments(), 0.0)
     , segment_depth_diffs_(numberOfSegments(), 0.0)
+    , flow_scaling_factors_(numberOfSegments(), 1.0)
     {
         // not handling solvent or polymer for now with multisegment well
         if (has_solvent) {
@@ -1858,6 +1859,89 @@ namespace Opm
             } else {
                 assemblePressureEq(seg);
             }
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    assembleSICDPressureEq(const int seg) const
+    {
+        // top segment can not be a spiral ICD device
+        assert(seg != 0);
+    }
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    calculaeFlowScalingFactors()
+    {
+        // top segment will not be spiral ICD segment
+        for (int seg = 1; seg < numberOfSegments(); ++seg) {
+            const Segment& segment = segmentSet()[seg];
+            if (segment.segmentType() == WellSegment::SPIRALICD) {
+                const SpiralICD& sicd = *segment.spiralICD();
+                const int method_flow_scaling = sicd.method_flow_scaling;
+                const double icd_length = sicd.length;
+                if (method_flow_scaling < 0) {
+                    if (icd_length > 0.) { // icd_length / outlet_segment length
+                        // the parental segment index
+                        const int parental_seg_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
+                        const double segment_length = segmentLength(parental_seg_index);
+                        flow_scaling_factors_[seg] = icd_length / segment_length;
+                    } else if (icd_length < 0.) {
+                        flow_scaling_factors_[seg] = std::abs(icd_length);
+                    } else { // icd_length == 0., not sure what this means
+                        const std::string msg = "Zero-value is found when calculaeFlowScalingFactors for segment "
+                                              + std::to_string(segmentSet()[seg].segmentNumber()) + " of well " + name();
+                        OPM_THROW(std::runtime_error, msg);
+                    }
+                } else if (method_flow_scaling == 0) {
+                    if (icd_length <= 0.) {
+                        const std::string msg = "Non-positive spiral ICD length value found when flow scaling method is 0 for segment "
+                                              + std::to_string(segmentSet()[seg].segmentNumber()) + " of well " + name();
+                    }
+                    const int parental_seg_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
+                    const double segment_length = segmentLength(parental_seg_index);
+                    flow_scaling_factors_[seg] = icd_length / segment_length;
+                } else if (method_flow_scaling == 1) {
+                    flow_scaling_factors_[seg] = std::abs(icd_length);
+                } else if (method_flow_scaling == 2) {
+                    OPM_THROW(std::logic_error, "Not handling flow scaling method 2 for segment yet");
+                } else {
+                    OPM_THROW(std::logic_error, "The way specified to calculate flow scaling factor is not valid");
+                }
+            }
+        }
+    }
+
+
+
+
+
+
+    template<typename TypeTag>
+    double
+    MultisegmentWell<TypeTag>::
+    segmentLength(const int seg) const
+    {
+        if (seg != 0) {
+            const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
+            const double segment_length = segmentSet()[outlet_segment_index].totalLength() - segmentSet()[seg].totalLength();
+            if (segment_length <= 0.) {
+                const std::string msg = "Non-positive segment length is found for segment "
+                                      + std::to_string(segmentSet()[seg].segmentNumber()) + " of well " + name();
+                OPM_THROW(std::runtime_error, msg);
+            }
+        } else { // top segment
+            return segmentSet()[seg].totalLength();
         }
     }
 
