@@ -258,6 +258,8 @@ namespace Opm
 
         std::vector<std::vector<EvalWell>> segment_phase_fractions_;
 
+        std::vector<std::vector<EvalWell>> segment_phase_viscosities_;
+
         // for now, it is only used for spiral ICD segments
         // for simplicity of implementation, we keep a value for all the segments,
         // defaulted to be 1.
@@ -364,9 +366,11 @@ namespace Opm
 
         void assembleSICDPressureEq(const int seg) const;
 
-        void calculaeFlowScalingFactors();
+        void calculateFlowScalingFactors();
 
-        double segmentLength(const int seg) const;
+        inline double segmentLength(const int seg) const;
+
+        EvalWell pressureDropSpiralICD(const int seg) const;
     };
 
 }
