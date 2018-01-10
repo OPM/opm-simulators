@@ -23,6 +23,9 @@
 #ifndef EWOMS_PARALLELSERIALOUTPUT_HH
 #define EWOMS_PARALLELSERIALOUTPUT_HH
 
+#include <opm/output/data/Cells.hpp>
+#include <opm/output/data/Solution.hpp>
+
 //#if HAVE_OPM_GRID
 #include <dune/grid/common/p2pcommunicator.hh>
 #include <dune/grid/utility/persistentcontainer.hh>
@@ -90,9 +93,6 @@ namespace Ewoms
             IndexMapType& localIndexMap_;
             IndexMapStorageType& indexMaps_;
             std::map< const int, const int > globalPosition_;
-#ifndef NDEBUG
-            std::set< int > checkPosition_;
-#endif
 
         public:
             DistributeIndexMapping( const std::vector<int>& globalIndex,
@@ -111,7 +111,7 @@ namespace Ewoms
                     globalPosition_.insert( std::make_pair( globalIndex[ index ], index ) );
                 }
 
-                // on I/O rank we need to create a mapping from local to global
+                // we need to create a mapping from local to global
                 if( ! indexMaps_.empty() )
                 {
                     // for the ioRank create a localIndex to index in global state map
@@ -122,10 +122,6 @@ namespace Ewoms
                     {
                         const int id = distributedGlobalIndex_[ localIndexMap_[ i ] ];
                         indexMap[ i ] = globalPosition_[ id ] ;
-#ifndef NDEBUG
-                        assert( checkPosition_.find( id ) == checkPosition_.end() );
-                        checkPosition_.insert( id );
-#endif
                     }
                 }
             }
@@ -164,10 +160,6 @@ namespace Ewoms
                     buffer.read( globalId );
                     assert( globalPosition_.find( globalId ) != globalPosition_.end() );
                     indexMap[ index ] = globalPosition_[ globalId ];
-#ifndef NDEBUG
-                    assert( checkPosition_.find( globalId ) == checkPosition_.end() );
-                    checkPosition_.insert( globalId );
-#endif
                 }
             }
         };
@@ -178,12 +170,10 @@ namespace Ewoms
             typename GridManager::Grid, typename GridManager::EquilGrid > :: value ;
 
         CollectDataToIORank( const GridManager& gridManager )
-            : toIORankComm_( ),
-              isIORank_( gridManager.grid().comm().rank() == ioRank ),
-              isParallel_( gridManager.grid().comm().size() > 1 )
+            : toIORankComm_( )
         {
             // index maps only have to be build when reordering is needed
-            if( ! needsReordering && ! isParallel_ )
+            if( ! needsReordering && ! isParallel() )
             {
                 return ;
             }
@@ -192,36 +182,35 @@ namespace Ewoms
 
             {
                 std::set< int > send, recv;
+		typedef typename GridManager::EquilGrid::LeafGridView EquilGridView;
+                const EquilGridView equilGridView = gridManager.equilGrid().leafGridView() ;
+
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
+                typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView> EquilElementMapper;
+                EquilElementMapper equilElemMapper(equilGridView, Dune::mcmgElementLayout());
+#else
+                typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView, Dune::MCMGElementLayout> EquilElementMapper;
+                EquilElementMapper equilElemMapper(equilGridView);
+#endif
+
+                // We need a mapping from local to global grid, here we
+                // use equilGrid which represents a view on the global grid
+                const size_t globalSize = gridManager.equilGrid().leafGridView().size( 0 );
+                // reserve memory
+                globalCartesianIndex_.resize(globalSize, -1);
+
+                // loop over all elements (global grid) and store Cartesian index
+                auto elemIt = gridManager.equilGrid().leafGridView().template begin<0>();
+                const auto& elemEndIt = gridManager.equilGrid().leafGridView().template end<0>();
+                for (; elemIt != elemEndIt; ++elemIt) {
+                    int elemIdx = equilElemMapper.index(*elemIt );
+                    int cartElemIdx = gridManager.equilCartesianIndexMapper().cartesianIndex(elemIdx);
+                    globalCartesianIndex_[elemIdx] = cartElemIdx;
+                }
+
                 // the I/O rank receives from all other ranks
                 if( isIORank() )
                 {
-                    typedef typename GridManager::EquilGrid::LeafGridView EquilGridView;
-                    const EquilGridView equilGridView = gridManager.equilGrid().leafGridView() ;
-
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
-                    typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView> EquilElementMapper;
-                    EquilElementMapper equilElemMapper(equilGridView, Dune::mcmgElementLayout());
-#else
-                    typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView, Dune::MCMGElementLayout> EquilElementMapper;
-                    EquilElementMapper equilElemMapper(equilGridView);
-#endif
-
-
-                    // the I/O rank needs a picture of the global grid, here we
-                    // use equilGrid which represents a view on the global grid
-                    const size_t globalSize = gridManager.equilGrid().leafGridView().size( 0 );
-                    // reserve memory
-                    globalCartesianIndex_.resize(globalSize, -1);
-
-                    // loop over all elements (global grid) and store Cartesian index
-                    auto elemIt = gridManager.equilGrid().leafGridView().template begin<0>();
-                    const auto& elemEndIt = gridManager.equilGrid().leafGridView().template end<0>();
-                    for (; elemIt != elemEndIt; ++elemIt) {
-                        int elemIdx = equilElemMapper.index(*elemIt );
-                        int cartElemIdx = gridManager.equilCartesianIndexMapper().cartesianIndex(elemIdx);
-                        globalCartesianIndex_[elemIdx] = cartElemIdx;
-                    }
-
                     for(int i=0; i<comm.size(); ++i)
                     {
                         if( i != ioRank )
@@ -254,15 +243,16 @@ namespace Ewoms
                 ElementMapper elemMapper(localGridView);
 #endif
 
-                for( auto it = localGridView.template begin< 0, Dune::Interior_Partition >(),
-                     end = localGridView.template end< 0, Dune::Interior_Partition >(); it != end; ++it )
+                // A mapping for the whole grid (including the ghosts) is needed for restarts
+                for( auto it = localGridView.template begin< 0 >(),
+                     end = localGridView.template end< 0 >(); it != end; ++it )
                 {
                     const auto element = *it ;
                     int elemIdx = elemMapper.index( element );
                     distributedCartesianIndex[elemIdx] = gridManager.cartesianIndex( elemIdx );
 
                     // only store interior element for collection
-                    assert( element.partitionType() == Dune :: InteriorEntity );
+                    //assert( element.partitionType() == Dune :: InteriorEntity );
 
                     localIndexMap_.push_back( elemIdx );
                 }
@@ -270,12 +260,9 @@ namespace Ewoms
                 // insert send and recv linkage to communicator
                 toIORankComm_.insertRequest( send, recv );
 
-                if( isIORank() )
-                {
-                    // need an index map for each rank
-                    indexMaps_.clear();
-                    indexMaps_.resize( comm.size() );
-                }
+                // need an index map for each rank
+                indexMaps_.clear();
+                indexMaps_.resize( comm.size() );
 
                 // distribute global id's to io rank for later association of dof's
                 DistributeIndexMapping distIndexMapping( globalCartesianIndex_, distributedCartesianIndex, localIndexMap_, indexMaps_ );
@@ -283,33 +270,40 @@ namespace Ewoms
             }
         }
 
-        template <class BufferList>
-        class PackUnPackOutputBuffers : public P2PCommunicatorType::DataHandleInterface
+        class PackUnPack : public P2PCommunicatorType::DataHandleInterface
         {
-            BufferList& bufferList_;
+            const Opm::data::Solution& localCellData_;
+            Opm::data::Solution& globalCellData_;
 
             const IndexMapType& localIndexMap_;
             const IndexMapStorageType& indexMaps_;
 
         public:
-            PackUnPackOutputBuffers( BufferList& bufferList,
-                                     const IndexMapType& localIndexMap,
-                                     const IndexMapStorageType& indexMaps,
-                                     const size_t globalSize,
-                                     const bool isIORank )
-            : bufferList_( bufferList ),
+            PackUnPack( const Opm::data::Solution& localCellData,
+                        Opm::data::Solution& globalCellData,
+                        const IndexMapType& localIndexMap,
+                        const IndexMapStorageType& indexMaps,
+                        const size_t globalSize,
+                        const bool isIORank )
+            : localCellData_( localCellData ),
+              globalCellData_( globalCellData ),
               localIndexMap_( localIndexMap ),
               indexMaps_( indexMaps )
             {
                 if( isIORank )
                 {
+                    // add missing data to global cell data
+                    for (const auto& pair : localCellData_) {
+                        const std::string& key = pair.first;
+                        std::size_t container_size = globalSize;
+                        auto OPM_OPTIM_UNUSED ret = globalCellData_.insert(key, pair.second.dim,
+                                                                           std::vector<double>(container_size),
+                                                                           pair.second.target);
+                        assert(ret.second);
+                    }
+
                     MessageBufferType buffer;
                     pack( 0, buffer );
-                    // resize all buffers
-                    for (auto it = bufferList_.begin(), end = bufferList_.end(); it != end; ++it )
-                    {
-                      it->second->resize( globalSize );
-                    }
 
                     // the last index map is the local one
                     doUnpack( indexMaps.back(), buffer );
@@ -324,22 +318,26 @@ namespace Ewoms
                     OPM_THROW(std::logic_error,"link in method pack is not 0 as expected");
                 }
 
-                size_t buffers = bufferList_.size();
-                buffer.write( buffers );
-                for (auto it = bufferList_.begin(), end = bufferList_.end(); it != end; ++it )
-                {
-                    write( buffer, localIndexMap_, *(it->second) );
+                // write all cell data registered in local state
+                for (const auto& pair : localCellData_) {
+                    const auto& data = pair.second.data;
+
+                    // write all data from local data to buffer
+                    write( buffer, localIndexMap_, data);
                 }
+
             }
 
             void doUnpack( const IndexMapType& indexMap, MessageBufferType& buffer )
             {
-                size_t buffers = 0;
-                buffer.read( buffers );
-                assert( buffers == bufferList_.size() );
-                for( auto it = bufferList_.begin(), end = bufferList_.end(); it != end; ++it )
-                {
-                    read( buffer, indexMap, *(it->second) );
+                // we loop over the data  as
+                // its order governs the order the data got received.
+                for (auto& pair : localCellData_) {
+                    const std::string& key = pair.first;
+                    auto& data = globalCellData_.data(key);
+
+                    //write all data from local cell data to buffer
+                    read( buffer, indexMap, data);
                 }
             }
 
@@ -351,71 +349,63 @@ namespace Ewoms
 
         protected:
             template <class Vector>
-            void write( MessageBufferType& buffer, const IndexMapType& localIndexMap, const Vector& data ) const
+            void write( MessageBufferType& buffer,
+                        const IndexMapType& localIndexMap,
+                        const Vector& vector,
+                        const unsigned int offset = 0,
+                        const unsigned int stride = 1 ) const
             {
-                const size_t size = localIndexMap.size();
-                assert( size <= data.size() );
+                unsigned int size = localIndexMap.size();
                 buffer.write( size );
-                for( size_t i=0; i<size; ++i )
+                assert( vector.size() >= stride * size );
+                for( unsigned int i=0; i<size; ++i )
                 {
-                    buffer.write( data[ localIndexMap[ i ] ] );
+                    const unsigned int index = localIndexMap[ i ] * stride + offset;
+                    assert( index < vector.size() );
+                    buffer.write( vector[ index ] );
                 }
             }
 
             template <class Vector>
-            void read( MessageBufferType& buffer, const IndexMapType& indexMap, Vector& data ) const
+            void read( MessageBufferType& buffer,
+                       const IndexMapType& indexMap,
+                       Vector& vector,
+                       const unsigned int offset = 0, const unsigned int stride = 1 ) const
             {
-                size_t size = indexMap.size();
-                assert( size <= data.size() );
+                unsigned int size = 0;
                 buffer.read( size );
                 assert( size == indexMap.size() );
-                for( size_t i=0; i<size; ++i )
+                for( unsigned int i=0; i<size; ++i )
                 {
-                    buffer.read( data[ indexMap[ i ] ] );
+                    const unsigned int index = indexMap[ i ] * stride + offset;
+                    assert( index < vector.size() );
+                    buffer.read( vector[ index ] );
                 }
             }
 
-            void writeString( MessageBufferType& buffer, const std::string& s) const
-            {
-                const int size = s.size();
-                buffer.write( size );
-                for( int i=0; i<size; ++i )
-                {
-                    buffer.write( s[ i ] );
-                }
-            }
 
-            void readString( MessageBufferType& buffer, std::string& s) const
-            {
-                int size = -1;
-                buffer.read( size );
-                s.resize( size );
-                for( int i=0; i<size; ++i )
-                {
-                    buffer.read( s[ i ] );
-                }
-            }
         };
 
         // gather solution to rank 0 for EclipseWriter
-        template <class BufferList>
-        void collect( BufferList& bufferList ) const
+        void collect( const Opm::data::Solution& localCellData )
         {
+            globalCellData_ = {};
             // index maps only have to be build when reordering is needed
-            if( ! needsReordering && ! isParallel_ )
+            if( ! needsReordering && ! isParallel() )
             {
                 return ;
             }
 
             // this also packs and unpacks the local buffers one ioRank
-            PackUnPackOutputBuffers< BufferList >
-                packUnpack( bufferList,
+            PackUnPack
+                packUnpack( localCellData,
+                            globalCellData_,
                             localIndexMap_,
                             indexMaps_,
                             numCells(),
                             isIORank() );
 
-            if ( ! isParallel_ )
+            if ( ! isParallel() )
             {
                 // no need to collect anything.
                 return;
@@ -430,14 +420,36 @@ namespace Ewoms
 #endif
         }
 
+        const Opm::data::Solution& globalCellData() const
+        {
+            return globalCellData_;
+        }
+
         bool isIORank() const
         {
-            return isIORank_;
+            return toIORankComm_.rank() == ioRank;
         }
 
         bool isParallel() const
         {
             return toIORankComm_.size() > 1;
+        }
+
+        int localIdxToGlobalIdx(const unsigned localIdx) {
+
+            if ( ! isParallel() )
+            {
+                return localIdx;
+            }
+            // the last indexMap is the local one
+            IndexMapType& indexMap = indexMaps_.back();
+            if( indexMap.empty() )
+                OPM_THROW(std::logic_error,"index map is not created on this rank");
+
+            if (localIdx > indexMap.size())
+                OPM_THROW(std::logic_error,"local index is outside map range");
+
+            return indexMap[localIdx];
         }
 
         size_t numCells () const { return globalCartesianIndex_.size(); }
@@ -447,10 +459,7 @@ namespace Ewoms
         IndexMapType                    globalCartesianIndex_;
         IndexMapType                    localIndexMap_;
         IndexMapStorageType             indexMaps_;
-        // true if we are on I/O rank
-        bool                            isIORank_;
-        /// \brief True if there is more than one MPI process
-        bool                            isParallel_;
+        Opm::data::Solution             globalCellData_;
     };
 
 } // end namespace Opm
