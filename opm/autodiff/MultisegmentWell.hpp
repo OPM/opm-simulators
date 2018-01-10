@@ -254,6 +254,10 @@ namespace Opm
 
         std::vector<double> segment_depth_diffs_;
 
+        std::vector<EvalWell> segment_reservoir_volume_rates_;
+
+        std::vector<std::vector<EvalWell>> segment_phase_fractions_;
+
         // for now, it is only used for spiral ICD segments
         // for simplicity of implementation, we keep a value for all the segments,
         // defaulted to be 1.

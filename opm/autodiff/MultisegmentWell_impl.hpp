@@ -43,6 +43,8 @@ namespace Opm
     , segment_viscosities_(numberOfSegments(), 0.0)
     , segment_mass_rates_(numberOfSegments(), 0.0)
     , segment_depth_diffs_(numberOfSegments(), 0.0)
+    , segment_reservoir_volume_rates_(numberOfSegments(), 0.0)
+    , segment_phase_fractions_(numberOfSegments(), std::vector<EvalWell>(num_components_, 0.0)) // number of phase here?
     , flow_scaling_factors_(numberOfSegments(), 1.0)
     {
         // not handling solvent or polymer for now with multisegment well
@@ -1233,10 +1235,15 @@ namespace Opm
             }
 
             EvalWell density(0.0);
+            EvalWell surface_volume_rate(0.0);
             for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 density += surf_dens[comp_idx] * mix_s[comp_idx];
+                surface_volume_rate += getSegmentRate(seg, comp_idx);
             }
             segment_densities_[seg] = density / volrat;
+            segment_reservoir_volume_rates_[seg] = surface_volume_rate / volrat;
+
+            segment_phase_fractions_[seg] = mix;
 
             // calculate the mass rates
             segment_mass_rates_[seg] = 0.;
@@ -1873,6 +1880,19 @@ namespace Opm
     {
         // top segment can not be a spiral ICD device
         assert(seg != 0);
+
+        // the pressure equation is something like
+        // p_seg + deltaP - p_outlet = 0.
+        // the major part is how to calculate the deltaP
+
+        // calculate the volume fraction and volume flow rate under reservoir conitions
+
+        EvalWell pressure_equation = getSegmentPressure(seg);
+
+
+        // contribution from the outlet segment
+        const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
+        const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
     }
 
 
