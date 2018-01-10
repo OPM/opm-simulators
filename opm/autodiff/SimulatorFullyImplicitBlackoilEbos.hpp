@@ -560,10 +560,12 @@ protected:
 
         typedef std::vector<double> VectorType;
 
+        // HACK: This currently only considers the VAPPARS case, not DR[SV]DT.
+        //
+        // TODO: move this to EclProblem and do it properly there
         const VectorType& somax = state.getCellData( "SOMAX" );
-
         for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
-            ebosSimulator_.model().setMaxOilSaturation(somax[cellIdx], cellIdx);
+            ebosSimulator_.problem().setMaxOilSaturation(somax[cellIdx], cellIdx);
         }
 
         if (ebosSimulator_.problem().materialLawManager()->enableHysteresis()) {
