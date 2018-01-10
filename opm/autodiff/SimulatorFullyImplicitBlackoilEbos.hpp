@@ -22,7 +22,7 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 
-#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
+#include <opm/autodiff/BlackoilOutputEbos.hpp>
 #include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/NonlinearSolver.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
@@ -61,7 +61,7 @@ public:
 
     typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilState ReservoirState;
-    typedef BlackoilOutputWriter OutputWriter;
+    typedef BlackoilOutputEbos<TypeTag> OutputWriter;
     typedef BlackoilModelEbos<TypeTag> Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
@@ -140,20 +140,11 @@ public:
         failureReport_ = SimulatorReport();
 
         if (output_writer_.isRestart()) {
-            // This is a restart, populate WellState and ReservoirState state objects from restart file
+            // This is a restart, populate WellState
             ReservoirState stateInit(Opm::UgGridHelpers::numCells(grid()),
                                      Opm::UgGridHelpers::numFaces(grid()),
                                      phaseUsage_.num_phases);
             output_writer_.initFromRestartFile(phaseUsage_, grid(), stateInit, prev_well_state, extra);
-            initHydroCarbonState(stateInit, phaseUsage_, Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
-            initHysteresisParams(stateInit);
-            // communicate the restart solution to ebos
-            convertInput(/*iterationIdx=*/0, stateInit, ebosSimulator_ );
-            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-            // Sync the overlap region of the inital solution. It was generated
-            // from the ReservoirState which has wrong values in the ghost region
-            // for some models (SPE9, Norne, Model 2)
-            ebosSimulator_.model().syncOverlap();
         }
 
         // Create timers and file for writing timing info.
@@ -554,147 +545,6 @@ protected:
 
     const Schedule& schedule() const
     { return ebosSimulator_.gridManager().schedule(); }
-
-    void initHysteresisParams(ReservoirState& state) {
-        const int num_cells = Opm::UgGridHelpers::numCells(grid());
-
-        typedef std::vector<double> VectorType;
-
-        const VectorType& somax = state.getCellData( "SOMAX" );
-
-        for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
-            ebosSimulator_.model().setMaxOilSaturation(somax[cellIdx], cellIdx);
-        }
-
-        if (ebosSimulator_.problem().materialLawManager()->enableHysteresis()) {
-            auto matLawManager = ebosSimulator_.problem().materialLawManager();
-
-            VectorType& pcSwMdc_ow = state.getCellData( "PCSWMDC_OW" );
-            VectorType& krnSwMdc_ow = state.getCellData( "KRNSWMDC_OW" );
-
-            VectorType& pcSwMdc_go = state.getCellData( "PCSWMDC_GO" );
-            VectorType& krnSwMdc_go = state.getCellData( "KRNSWMDC_GO" );
-
-            for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
-                matLawManager->setOilWaterHysteresisParams(
-                        pcSwMdc_ow[cellIdx],
-                        krnSwMdc_ow[cellIdx],
-                        cellIdx);
-                matLawManager->setGasOilHysteresisParams(
-                        pcSwMdc_go[cellIdx],
-                        krnSwMdc_go[cellIdx],
-                        cellIdx);
-            }
-        }
-    }
-
-
-    // Used to convert initial Reservoirstate to primary variables in the SolutionVector
-    void convertInput( const int iterationIdx,
-                       const ReservoirState& reservoirState,
-                       Simulator& simulator ) const
-    {
-        SolutionVector& solution = simulator.model().solution( 0 /* timeIdx */ );
-        const Opm::PhaseUsage pu = phaseUsage_;
-
-        const std::vector<bool> active = detail::activePhases(pu);
-        bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
-        bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
-
-        const int numCells = reservoirState.numCells();
-        const int numPhases = phaseUsage_.num_phases;
-        const auto& oilPressure = reservoirState.pressure();
-        const auto& saturations = reservoirState.saturation();
-        const auto& rs          = reservoirState.gasoilratio();
-        const auto& rv          = reservoirState.rv();
-        for( int cellIdx = 0; cellIdx<numCells; ++cellIdx )
-        {
-            // set non-switching primary variables
-            PrimaryVariables& cellPv = solution[ cellIdx ];
-            // set water saturation
-            if ( active[Water] ) {
-                cellPv[BlackoilIndices::waterSaturationIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Water]];
-            }
-
-            if (has_solvent) {
-                cellPv[BlackoilIndices::solventSaturationIdx] = reservoirState.getCellData( reservoirState.SSOL )[cellIdx];
-            }
-
-            if (has_polymer) {
-                cellPv[BlackoilIndices::polymerConcentrationIdx] = reservoirState.getCellData( reservoirState.POLYMER )[cellIdx];
-            }
-
-
-            // set switching variable and interpretation
-            if ( active[Gas] ) {
-                if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::OilOnly && has_disgas_ )
-                {
-                    cellPv[BlackoilIndices::compositionSwitchIdx] = rs[cellIdx];
-                    cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[cellIdx];
-                    cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Rs );
-                }
-                else if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasOnly && has_vapoil_ )
-                {
-                    // this case (-> gas only with vaporized oil in the gas) is
-                    // relatively expensive as it requires to compute the capillary
-                    // pressure in order to get the gas phase pressure. (the reason why
-                    // ebos uses the gas pressure here is that it makes the common case
-                    // of the primary variable switching code fast because to determine
-                    // whether the oil phase appears one needs to compute the Rv value
-                    // for the saturated gas phase and if this is not available as a
-                    // primary variable, it needs to be computed.) luckily for here, the
-                    // gas-only case is not too common, so the performance impact of this
-                    // is limited.
-                    typedef Opm::SimpleModularFluidState<double,
-                            /*numPhases=*/3,
-                            /*numComponents=*/3,
-                            FluidSystem,
-                            /*storePressure=*/false,
-                            /*storeTemperature=*/false,
-                            /*storeComposition=*/false,
-                            /*storeFugacity=*/false,
-                            /*storeSaturation=*/true,
-                            /*storeDensity=*/false,
-                            /*storeViscosity=*/false,
-                            /*storeEnthalpy=*/false> SatOnlyFluidState;
-                    SatOnlyFluidState fluidState;
-                    if ( active[Water] ) {
-                        fluidState.setSaturation(FluidSystem::waterPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Water]]);
-                    }
-                    else {
-                        fluidState.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
-                    }
-                    fluidState.setSaturation(FluidSystem::oilPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Oil]]);
-                    fluidState.setSaturation(FluidSystem::gasPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Gas]]);
-
-                    double pC[/*numPhases=*/3] = { 0.0, 0.0, 0.0 };
-                    const MaterialLawParams& matParams = simulator.problem().materialLawParams(cellIdx);
-                    MaterialLaw::capillaryPressures(pC, matParams, fluidState);
-                    double pg = oilPressure[cellIdx] + (pC[FluidSystem::gasPhaseIdx] - pC[FluidSystem::oilPhaseIdx]);
-
-                    cellPv[BlackoilIndices::compositionSwitchIdx] = rv[cellIdx];
-                    cellPv[BlackoilIndices::pressureSwitchIdx] = pg;
-                    cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_pg_Rv );
-                }
-                else
-                {
-                    assert( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasAndOil);
-                    cellPv[BlackoilIndices::compositionSwitchIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Gas]];
-                    cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[ cellIdx ];
-                    cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Sg );
-                }
-            } else {
-                // for oil-water case oil pressure should be used as primary variable
-                cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[cellIdx];
-            }
-        }
-
-        // store the solution at the beginning of the time step
-        if( iterationIdx == 0 )
-        {
-            simulator.model().solution( 1 /* timeIdx */ ) = solution;
-        }
-    }
 
 
     // Data.

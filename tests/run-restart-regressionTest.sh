@@ -12,16 +12,23 @@ ABS_TOL="$5"
 REL_TOL="$6"
 COMPARE_SUMMARY_COMMAND="$7"
 COMPARE_ECL_COMMAND="$8"
-EXE_NAME="${9}"
-shift 9
+PARALLEL="${9}"
+EXE_NAME="${10}"
+shift 10
 TEST_ARGS="$@"
 
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA timestep.adaptive=false output_dir=${RESULT_PATH}
+if test $PARALLEL -eq 1
+then
+  CMD_PREFIX="mpirun -np 4 "
+else
+  CMD_PREFIX=""
+fi
+${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA timestep.adaptive=false output_dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
-${BINPATH}/${EXE_NAME} ${TEST_ARGS}_RESTART.DATA timestep.adaptive=false output_dir=${RESULT_PATH}
+${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${TEST_ARGS}_RESTART.DATA timestep.adaptive=false output_dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
 
 ecode=0

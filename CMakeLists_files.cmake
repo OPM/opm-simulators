@@ -208,6 +208,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/WellDensitySegmented.hpp
   opm/autodiff/WellStateFullyImplicitBlackoil.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp
+  opm/autodiff/BlackoilOutputEbos.hpp
   opm/autodiff/VFPProperties.hpp
   opm/autodiff/VFPHelpers.hpp
   opm/autodiff/VFPProdProperties.hpp
