@@ -123,7 +123,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/sim_poly2p_comp_reorder.cpp
   examples/sim_poly2p_incomp_reorder.cpp
   examples/wells_example.cpp
-  tutorials/tutorial1.cpp
+#  tutorials/tutorial1.cpp
   tutorials/tutorial2.cpp
   tutorials/tutorial3.cpp
   tutorials/tutorial4.cpp
