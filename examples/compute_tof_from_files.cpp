@@ -22,8 +22,6 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/pressure/FlowBCManager.hpp>
-
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/wells.h>
@@ -42,7 +40,6 @@
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/simulator/initState.hpp>
-#include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/flowdiagnostics/TofReorder.hpp>
 #include <opm/core/flowdiagnostics/TofDiscGalReorder.hpp>
 
