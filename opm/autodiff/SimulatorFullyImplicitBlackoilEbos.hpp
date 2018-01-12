@@ -209,7 +209,7 @@ public:
                 perfTimer.start();
 
                 if (terminal_output_) {
-                    outputFluidInPlace(timer, originalFluidInPlace_);
+                    //outputFluidInPlace(timer, originalFluidInPlace_);
                 }
 
                 // No per cell data is written for initial step, but will be
@@ -293,20 +293,26 @@ public:
 
             if (terminal_output_ )
             {
-                outputFluidInPlace(timer, currentFluidInPlace);
-
-                std::string msg =
-                    "Time step took " + std::to_string(solver_timer.secsSinceStart()) + " seconds; "
-                    "total solver time " + std::to_string(report.solver_time) + " seconds.";
-                OpmLog::debug(msg);
+                if (!timer.initialStep()) {
+                    const std::string version = moduleVersionName();
+                    outputTimestampFIP(timer, version);
+                }
             }
 
             // write simulation state at the report stage
             Dune::Timer perfTimer;
             perfTimer.start();
-            const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
+            const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;            
             output_writer_.writeTimeStep( timer, dummy_state, well_model.wellState(), solver->model(), false, nextstep, report);
             report.output_write_time += perfTimer.stop();
+
+            if (terminal_output_ )
+            {
+                std::string msg =
+                    "Time step took " + std::to_string(solver_timer.secsSinceStart()) + " seconds; "
+                    "total solver time " + std::to_string(report.solver_time) + " seconds.";
+                OpmLog::debug(msg);
+            }
 
         }
 
