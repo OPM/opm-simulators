@@ -93,16 +93,19 @@ namespace Ewoms
             IndexMapType& localIndexMap_;
             IndexMapStorageType& indexMaps_;
             std::map< const int, const int > globalPosition_;
+            std::vector<int>& ranks_;
 
         public:
             DistributeIndexMapping( const std::vector<int>& globalIndex,
                                     const std::vector<int>& distributedGlobalIndex,
                                     IndexMapType& localIndexMap,
-                                    IndexMapStorageType& indexMaps )
+                                    IndexMapStorageType& indexMaps,
+                                    std::vector<int>& ranks)
             : distributedGlobalIndex_( distributedGlobalIndex ),
               localIndexMap_( localIndexMap ),
               indexMaps_( indexMaps ),
-              globalPosition_()
+              globalPosition_(),
+              ranks_(ranks)
             {
                 const size_t size = globalIndex.size();
                 // create mapping globalIndex --> localIndex
@@ -114,6 +117,7 @@ namespace Ewoms
                 // we need to create a mapping from local to global
                 if( ! indexMaps_.empty() )
                 {
+                    ranks_.resize( size, -1);
                     // for the ioRank create a localIndex to index in global state map
                     IndexMapType& indexMap = indexMaps_.back();
                     const size_t localSize = localIndexMap_.size();
@@ -122,6 +126,7 @@ namespace Ewoms
                     {
                         const int id = distributedGlobalIndex_[ localIndexMap_[ i ] ];
                         indexMap[ i ] = globalPosition_[ id ] ;
+                        ranks_[ indexMap[ i ] ] = ioRank;
                     }
                 }
             }
@@ -160,6 +165,7 @@ namespace Ewoms
                     buffer.read( globalId );
                     assert( globalPosition_.find( globalId ) != globalPosition_.end() );
                     indexMap[ index ] = globalPosition_[ globalId ];
+                    ranks_[ indexMap[ index ] ] = link + 1;
                 }
             }
         };
@@ -265,7 +271,7 @@ namespace Ewoms
                 indexMaps_.resize( comm.size() );
 
                 // distribute global id's to io rank for later association of dof's
-                DistributeIndexMapping distIndexMapping( globalCartesianIndex_, distributedCartesianIndex, localIndexMap_, indexMaps_ );
+                DistributeIndexMapping distIndexMapping( globalCartesianIndex_, distributedCartesianIndex, localIndexMap_, indexMaps_, globalRanks_);
                 toIORankComm_.exchange( distIndexMapping );
             }
         }
@@ -435,14 +441,14 @@ namespace Ewoms
             return toIORankComm_.size() > 1;
         }
 
-        int localIdxToGlobalIdx(const unsigned localIdx) {
-
+        int localIdxToGlobalIdx(const unsigned localIdx) const
+        {
             if ( ! isParallel() )
             {
                 return localIdx;
             }
             // the last indexMap is the local one
-            IndexMapType& indexMap = indexMaps_.back();
+            const IndexMapType& indexMap = indexMaps_.back();
             if( indexMap.empty() )
                 OPM_THROW(std::logic_error,"index map is not created on this rank");
 
@@ -454,11 +460,17 @@ namespace Ewoms
 
         size_t numCells () const { return globalCartesianIndex_.size(); }
 
+        const std::vector<int>& globalRanks() const
+        {
+            return globalRanks_;
+        }
+
     protected:
         P2PCommunicatorType             toIORankComm_;
         IndexMapType                    globalCartesianIndex_;
         IndexMapType                    localIndexMap_;
         IndexMapStorageType             indexMaps_;
+        std::vector<int>                globalRanks_;
         Opm::data::Solution             globalCellData_;
     };
 

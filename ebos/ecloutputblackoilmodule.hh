@@ -34,6 +34,7 @@
 
 #include <opm/common/Valgrind.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 
@@ -41,6 +42,8 @@
 #include <dune/common/fvector.hh>
 
 #include <type_traits>
+
+#define ENUM_TO_STR(ENUM) std::string(#ENUM)
 
 namespace Ewoms {
 namespace Properties {
@@ -81,10 +84,28 @@ class EclOutputBlackOilModule
 
     typedef std::vector<Scalar> ScalarBuffer;
 
+    struct FIPDataType {
+
+        enum FipId {
+            WIP = waterPhaseIdx,
+            OIP = oilPhaseIdx,
+            GIP = gasPhaseIdx,
+            OIPL = 3,
+            OIPG = 4,
+            GIPL = 5,
+            GIPG = 6,
+            PV   = 7, //< Pore volume
+            PAV  = 8
+        };
+        static const int fipValues = PAV + 1 ;
+    };
+
 public:
     EclOutputBlackOilModule(const Simulator& simulator)
         : simulator_(simulator)
-    { }
+    {
+        createLocalFipnum_();
+    }
 
     /*!
      * \brief Allocate memory for the scalar fields we would like to
@@ -101,37 +122,61 @@ public:
             keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
         }
 
+        const Opm::SummaryConfig summaryConfig = simulator_.gridManager().summaryConfig();
+
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
 
-            saturation_[phaseIdx].resize(bufferSize,0.0);
+            if (!substep || (phaseIdx == waterPhaseIdx && summaryConfig.require3DField("SWAT") )
+                    || (phaseIdx == gasPhaseIdx && summaryConfig.require3DField("SGAS") )  )
+                saturation_[phaseIdx].resize(bufferSize,0.0);
         }
 
-        oilPressure_.resize(bufferSize,0.0);
-        temperature_.resize(bufferSize,0.0);
+        if (!substep || summaryConfig.require3DField("PRESSURE"))
+            oilPressure_.resize(bufferSize,0.0);
+
+        if (!substep || summaryConfig.require3DField("TEMP"))
+            temperature_.resize(bufferSize,0.0);
 
         // Output the same as legacy
         // TODO: Only needed if DISGAS or VAPOIL
-        if (true)
-            rs_.resize(bufferSize,0.0);
-        if (true)
-            rv_.resize(bufferSize,0.0);
+        if (true) {
+            if (!substep || summaryConfig.require3DField("RS"))
+                rs_.resize(bufferSize,0.0);
+        }
+        if (true) {
+            if (!substep || summaryConfig.require3DField("RV"))
+                rv_.resize(bufferSize,0.0);
+        }
 
         if (GET_PROP_VALUE(TypeTag, EnableSolvent)) {
-            sSol_.resize(bufferSize,0.0);
+            if (!substep || summaryConfig.require3DField("SSOL"))
+                sSol_.resize(bufferSize,0.0);
         }
         if (GET_PROP_VALUE(TypeTag, EnablePolymer)) {
-            cPolymer_.resize(bufferSize,0.0);
+            if (!substep || summaryConfig.require3DField("POLYMER"))
+                cPolymer_.resize(bufferSize,0.0);
         }
 
+        // Fluid in place
+        for (int i = 0; i<FIPDataType::fipValues; i++) {
+            //std::cout << stringOfEnumIndex_(i) << std::endl;
+            if (!substep || summaryConfig.require3DField(stringOfEnumIndex_(i))) {
+                //std::cout << "required " << stringOfEnumIndex_(i) << std::endl;
+                fip_[i].resize(bufferSize, 0.0);
+            }
+        }
+
+        if (!substep) {
         // Output the same as legacy
         // TODO: Only needed if Vappars or hysteresis.
-        soMax_.resize(bufferSize,0.0);
-        pcSwMdcOw_.resize(bufferSize,0.0);
-        krnSwMdcOw_.resize(bufferSize,0.0);
-        pcSwMdcGo_.resize(bufferSize,0.0);
-        krnSwMdcGo_.resize(bufferSize,0.0);
+            soMax_.resize(bufferSize,0.0);
+            pcSwMdcOw_.resize(bufferSize,0.0);
+            krnSwMdcOw_.resize(bufferSize,0.0);
+            pcSwMdcGo_.resize(bufferSize,0.0);
+            krnSwMdcGo_.resize(bufferSize,0.0);
+        }
 
         // Only provide RESTART_AUXILIARY if it is asked for by the user
         if (!restartConfig.getWriteRestartFile(reportStepNum) || substep)
@@ -253,6 +298,7 @@ public:
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
+
             typedef typename std::remove_const<typename std::remove_reference<decltype(fs)>::type>::type FluidState;
             unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
             unsigned pvtRegionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
@@ -438,6 +484,62 @@ public:
                                                                                         intQuants.pvtRegionIndex());
             }
 
+            // FIP
+
+            // calculate the pore volume of the current cell. Note that the porosity
+            // returned by the intensive quantities is defined as the ratio of pore
+            // space to total cell volume and includes all pressure dependent (->
+            // rock compressibility) and static modifiers (MULTPV, MULTREGP, NTG,
+            // PORV, MINPV and friends). Also note that because of this, the porosity
+            // returned by the intensive quantities can be outside of the physical
+            // range [0, 1] in pathetic cases.
+            const double pv =
+                elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
+                * intQuants.porosity().value();
+            if (fip_[FIPDataType::PV].size() > 0)
+                fip_[FIPDataType::PV][globalDofIdx] = pv;
+
+            Scalar fip[FluidSystem::numPhases];
+            for (unsigned phase = 0; phase < FluidSystem::numPhases; ++phase) {
+                if (!FluidSystem::phaseIsActive(phase)) {
+                    continue;
+                }
+
+                const double b = Toolbox::value(fs.invB(phase));
+                const double s = Toolbox::value(fs.saturation(phase));
+                fip[phase] = b * s * pv;
+            }
+
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && fip_[FIPDataType::OIP].size() > 0)
+                fip_[FIPDataType::OIP][globalDofIdx] = fip[FluidSystem::oilPhaseIdx];
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && fip_[FIPDataType::GIP].size() > 0)
+                fip_[FIPDataType::GIP][globalDofIdx] = fip[FluidSystem::gasPhaseIdx];
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && fip_[FIPDataType::WIP].size() > 0)
+                fip_[FIPDataType::WIP][globalDofIdx] = fip[FluidSystem::waterPhaseIdx];
+
+            // Store the pure oil and gas FIP
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && fip_[FIPDataType::OIPL].size() > 0)
+                fip_[FIPDataType::OIPL][globalDofIdx] = fip[FluidSystem::oilPhaseIdx];
+
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && fip_[FIPDataType::GIPG].size() > 0)
+                fip_[FIPDataType::GIPG][globalDofIdx] = fip[FluidSystem::gasPhaseIdx];
+
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                // Gas dissolved in oil and vaporized oil
+                Scalar gipl = Toolbox::value(fs.Rs()) * fip[FluidSystem::oilPhaseIdx];
+                Scalar oipg = Toolbox::value(fs.Rv()) * fip[FluidSystem::gasPhaseIdx];
+                if (fip_[FIPDataType::GIPG].size() > 0)
+                    fip_[FIPDataType::GIPL][globalDofIdx] = gipl;
+                if (fip_[FIPDataType::OIPG].size() > 0)
+                    fip_[FIPDataType::OIPG][globalDofIdx] = oipg;
+
+                // Add dissolved gas and vaporized oil to total FIP
+                if (fip_[FIPDataType::OIP].size() > 0)
+                    fip_[FIPDataType::OIP][globalDofIdx] += oipg;
+                if (fip_[FIPDataType::GIP].size() > 0)
+                    fip_[FIPDataType::GIP][globalDofIdx] += gipl;
+            }
+
         }
 
     }
@@ -519,7 +621,7 @@ public:
             return;
 
         if ( oilPressure_.size() > 0 ) {
-            sol.insert( "PRESSURE", Opm::UnitSystem::measure::pressure, std::move(oilPressure_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert( "PRESSURE", Opm::UnitSystem::measure::pressure, oilPressure_, Opm::data::TargetType::RESTART_SOLUTION);
         }
 
         if ( temperature_.size() > 0 ) {
@@ -527,10 +629,10 @@ public:
         }
 
         if( FluidSystem::phaseIsActive(waterPhaseIdx) && saturation_[waterPhaseIdx].size() > 0 ) {
-            sol.insert( "SWAT", Opm::UnitSystem::measure::identity, std::move(saturation_[waterPhaseIdx]), Opm::data::TargetType::RESTART_SOLUTION );
+            sol.insert( "SWAT", Opm::UnitSystem::measure::identity, saturation_[waterPhaseIdx], Opm::data::TargetType::RESTART_SOLUTION );
         }
         if( FluidSystem::phaseIsActive(gasPhaseIdx) && saturation_[gasPhaseIdx].size() > 0) {
-            sol.insert( "SGAS", Opm::UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), Opm::data::TargetType::RESTART_SOLUTION );
+            sol.insert( "SGAS", Opm::UnitSystem::measure::identity, saturation_[gasPhaseIdx], Opm::data::TargetType::RESTART_SOLUTION );
         }
 
         if ( gasDissolutionFactor_.size() > 0 ) {
@@ -614,7 +716,79 @@ public:
         if (bubblePointPressure_.size() > 0)
             sol.insert ("PBUB", Opm::UnitSystem::measure::pressure, std::move(bubblePointPressure_), Opm::data::TargetType::RESTART_AUXILIARY);
 
-}
+        // Summary FIP output
+        // Fluid in place
+        for (int i = 0; i<FIPDataType::fipValues; i++) {
+            if (fip_[i].size() > 0) {
+                sol.insert(stringOfEnumIndex_(i),
+                           Opm::UnitSystem::measure::volume,
+                           fip_[i] ,
+                           Opm::data::TargetType::SUMMARY);
+            }
+        }
+
+    }
+
+    // write Fip to output log
+    void outputFIPLog() {
+
+        const auto& comm = simulator_.gridView().comm();
+        size_t ntFip = *std::max_element(fipnum_.begin(), fipnum_.end());
+        ntFip = comm.max(ntFip);
+
+        // sum values over each region
+        ScalarBuffer regionValues[FIPDataType::fipValues];
+        for (int i = 0; i<FIPDataType::fipValues; i++) {
+            regionValues[i] = FIPTotals_(fip_[i], fipnum_, ntFip);
+            if (isIORank_() && origRegionValues_[i].empty())
+                origRegionValues_[i] = regionValues[i];
+        }
+
+        // sum all region values to compute the field total
+        std::vector<int> fieldNum(ntFip, 1);
+        ScalarBuffer totalValues(FIPDataType::fipValues,0.0);
+        for (int i = 0; i<FIPDataType::fipValues; i++) {
+            bool comunicateSum = false; // the regionValues are already summed over all ranks.
+            const ScalarBuffer& tmp = FIPTotals_(regionValues[i], fieldNum, 1, comunicateSum);
+            totalValues[i] = tmp[0]; //
+        }
+
+        // compute the hydrocarbon averaged pressure over the field.
+        totalValues[FIPDataType::PAV] = FipPav_(-1);
+
+        // convert units and output field values
+        // the original Fip values are stored on the first step
+        // TODO: Store initial Fip in the init file and restore them
+        // and use them here.
+        if ( isIORank_() ) {
+            FIPUnitConvert_(simulator_.gridManager().eclState().getUnits(), totalValues);
+            if (origTotalValues_.empty())
+                origTotalValues_ = totalValues;
+
+            outputRegionFluidInPlace_(origTotalValues_, totalValues, simulator_.gridManager().eclState().getUnits(), 0);
+        }
+
+        // Do the same on each region.
+        for (size_t reg = 0; reg < ntFip; ++reg ) {
+            ScalarBuffer tmp(FIPDataType::fipValues,0.0);
+            for (int i = 0; i<FIPDataType::fipValues; i++) {
+                tmp[i] = regionValues[i][reg];
+            }
+            tmp[FIPDataType::PAV] = FipPav_(reg+1);
+
+            if ( isIORank_() ) {
+
+                ScalarBuffer tmpO(FIPDataType::fipValues,0.0);
+                for (int i = 0; i<FIPDataType::fipValues; i++) {
+                    tmpO[i] = origRegionValues_[i][reg];
+                }
+
+                FIPUnitConvert_(simulator_.gridManager().eclState().getUnits(), tmp);
+                FIPUnitConvert_(simulator_.gridManager().eclState().getUnits(), tmpO);
+                outputRegionFluidInPlace_(tmpO, tmp, simulator_.gridManager().eclState().getUnits() , reg + 1);
+            }
+        }
+    }
 
     void setRestart(const Opm::data::Solution& sol, unsigned elemIdx, unsigned globalDofIndex) 
     {
@@ -767,6 +941,165 @@ private:
         return comm.rank() == 0;
     }
 
+    void createLocalFipnum_()
+    {
+        const std::vector<int>& fipnum_global = simulator_.gridManager().eclState().get3DProperties().getIntGridProperty("FIPNUM").getData();
+        // Get compressed cell fipnum.
+        const auto& gridView = simulator_.gridManager().gridView();
+        unsigned numElements = gridView.size(/*codim=*/0);
+        fipnum_.resize(numElements);
+        if (fipnum_global.empty()) {
+            std::fill(fipnum_.begin(), fipnum_.end(), 0);
+        } else {
+            for (size_t elemIdx = 0; elemIdx < numElements; ++elemIdx) {
+                fipnum_[elemIdx] = fipnum_global[simulator_.gridManager().cartesianIndex( elemIdx )];
+            }
+        }
+    }
+
+    // Sum Fip values over regions.
+    ScalarBuffer FIPTotals_(const ScalarBuffer& fip, std::vector<int>& regionId, size_t maxNumberOfRegions, bool commSum = true)
+    {
+        ScalarBuffer totals(maxNumberOfRegions, 0.0);
+        assert(regionId.size() == fip.size());
+        for (size_t j = 0; j < regionId.size(); ++j) {
+            const int regionIdx = regionId[j] - 1;
+            // the cell is not attributed to any region. ignore it!
+            if (regionIdx < 0)
+                continue;
+
+            assert(regionIdx < static_cast<int>(maxNumberOfRegions));
+            totals[regionIdx] += fip[j];
+        }
+        if (commSum) {
+            const auto& comm = simulator_.gridView().comm();
+            for (size_t i = 0; i < maxNumberOfRegions; ++i)
+                totals[i] = comm.sum(totals[i]);
+        }
+
+        return totals;
+    }
+
+    // computes the hydrocarbon volume weighted averaged pressure
+    // of a region (reg)
+    // if reg == -1, the field average is computed.
+    Scalar FipPav_(int reg)
+    {
+        Scalar pPvSum = 0.0;
+        Scalar pvSum = 0.0;
+        Scalar pPvHydrocarbonSum = 0.0;
+        Scalar pvHydrocarbonSum = 0.0;
+        size_t numElem = oilPressure_.size();
+        for (size_t elem = 0; elem < numElem; ++elem) {
+            if(static_cast<int>(fipnum_[elem]) == reg || -1 == reg)
+            {
+                Scalar hydrocarbon = 0.0;
+                if (FluidSystem::phaseIsActive(oilPhaseIdx))
+                    hydrocarbon += saturation_[oilPhaseIdx][elem];
+                if (FluidSystem::phaseIsActive(gasPhaseIdx))
+                    hydrocarbon += saturation_[gasPhaseIdx][elem];
+
+                pPvSum += oilPressure_[elem] * fip_[FIPDataType::PV][elem];
+                pvSum += fip_[FIPDataType::PV][elem];
+                pPvHydrocarbonSum += pPvSum * hydrocarbon;
+                pvHydrocarbonSum += pvSum * hydrocarbon;
+            }
+        }
+        const auto& comm = simulator_.gridView().comm();
+        pPvSum = comm.sum(pPvSum);
+        pvSum = comm.sum(pvSum);
+        pPvHydrocarbonSum = comm.sum(pPvHydrocarbonSum);
+        pvHydrocarbonSum = comm.sum(pvHydrocarbonSum);
+
+        if (pvHydrocarbonSum > 1e-10)
+            return pPvHydrocarbonSum / pvHydrocarbonSum;
+
+        // return the porevolume weighted pressure if no hydrocarbon
+        return pPvSum / pvSum;;
+    }
+
+    void FIPUnitConvert_(const Opm::UnitSystem& units,
+                         ScalarBuffer& fip)
+    {
+        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+            fip[FIPDataType::WIP] = Opm::unit::convert::to(fip[FIPDataType::WIP], Opm::unit::stb);
+            fip[FIPDataType::OIP] = Opm::unit::convert::to(fip[FIPDataType::OIP], Opm::unit::stb);
+            fip[FIPDataType::OIPL] = Opm::unit::convert::to(fip[FIPDataType::OIPL], Opm::unit::stb);
+            fip[FIPDataType::OIPG] = Opm::unit::convert::to(fip[FIPDataType::OIPG], Opm::unit::stb);
+            fip[FIPDataType::GIP] = Opm::unit::convert::to(fip[FIPDataType::GIP], 1000*Opm::unit::cubic(Opm::unit::feet));
+            fip[FIPDataType::GIPL] = Opm::unit::convert::to(fip[FIPDataType::GIPL], 1000*Opm::unit::cubic(Opm::unit::feet));
+            fip[FIPDataType::GIPG] = Opm::unit::convert::to(fip[FIPDataType::GIPG], 1000*Opm::unit::cubic(Opm::unit::feet));
+            fip[FIPDataType::PV] = Opm::unit::convert::to(fip[FIPDataType::PV], Opm::unit::stb);
+            fip[FIPDataType::PAV] = Opm::unit::convert::to(fip[FIPDataType::PAV], Opm::unit::psia);
+        }
+        else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+            fip[FIPDataType::PAV] = Opm::unit::convert::to(fip[FIPDataType::PAV], Opm::unit::barsa);
+        }
+        else {
+            OPM_THROW(std::runtime_error, "Unsupported unit type for fluid in place output.");
+        }
+    }
+
+    void outputRegionFluidInPlace_(const ScalarBuffer& oip, const ScalarBuffer& cip, const Opm::UnitSystem& units, const int reg)
+    {
+        std::ostringstream ss;
+        if (!reg) {
+            ss << "                                                  ===================================================\n"
+               << "                                                  :                   Field Totals                  :\n";
+        } else {
+            ss << "                                                  ===================================================\n"
+               << "                                                  :        FIPNUM report region  "
+               << std::setw(2) << reg << "                 :\n";
+        }
+        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+            ss << "                                                  :      PAV  =" << std::setw(14) << cip[FIPDataType::PAV] << " BARSA                 :\n"
+               << std::fixed << std::setprecision(0)
+               << "                                                  :      PORV =" << std::setw(14) << cip[FIPDataType::PV] << "   RM3                 :\n";
+            if (!reg) {
+                ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
+                   << "                                                  : Porv volumes are taken at reference conditions  :\n";
+            }
+            ss << "                         :--------------- Oil    SM3 ---------------:-- Wat    SM3 --:--------------- Gas    SM3 ---------------:\n";
+        }
+        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+            ss << "                                                  :      PAV  =" << std::setw(14) << cip[FIPDataType::PAV] << "  PSIA                 :\n"
+               << std::fixed << std::setprecision(0)
+               << "                                                  :      PORV =" << std::setw(14) << cip[FIPDataType::PV] << "   RB                  :\n";
+            if (!reg) {
+                ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
+                   << "                                                  : Pore volumes are taken at reference conditions  :\n";
+            }
+            ss << "                         :--------------- Oil    STB ---------------:-- Wat    STB --:--------------- Gas   MSCF ---------------:\n";
+        }
+        ss << "                         :      Liquid        Vapour        Total   :      Total     :      Free        Dissolved       Total   :" << "\n"
+           << ":------------------------:------------------------------------------:----------------:------------------------------------------:" << "\n"
+           << ":Currently   in place    :" << std::setw(14) << cip[FIPDataType::OIPL] << std::setw(14) << cip[FIPDataType::OIPG] << std::setw(14) << cip[FIPDataType::OIP] << ":"
+           << std::setw(13) << cip[FIPDataType::WIP] << "   :" << std::setw(14) << (cip[FIPDataType::GIPG]) << std::setw(14) << cip[FIPDataType::GIPL] << std::setw(14) << cip[FIPDataType::GIP] << ":\n"
+           << ":------------------------:------------------------------------------:----------------:------------------------------------------:\n"
+           << ":Originally  in place    :" << std::setw(14) << oip[FIPDataType::OIPL] << std::setw(14) << oip[FIPDataType::OIPG] << std::setw(14) << oip[FIPDataType::OIP] << ":"
+           << std::setw(13) << oip[FIPDataType::WIP] << "   :" << std::setw(14) << oip[FIPDataType::GIPG] << std::setw(14) << oip[FIPDataType::GIPL] << std::setw(14) << oip[FIPDataType::GIP] << ":\n"
+           << ":========================:==========================================:================:==========================================:\n";
+        Opm::OpmLog::note(ss.str());
+    }
+
+    std::string stringOfEnumIndex_(int i) {
+        typedef typename FIPDataType::FipId FipId;
+        switch( static_cast<FipId>(i) )
+        {
+        case FIPDataType::WIP: return "WIP";  break;
+        case FIPDataType::OIP: return "OIP";  break;
+        case FIPDataType::GIP: return "GIP";  break;
+        case FIPDataType::OIPL:return "OIPL"; break;
+        case FIPDataType::OIPG:return "OIPG"; break;
+        case FIPDataType::GIPL:return "GIPL"; break;
+        case FIPDataType::GIPG:return "GIPG"; break;
+        case FIPDataType::PV:  return "PV";   break;
+        case FIPDataType::PAV: return "PAV";  break;
+        }
+        return "ERROR";
+    }
+
+
     const Simulator& simulator_;
 
     ScalarBuffer saturation_[numPhases];
@@ -794,6 +1127,10 @@ private:
     ScalarBuffer dewPointPressure_;
     std::vector<int> failedCellsPb_;
     std::vector<int> failedCellsPd_;
+    std::vector<int> fipnum_;
+    ScalarBuffer fip_[FIPDataType::fipValues];
+    ScalarBuffer origTotalValues_;
+    ScalarBuffer origRegionValues_[FIPDataType::fipValues];
 
 };
 } // namespace Ewoms

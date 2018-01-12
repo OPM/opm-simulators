@@ -460,6 +460,8 @@ public:
             int numElements = gridView.size(/*codim=*/0);
             maxPolymerAdsorption_.resize(numElements, 0.0);
         }
+
+        eclWriter_->writeInit();
     }
 
     void prefetch(const Element& elem) const
@@ -702,11 +704,10 @@ public:
         }
         Scalar totalSolverTime = 0.0;
         Scalar nextstep = this->simulator().timeStepSize();
-        Opm::data::Solution fip;
-        writeOutput(dw, t, false, totalSolverTime, nextstep, fip, verbose);
+        writeOutput(dw, t, false, totalSolverTime, nextstep, verbose);
     }
 
-    void writeOutput(const Opm::data::Wells& dw, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep, const Opm::data::Solution& fip, bool verbose = true)
+    void writeOutput(const Opm::data::Wells& dw, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep, bool verbose = true)
     {
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
@@ -714,7 +715,7 @@ public:
 
         // output using eclWriter if enabled
         if (eclWriter_)
-            eclWriter_->writeOutput(dw, t, substep, totalSolverTime, nextstep, fip);
+            eclWriter_->writeOutput(dw, t, substep, totalSolverTime, nextstep);
     }
 
     /*!
@@ -1165,9 +1166,6 @@ public:
     const InitialFluidState& initialFluidState(unsigned globalDofIdx ) const {
         return initialFluidStates_[globalDofIdx];
     }
-
-    void setEclIO(std::unique_ptr<Opm::EclipseIO>&& eclIO)
-    { eclWriter_->setEclIO(std::move(eclIO)); }
 
     const Opm::EclipseIO& eclIO() const
     { return eclWriter_->eclIO(); }
