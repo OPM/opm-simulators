@@ -125,7 +125,7 @@ namespace Opm
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
-                          const int num_cells);
+                          const size_t num_cells);
 
         virtual void initPrimaryVariablesEvaluation() const = 0;
 

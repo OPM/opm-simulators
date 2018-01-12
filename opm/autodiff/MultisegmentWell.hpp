@@ -42,6 +42,7 @@ namespace Opm
         using typename Base::MaterialLaw;
         using typename Base::Indices;
         using typename Base::RateConverterType;
+        using typename Base::Grid;
 
 
         /// the number of reservior equations
@@ -103,12 +104,13 @@ namespace Opm
                          const ModelParameters& param,
                          const RateConverterType& rate_converter,
                          const int pvtRegionIdx,
-                         const int num_components);
+                         const int num_components,
+                         const std::vector<int>& perforation_mapping_well);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
-                          const int num_cells);
+                          const size_t num_cells);
 
 
         virtual void initPrimaryVariablesEvaluation() const;

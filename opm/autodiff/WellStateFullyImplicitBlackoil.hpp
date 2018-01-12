@@ -300,7 +300,9 @@ namespace Opm
         /// init the MS well related.
         template <typename PrevWellState>
         void initWellStateMSWell(const Wells* wells, const std::vector<const Well*>& wells_ecl,
-                                 const int time_step, const PhaseUsage& pu, const PrevWellState& prev_well_state)
+                                 const int time_step, const PhaseUsage& pu, const PrevWellState& prev_well_state,
+                                 const std::map<int, int>& cartesian_to_compressed, const int* cart_dims,
+                                 std::map<std::string, std::vector<int> >& perforation_mapping)
         {
             // still using the order in wells
             const int nw = wells->number_of_wells;
@@ -348,17 +350,66 @@ namespace Opm
                     const CompletionSet& completion_set = well_ecl->getCompletions(time_step);
                     // number of segment for this single well
                     const int well_nseg = segment_set.numberSegment();
-                    const int nperf = completion_set.size();
                     nseg_ += well_nseg;
+
+                    const int start_perf = wells->well_connpos[w];
+                    const int start_perf_next_well = wells->well_connpos[w + 1];
+                    // number of perforations from the wells structure
+                    const int nperf = start_perf_next_well - start_perf;
+                    // number of perforations from ther parser
+                    const int nperf_parser = completion_set.size();
+
+                    assert(nperf_parser >= nperf);
+
                     // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
                     // that is why I think we should use a well model to initialize the WellState here
                     std::vector<std::vector<int>> segment_perforations(well_nseg);
-                    for (int perf = 0; perf < nperf; ++perf) {
-                        const Completion& completion = completion_set.get(perf);
-                        const int segment_number = completion.getSegmentNumber();
-                        const int segment_index = segment_set.segmentNumberToIndex(segment_number);
-                        segment_perforations[segment_index].push_back(perf);
+                    // perforation mapping for this single well
+                    std::vector<int> perforation_mapping_well(nperf_parser, -1);
+                    // assuming the order of the perforations will not change after parser.
+                    // not sure if it is always true though
+                    if (nperf == nperf_parser) {
+                        for (int perf = 0; perf < nperf_parser; ++perf) {
+                            const Completion& completion = completion_set.get(perf);
+                            const int segment_number = completion.getSegmentNumber();
+                            const int segment_index = segment_set.segmentNumberToIndex(segment_number);
+                            segment_perforations[segment_index].push_back(perf);
+                            perforation_mapping_well[perf] = perf;
+                        }
+                    } else { // some perforations are removed due to some reasons
+                        // building a mapping between the perforation index in opm-parser and Wells structure
+                        int perf_number_found = 0;
+                        for (int perf = 0; perf < nperf_parser; ++perf) {
+                            const Completion& completion = completion_set.get(perf);
+                            if (completion.getState() == WellCompletion::OPEN) {
+                                const int i = completion.getI();
+                                const int j = completion.getJ();
+                                const int k = completion.getK();
+
+                                const int cart_grid_indx = i + cart_dims[0] * (j + cart_dims[1] * k);
+                                const std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
+                                if (cgit != cartesian_to_compressed.end()) { // found it
+                                    const int cell = cgit->second;
+                                    for (int perf_well = 0; perf_well < nperf; ++perf_well) {
+                                        if (wells->well_cells[perf_well + start_perf] == cell) { // found in the Wells struct
+                                            const int segment_number = completion.getSegmentNumber();
+                                            const int segment_index = segment_set.segmentNumberToIndex(segment_number);
+                                            segment_perforations[segment_index].push_back(perf_well);
+                                            perforation_mapping_well[perf] = perf_well;
+                                            ++perf_number_found;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // make sure all the perforations in Wells struct is corresponding to one perforation
+                        // in EclipseState, otherwise it means some perforation in Wells struct could not map
+                        // to some perforation in EclipseState, something needs to be taken care of then.
+                        assert(perf_number_found == nperf);
                     }
+
+                    perforation_mapping[well_name] = perforation_mapping_well;
 
                     std::vector<std::vector<int>> segment_inlets(well_nseg);
                     for (int seg = 0; seg < well_nseg; ++seg) {
@@ -376,9 +427,6 @@ namespace Opm
                     // for the segrates_, now it becomes a recursive solution procedure.
                     {
                         const int np = numPhases();
-                        const int start_perf = wells->well_connpos[w];
-                        const int start_perf_next_well = wells->well_connpos[w + 1];
-                        assert(nperf == (start_perf_next_well - start_perf)); // make sure the information from wells_ecl consistent with wells
                         if (pu.phase_used[Gas]) {
                             const int gaspos = pu.phase_pos[Gas];
                             // scale the phase rates for Gas to avoid too bad initial guess for gas fraction
@@ -408,7 +456,6 @@ namespace Opm
                         // top segment is always the first one, and its pressure is the well bhp
                         segpress_.push_back(bhp()[w]);
                         const int top_segment = top_segment_index_[w];
-                        const int start_perf = wells->well_connpos[w];
                         for (int seg = 1; seg < well_nseg; ++seg) {
                             if ( !segment_perforations[seg].empty() ) {
                                 const int first_perf = segment_perforations[seg][0];

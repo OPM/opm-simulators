@@ -89,14 +89,23 @@ namespace Opm {
         }
         well_state_.init(wells(), cellPressures, previous_well_state_, phase_usage_);
 
+        std::map<std::string, std::vector<int> > perforation_mapping;
         // handling MS well related
         if (param_.use_multisegment_well_) { // if we use MultisegmentWell model
             for (const auto& well : wells_ecl_) {
-                // TODO: this is acutally not very accurate, because sometimes a deck just claims a MS well
-                // while keep the well shut. More accurately, we should check if the well exisits in the Wells
-                // structure here
-                if (well->isMultiSegment(timeStepIdx) ) { // there is one well is MS well
-                    well_state_.initWellStateMSWell(wells(), wells_ecl_, timeStepIdx, phase_usage_, previous_well_state_);
+                // there is one active well is MS well
+                if (well->isMultiSegment(timeStepIdx) && well->getStatus(timeStepIdx) != WellCommon::SHUT) {
+                    const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
+
+                    std::map<int,int> cartesian_to_compressed;
+                    setupCompressedToCartesian(global_cell, number_of_cells_,
+                                               cartesian_to_compressed);
+
+                    const int* cart_dims = Opm::UgGridHelpers::cartDims(grid);
+
+                    well_state_.initWellStateMSWell(wells(), wells_ecl_, timeStepIdx, phase_usage_,
+                                                    previous_well_state_, cartesian_to_compressed, cart_dims,
+                                                    perforation_mapping);
                     break;
                 }
             }
@@ -108,7 +117,7 @@ namespace Opm {
         computeRESV(timeStepIdx);
 
         // create the well container
-        well_container_ = createWellContainer(timeStepIdx);
+        well_container_ = createWellContainer(timeStepIdx, perforation_mapping);
 
         // do the initialization for all the wells
         // TODO: to see whether we can postpone of the intialization of the well containers to
@@ -186,7 +195,8 @@ namespace Opm {
     template<typename TypeTag>
     std::vector<typename BlackoilWellModel<TypeTag>::WellInterfacePtr >
     BlackoilWellModel<TypeTag>::
-    createWellContainer(const int time_step) const
+    createWellContainer(const int time_step,
+                        const std::map<std::string, std::vector<int> >& perforation_mapping) const
     {
         std::vector<WellInterfacePtr> well_container;
 
@@ -224,8 +234,13 @@ namespace Opm {
                     well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
                                                 param_, *rateConverter_, pvtreg, numComponents() ) );
                 } else {
+                    const auto it = perforation_mapping.find(well_name);
+                    if (it == perforation_mapping.end()) { // not found
+                        OPM_THROW(std::runtime_error, "Could not find well " + well_name + " in perforation_mapping");
+                    }
+                    const std::vector<int>& perforation_mapping_well = it->second;
                     well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(),
-                                                param_, *rateConverter_, pvtreg, numComponents() ) );
+                                                param_, *rateConverter_, pvtreg, numComponents(), perforation_mapping_well) );
                 }
             }
         }

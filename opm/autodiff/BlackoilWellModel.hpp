@@ -161,7 +161,8 @@ namespace Opm {
             using ConvergenceReport = typename WellInterface<TypeTag>::ConvergenceReport;
 
             // create the well container
-            std::vector<WellInterfacePtr > createWellContainer(const int time_step) const;
+            std::vector<WellInterfacePtr > createWellContainer(const int time_step,
+                                   const std::map<std::string, std::vector<int> >& perforation_mapping) const;
 
             WellState well_state_;
             WellState previous_well_state_;
