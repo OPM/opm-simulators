@@ -28,13 +28,12 @@
 #ifndef EWOMS_ECL_WRITER_HH
 #define EWOMS_ECL_WRITER_HH
 
-#include <opm/material/densead/Evaluation.hpp>
-
 #include "collecttoiorank.hh"
 #include "ecloutputblackoilmodule.hh"
 
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include <ewoms/io/baseoutputwriter.hh>
+
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/common/Valgrind.hpp>
@@ -58,7 +57,6 @@ NEW_PROP_TAG(EnableEclOutput);
 
 template <class TypeTag>
 class EclWriter;
-
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -87,17 +85,15 @@ class EclWriter
     typedef typename GridView::template Codim<0>::Entity Element;
     typedef typename GridView::template Codim<0>::Iterator ElementIterator;
 
-
     typedef CollectDataToIORank< GridManager > CollectDataToIORankType;
 
     typedef std::vector<Scalar> ScalarBuffer;
-
 
 public:
     EclWriter(const Simulator& simulator)
         : simulator_(simulator)
         , eclOutputModule_(simulator)
-        , collectToIORank_( simulator_.gridManager() )
+        , collectToIORank_(simulator_.gridManager())
     {
         Grid globalGrid = simulator_.gridManager().grid();
         globalGrid.switchToGlobalView();
@@ -110,23 +106,21 @@ public:
     ~EclWriter()
     { }
 
-    void setEclIO(std::unique_ptr<Opm::EclipseIO>&& eclIO) {
-        eclIO_ = std::move(eclIO);
-    }
+    void setEclIO(std::unique_ptr<Opm::EclipseIO>&& eclIO)
+    { eclIO_ = std::move(eclIO); }
 
     const Opm::EclipseIO& eclIO() const
-    {return *eclIO_;}
+    { return *eclIO_; }
 
     /*!
      * \brief collect and pass data and pass it to eclIO writer
      */
     void writeOutput(const Opm::data::Wells& dw, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep, const Opm::data::Solution& fip)
     {
-
-        #if !HAVE_OPM_OUTPUT
-                OPM_THROW(std::runtime_error,
-                          "Opm-output must be available to write ECL output!");
-        #else
+#if !HAVE_OPM_OUTPUT
+        OPM_THROW(std::runtime_error,
+                  "Opm-output must be available to write ECL output!");
+#else
 
         int episodeIdx = simulator_.episodeIndex() + 1;
         const auto& gridView = simulator_.gridManager().gridView();
@@ -179,7 +173,8 @@ public:
 #endif
     }
 
-    void restartBegin() {
+    void restartBegin()
+    {
         std::map<std::string, Opm::RestartKey> solution_keys {{"PRESSURE" , Opm::RestartKey(Opm::UnitSystem::measure::pressure)},
                                                          {"SWAT" , Opm::RestartKey(Opm::UnitSystem::measure::identity)},
                                                          {"SGAS" , Opm::RestartKey(Opm::UnitSystem::measure::identity)},

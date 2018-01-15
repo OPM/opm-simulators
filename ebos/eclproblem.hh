@@ -113,6 +113,9 @@ NEW_PROP_TAG(EnableWriteAllSolutions);
 // The number of time steps skipped between writing two consequtive restart files
 NEW_PROP_TAG(RestartWritingInterval);
 
+// The default location for the ECL output files
+NEW_PROP_TAG(EclOutputDir);
+
 // Disable well treatment (for users which do this externally)
 NEW_PROP_TAG(DisableWells);
 
@@ -220,8 +223,8 @@ SET_TYPE_PROP(EclBaseProblem, FluxModule, Ewoms::EclTransFluxModule<TypeTag>);
 // Use the dummy gradient calculator in order not to do unnecessary work.
 SET_TYPE_PROP(EclBaseProblem, GradientCalculator, Ewoms::EclDummyGradientCalculator<TypeTag>);
 
-// The default name of the data file to load
-SET_STRING_PROP(EclBaseProblem, GridFile, "data/ecl.DATA");
+// The default location for the ECL output files
+SET_STRING_PROP(EclBaseProblem, EclOutputDir, ".");
 
 // The frequency of writing restart (*.ers) files. This is the number of time steps
 // between writing restart files
@@ -317,6 +320,8 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEclOutput,
                              "Write binary output which is compatible with the commercial "
                              "Eclipse simulator");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, EclOutputDir,
+                             "The directory to which the ECL result files are written");
         EWOMS_REGISTER_PARAM(TypeTag, unsigned, RestartWritingInterval,
                              "The frequencies of which time steps are serialized to disk");
     }
@@ -329,14 +334,38 @@ public:
         , transmissibilities_(simulator.gridManager())
         , thresholdPressures_(simulator)
         , wellManager_(simulator)
-        , eclWriter_( EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput)
-                        ? new EclWriterType(simulator) : nullptr )
         , pffDofData_(simulator.gridView(), this->elementMapper())
     {
         // Tell the extra modules to initialize its internal data structures
         const auto& gridManager = simulator.gridManager();
         SolventModule::initFromDeck(gridManager.deck(), gridManager.eclState());
         PolymerModule::initFromDeck(gridManager.deck(), gridManager.eclState());
+
+        if (EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput)) {
+            // retrieve the location where the output is supposed to go
+            const auto& outputDir = EWOMS_GET_PARAM(TypeTag, std::string, EclOutputDir);
+
+            // ensure that the output directory exists and that it is a directory
+            if (outputDir != ".") { // Do not try to create the current directory.
+                if (!boost::filesystem::is_directory(outputDir)) {
+                    try {
+                        boost::filesystem::create_directories(outputDir);
+                    }
+                    catch (...) {
+                        OPM_THROW(std::runtime_error, "Creation of output directory '"<<outputDir<<"' failed\n");
+                    }
+                }
+            }
+
+            // specify the directory output. This is not a very nice mechanism because
+            // the eclState is supposed to be immutable here, IMO.
+            auto& eclState = this->simulator().gridManager().eclState();
+            auto& ioConfig = eclState.getIOConfig();
+            ioConfig.setOutputDir(outputDir);
+
+            // create the actual ECL writer
+            eclWriter_.reset(new EclWriterType(simulator));
+        }
 
         // Hack to compute the initial thpressure values for restarts
         restartApplied = false;
@@ -684,10 +713,8 @@ public:
         ParentType::writeOutput(verbose);
 
         // output using eclWriter if enabled
-        if ( eclWriter_ ) {
+        if (eclWriter_)
             eclWriter_->writeOutput(dw, t, substep, totalSolverTime, nextstep, fip);
-        }
-
     }
 
     /*!
@@ -1139,12 +1166,11 @@ public:
         return initialFluidStates_[globalDofIdx];
     }
 
-    void setEclIO(std::unique_ptr<Opm::EclipseIO>&& eclIO) {
-        eclWriter_->setEclIO(std::move(eclIO));
-    }
+    void setEclIO(std::unique_ptr<Opm::EclipseIO>&& eclIO)
+    { eclWriter_->setEclIO(std::move(eclIO)); }
 
     const Opm::EclipseIO& eclIO() const
-    {return eclWriter_->eclIO();}
+    { return eclWriter_->eclIO(); }
 
 private:
     Scalar cellCenterDepth( const Element& element ) const
@@ -1840,7 +1866,7 @@ private:
 
     EclWellManager<TypeTag> wellManager_;
 
-    std::unique_ptr< EclWriterType > eclWriter_;
+    std::unique_ptr<EclWriterType> eclWriter_;
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
 
