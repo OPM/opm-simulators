@@ -26,9 +26,7 @@
 
 #include <sys/utsname.h>
 
-
 #include <opm/simulators/ParallelFileMerger.hpp>
-#include <opm/simulators/ensureDirectoryExists.hpp>
 
 #include <opm/autodiff/BlackoilModelEbos.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
@@ -257,23 +255,7 @@ namespace Opm
                           << std::endl;
             }
 
-            output_to_files_ = output_cout_ && output_ > OUTPUT_NONE;
-
-            // Setup output directory.
-            auto& ioConfig = eclState().getIOConfig();
-            // Default output directory is the directory where the deck is found.
-            const std::string default_output_dir = ioConfig.getOutputDir();
-            output_dir_ = param_.getDefault("output_dir", default_output_dir);
-            // Override output directory if user specified.
-            ioConfig.setOutputDir(output_dir_);
-
-            // Write parameters used for later reference. (only if rank is zero)
-            if (output_to_files_) {
-                // Create output directory if needed.
-                ensureDirectoryExists(output_dir_);
-                // Write simulation parameters.
-                param_.writeParam(output_dir_ + "/simulation.param");
-            }
+            output_to_files_ = output_cout_ && (output_ != OUTPUT_NONE);
         }
 
         // Setup OpmLog backend with output_dir.
@@ -413,8 +395,16 @@ namespace Opm
             argv.push_back("flow_ebos");
 
             std::string deckFileParam("--ecl-deck-file-name=");
-            deckFileParam += param_.get<std::string>("deck_filename");
+            const std::string& deckFileName = param_.get<std::string>("deck_filename");
+            deckFileParam += deckFileName;
             argv.push_back(deckFileParam.c_str());
+
+            const std::string default_output_dir = boost::filesystem::basename(deckFileName);
+            output_dir_ = param_.getDefault("output_dir", default_output_dir);
+
+            std::string outputDirParam("--ecl-output-dir=");
+            outputDirParam += output_dir_;
+            argv.push_back(outputDirParam.c_str());
 
 #if defined(_OPENMP)
             std::string numThreadsParam("--threads-per-process=");
