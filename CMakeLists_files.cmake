@@ -330,7 +330,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilWellModel.hpp
   opm/autodiff/BlackoilWellModel_impl.hpp
   opm/autodiff/MissingFeatures.hpp
-  opm/autodiff/ThreadHandle.hpp
   opm/core/flowdiagnostics/AnisotropicEikonal.hpp
   opm/core/flowdiagnostics/DGBasis.hpp
   opm/core/flowdiagnostics/FlowDiagnostics.hpp

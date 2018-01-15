@@ -32,16 +32,13 @@
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
-
+#include <opm/core/wells/WellsManager.hpp>
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Solution.hpp>
 
-#include <opm/autodiff/GridHelpers.hpp>
-#include <opm/autodiff/ParallelDebugOutput.hpp>
 #include <opm/autodiff/Compat.hpp>
 
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/ThreadHandle.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -90,36 +87,8 @@ namespace Opm
                 }()
                 ),
             ebosSimulator_(ebosSimulator),
-            phaseUsage_(phaseUsageFromDeck(eclState())),
-            parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid(), eclState(), schedule(), phaseUsage_.num_phases, phaseUsage_ ) : 0 ),
-            restart_double_si_( output_ ? param.getDefault("restart_double_si", false) : false ),
-            asyncOutput_()
-        {
-            // For output.
-            if ( output_ )
-            {
-
-                // create output thread if enabled and rank is I/O rank
-                // async output is enabled by default if pthread are enabled
-    #if HAVE_PTHREAD
-                const bool asyncOutputDefault = true;
-    #else
-                const bool asyncOutputDefault = false;
-    #endif
-                if( param.getDefault("async_output", asyncOutputDefault ) )
-                {
-                    const bool isIORank = parallelOutput_ ? parallelOutput_->isIORank() : true;
-    #if HAVE_PTHREAD
-                    asyncOutput_.reset( new ThreadHandle( isIORank ) );
-    #else
-                    OPM_THROW(std::runtime_error,"Pthreads were not found, cannot enable async_output");
-    #endif
-                }
-            }
-        }
-
-
-
+            phaseUsage_(phaseUsageFromDeck(eclState()))
+        {}
 
         /*!
          * \brief Write a blackoil reservoir state to disk for later inspection with
@@ -129,7 +98,7 @@ namespace Opm
          */
         template<class SimulationDataContainer, class Model>
         void writeTimeStep(const SimulatorTimerInterface& timer,
-                           const SimulationDataContainer& reservoirStateDummy,
+                           const SimulationDataContainer& /*reservoirStateDummy*/,
                            const Opm::WellStateFullyImplicitBlackoil& /*wellStateDummy*/,
                            const Model& physicalModel,
                            const bool substep = false,
@@ -143,28 +112,9 @@ namespace Opm
 
                 const Opm::WellStateFullyImplicitBlackoil& localWellState = physicalModel.wellModel().wellState();
 
-                if( parallelOutput_ && parallelOutput_->isParallel() )
-                {
-                    // If this is not the initial write and no substep, then the well
-                    // state used in the computation is actually the one of the last
-                    // step. We need that well state for the gathering. Otherwise
-                    // It an exception with a message like "global state does not
-                    // contain well ..." might be thrown.
-                    // The distribution of data::solution is not done here
-                    data::Solution localCellDataDummy{};
-                    int wellStateStepNumber = ( ! substep && timer.reportStepNum() > 0) ?
-                                (timer.reportStepNum() - 1) : timer.reportStepNum();
-                    // collect all solutions to I/O rank
-                    parallelOutput_->collectToIORank( reservoirStateDummy, localWellState,
-                                                      localCellDataDummy,
-                                                      wellStateStepNumber );
-                    // Note that at this point the extraData are assumed to be global, i.e. identical across all processes.
-                }
-
-                const WellStateFullyImplicitBlackoil& wellState  = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalWellState() : localWellState;
-
-                // The writeOutput expects a local data::solution vector and a global data::well vector.
-            ebosSimulator_.problem().writeOutput( wellState.report(phaseUsage_), timer.simulationTimeElapsed(), substep, totalSolverTime, nextstep);
+                // The writeOutput expects a local data::solution vector and a local data::well vector.
+                auto localWellData = localWellState.report(phaseUsage_, Opm::UgGridHelpers::globalCell(grid()) );
+                ebosSimulator_.problem().writeOutput(localWellData, timer.simulationTimeElapsed(), substep, totalSolverTime, nextstep);
             }
         }
 
@@ -235,9 +185,6 @@ namespace Opm
         const bool output_;
         Simulator& ebosSimulator_;
         Opm::PhaseUsage phaseUsage_;
-        std::unique_ptr< ParallelDebugOutputInterface > parallelOutput_;
-        const bool restart_double_si_;
-        std::unique_ptr< ThreadHandle > asyncOutput_;
     };
 
 

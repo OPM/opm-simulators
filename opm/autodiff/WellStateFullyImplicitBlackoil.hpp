@@ -238,8 +238,8 @@ namespace Opm
         std::vector<int>& currentControls() { return current_controls_; }
         const std::vector<int>& currentControls() const { return current_controls_; }
 
-        data::Wells report(const PhaseUsage &pu) const override {
-            data::Wells res = WellState::report(pu);
+        data::Wells report(const PhaseUsage &pu, const int* globalCellIdxMap) const override {
+            data::Wells res = WellState::report(pu, globalCellIdxMap);
 
             const int nw = this->numWells();
             if( nw == 0 ) return res;

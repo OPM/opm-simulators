@@ -224,7 +224,7 @@ namespace Opm
             return wellRates().size() / numWells();
         }
 
-        virtual data::Wells report(const PhaseUsage& pu) const
+        virtual data::Wells report(const PhaseUsage& pu, const int* globalCellIdxMap) const
         {
             using rt = data::Rates::opt;
 
@@ -260,7 +260,7 @@ namespace Opm
                     const auto active_index = this->wells_->well_cells[ wi ];
 
                     auto& completion = well.completions[ i ];
-                    completion.index = active_index;
+                    completion.index = globalCellIdxMap[active_index];
                     completion.pressure = this->perfPress()[ itr.second[1] + i ];
                     completion.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
                 }
