@@ -117,8 +117,6 @@ namespace Opm {
         typedef ISTLSolver< MatrixBlockType, VectorBlockType, Indices::pressureSwitchIdx >  ISTLSolverType;
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
-        typedef Opm::FIPData FIPDataType;
-
         // ---------  Public methods  ---------
 
         /// Construct the model. It will retain references to the
@@ -999,142 +997,14 @@ namespace Opm {
             return computeFluidInPlace(fipnum);
         }
 
+        /// Should not be called
         std::vector<std::vector<double> >
-        computeFluidInPlace(const std::vector<int>& fipnum) const
-        {
-            const auto& comm = grid_.comm();
-            const auto& gridView = ebosSimulator().gridView();
-            const int nc = gridView.size(/*codim=*/0);
-            int ntFip = *std::max_element(fipnum.begin(), fipnum.end());
-            ntFip = comm.max(ntFip);
-
-            std::vector<double> tpv(ntFip, 0.0);
-            std::vector<double> hcpv(ntFip, 0.0);
-
-            std::vector<std::vector<double> > regionValues(ntFip, std::vector<double>(FIPDataType::fipValues,0.0));
-
-            for (int i = 0; i<FIPDataType::fipValues; i++) {
-                fip_.fip[i].resize(nc,0.0);
-            }
-
-            ElementContext elemCtx(ebosSimulator_);
-            const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
-            for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
-                 elemIt != elemEndIt;
-                 ++elemIt)
-            {
-                elemCtx.updatePrimaryStencil(*elemIt);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-                const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& fs = intQuants.fluidState();
-
-                const int regionIdx = fipnum[cellIdx] - 1;
-                if (regionIdx < 0) {
-                    // the given cell is not attributed to any region
-                    continue;
-                }
-
-                // calculate the pore volume of the current cell. Note that the porosity
-                // returned by the intensive quantities is defined as the ratio of pore
-                // space to total cell volume and includes all pressure dependent (->
-                // rock compressibility) and static modifiers (MULTPV, MULTREGP, NTG,
-                // PORV, MINPV and friends). Also note that because of this, the porosity
-                // returned by the intensive quantities can be outside of the physical
-                // range [0, 1] in pathetic cases.
-                const double pv =
-                    ebosSimulator_.model().dofTotalVolume(cellIdx)
-                    * intQuants.porosity().value();
-
-                for (unsigned phase = 0; phase < FluidSystem::numPhases; ++phase) {
-                    if (!FluidSystem::phaseIsActive(phase)) {
-                        continue;
-                    }
-
-                    const double b = fs.invB(phase).value();
-                    const double s = fs.saturation(phase).value();
-                    const unsigned flowCanonicalPhaseIdx = ebosPhaseToFlowCanonicalPhaseIdx(phase);
-
-                    fip_.fip[flowCanonicalPhaseIdx][cellIdx] = b * s * pv;
-                    regionValues[regionIdx][flowCanonicalPhaseIdx] += fip_.fip[flowCanonicalPhaseIdx][cellIdx];
-                }
-
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    // Account for gas dissolved in oil and vaporized oil
-                    fip_.fip[FIPDataType::FIP_DISSOLVED_GAS][cellIdx] = fs.Rs().value() * fip_.fip[FIPDataType::FIP_LIQUID][cellIdx];
-                    fip_.fip[FIPDataType::FIP_VAPORIZED_OIL][cellIdx] = fs.Rv().value() * fip_.fip[FIPDataType::FIP_VAPOUR][cellIdx];
-
-                    regionValues[regionIdx][FIPData::FIP_DISSOLVED_GAS] += fip_.fip[FIPData::FIP_DISSOLVED_GAS][cellIdx];
-                    regionValues[regionIdx][FIPData::FIP_VAPORIZED_OIL] += fip_.fip[FIPData::FIP_VAPORIZED_OIL][cellIdx];
-                }
-
-                const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
-
-                tpv[regionIdx] += pv;
-                hcpv[regionIdx] += pv * hydrocarbon;
-            }
-
-            // sum tpv (-> total pore volume of the regions) and hcpv (-> pore volume of the
-            // the regions that is occupied by hydrocarbons)
-            comm.sum(tpv.data(), tpv.size());
-            comm.sum(hcpv.data(), hcpv.size());
-
-            for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
-                 elemIt != elemEndIt;
-                 ++elemIt)
-            {
-                const auto& elem = *elemIt;
-
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-                unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const int regionIdx = fipnum[cellIdx] - 1;
-                if (regionIdx < 0) {
-                    // the cell is not attributed to any region. ignore it!
-                    continue;
-                }
-
-                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& fs = intQuants.fluidState();
-
-                // calculate the pore volume of the current cell. Note that the
-                // porosity returned by the intensive quantities is defined as the
-                // ratio of pore space to total cell volume and includes all pressure
-                // dependent (-> rock compressibility) and static modifiers (MULTPV,
-                // MULTREGP, NTG, PORV, MINPV and friends). Also note that because of
-                // this, the porosity returned by the intensive quantities can be
-                // outside of the physical range [0, 1] in pathetic cases.
-                const double pv =
-                    ebosSimulator_.model().dofTotalVolume(cellIdx)
-                    * intQuants.porosity().value();
-
-                fip_.fip[FIPDataType::FIP_PV][cellIdx] = pv;
-                const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
-
-                //Compute hydrocarbon pore volume weighted average pressure.
-                //If we have no hydrocarbon in region, use pore volume weighted average pressure instead
-                if (hcpv[regionIdx] > 1e-10) {
-                    fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][cellIdx] = pv * fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbon / hcpv[regionIdx];
-                } else {
-                    fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][cellIdx] = pv * fs.pressure(FluidSystem::oilPhaseIdx).value() / tpv[regionIdx];
-                }
-
-                regionValues[regionIdx][FIPDataType::FIP_PV] += fip_.fip[FIPDataType::FIP_PV][cellIdx];
-                regionValues[regionIdx][FIPDataType::FIP_WEIGHTED_PRESSURE] += fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][cellIdx];
-            }
-
-            // sum the results over all processes
-            for(int regionIdx=0; regionIdx < ntFip; ++regionIdx) {
-                comm.sum(regionValues[regionIdx].data(), regionValues[regionIdx].size());
-            }
-
+        computeFluidInPlace(const std::vector<int>& /*fipnum*/) const
+        {            
+            //assert(true)
+            //return an empty vector
+            std::vector<std::vector<double> > regionValues(0, std::vector<double>(0,0.0));
             return regionValues;
-        }
-
-        const FIPDataType& getFIPData() const {
-            return fip_;
         }
 
         const Simulator& ebosSimulator() const
@@ -1176,7 +1046,6 @@ namespace Opm {
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
         BVector dx_old_;
-        mutable FIPDataType fip_;
 
     public:
         /// return the StandardWells object
@@ -1185,20 +1054,6 @@ namespace Opm {
 
         const BlackoilWellModel<TypeTag>&
         wellModel() const { return well_model_; }
-
-        int ebosPhaseToFlowCanonicalPhaseIdx( const int phaseIdx ) const
-        {
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::waterPhaseIdx == phaseIdx)
-                return Water;
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::oilPhaseIdx == phaseIdx)
-                return Oil;
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::gasPhaseIdx == phaseIdx)
-                return Gas;
-
-            assert(phaseIdx < 3);
-            // for other phases return the index
-            return phaseIdx;
-        }
 
         void beginReportStep()
         {
