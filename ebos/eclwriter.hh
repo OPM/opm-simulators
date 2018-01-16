@@ -145,9 +145,6 @@ public:
         const ElementIterator& elemEndIt = gridView.template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity)
-                continue;
-
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
             eclOutputModule_.processElement(elemCtx);

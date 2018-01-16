@@ -72,6 +72,9 @@ class EclOutputBlackOilModule
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef typename GridView::template Codim<0>::Entity Element;
+    typedef typename GridView::template Codim<0>::Iterator ElementIterator;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
@@ -943,11 +946,18 @@ private:
         // Get compressed cell fipnum.
         const auto& gridView = simulator_.gridManager().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
-        fipnum_.resize(numElements);
-        if (fipnum_global.empty()) {
-            std::fill(fipnum_.begin(), fipnum_.end(), 0);
-        } else {
-            for (size_t elemIdx = 0; elemIdx < numElements; ++elemIdx) {
+        fipnum_.resize(numElements, 0.0);
+        if (!fipnum_global.empty()) {
+            ElementContext elemCtx(simulator_);
+            ElementIterator elemIt = gridView.template begin</*codim=*/0>();
+            const ElementIterator& elemEndIt = gridView.template end</*codim=*/0>();
+            for (; elemIt != elemEndIt; ++elemIt) {
+                const Element& elem = *elemIt;
+                if (elem.partitionType() != Dune::InteriorEntity)
+                    continue; // assign no fipnum regions to ghost elements
+
+                elemCtx.updatePrimaryStencil(elem);
+                const unsigned elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 fipnum_[elemIdx] = fipnum_global[simulator_.gridManager().cartesianIndex( elemIdx )];
             }
         }
@@ -995,10 +1005,11 @@ private:
                 if (FluidSystem::phaseIsActive(gasPhaseIdx))
                     hydrocarbon += saturation_[gasPhaseIdx][elem];
 
-                pPvSum += oilPressure_[elem] * fip_[FIPDataType::PoreVolume][elem];
+                Scalar pPv = oilPressure_[elem] * fip_[FIPDataType::PoreVolume][elem];
+                pPvSum += pPv;
                 pvSum += fip_[FIPDataType::PoreVolume][elem];
-                pPvHydrocarbonSum += pPvSum * hydrocarbon;
-                pvHydrocarbonSum += pvSum * hydrocarbon;
+                pPvHydrocarbonSum += pPv * hydrocarbon;
+                pvHydrocarbonSum += fip_[FIPDataType::PoreVolume][elem] * hydrocarbon;
             }
         }
         const auto& comm = simulator_.gridView().comm();
