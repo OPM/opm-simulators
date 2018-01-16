@@ -31,7 +31,8 @@ namespace Opm
                      const ModelParameters& param,
                      const RateConverterType& rate_converter,
                      const int pvtRegionIdx,
-                     const int num_components)
+                     const int num_components,
+                     const std::vector<int>& perforation_mapping_well)
     : Base(well, time_step, wells, param, rate_converter, pvtRegionIdx, num_components)
     , segment_perforations_(numberOfSegments())
     , segment_inlets_(numberOfSegments())
@@ -56,12 +57,22 @@ namespace Opm
         // for other facilities needed but not available from parser, we need to process them here
 
         // initialize the segment_perforations_
+        // callcuate the depth difference between perforations and their segments
         const CompletionSet& completion_set = well_ecl_->getCompletions(current_step_);
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+        const int nperf_parser = completion_set.size();
+        perf_depth_.resize(number_of_perforations_, 0.);
+        for (int perf = 0; perf < nperf_parser; ++perf) {
             const Completion& completion = completion_set.get(perf);
             const int segment_number = completion.getSegmentNumber();
             const int segment_index = segmentNumberToIndex(segment_number);
-            segment_perforations_[segment_index].push_back(perf);
+            // perforation number in Wells struct
+            // if perf_well < 0, then means the perforation is removed
+            const int perf_well = perforation_mapping_well[perf];
+            if (perf_well < 0) continue;
+            segment_perforations_[segment_index].push_back(perf_well);
+            perf_depth_[perf_well] = completion.getCenterDepth();
+            const double segment_depth = segmentSet()[segment_index].depth();
+            perforation_segment_depth_diffs_[perf_well] = perf_depth_[perf_well] - segment_depth;
         }
 
         // initialize the segment_inlets_
@@ -73,16 +84,6 @@ namespace Opm
                 const int segment_index = segmentNumberToIndex(segment_number);
                 const int outlet_segment_index = segmentNumberToIndex(outlet_segment_number);
                 segment_inlets_[outlet_segment_index].push_back(segment_index);
-            }
-        }
-
-        // callcuate the depth difference between perforations and their segments
-        perf_depth_.resize(number_of_perforations_, 0.);
-        for (int seg = 0; seg < numberOfSegments(); ++seg) {
-            const double segment_depth = segmentSet()[seg].depth();
-            for (const int perf : segment_perforations_[seg]) {
-                perf_depth_[perf] = completion_set.get(perf).getCenterDepth();
-                perforation_segment_depth_diffs_[perf] = perf_depth_[perf] - segment_depth;
             }
         }
 
@@ -107,7 +108,7 @@ namespace Opm
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<double>& depth_arg,
          const double gravity_arg,
-         const int num_cells)
+         const size_t num_cells)
     {
         Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells);
 
