@@ -210,6 +210,10 @@ SET_BOOL_PROP(EclBaseProblem, EnableVtkOutput, false);
 // ... but enable the ECL output by default
 SET_BOOL_PROP(EclBaseProblem, EnableEclOutput, true);
 
+// Output single precision is default
+SET_BOOL_PROP(EclBaseProblem, EclOutputDoublePrecision, false);
+
+
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
 SET_BOOL_PROP(EclBaseProblem, EnableIntensiveQuantityCache, true);
@@ -322,6 +326,8 @@ public:
                              "Eclipse simulator");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, EclOutputDir,
                              "The directory to which the ECL result files are written");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EclOutputDoublePrecision,
+                             "Tell the output writer to use double precision. Useful for 'perfect' restarts");
         EWOMS_REGISTER_PARAM(TypeTag, unsigned, RestartWritingInterval,
                              "The frequencies of which time steps are serialized to disk");
     }

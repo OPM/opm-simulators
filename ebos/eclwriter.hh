@@ -53,6 +53,7 @@
 namespace Ewoms {
 namespace Properties {
 NEW_PROP_TAG(EnableEclOutput);
+NEW_PROP_TAG(EclOutputDoublePrecision);
 }
 
 template <class TypeTag>
@@ -157,23 +158,25 @@ public:
         if (collectToIORank_.isParallel())
             collectToIORank_.collect(localCellData);
 
-        if (!substep)
-            eclOutputModule_.outputFIPLog();
+        //if (!substep)
+        std::map<std::string, double> miscSummaryData;
+        std::map<std::string, std::vector<double>> regionData;
+        eclOutputModule_.outputFIPLog(miscSummaryData, regionData, substep);
 
         // write output on I/O rank
         if (collectToIORank_.isIORank()) {
 
             std::map<std::string, std::vector<double>> extraRestartData;
-            std::map<std::string, double> miscSummaryData;
 
             // Add suggested next timestep to extra data.
-            extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextstep);
+            if (!substep)
+                extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextstep);
 
-            // Add TCPU if simulatorReport is not defaulted.
+            // Add TCPU
             if (totalSolverTime != 0.0) {
                 miscSummaryData["TCPU"] = totalSolverTime;
             }
-
+            bool enableDoublePrecisionOutput = false; //EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
             const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
             eclIO_->writeTimeStep(episodeIdx,
                                   substep,
@@ -181,8 +184,9 @@ public:
                                   cellData,
                                   dw,
                                   miscSummaryData,
+                                  regionData,
                                   extraRestartData,
-                                  false);
+                                  enableDoublePrecisionOutput);
         }
 
 #endif
