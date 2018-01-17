@@ -19,14 +19,12 @@ fi
 declare -a downstreams
 downstreams=(opm-output
              opm-grid
-             opm-core
              ewoms
              opm-simulators
              opm-upscaling)
 
 declare -A downstreamRev
 downstreamRev[opm-output]=master
-downstreamRev[opm-core]=master
 downstreamRev[opm-grid]=master
 downstreamRev[ewoms]=master
 downstreamRev[opm-simulators]=master
