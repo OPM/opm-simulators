@@ -3,6 +3,11 @@ set (opm-simulators_CONFIG_VAR
   HAVE_OPM_GRID
   HAVE_PTHREAD
   HAVE_EWOMS
+  HAVE_ERT
+  HAVE_MPI
+  HAVE_PETSC
+  HAVE_SUITESPARSE_UMFPACK_H
+  HAVE_DUNE_ISTL
   DUNE_ISTL_VERSION_MAJOR
   DUNE_ISTL_VERSION_MINOR
   DUNE_ISTL_VERSION_REVISION
@@ -21,13 +26,22 @@ set (opm-simulators_DEPS
   # DUNE prerequisites
   "dune-common REQUIRED"
   "dune-istl REQUIRED"
+  # matrix library
+  "BLAS REQUIRED"
+  "LAPACK REQUIRED"
+  # Look for MPI support
+  "MPI"
+  # PETSc numerical backend
+  "PETSc"
   # Tim Davis' SuiteSparse archive
   "SuiteSparse COMPONENTS umfpack"
+  # SuperLU direct solver
+  "SuperLU"
   # OPM dependency
   "opm-common REQUIRED"
   "opm-parser REQUIRED"
+  "opm-material REQUIRED"
   "opm-grid REQUIRED"
-  "opm-core REQUIRED"
   "opm-output REQUIRED"
   "ewoms REQUIRED"
   # Eigen
