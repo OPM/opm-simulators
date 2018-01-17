@@ -333,11 +333,6 @@ namespace Opm
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
-                if ( timer.initialStep() )
-                {
-                    // Set the initial OIP
-                    eclIO_->overwriteInitialOIP(simProps);
-                }
                 // ... insert "extra" data (KR, VISC, ...)
                 const int reportStepForOutput = substep ? timer.reportStepNum() + 1 : timer.reportStepNum();
                 eclIO_->writeTimeStep(reportStepForOutput,
@@ -346,6 +341,8 @@ namespace Opm
                                       simProps,
                                       wellState.report(phaseUsage_),
                                       miscSummaryData,
+                                      {}, //regionData
+                                      {}, //blockData
                                       extraRestartData,
                                       restart_double_si_);
             }

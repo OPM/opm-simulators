@@ -405,6 +405,11 @@ namespace Opm
             outputDirParam += output_dir_;
             argv.push_back(outputDirParam.c_str());
 
+            const bool restart_double_si  = param_.getDefault("restart_double_si", false);
+            std::string outputDoublePrecisionParam("--ecl-output-double-precision=");
+            outputDoublePrecisionParam += restart_double_si;
+            argv.push_back(outputDoublePrecisionParam.c_str());
+
 #if defined(_OPENMP)
             std::string numThreadsParam("--threads-per-process=");
             int numThreads = omp_get_max_threads();
