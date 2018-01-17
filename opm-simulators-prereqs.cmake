@@ -27,7 +27,6 @@ set (opm-simulators_DEPS
   "opm-common REQUIRED"
   "opm-parser REQUIRED"
   "opm-grid REQUIRED"
-  "opm-core REQUIRED"
   "opm-output REQUIRED"
   "ewoms REQUIRED"
   # Eigen
