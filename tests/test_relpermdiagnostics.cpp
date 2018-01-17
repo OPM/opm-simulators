@@ -51,9 +51,8 @@ BOOST_AUTO_TEST_CASE(diagnosis)
 {
     using namespace Opm;
     Parser parser;
-    Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }, 
-                              { ParseContext::PARSE_UNKNOWN_KEYWORD, InputError::IGNORE}
-                             });
+    Opm::ParseContext parseContext;
+
     Opm::Deck deck = parser.parseFile("../tests/relpermDiagnostics.DATA", parseContext);
     EclipseState eclState(deck, parseContext);
     GridManager gm(eclState.getInputGrid());
