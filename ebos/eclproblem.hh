@@ -1207,9 +1207,8 @@ private:
                 if (!dRsDtOnlyFreeGas_ || fs.saturation(gasPhaseIdx) > freeGasMinSaturation_)
                     lastRs_[compressedDofIdx] =
                         Opm::BlackOil::template getRs_<FluidSystem,
-                                                       Scalar,
-                                                       FluidState>(fs,
-                                                                   iq.pvtRegionIndex());
+                                                       FluidState,
+                                                       Scalar>(fs, iq.pvtRegionIndex());
                 else
                     lastRs_[compressedDofIdx] = std::numeric_limits<Scalar>::infinity();
             }
@@ -1236,9 +1235,8 @@ private:
 
                 lastRv_[compressedDofIdx] =
                     Opm::BlackOil::template getRv_<FluidSystem,
-                                                   Scalar,
-                                                   FluidState>(fs,
-                                                               iq.pvtRegionIndex());
+                                                   FluidState,
+                                                   Scalar>(fs, iq.pvtRegionIndex());
             }
         }
     }
