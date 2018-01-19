@@ -154,11 +154,12 @@ public:
 
         // collect all data to I/O rank and assign to sol
         Opm::data::Solution localCellData;
-        eclOutputModule_.assignToSolution(localCellData);
-        if (collectToIORank_.isParallel())
-            collectToIORank_.collect(localCellData);
+        if (eclOutputModule_.outputRestart())
+            eclOutputModule_.assignToSolution(localCellData);
 
-        //if (!substep)
+        if (collectToIORank_.isParallel())
+            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockValues());
+
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
         eclOutputModule_.outputFIPLog(miscSummaryData, regionData, substep);
@@ -169,7 +170,7 @@ public:
             std::map<std::string, std::vector<double>> extraRestartData;
 
             // Add suggested next timestep to extra data.
-            if (!substep)
+            if (eclOutputModule_.outputRestart())
                 extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextstep);
 
             // Add TCPU
@@ -178,6 +179,8 @@ public:
             }
             bool enableDoublePrecisionOutput = false; //EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
             const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
+            const std::map<std::pair<std::string, int>, double>& blockValues = collectToIORank_.isParallel() ? collectToIORank_.globalBlockValues() : eclOutputModule_.getBlockValues();
+
             eclIO_->writeTimeStep(episodeIdx,
                                   substep,
                                   t,
@@ -185,6 +188,7 @@ public:
                                   dw,
                                   miscSummaryData,
                                   regionData,
+                                  blockValues,
                                   extraRestartData,
                                   enableDoublePrecisionOutput);
         }

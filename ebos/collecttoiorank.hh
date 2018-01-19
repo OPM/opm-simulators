@@ -281,18 +281,25 @@ namespace Ewoms
             const Opm::data::Solution& localCellData_;
             Opm::data::Solution& globalCellData_;
 
+            const std::map<std::pair<std::string, int>, double>& localBlockData_;
+            std::map<std::pair<std::string, int>, double>& globalBlockValues_;
+
             const IndexMapType& localIndexMap_;
             const IndexMapStorageType& indexMaps_;
 
         public:
             PackUnPack( const Opm::data::Solution& localCellData,
                         Opm::data::Solution& globalCellData,
+                        const std::map<std::pair<std::string, int>, double>& localBlockData,
+                        std::map<std::pair<std::string, int>, double>& globalBlockValues,
                         const IndexMapType& localIndexMap,
                         const IndexMapStorageType& indexMaps,
                         const size_t globalSize,
                         const bool isIORank )
             : localCellData_( localCellData ),
               globalCellData_( globalCellData ),
+              localBlockData_( localBlockData ),
+              globalBlockValues_( globalBlockValues ),
               localIndexMap_( localIndexMap ),
               indexMaps_( indexMaps )
             {
@@ -332,6 +339,14 @@ namespace Ewoms
                     write( buffer, localIndexMap_, data);
                 }
 
+                // write all block data
+                unsigned int size = localBlockData_.size();
+                buffer.write( size );
+                for (const auto& map : localBlockData_) {
+                    buffer.write(map.first.first);
+                    buffer.write(map.first.second);
+                    buffer.write(map.second);
+                }
             }
 
             void doUnpack( const IndexMapType& indexMap, MessageBufferType& buffer )
@@ -344,6 +359,19 @@ namespace Ewoms
 
                     //write all data from local cell data to buffer
                     read( buffer, indexMap, data);
+                }
+
+                // write all block data
+                unsigned int size = 0;
+                buffer.read(size);
+                for (size_t i = 0; i < size; ++i) {
+                    std::string name;
+                    int idx;
+                    double data;
+                    buffer.read( name );
+                    buffer.read( idx );
+                    buffer.read( data );
+                    globalBlockValues_[std::make_pair(name, idx)] = data;
                 }
             }
 
@@ -393,9 +421,10 @@ namespace Ewoms
         };
 
         // gather solution to rank 0 for EclipseWriter
-        void collect( const Opm::data::Solution& localCellData )
+        void collect( const Opm::data::Solution& localCellData, const std::map<std::pair<std::string, int>, double>& localBlockValues)
         {
             globalCellData_ = {};
+            globalBlockValues_.clear();
             // index maps only have to be build when reordering is needed
             if( ! needsReordering && ! isParallel() )
             {
@@ -406,6 +435,8 @@ namespace Ewoms
             PackUnPack
                 packUnpack( localCellData,
                             globalCellData_,
+                            localBlockValues,
+                            globalBlockValues_,
                             localIndexMap_,
                             indexMaps_,
                             numCells(),
@@ -424,6 +455,11 @@ namespace Ewoms
             // mkae sure every process is on the same page
             toIORankComm_.barrier();
 #endif
+        }
+
+        const std::map<std::pair<std::string, int>, double>& globalBlockValues() const
+        {
+            return globalBlockValues_;
         }
 
         const Opm::data::Solution& globalCellData() const
@@ -472,6 +508,7 @@ namespace Ewoms
         IndexMapStorageType             indexMaps_;
         std::vector<int>                globalRanks_;
         Opm::data::Solution             globalCellData_;
+        std::map<std::pair<std::string, int>, double> globalBlockValues_;
     };
 
 } // end namespace Opm

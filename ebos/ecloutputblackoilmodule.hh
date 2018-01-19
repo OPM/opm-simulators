@@ -117,47 +117,9 @@ public:
         if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
             return;
 
-        std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
-        for (auto& keyValue : rstKeywords) {
-            keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
-        }
-
+        // Summary output is for all steps
         const Opm::SummaryConfig summaryConfig = simulator_.gridManager().summaryConfig();
-
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
-                continue;
-
-            if (!substep || (phaseIdx == waterPhaseIdx && summaryConfig.require3DField("SWAT") )
-                    || (phaseIdx == gasPhaseIdx && summaryConfig.require3DField("SGAS") )  )
-                saturation_[phaseIdx].resize(bufferSize,0.0);
-        }
-
-        if (!substep || summaryConfig.require3DField("PRESSURE"))
-            oilPressure_.resize(bufferSize,0.0);
-
-        if (!substep || summaryConfig.require3DField("TEMP"))
-            temperature_.resize(bufferSize,0.0);
-
-        // Output the same as legacy
-        // TODO: Only needed if DISGAS or VAPOIL
-        if (true) {
-            if (!substep || summaryConfig.require3DField("RS"))
-                rs_.resize(bufferSize,0.0);
-        }
-        if (true) {
-            if (!substep || summaryConfig.require3DField("RV"))
-                rv_.resize(bufferSize,0.0);
-        }
-
-        if (GET_PROP_VALUE(TypeTag, EnableSolvent)) {
-            if (!substep || summaryConfig.require3DField("SSOL"))
-                sSol_.resize(bufferSize,0.0);
-        }
-        if (GET_PROP_VALUE(TypeTag, EnablePolymer)) {
-            if (!substep || summaryConfig.require3DField("POLYMER"))
-                cPolymer_.resize(bufferSize,0.0);
-        }
+        blockValues_.clear();
 
         // Fluid in place
         for (int i = 0; i<FIPDataType::numFipValues; i++) {
@@ -172,7 +134,42 @@ public:
             pPvHydrocarbon_.resize(bufferSize, 0.0);
         }
 
-        if (!substep) {
+        outputRestart_ = false;
+        // Only provide restart on restart steps
+        if (!restartConfig.getWriteRestartFile(reportStepNum) || substep)
+            return;
+
+        outputRestart_ = true;
+
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx))
+                continue;
+
+            saturation_[phaseIdx].resize(bufferSize,0.0);
+        }
+
+        oilPressure_.resize(bufferSize,0.0);
+
+        if (true)
+            temperature_.resize(bufferSize,0.0);
+
+        // Output the same as legacy
+        // TODO: Only needed if DISGAS or VAPOIL
+        if (true) {
+            rs_.resize(bufferSize,0.0);
+        }
+        if (true) {
+            rv_.resize(bufferSize,0.0);
+        }
+
+        if (GET_PROP_VALUE(TypeTag, EnableSolvent)) {
+            sSol_.resize(bufferSize,0.0);
+        }
+        if (GET_PROP_VALUE(TypeTag, EnablePolymer)) {
+            cPolymer_.resize(bufferSize,0.0);
+        }
+
+        if (true) {
         // Output the same as legacy
         // TODO: Only needed if Vappars or hysteresis.
             soMax_.resize(bufferSize,0.0);
@@ -182,9 +179,11 @@ public:
             krnSwMdcGo_.resize(bufferSize,0.0);
         }
 
-        // Only provide RESTART_AUXILIARY if it is asked for by the user
-        if (!restartConfig.getWriteRestartFile(reportStepNum) || substep)
-            return;
+        // Only output RESTART_AUXILIARY asked for by the user.
+        std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
+        for (auto& keyValue : rstKeywords) {
+            keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
+        }
 
         // Output the same as legacy
         // TODO: Only needed if DISGAS or VAPOIL
@@ -299,6 +298,7 @@ public:
         if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
             return;
 
+        const Opm::SummaryConfig& summaryConfig = simulator_.gridManager().summaryConfig();
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
@@ -562,8 +562,24 @@ public:
                     fip_[FIPDataType::GasInPlace][globalDofIdx] += gipl;
             }
 
+            // Adding block values
+            const auto globalIdx = elemCtx.simulator().gridManager().grid().globalCell()[globalDofIdx];
+            for( const auto& node : summaryConfig ) {
+                if (node.type() == ECL_SMSPEC_BLOCK_VAR) {
+                    int global_index = node.num() - 1;
+                    std::pair<std::string, int> key = std::make_pair(node.keyword(), node.num());
+                    if (global_index == globalIdx) {
+                        if (strcmp(node.keyword(),"BGSAT")) {
+                            blockValues_[key] = Toolbox::value(fs.saturation(waterPhaseIdx));
+                        } else if (strcmp(node.keyword(),"BWSAT")) {
+                            blockValues_[key] = Toolbox::value(fs.saturation(gasPhaseIdx));
+                        } else if (strcmp(node.keyword(),"BPR")) {
+                            blockValues_[key] = Toolbox::value(fs.pressure(oilPhaseIdx));
+                        }
+                    }
+                }
+            }
         }
-
     }
 
 
@@ -989,6 +1005,14 @@ public:
         return 0;
     }
 
+    const std::map<std::pair<std::string, int>, double>& getBlockValues() {
+        return blockValues_;
+    }
+
+    const bool outputRestart() const {
+        return outputRestart_;
+    }
+
 
 private:
 
@@ -1055,6 +1079,7 @@ private:
         Scalar pvHydrocarbonSum = 0.0;
         size_t numElem = pPv_.size();
         for (size_t elem = 0; elem < numElem; ++elem) {
+            //ignore ghost cells (all ghost cells has fipnum == 0)
             if(static_cast<int>(fipnum_[elem]) == reg || (-1 == reg && fipnum_[elem] > 0) )
             {
                 pPvSum += pPv_[elem];;
@@ -1110,8 +1135,6 @@ private:
             OPM_THROW(std::runtime_error, "Unsupported unit type for fluid in place output.");
         }
     }
-
-
 
     void outputRegionFluidInPlace_(const ScalarBuffer& oip, const ScalarBuffer& cip, const Scalar& pav, const int reg)
     {
@@ -1175,6 +1198,8 @@ private:
 
     const Simulator& simulator_;
 
+    bool outputRestart_;
+
     ScalarBuffer saturation_[numPhases];
     ScalarBuffer oilPressure_;
     ScalarBuffer temperature_;
@@ -1208,7 +1233,7 @@ private:
     ScalarBuffer pvHydrocarbon_;
     ScalarBuffer pPv_;
     ScalarBuffer pPvHydrocarbon_;
-
+    std::map<std::pair<std::string, int>, double> blockValues_;
 };
 } // namespace Ewoms
 
