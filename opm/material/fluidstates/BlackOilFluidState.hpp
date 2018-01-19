@@ -52,14 +52,14 @@ unsigned getPvtRegionIndex_(typename std::enable_if<!HasMember_pvtRegionIndex<Fl
 
 OPM_GENERATE_HAS_MEMBER(invB, ) // Creates 'HasMember_invB<T>'.
 
-template <class FluidState, class FluidSystem, class LhsEval>
+template <class FluidSystem, class FluidState, class LhsEval>
 LhsEval getInvB_(typename std::enable_if<HasMember_invB<FluidState>::value,
                                          const FluidState&>::type fluidState,
                  unsigned phaseIdx,
                  unsigned pvtRegionIdx OPM_UNUSED)
 { return Opm::decay<LhsEval>(fluidState.invB(phaseIdx)); }
 
-template <class FluidState, class FluidSystem, class LhsEval>
+template <class FluidSystem, class FluidState, class LhsEval>
 LhsEval getInvB_(typename std::enable_if<!HasMember_invB<FluidState>::value,
                                          const FluidState&>::type fluidState,
                  unsigned phaseIdx,
@@ -144,8 +144,8 @@ public:
 
         unsigned pvtRegionIdx = getPvtRegionIndex_<FluidState>(fs);
         setPvtRegionIndex(pvtRegionIdx);
-        setRs(Opm::BlackOil::getRs_<FluidSystem, Scalar, FluidState>(fs, pvtRegionIdx));
-        setRv(Opm::BlackOil::getRv_<FluidSystem, Scalar, FluidState>(fs, pvtRegionIdx));
+        setRs(Opm::BlackOil::getRs_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
+        setRv(Opm::BlackOil::getRv_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             setSaturation(phaseIdx, fs.saturation(phaseIdx));
@@ -155,7 +155,7 @@ public:
             if (enableEnergy)
                 setEnthalpy(phaseIdx, fs.enthalpy(phaseIdx));
 
-            setInvB(phaseIdx, getInvB_<FluidState, FluidSystem, Scalar>(fs, phaseIdx, pvtRegionIdx));
+            setInvB(phaseIdx, getInvB_<FluidSystem, FluidState, Scalar>(fs, phaseIdx, pvtRegionIdx));
         }
     }
 
