@@ -65,7 +65,7 @@ LhsEval getInvB_(typename std::enable_if<!HasMember_invB<FluidState>::value,
 {
     const auto& rho = fluidState.density(phaseIdx);
     const auto& Xsolvent =
-        fluidState.massFraction(phaseIdx, FluidSystem::solventComponentIndx(phaseIdx));
+        fluidState.massFraction(phaseIdx, FluidSystem::solventComponentIndex(phaseIdx));
 
     unsigned pvtRegionIdx = getPvtRegionIndex_(fluidState);
     return
