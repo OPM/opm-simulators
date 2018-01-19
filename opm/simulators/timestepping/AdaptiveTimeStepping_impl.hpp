@@ -333,7 +333,7 @@ namespace Opm {
                     perfTimer.start();
                     bool substep = true;
                     const auto& physicalModel = solver.model();
-                    outputWriter->writeTimeStep( substepTimer, state, well_state, physicalModel, substep);
+                    outputWriter->writeTimeStep( substepTimer, state, well_state, physicalModel, substep, -1.0, substepReport);
                     report.output_write_time += perfTimer.secsSinceStart();
                 }
 

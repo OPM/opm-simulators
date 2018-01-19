@@ -31,7 +31,6 @@
 #include <opm/autodiff/BlackoilWellModel.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
-#include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 
 #include <opm/common/Exceptions.hpp>
@@ -119,7 +118,6 @@ public:
             is_parallel_run_ = ( info.communicator().size() > 1 );
         }
 #endif
-        createLocalFipnum();
     }
 
     /// Run the simulation.
@@ -198,19 +196,10 @@ public:
 
             auto solver = createSolver(well_model);
 
-            // Compute orignal fluid in place if this has not been done yet
-            if (originalFluidInPlace_.data.empty()) {
-                originalFluidInPlace_ = computeFluidInPlace(*solver);
-            }
-
             // write the inital state at the report stage
             if (timer.initialStep()) {
                 Dune::Timer perfTimer;
                 perfTimer.start();
-
-                if (terminal_output_) {
-                    outputFluidInPlace(timer, originalFluidInPlace_);
-                }
 
                 // No per cell data is written for initial step, but will be
                 // for subsequent steps, when we have started simulating
@@ -250,8 +239,7 @@ public:
                         events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE, timer.currentStepNum());
-                stepReport = adaptiveTimeStepping->step( timer, *solver, dummy_state, wellStateDummy, event, output_writer_,
-                                                         output_writer_.requireFIPNUM() ? &fipnum_ : nullptr );
+                stepReport = adaptiveTimeStepping->step( timer, *solver, dummy_state, wellStateDummy, event, output_writer_, nullptr );
                 report += stepReport;
                 failureReport_ += adaptiveTimeStepping->failureReport();
             }
@@ -288,25 +276,29 @@ public:
             // Increment timer, remember well state.
             ++timer;
 
-            // Compute current fluid in place.
-            const auto currentFluidInPlace = computeFluidInPlace(*solver);
 
             if (terminal_output_ )
             {
-                outputFluidInPlace(timer, currentFluidInPlace);
-
-                std::string msg =
-                    "Time step took " + std::to_string(solver_timer.secsSinceStart()) + " seconds; "
-                    "total solver time " + std::to_string(report.solver_time) + " seconds.";
-                OpmLog::debug(msg);
+                if (!timer.initialStep()) {
+                    const std::string version = moduleVersionName();
+                    outputTimestampFIP(timer, version);
+                }
             }
 
             // write simulation state at the report stage
             Dune::Timer perfTimer;
             perfTimer.start();
-            const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
+            const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;            
             output_writer_.writeTimeStep( timer, dummy_state, well_model.wellState(), solver->model(), false, nextstep, report);
             report.output_write_time += perfTimer.stop();
+
+            if (terminal_output_ )
+            {
+                std::string msg =
+                    "Time step took " + std::to_string(solver_timer.secsSinceStart()) + " seconds; "
+                    "total solver time " + std::to_string(report.solver_time) + " seconds.";
+                OpmLog::debug(msg);
+            }
 
         }
 
@@ -337,150 +329,6 @@ protected:
         return std::unique_ptr<Solver>(new Solver(solver_param_, std::move(model)));
     }
 
-
-    void createLocalFipnum()
-    {
-        const std::vector<int>& fipnum_global = eclState().get3DProperties().getIntGridProperty("FIPNUM").getData();
-        // Get compressed cell fipnum.
-        fipnum_.resize(Opm::UgGridHelpers::numCells(grid()));
-        if (fipnum_global.empty()) {
-            std::fill(fipnum_.begin(), fipnum_.end(), 0);
-        } else {
-            for (size_t c = 0; c < fipnum_.size(); ++c) {
-                fipnum_[c] = fipnum_global[Opm::UgGridHelpers::globalCell(grid())[c]];
-            }
-        }
-    }
-
-
-    void FIPUnitConvert(const UnitSystem& units,
-                        std::vector<std::vector<double>>& fip)
-    {
-        for (size_t i = 0; i < fip.size(); ++i) {
-            FIPUnitConvert(units, fip[i]);
-        }
-    }
-
-
-    void FIPUnitConvert(const UnitSystem& units,
-                        std::vector<double>& fip)
-    {
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            fip[0] = unit::convert::to(fip[0], unit::stb);
-            fip[1] = unit::convert::to(fip[1], unit::stb);
-            fip[2] = unit::convert::to(fip[2], 1000*unit::cubic(unit::feet));
-            fip[3] = unit::convert::to(fip[3], 1000*unit::cubic(unit::feet));
-            fip[4] = unit::convert::to(fip[4], unit::stb);
-            fip[5] = unit::convert::to(fip[5], unit::stb);
-            fip[6] = unit::convert::to(fip[6], unit::psia);
-        }
-        else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            fip[6] = unit::convert::to(fip[6], unit::barsa);
-        }
-        else {
-            OPM_THROW(std::runtime_error, "Unsupported unit type for fluid in place output.");
-        }
-    }
-
-
-    std::vector<double> FIPTotals(const std::vector<std::vector<double>>& fip)
-    {
-        std::vector<double> totals(7,0.0);
-        for (int i = 0; i < 5; ++i) {
-            for (size_t reg = 0; reg < fip.size(); ++reg) {
-                totals[i] += fip[reg][i];
-            }
-        }
-
-        const auto& gridView = ebosSimulator_.gridManager().gridView();
-        const auto& comm = gridView.comm();
-        double pv_hydrocarbon_sum = 0.0;
-        double p_pv_hydrocarbon_sum = 0.0;
-
-        ElementContext elemCtx(ebosSimulator_);
-        const auto& elemEndIt = gridView.template end</*codim=*/0>();
-        for (auto elemIt = gridView.template begin</*codim=*/0>();
-             elemIt != elemEndIt;
-             ++elemIt)
-        {
-            const auto& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity) {
-                continue;
-            }
-
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-            const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& fs = intQuants.fluidState();
-
-            const double p = fs.pressure(FluidSystem::oilPhaseIdx).value();
-            const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
-
-            // calculate the pore volume of the current cell. Note that the
-            // porosity returned by the intensive quantities is defined as the
-            // ratio of pore space to total cell volume and includes all pressure
-            // dependent (-> rock compressibility) and static modifiers (MULTPV,
-            // MULTREGP, NTG, PORV, MINPV and friends). Also note that because of
-            // this, the porosity returned by the intensive quantities can be
-            // outside of the physical range [0, 1] in pathetic cases.
-            const double pv =
-                ebosSimulator_.model().dofTotalVolume(cellIdx)
-                * intQuants.porosity().value();
-
-            totals[5] += pv;
-            pv_hydrocarbon_sum += pv*hydrocarbon;
-            p_pv_hydrocarbon_sum += p*pv*hydrocarbon;
-        }
-
-        pv_hydrocarbon_sum = comm.sum(pv_hydrocarbon_sum);
-        p_pv_hydrocarbon_sum = comm.sum(p_pv_hydrocarbon_sum);
-        totals[5] = comm.sum(totals[5]);
-        totals[6] = (p_pv_hydrocarbon_sum / pv_hydrocarbon_sum);
-
-        return totals;
-    }
-
-
-    struct FluidInPlace
-    {
-        std::vector<std::vector<double>> data;
-        std::vector<double> totals;
-    };
-
-
-    FluidInPlace computeFluidInPlace(const Solver& solver)
-    {
-        FluidInPlace fip;
-        fip.data = solver.computeFluidInPlace(fipnum_);
-        fip.totals = FIPTotals(fip.data);
-        FIPUnitConvert(eclState().getUnits(), fip.data);
-        FIPUnitConvert(eclState().getUnits(), fip.totals);
-        return fip;
-    }
-
-
-    void outputFluidInPlace(const SimulatorTimer& timer,
-                            const FluidInPlace& currentFluidInPlace)
-    {
-        if (!timer.initialStep()) {
-            const std::string version = moduleVersionName();
-            outputTimestampFIP(timer, version);
-        }
-        outputRegionFluidInPlace(originalFluidInPlace_.totals,
-                                 currentFluidInPlace.totals,
-                                 eclState().getUnits(),
-                                 0);
-        for (size_t reg = 0; reg < originalFluidInPlace_.data.size(); ++reg) {
-            outputRegionFluidInPlace(originalFluidInPlace_.data[reg],
-                                     currentFluidInPlace.data[reg],
-                                     eclState().getUnits(),
-                                     reg+1);
-        }
-    }
-
-
     void outputTimestampFIP(const SimulatorTimer& timer, const std::string version)
     {
         std::ostringstream ss;
@@ -495,50 +343,6 @@ protected:
         OpmLog::note(ss.str());
     }
 
-
-    void outputRegionFluidInPlace(const std::vector<double>& oip, const std::vector<double>& cip, const UnitSystem& units, const int reg)
-    {
-        std::ostringstream ss;
-        if (!reg) {
-            ss << "                                                  ===================================================\n"
-               << "                                                  :                   Field Totals                  :\n";
-        } else {
-            ss << "                                                  ===================================================\n"
-               << "                                                  :        FIPNUM report region  "
-               << std::setw(2) << reg << "                 :\n";
-        }
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            ss << "                                                  :      PAV  =" << std::setw(14) << cip[6] << " BARSA                 :\n"
-               << std::fixed << std::setprecision(0)
-               << "                                                  :      PORV =" << std::setw(14) << cip[5] << "   RM3                 :\n";
-            if (!reg) {
-                ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
-                   << "                                                  : Porv volumes are taken at reference conditions  :\n";
-            }
-            ss << "                         :--------------- Oil    SM3 ---------------:-- Wat    SM3 --:--------------- Gas    SM3 ---------------:\n";
-        }
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            ss << "                                                  :      PAV  =" << std::setw(14) << cip[6] << "  PSIA                 :\n"
-               << std::fixed << std::setprecision(0)
-               << "                                                  :      PORV =" << std::setw(14) << cip[5] << "   RB                  :\n";
-            if (!reg) {
-                ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
-                   << "                                                  : Pore volumes are taken at reference conditions  :\n";
-            }
-            ss << "                         :--------------- Oil    STB ---------------:-- Wat    STB --:--------------- Gas   MSCF ---------------:\n";
-        }
-        ss << "                         :      Liquid        Vapour        Total   :      Total     :      Free        Dissolved       Total   :" << "\n"
-           << ":------------------------:------------------------------------------:----------------:------------------------------------------:" << "\n"
-           << ":Currently   in place    :" << std::setw(14) << cip[1] << std::setw(14) << cip[4] << std::setw(14) << (cip[1]+cip[4]) << ":"
-           << std::setw(13) << cip[0] << "   :" << std::setw(14) << (cip[2]) << std::setw(14) << cip[3] << std::setw(14) << (cip[2] + cip[3]) << ":\n"
-           << ":------------------------:------------------------------------------:----------------:------------------------------------------:\n"
-           << ":Originally  in place    :" << std::setw(14) << oip[1] << std::setw(14) << oip[4] << std::setw(14) << (oip[1]+oip[4]) << ":"
-           << std::setw(13) << oip[0] << "   :" << std::setw(14) << oip[2] << std::setw(14) << oip[3] << std::setw(14) << (oip[2] + oip[3]) << ":\n"
-           << ":========================:==========================================:================:==========================================:\n";
-        OpmLog::note(ss.str());
-    }
-
-
     const EclipseState& eclState() const
     { return ebosSimulator_.gridManager().eclState(); }
 
@@ -549,9 +353,6 @@ protected:
 
     // Data.
     Simulator& ebosSimulator_;
-
-    std::vector<int> fipnum_;
-    FluidInPlace originalFluidInPlace_;
 
     typedef typename Solver::SolverParameters SolverParameters;
 
