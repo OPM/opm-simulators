@@ -50,13 +50,14 @@ unsigned getPvtRegionIndex_(typename std::enable_if<!HasMember_pvtRegionIndex<Fl
                                                     const FluidState&>::type fluidState OPM_UNUSED)
 { return 0; }
 
-OPM_GENERATE_HAS_MEMBER(invB, ) // Creates 'HasMember_invB<T>'.
+OPM_GENERATE_HAS_MEMBER(invB, /*phaseIdx=*/0) // Creates 'HasMember_invB<T>'.
 
 template <class FluidSystem, class FluidState, class LhsEval>
-LhsEval getInvB_(typename std::enable_if<HasMember_invB<FluidState>::value,
-                                         const FluidState&>::type fluidState,
-                 unsigned phaseIdx,
-                 unsigned pvtRegionIdx OPM_UNUSED)
+auto getInvB_(typename std::enable_if<HasMember_invB<FluidState>::value,
+                                      const FluidState&>::type fluidState,
+              unsigned phaseIdx,
+              unsigned pvtRegionIdx OPM_UNUSED)
+    -> decltype(Opm::decay<LhsEval>(fluidState.invB(phaseIdx)))
 { return Opm::decay<LhsEval>(fluidState.invB(phaseIdx)); }
 
 template <class FluidSystem, class FluidState, class LhsEval>
