@@ -407,7 +407,7 @@ namespace Opm
 
             const bool restart_double_si  = param_.getDefault("restart_double_si", false);
             std::string outputDoublePrecisionParam("--ecl-output-double-precision=");
-            outputDoublePrecisionParam += restart_double_si;
+            outputDoublePrecisionParam += restart_double_si ? "true" : "false";
             argv.push_back(outputDoublePrecisionParam.c_str());
 
 #if defined(_OPENMP)
