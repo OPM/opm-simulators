@@ -83,6 +83,7 @@ class EclWriter
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GridView::template Codim<0>::Entity Element;
     typedef typename GridView::template Codim<0>::Iterator ElementIterator;
 
@@ -199,11 +200,11 @@ public:
     void restartBegin()
     {
         std::map<std::string, Opm::RestartKey> solution_keys {{"PRESSURE" , Opm::RestartKey(Opm::UnitSystem::measure::pressure)},
-                                                         {"SWAT" , Opm::RestartKey(Opm::UnitSystem::measure::identity)},
-                                                         {"SGAS" , Opm::RestartKey(Opm::UnitSystem::measure::identity)},
-                                                         {"TEMP" , Opm::RestartKey(Opm::UnitSystem::measure::temperature)},
-                                                         {"RS" , Opm::RestartKey(Opm::UnitSystem::measure::gas_oil_ratio)},
-                                                         {"RV" , Opm::RestartKey(Opm::UnitSystem::measure::oil_gas_ratio)},
+                                                         {"SWAT" , Opm::RestartKey(Opm::UnitSystem::measure::identity, FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
+                                                         {"SGAS" , Opm::RestartKey(Opm::UnitSystem::measure::identity, FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
+                                                         {"TEMP" , Opm::RestartKey(Opm::UnitSystem::measure::temperature)}, // always required for now
+                                                         {"RS" , Opm::RestartKey(Opm::UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas())},
+                                                         {"RV" , Opm::RestartKey(Opm::UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil())},
                                                          {"SOMAX", {Opm::UnitSystem::measure::identity, false}},
                                                          {"PCSWM_OW", {Opm::UnitSystem::measure::identity, false}},
                                                          {"KRNSW_OW", {Opm::UnitSystem::measure::identity, false}},

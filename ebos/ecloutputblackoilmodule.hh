@@ -121,9 +121,20 @@ public:
         const Opm::SummaryConfig summaryConfig = simulator_.gridManager().summaryConfig();
         blockValues_.clear();
 
+        // Only output RESTART_AUXILIARY asked for by the user.
+        std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
+        for (auto& keyValue : rstKeywords) {
+            keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
+        }
+
+        outputFipRestart_ = false;
         // Fluid in place
         for (int i = 0; i<FIPDataType::numFipValues; i++) {
             if (!substep || summaryConfig.require3DField(stringOfEnumIndex_(i))) {
+                if (rstKeywords["FIP"] > 0) {
+                    rstKeywords["FIP"] = 0;
+                    outputFipRestart_ = true;
+                }
                 fip_[i].resize(bufferSize, 0.0);
             }
         }
@@ -141,24 +152,23 @@ public:
 
         outputRestart_ = true;
 
+        // always output saturation of active phases
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
 
             saturation_[phaseIdx].resize(bufferSize,0.0);
         }
-
+        // and oil pressure
         oilPressure_.resize(bufferSize,0.0);
 
-        if (true)
+        if (true) // adding some logic here when the energy module is done
             temperature_.resize(bufferSize,0.0);
 
-        // Output the same as legacy
-        // TODO: Only needed if DISGAS or VAPOIL
-        if (true) {
+        if (FluidSystem::enableDissolvedGas()) {
             rs_.resize(bufferSize,0.0);
         }
-        if (true) {
+        if (FluidSystem::enableVaporizedOil()) {
             rv_.resize(bufferSize,0.0);
         }
 
@@ -169,33 +179,23 @@ public:
             cPolymer_.resize(bufferSize,0.0);
         }
 
-        if (true) {
-        // Output the same as legacy
-        // TODO: Only needed if Vappars or hysteresis.
+        if (simulator_.problem().vapparsActive())
             soMax_.resize(bufferSize,0.0);
+
+        if (simulator_.problem().materialLawManager()->enableHysteresis()) {
             pcSwMdcOw_.resize(bufferSize,0.0);
             krnSwMdcOw_.resize(bufferSize,0.0);
             pcSwMdcGo_.resize(bufferSize,0.0);
             krnSwMdcGo_.resize(bufferSize,0.0);
         }
 
-        // Only output RESTART_AUXILIARY asked for by the user.
-        std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
-        for (auto& keyValue : rstKeywords) {
-            keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
+        if (FluidSystem::enableDissolvedGas() && rstKeywords["RSSAT"] > 0) {
+            rstKeywords["RSSAT"] = 0;
+            gasDissolutionFactor_.resize(bufferSize,0.0);
         }
-
-        // Output the same as legacy
-        // TODO: Only needed if DISGAS or VAPOIL
-        if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
-            if (rstKeywords["RSSAT"] > 0) {
-                rstKeywords["RSSAT"] = 0;
-                gasDissolutionFactor_.resize(bufferSize,0.0);
-            }
-            if (rstKeywords["RVSAT"] > 0) {
-                rstKeywords["RVSAT"] = 0;
-                oilVaporizationFactor_.resize(bufferSize,0.0);
-            }
+        if (FluidSystem::enableVaporizedOil() && rstKeywords["RVSAT"] > 0) {
+            rstKeywords["RVSAT"] = 0;
+            oilVaporizationFactor_.resize(bufferSize,0.0);
         }
 
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["BW"] > 0)
@@ -569,11 +569,11 @@ public:
                     int global_index = node.num() - 1;
                     std::pair<std::string, int> key = std::make_pair(node.keyword(), node.num());
                     if (global_index == globalIdx) {
-                        if (strcmp(node.keyword(),"BGSAT")) {
+                        if (key.first == "BWSAT") {
                             blockValues_[key] = Toolbox::value(fs.saturation(waterPhaseIdx));
-                        } else if (strcmp(node.keyword(),"BWSAT")) {
+                        } else if (key.first == "BGSAT") {
                             blockValues_[key] = Toolbox::value(fs.saturation(gasPhaseIdx));
-                        } else if (strcmp(node.keyword(),"BPR")) {
+                        } else if (key.first == "BPR") {
                             blockValues_[key] = Toolbox::value(fs.pressure(oilPhaseIdx));
                         }
                     }
@@ -754,10 +754,9 @@ public:
         if (bubblePointPressure_.size() > 0)
             sol.insert ("PBUB", Opm::UnitSystem::measure::pressure, std::move(bubblePointPressure_), Opm::data::TargetType::RESTART_AUXILIARY);
 
-        // Summary FIP output
         // Fluid in place
         for (int i = 0; i<FIPDataType::numFipValues; i++) {
-            if (fip_[i].size() > 0) {
+            if (outputFipRestart_ && fip_[i].size() > 0) {
                 sol.insert(stringOfEnumIndex_(i),
                            Opm::UnitSystem::measure::volume,
                            fip_[i] ,
@@ -774,33 +773,30 @@ public:
         ntFip = comm.max(ntFip);
 
         // sum values over each region
-        ScalarBuffer regionValues[FIPDataType::numFipValues];
+        ScalarBuffer regionFipValues[FIPDataType::numFipValues];
         for (int i = 0; i<FIPDataType::numFipValues; i++) {
-            regionValues[i] = FIPTotals_(fip_[i], fipnum_, ntFip);
+            regionFipValues[i] = FIPTotals_(fip_[i], fipnum_, ntFip);
             if (isIORank_() && origRegionValues_[i].empty())
-                origRegionValues_[i] = regionValues[i];
+                origRegionValues_[i] = regionFipValues[i];
         }
 
         // sum all region values to compute the field total
         std::vector<int> fieldNum(ntFip, 1);
-        ScalarBuffer totalValues(FIPDataType::numFipValues,0.0);
-        for (int i = 0; i<FIPDataType::numFipValues; i++) {
-            bool comunicateSum = false; // the regionValues are already summed over all ranks.
-            const ScalarBuffer& tmp = FIPTotals_(regionValues[i], fieldNum, 1, comunicateSum);
-            totalValues[i] = tmp[0]; //
+        ScalarBuffer fieldFipValues(FIPDataType::numFipValues,0.0);
+        bool comunicateSum = false; // the regionValues are already summed over all ranks.
+        for (int i = 0; i<FIPDataType::numFipValues; i++) {            
+            const ScalarBuffer& tmp = FIPTotals_(regionFipValues[i], fieldNum, 1, comunicateSum);
+            fieldFipValues[i] = tmp[0]; //
         }
-
-        // compute the hydrocarbon averaged pressure over the field.
-        Scalar totalPoreVolumeAveragedPressure;
-        Scalar totalHydroCarbonPoreVolumeAveragedPressure;
-        pressureAverage_(-1, totalPoreVolumeAveragedPressure, totalHydroCarbonPoreVolumeAveragedPressure);
 
         // compute the hydrocarbon averaged pressure over the regions.
-        ScalarBuffer regPoreVolumeAveragedPressure(ntFip,0.0);
-        ScalarBuffer regHydroCarbonPoreVolumeAveragedPressure(ntFip,0.0);
-        for (size_t reg = 0; reg < ntFip; ++reg ) {
-            pressureAverage_(reg + 1, regPoreVolumeAveragedPressure[reg], regHydroCarbonPoreVolumeAveragedPressure[reg]);
-        }
+        ScalarBuffer regPressurePv = FIPTotals_(pPv_, fipnum_, ntFip);
+        ScalarBuffer regPvHydrocarbon = FIPTotals_(pvHydrocarbon_, fipnum_, ntFip);
+        ScalarBuffer regPressurePvHydrocarbon = FIPTotals_(pPvHydrocarbon_, fipnum_, ntFip);
+
+        ScalarBuffer fieldPressurePv = FIPTotals_(regPressurePv, fieldNum, 1, comunicateSum);
+        ScalarBuffer fieldPvHydrocarbon = FIPTotals_(regPvHydrocarbon, fieldNum, 1, comunicateSum);
+        ScalarBuffer fieldPressurePvHydrocarbon = FIPTotals_(regPressurePvHydrocarbon, fieldNum, 1, comunicateSum);
 
         // output on io rank
         // the original Fip values are stored on the first step
@@ -812,38 +808,39 @@ public:
             for (int i = 0; i<FIPDataType::numFipValues; i++) {
                 std::string key = "F" + stringOfEnumIndex_(i);
                 if (summaryConfig.hasKeyword(key))
-                    miscSummaryData[key] = totalValues[i];
+                    miscSummaryData[key] = fieldFipValues[i];
             }
             if (summaryConfig.hasKeyword("FOE") && !origTotalValues_.empty())
-                miscSummaryData["FOE"] = totalValues[FIPDataType::OilInPlace] / origTotalValues_[FIPDataType::OilInPlace];
+                miscSummaryData["FOE"] = fieldFipValues[FIPDataType::OilInPlace] / origTotalValues_[FIPDataType::OilInPlace];
 
             if (summaryConfig.hasKeyword("FPR"))
-                miscSummaryData["FPR"] = totalHydroCarbonPoreVolumeAveragedPressure;
+                miscSummaryData["FPR"] = pressureAverage_(fieldPressurePvHydrocarbon[0], fieldPvHydrocarbon[0], fieldPressurePv[0], fieldFipValues[FIPDataType::PoreVolume], true);
 
             if (summaryConfig.hasKeyword("FPRP"))
-                miscSummaryData["FPRP"] = totalPoreVolumeAveragedPressure;
+                miscSummaryData["FPR"] = pressureAverage_(fieldPressurePvHydrocarbon[0], fieldPvHydrocarbon[0], fieldPressurePv[0], fieldFipValues[FIPDataType::PoreVolume], false);
 
             // Region summary output
             for (int i = 0; i<FIPDataType::numFipValues; i++) {
                 std::string key = "R" + stringOfEnumIndex_(i);
                 if (summaryConfig.hasKeyword(key))
-                    regionData[key] = regionValues[i];
+                    regionData[key] = regionFipValues[i];
             }
             if (summaryConfig.hasKeyword("RPR"))
-                regionData["RPR"] = regHydroCarbonPoreVolumeAveragedPressure;
+                regionData["RPR"] = pressureAverage_(regPressurePvHydrocarbon, regPvHydrocarbon, regPressurePv, regionFipValues[FIPDataType::PoreVolume], true);
 
-            if (summaryConfig.hasKeyword("FPRP"))
-                regionData["FPRP"] = regPoreVolumeAveragedPressure;
+            if (summaryConfig.hasKeyword("RPRP"))
+                regionData["RPRP"] = pressureAverage_(regPressurePvHydrocarbon, regPvHydrocarbon, regPressurePv, regionFipValues[FIPDataType::PoreVolume], false);
 
             // Output to log
             if (!substep) {
 
-                FIPUnitConvert_(totalValues);
+                FIPUnitConvert_(fieldFipValues);
                 if (origTotalValues_.empty())
-                    origTotalValues_ = totalValues;
+                    origTotalValues_ = fieldFipValues;
 
-                pressureUnitConvert_(totalHydroCarbonPoreVolumeAveragedPressure);
-                outputRegionFluidInPlace_(origTotalValues_, totalValues, totalHydroCarbonPoreVolumeAveragedPressure, 0);
+                Scalar fieldHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(fieldPressurePvHydrocarbon[0], fieldPvHydrocarbon[0], fieldPressurePv[0], fieldFipValues[FIPDataType::PoreVolume], true);
+                pressureUnitConvert_(fieldHydroCarbonPoreVolumeAveragedPressure);
+                outputRegionFluidInPlace_(origTotalValues_, fieldFipValues, fieldHydroCarbonPoreVolumeAveragedPressure, 0);
                 for (size_t reg = 0; reg < ntFip; ++reg ) {
                     ScalarBuffer tmpO(FIPDataType::numFipValues,0.0);
                     for (int i = 0; i<FIPDataType::numFipValues; i++) {
@@ -852,11 +849,12 @@ public:
                     FIPUnitConvert_(tmpO);
                     ScalarBuffer tmp(FIPDataType::numFipValues,0.0);
                     for (int i = 0; i<FIPDataType::numFipValues; i++) {
-                        tmp[i] = regionValues[i][reg];
+                        tmp[i] = regionFipValues[i][reg];
                     }
                     FIPUnitConvert_(tmp);
-                    pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure[reg]);
-                    outputRegionFluidInPlace_(tmpO, tmp, regHydroCarbonPoreVolumeAveragedPressure[reg], reg + 1);
+                    Scalar regHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(regPressurePvHydrocarbon[reg], regPvHydrocarbon[reg], regPressurePv[reg], regionFipValues[FIPDataType::PoreVolume][reg], true);
+                    pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure);
+                    outputRegionFluidInPlace_(tmpO, tmp, regHydroCarbonPoreVolumeAveragedPressure, reg + 1);
                 }
             }
         }
@@ -865,7 +863,6 @@ public:
 
     void setRestart(const Opm::data::Solution& sol, unsigned elemIdx, unsigned globalDofIndex) 
     {
-
         Scalar so = 1.0;
         if( sol.has( "SWAT" ) ) {
             saturation_[waterPhaseIdx][elemIdx] = sol.data("SWAT")[globalDofIndex];
@@ -1068,39 +1065,24 @@ private:
         return totals;
     }
 
-    // computes the pore volume weighted averaged pressure
-    // of a region (reg) and the hydrocarbon volume weighted average
-    // if reg == -1, the field average is computed.
-    void pressureAverage_(int reg, Scalar& poreVolumeAveragedPressure, Scalar& hydroCarbonPoreVolumeAveragedPressure)
-    {
-        Scalar pPvSum = 0.0;
-        Scalar pvSum = 0.0;
-        Scalar pPvHydrocarbonSum = 0.0;
-        Scalar pvHydrocarbonSum = 0.0;
-        size_t numElem = pPv_.size();
-        for (size_t elem = 0; elem < numElem; ++elem) {
-            //ignore ghost cells (all ghost cells has fipnum == 0)
-            if(static_cast<int>(fipnum_[elem]) == reg || (-1 == reg && fipnum_[elem] > 0) )
-            {
-                pPvSum += pPv_[elem];;
-                pvSum += fip_[FIPDataType::PoreVolume][elem];
-                pPvHydrocarbonSum += pPvHydrocarbon_[elem];
-                pvHydrocarbonSum += pvHydrocarbon_[elem];
-            }
+    ScalarBuffer pressureAverage_(const ScalarBuffer& pressurePvHydrocarbon, const ScalarBuffer& pvHydrocarbon, const ScalarBuffer& pressurePv, const ScalarBuffer& pv, bool hydrocarbon) {
+        size_t size = pressurePvHydrocarbon.size();
+        assert(pvHydrocarbon.size() == size);
+        assert(pressurePv.size() == size);
+        assert(pv.size() == size);
+
+        ScalarBuffer fraction(size,0.0);
+        for (size_t i = 0; i < size; ++i) {
+            fraction[i] = pressureAverage_(pressurePvHydrocarbon[i], pvHydrocarbon[i], pressurePv[i], pv[i], hydrocarbon);
         }
-        const auto& comm = simulator_.gridView().comm();
-        pPvSum = comm.sum(pPvSum);
-        pvSum = comm.sum(pvSum);
-        pPvHydrocarbonSum = comm.sum(pPvHydrocarbonSum);
-        pvHydrocarbonSum = comm.sum(pvHydrocarbonSum);
+        return fraction;
+    }
 
-        poreVolumeAveragedPressure = pPvSum / pvSum;
-        // use porevolume weighted pressure if no hydrocarbon
-        hydroCarbonPoreVolumeAveragedPressure = poreVolumeAveragedPressure;
+    Scalar pressureAverage_(const Scalar& pressurePvHydrocarbon, const Scalar& pvHydrocarbon, const Scalar& pressurePv, const Scalar& pv, bool hydrocarbon) {
+        if (pvHydrocarbon > 1e-10 && hydrocarbon)
+            return pressurePvHydrocarbon / pvHydrocarbon;
 
-        if (pvHydrocarbonSum > 1e-10)
-            hydroCarbonPoreVolumeAveragedPressure = pPvHydrocarbonSum / pvHydrocarbonSum;
-
+        return pressurePv / pv;
     }
 
     void FIPUnitConvert_(ScalarBuffer& fip)
@@ -1199,6 +1181,7 @@ private:
     const Simulator& simulator_;
 
     bool outputRestart_;
+    bool outputFipRestart_;
 
     ScalarBuffer saturation_[numPhases];
     ScalarBuffer oilPressure_;
@@ -1229,7 +1212,6 @@ private:
     ScalarBuffer fip_[FIPDataType::numFipValues];
     ScalarBuffer origTotalValues_;
     ScalarBuffer origRegionValues_[FIPDataType::numFipValues];
-    ScalarBuffer pv_;
     ScalarBuffer pvHydrocarbon_;
     ScalarBuffer pPv_;
     ScalarBuffer pPvHydrocarbon_;

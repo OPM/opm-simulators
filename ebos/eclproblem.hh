@@ -1176,6 +1176,11 @@ public:
     const Opm::EclipseIO& eclIO() const
     { return eclWriter_->eclIO(); }
 
+    bool vapparsActive() const
+    {
+        return vapparsActive_;
+    }
+
 private:
     Scalar cellCenterDepth( const Element& element ) const
     {
