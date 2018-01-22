@@ -527,7 +527,7 @@ private:
 
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
-        CFRP::solve(fs, paramCache, liquidPhaseIdx, /*setViscosity=*/false,  /*setEnthalpy=*/true);
+        CFRP::solve(fs, paramCache, liquidPhaseIdx, /*setViscosity=*/true,  /*setEnthalpy=*/true);
     }
 
     void computeThermalCondParams_(ThermalConductionLawParams& params, Scalar poro)

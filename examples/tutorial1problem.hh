@@ -243,6 +243,13 @@ public:
             fs.setPressure(wettingPhaseIdx, 200e3);
             fs.setPressure(nonWettingPhaseIdx, 200e3 + pC[nonWettingPhaseIdx] - pC[nonWettingPhaseIdx]);
 
+            typename FluidSystem::template ParameterCache<Scalar> paramCache;
+            paramCache.updateAll(fs);
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                fs.setDensity(phaseIdx, FluidSystem::density(fs, paramCache, phaseIdx));
+                fs.setViscosity(phaseIdx, FluidSystem::viscosity(fs, paramCache, phaseIdx));
+            }
+
             values.setFreeFlow(context, spaceIdx, timeIdx, fs);
         }
         else if (pos[0] > this->boundingBoxMax()[0] - eps_) {

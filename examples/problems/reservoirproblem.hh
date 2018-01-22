@@ -663,7 +663,7 @@ private:
         CFRP::solve(injFs,
                     paramCache,
                     /*refPhaseIdx=*/waterPhaseIdx,
-                    /*setViscosities=*/false,
+                    /*setViscosities=*/true,
                     /*setEnthalpies=*/false);
 
         // set up the fluid state used for the producer
@@ -681,7 +681,7 @@ private:
         CFRP::solve(prodFs,
                     paramCache,
                     /*refPhaseIdx=*/oilPhaseIdx,
-                    /*setViscosities=*/false,
+                    /*setViscosities=*/true,
                     /*setEnthalpies=*/false);
     }
 

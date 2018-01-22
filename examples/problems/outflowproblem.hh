@@ -122,6 +122,8 @@ class OutflowProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         dim = GridView::dimension,
         dimWorld = GridView::dimensionworld,
 
+        numPhases = FluidSystem::numPhases,
+
         // component indices
         H2OIdx = FluidSystem::H2OIdx,
         N2Idx = FluidSystem::N2Idx
@@ -267,6 +269,13 @@ public:
             fs.setMoleFraction(/*phaseIdx=*/0, N2Idx, xlN2);
             fs.setMoleFraction(/*phaseIdx=*/0, H2OIdx, 1 - xlN2);
 
+            typename FluidSystem::template ParameterCache<Scalar> paramCache;
+            paramCache.updateAll(fs);
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                fs.setDensity(phaseIdx, FluidSystem::density(fs, paramCache, phaseIdx));
+                fs.setViscosity(phaseIdx, FluidSystem::viscosity(fs, paramCache, phaseIdx));
+            }
+
             // impose an freeflow boundary condition
             values.setFreeFlow(context, spaceIdx, timeIdx, fs);
         }
@@ -343,6 +352,13 @@ private:
         fs.setMoleFraction(/*phaseIdx=*/0, H2OIdx, 1.0);
         fs.setMoleFraction(/*phaseIdx=*/0, N2Idx, 0);
         fs.setTemperature(T);
+
+        typename FluidSystem::template ParameterCache<Scalar> paramCache;
+        paramCache.updateAll(fs);
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            fs.setDensity(phaseIdx, FluidSystem::density(fs, paramCache, phaseIdx));
+            fs.setViscosity(phaseIdx, FluidSystem::viscosity(fs, paramCache, phaseIdx));
+        }
     }
 
     const Scalar eps_;
