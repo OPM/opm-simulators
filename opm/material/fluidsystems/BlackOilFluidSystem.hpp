@@ -62,11 +62,8 @@ LhsEval getRs_(typename std::enable_if<!HasMember_Rs<FluidState>::value, const F
 template <class FluidSystem, class FluidState, class LhsEval>
 auto getRs_(typename std::enable_if<HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,
             unsigned regionIdx OPM_UNUSED)
-    -> decltype(Opm::MathToolbox<typename FluidState::Scalar>
-                ::template decay<LhsEval>(fluidState.Rs()))
-{
-    return Opm::decay<LhsEval>(fluidState.Rs());
-}
+    -> decltype(Opm::decay<LhsEval>(fluidState.Rs()))
+{ return Opm::decay<LhsEval>(fluidState.Rs()); }
 
 template <class FluidSystem, class FluidState, class LhsEval>
 LhsEval getRv_(typename std::enable_if<!HasMember_Rv<FluidState>::value, const FluidState&>::type fluidState,
@@ -81,11 +78,9 @@ LhsEval getRv_(typename std::enable_if<!HasMember_Rv<FluidState>::value, const F
 template <class FluidSystem, class FluidState, class LhsEval>
 auto getRv_(typename std::enable_if<HasMember_Rv<FluidState>::value, const FluidState&>::type fluidState,
             unsigned regionIdx OPM_UNUSED)
-    -> decltype(Opm::MathToolbox<typename FluidState::Scalar>
-                ::template decay<LhsEval>(fluidState.Rv()))
-{
-    return Opm::decay<LhsEval>(fluidState.Rv());
-}
+    -> decltype(Opm::decay<LhsEval>(fluidState.Rv()))
+{ return Opm::decay<LhsEval>(fluidState.Rv()); }
+
 }
 
 namespace FluidSystems {
