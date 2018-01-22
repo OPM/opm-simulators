@@ -527,11 +527,15 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
             Dune::InverseOperatorResult result;
 
             // the scalar product chooser
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+            auto sp = Dune::createScalarProduct<X,ParallelInformation>(commAe_, category());
+#else
             typedef Dune::ScalarProductChooser<X,ParallelInformation,category>
                 ScalarProductChooser;
             // the scalar product.
             std::unique_ptr<typename ScalarProductChooser::ScalarProduct>
                 sp(ScalarProductChooser::construct(commAe_));
+#endif
 
             if( amg_ )
             {
