@@ -385,11 +385,19 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
         typedef typename X::field_type field_type;
 
         // define the category
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+        Dune::SolverCategory::Category category() const override
+        {
+          return std::is_same<P,Dune::Amg::SequentialInformation>::value ?
+                 Dune::SolverCategory::sequential : Dune::SolverCategory::overlapping;
+        }
+#else
         enum {
             //! \brief The category the preconditioner is part of.
             category = std::is_same<P,Dune::Amg::SequentialInformation>::value?
             Dune::SolverCategory::sequential:Dune::SolverCategory::overlapping
         };
+#endif
 
         typedef ISTLUtility::CPRSelector<M,X,X,P>  CPRSelectorType ;
 
