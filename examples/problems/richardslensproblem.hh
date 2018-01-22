@@ -368,6 +368,14 @@ public:
             fs.setPressure(wettingPhaseIdx, pnRef_ + pC[wettingPhaseIdx] - pC[nonWettingPhaseIdx]);
             fs.setPressure(nonWettingPhaseIdx, pnRef_);
 
+            typename FluidSystem::template ParameterCache<Scalar> paramCache;
+            paramCache.updateAll(fs);
+            fs.setDensity(wettingPhaseIdx, FluidSystem::density(fs, paramCache, wettingPhaseIdx));
+            //fs.setDensity(nonWettingPhaseIdx, FluidSystem::density(fs, paramCache, nonWettingPhaseIdx));
+
+            fs.setViscosity(wettingPhaseIdx, FluidSystem::viscosity(fs, paramCache, wettingPhaseIdx));
+            //fs.setViscosity(nonWettingPhaseIdx, FluidSystem::viscosity(fs, paramCache, nonWettingPhaseIdx));
+
             values.setFreeFlow(context, spaceIdx, timeIdx, fs);
         }
         else if (onInlet_(pos)) {

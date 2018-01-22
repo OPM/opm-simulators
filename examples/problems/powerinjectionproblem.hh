@@ -170,6 +170,7 @@ class PowerInjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     enum {
         // number of phases
+        numPhases = FluidSystem::numPhases,
 
         // phase indices
         wettingPhaseIdx = FluidSystem::wettingPhaseIdx,
@@ -409,6 +410,15 @@ private:
         Scalar p = 1e5;
         initialFluidState_.setPressure(wettingPhaseIdx, p);
         initialFluidState_.setPressure(nonWettingPhaseIdx, p);
+
+        typename FluidSystem::template ParameterCache<Scalar> paramCache;
+        paramCache.updateAll(initialFluidState_);
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            initialFluidState_.setDensity(phaseIdx,
+                                          FluidSystem::density(initialFluidState_, paramCache, phaseIdx));
+            initialFluidState_.setViscosity(phaseIdx,
+                                            FluidSystem::viscosity(initialFluidState_, paramCache, phaseIdx));
+        }
     }
 
     DimMatrix K_;

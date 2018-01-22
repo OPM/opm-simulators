@@ -426,9 +426,9 @@ public:
         const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
 
         if (onLeftBoundary_(pos) || onRightBoundary_(pos)) {
-            // free flow boundary
-            Scalar densityW = WettingPhase::density(temperature_,
-                                                     /*pressure=*/Scalar(1e5));
+            // free flow boundary. we assume incompressible fluids
+            Scalar densityW = WettingPhase::density(temperature_, /*pressure=*/Scalar(1e5));
+            Scalar densityN = NonwettingPhase::density(temperature_, /*pressure=*/Scalar(1e5));
 
             Scalar T = temperature(context, spaceIdx, timeIdx);
             Scalar pw, Sw;
@@ -464,6 +464,12 @@ public:
             MaterialLaw::capillaryPressures(pC, matParams, fs);
             fs.setPressure(wettingPhaseIdx, pw);
             fs.setPressure(nonWettingPhaseIdx, pw + pC[nonWettingPhaseIdx] - pC[wettingPhaseIdx]);
+
+            fs.setDensity(wettingPhaseIdx, densityW);
+            fs.setDensity(nonWettingPhaseIdx, densityN);
+
+            fs.setViscosity(wettingPhaseIdx, WettingPhase::viscosity(temperature_, fs.pressure(wettingPhaseIdx)));
+            fs.setViscosity(nonWettingPhaseIdx, NonwettingPhase::viscosity(temperature_, fs.pressure(nonWettingPhaseIdx)));
 
             // impose an freeflow boundary condition
             values.setFreeFlow(context, spaceIdx, timeIdx, fs);
