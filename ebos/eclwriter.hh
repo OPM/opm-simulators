@@ -178,7 +178,7 @@ public:
             if (totalSolverTime != 0.0) {
                 miscSummaryData["TCPU"] = totalSolverTime;
             }
-            bool enableDoublePrecisionOutput = false; //EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
+            bool enableDoublePrecisionOutput = EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
             const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
             const std::map<std::pair<std::string, int>, double>& blockValues = collectToIORank_.isParallel() ? collectToIORank_.globalBlockValues() : eclOutputModule_.getBlockValues();
 
