@@ -128,10 +128,13 @@ class GroundWaterProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
     // copy some indices for convenience
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
     enum {
+        numPhases = FluidSystem::numPhases,
+
         // Grid and world dimension
         dim = GridView::dimension,
         dimWorld = GridView::dimensionworld,
@@ -141,7 +144,6 @@ class GroundWaterProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     };
 
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
@@ -319,6 +321,13 @@ public:
             fs.setSaturation(/*phaseIdx=*/0, 1.0);
             fs.setPressure(/*phaseIdx=*/0, pressure);
             fs.setTemperature(T);
+
+            typename FluidSystem::template ParameterCache<Scalar> paramCache;
+            paramCache.updateAll(fs);
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                fs.setDensity(phaseIdx, FluidSystem::density(fs, paramCache, phaseIdx));
+                fs.setViscosity(phaseIdx, FluidSystem::viscosity(fs, paramCache, phaseIdx));
+            }
 
             // impose an freeflow boundary condition
             values.setFreeFlow(context, spaceIdx, timeIdx, fs);

@@ -470,6 +470,15 @@ public:
             fluidState.setPressure(wettingPhaseIdx, 1e5);
             fluidState.setPressure(nonWettingPhaseIdx, fluidState.pressure(wettingPhaseIdx));
 
+            typename FluidSystem::template ParameterCache<Scalar> paramCache;
+            paramCache.updateAll(fluidState);
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                fluidState.setDensity(phaseIdx,
+                                      FluidSystem::density(fluidState, paramCache, phaseIdx));
+                fluidState.setViscosity(phaseIdx,
+                                        FluidSystem::viscosity(fluidState, paramCache, phaseIdx));
+            }
+
             // set a free flow (i.e. Dirichlet) boundary
             values.setFreeFlow(context, spaceIdx, timeIdx, fluidState);
         }
