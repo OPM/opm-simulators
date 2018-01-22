@@ -449,7 +449,7 @@ private:
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
         CFRP::solve(fs, paramCache, gasPhaseIdx,
-                    /*setViscosity=*/false,
+                    /*setViscosity=*/true,
                     /*setEnthalpy=*/false);
 
         fs.setMoleFraction(waterPhaseIdx, H2OIdx,

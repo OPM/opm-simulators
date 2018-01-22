@@ -528,12 +528,11 @@ private:
 
         // make the fluid state consistent with local thermodynamic
         // equilibrium
-        typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem>
-        ComputeFromReferencePhase;
+        typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> ComputeFromReferencePhase;
 
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
         ComputeFromReferencePhase::solve(fs, paramCache, refPhaseIdx,
-                                         /*setViscosity=*/false,
+                                         /*setViscosity=*/true,
                                          /*setEnthalpy=*/false);
     }
 
