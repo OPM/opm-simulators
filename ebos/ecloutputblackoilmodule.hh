@@ -105,13 +105,15 @@ public:
         : simulator_(simulator)
     {
         createLocalFipnum_();
+        firstStep_ = true;
     }
 
     /*!
      * \brief Allocate memory for the scalar fields we would like to
      *        write to ECL output files
      */
-    void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const Opm::RestartConfig& restartConfig, const bool substep, const bool log)
+    template<class CollectDataToIORankType>
+    void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const bool substep, const bool log, const CollectDataToIORankType& collectToIORank)
     {
 
         if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
@@ -119,15 +121,30 @@ public:
 
         // Summary output is for all steps
         const Opm::SummaryConfig summaryConfig = simulator_.gridManager().summaryConfig();
-        blockValues_.clear();
+
+        // block values
+        if (firstStep_) { // SummaryConfig doesn't change.
+            for( const auto& node : summaryConfig ) {
+                if (node.type() == ECL_SMSPEC_BLOCK_VAR) {
+                    if(collectToIORank.isGlobalIdxOnThisRank(node.num() - 1)) {
+                        std::pair<std::string, int> key = std::make_pair(node.keyword(), node.num());
+                        blockValues_[key] = 0.0;
+                    }
+                }
+            }
+            firstStep_ = false;
+        }
 
         // Only output RESTART_AUXILIARY asked for by the user.
+        const Opm::RestartConfig& restartConfig = simulator_.gridManager().eclState().getRestartConfig();
         std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
         for (auto& keyValue : rstKeywords) {
             keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
         }
 
         outputFipRestart_ = false;
+        computeFip_ = false;
+
         // Fluid in place
         for (int i = 0; i<FIPDataType::numFipValues; i++) {
             if (!substep || summaryConfig.require3DField(stringOfEnumIndex_(i))) {
@@ -136,6 +153,9 @@ public:
                     outputFipRestart_ = true;
                 }
                 fip_[i].resize(bufferSize, 0.0);
+                computeFip_ = true;
+            } else {
+                fip_[i].clear();
             }
         }
         if (!substep || summaryConfig.hasKeyword("FPR") || summaryConfig.hasKeyword("FPRP") || summaryConfig.hasKeyword("RPR")) {
@@ -143,11 +163,17 @@ public:
             pvHydrocarbon_.resize(bufferSize, 0.0);
             pPv_.resize(bufferSize, 0.0);
             pPvHydrocarbon_.resize(bufferSize, 0.0);
+        } else {
+            pvHydrocarbon_.clear();
+            pPv_.clear();
+            pPvHydrocarbon_.clear();
         }
 
+        // TODO: There seems to be an issue with mixing of RPTRST and RPTSCHED
+        // keywords in restartConfig.
+        // For now output basic fields for all ordinary steps
         outputRestart_ = false;
-        // Only provide restart on restart steps
-        if (!restartConfig.getWriteRestartFile(reportStepNum) || substep)
+        if (substep)
             return;
 
         outputRestart_ = true;
@@ -188,6 +214,10 @@ public:
             pcSwMdcGo_.resize(bufferSize,0.0);
             krnSwMdcGo_.resize(bufferSize,0.0);
         }
+
+        // Only provide restart on restart steps
+        if (!restartConfig.getWriteRestartFile(reportStepNum) || substep)
+            return;
 
         if (FluidSystem::enableDissolvedGas() && rstKeywords["RSSAT"] > 0) {
             rstKeywords["RSSAT"] = 0;
@@ -293,12 +323,12 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
+
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
         if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
             return;
 
-        const Opm::SummaryConfig& summaryConfig = simulator_.gridManager().summaryConfig();
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
@@ -521,61 +551,67 @@ public:
                 }
             }
 
-            Scalar fip[FluidSystem::numPhases];
-            for (unsigned phase = 0; phase < FluidSystem::numPhases; ++phase) {
-                if (!FluidSystem::phaseIsActive(phase)) {
-                    continue;
+            if (computeFip_) {
+                Scalar fip[FluidSystem::numPhases];
+                for (unsigned phase = 0; phase < FluidSystem::numPhases; ++phase) {
+                    if (!FluidSystem::phaseIsActive(phase)) {
+                        continue;
+                    }
+
+                    const double b = Toolbox::value(fs.invB(phase));
+                    const double s = Toolbox::value(fs.saturation(phase));
+                    fip[phase] = b * s * pv;
                 }
 
-                const double b = Toolbox::value(fs.invB(phase));
-                const double s = Toolbox::value(fs.saturation(phase));
-                fip[phase] = b * s * pv;
-            }
+                if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[FIPDataType::OilInPlace].size() > 0)
+                    fip_[FIPDataType::OilInPlace][globalDofIdx] = fip[oilPhaseIdx];
+                if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[FIPDataType::GasInPlace].size() > 0)
+                    fip_[FIPDataType::GasInPlace][globalDofIdx] = fip[gasPhaseIdx];
+                if (FluidSystem::phaseIsActive(waterPhaseIdx) && fip_[FIPDataType::WaterInPlace].size() > 0)
+                    fip_[FIPDataType::WaterInPlace][globalDofIdx] = fip[waterPhaseIdx];
 
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[FIPDataType::OilInPlace].size() > 0)
-                fip_[FIPDataType::OilInPlace][globalDofIdx] = fip[oilPhaseIdx];
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[FIPDataType::GasInPlace].size() > 0)
-                fip_[FIPDataType::GasInPlace][globalDofIdx] = fip[gasPhaseIdx];
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && fip_[FIPDataType::WaterInPlace].size() > 0)
-                fip_[FIPDataType::WaterInPlace][globalDofIdx] = fip[waterPhaseIdx];
+                // Store the pure oil and gas FIP
+                if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[FIPDataType::OilInPlaceInLiquidPhase].size() > 0)
+                    fip_[FIPDataType::OilInPlaceInLiquidPhase][globalDofIdx] = fip[oilPhaseIdx];
 
-            // Store the pure oil and gas FIP
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[FIPDataType::OilInPlaceInLiquidPhase].size() > 0)
-                fip_[FIPDataType::OilInPlaceInLiquidPhase][globalDofIdx] = fip[oilPhaseIdx];
+                if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[FIPDataType::GasInPlaceInGasPhase].size() > 0)
+                    fip_[FIPDataType::GasInPlaceInGasPhase][globalDofIdx] = fip[gasPhaseIdx];
 
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[FIPDataType::GasInPlaceInGasPhase].size() > 0)
-                fip_[FIPDataType::GasInPlaceInGasPhase][globalDofIdx] = fip[gasPhaseIdx];
+                if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                    // Gas dissolved in oil and vaporized oil
+                    Scalar gipl = Toolbox::value(fs.Rs()) * fip[oilPhaseIdx];
+                    Scalar oipg = Toolbox::value(fs.Rv()) * fip[gasPhaseIdx];
+                    if (fip_[FIPDataType::GasInPlaceInGasPhase].size() > 0)
+                        fip_[FIPDataType::GasInPlaceInLiquidPhase][globalDofIdx] = gipl;
+                    if (fip_[FIPDataType::OilInPlaceInGasPhase].size() > 0)
+                        fip_[FIPDataType::OilInPlaceInGasPhase][globalDofIdx] = oipg;
 
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                // Gas dissolved in oil and vaporized oil
-                Scalar gipl = Toolbox::value(fs.Rs()) * fip[oilPhaseIdx];
-                Scalar oipg = Toolbox::value(fs.Rv()) * fip[gasPhaseIdx];
-                if (fip_[FIPDataType::GasInPlaceInGasPhase].size() > 0)
-                    fip_[FIPDataType::GasInPlaceInLiquidPhase][globalDofIdx] = gipl;
-                if (fip_[FIPDataType::OilInPlaceInGasPhase].size() > 0)
-                    fip_[FIPDataType::OilInPlaceInGasPhase][globalDofIdx] = oipg;
-
-                // Add dissolved gas and vaporized oil to total FIP
-                if (fip_[FIPDataType::OilInPlace].size() > 0)
-                    fip_[FIPDataType::OilInPlace][globalDofIdx] += oipg;
-                if (fip_[FIPDataType::GasInPlace].size() > 0)
-                    fip_[FIPDataType::GasInPlace][globalDofIdx] += gipl;
+                    // Add dissolved gas and vaporized oil to total FIP
+                    if (fip_[FIPDataType::OilInPlace].size() > 0)
+                        fip_[FIPDataType::OilInPlace][globalDofIdx] += oipg;
+                    if (fip_[FIPDataType::GasInPlace].size() > 0)
+                        fip_[FIPDataType::GasInPlace][globalDofIdx] += gipl;
+                }
             }
 
             // Adding block values
             const auto globalIdx = elemCtx.simulator().gridManager().grid().globalCell()[globalDofIdx];
-            for( const auto& node : summaryConfig ) {
-                if (node.type() == ECL_SMSPEC_BLOCK_VAR) {
-                    int global_index = node.num() - 1;
-                    std::pair<std::string, int> key = std::make_pair(node.keyword(), node.num());
-                    if (global_index == globalIdx) {
-                        if (key.first == "BWSAT") {
-                            blockValues_[key] = Toolbox::value(fs.saturation(waterPhaseIdx));
-                        } else if (key.first == "BGSAT") {
-                            blockValues_[key] = Toolbox::value(fs.saturation(gasPhaseIdx));
-                        } else if (key.first == "BPR") {
-                            blockValues_[key] = Toolbox::value(fs.pressure(oilPhaseIdx));
-                        }
+            for( auto& val : blockValues_ ) {
+                const auto& key = val.first;
+                int global_index = key.second - 1;
+                if (global_index == globalIdx) {
+                    if (key.first == "BWSAT") {
+                        val.second = Toolbox::value(fs.saturation(waterPhaseIdx));
+                    } else if (key.first == "BGSAT") {
+                        val.second = Toolbox::value(fs.saturation(gasPhaseIdx));
+                    } else if (key.first == "BPR") {
+                        std::cout << "BPR set "<<Toolbox::value(fs.pressure(oilPhaseIdx)) << std::endl;
+                        val.second = Toolbox::value(fs.pressure(oilPhaseIdx));
+                    } else {
+                        std::string logstring = "Keyword '";
+                        logstring.append(key.first);
+                        logstring.append("' is unhandled for output to file.");
+                        Opm::OpmLog::warning("Unhandled output keyword", logstring);
                     }
                 }
             }
@@ -1182,6 +1218,8 @@ private:
 
     bool outputRestart_;
     bool outputFipRestart_;
+    bool firstStep_;
+    bool computeFip_;
 
     ScalarBuffer saturation_[numPhases];
     ScalarBuffer oilPressure_;

@@ -501,6 +501,20 @@ namespace Ewoms
             return globalRanks_;
         }
 
+        bool isGlobalIdxOnThisRank(const unsigned globalIdx) const
+        {
+            if ( ! isParallel() )
+            {
+                return true;
+            }
+            // the last indexMap is the local one
+            const IndexMapType& indexMap = indexMaps_.back();
+            if( indexMap.empty() )
+                OPM_THROW(std::logic_error,"index map is not created on this rank");
+
+            return std::find(indexMap.begin(), indexMap.end(), globalIdx) != indexMap.end();
+        }
+
     protected:
         P2PCommunicatorType             toIORankComm_;
         IndexMapType                    globalCartesianIndex_;
