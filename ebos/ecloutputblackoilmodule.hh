@@ -1169,7 +1169,7 @@ private:
         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
             ss << "                                                  :      PAV  =" << std::setw(14) << pav << " BARSA                 :\n"
                << std::fixed << std::setprecision(0)
-               << "                                                  :      PORV =" << std::setw(14) << oip[FIPDataType::PoreVolume] << "   RM3                 :\n";
+               << "                                                  :      PORV =" << std::setw(14) << cip[FIPDataType::PoreVolume] << "   RM3                 :\n";
             if (!reg) {
                 ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
                    << "                                                  : Porv volumes are taken at reference conditions  :\n";
@@ -1179,7 +1179,7 @@ private:
         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
             ss << "                                                  :      PAV  =" << std::setw(14) << pav << "  PSIA                 :\n"
                << std::fixed << std::setprecision(0)
-               << "                                                  :      PORV =" << std::setw(14) << oip[FIPDataType::PoreVolume] << "   RB                  :\n";
+               << "                                                  :      PORV =" << std::setw(14) << cip[FIPDataType::PoreVolume] << "   RB                  :\n";
             if (!reg) {
                 ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
                    << "                                                  : Pore volumes are taken at reference conditions  :\n";
