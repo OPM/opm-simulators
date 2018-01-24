@@ -4,6 +4,7 @@ set (opm-material_CONFIG_VAR
   HAVE_TYPE_TRAITS
   HAVE_VALGRIND
   HAVE_FINAL
+  HAVE_OPM_PARSER
   )
 
 # dependencies
