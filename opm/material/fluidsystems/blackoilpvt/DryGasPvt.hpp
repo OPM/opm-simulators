@@ -195,7 +195,7 @@ public:
      * \brief Returns the specific enthalpy [J/kg] of gas given a set of parameters.
      */
     template <class Evaluation>
-    Evaluation enthalpy(unsigned regionIdx OPM_UNUSED,
+    Evaluation internalEnergy(unsigned regionIdx OPM_UNUSED,
                         const Evaluation& temperature OPM_UNUSED,
                         const Evaluation& pressure OPM_UNUSED,
                         const Evaluation& Rv OPM_UNUSED) const

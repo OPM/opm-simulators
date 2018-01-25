@@ -62,7 +62,7 @@ public:
     {
         enableThermalDensity_ = false;
         enableThermalViscosity_ = false;
-        enableEnthalpy_ = false;
+        enableInternalEnergy_ = false;
     }
 
     ~GasPvtThermal()
@@ -88,7 +88,7 @@ public:
 
         enableThermalDensity_ = deck.hasKeyword("GASDENT");
         enableThermalViscosity_ = deck.hasKeyword("GASVISCT");
-        enableEnthalpy_ = deck.hasKeyword("SPECHEAT");
+        enableInternalEnergy_ = deck.hasKeyword("SPECHEAT");
 
         unsigned numRegions = isothermalPvt_->numRegions();
         setNumRegions(numRegions);
@@ -121,15 +121,15 @@ public:
         }
 
         if (deck.hasKeyword("SPECHEAT")) {
-            // the specific enthalpy of gas. be aware that ecl only specifies the heat capacity
+            // the specific internal energy of gas. be aware that ecl only specifies the heat capacity
             // (via the SPECHEAT keyword) and we need to integrate it ourselfs to get the
-            // enthalpy
+            // internal energy
             for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
                 const auto& specHeatTable = tables.getSpecheatTables()[regionIdx];
                 const auto& temperatureColumn = specHeatTable.getColumn("TEMPERATURE");
-                const auto& cpGasColumn = specHeatTable.getColumn("CP_GAS");
+                const auto& cvGasColumn = specHeatTable.getColumn("CV_GAS");
 
-                std::vector<double> hSamples(temperatureColumn.size());
+                std::vector<double> uSamples(temperatureColumn.size());
 
                 // the specific enthalpy of vaporization. since ECL does not seem to
                 // feature a proper way to specify this quantity, we use the value for
@@ -138,25 +138,25 @@ public:
                 // phases should depend on the phase composition
                 const Scalar hVap = 480.6e3; // [J / kg]
 
-                Scalar h = temperatureColumn[0]*cpGasColumn[0] + hVap;
+                Scalar u = temperatureColumn[0]*cvGasColumn[0] + hVap;
                 for (size_t i = 0;; ++i) {
-                    hSamples[i] = h;
+                    uSamples[i] = u;
 
                     if (i >= temperatureColumn.size() - 1)
                         break;
 
                     // integrate to the heat capacity from the current sampling point to the next
                     // one. this leads to a quadratic polynomial.
-                    Scalar h0 = cpGasColumn[i];
-                    Scalar h1 = cpGasColumn[i + 1];
+                    Scalar h0 = cvGasColumn[i];
+                    Scalar h1 = cvGasColumn[i + 1];
                     Scalar T0 = temperatureColumn[i];
                     Scalar T1 = temperatureColumn[i + 1];
                     Scalar m = (h1 - h0)/(T1 - T0);
-                    Scalar deltaH = 0.5*m*(T1*T1 - T0*T0) + h0*(T1 - T0);
-                    h += deltaH;
+                    Scalar deltaU = 0.5*m*(T1*T1 - T0*T0) + h0*(T1 - T0);
+                    u += deltaU;
                 }
 
-                enthalpyCurves_[regionIdx].setXYContainers(temperatureColumn.vectorCopy(), hSamples);
+                internalEnergyCurves_[regionIdx].setXYContainers(temperatureColumn.vectorCopy(), uSamples);
             }
         }
     }
@@ -168,7 +168,7 @@ public:
     void setNumRegions(size_t numRegions)
     {
         gasvisctCurves_.resize(numRegions);
-        enthalpyCurves_.resize(numRegions);
+        internalEnergyCurves_.resize(numRegions);
         gasdentRefTemp_.resize(numRegions);
         gasdentCT1_.resize(numRegions);
         gasdentCT2_.resize(numRegions);
@@ -196,22 +196,22 @@ public:
     { return enableThermalViscosity_; }
 
     /*!
-     * \brief Returns the specific enthalpy [J/kg] of gas given a set of parameters.
+     * \brief Returns the specific internal energy [J/kg] of gas given a set of parameters.
      */
     template <class Evaluation>
-    Evaluation enthalpy(unsigned regionIdx,
-                        const Evaluation& temperature,
-                        const Evaluation& pressure OPM_UNUSED,
-                        const Evaluation& Rv OPM_UNUSED) const
+    Evaluation internalEnergy(unsigned regionIdx,
+                              const Evaluation& temperature,
+                              const Evaluation& pressure OPM_UNUSED,
+                              const Evaluation& Rv OPM_UNUSED) const
     {
-        if (!enableEnthalpy_)
+        if (!enableInternalEnergy_)
             OPM_THROW(std::runtime_error,
-                      "Requested the enthalpy of oil but it is disabled");
+                      "Requested the internal energy of oil but it is disabled");
 
-        // compute the specific enthalpy for the specified tempature. We use linear
+        // compute the specific internal energy for the specified tempature. We use linear
         // interpolation here despite the fact that the underlying heat capacities are
         // piecewise linear (which leads to a quadratic function)
-        return enthalpyCurves_[regionIdx].eval(temperature, /*extrapolate=*/true);
+        return internalEnergyCurves_[regionIdx].eval(temperature, /*extrapolate=*/true);
     }
 
     /*!
@@ -358,12 +358,12 @@ private:
     std::vector<Scalar> gasdentCT1_;
     std::vector<Scalar> gasdentCT2_;
 
-    // piecewise linear curve representing the enthalpy of gas
-    std::vector<TabulatedOneDFunction> enthalpyCurves_;
+    // piecewise linear curve representing the internal energy of gas
+    std::vector<TabulatedOneDFunction> internalEnergyCurves_;
 
     bool enableThermalDensity_;
     bool enableThermalViscosity_;
-    bool enableEnthalpy_;
+    bool enableInternalEnergy_;
 };
 
 } // namespace Opm
