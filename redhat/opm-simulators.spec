@@ -14,7 +14,7 @@ Url:            http://www.opm-project.org/
 Source0:        https://github.com/OPM/%{name}/archive/release/%{version}/%{tag}.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  blas-devel lapack-devel dune-common-devel opm-output-devel
 BuildRequires:  git suitesparse-devel doxygen bc devtoolset-6-toolchain 
-BuildRequires:  opm-parser-devel opm-core-devel opm-grid-devel
+BuildRequires:  opm-parser-devel opm-grid-devel
 BuildRequires:  tinyxml-devel dune-istl-devel eigen3-devel ecl-devel ewoms-devel
 %{?el6:BuildRequires: cmake3 boost148-devel}
 %{!?el6:BuildRequires: cmake boost-devel}

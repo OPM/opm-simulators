@@ -527,12 +527,20 @@ namespace Opm {
           typedef Dune::CollectiveCommunication< Grid > communication_type;
 #endif
 
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+          Dune::SolverCategory::Category category() const override
+          {
+            return overlapping ?
+                   Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
+          }
+#else
           enum {
             //! \brief The solver category.
             category = overlapping ?
                 Dune::SolverCategory::overlapping :
                 Dune::SolverCategory::sequential
           };
+#endif
 
           //! constructor: just store a reference to a matrix
           WellModelMatrixAdapter (const M& A, const WellModel& wellMod, const boost::any& parallelInformation = boost::any() )

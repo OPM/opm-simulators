@@ -251,13 +251,6 @@ foreach(sim flow flow_legacy)
                                         REL_TOL ${rel_tol_restart})
 endforeach()
 
-  add_test_compare_parallel_restarted_simulation(CASENAME spe1
-                                        FILENAME SPE1CASE2_ACTNUM
-                                        SIMULATOR flow
-                                        ABS_TOL ${abs_tol_restart}
-                                        REL_TOL ${rel_tol_restart})
-
-
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
 
@@ -273,6 +266,14 @@ endforeach()
 
 # Parallel tests
 if(MPI_FOUND)
+  opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
+  add_test_compare_parallel_restarted_simulation(CASENAME spe1
+                                                 FILENAME SPE1CASE2_ACTNUM
+                                                 SIMULATOR flow
+                                                 ABS_TOL ${abs_tol_restart}
+                                                 REL_TOL ${rel_tol_restart})
+
+
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-regressionTest.sh "")
 
   # Different tolerances for these tests

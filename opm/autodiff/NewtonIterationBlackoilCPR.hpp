@@ -84,16 +84,25 @@ namespace Opm
         /// \brief construct the CPR preconditioner and the solver.
         /// \tparam P The type of the parallel information.
         /// \param parallelInformation the information about the parallelization.
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+        template<Dune::SolverCategory::Category category=Dune::SolverCategory::sequential,
+                 class O, class P>
+#else
         template<int category=Dune::SolverCategory::sequential, class O, class P>
+#endif
         void constructPreconditionerAndSolve(O& opA, DuneMatrix& istlAe,
                                              Vector& x, Vector& istlb,
                                              const P& parallelInformation_arg,
                                              const P& parallelInformationAe,
                                              Dune::InverseOperatorResult& result) const
         {
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+            auto sp = Dune::createScalarProduct<Vector,P>(parallelInformation_arg, category);
+#else
             typedef Dune::ScalarProductChooser<Vector,P,category> ScalarProductChooser;
             std::unique_ptr<typename ScalarProductChooser::ScalarProduct>
                 sp(ScalarProductChooser::construct(parallelInformation_arg));
+#endif
             // Construct preconditioner.
             // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
            typedef Opm::CPRPreconditioner<Mat,Vector,Vector,P> Preconditioner;

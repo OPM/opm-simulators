@@ -92,6 +92,26 @@ macro (sources_hook)
       ${PROJECT_SOURCE_DIR}/tutorials/tutorial4.cpp
       )
   endif()
+
+  # these solvers are only compiled in if their dependency is found
+  if (NOT dune-istl_FOUND)
+    list (REMOVE_ITEM opm-simulators_SOURCES
+      ${PROJECT_SOURCE_DIR}/opm/core/linalg/LinearSolverIstl.cpp
+      )
+  endif ()
+
+  if (NOT PETSc_FOUND)
+    list (REMOVE_ITEM opm-simulators_SOURCES
+      ${PROJECT_SOURCE_DIR}/opm/core/linalg/LinearSolverPetsc.cpp
+      )
+  endif ()
+
+  if ((NOT MPI_FOUND) OR (NOT DUNE_ISTL_FOUND))
+    list (REMOVE_ITEM tests_SOURCES
+      ${PROJECT_SOURCE_DIR}/tests/test_parallel_linearsolver.cpp
+      ${PROJECT_SOURCE_DIR}/tests/test_parallelistlinformation.cpp
+      )
+  endif ()
 endmacro (sources_hook)
 
 macro (fortran_hook)
