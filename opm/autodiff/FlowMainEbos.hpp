@@ -711,13 +711,20 @@ namespace Opm
             if(  output && output_ecl && grid().comm().size() > 1 )
             {
                 typedef typename Grid::LeafGridView GridView;
-                using ElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout>;
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY, 2, 6)
+                using ElementMapper =  Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
+#else
                 // Get the owner rank number for each cell
                 using ElementMapper =  Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout>;
+#endif
                 using Handle = CellOwnerDataHandle<ElementMapper>;
                 const Grid& globalGrid = this->globalGrid();
                 const auto& globalGridView = globalGrid.leafGridView();
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY, 2, 6)
+                ElementMapper globalMapper(globalGridView, Dune::mcmgElementLayout());
+#else
                 ElementMapper globalMapper(globalGridView);
+#endif
                 const auto globalSize = globalGrid.size(0);
                 std::vector<int> ranks(globalSize, -1);
                 Handle handle(globalMapper, ranks);
@@ -746,8 +753,13 @@ namespace Opm
             const Grid& globalGrid = this->globalGrid();
             const auto& globalGridView = globalGrid.leafGridView();
             typedef typename Grid::LeafGridView GridView;
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY, 2, 6)
+            typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
+            ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
+#else
             typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
             ElementMapper globalElemMapper(globalGridView);
+#endif
             const auto& cartesianCellIdx = globalGrid.globalCell();
 
             const auto* globalTrans = &(ebosSimulator_->gridManager().globalTransmissibility());
@@ -816,8 +828,13 @@ namespace Opm
             const Grid& globalGrid = this->globalGrid();
             const auto& globalGridView = globalGrid.leafGridView();
             typedef typename Grid::LeafGridView GridView;
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY, 2, 6)
+            typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
+            ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
+#else
             typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
             ElementMapper globalElemMapper(globalGridView);
+#endif
 
             const auto* globalTrans = &(ebosSimulator_->gridManager().globalTransmissibility());
             if (grid().comm().size() < 2) {

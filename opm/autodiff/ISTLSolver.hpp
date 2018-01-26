@@ -380,16 +380,25 @@ namespace Opm
         /// \brief construct the CPR preconditioner and the solver.
         /// \tparam P The type of the parallel information.
         /// \param parallelInformation the information about the parallelization.
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+        template<Dune::SolverCategory::Category category=Dune::SolverCategory::sequential,
+                 class LinearOperator, class POrComm>
+#else
         template<int category=Dune::SolverCategory::sequential, class LinearOperator, class POrComm>
+#endif
         void constructPreconditionerAndSolve(LinearOperator& linearOperator,
                                              Vector& x, Vector& istlb,
                                              const POrComm& parallelInformation_arg,
                                              Dune::InverseOperatorResult& result) const
         {
             // Construct scalar product.
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+            auto sp = Dune::createScalarProduct<Vector,POrComm>(parallelInformation_arg, category);
+#else
             typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
             typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
             SPPointer sp(ScalarProductChooser::construct(parallelInformation_arg));
+#endif
 
             // Communicate if parallel.
             parallelInformation_arg.copyOwnerToAll(istlb, istlb);
