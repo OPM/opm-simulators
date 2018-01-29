@@ -514,6 +514,7 @@ public:
         CommunicationArgs commArgs(communication_->communicator(), communication_->getSolverCategory());
         coarseLevelCommunication_.reset(Dune::Amg::ConstructionTraits<Communication>::construct(commArgs));
         using Iterator = typename std::vector<bool>::iterator;
+	using std::get;
         auto visitedMap = get(Dune::Amg::VertexVisitedTag(), *(get<1>(graphs)));
         communication_->buildGlobalLookup(fineOperator.getmat().N());
         std::size_t aggregates =
