@@ -255,8 +255,14 @@ private:
 
         const auto& globalGridView = globalGrid_.leafGridView();
         typedef typename Grid::LeafGridView GridView;
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
+        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
+        ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
+#else
         typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
         ElementMapper globalElemMapper(globalGridView);
+#endif
+
         const auto& cartesianCellIdx = globalGrid_.globalCell();
 
         const auto* globalTrans = &(simulator_.gridManager().globalTransmissibility());
@@ -323,8 +329,14 @@ private:
 
         const auto& globalGridView = globalGrid_.leafGridView();
         typedef typename Grid::LeafGridView GridView;
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
+        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
+        ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
+
+#else
         typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
         ElementMapper globalElemMapper(globalGridView);
+#endif
 
         const auto* globalTrans = &(simulator_.gridManager().globalTransmissibility());
         if (!collectToIORank_.isParallel()) {
