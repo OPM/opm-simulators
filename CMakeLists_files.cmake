@@ -158,7 +158,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_parallel_linearsolver.cpp
   tests/test_satfunc.cpp
   tests/test_shadow.cpp
-  tests/test_equil.cpp
+  tests/test_equil_legacy.cpp
   tests/test_blackoilstate.cpp
   tests/test_wellsmanager.cpp
   tests/test_wellcontrols.cpp
@@ -224,10 +224,10 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/compute_initial_state.cpp
   examples/compute_tof_from_files.cpp
   examples/diagnose_relperm.cpp
-  tutorials/tutorial1.cpp
-  tutorials/tutorial2.cpp
-  tutorials/tutorial3.cpp
-  tutorials/tutorial4.cpp
+  tutorials/sim_tutorial1.cpp
+  tutorials/sim_tutorial2.cpp
+  tutorials/sim_tutorial3.cpp
+  tutorials/sim_tutorial4.cpp
   )
 
 # programs listed here will not only be compiled, but also marked for
