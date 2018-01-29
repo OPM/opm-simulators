@@ -261,6 +261,14 @@ private:
             : amg_(op, crit,args, comm), op_(op), comm_(comm), first_(true)
         {}
 
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+        Dune::SolverCategory::Category category() const override
+        {
+            return std::is_same<Communication, Dune::Amg::SequentialInformation>::value ?
+                Dune::SolverCategory::sequential : Dune::SolverCategory::overlapping;
+        }
+#endif
+
         void apply(X& x, X& b, double reduction, Dune::InverseOperatorResult& res)
         {
             DUNE_UNUSED_PARAMETER(reduction);
@@ -274,11 +282,17 @@ private:
             }
             amg_.apply(x,b);
             */
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+            auto sp = Dune::createScalarProduct<X,Communication>(comm_, op_.category());
+#else
             using Chooser = Dune::ScalarProductChooser<X,Communication,AMGType::category>;
             auto sp = Chooser::construct(comm_);
+#endif
             Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, amg_, 1e-2, 25, 0);
             solver.apply(x,b,res);
+#if ! DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             delete sp;
+#endif
         }
 
         void apply(X& x, X& b, Dune::InverseOperatorResult& res)
@@ -489,7 +503,12 @@ public:
     void createCoarseLevelSystem(const Operator& fineOperator)
     {
         prolongDamp_ = 1;
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+        typedef Dune::Amg::PropertiesGraphCreator<Operator,Communication> GraphCreator;
+#else
         typedef Dune::Amg::PropertiesGraphCreator<Operator> GraphCreator;
+#endif
+
         typedef typename GraphCreator::PropertiesGraph PropertiesGraph;
         typedef typename GraphCreator::GraphTuple GraphTuple;
 
@@ -663,11 +682,20 @@ protected:
                                   CoarseSolverPolicy,
                                   Smoother>;
 public:
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+    Dune::SolverCategory::Category category() const override
+    {
+      return std::is_same<Communication, Dune::Amg::SequentialInformation>::value ?
+              Dune::SolverCategory::sequential : Dune::SolverCategory::overlapping;
+    }
+#else
     // define the category
     enum {
         //! \brief The category the precondtioner is part of.
         category = Operator::category
     };
+#endif
+
     BlackoilAmg(const Operator& fineOperator, const Criterion& criterion,
                 const SmootherArgs& smargs, const Communication& comm)
         : smoother_(Detail::constructSmoother<Smoother>(fineOperator,smargs,comm)),
