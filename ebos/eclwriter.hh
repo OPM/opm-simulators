@@ -163,7 +163,7 @@ public:
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
-        eclOutputModule_.outputFIPLog(miscSummaryData, regionData, substep);
+        eclOutputModule_.outputFipLog(miscSummaryData, regionData, substep);
 
         // write output on I/O rank
         if (collectToIORank_.isIORank()) {
