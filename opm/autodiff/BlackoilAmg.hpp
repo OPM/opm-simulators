@@ -576,77 +576,110 @@ public:
 
 public:
     OneComponentAggregationLevelTransferPolicy(const Criterion& crit, const Communication& comm)
-        : criterion_(crit), communication_(&const_cast<Communication&>(comm))
+        : criterion_(crit), communication_(&const_cast<Communication&>(comm)), use_aggregation_(false)
     {}
 
     void createCoarseLevelSystem(const Operator& fineOperator)
     {
         prolongDamp_ = 1;
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
-        typedef Dune::Amg::PropertiesGraphCreator<Operator,Communication> GraphCreator;
-#else
-        typedef Dune::Amg::PropertiesGraphCreator<Operator> GraphCreator;
-#endif
 
-        typedef typename GraphCreator::PropertiesGraph PropertiesGraph;
-        typedef typename GraphCreator::GraphTuple GraphTuple;
-
-        typedef typename PropertiesGraph::VertexDescriptor Vertex;
-
-        std::vector<bool> excluded(fineOperator.getmat().N(), false);
-
-        using OverlapFlags = Dune::NegateSet<typename ParallelInformation::OwnerSet>;
-        GraphTuple graphs = GraphCreator::create(fineOperator, excluded,
-                                                 *communication_, OverlapFlags());
-
-        aggregatesMap_.reset(new AggregatesMap(std::get<1>(graphs)->maxVertex()+1));
-
-        int noAggregates, isoAggregates, oneAggregates, skippedAggregates;
-        using std::get;
-        std::tie(noAggregates, isoAggregates, oneAggregates, skippedAggregates) =
-            aggregatesMap_->buildAggregates(fineOperator.getmat(), *(get<1>(graphs)),
-                                            criterion_, true);
-        std::cout<<"no aggregates="<<noAggregates<<" iso="<<isoAggregates<<" one="<<oneAggregates<<" skipped="<<skippedAggregates<<std::endl;
-
-        using CommunicationArgs = typename Dune::Amg::ConstructionTraits<Communication>::Arguments;
-        CommunicationArgs commArgs(communication_->communicator(), communication_->getSolverCategory());
-        coarseLevelCommunication_.reset(Dune::Amg::ConstructionTraits<Communication>::construct(commArgs));
-        using Iterator = typename std::vector<bool>::iterator;
-	using std::get;
-        auto visitedMap = get(Dune::Amg::VertexVisitedTag(), *(get<1>(graphs)));
-        communication_->buildGlobalLookup(fineOperator.getmat().N());
-        std::size_t aggregates =
-            Dune::Amg::IndicesCoarsener<ParallelInformation,OverlapFlags>
-            ::coarsen(*communication_, *get<1>(graphs), visitedMap,
-                      *aggregatesMap_, *coarseLevelCommunication_,
-                      noAggregates);
-        GraphCreator::free(graphs);
-        coarseLevelCommunication_->buildGlobalLookup(aggregates);
-        Dune::Amg::AggregatesPublisher<Vertex,OverlapFlags,ParallelInformation>
-            ::publish(*aggregatesMap_,
-                      *communication_,
-                      coarseLevelCommunication_->globalLookup());
-        std::vector<bool>& visited=excluded;
-
-        std::fill(visited.begin(), visited.end(), false);
-
-        Dune::IteratorPropertyMap<Iterator, Dune::IdentityMap>
-            visitedMap2(visited.begin(), Dune::IdentityMap());
-        using CoarseMatrix = typename CoarseOperator::matrix_type;
-        coarseLevelMatrix_.reset(new CoarseMatrix(aggregates, aggregates,
-                                                  CoarseMatrix::row_wise));
-        Detail::buildCoarseSparseMatrix(*coarseLevelMatrix_, *get<0>(graphs), visitedMap2,
-                                        *communication_,
-                                        *aggregatesMap_,
-                                        OverlapFlags());
-        delete get<0>(graphs);
-        communication_->freeGlobalLookup();
-        if( static_cast<int>(this->coarseLevelMatrix_->N())
-            < criterion_.coarsenTarget())
+        if ( use_aggregation_ )
         {
-            coarseLevelCommunication_->freeGlobalLookup();
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+            typedef Dune::Amg::PropertiesGraphCreator<Operator,Communication> GraphCreator;
+#else
+            typedef Dune::Amg::PropertiesGraphCreator<Operator> GraphCreator;
+#endif
+            typedef typename GraphCreator::PropertiesGraph PropertiesGraph;
+            typedef typename GraphCreator::GraphTuple GraphTuple;
+
+            typedef typename PropertiesGraph::VertexDescriptor Vertex;
+
+            std::vector<bool> excluded(fineOperator.getmat().N(), false);
+
+            using OverlapFlags = Dune::NegateSet<typename ParallelInformation::OwnerSet>;
+            GraphTuple graphs = GraphCreator::create(fineOperator, excluded,
+                                                     *communication_, OverlapFlags());
+
+            aggregatesMap_.reset(new AggregatesMap(std::get<1>(graphs)->maxVertex()+1));
+
+            int noAggregates, isoAggregates, oneAggregates, skippedAggregates;
+            using std::get;
+            std::tie(noAggregates, isoAggregates, oneAggregates, skippedAggregates) =
+                aggregatesMap_->buildAggregates(fineOperator.getmat(), *(get<1>(graphs)),
+                                                criterion_, true);
+            //std::cout<<"no aggregates="<<noAggregates<<" iso="<<isoAggregates<<" one="<<oneAggregates<<" skipped="<<skippedAggregates<<std::endl;
+            using CommunicationArgs = typename Dune::Amg::ConstructionTraits<Communication>::Arguments;
+            CommunicationArgs commArgs(communication_->communicator(), communication_->getSolverCategory());
+            coarseLevelCommunication_.reset(Dune::Amg::ConstructionTraits<Communication>::construct(commArgs));
+            using Iterator = typename std::vector<bool>::iterator;
+            using std::get;
+            auto visitedMap = get(Dune::Amg::VertexVisitedTag(), *(get<1>(graphs)));
+            communication_->buildGlobalLookup(fineOperator.getmat().N());
+            std::size_t aggregates =
+                Dune::Amg::IndicesCoarsener<ParallelInformation,OverlapFlags>
+                ::coarsen(*communication_, *get<1>(graphs), visitedMap,
+                          *aggregatesMap_, *coarseLevelCommunication_,
+                          noAggregates);
+            GraphCreator::free(graphs);
+            coarseLevelCommunication_->buildGlobalLookup(aggregates);
+            Dune::Amg::AggregatesPublisher<Vertex,OverlapFlags,ParallelInformation>
+                ::publish(*aggregatesMap_,
+                          *communication_,
+                          coarseLevelCommunication_->globalLookup());
+            std::vector<bool>& visited=excluded;
+
+            std::fill(visited.begin(), visited.end(), false);
+
+            Dune::IteratorPropertyMap<Iterator, Dune::IdentityMap>
+                visitedMap2(visited.begin(), Dune::IdentityMap());
+            using CoarseMatrix = typename CoarseOperator::matrix_type;
+            coarseLevelMatrix_.reset(new CoarseMatrix(aggregates, aggregates,
+                                                      CoarseMatrix::row_wise));
+            Detail::buildCoarseSparseMatrix(*coarseLevelMatrix_, *get<0>(graphs), visitedMap2,
+                                            *communication_,
+                                            *aggregatesMap_,
+                                            OverlapFlags());
+            delete get<0>(graphs);
+            communication_->freeGlobalLookup();
+            if( static_cast<int>(this->coarseLevelMatrix_->N())
+                < criterion_.coarsenTarget())
+            {
+                coarseLevelCommunication_->freeGlobalLookup();
+            }
+            calculateCoarseEntries(fineOperator.getmat());
         }
-        calculateCoarseEntries(fineOperator.getmat());
+        else
+        {
+            using CoarseMatrix = typename CoarseOperator::matrix_type;
+            const auto& fineLevelMatrix = fineOperator.getmat();
+            coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), CoarseMatrix::row_wise));
+            auto createIter = coarseLevelMatrix_->createbegin();
+
+            for ( const auto& row: fineLevelMatrix )
+            {
+                for ( auto col = row.begin(), cend = row.end(); col != cend; ++col)
+                {
+                    createIter.insert(col.index());
+                }
+                ++createIter;
+            }
+
+            auto coarseRow = coarseLevelMatrix_->begin();
+            for ( const auto& row: fineLevelMatrix )
+            {
+                auto coarseCol = coarseRow->begin();
+
+                for ( auto col = row.begin(), cend = row.end(); col != cend; ++col, ++coarseCol )
+                {
+                    assert( col.index() == coarseCol.index() );
+                    *coarseCol = (*col)[COMPONENT_INDEX][COMPONENT_INDEX];
+                }
+                ++coarseRow;
+            }
+            coarseLevelCommunication_.reset(communication_, [](Communication*){});
+        }
+
         this->lhs_.resize(this->coarseLevelMatrix_->M());
         this->rhs_.resize(this->coarseLevelMatrix_->N());
         using OperatorArgs = typename Dune::Amg::ConstructionTraits<CoarseOperator>::Arguments;
@@ -682,32 +715,56 @@ public:
         // Set coarse vector to zero
         this->rhs_=0;
 
-        auto end = fine.end(),  begin=fine.begin();
-        for(auto block=begin; block != end; ++block)
+        if ( use_aggregation_ )
         {
-            const auto& vertex = (*aggregatesMap_)[block-begin];
-            if(vertex != AggregatesMap::ISOLATED)
+            auto end = fine.end(),  begin=fine.begin();
+
+            for(auto block=begin; block != end; ++block)
             {
-                this->rhs_[vertex] += (*block)[COMPONENT_INDEX];
+                const auto& vertex = (*aggregatesMap_)[block-begin];
+                if(vertex != AggregatesMap::ISOLATED)
+                {
+                    this->rhs_[vertex] += (*block)[COMPONENT_INDEX];
+                }
             }
         }
+        else
+        {
+            auto end = fine.end(),  begin=fine.begin();
+
+            for(auto block=begin; block != end; ++block)
+            {
+                this->rhs_[block-begin] = (*block)[COMPONENT_INDEX];
+            }
+        }
+
         this->lhs_=0;
     }
 
     void moveToFineLevel(typename FatherType::FineDomainType& fine)
     {
-        //for(auto& entry: this->lhs_)
-        //    entry*=prolongDamp_;
-        this->lhs_ *= prolongDamp_;
-        auto end=fine.end(), begin=fine.begin();
-
-        for(auto block=begin; block != end; ++block)
+        if( use_aggregation_ )
         {
-            const auto& vertex = (*aggregatesMap_)[block-begin];
-            if(vertex != AggregatesMap::ISOLATED)
-                (*block)[COMPONENT_INDEX] += this->lhs_[vertex];
+            this->lhs_ *= prolongDamp_;
+            auto end=fine.end(), begin=fine.begin();
+
+            for(auto block=begin; block != end; ++block)
+            {
+                const auto& vertex = (*aggregatesMap_)[block-begin];
+                if(vertex != AggregatesMap::ISOLATED)
+                    (*block)[COMPONENT_INDEX] += this->lhs_[vertex];
+            }
+            communication_->copyOwnerToAll(fine,fine);
         }
-        communication_->copyOwnerToAll(fine,fine);
+        else
+        {
+            auto end=fine.end(), begin=fine.begin();
+
+            for(auto block=begin; block != end; ++block)
+            {
+                (*block)[COMPONENT_INDEX] = this->lhs_[block-begin];
+            }
+        }
     }
 
     OneComponentAggregationLevelTransferPolicy* clone() const
@@ -726,6 +783,7 @@ private:
     Communication* communication_;
     std::shared_ptr<Communication> coarseLevelCommunication_;
     std::shared_ptr<typename CoarseOperator::matrix_type> coarseLevelMatrix_;
+    bool use_aggregation_;
 };
 
 template<typename O, typename S, typename C,
