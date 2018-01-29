@@ -218,7 +218,7 @@ public:
         unsigned episodeIdx = simulator_.episodeIndex();
         const auto& gridView = simulator_.gridManager().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
-        eclOutputModule_.allocBuffers(numElements, episodeIdx, false, false, collectToIORank_);
+        eclOutputModule_.allocBuffers(numElements, episodeIdx, /*substep=*/false, /*log=*/false, collectToIORank_);
 
         auto restart_values = eclIO_->loadRestart(solution_keys, extra_keys);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {

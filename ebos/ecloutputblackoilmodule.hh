@@ -147,7 +147,7 @@ public:
 
         // Fluid in place
         for (int i = 0; i<FIPDataType::numFipValues; i++) {
-            if (!substep || summaryConfig.require3DField(stringOfEnumIndex_(i))) {
+            if (!substep || summaryConfig.require3DField(fipEnumToString_(i))) {
                 if (rstKeywords["FIP"] > 0) {
                     rstKeywords["FIP"] = 0;
                     outputFipRestart_ = true;
@@ -160,13 +160,13 @@ public:
         }
         if (!substep || summaryConfig.hasKeyword("FPR") || summaryConfig.hasKeyword("FPRP") || summaryConfig.hasKeyword("RPR")) {
             fip_[FIPDataType::PoreVolume].resize(bufferSize, 0.0);
-            pvHydrocarbon_.resize(bufferSize, 0.0);
-            pPv_.resize(bufferSize, 0.0);
-            pPvHydrocarbon_.resize(bufferSize, 0.0);
+            hydrocarbonPoreVolume_.resize(bufferSize, 0.0);
+            pressureTimesPoreVolume_.resize(bufferSize, 0.0);
+            pressureTimesHydrocarbonVolume_.resize(bufferSize, 0.0);
         } else {
-            pvHydrocarbon_.clear();
-            pPv_.clear();
-            pPvHydrocarbon_.clear();
+            hydrocarbonPoreVolume_.clear();
+            pressureTimesPoreVolume_.clear();
+            pressureTimesHydrocarbonVolume_.clear();
         }
 
         // TODO: There seems to be an issue with mixing of RPTRST and RPTSCHED
@@ -324,8 +324,6 @@ public:
     void processElement(const ElementContext& elemCtx)
     {
 
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
         if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
             return;
 
@@ -341,12 +339,12 @@ public:
                 if (saturation_[phaseIdx].size() == 0)
                     continue;
 
-                saturation_[phaseIdx][globalDofIdx] = Toolbox::value(fs.saturation(phaseIdx));
+                saturation_[phaseIdx][globalDofIdx] = Opm::getValue(fs.saturation(phaseIdx));
                 Opm::Valgrind::CheckDefined(saturation_[phaseIdx][globalDofIdx]);
             }
 
             if (oilPressure_.size() > 0) {
-                oilPressure_[globalDofIdx] = Toolbox::value(fs.pressure(oilPhaseIdx));
+                oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
                 Opm::Valgrind::CheckDefined(oilPressure_[globalDofIdx]);
 
             }
@@ -384,12 +382,12 @@ public:
             }
 
             if (rs_.size()) {
-                rs_[globalDofIdx] = Toolbox::value(fs.Rs());
+                rs_[globalDofIdx] = Opm::getValue(fs.Rs());
                 Opm::Valgrind::CheckDefined(rs_[globalDofIdx]);
             }
 
             if (rv_.size()) {
-                rv_[globalDofIdx] = Toolbox::value(fs.Rv());
+                rv_[globalDofIdx] = Opm::getValue(fs.Rv());
                 Opm::Valgrind::CheckDefined(rv_[globalDofIdx]);
             }
 
@@ -397,7 +395,7 @@ public:
                 if (invB_[phaseIdx].size() == 0)
                     continue;
 
-                invB_[phaseIdx][globalDofIdx] = Toolbox::value(fs.invB(phaseIdx));
+                invB_[phaseIdx][globalDofIdx] = Opm::getValue(fs.invB(phaseIdx));
                 Opm::Valgrind::CheckDefined(invB_[phaseIdx][globalDofIdx]);
             }
 
@@ -405,7 +403,7 @@ public:
                 if (density_[phaseIdx].size() == 0)
                     continue;
 
-                density_[phaseIdx][globalDofIdx] = Toolbox::value(fs.density(phaseIdx));
+                density_[phaseIdx][globalDofIdx] = Opm::getValue(fs.density(phaseIdx));
                 Opm::Valgrind::CheckDefined(density_[phaseIdx][globalDofIdx]);
             }
 
@@ -413,7 +411,7 @@ public:
                 if (viscosity_[phaseIdx].size() == 0)
                     continue;
 
-                viscosity_[phaseIdx][globalDofIdx] = Toolbox::value(fs.viscosity(phaseIdx));
+                viscosity_[phaseIdx][globalDofIdx] = Opm::getValue(fs.viscosity(phaseIdx));
                 Opm::Valgrind::CheckDefined(viscosity_[phaseIdx][globalDofIdx]);
             }
 
@@ -421,7 +419,7 @@ public:
                 if (relativePermeability_[phaseIdx].size() == 0)
                     continue;
 
-                relativePermeability_[phaseIdx][globalDofIdx] = Toolbox::value(intQuants.relativePermeability(phaseIdx));
+                relativePermeability_[phaseIdx][globalDofIdx] = Opm::getValue(intQuants.relativePermeability(phaseIdx));
                 Opm::Valgrind::CheckDefined(relativePermeability_[phaseIdx][globalDofIdx]);
             }
 
@@ -436,7 +434,7 @@ public:
             if (bubblePointPressure_.size() > 0)
             {
                 try {
-                    bubblePointPressure_[globalDofIdx] = Toolbox::value(FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()));
+                    bubblePointPressure_[globalDofIdx] = Opm::getValue(FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()));
                 }
                 catch (const Opm::NumericalProblem& e) {
                     const auto globalIdx = elemCtx.simulator().gridManager().grid().globalCell()[globalDofIdx];
@@ -446,7 +444,7 @@ public:
             if (dewPointPressure_.size() > 0)
             {
                 try {
-                    dewPointPressure_[globalDofIdx] = Toolbox::value(FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()));
+                    dewPointPressure_[globalDofIdx] = Opm::getValue(FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()));
                 }
                 catch (const Opm::NumericalProblem& e) {
                     const auto globalIdx = elemCtx.simulator().gridManager().grid().globalCell()[globalDofIdx];
@@ -518,81 +516,8 @@ public:
                                                                                         intQuants.pvtRegionIndex());
             }
 
-            // Fluid in Place calculations
-
-            // calculate the pore volume of the current cell. Note that the porosity
-            // returned by the intensive quantities is defined as the ratio of pore
-            // space to total cell volume and includes all pressure dependent (->
-            // rock compressibility) and static modifiers (MULTPV, MULTREGP, NTG,
-            // PORV, MINPV and friends). Also note that because of this, the porosity
-            // returned by the intensive quantities can be outside of the physical
-            // range [0, 1] in pathetic cases.
-            const double pv =
-                elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
-                * intQuants.porosity().value();
-
-            if (pPvHydrocarbon_.size() > 0 && pPv_.size() > 0) {
-                assert(pvHydrocarbon_.size() ==  pPvHydrocarbon_.size());
-                assert(fip_[FIPDataType::PoreVolume].size() == pPv_.size() );
-
-                fip_[FIPDataType::PoreVolume][globalDofIdx] = pv;
-
-                Scalar hydrocarbon = 0.0;
-                if (FluidSystem::phaseIsActive(oilPhaseIdx))
-                    hydrocarbon += Toolbox::value(fs.saturation(oilPhaseIdx));
-                if (FluidSystem::phaseIsActive(gasPhaseIdx))
-                    hydrocarbon += Toolbox::value(fs.saturation(gasPhaseIdx));
-
-                pvHydrocarbon_[globalDofIdx] = pv * hydrocarbon;
-
-                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    pPv_[globalDofIdx] = Toolbox::value(fs.pressure(oilPhaseIdx)) * pv;
-                    pPvHydrocarbon_[globalDofIdx] = pPv_[globalDofIdx] * hydrocarbon;
-                }
-            }
-
-            if (computeFip_) {
-                Scalar fip[FluidSystem::numPhases];
-                for (unsigned phase = 0; phase < FluidSystem::numPhases; ++phase) {
-                    if (!FluidSystem::phaseIsActive(phase)) {
-                        continue;
-                    }
-
-                    const double b = Toolbox::value(fs.invB(phase));
-                    const double s = Toolbox::value(fs.saturation(phase));
-                    fip[phase] = b * s * pv;
-                }
-
-                if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[FIPDataType::OilInPlace].size() > 0)
-                    fip_[FIPDataType::OilInPlace][globalDofIdx] = fip[oilPhaseIdx];
-                if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[FIPDataType::GasInPlace].size() > 0)
-                    fip_[FIPDataType::GasInPlace][globalDofIdx] = fip[gasPhaseIdx];
-                if (FluidSystem::phaseIsActive(waterPhaseIdx) && fip_[FIPDataType::WaterInPlace].size() > 0)
-                    fip_[FIPDataType::WaterInPlace][globalDofIdx] = fip[waterPhaseIdx];
-
-                // Store the pure oil and gas FIP
-                if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[FIPDataType::OilInPlaceInLiquidPhase].size() > 0)
-                    fip_[FIPDataType::OilInPlaceInLiquidPhase][globalDofIdx] = fip[oilPhaseIdx];
-
-                if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[FIPDataType::GasInPlaceInGasPhase].size() > 0)
-                    fip_[FIPDataType::GasInPlaceInGasPhase][globalDofIdx] = fip[gasPhaseIdx];
-
-                if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    // Gas dissolved in oil and vaporized oil
-                    Scalar gipl = Toolbox::value(fs.Rs()) * fip[oilPhaseIdx];
-                    Scalar oipg = Toolbox::value(fs.Rv()) * fip[gasPhaseIdx];
-                    if (fip_[FIPDataType::GasInPlaceInGasPhase].size() > 0)
-                        fip_[FIPDataType::GasInPlaceInLiquidPhase][globalDofIdx] = gipl;
-                    if (fip_[FIPDataType::OilInPlaceInGasPhase].size() > 0)
-                        fip_[FIPDataType::OilInPlaceInGasPhase][globalDofIdx] = oipg;
-
-                    // Add dissolved gas and vaporized oil to total FIP
-                    if (fip_[FIPDataType::OilInPlace].size() > 0)
-                        fip_[FIPDataType::OilInPlace][globalDofIdx] += oipg;
-                    if (fip_[FIPDataType::GasInPlace].size() > 0)
-                        fip_[FIPDataType::GasInPlace][globalDofIdx] += gipl;
-                }
-            }
+            // Add fluid in Place values
+            updateFluidInPlace_(elemCtx, dofIdx);
 
             // Adding block values
             const auto globalIdx = elemCtx.simulator().gridManager().grid().globalCell()[globalDofIdx];
@@ -601,12 +526,11 @@ public:
                 int global_index = key.second - 1;
                 if (global_index == globalIdx) {
                     if (key.first == "BWSAT") {
-                        val.second = Toolbox::value(fs.saturation(waterPhaseIdx));
+                        val.second = Opm::getValue(fs.saturation(waterPhaseIdx));
                     } else if (key.first == "BGSAT") {
-                        val.second = Toolbox::value(fs.saturation(gasPhaseIdx));
+                        val.second = Opm::getValue(fs.saturation(gasPhaseIdx));
                     } else if (key.first == "BPR") {
-                        std::cout << "BPR set "<<Toolbox::value(fs.pressure(oilPhaseIdx)) << std::endl;
-                        val.second = Toolbox::value(fs.pressure(oilPhaseIdx));
+                        val.second = Opm::getValue(fs.pressure(oilPhaseIdx));
                     } else {
                         std::string logstring = "Keyword '";
                         logstring.append(key.first);
@@ -793,7 +717,7 @@ public:
         // Fluid in place
         for (int i = 0; i<FIPDataType::numFipValues; i++) {
             if (outputFipRestart_ && fip_[i].size() > 0) {
-                sol.insert(stringOfEnumIndex_(i),
+                sol.insert(fipEnumToString_(i),
                            Opm::UnitSystem::measure::volume,
                            fip_[i] ,
                            Opm::data::TargetType::SUMMARY);
@@ -811,7 +735,7 @@ public:
         // sum values over each region
         ScalarBuffer regionFipValues[FIPDataType::numFipValues];
         for (int i = 0; i<FIPDataType::numFipValues; i++) {
-            regionFipValues[i] = FIPTotals_(fip_[i], fipnum_, ntFip);
+            regionFipValues[i] = computeFipForRegions_(fip_[i], fipnum_, ntFip);
             if (isIORank_() && origRegionValues_[i].empty())
                 origRegionValues_[i] = regionFipValues[i];
         }
@@ -821,18 +745,18 @@ public:
         ScalarBuffer fieldFipValues(FIPDataType::numFipValues,0.0);
         bool comunicateSum = false; // the regionValues are already summed over all ranks.
         for (int i = 0; i<FIPDataType::numFipValues; i++) {            
-            const ScalarBuffer& tmp = FIPTotals_(regionFipValues[i], fieldNum, 1, comunicateSum);
-            fieldFipValues[i] = tmp[0]; //
+            const ScalarBuffer& tmp = computeFipForRegions_(regionFipValues[i], fieldNum, 1, comunicateSum);
+            fieldFipValues[i] = tmp[0];
         }
 
         // compute the hydrocarbon averaged pressure over the regions.
-        ScalarBuffer regPressurePv = FIPTotals_(pPv_, fipnum_, ntFip);
-        ScalarBuffer regPvHydrocarbon = FIPTotals_(pvHydrocarbon_, fipnum_, ntFip);
-        ScalarBuffer regPressurePvHydrocarbon = FIPTotals_(pPvHydrocarbon_, fipnum_, ntFip);
+        ScalarBuffer regPressurePv = computeFipForRegions_(pressureTimesPoreVolume_, fipnum_, ntFip);
+        ScalarBuffer regPvHydrocarbon = computeFipForRegions_(hydrocarbonPoreVolume_, fipnum_, ntFip);
+        ScalarBuffer regPressurePvHydrocarbon = computeFipForRegions_(pressureTimesHydrocarbonVolume_, fipnum_, ntFip);
 
-        ScalarBuffer fieldPressurePv = FIPTotals_(regPressurePv, fieldNum, 1, comunicateSum);
-        ScalarBuffer fieldPvHydrocarbon = FIPTotals_(regPvHydrocarbon, fieldNum, 1, comunicateSum);
-        ScalarBuffer fieldPressurePvHydrocarbon = FIPTotals_(regPressurePvHydrocarbon, fieldNum, 1, comunicateSum);
+        ScalarBuffer fieldPressurePv = computeFipForRegions_(regPressurePv, fieldNum, 1, comunicateSum);
+        ScalarBuffer fieldPvHydrocarbon = computeFipForRegions_(regPvHydrocarbon, fieldNum, 1, comunicateSum);
+        ScalarBuffer fieldPressurePvHydrocarbon = computeFipForRegions_(regPressurePvHydrocarbon, fieldNum, 1, comunicateSum);
 
         // output on io rank
         // the original Fip values are stored on the first step
@@ -842,7 +766,7 @@ public:
         if ( isIORank_()) {
             // Field summary output
             for (int i = 0; i<FIPDataType::numFipValues; i++) {
-                std::string key = "F" + stringOfEnumIndex_(i);
+                std::string key = "F" + fipEnumToString_(i);
                 if (summaryConfig.hasKeyword(key))
                     miscSummaryData[key] = fieldFipValues[i];
             }
@@ -857,7 +781,7 @@ public:
 
             // Region summary output
             for (int i = 0; i<FIPDataType::numFipValues; i++) {
-                std::string key = "R" + stringOfEnumIndex_(i);
+                std::string key = "R" + fipEnumToString_(i);
                 if (summaryConfig.hasKeyword(key))
                     regionData[key] = regionFipValues[i];
             }
@@ -870,7 +794,7 @@ public:
             // Output to log
             if (!substep) {
 
-                FIPUnitConvert_(fieldFipValues);
+                fipUnitConvert_(fieldFipValues);
                 if (origTotalValues_.empty())
                     origTotalValues_ = fieldFipValues;
 
@@ -882,12 +806,12 @@ public:
                     for (int i = 0; i<FIPDataType::numFipValues; i++) {
                         tmpO[i] = origRegionValues_[i][reg];
                     }
-                    FIPUnitConvert_(tmpO);
+                    fipUnitConvert_(tmpO);
                     ScalarBuffer tmp(FIPDataType::numFipValues,0.0);
                     for (int i = 0; i<FIPDataType::numFipValues; i++) {
                         tmp[i] = regionFipValues[i][reg];
                     }
-                    FIPUnitConvert_(tmp);
+                    fipUnitConvert_(tmp);
                     Scalar regHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(regPressurePvHydrocarbon[reg], regPvHydrocarbon[reg], regPressurePv[reg], regionFipValues[FIPDataType::PoreVolume][reg], true);
                     pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure);
                     outputRegionFluidInPlace_(tmpO, tmp, regHydroCarbonPoreVolumeAveragedPressure, reg + 1);
@@ -1055,6 +979,91 @@ private:
         return comm.rank() == 0;
     }
 
+    void updateFluidInPlace_(const ElementContext& elemCtx, unsigned dofIdx)
+    {
+
+        const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
+        const auto& fs = intQuants.fluidState();
+        unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+
+        // Fluid in Place calculations
+
+        // calculate the pore volume of the current cell. Note that the porosity
+        // returned by the intensive quantities is defined as the ratio of pore
+        // space to total cell volume and includes all pressure dependent (->
+        // rock compressibility) and static modifiers (MULTPV, MULTREGP, NTG,
+        // PORV, MINPV and friends). Also note that because of this, the porosity
+        // returned by the intensive quantities can be outside of the physical
+        // range [0, 1] in pathetic cases.
+        const double pv =
+            elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
+            * intQuants.porosity().value();
+
+        if (pressureTimesHydrocarbonVolume_.size() > 0 && pressureTimesPoreVolume_.size() > 0) {
+            assert(hydrocarbonPoreVolume_.size() ==  pressureTimesHydrocarbonVolume_.size());
+            assert(fip_[FIPDataType::PoreVolume].size() == pressureTimesPoreVolume_.size() );
+
+            fip_[FIPDataType::PoreVolume][globalDofIdx] = pv;
+
+            Scalar hydrocarbon = 0.0;
+            if (FluidSystem::phaseIsActive(oilPhaseIdx))
+                hydrocarbon += Opm::getValue(fs.saturation(oilPhaseIdx));
+            if (FluidSystem::phaseIsActive(gasPhaseIdx))
+                hydrocarbon += Opm::getValue(fs.saturation(gasPhaseIdx));
+
+            hydrocarbonPoreVolume_[globalDofIdx] = pv * hydrocarbon;
+
+            if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                pressureTimesPoreVolume_[globalDofIdx] = Opm::getValue(fs.pressure(oilPhaseIdx)) * pv;
+                pressureTimesHydrocarbonVolume_[globalDofIdx] = pressureTimesPoreVolume_[globalDofIdx] * hydrocarbon;
+            }
+        }
+
+        if (computeFip_) {
+            Scalar fip[FluidSystem::numPhases];
+            for (unsigned phase = 0; phase < FluidSystem::numPhases; ++phase) {
+                if (!FluidSystem::phaseIsActive(phase)) {
+                    continue;
+                }
+
+                const double b = Opm::getValue(fs.invB(phase));
+                const double s = Opm::getValue(fs.saturation(phase));
+                fip[phase] = b * s * pv;
+            }
+
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[FIPDataType::OilInPlace].size() > 0)
+                fip_[FIPDataType::OilInPlace][globalDofIdx] = fip[oilPhaseIdx];
+            if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[FIPDataType::GasInPlace].size() > 0)
+                fip_[FIPDataType::GasInPlace][globalDofIdx] = fip[gasPhaseIdx];
+            if (FluidSystem::phaseIsActive(waterPhaseIdx) && fip_[FIPDataType::WaterInPlace].size() > 0)
+                fip_[FIPDataType::WaterInPlace][globalDofIdx] = fip[waterPhaseIdx];
+
+            // Store the pure oil and gas FIP
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[FIPDataType::OilInPlaceInLiquidPhase].size() > 0)
+                fip_[FIPDataType::OilInPlaceInLiquidPhase][globalDofIdx] = fip[oilPhaseIdx];
+
+            if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[FIPDataType::GasInPlaceInGasPhase].size() > 0)
+                fip_[FIPDataType::GasInPlaceInGasPhase][globalDofIdx] = fip[gasPhaseIdx];
+
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                // Gas dissolved in oil and vaporized oil
+                Scalar gasInPlaceLiquid = Opm::getValue(fs.Rs()) * fip[oilPhaseIdx];
+                Scalar oilInPlaceGas = Opm::getValue(fs.Rv()) * fip[gasPhaseIdx];
+                if (fip_[FIPDataType::GasInPlaceInGasPhase].size() > 0)
+                    fip_[FIPDataType::GasInPlaceInLiquidPhase][globalDofIdx] = gasInPlaceLiquid;
+                if (fip_[FIPDataType::OilInPlaceInGasPhase].size() > 0)
+                    fip_[FIPDataType::OilInPlaceInGasPhase][globalDofIdx] = oilInPlaceGas;
+
+                // Add dissolved gas and vaporized oil to total FIP
+                if (fip_[FIPDataType::OilInPlace].size() > 0)
+                    fip_[FIPDataType::OilInPlace][globalDofIdx] += oilInPlaceGas;
+                if (fip_[FIPDataType::GasInPlace].size() > 0)
+                    fip_[FIPDataType::GasInPlace][globalDofIdx] += gasInPlaceLiquid;
+            }
+        }
+
+    }
+
     void createLocalFipnum_()
     {
         const std::vector<int>& fipnum_global = simulator_.gridManager().eclState().get3DProperties().getIntGridProperty("FIPNUM").getData();
@@ -1079,7 +1088,7 @@ private:
     }
 
     // Sum Fip values over regions.
-    ScalarBuffer FIPTotals_(const ScalarBuffer& fip, std::vector<int>& regionId, size_t maxNumberOfRegions, bool commSum = true)
+    ScalarBuffer computeFipForRegions_(const ScalarBuffer& fip, std::vector<int>& regionId, size_t maxNumberOfRegions, bool commSum = true)
     {
         ScalarBuffer totals(maxNumberOfRegions, 0.0);
         assert(regionId.size() == fip.size());
@@ -1121,7 +1130,7 @@ private:
         return pressurePv / pv;
     }
 
-    void FIPUnitConvert_(ScalarBuffer& fip)
+    void fipUnitConvert_(ScalarBuffer& fip)
     {
         const Opm::UnitSystem& units = simulator_.gridManager().eclState().getUnits();
         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
@@ -1197,18 +1206,18 @@ private:
         Opm::OpmLog::note(ss.str());
     }
 
-    std::string stringOfEnumIndex_(int i) {
+    std::string fipEnumToString_(int i) {
         typedef typename FIPDataType::FipId FipId;
         switch( static_cast<FipId>(i) )
         {
-        case FIPDataType::WaterInPlace: return "WIP";  break;
-        case FIPDataType::OilInPlace: return "OIP";  break;
-        case FIPDataType::GasInPlace: return "GIP";  break;
-        case FIPDataType::OilInPlaceInLiquidPhase: return "OIPL"; break;
-        case FIPDataType::OilInPlaceInGasPhase: return "OIPG"; break;
-        case FIPDataType::GasInPlaceInLiquidPhase: return "GIPL"; break;
-        case FIPDataType::GasInPlaceInGasPhase: return "GIPG"; break;
-        case FIPDataType::PoreVolume: return "PV"; break;
+        case FIPDataType::WaterInPlace: return "WIP";
+        case FIPDataType::OilInPlace: return "OIP";
+        case FIPDataType::GasInPlace: return "GIP";
+        case FIPDataType::OilInPlaceInLiquidPhase: return "OIPL";
+        case FIPDataType::OilInPlaceInGasPhase: return "OIPG";
+        case FIPDataType::GasInPlaceInLiquidPhase: return "GIPL";
+        case FIPDataType::GasInPlaceInGasPhase: return "GIPG";
+        case FIPDataType::PoreVolume: return "PV";
         }
         return "ERROR";
     }
@@ -1250,9 +1259,9 @@ private:
     ScalarBuffer fip_[FIPDataType::numFipValues];
     ScalarBuffer origTotalValues_;
     ScalarBuffer origRegionValues_[FIPDataType::numFipValues];
-    ScalarBuffer pvHydrocarbon_;
-    ScalarBuffer pPv_;
-    ScalarBuffer pPvHydrocarbon_;
+    ScalarBuffer hydrocarbonPoreVolume_;
+    ScalarBuffer pressureTimesPoreVolume_;
+    ScalarBuffer pressureTimesHydrocarbonVolume_;
     std::map<std::pair<std::string, int>, double> blockValues_;
 };
 } // namespace Ewoms
