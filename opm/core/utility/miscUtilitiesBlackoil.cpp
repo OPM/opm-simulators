@@ -24,7 +24,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
-#include <opm/core/linalg/blas_lapack.h>
+#include <opm/common/utility/numeric/blas_lapack.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>

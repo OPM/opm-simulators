@@ -22,7 +22,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include <opm/core/linalg/blas_lapack.h>
+#include <opm/common/utility/numeric/blas_lapack.h>
 #include <opm/core/pressure/mimetic/mimetic.h>
 
 /* ------------------------------------------------------------------ */

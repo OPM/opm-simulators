@@ -27,7 +27,7 @@
 #include <opm/core/utility/SparseTable.hpp>
 #include <opm/core/utility/VelocityInterpolation.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/linalg/blas_lapack.h>
+#include <opm/common/utility/numeric/blas_lapack.h>
 
 #include <algorithm>
 #include <cmath>
