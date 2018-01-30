@@ -38,7 +38,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-int main(int argc, char **argv)
+int main()
 {
     {
         typedef double Scalar;

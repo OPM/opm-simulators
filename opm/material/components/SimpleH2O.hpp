@@ -189,7 +189,7 @@ public:
      * \copydoc Component::liquidHeatCapacity
      */
     template <class Evaluation>
-    static Evaluation liquidHeatCapacity(const Evaluation& temperature,
+    static Evaluation liquidHeatCapacity(const Evaluation& temperature OPM_UNUSED,
                                          const Evaluation& pressure OPM_UNUSED)
     { return 4.184e3; }
 
