@@ -1021,7 +1021,8 @@ namespace Opm
         if ( drawdown > 0.0) {
             // Do nothing is crossflow is not allowed
             if (!allow_cf && well_type_ == INJECTOR) {
-                return;
+                // TODO: actaully, we did not have a case to test if it is the same case for injectors
+                drawdown = -mini_drawdown;
             }
 
             // compute component volumetric rates at standard conditions
@@ -1041,7 +1042,7 @@ namespace Opm
         } else { // injecting perforations
             // Do nothing if crossflow is not allowed
             if (!allow_cf && well_type_ == PRODUCER) {
-                return;
+                drawdown = mini_drawdown;
             }
 
             // for injecting perforations, we use total mobility
@@ -1896,10 +1897,11 @@ namespace Opm
                         // also need to consider the efficiency factor when manipulating the jacobians.
                         duneB_[seg][cell_idx][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx);
                     }
+                    // TODO: we should save the perforation pressure and preforation rates?
+                    // we do not use it in the simulation for now, while we might need them if
+                    // we handle the pressure in SEG mode.
+                    well_state.perfPhaseRates()[(first_perf_ + perf) * number_of_phases_ + ebosCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
                 }
-                // TODO: we should save the perforation pressure and preforation rates?
-                // we do not use it in the simulation for now, while we might need them if
-                // we handle the pressure in SEG mode.
             }
 
             // the fourth dequation, the pressure drop equation
