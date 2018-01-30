@@ -37,11 +37,24 @@
 namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(EclFlowGasOilProblem, INHERITS_FROM(EclFlowProblem));
+
 //! The indices required by the model
-SET_TYPE_PROP(EclFlowGasOilProblem, Indices,
-              Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent)?1:0,
-                GET_PROP_VALUE(TypeTag, EnablePolymer)?1:0,
-                /*PVOffset=*/0, /*disabledCompIdx=*/1>);
+SET_PROP(EclFlowGasOilProblem, Indices)
+{
+private:
+    // it is unfortunately not possible to simply use 'TypeTag' here because this leads
+    // to cyclic definitions of some properties. if this happens the compiler error
+    // messages unfortunately are *really* confusing and not really helpful.
+    typedef TTAG(EclFlowProblem) BaseTypeTag;
+    typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
+
+public:
+    typedef Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
+                                           GET_PROP_VALUE(TypeTag, EnablePolymer),
+                                           GET_PROP_VALUE(TypeTag, EnableEnergy),
+                                           /*PVOffset=*/0,
+                                           /*disabledCompIdx=*/FluidSystem::waterCompIdx> type;
+};
 }}
 
 namespace Opm {
