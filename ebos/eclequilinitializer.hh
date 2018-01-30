@@ -77,12 +77,15 @@ class EclEquilInitializer
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
     enum { dimWorld = GridView::dimensionworld };
+    enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
 
+    // NB: setting the enableEnergy argument to true enables storage of enthalpy and
+    // internal energy!
     typedef Opm::BlackOilFluidState<Scalar,
                                     FluidSystem,
-                                    /*enableTemperature=*/true,
-                                    /*enableEnthalpy=*/enableEnergy> ScalarFluidState;
+                                    enableTemperature,
+                                    enableEnergy> ScalarFluidState;
 
 public:
     template <class EclMaterialLawManager>
@@ -101,9 +104,6 @@ public:
                                                                          eclState,
                                                                          vanguard.grid(),
                                                                          simulator.problem().gravity()[dimWorld - 1]);
-
-        const std::vector<double>& tempiData =
-            eclState.get3DProperties().getDoubleGridProperty("TEMPI").getData();
 
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numCartesianElems);
@@ -135,18 +135,12 @@ public:
 
 
             // set the temperature.
-            //
-            // TODO: setting temperature explicitly while computing static equilibirum
-            //       for everything else is a bit inconsistent, i.e.,
-            //       Opm::initStateEquil() should be extended to provide correct initial
-            //       temperatures
-            assert(std::isfinite(tempiData[cartesianElemIdx]));
-            fluidState.setTemperature(tempiData[cartesianElemIdx]);
+            if (enableTemperature || enableEnergy)
+                fluidState.setTemperature(initialState.temperature()[elemIdx]);
 
             // set the phase pressures.
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 fluidState.setPressure(phaseIdx, initialState.press()[phaseIdx][elemIdx]);
-
         }
     }
 

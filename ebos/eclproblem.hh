@@ -268,6 +268,15 @@ SET_BOOL_PROP(EclBaseProblem, DisableWells, false);
 // By default, we enable the debugging checks if we're compiled in debug mode
 SET_BOOL_PROP(EclBaseProblem, EnableDebuggingChecks, true);
 
+// store temperature (but do not conserve energy, as long as EnableEnergy is false)
+SET_BOOL_PROP(EclBaseProblem, EnableTemperature, true);
+
+// disable all extensions supported by black oil model. this should not really be
+// necessary but it makes things a bit more explicit
+SET_BOOL_PROP(EclBaseProblem, EnablePolymer, false);
+SET_BOOL_PROP(EclBaseProblem, EnableSolvent, false);
+SET_BOOL_PROP(EclBaseProblem, EnableEnergy, false);
+
 } // namespace Properties
 
 /*!
@@ -296,6 +305,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { numComponents = FluidSystem::numComponents };
     enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
     enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
+    enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
@@ -325,8 +335,8 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef Opm::BlackOilFluidState<Scalar,
                                     FluidSystem,
-                                    /*enableTemperature=*/true,
-                                    /*enableEnthalpy=*/enableEnergy> InitialFluidState;
+                                    enableTemperature,
+                                    enableEnergy> InitialFluidState;
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
