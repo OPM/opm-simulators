@@ -350,10 +350,108 @@ protected:
     }
 
     /*!
+     * \brief Update the required gradients for boundary faces
+     */
+    template <class FluidState>
+    void calculateBoundaryGradients_(const ElementContext& elemCtx,
+                                     unsigned scvfIdx,
+                                     unsigned timeIdx,
+                                     const FluidState& exFluidState)
+    {
+        bool enableBoundaryMassFlux = false;
+        if (!enableBoundaryMassFlux)
+            return;
+
+        const auto& problem = elemCtx.problem();
+        const auto& stencil = elemCtx.stencil(timeIdx);
+        const auto& scvf = stencil.boundaryFace(scvfIdx);
+
+        interiorDofIdx_ = scvf.interiorIndex();
+
+        Scalar trans = problem.transmissibilityBoundary(elemCtx, scvfIdx);
+        Scalar faceArea = scvf.area();
+
+        // estimate the gravity correction: for performance reasons we use a simplified
+        // approach for this flux module that assumes that gravity is constant and always
+        // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
+        Scalar g = elemCtx.problem().gravity()[dimWorld - 1];
+
+        const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx_, timeIdx);
+
+        // this is quite hacky because the dune grid interface does not provide a
+        // cellCenterDepth() method (so we ask the problem to provide it). The "good"
+        // solution would be to take the Z coordinate of the element centroids, but since
+        // ECL seems to like to be inconsistent on that front, it needs to be done like
+        // here...
+        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx_, timeIdx);
+        Scalar zEx = scvf.integrationPos()[dimWorld - 1];
+
+        // the distances from the DOF's depths. (i.e., the additional depth of the
+        // exterior DOF)
+        Scalar distZ = zIn - zEx;
+
+        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+            if (!FluidSystem::phaseIsActive(phaseIdx))
+                continue;
+
+            // do the gravity correction: compute the hydrostatic pressure for the
+            // integration position
+            const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
+            const auto& rhoEx = exFluidState.density(phaseIdx);
+            Evaluation rhoAvg = (rhoIn + rhoEx)/2;
+
+            const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
+            Evaluation pressureExterior = exFluidState.pressure(phaseIdx);
+            pressureExterior += rhoAvg*(distZ*g);
+
+            pressureDifference_[phaseIdx] = pressureExterior - pressureInterior;
+
+            // decide the upstream index for the phase. for this we make sure that the
+            // degree of freedom which is regarded upstream if both pressures are equal
+            // is always the same: if the pressure is equal, the DOF with the lower
+            // global index is regarded to be the upstream one.
+            if (pressureDifference_[phaseIdx] > 0.0) {
+                upIdx_[phaseIdx] = -1;
+                dnIdx_[phaseIdx] = interiorDofIdx_;
+            }
+            else {
+                upIdx_[phaseIdx] = interiorDofIdx_;
+                dnIdx_[phaseIdx] = -1;
+            }
+
+            // this is slightly hacky because in the automatic differentiation case, it
+            // only works for the element centered finite volume method. for ebos this
+            // does not matter, though.
+            unsigned upstreamIdx = upstreamIndex_(phaseIdx);
+            const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
+            if (upstreamIdx == interiorDofIdx_)
+                volumeFlux_[phaseIdx] =
+                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-trans/faceArea);
+            else {
+                // compute the phase mobility using the material law parameters of the
+                // interior element. TODO: this could probably be done more efficiently
+                const auto& matParams =
+                    elemCtx.problem().materialLawParams(elemCtx,
+                                                        interiorDofIdx_,
+                                                        /*timeIdx=*/0);
+                typename FluidState::Scalar kr[numPhases];
+                MaterialLaw::relativePermeabilities(kr, matParams, exFluidState);
+
+                const auto& mob = kr[phaseIdx]/exFluidState.viscosity(phaseIdx);
+                volumeFlux_[phaseIdx] =
+                    pressureDifference_[phaseIdx]*mob*(-trans/faceArea);
+            }
+        }
+    }
+
+    /*!
      * \brief Update the volumetric fluxes for all fluid phases on the interior faces of the context
      */
     void calculateFluxes_(const ElementContext& elemCtx OPM_UNUSED, unsigned scvfIdx OPM_UNUSED, unsigned timeIdx OPM_UNUSED)
     { }
+
+    void calculateBoundaryFluxes_(const ElementContext& elemCtx OPM_UNUSED, unsigned scvfIdx OPM_UNUSED, unsigned timeIdx OPM_UNUSED)
+    {}
 
 private:
     Implementation& asImp_()

@@ -162,10 +162,14 @@ public:
         trans_.clear();
         trans_.reserve(numElements*3*1.05);
 
+        transBoundary_.clear();
+
         // if energy is enabled, let's do the same for the "thermal half transmissibilities"
         if (enableEnergy) {
             thermalHalfTrans_->clear();
             thermalHalfTrans_->reserve(numElements*3*1.05);
+
+            thermalHalfTransBoundary_.clear();
         }
 
         // compute the transmissibilities for all intersections
@@ -176,13 +180,54 @@ public:
 
             auto isIt = gridView.ibegin(elem);
             const auto& isEndIt = gridView.iend(elem);
+            unsigned boundaryIsIdx = 0;
             for (; isIt != isEndIt; ++ isIt) {
                 // store intersection, this might be costly
                 const auto& intersection = *isIt;
 
-                // ignore boundary intersections for now (TODO?)
-                if (!intersection.neighbor())
+                // deal with grid boundaries
+                if (!intersection.neighbor()) {
+                    // compute the transmissibilty for the boundary intersection
+                    const auto& geometry = intersection.geometry();
+                    const auto& faceCenterInside = geometry.center();
+
+                    auto faceAreaNormal = intersection.centerUnitOuterNormal();
+                    faceAreaNormal *= geometry.volume();
+
+                    Scalar transBoundaryIs;
+                    computeHalfTrans_(transBoundaryIs,
+                                      faceAreaNormal,
+                                      intersection.indexInInside(),
+                                      distanceVector_(faceCenterInside,
+                                                      intersection.indexInInside(),
+                                                      elemIdx,
+                                                      axisCentroids),
+                                      permeability_[elemIdx]);
+
+                    // normally there would be two half-transmissibilities that would be
+                    // averaged. on the grid boundary there only is the half
+                    // transmissibility of the interior element.
+                    transBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] = transBoundaryIs;
+
+                    // for boundary intersections we also need to compute the thermal
+                    // half transmissibilities
+                    if (enableEnergy) {
+                        const auto& n = intersection.centerUnitOuterNormal();
+                        Scalar A = intersection.geometry().volume();
+
+                        const auto& inPos = elem.geometry().center();
+                        const auto& outPos = intersection.geometry().center();
+                        const auto& d = outPos - inPos;
+
+                        Scalar thermalHalfTrans =
+                            A * std::abs(n*d)/(d*d);
+
+                        thermalHalfTransBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] = thermalHalfTrans;
+                    }
+
+                    ++ boundaryIsIdx;
                     continue;
+                }
 
                 const auto& outsideElem = intersection.outside();
                 unsigned outsideElemIdx = elemMapper.index(outsideElem);
@@ -217,10 +262,16 @@ public:
                 DimVector faceCenterOutside;
                 DimVector faceAreaNormal;
 
-                typename std::is_same< Grid, Dune::CpGrid> :: type isCpGrid;
-                computeFaceProperties( intersection, elemIdx, insideFaceIdx, outsideElemIdx, outsideFaceIdx,
-                                       faceCenterInside, faceCenterOutside, faceAreaNormal,
-                                       isCpGrid );
+                typename std::is_same<Grid, Dune::CpGrid>::type isCpGrid;
+                computeFaceProperties(intersection,
+                                      elemIdx,
+                                      insideFaceIdx,
+                                      outsideElemIdx,
+                                      outsideFaceIdx,
+                                      faceCenterInside,
+                                      faceCenterOutside,
+                                      faceAreaNormal,
+                                      isCpGrid);
 
                 Scalar halfTrans1;
                 Scalar halfTrans2;
@@ -304,6 +355,12 @@ public:
     { return trans_.at(isId_(elemIdx1, elemIdx2)); }
 
     /*!
+     * \brief Return the transmissibility for a given boundary segment.
+     */
+    Scalar transmissibilityBoundary(unsigned elemIdx, unsigned boundaryFaceIdx) const
+    { return transBoundary_.at(std::make_pair(elemIdx, boundaryFaceIdx)); }
+
+    /*!
      * \brief Return the thermal "half transmissibility" for the intersection between two
      *        elements.
      *
@@ -320,6 +377,9 @@ public:
     Scalar thermalHalfTrans(unsigned insideElemIdx, unsigned outsideElemIdx) const
     { return thermalHalfTrans_->at(isId_(insideElemIdx, outsideElemIdx)); }
 
+    Scalar thermalHalfTransBoundary(unsigned insideElemIdx, unsigned boundaryFaceIdx) const
+    { return thermalHalfTransBoundary_.at(std::make_pair(insideElemIdx, boundaryFaceIdx)); }
+
 private:
     template <class Intersection>
     void computeFaceProperties( const Intersection& intersection,
@@ -330,7 +390,7 @@ private:
                                 DimVector& faceCenterInside,
                                 DimVector& faceCenterOutside,
                                 DimVector& faceAreaNormal,
-                                std::false_type ) const
+                                /*isCpGrid=*/std::false_type) const
     {
         // default implementation for DUNE grids
         const auto& geometry = intersection.geometry();
@@ -350,7 +410,7 @@ private:
                                 DimVector& faceCenterInside,
                                 DimVector& faceCenterOutside,
                                 DimVector& faceAreaNormal,
-                                std::true_type ) const
+                                /*isCpGrid=*/std::true_type) const
     {
         int faceIdx = intersection.id();
         faceCenterInside = vanguard_.grid().faceCenterEcl(insideElemIdx,insideFaceIdx);
@@ -537,6 +597,8 @@ private:
     const Vanguard& vanguard_;
     std::vector<DimMatrix> permeability_;
     std::unordered_map<std::uint64_t, Scalar> trans_;
+    std::map<std::pair<unsigned, unsigned>, Scalar> transBoundary_;
+    std::map<std::pair<unsigned, unsigned>, Scalar> thermalHalfTransBoundary_;
     Opm::ConditionalStorage<enableEnergy,
                             std::unordered_map<std::uint64_t, Scalar> > thermalHalfTrans_;
 };

@@ -150,7 +150,7 @@ public:
     typedef typename EclMaterialLawManager::MaterialLaw type;
 };
 
-// Set the material law for heat heat storage in rock
+// Set the material law for energy storage in rock
 SET_PROP(EclBaseProblem, SolidEnergyLaw)
 {
 private:
@@ -163,7 +163,7 @@ public:
     typedef typename EclThermalLawManager::SolidEnergyLaw type;
 };
 
-// Set the material law for heat conduction
+// Set the material law for thermal conduction
 SET_PROP(EclBaseProblem, ThermalConductionLaw)
 {
 private:
@@ -324,8 +324,9 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
 
     typedef Opm::BlackOilFluidState<Scalar,
-            FluidSystem,
-            /*enableTemperature=*/true> InitialFluidState;
+                                    FluidSystem,
+                                    /*enableTemperature=*/true,
+                                    /*enableEnthalpy=*/enableEnergy> InitialFluidState;
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
@@ -769,6 +770,17 @@ public:
     }
 
     /*!
+     * \copydoc EclTransmissiblity::transmissibilityBoundary
+     */
+    template <class Context>
+    Scalar transmissibilityBoundary(const Context& elemCtx,
+                                    unsigned boundaryFaceIdx) const
+    {
+        unsigned elemIdx = elemCtx.globalSpaceIndex(/*dofIdx=*/0, /*timeIdx=*/0);
+        return transmissibilities_.transmissibilityBoundary(elemIdx, boundaryFaceIdx);
+    }
+
+    /*!
      * \copydoc EclTransmissiblity::thermalHalfTransmissibility
      */
     template <class Context>
@@ -784,11 +796,10 @@ public:
      * \copydoc EclTransmissiblity::thermalHalfTransmissibility
      */
     template <class Context>
-    Scalar thermalHalfTransmissibilityBoundary(const Context& context,
-                                               unsigned dofIdx,
+    Scalar thermalHalfTransmissibilityBoundary(const Context& elemCtx,
                                                unsigned boundaryFaceIdx) const
     {
-        unsigned elemIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+        unsigned elemIdx = elemCtx.globalSpaceIndex(/*dofIdx=*/0, /*timeIdx=*/0);
         return transmissibilities_.thermalHalfTransBoundary(elemIdx, boundaryFaceIdx);
     }
 
@@ -888,7 +899,7 @@ public:
     { return materialLawManager_->materialLawParams(globalDofIdx); }
 
     /*!
-     * \brief Return the parameters for the heat storage law of the rock
+     * \brief Return the parameters for the energy storage law of the rock
      */
     template <class Context>
     const SolidEnergyLawParams&
@@ -1069,10 +1080,23 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector& values,
-                  const Context& context OPM_UNUSED,
-                  unsigned spaceIdx OPM_UNUSED,
-                  unsigned timeIdx OPM_UNUSED) const
-    { values.setNoFlow(); }
+                  const Context& context,
+                  unsigned spaceIdx,
+                  unsigned timeIdx) const
+    {
+        if (!enableEnergy)
+            values.setNoFlow();
+        else {
+            // in the energy case we need to specify a non-trivial boundary condition
+            // because the geothermal gradient needs to be maintained. for this, we
+            // simply assume the initial temperature at the boundary and specify the
+            // thermal flow accordingly. in this context, "thermal flow" means energy
+            // flow due to a temerature gradient while assuming no-flow for mass
+            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
+            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
+            values.setThermalFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
+        }
+    }
 
     /*!
      * \copydoc FvBaseProblem::initial

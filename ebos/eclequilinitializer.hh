@@ -44,6 +44,7 @@ NEW_PROP_TAG(FluidSystem);
 NEW_PROP_TAG(GridView);
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(MaterialLaw);
+NEW_PROP_TAG(EnableEnergy);
 }
 
 /*!
@@ -65,10 +66,6 @@ class EclEquilInitializer
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
 
-    typedef Opm::BlackOilFluidState<Scalar,
-    FluidSystem,
-    /*enableTemperature=*/true> ScalarFluidState;
-
     enum { numPhases = FluidSystem::numPhases };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
@@ -80,6 +77,12 @@ class EclEquilInitializer
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
     enum { dimWorld = GridView::dimensionworld };
+    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+
+    typedef Opm::BlackOilFluidState<Scalar,
+                                    FluidSystem,
+                                    /*enableTemperature=*/true,
+                                    /*enableEnthalpy=*/enableEnergy> ScalarFluidState;
 
 public:
     template <class EclMaterialLawManager>
