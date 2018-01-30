@@ -1,5 +1,5 @@
 #include "BlackoilState.hpp"
-#include <opm/common/util/numeric/cmp.hpp>
+#include <opm/common/utility/numeric/cmp.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/output/data/Wells.hpp>
