@@ -457,110 +457,112 @@ inline void testAll()
             OPM_THROW(std::logic_error,
                       "Discrepancy between the deck and the EclMaterialLawManager");
 
-        const auto fam2Deck = parser.parseString(fam2DeckString, parseContext);
-        const Opm::EclipseState fam2EclState(fam2Deck, parseContext);
+        {
+            const auto fam2Deck = parser.parseString(fam2DeckString, parseContext);
+            const Opm::EclipseState fam2EclState(fam2Deck, parseContext);
 
-        Opm::EclMaterialLawManager<MaterialTraits> fam2MaterialLawManager;
-        fam2MaterialLawManager.initFromDeck(fam2Deck, fam2EclState, compressedToCartesianIdx);
+            Opm::EclMaterialLawManager<MaterialTraits> fam2MaterialLawManager;
+            fam2MaterialLawManager.initFromDeck(fam2Deck, fam2EclState, compressedToCartesianIdx);
 
-        if (fam2MaterialLawManager.enableEndPointScaling())
-            OPM_THROW(std::logic_error,
-                      "Discrepancy between the deck and the EclMaterialLawManager");
+            if (fam2MaterialLawManager.enableEndPointScaling())
+                OPM_THROW(std::logic_error,
+                          "Discrepancy between the deck and the EclMaterialLawManager");
 
-        if (fam2MaterialLawManager.enableHysteresis())
-            OPM_THROW(std::logic_error,
-                      "Discrepancy between the deck and the EclMaterialLawManager");
+            if (fam2MaterialLawManager.enableHysteresis())
+                OPM_THROW(std::logic_error,
+                          "Discrepancy between the deck and the EclMaterialLawManager");
 
-        const auto hysterDeck = parser.parseString(hysterDeckString, parseContext);
-        const Opm::EclipseState hysterEclState(hysterDeck, parseContext);
+            const auto hysterDeck = parser.parseString(hysterDeckString, parseContext);
+            const Opm::EclipseState hysterEclState(hysterDeck, parseContext);
 
-        Opm::EclMaterialLawManager<MaterialTraits> hysterMaterialLawManager;
-        hysterMaterialLawManager.initFromDeck(hysterDeck, hysterEclState, compressedToCartesianIdx);
+            Opm::EclMaterialLawManager<MaterialTraits> hysterMaterialLawManager;
+            hysterMaterialLawManager.initFromDeck(hysterDeck, hysterEclState, compressedToCartesianIdx);
 
-        if (hysterMaterialLawManager.enableEndPointScaling())
-            OPM_THROW(std::logic_error,
-                      "Discrepancy between the deck and the EclMaterialLawManager");
+            if (hysterMaterialLawManager.enableEndPointScaling())
+                OPM_THROW(std::logic_error,
+                          "Discrepancy between the deck and the EclMaterialLawManager");
 
-        if (hysterMaterialLawManager.enableHysteresis() != true)
-            OPM_THROW(std::logic_error,
-                      "Discrepancy between the deck and the EclMaterialLawManager");
+            if (hysterMaterialLawManager.enableHysteresis() != true)
+                OPM_THROW(std::logic_error,
+                          "Discrepancy between the deck and the EclMaterialLawManager");
 
 
 
-        // make sure that the saturation functions for both keyword families are
-        // identical, and that setting and getting the hysteresis parameters works
-        for (unsigned elemIdx = 0; elemIdx < n; ++ elemIdx) {
-            for (int i = -10; i < 120; ++ i) {
-                Scalar Sw = Scalar(i)/100;
-                for (int j = i; j < 120; ++ j) {
-                    Scalar So = Scalar(j)/100;
-                    Scalar Sg = 1 - Sw - So;
-                    FluidState fs;
-                    fs.setSaturation(waterPhaseIdx, Sw);
-                    fs.setSaturation(oilPhaseIdx, So);
-                    fs.setSaturation(gasPhaseIdx, Sg);
+            // make sure that the saturation functions for both keyword families are
+            // identical, and that setting and getting the hysteresis parameters works
+            for (unsigned elemIdx = 0; elemIdx < n; ++ elemIdx) {
+                for (int i = -10; i < 120; ++ i) {
+                    Scalar Sw = Scalar(i)/100;
+                    for (int j = i; j < 120; ++ j) {
+                        Scalar So = Scalar(j)/100;
+                        Scalar Sg = 1 - Sw - So;
+                        FluidState fs;
+                        fs.setSaturation(waterPhaseIdx, Sw);
+                        fs.setSaturation(oilPhaseIdx, So);
+                        fs.setSaturation(gasPhaseIdx, Sg);
 
-                    Scalar pcFam1[numPhases]  = { 0.0, 0.0 };
-                    Scalar pcFam2[numPhases]  = { 0.0, 0.0 };
-                    MaterialLaw::capillaryPressures(pcFam1,
-                                                    materialLawManager.materialLawParams(elemIdx),
-                                                    fs);
-                    MaterialLaw::capillaryPressures(pcFam2,
-                                                    fam2MaterialLawManager.materialLawParams(elemIdx),
-                                                    fs);
-
-                    Scalar krFam1[numPhases] = { 0.0, 0.0 };
-                    Scalar krFam2[numPhases] = { 0.0, 0.0 };
-                    MaterialLaw::relativePermeabilities(krFam1,
+                        Scalar pcFam1[numPhases]  = { 0.0, 0.0 };
+                        Scalar pcFam2[numPhases]  = { 0.0, 0.0 };
+                        MaterialLaw::capillaryPressures(pcFam1,
                                                         materialLawManager.materialLawParams(elemIdx),
                                                         fs);
-                    MaterialLaw::relativePermeabilities(krFam2,
+                        MaterialLaw::capillaryPressures(pcFam2,
                                                         fam2MaterialLawManager.materialLawParams(elemIdx),
                                                         fs);
 
-                    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                        Scalar krFam1[numPhases] = { 0.0, 0.0 };
+                        Scalar krFam2[numPhases] = { 0.0, 0.0 };
+                        MaterialLaw::relativePermeabilities(krFam1,
+                                                            materialLawManager.materialLawParams(elemIdx),
+                                                            fs);
+                        MaterialLaw::relativePermeabilities(krFam2,
+                                                            fam2MaterialLawManager.materialLawParams(elemIdx),
+                                                            fs);
 
-                        if (std::abs(pcFam1[phaseIdx] - pcFam2[phaseIdx]) > 1e-5)
-                            OPM_THROW(std::logic_error,
-                                      "Discrepancy between capillary pressure of family 1 and family 2 keywords");
-                        if (std::abs(krFam1[phaseIdx] - krFam2[phaseIdx]) > 1e-1)
-                            OPM_THROW(std::logic_error,
-                                      "Discrepancy between relative permeabilities of family 1 and family 2 keywords");
-                    }
+                        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+
+                            if (std::abs(pcFam1[phaseIdx] - pcFam2[phaseIdx]) > 1e-5)
+                                OPM_THROW(std::logic_error,
+                                          "Discrepancy between capillary pressure of family 1 and family 2 keywords");
+                            if (std::abs(krFam1[phaseIdx] - krFam2[phaseIdx]) > 1e-1)
+                                OPM_THROW(std::logic_error,
+                                          "Discrepancy between relative permeabilities of family 1 and family 2 keywords");
+                        }
 
 
-                    // This should ideally test each of the materials (stone1, stone2, default, two-phase),
-                    // but currently only tests default
-                    const Scalar pcSwMdc_in[2] = { 1.0/2.0, 1.0/3.0 };
-                    const Scalar krnSwMdc_in[2] = { 1.0/5.0, 1.0/7.0 };
-                    hysterMaterialLawManager.setOilWaterHysteresisParams(
-                            pcSwMdc_in[0],
-                            krnSwMdc_in[0],
-                            elemIdx);
-                    hysterMaterialLawManager.setGasOilHysteresisParams(
-                            pcSwMdc_in[1],
-                            krnSwMdc_in[1],
-                            elemIdx);
+                        // This should ideally test each of the materials (stone1, stone2, default, two-phase),
+                        // but currently only tests default
+                        const Scalar pcSwMdc_in[2] = { 1.0/2.0, 1.0/3.0 };
+                        const Scalar krnSwMdc_in[2] = { 1.0/5.0, 1.0/7.0 };
+                        hysterMaterialLawManager.setOilWaterHysteresisParams(
+                                                                             pcSwMdc_in[0],
+                                                                             krnSwMdc_in[0],
+                                                                             elemIdx);
+                        hysterMaterialLawManager.setGasOilHysteresisParams(
+                                                                           pcSwMdc_in[1],
+                                                                           krnSwMdc_in[1],
+                                                                           elemIdx);
 
-                    Scalar pcSwMdc_out[2] = { 0.0, 0.0 };
-                    Scalar krnSwMdc_out[2] = { 0.0, 0.0 };
-                    hysterMaterialLawManager.oilWaterHysteresisParams(
-                            pcSwMdc_out[0],
-                            krnSwMdc_out[0],
-                            elemIdx);
-                    hysterMaterialLawManager.gasOilHysteresisParams(
-                            pcSwMdc_out[1],
-                            krnSwMdc_out[1],
-                            elemIdx);
+                        Scalar pcSwMdc_out[2] = { 0.0, 0.0 };
+                        Scalar krnSwMdc_out[2] = { 0.0, 0.0 };
+                        hysterMaterialLawManager.oilWaterHysteresisParams(
+                                                                          pcSwMdc_out[0],
+                                                                          krnSwMdc_out[0],
+                                                                          elemIdx);
+                        hysterMaterialLawManager.gasOilHysteresisParams(
+                                                                        pcSwMdc_out[1],
+                                                                        krnSwMdc_out[1],
+                                                                        elemIdx);
 
-                    for (unsigned phasePairIdx = 0; phasePairIdx < 2; ++ phasePairIdx) {
-                        if ((pcSwMdc_in[phasePairIdx] - pcSwMdc_out[phasePairIdx]) != 0.0)
-                            OPM_THROW(std::logic_error,
-                                      "Hysteresis parameters did not propagate correctly");
-                        if ((krnSwMdc_in[phasePairIdx] - krnSwMdc_out[phasePairIdx]) != 0.0)
-                            OPM_THROW(std::logic_error,
-                                      "Hysteresis parameters did not propagate correctly");
+                        for (unsigned phasePairIdx = 0; phasePairIdx < 2; ++ phasePairIdx) {
+                            if ((pcSwMdc_in[phasePairIdx] - pcSwMdc_out[phasePairIdx]) != 0.0)
+                                OPM_THROW(std::logic_error,
+                                          "Hysteresis parameters did not propagate correctly");
+                            if ((krnSwMdc_in[phasePairIdx] - krnSwMdc_out[phasePairIdx]) != 0.0)
+                                OPM_THROW(std::logic_error,
+                                          "Hysteresis parameters did not propagate correctly");
 
+                        }
                     }
                 }
             }
