@@ -20,7 +20,7 @@
 #ifndef OPM_SATURATIONPROPSBASIC_HEADER_INCLUDED
 #define OPM_SATURATIONPROPSBASIC_HEADER_INCLUDED
 
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 
 namespace Opm
 {

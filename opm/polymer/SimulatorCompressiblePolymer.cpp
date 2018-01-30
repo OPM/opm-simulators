@@ -22,7 +22,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <opm/polymer/SimulatorCompressiblePolymer.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/polymer/CompressibleTpfaPolymer.hpp>

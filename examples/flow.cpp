@@ -27,7 +27,7 @@
 #include <opm/simulators/flow_ebos_polymer.hpp>
 
 #include <opm/autodiff/MissingFeatures.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/utility/ResetLocale.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>

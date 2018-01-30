@@ -24,7 +24,7 @@
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/OilPvtMultiplexer.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/GasPvtMultiplexer.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/WaterPvtMultiplexer.hpp>

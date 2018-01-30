@@ -26,7 +26,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/SparseTable.hpp>
 #include <opm/core/utility/VelocityInterpolation.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/utility/numeric/blas_lapack.h>
 
 #include <algorithm>

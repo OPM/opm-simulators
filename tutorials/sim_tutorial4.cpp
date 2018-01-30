@@ -46,7 +46,7 @@
 
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/wells/WellCollection.hpp>
 
 /// \page tutorial4 Well controls

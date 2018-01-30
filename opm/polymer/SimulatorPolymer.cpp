@@ -23,7 +23,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <opm/polymer/SimulatorPolymer.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/polymer/IncompTpfaPolymer.hpp>

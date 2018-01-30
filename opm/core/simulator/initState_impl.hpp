@@ -23,7 +23,7 @@
 #include <opm/common/data/SimulationDataContainer.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridHelpers.hpp>
 #include <opm/core/utility/MonotCubicInterpolator.hpp>

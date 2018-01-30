@@ -27,7 +27,7 @@
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/simulator/initStateEquil.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>

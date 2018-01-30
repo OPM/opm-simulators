@@ -47,7 +47,7 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/simulators/thresholdPressures.hpp> // Note: the GridHelpers must be included before this (to make overloads available). \TODO: Fix.
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
