@@ -28,7 +28,6 @@
 #ifndef EWOMS_ECL_TRANSMISSIBILITY_HH
 #define EWOMS_ECL_TRANSMISSIBILITY_HH
 
-
 #include <ewoms/common/propertysystem.hh>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -39,6 +38,7 @@
 #include <opm/grid/CpGrid.hpp>
 
 #include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/ConditionalStorage.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
 
@@ -57,6 +57,7 @@ NEW_PROP_TAG(Vanguard);
 NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(GridView);
 NEW_PROP_TAG(ElementMapper);
+NEW_PROP_TAG(EnableEnergy);
 }
 
 /*!
@@ -74,6 +75,8 @@ class EclTransmissibility
     typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
     typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
     typedef typename GridView::Intersection Intersection;
+
+    static const bool enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy);
 
     // Grid and world dimension
     enum { dimWorld = GridView::dimensionworld };
@@ -104,6 +107,11 @@ public:
     { update(); }
 
 
+    /*!
+     * \brief Compute all transmissibilities
+     *
+     * Also, this updates the "thermal half transmissibilities" if energy is enabled.
+     */
     void update()
     {
         const auto& gridView = vanguard_.gridView();
@@ -154,10 +162,18 @@ public:
         trans_.clear();
         trans_.reserve(numElements*3*1.05);
 
+        // if energy is enabled, let's do the same for the "thermal half transmissibilities"
+        if (enableEnergy) {
+            thermalHalfTrans_->clear();
+            thermalHalfTrans_->reserve(numElements*3*1.05);
+        }
+
         // compute the transmissibilities for all intersections
         elemIt = gridView.template begin</*codim=*/ 0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto& elem = *elemIt;
+            unsigned elemIdx = elemMapper.index(elem);
+
             auto isIt = gridView.ibegin(elem);
             const auto& isEndIt = gridView.iend(elem);
             for (; isIt != isEndIt; ++ isIt) {
@@ -165,22 +181,31 @@ public:
                 const auto& intersection = *isIt;
 
                 // ignore boundary intersections for now (TODO?)
-
-                // continue if no neighbor is present
-                if ( ! intersection.neighbor() )
+                if (!intersection.neighbor())
                     continue;
 
-                const auto& inside = intersection.inside();
-                const auto& outside = intersection.outside();
-                unsigned insideElemIdx = elemMapper.index(inside);
-                unsigned outsideElemIdx = elemMapper.index(outside);
+                const auto& outsideElem = intersection.outside();
+                unsigned outsideElemIdx = elemMapper.index(outsideElem);
 
                 // we only need to calculate a face's transmissibility
                 // once...
-                if (insideElemIdx > outsideElemIdx)
+                if (elemIdx > outsideElemIdx)
                     continue;
 
-                unsigned insideCartElemIdx = cartMapper.cartesianIndex(insideElemIdx);
+                // update the "thermal half transmissibility" for the intersection
+                if (enableEnergy) {
+                    const auto& n = intersection.centerUnitOuterNormal();
+                    Scalar A = intersection.geometry().volume();
+
+                    const auto& inPos = elem.geometry().center();
+                    const auto& outPos = outsideElem.geometry().center();
+                    const auto& d = outPos - inPos;
+
+                    (*thermalHalfTrans_)[isId_(elemIdx, outsideElemIdx)] =
+                        A * std::abs(n*d)/(d*d);
+                }
+
+                unsigned insideCartElemIdx = cartMapper.cartesianIndex(elemIdx);
                 unsigned outsideCartElemIdx = cartMapper.cartesianIndex(outsideElemIdx);
 
                 // local indices of the faces of the inside and
@@ -193,7 +218,7 @@ public:
                 DimVector faceAreaNormal;
 
                 typename std::is_same< Grid, Dune::CpGrid> :: type isCpGrid;
-                computeFaceProperties( intersection, insideElemIdx, insideFaceIdx, outsideElemIdx, outsideFaceIdx,
+                computeFaceProperties( intersection, elemIdx, insideFaceIdx, outsideElemIdx, outsideFaceIdx,
                                        faceCenterInside, faceCenterOutside, faceAreaNormal,
                                        isCpGrid );
 
@@ -205,9 +230,9 @@ public:
                                   insideFaceIdx,
                                   distanceVector_(faceCenterInside,
                                                   intersection.indexInInside(),
-                                                  insideElemIdx,
+                                                  elemIdx,
                                                   axisCentroids),
-                                  permeability_[insideElemIdx]);
+                                  permeability_[elemIdx]);
                 computeHalfTrans_(halfTrans2,
                                   faceAreaNormal,
                                   outsideFaceIdx,
@@ -261,16 +286,39 @@ public:
                                                        outsideCartElemIdx,
                                                        faceDir);
 
-                trans_[isId_(insideElemIdx, outsideElemIdx)] = trans;
+                trans_[isId_(elemIdx, outsideElemIdx)] = trans;
             }
         }
     }
 
+    /*!
+     * \brief Return the permeability for an element.
+     */
     const DimMatrix& permeability(unsigned elemIdx) const
     { return permeability_[elemIdx]; }
 
+    /*!
+     * \brief Return the transmissibility for the intersection between two elements.
+     */
     Scalar transmissibility(unsigned elemIdx1, unsigned elemIdx2) const
     { return trans_.at(isId_(elemIdx1, elemIdx2)); }
+
+    /*!
+     * \brief Return the thermal "half transmissibility" for the intersection between two
+     *        elements.
+     *
+     * The "half transmissibility" features all sub-expressions of the "thermal
+     * transmissibility" which can be precomputed and is not dependent on the current
+     * solution:
+     *
+     * H_t = A* (n*d)/(d*d);
+     *
+     * where A is the area of the intersection between the inside and outside elements, n
+     * is the outer unit normal and d is the distance between the centers of the adjacent
+     * elements
+     */
+    Scalar thermalHalfTrans(unsigned insideElemIdx, unsigned outsideElemIdx) const
+    { return thermalHalfTrans_->at(isId_(insideElemIdx, outsideElemIdx)); }
 
 private:
     template <class Intersection>
@@ -484,15 +532,13 @@ private:
             }
             averageNtg[cartesianCellIdx] = ntgCellVolume / totalCellVolume;
         }
-
     }
-
-
-
 
     const Vanguard& vanguard_;
     std::vector<DimMatrix> permeability_;
     std::unordered_map<std::uint64_t, Scalar> trans_;
+    Opm::ConditionalStorage<enableEnergy,
+                            std::unordered_map<std::uint64_t, Scalar> > thermalHalfTrans_;
 };
 
 } // namespace Ewoms

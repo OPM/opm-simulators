@@ -116,8 +116,13 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 
     static const unsigned numModelEq = GET_PROP_VALUE(TypeTag, NumEq);
     static const unsigned conti0EqIdx = GET_PROP_TYPE(TypeTag, Indices)::conti0EqIdx;
+    static const unsigned contiEnergyEqIdx = GET_PROP_TYPE(TypeTag, Indices)::contiEnergyEqIdx;
 
-    typedef Opm::CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/false> FluidState;
+    static constexpr unsigned historySize = GET_PROP_VALUE(TypeTag, TimeDiscHistorySize);
+
+    static constexpr bool enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy);
+
+    typedef Opm::CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/true> FluidState;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
     // all quantities that need to be stored per degree of freedom that intersects the
@@ -318,6 +323,17 @@ public:
 
         int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
         sol[wellGlobalDof] = 0.0;
+
+        // make valgrind shut up about the DOFs for the well even if the PrimaryVariables
+        // class contains some "holes" due to alignment
+        Opm::Valgrind::SetDefined(sol[wellGlobalDof]);
+
+        // also apply the initial solution of the well to the "old" time steps
+        for (unsigned timeIdx = 1; timeIdx < historySize; ++timeIdx) {
+            auto& oldSol = const_cast<SolutionVector&>(simulator_.model().solution(timeIdx));
+
+            oldSol[wellGlobalDof] = sol[wellGlobalDof];
+        }
     }
 
     /*!
@@ -707,6 +723,12 @@ public:
      */
     void setControlMode(ControlMode controlMode)
     { controlMode_ = controlMode; }
+
+    /*!
+     * \brief Set the temperature of the injected fluids [K]
+     */
+    void setTemperature(Scalar value)
+    { wellTemperature_ = value; }
 
     /*!
      * \brief Set the connection transmissibility factor for a given degree of freedom.
@@ -1104,15 +1126,59 @@ public:
         computeVolumetricDofRates_(volumetricRates, actualBottomHolePressure_, tmp);
 
         // convert to mass rates
-        RateVector modelRate;
+        RateVector modelRate(0.0);
         const auto& intQuants = context.intensiveQuantities(dofIdx, timeIdx);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
 
+            // energy is disabled or we have production for the given phase, i.e., we
+            // can use the intensive quantities' fluid state
             modelRate.setVolumetricRate(intQuants.fluidState(), phaseIdx, volumetricRates[phaseIdx]);
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
-                q[conti0EqIdx + compIdx] += modelRate[conti0EqIdx + compIdx];
+
+            if (enableEnergy) {
+                if (volumetricRates[phaseIdx] < 0.0) {
+                    // producer
+                    const auto& fs = intQuants.fluidState();
+                    modelRate[contiEnergyEqIdx] += volumetricRates[phaseIdx]*fs.density(phaseIdx)*fs.enthalpy(phaseIdx);
+                }
+                else if (volumetricRates[phaseIdx] > 0.0
+                         && injectedPhaseIdx_ == phaseIdx)
+                {
+                    // injector for the right phase. we need to use the thermodynamic
+                    // quantities from the borehole as upstream
+                    //
+                    // TODO: This is not implemented in a very efficient way, the
+                    // required quantities could be precomputed at initialization!
+                    auto fs = injectionFluidState_;
+
+                    // TODO: maybe we need to use a depth dependent pressure here. the
+                    // difference is probably not very large, and for wells that span
+                    // multiple perforations it is unclear what "well temperature" means
+                    // anyway.
+                    fs.setPressure(phaseIdx, actualBottomHolePressure_);
+
+                    fs.setTemperature(wellTemperature_);
+
+                    typename FluidSystem::template ParameterCache<Evaluation> paramCache;
+                    unsigned globalSpaceIdx = context.globalSpaceIndex(dofIdx, timeIdx);
+                    unsigned pvtRegionIdx = context.primaryVars(dofIdx, timeIdx).pvtRegionIndex();
+                    paramCache.setRegionIndex(pvtRegionIdx);
+                    paramCache.setMaxOilSat(context.problem().maxOilSaturation(globalSpaceIdx));
+                    paramCache.updatePhase(fs, phaseIdx);
+
+                    const auto& rho = FluidSystem::density(fs, paramCache, phaseIdx);
+                    fs.setDensity(phaseIdx, rho);
+
+                    const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
+                    fs.setEnthalpy(phaseIdx, h);
+
+                    modelRate[contiEnergyEqIdx] += volumetricRates[phaseIdx]*fs.density(phaseIdx)*fs.enthalpy(phaseIdx);
+                }
+            }
+
+            for (unsigned eqIdx = 0; eqIdx < modelRate.size(); ++eqIdx)
+                q[conti0EqIdx + eqIdx] += modelRate[conti0EqIdx + eqIdx];
         }
 
         Opm::Valgrind::CheckDefined(q);
@@ -1561,6 +1627,9 @@ protected:
 
     // the sum of the total volumes of all the degrees of freedoms that interact with the well
     Scalar wellTotalVolume_;
+
+    // the temperature assumed for the fluid (in the case of an injector well)
+    Scalar wellTemperature_;
 
     // The assumed bottom hole and tubing head pressures as specified by the user
     Scalar bhpLimit_;

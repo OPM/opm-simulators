@@ -103,6 +103,9 @@ public:
         {
             const Opm::Well* deckWell = deckSchedule.getWells()[deckWellIdx];
             const std::string& wellName = deckWell->name();
+            Scalar wellTemperature = 273.15 + 15.56; // [K]
+            if (deckWell->isInjector(/*timeStep=*/0))
+                wellTemperature = deckWell->getInjectionProperties(/*timeStep=*/0).temperature;
 
             // set the name of the well but not much else. (i.e., if it is not completed,
             // the well primarily serves as a placeholder.) The big rest of the well is
@@ -110,6 +113,7 @@ public:
             auto well = std::make_shared<Well>(simulator_);
             well->setName(wellName);
             well->setWellStatus(Well::Shut);
+            well->setTemperature(wellTemperature);
 
             wells_.push_back(well);
             wellNameToIndex_[well->name()] = wells_.size() - 1;
@@ -143,6 +147,9 @@ public:
                 continue;
 
             auto well = this->well(deckWell->name());
+
+            if (deckWell->isInjector(episodeIdx))
+                well->setTemperature(deckWell->getInjectionProperties(episodeIdx).temperature);
 
             Opm::WellCommon::StatusEnum deckWellStatus = deckWell->getStatus(episodeIdx);
             switch (deckWellStatus) {

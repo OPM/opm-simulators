@@ -115,6 +115,7 @@ class EclTransExtensiveQuantities
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { numPhases = FluidSystem::numPhases };
     enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
+    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
