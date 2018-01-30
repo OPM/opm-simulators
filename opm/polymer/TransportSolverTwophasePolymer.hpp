@@ -22,7 +22,7 @@
 
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/core/transport/reorder/ReorderSolverInterface.hpp>
-#include <opm/core/utility/linearInterpolation.hpp>
+#include <opm/common/utility/numeric/linearInterpolation.hpp>
 #include <vector>
 #include <list>
 

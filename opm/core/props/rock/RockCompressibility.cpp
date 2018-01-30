@@ -23,7 +23,7 @@
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/core/utility/linearInterpolation.hpp>
+#include <opm/common/utility/numeric/linearInterpolation.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>

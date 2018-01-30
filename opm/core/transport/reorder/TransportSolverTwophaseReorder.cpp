@@ -23,7 +23,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
 #include <opm/core/grid/ColumnExtract.hpp>
-#include <opm/core/utility/RootFinders.hpp>
+#include <opm/common/utility/numeric/RootFinders.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 

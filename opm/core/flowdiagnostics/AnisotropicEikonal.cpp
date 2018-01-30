@@ -21,7 +21,7 @@
 #include <opm/core/flowdiagnostics/AnisotropicEikonal.hpp>
 #include <opm/core/grid/GridUtilities.hpp>
 #include <opm/core/grid.h>
-#include <opm/core/utility/RootFinders.hpp>
+#include <opm/common/utility/numeric/RootFinders.hpp>
 
 #if BOOST_HEAP_AVAILABLE
 

@@ -30,7 +30,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/grid/GridHelpers.hpp>
-#include <opm/core/utility/linearInterpolation.hpp>
+#include <opm/common/utility/numeric/linearInterpolation.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>

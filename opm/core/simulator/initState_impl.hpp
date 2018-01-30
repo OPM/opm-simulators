@@ -26,7 +26,7 @@
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridHelpers.hpp>
-#include <opm/core/utility/MonotCubicInterpolator.hpp>
+#include <opm/common/utility/numeric/MonotCubicInterpolator.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
