@@ -110,7 +110,6 @@ namespace Opm
                 printPRTHeader();
                 extractMessages();
                 runDiagnostics();
-                setupState();
                 writeInit();
                 setupOutputWriter();
                 setupLinearSolver();
@@ -360,7 +359,8 @@ namespace Opm
               strftime(tmstr, sizeof(tmstr), "%d-%m-%Y at %X", &tstruct);
               const double mem_size = getTotalSystemMemory() / megabyte;
               std::ostringstream ss;
-              ss << "\n\n\n ########  #          ######   #           #\n";
+              ss << "\n\n\n";
+              ss << " ########  #          ######   #           #\n";
               ss << " #         #         #      #   #         # \n";
               ss << " #####     #         #      #    #   #   #  \n";
               ss << " #         #         #      #     # # # #   \n";
@@ -477,102 +477,6 @@ namespace Opm
         const SummaryConfig& summaryConfig() const
         { return ebosSimulator_->gridManager().summaryConfig(); }
   
-        // Initialise the reservoir state. Updated fluid props for SWATINIT.
-        // Writes to:
-        //   state_
-        //   threshold_pressures_
-        void setupState()
-        {
-            const PhaseUsage pu = Opm::phaseUsageFromDeck(deck());
-            const Grid& grid = this->grid();
-
-            // Need old-style fluid object for init purposes (only).
-            BlackoilPropertiesFromDeck props(deck(),
-                                             eclState(),
-                                             materialLawManager(),
-                                             grid.size(/*codim=*/0),
-                                             grid.globalCell().data(),
-                                             grid.logicalCartesianSize().data(),
-                                             param_);
-
-
-            // Init state variables (saturation and pressure).
-            if (param_.has("init_saturation")) {
-                state_.reset(new ReservoirState(grid.size(/*codim=*/0),
-                                                grid.numFaces(),
-                                                props.numPhases()));
-
-                initStateBasic(grid.size(/*codim=*/0),
-                               grid.globalCell().data(),
-                               grid.logicalCartesianSize().data(),
-                               grid.numFaces(),
-                               Opm::UgGridHelpers::faceCells(grid),
-                               Opm::UgGridHelpers::beginFaceCentroids(grid),
-                               Opm::UgGridHelpers::beginCellCentroids(grid),
-                               Grid::dimension,
-                               props, param_, gravity(), *state_);
-
-                initBlackoilSurfvol(Opm::UgGridHelpers::numCells(grid), props, *state_);
-
-                enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
-                if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
-                    const int numPhases = props.numPhases();
-                    const int numCells  = Opm::UgGridHelpers::numCells(grid);
-
-                    // Uglyness 1: The state is a templated type, here we however make explicit use BlackoilState.
-                    auto& gor = state_->getCellData( BlackoilState::GASOILRATIO );
-                    const auto& surface_vol = state_->getCellData( BlackoilState::SURFACEVOL );
-                    for (int c = 0; c < numCells; ++c) {
-                        // Uglyness 2: Here we explicitly use the layout of the saturation in the surface_vol field.
-                        gor[c] = surface_vol[ c * numPhases + pu.phase_pos[Gas]] / surface_vol[ c * numPhases + pu.phase_pos[Oil]];
-                    }
-                }
-            } else if (deck().hasKeyword("EQUIL")) {
-                // Which state class are we really using - what a f... mess?
-                state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
-                                                  Opm::UgGridHelpers::numFaces(grid),
-                                                  props.numPhases()));
-
-                initStateEquil(grid, props, deck(), eclState(), gravity(), *state_);
-                //state_.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
-            } else {
-                state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
-                                                  Opm::UgGridHelpers::numFaces(grid),
-                                                  props.numPhases()));
-                initBlackoilStateFromDeck(Opm::UgGridHelpers::numCells(grid),
-                                          Opm::UgGridHelpers::globalCell(grid),
-                                          Opm::UgGridHelpers::numFaces(grid),
-                                          Opm::UgGridHelpers::faceCells(grid),
-                                          Opm::UgGridHelpers::beginFaceCentroids(grid),
-                                          Opm::UgGridHelpers::beginCellCentroids(grid),
-                                          Opm::UgGridHelpers::dimensions(grid),
-                                          props, deck(), gravity(), *state_);
-            }
-
-            initHydroCarbonState(*state_, pu, Opm::UgGridHelpers::numCells(grid), deck().hasKeyword("DISGAS"), deck().hasKeyword("VAPOIL"));
-
-            // Get initial polymer concentration from ebos
-            if (GET_PROP_VALUE(TypeTag, EnablePolymer)) {
-                auto& cpolymer = state_->getCellData( state_->POLYMER );
-                const int numCells = Opm::UgGridHelpers::numCells(grid);
-                for (int c = 0; c < numCells; ++c) {
-                    cpolymer[c] = ebosProblem().polymerConcentration(c);
-                }
-            }
-            // Get initial solvent saturation from ebos
-            if (GET_PROP_VALUE(TypeTag, EnableSolvent)) {
-                auto& solvent = state_->getCellData( state_->SSOL );
-                auto& sat = state_->saturation();
-                const int np = props.numPhases();
-                const int numCells = Opm::UgGridHelpers::numCells(grid);
-                for (int c = 0; c < numCells; ++c) {
-                    solvent[c] = ebosProblem().solventSaturation(c);
-                    sat[c * np + pu.phase_pos[Water]];
-                }
-            }
-
-        }
-
         // Extract messages from parser.
         // Writes to:
         //    OpmLog singleton.
@@ -623,6 +527,8 @@ namespace Opm
         {
             bool output      = ( output_ > OUTPUT_LOG_ONLY );
             bool output_ecl  = param_.getDefault("output_ecl", true);
+            auto int_vectors  = computeCellRanks(output, output_ecl);
+
             if( output && output_ecl && grid().comm().rank() == 0 )
             {
                 exportNncStructure_();
@@ -632,7 +538,9 @@ namespace Opm
                                            UgGridHelpers::createEclipseGrid( this->globalGrid() , inputGrid ),
                                            schedule(),
                                            summaryConfig()));
-                eclIO_->writeInitial(computeLegacySimProps_(), nnc_);
+                eclIO_->writeInitial(computeLegacySimProps_(), int_vectors, nnc_);
+                Problem& problem = ebosProblem();
+                problem.setEclIO(std::move(eclIO_));
             }
         }
 
@@ -644,13 +552,10 @@ namespace Opm
             // create output writer after grid is distributed, otherwise the parallel output
             // won't work correctly since we need to create a mapping from the distributed to
             // the global view
-            output_writer_.reset(new OutputWriter(grid(),
-                                                  param_,
-                                                  eclState(),
-                                                  schedule(),
-                                                  summaryConfig(),
-                                                  std::move(eclIO_),
-                                                  Opm::phaseUsageFromDeck(deck())) );
+
+            output_writer_.reset(new OutputWriter(*ebosSimulator_,
+                                                   param_));
+
         }
 
         // Run the simulator.
@@ -673,7 +578,7 @@ namespace Opm
                     OpmLog::info(msg);
                 }
 
-                SimulatorReport successReport = simulator_->run(simtimer, *state_);
+                SimulatorReport successReport = simulator_->run(simtimer);
                 SimulatorReport failureReport = simulator_->failureReport();
                 SimulatorReport successReport_adjoint = simulator_->runAdjoint(simtimer);//, *state_);
 
@@ -691,11 +596,6 @@ namespace Opm
                     }
                 }
 
-                if (output_to_files_) {
-                    std::string filename = output_dir_ + "/walltime.txt";
-                    std::fstream tot_os(filename.c_str(), std::fstream::trunc | std::fstream::out);
-                    successReport.reportParam(tot_os);
-                }
             } else {
                 if (output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
@@ -728,7 +628,6 @@ namespace Opm
                                            *fis_solver_,
                                            FluidSystem::enableDissolvedGas(),
                                            FluidSystem::enableVaporizedOil(),
-                                           eclState(),
                                            *output_writer_));
         }
 
@@ -806,6 +705,37 @@ namespace Opm
         Scalar gravity() const
         { return ebosProblem().gravity()[2]; }
 
+        std::map<std::string, std::vector<int> > computeCellRanks(bool output, bool output_ecl)
+        {
+            std::map<std::string, std::vector<int> > integerVectors;
+
+            if(  output && output_ecl && grid().comm().size() > 1 )
+            {
+                typedef typename Grid::LeafGridView GridView;
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY, 2, 6)
+                using ElementMapper =  Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
+#else
+                // Get the owner rank number for each cell
+                using ElementMapper =  Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout>;
+#endif
+                using Handle = CellOwnerDataHandle<ElementMapper>;
+                const Grid& globalGrid = this->globalGrid();
+                const auto& globalGridView = globalGrid.leafGridView();
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY, 2, 6)
+                ElementMapper globalMapper(globalGridView, Dune::mcmgElementLayout());
+#else
+                ElementMapper globalMapper(globalGridView);
+#endif
+                const auto globalSize = globalGrid.size(0);
+                std::vector<int> ranks(globalSize, -1);
+                Handle handle(globalMapper, ranks);
+                this->grid().gatherData(handle);
+                integerVectors.emplace("MPI_RANK", ranks);
+            }
+
+            return integerVectors;
+        }
+
         data::Solution computeLegacySimProps_()
         {
             const int* dims = UgGridHelpers::cartDims(grid());
@@ -824,8 +754,13 @@ namespace Opm
             const Grid& globalGrid = this->globalGrid();
             const auto& globalGridView = globalGrid.leafGridView();
             typedef typename Grid::LeafGridView GridView;
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY, 2, 6)
+            typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
+            ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
+#else
             typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
             ElementMapper globalElemMapper(globalGridView);
+#endif
             const auto& cartesianCellIdx = globalGrid.globalCell();
 
             const auto* globalTrans = &(ebosSimulator_->gridManager().globalTransmissibility());
@@ -894,8 +829,13 @@ namespace Opm
             const Grid& globalGrid = this->globalGrid();
             const auto& globalGridView = globalGrid.leafGridView();
             typedef typename Grid::LeafGridView GridView;
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY, 2, 6)
+            typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
+            ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
+#else
             typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
             ElementMapper globalElemMapper(globalGridView);
+#endif
 
             const auto* globalTrans = &(ebosSimulator_->gridManager().globalTransmissibility());
             if (grid().comm().size() < 2) {
@@ -947,6 +887,35 @@ namespace Opm
             }
         }
 
+        /// Convert saturations from a vector of individual phase saturation vectors
+        /// to an interleaved format where all values for a given cell come before all
+        /// values for the next cell, all in a single vector.
+        template <class FluidSystem>
+        void convertSats(std::vector<double>& sat_interleaved, const std::vector< std::vector<double> >& sat, const PhaseUsage& pu)
+        {
+            assert(sat.size() == 3);
+            const auto nc = sat[0].size();
+            const auto np = sat_interleaved.size() / nc;
+            for (size_t c = 0; c < nc; ++c) {
+                if ( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    const int opos = pu.phase_pos[BlackoilPhases::Liquid];
+                    const std::vector<double>& sat_p = sat[ FluidSystem::oilPhaseIdx];
+                    sat_interleaved[np*c + opos] = sat_p[c];
+                }
+                if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
+                    const std::vector<double>& sat_p = sat[ FluidSystem::waterPhaseIdx];
+                    sat_interleaved[np*c + wpos] = sat_p[c];
+                }
+                if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
+                    const std::vector<double>& sat_p = sat[ FluidSystem::gasPhaseIdx];
+                    sat_interleaved[np*c + gpos] = sat_p[c];
+                }
+            }
+        }
+
+
         std::unique_ptr<EbosSimulator> ebosSimulator_;
         int  mpi_rank_ = 0;
         bool output_cout_ = false;
@@ -955,7 +924,6 @@ namespace Opm
         ParameterGroup param_;
         bool output_to_files_ = false;
         std::string output_dir_ = std::string(".");
-        std::unique_ptr<ReservoirState> state_;
         NNC nnc_;
         std::unique_ptr<EclipseIO> eclIO_;
         std::unique_ptr<OutputWriter> output_writer_;

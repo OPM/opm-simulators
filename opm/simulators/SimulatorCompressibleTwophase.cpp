@@ -22,7 +22,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <opm/simulators/SimulatorCompressibleTwophase.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/core/pressure/CompressibleTpfa.hpp>

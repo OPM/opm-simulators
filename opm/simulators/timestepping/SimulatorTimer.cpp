@@ -19,7 +19,7 @@
 
 #include "config.h"
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <ostream>
 #include <numeric>
@@ -114,7 +114,9 @@ namespace Opm
 
     boost::posix_time::ptime SimulatorTimer::currentDateTime() const
     {
-        return startDateTime() + boost::posix_time::seconds( (int) simulationTimeElapsed());
+        // boost uses only 32 bit long for seconds. But 64 bit for milliseconds
+        // as a work around for very large timess we just use milliseconds
+        return startDateTime() + boost::posix_time::milliseconds( simulationTimeElapsed() / Opm::prefix::milli);
     }
 
     /// Total time.

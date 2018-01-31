@@ -24,7 +24,7 @@
 
 #include <opm/autodiff/SimulatorIncompTwophaseAd.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/core/pressure/IncompTpfa.hpp>
@@ -49,7 +49,6 @@
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/transport/reorder/TransportSolverTwophaseReorder.hpp>
-#include <opm/core/transport/implicit/TransportSolverTwophaseImplicit.hpp>
 #include <opm/autodiff/TransportSolverTwophaseAd.hpp>
 #include <opm/simulators/ensureDirectoryExists.hpp>
 
@@ -143,7 +142,7 @@ namespace Opm
                               double injected[2], double produced[2],
                               double init_satvol[2])
     {
-        std::cout.precision(5);
+        os.precision(5);
         const int width = 18;
         os << "\nVolume balance report (all numbers relative to total pore volume).\n";
         os << "    Saturated volumes:     "
@@ -329,21 +328,6 @@ namespace Opm
                                                                    param.getDefault("nl_tolerance", 1e-9),
                                                                    param.getDefault("nl_maxiter", 30)));
 
-        } else if (transport_solver_type_ == "implicit") {
-            if (rock_comp_props && rock_comp_props->isActive()) {
-                OPM_THROW(std::runtime_error, "The implicit transport solver cannot handle rock compressibility.");
-            }
-            if (use_segregation_split_) {
-                OPM_THROW(std::runtime_error, "The implicit transport solver is not set up to use segregation splitting.");
-            }
-            std::vector<double> porevol;
-            computePorevolume(grid, props.porosity(), porevol);
-            tsolver_.reset(new Opm::TransportSolverTwophaseImplicit(grid,
-                                                                    props,
-                                                                    porevol,
-                                                                    gravity,
-                                                                    psolver_.getHalfTrans(),
-                                                                    param));
         } else if (transport_solver_type_ == "ad") {
             if (rock_comp_props && rock_comp_props->isActive()) {
                 OPM_THROW(std::runtime_error, "The implicit ad transport solver cannot handle rock compressibility.");

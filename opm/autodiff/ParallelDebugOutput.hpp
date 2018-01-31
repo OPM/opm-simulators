@@ -30,6 +30,7 @@
 
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/autodiff/Compat.hpp>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 
 #if HAVE_OPM_GRID

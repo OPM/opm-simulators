@@ -3,7 +3,7 @@
   Copyright 2014, 2015 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2014, 2015 Statoil ASA.
   Copyright 2015 NTNU
-  Copyright 2015 IRIS AS
+  Copyright 2015, 2016, 2017 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -29,12 +29,8 @@
 
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/BlackoilWellModel.hpp>
-#include <opm/autodiff/GridHelpers.hpp>
-#include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
-#include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
-#include <opm/autodiff/RateConverter.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
@@ -45,9 +41,8 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/core/well_controls.h>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
@@ -86,11 +81,6 @@ SET_BOOL_PROP(EclFlowProblem, ExportGlobalTransmissibility, true);
 // default in flow is to formulate the equations in surface volumes
 SET_BOOL_PROP(EclFlowProblem, BlackoilConserveSurfaceVolume, true);
 SET_BOOL_PROP(EclFlowProblem, UseVolumetricResidual, false);
-
-
-// SWATINIT is done by the flow part of flow_ebos. this can be removed once the legacy
-// code for fluid and satfunc handling gets fully retired.
-SET_BOOL_PROP(EclFlowProblem, EnableSwatinit, false);
 }}
 
 namespace Opm {
@@ -134,10 +124,6 @@ namespace Opm {
         typedef ISTLSolver< MatrixBlockType, VectorBlockType, Indices::pressureSwitchIdx >  ISTLSolverType;
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
-        // For the conversion between the surface volume rate and resrevoir voidage rate
-        using RateConverterType = RateConverter::
-            SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
-
         typedef Opm::FIPData FIPDataType;
 
         // ---------  Public methods  ---------
@@ -162,7 +148,6 @@ namespace Opm {
         , grid_(ebosSimulator_.gridManager().grid())
         , istlSolver_( dynamic_cast< const ISTLSolverType* > (&linsolver) )
         , phaseUsage_(phaseUsageFromDeck(eclState()))
-        , active_(detail::activePhases(phaseUsage_))
         , has_disgas_(FluidSystem::enableDissolvedGas())
         , has_vapoil_(FluidSystem::enableVaporizedOil())
         , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
@@ -171,8 +156,7 @@ namespace Opm {
         , well_model_ (well_model)
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
-        , dx_old_(AutoDiffGrid::numCells(grid_))
-        , isBeginReportStep_(false)
+        , dx_old_(UgGridHelpers::numCells(grid_))
         {
             // compute global sum of number of cells
             global_nc_ = detail::countGlobalCells(grid_);
@@ -215,11 +199,25 @@ namespace Opm {
             ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
 
 
+            // set the timestep size and index in ebos explicitly
+            // we use our own time stepper.
+            ebosSimulator_.startNextEpisode( timer.currentStepLength() );
+            ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
+            ebosSimulator_.setTimeStepSize( timer.currentStepLength() );
+            ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+
+            ebosSimulator_.problem().beginTimeStep();
+
             unsigned numDof = ebosSimulator_.model().numGridDof();
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
             wellModel().beginTimeStep();
+
+            if (param_.update_equations_scaling_) {
+                std::cout << "equation scaling not suported yet" << std::endl;
+                //updateEquationsScaling();
+            }
         }
         /// Called once per nonlinear iteration.
         /// This model will perform a Newton-Raphson update, changing reservoir_state
@@ -385,7 +383,7 @@ namespace Opm {
                 //residual_.singlePrecision = (unit::convert::to(dt, unit::day) < 20.) ;
 
                 // Compute the nonlinear update.
-                const int nc = AutoDiffGrid::numCells(grid_);
+                const int nc = UgGridHelpers::numCells(grid_);
                 BVector x(nc);
 
                 try {
@@ -462,6 +460,7 @@ namespace Opm {
             DUNE_UNUSED_PARAMETER(well_state);
 
             wellModel().timeStepSucceeded();
+            ebosSimulator_.problem().endTimeStep();
 
         }
 
@@ -473,7 +472,10 @@ namespace Opm {
                                  const int iterationIdx)
         {
             // -------- Mass balance equations --------
-            assembleMassBalanceEq(timer, iterationIdx);
+            ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
+            ebosSimulator_.problem().beginIteration();
+            ebosSimulator_.model().linearizer().linearize();
+            ebosSimulator_.problem().endIteration();
 
             // -------- Well equations ----------
             double dt = timer.currentStepLength();
@@ -648,12 +650,20 @@ namespace Opm {
           typedef Dune::CollectiveCommunication< Grid > communication_type;
 #endif
 
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+          Dune::SolverCategory::Category category() const override
+          {
+            return overlapping ?
+                   Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
+          }
+#else
           enum {
             //! \brief The solver category.
             category = overlapping ?
                 Dune::SolverCategory::overlapping :
                 Dune::SolverCategory::sequential
           };
+#endif
 
           //! constructor: just store a reference to a matrix
           WellModelMatrixAdapter (const M& A, const WellModel& wellMod, const boost::any& parallelInformation = boost::any() )
@@ -713,8 +723,6 @@ namespace Opm {
         /// \param[in, out] well_state        well state variables
         void updateState(const BVector& dx)
         {
-            using namespace Opm::AutoDiffGrid;
-
             const auto& ebosProblem = ebosSimulator_.problem();
 
             unsigned numSwitched = 0;
@@ -743,8 +751,8 @@ namespace Opm {
                 p = std::max(p, 0.0);
 
                 // Saturation updates.
-                const double dsw = active_[Water] ? dx[cell_idx][Indices::waterSaturationIdx] : 0.0;
-                const double dxvar = active_[Gas] ? dx[cell_idx][Indices::compositionSwitchIdx] : 0.0;
+                const double dsw = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ? dx[cell_idx][Indices::waterSaturationIdx] : 0.0;
+                const double dxvar = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ? dx[cell_idx][Indices::compositionSwitchIdx] : 0.0;
 
                 double dso = 0.0;
                 double dsg = 0.0;
@@ -786,12 +794,12 @@ namespace Opm {
                     satScaleFactor = dsMax()/maxVal;
                 }
 
-                if (active_[Water]) {
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     double& sw = priVars[Indices::waterSaturationIdx];
                     sw -= satScaleFactor * dsw;
                 }
 
-                if (active_[Gas]) {
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                      if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
                            double& sg = priVars[Indices::compositionSwitchIdx];
                            sg -= satScaleFactor * dsg;
@@ -810,7 +818,7 @@ namespace Opm {
                 }
 
                 // Update rs and rv
-                if (active_[Gas] && active_[Oil] ) {
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ) {
                     unsigned pvtRegionIdx = ebosSimulator_.problem().pvtRegionIndex(cell_idx);
                     const double drmaxrel = drMaxRel();
                     if (has_disgas_) {
@@ -926,8 +934,7 @@ namespace Opm {
             const double tol_mb    = param_.tolerance_mb_;
             const double tol_cnv   = param_.tolerance_cnv_;
 
-            const int np = numPhases();
-            const int numComp = numComponents();
+            const int numComp = numEq;
 
             Vector R_sum(numComp, 0.0 );
             Vector B_avg(numComp, 0.0 );
@@ -957,16 +964,19 @@ namespace Opm {
                 const double pvValue = ebosProblem.porosity(cell_idx) * ebosModel.dofTotalVolume( cell_idx );
                 pvSumLocal += pvValue;
 
-                for ( int phaseIdx = 0; phaseIdx < np; ++phaseIdx )
+                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
                 {
-                    const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phaseIdx);
-                    const int ebosCompIdx = flowPhaseToEbosCompIdx(phaseIdx);
+                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
 
-                    B_avg[ phaseIdx ] += 1.0 / fs.invB(ebosPhaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][ebosCompIdx];
+                    const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
 
-                    R_sum[ phaseIdx ] += R2;
-                    maxCoeff[ phaseIdx ] = std::max( maxCoeff[ phaseIdx ], std::abs( R2 ) / pvValue );
+                    B_avg[ compIdx ] += 1.0 / fs.invB(phaseIdx).value();
+                    const auto R2 = ebosResid[cell_idx][compIdx];
+
+                    R_sum[ compIdx ] += R2;
+                    maxCoeff[ compIdx ] = std::max( maxCoeff[ compIdx ], std::abs( R2 ) / pvValue );
                 }
 
                 if ( has_solvent_ ) {
@@ -1031,9 +1041,15 @@ namespace Opm {
                     std::string msg = "Iter";
 
                     std::vector< std::string > key( numComp );
-                    for (int phaseIdx = 0; phaseIdx < numPhases(); ++phaseIdx) {
-                        const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
-                        key[ phaseIdx ] = std::toupper( phaseName.front() );
+                    for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                        if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                            continue;
+                        }
+
+                        const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
+                        const std::string& compName = FluidSystem::componentName(canonicalCompIdx);
+                        const unsigned compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
+                        key[ compIdx ] = std::toupper( compName.front() );
                     }
                     if (has_solvent_) {
                         key[ solventSaturationIdx ] = "S";
@@ -1049,7 +1065,7 @@ namespace Opm {
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                         msg += "    CNV(" + key[ compIdx ] + ") ";
                     }
-                    OpmLog::note(msg);
+                    OpmLog::debug(msg);
                 }
                 std::ostringstream ss;
                 const std::streamsize oprec = ss.precision(3);
@@ -1063,19 +1079,28 @@ namespace Opm {
                 }
                 ss.precision(oprec);
                 ss.flags(oflags);
-                OpmLog::note(ss.str());
+                OpmLog::debug(ss.str());
             }
 
-            for (int phaseIdx = 0; phaseIdx < numPhases(); ++phaseIdx) {
-                const auto& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
 
-                if (std::isnan(mass_balance_residual[phaseIdx])
-                    || std::isnan(CNV[phaseIdx])) {
-                    OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName);
+                const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
+                const std::string& compName = FluidSystem::componentName(canonicalCompIdx);
+                const unsigned compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
+
+                if (std::isnan(mass_balance_residual[compIdx])
+                    || std::isnan(CNV[compIdx])) {
+                    OPM_THROW(Opm::NumericalProblem, "NaN residual for " << compName << " equation");
                 }
-                if (mass_balance_residual[phaseIdx] > maxResidualAllowed()
-                    || CNV[phaseIdx] > maxResidualAllowed()) {
-                    OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName);
+                if (mass_balance_residual[compIdx] > maxResidualAllowed()
+                    || CNV[compIdx] > maxResidualAllowed()) {
+                    OPM_THROW(Opm::NumericalProblem, "Too large residual for " << compName << " equation");
+                }
+                if (mass_balance_residual[compIdx] < 0
+                    || CNV[compIdx] < 0) {
+                    OPM_THROW(Opm::NumericalProblem, "Negative residual for " << compName << " equation");
                 }
             }
 
@@ -1087,21 +1112,6 @@ namespace Opm {
         int numPhases() const
         {
             return phaseUsage_.num_phases;
-        }
-
-        int numComponents() const
-        {
-            if (numPhases() == 2) {
-                return 2;
-            }
-            int numComp = FluidSystem::numComponents;
-            if (has_solvent_)
-                numComp ++;
-
-            if (has_polymer_)
-                numComp ++;
-
-            return numComp;
         }
 
         /// Wrapper required due to not following generic API
@@ -1118,7 +1128,6 @@ namespace Opm {
             const auto& comm = grid_.comm();
             const auto& gridView = ebosSimulator_.gridView();
             const int nc = gridView.size(/*codim=*/0);
-            const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
             int ntFip = *std::max_element(fipnum.begin(), fipnum.end());
             ntFip = comm.max(ntFip);
 
@@ -1161,18 +1170,20 @@ namespace Opm {
                     ebosSimulator_.model().dofTotalVolume(cellIdx)
                     * intQuants.porosity().value();
 
-                for (int phase = 0; phase < maxnp; ++phase) {
-                    const double b = fs.invB(flowPhaseToEbosPhaseIdx(phase)).value();
-                    const double s = fs.saturation(flowPhaseToEbosPhaseIdx(phase)).value();
-
-                    fip_.fip[phase][cellIdx] = b * s * pv;
-
-                    if (active_[ phase ]) {
-                        regionValues[regionIdx][phase] += fip_.fip[phase][cellIdx];
+                for (unsigned phase = 0; phase < FluidSystem::numPhases; ++phase) {
+                    if (!FluidSystem::phaseIsActive(phase)) {
+                        continue;
                     }
+
+                    const double b = fs.invB(phase).value();
+                    const double s = fs.saturation(phase).value();
+                    const unsigned flowCanonicalPhaseIdx = ebosPhaseToFlowCanonicalPhaseIdx(phase);
+
+                    fip_.fip[flowCanonicalPhaseIdx][cellIdx] = b * s * pv;
+                    regionValues[regionIdx][flowCanonicalPhaseIdx] += fip_.fip[flowCanonicalPhaseIdx][cellIdx];
                 }
 
-                if (active_[ Oil ] && active_[ Gas ]) {
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     // Account for gas dissolved in oil and vaporized oil
                     fip_.fip[FIPDataType::FIP_DISSOLVED_GAS][cellIdx] = fs.Rs().value() * fip_.fip[FIPDataType::FIP_LIQUID][cellIdx];
                     fip_.fip[FIPDataType::FIP_VAPORIZED_OIL][cellIdx] = fs.Rv().value() * fip_.fip[FIPDataType::FIP_VAPOUR][cellIdx];
@@ -1245,322 +1256,6 @@ namespace Opm {
             return regionValues;
         }
 
-        SimulationDataContainer getSimulatorData ( const SimulationDataContainer& localState) const
-        {
-            typedef std::vector<double> VectorType;
-
-            const auto& ebosModel = ebosSimulator().model();
-            const auto& phaseUsage = phaseUsage_;
-
-            // extract everything which can possibly be written to disk
-            const int numCells   = ebosModel.numGridDof();
-            const int num_phases = numPhases();
-
-            SimulationDataContainer simData( numCells, 0, num_phases );
-
-            //Get shorthands for water, oil, gas
-            const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
-            const int liquid_active = phaseUsage.phase_used[Opm::PhaseUsage::Liquid];
-            const int vapour_active = phaseUsage.phase_used[Opm::PhaseUsage::Vapour];
-
-            const int aqua_pos   = phaseUsage.phase_pos[ Opm::PhaseUsage::Aqua ];
-            const int liquid_pos = phaseUsage.phase_pos[ Opm::PhaseUsage::Liquid ];
-            const int vapour_pos = phaseUsage.phase_pos[ Opm::PhaseUsage::Vapour ];
-
-            VectorType zero;
-
-            VectorType& pressureOil = simData.pressure();
-            VectorType& temperature = simData.temperature();
-            VectorType& saturation = simData.saturation();
-
-            // WATER
-            if( aqua_active ) {
-                simData.registerCellData( "1OVERBW", 1 );
-                simData.registerCellData( "WAT_DEN", 1 );
-                simData.registerCellData( "WAT_VISC", 1 );
-                simData.registerCellData( "WATKR", 1 );
-            }
-
-            VectorType& bWater   = aqua_active ? simData.getCellData( "1OVERBW" ) : zero;
-            VectorType& rhoWater = aqua_active ? simData.getCellData( "WAT_DEN" ) : zero;
-            VectorType& muWater  = aqua_active ? simData.getCellData( "WAT_VISC" ) : zero;
-            VectorType& krWater  = aqua_active ? simData.getCellData( "WATKR" ) : zero;
-
-            // OIL
-            if( liquid_active ) {
-                simData.registerCellData( "1OVERBO", 1 );
-                simData.registerCellData( "OIL_DEN", 1 );
-                simData.registerCellData( "OIL_VISC", 1 );
-                simData.registerCellData( "OILKR", 1 );
-            }
-
-            VectorType& bOil   = liquid_active ? simData.getCellData( "1OVERBO" ) : zero;
-            VectorType& rhoOil = liquid_active ? simData.getCellData( "OIL_DEN" ) : zero;
-            VectorType& muOil  = liquid_active ? simData.getCellData( "OIL_VISC" ) : zero;
-            VectorType& krOil  = liquid_active ? simData.getCellData( "OILKR" ) : zero;
-
-            // GAS
-            if( vapour_active ) {
-                simData.registerCellData( "1OVERBG", 1 );
-                simData.registerCellData( "GAS_DEN", 1 );
-                simData.registerCellData( "GAS_VISC", 1 );
-                simData.registerCellData( "GASKR", 1 );
-            }
-
-            VectorType& bGas   = vapour_active ? simData.getCellData( "1OVERBG" ) : zero;
-            VectorType& rhoGas = vapour_active ? simData.getCellData( "GAS_DEN" ) : zero;
-            VectorType& muGas  = vapour_active ? simData.getCellData( "GAS_VISC" ) : zero;
-            VectorType& krGas  = vapour_active ? simData.getCellData( "GASKR" ) : zero;
-
-            simData.registerCellData( BlackoilState::GASOILRATIO, 1 );
-            simData.registerCellData( BlackoilState::RV, 1 );
-            simData.registerCellData( "RSSAT", 1 );
-            simData.registerCellData( "RVSAT", 1 );
-
-            VectorType& Rs    = simData.getCellData( BlackoilState::GASOILRATIO );
-            VectorType& Rv    = simData.getCellData( BlackoilState::RV );
-            VectorType& RsSat = simData.getCellData( "RSSAT" );
-            VectorType& RvSat = simData.getCellData( "RVSAT" );
-
-            simData.registerCellData( "PBUB", 1 );
-            simData.registerCellData( "PDEW", 1 );
-
-            VectorType& Pb = simData.getCellData( "PBUB" );
-            VectorType& Pd = simData.getCellData( "PDEW" );
-
-            simData.registerCellData( "SOMAX", 1 );
-            VectorType& somax = simData.getCellData( "SOMAX" );
-
-            // Two components for hysteresis parameters
-            // pcSwMdc/krnSwMdc, one for oil-water and one for gas-oil
-            simData.registerCellData( "PCSWMDC_GO", 1 );
-            simData.registerCellData( "KRNSWMDC_GO", 1 );
-
-            simData.registerCellData( "PCSWMDC_OW", 1 );
-            simData.registerCellData( "KRNSWMDC_OW", 1 );
-
-            VectorType& pcSwMdc_go = simData.getCellData( "PCSWMDC_GO" );
-            VectorType& krnSwMdc_go = simData.getCellData( "KRNSWMDC_GO" );
-
-            VectorType& pcSwMdc_ow = simData.getCellData( "PCSWMDC_OW" );
-            VectorType& krnSwMdc_ow = simData.getCellData( "KRNSWMDC_OW" );
-
-            if (has_solvent_) {
-                simData.registerCellData( "SSOL", 1 );
-            }
-            VectorType& ssol  = has_solvent_ ? simData.getCellData( "SSOL" ) : zero;
-
-            if (has_polymer_) {
-                simData.registerCellData( "POLYMER", 1 );
-            }
-            VectorType& cpolymer  = has_polymer_ ? simData.getCellData( "POLYMER" ) : zero;
-
-            std::vector<int> failed_cells_pb;
-            std::vector<int> failed_cells_pd;
-            const auto& gridView = ebosSimulator().gridView();
-            auto elemIt = gridView.template begin</*codim=*/ 0, Dune::Interior_Partition>();
-            const auto& elemEndIt = gridView.template end</*codim=*/ 0, Dune::Interior_Partition>();
-            ElementContext elemCtx(ebosSimulator());
-
-            for (; elemIt != elemEndIt; ++elemIt) {
-                const auto& elem = *elemIt;
-
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-                const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-
-                const auto& fs = intQuants.fluidState();
-
-                const int satIdx = cellIdx * num_phases;
-
-                pressureOil[cellIdx] = fs.pressure(FluidSystem::oilPhaseIdx).value();
-
-                temperature[cellIdx] = fs.temperature(FluidSystem::oilPhaseIdx).value();
-
-                somax[cellIdx] = ebosSimulator().model().maxOilSaturation(cellIdx);
-
-                const auto& matLawManager = ebosSimulator().problem().materialLawManager();
-                if (matLawManager->enableHysteresis()) {
-                    matLawManager->oilWaterHysteresisParams(
-                            pcSwMdc_ow[cellIdx],
-                            krnSwMdc_ow[cellIdx],
-                            cellIdx);
-                    matLawManager->gasOilHysteresisParams(
-                            pcSwMdc_go[cellIdx],
-                            krnSwMdc_go[cellIdx],
-                            cellIdx);
-                }
-
-                if (aqua_active) {
-                    saturation[ satIdx + aqua_pos ] = fs.saturation(FluidSystem::waterPhaseIdx).value();
-                    bWater[cellIdx] = fs.invB(FluidSystem::waterPhaseIdx).value();
-                    rhoWater[cellIdx] = fs.density(FluidSystem::waterPhaseIdx).value();
-                    muWater[cellIdx] = fs.viscosity(FluidSystem::waterPhaseIdx).value();
-                    krWater[cellIdx] = intQuants.relativePermeability(FluidSystem::waterPhaseIdx).value();
-                }
-                if (vapour_active) {
-                    saturation[ satIdx + vapour_pos ]  = fs.saturation(FluidSystem::gasPhaseIdx).value();
-                    bGas[cellIdx] = fs.invB(FluidSystem::gasPhaseIdx).value();
-                    rhoGas[cellIdx] = fs.density(FluidSystem::gasPhaseIdx).value();
-                    muGas[cellIdx] = fs.viscosity(FluidSystem::gasPhaseIdx).value();
-                    krGas[cellIdx] = intQuants.relativePermeability(FluidSystem::gasPhaseIdx).value();
-                    Rs[cellIdx] = fs.Rs().value();
-                    Rv[cellIdx] = fs.Rv().value();
-                    RsSat[cellIdx] = FluidSystem::saturatedDissolutionFactor(fs,
-                                                                             FluidSystem::oilPhaseIdx,
-                                                                             intQuants.pvtRegionIndex(),
-                                                                             /*maxOilSaturation=*/1.0).value();
-                    RvSat[cellIdx] = FluidSystem::saturatedDissolutionFactor(fs,
-                                                                             FluidSystem::gasPhaseIdx,
-                                                                             intQuants.pvtRegionIndex(),
-                                                                             /*maxOilSaturation=*/1.0).value();
-                    try {
-                        Pb[cellIdx] = FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()).value();
-                    }
-                    catch (const NumericalProblem& e) {
-                        const auto globalIdx = ebosSimulator_.gridManager().grid().globalCell()[cellIdx];
-                        failed_cells_pb.push_back(globalIdx);
-                    }
-                    try {
-                        Pd[cellIdx] = FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()).value();
-                    }
-                    catch (const NumericalProblem& e) {
-                        const auto globalIdx = ebosSimulator_.gridManager().grid().globalCell()[cellIdx];
-                        failed_cells_pd.push_back(globalIdx);
-                    }
-                }
-                if( liquid_active )
-                {
-                    saturation[ satIdx + liquid_pos ] = fs.saturation(FluidSystem::oilPhaseIdx).value();
-                    bOil[cellIdx] = fs.invB(FluidSystem::oilPhaseIdx).value();
-                    rhoOil[cellIdx] = fs.density(FluidSystem::oilPhaseIdx).value();
-                    muOil[cellIdx] = fs.viscosity(FluidSystem::oilPhaseIdx).value();
-                    krOil[cellIdx] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value();
-                }
-
-                if (has_solvent_)
-                {
-                    ssol[cellIdx] = intQuants.solventSaturation().value();
-                }
-
-                if (has_polymer_)
-                {
-                    cpolymer[cellIdx] = intQuants.polymerConcentration().value();
-                }
-
-                // hack to make the intial output of rs and rv Ecl compatible.
-                // For cells with swat == 1 Ecl outputs; rs = rsSat and rv=rvSat, in all but the initial step
-                // where it outputs rs and rv values calculated by the initialization. To be compatible we overwrite
-                // rs and rv with the values passed by the localState.
-                // Volume factors, densities and viscosities need to be recalculated with the updated rs and rv values.
-                if (ebosSimulator_.episodeIndex() < 0 && vapour_active && liquid_active ) {
-
-                    Rs[cellIdx] = localState.getCellData( BlackoilState::GASOILRATIO )[cellIdx];
-                    Rv[cellIdx] = localState.getCellData( BlackoilState::RV)[cellIdx];
-
-                    // copy the fluidstate and set the new rs and rv values
-                    auto fs_updated = fs;
-                    auto rs_eval = fs_updated.Rs();
-                    rs_eval.setValue( Rs[cellIdx] );
-                    fs_updated.setRs(rs_eval);
-                    auto rv_eval = fs_updated.Rv();
-                    rv_eval.setValue( Rv[cellIdx] );
-                    fs_updated.setRv(rv_eval);
-
-                    //re-compute the volume factors, viscosities and densities.
-                    rhoOil[cellIdx] = FluidSystem::density(fs_updated,
-                                                           FluidSystem::oilPhaseIdx,
-                                                           intQuants.pvtRegionIndex()).value();
-                    rhoGas[cellIdx] = FluidSystem::density(fs_updated,
-                                                           FluidSystem::gasPhaseIdx,
-                                                           intQuants.pvtRegionIndex()).value();
-
-                    bOil[cellIdx] = FluidSystem::inverseFormationVolumeFactor(fs_updated,
-                                                           FluidSystem::oilPhaseIdx,
-                                                           intQuants.pvtRegionIndex()).value();
-                    bGas[cellIdx] = FluidSystem::inverseFormationVolumeFactor(fs_updated,
-                                                           FluidSystem::gasPhaseIdx,
-                                                           intQuants.pvtRegionIndex()).value();
-
-                    muOil[cellIdx] = FluidSystem::viscosity(fs_updated,
-                                                           FluidSystem::oilPhaseIdx,
-                                                           intQuants.pvtRegionIndex()).value();
-                    muGas[cellIdx] = FluidSystem::viscosity(fs_updated,
-                                                           FluidSystem::gasPhaseIdx,
-                                                           intQuants.pvtRegionIndex()).value();
-
-                }
-            }
-
-            const size_t max_num_cells_faillog = 20;
-
-            int pb_size = failed_cells_pb.size(), pd_size = failed_cells_pd.size();
-            std::vector<int> displ_pb, displ_pd, recv_len_pb, recv_len_pd;
-            const auto& comm = grid_.comm();
-
-            if ( comm.rank() == 0 )
-            {
-                displ_pb.resize(comm.size()+1, 0);
-                displ_pd.resize(comm.size()+1, 0);
-                recv_len_pb.resize(comm.size());
-                recv_len_pd.resize(comm.size());
-            }
-
-            comm.gather(&pb_size, recv_len_pb.data(), 1, 0);
-            comm.gather(&pd_size, recv_len_pd.data(), 1, 0);
-            std::partial_sum(recv_len_pb.begin(), recv_len_pb.end(), displ_pb.begin()+1);
-            std::partial_sum(recv_len_pd.begin(), recv_len_pd.end(), displ_pd.begin()+1);
-            std::vector<int> global_failed_cells_pb, global_failed_cells_pd;
-
-            if ( comm.rank() == 0 )
-            {
-                global_failed_cells_pb.resize(displ_pb.back());
-                global_failed_cells_pd.resize(displ_pd.back());
-            }
-
-            comm.gatherv(failed_cells_pb.data(), static_cast<int>(failed_cells_pb.size()),
-                         global_failed_cells_pb.data(), recv_len_pb.data(),
-                         displ_pb.data(), 0);
-            comm.gatherv(failed_cells_pd.data(), static_cast<int>(failed_cells_pd.size()),
-                         global_failed_cells_pd.data(),  recv_len_pd.data(),
-                         displ_pd.data(), 0);
-            std::sort(global_failed_cells_pb.begin(), global_failed_cells_pb.end());
-            std::sort(global_failed_cells_pd.begin(), global_failed_cells_pd.end());
-
-            if (global_failed_cells_pb.size() > 0) {
-                std::stringstream errlog;
-                errlog << "Finding the bubble point pressure failed for " << global_failed_cells_pb.size() << " cells [";
-                errlog << global_failed_cells_pb[0];
-                const size_t max_elems = std::min(max_num_cells_faillog, failed_cells_pb.size());
-                for (size_t i = 1; i < max_elems; ++i) {
-                    errlog << ", " << global_failed_cells_pb[i];
-                }
-                if (global_failed_cells_pb.size() > max_num_cells_faillog) {
-                    errlog << ", ...";
-                }
-                errlog << "]";
-                OpmLog::warning("Bubble point numerical problem", errlog.str());
-            }
-            if (global_failed_cells_pd.size() > 0) {
-                std::stringstream errlog;
-                errlog << "Finding the dew point pressure failed for " << global_failed_cells_pd.size() << " cells [";
-                errlog << global_failed_cells_pd[0];
-                const size_t max_elems = std::min(max_num_cells_faillog, global_failed_cells_pd.size());
-                for (size_t i = 1; i < max_elems; ++i) {
-                    errlog << ", " << global_failed_cells_pd[i];
-                }
-                if (global_failed_cells_pd.size() > max_num_cells_faillog) {
-                    errlog << ", ...";
-                }
-                errlog << "]";
-                OpmLog::warning("Dew point numerical problem", errlog.str());
-            }
-
-            return simData;
-        }
-
         const FIPDataType& getFIPData() const {
             return fip_;
         }
@@ -1594,10 +1289,6 @@ namespace Opm {
         const Grid&            grid_;
         const ISTLSolverType*  istlSolver_;
         const PhaseUsage phaseUsage_;
-        // For each canonical phase -> true if active
-        const std::vector<bool>         active_;
-        // Size = # active phases. Maps active -> canonical phase indices.
-        const std::vector<int>          cells_;  // All grid cells
         const bool has_disgas_;
         const bool has_vapoil_;
         const bool has_solvent_;
@@ -1627,29 +1318,14 @@ namespace Opm {
         const BlackoilWellModel<TypeTag>&
         wellModel() const { return well_model_; }
 
-        int flowPhaseToEbosCompIdx( const int phaseIdx ) const
+        int ebosPhaseToFlowCanonicalPhaseIdx( const int phaseIdx ) const
         {
-            const auto& pu = phaseUsage_;
-            if (active_[Water] && pu.phase_pos[Water] == phaseIdx)
-                return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            if (active_[Oil] && pu.phase_pos[Oil] == phaseIdx)
-                return Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-            if (active_[Gas] && pu.phase_pos[Gas] == phaseIdx)
-                return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-
-            // for other phases return the index
-            return phaseIdx;
-        }
-
-        int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
-        {
-            const auto& pu = phaseUsage_;
-            if (active_[Water] && pu.phase_pos[Water] == phaseIdx)
-                return FluidSystem::waterPhaseIdx;
-            if (active_[Oil] && pu.phase_pos[Oil] == phaseIdx)
-                return FluidSystem::oilPhaseIdx;
-            if (active_[Gas] && pu.phase_pos[Gas] == phaseIdx)
-                return FluidSystem::gasPhaseIdx;
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::waterPhaseIdx == phaseIdx)
+                return Water;
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::oilPhaseIdx == phaseIdx)
+                return Oil;
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::gasPhaseIdx == phaseIdx)
+                return Gas;
 
             assert(phaseIdx < 3);
             // for other phases return the index
@@ -1658,7 +1334,7 @@ namespace Opm {
 
         void beginReportStep()
         {
-            isBeginReportStep_ = true;
+            ebosSimulator_.problem().beginEpisode();
         }
 
         void endReportStep()
@@ -1667,6 +1343,7 @@ namespace Opm {
         }
 
     private:
+
         void assembleMassBalanceEq(const SimulatorTimerInterface& timer,
                                    const int iterationIdx)
         {
@@ -1713,13 +1390,13 @@ namespace Opm {
             }
         }
 
+
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
         double drMaxRel() const { return param_.dr_max_rel_; }
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
 
     public:
-        bool isBeginReportStep_;
         std::vector<bool> wasSwitched_;
     };
 } // namespace Opm

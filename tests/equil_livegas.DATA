@@ -1,0 +1,131 @@
+NOECHO
+
+RUNSPEC   ======
+
+WATER
+OIL
+GAS
+VAPOIL
+
+TABDIMS
+  1    1   40   20    1   20  /
+
+DIMENS
+1 1 20
+/
+
+WELLDIMS
+   30   10    2   30 /
+
+START
+   1 'JAN' 1990  /
+
+NSTACK
+   25 /
+
+EQLDIMS
+-- NTEQUL
+     1 / 
+     
+
+FMTOUT
+FMTIN
+
+GRID      ======
+
+DXV
+1.0
+/
+
+DYV
+1.0
+/
+
+DZV
+20*5.0
+/
+
+
+PORO
+20*0.2
+/
+
+
+PERMZ
+  20*1.0
+/
+
+PERMY
+20*100.0
+/
+
+PERMX
+20*100.0
+/
+
+BOX
+ 1 1 1 1 1 1 /
+
+TOPS
+0.0
+/
+
+PROPS     ======
+
+PVDO
+100 1.0 1.0
+200 0.9 1.0
+/
+
+PVTG
+--  Pg     Rv        Bg       Vg
+   100   0.0001       0.010      0.1
+         0.0          0.0104     0.1 /
+   200   0.0004       0.005      0.2
+         0.0          0.0054     0.2 /
+/
+
+SWOF
+0.2 0 1 0.9
+1   1 0 0.1
+/
+
+SGOF
+0   0 1 0.2
+0.8 1 0 0.5
+/
+
+PVTW
+--RefPres  Bw      Comp   Vw    Cv
+   1.      1.0   4.0E-5  0.96  0.0 /
+   
+
+ROCK
+--RefPres  Comp
+   1.   5.0E-5 /
+
+DENSITY
+700 1000 1
+/
+
+SOLUTION  ======
+
+EQUIL
+45 150 50 0.25 45 0.35 1* 1* 0
+/
+
+RPTSOL
+'PRES' 'PGAS' 'PWAT' 'SOIL' 'SWAT' 'SGAS' 'RS' 'RESTART=2' /
+
+SUMMARY   ======
+RUNSUM
+
+SEPARATE
+
+SCHEDULE  ======
+
+RPTSCHED
+'PRES' 'PGAS' 'PWAT' 'SOIL' 'SWAT' 'SGAS' 'RS' 'RESTART=3' 'NEWTON=2' /
+
+
+END

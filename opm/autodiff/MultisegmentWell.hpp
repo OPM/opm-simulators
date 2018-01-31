@@ -40,7 +40,9 @@ namespace Opm
         using typename Base::FluidSystem;
         using typename Base::ModelParameters;
         using typename Base::MaterialLaw;
-        using typename Base::BlackoilIndices;
+        using typename Base::Indices;
+        using typename Base::RateConverterType;
+
 
         /// the number of reservior equations
         using Base::numEq;
@@ -59,7 +61,7 @@ namespace Opm
         // TODO: the following system looks not rather flexible. Looking into all kinds of possibilities
         // TODO: gas is always there? how about oil water case?
         // Is it gas oil two phase case?
-        static const bool gasoil = numEq == 2 && (BlackoilIndices::compositionSwitchIdx >= 0);
+        static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
         static const int GTotal = 0;
         static const int WFrac = gasoil? -1000: 1;
         static const int GFrac = gasoil? 1 : 2;
@@ -97,10 +99,13 @@ namespace Opm
         // TODO: for now, we only use one type to save some implementation efforts, while improve later.
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
 
-        MultisegmentWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param);
+        MultisegmentWell(const Well* well, const int time_step, const Wells* wells,
+                         const ModelParameters& param,
+                         const RateConverterType& rate_converter,
+                         const int pvtRegionIdx,
+                         const int num_components);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
-                          const std::vector<bool>* active_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
                           const int num_cells);
@@ -115,8 +120,7 @@ namespace Opm
 
         /// updating the well state based the control mode specified with current
         // TODO: later will check wheter we need current
-        virtual void updateWellStateWithTarget(const int current,
-                                               WellState& well_state) const;
+        virtual void updateWellStateWithTarget(WellState& well_state) const;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const;
@@ -179,15 +183,15 @@ namespace Opm
         using Base::gravity_;
         using Base::well_controls_;
         using Base::perf_depth_;
+        using Base::num_components_;
 
         // protected functions from the Base class
-        using Base::active;
         using Base::phaseUsage;
         using Base::name;
-        using Base::numComponents;
-        using Base::flowPhaseToEbosPhaseIdx;
         using Base::flowPhaseToEbosCompIdx;
+        using Base::ebosCompIdxToFlowCompIdx;
         using Base::getAllowCrossFlow;
+        using Base::scalingFactor;
 
         // TODO: trying to use the information from the Well opm-parser as much
         // as possible, it will possibly be re-implemented later for efficiency reason.
@@ -278,7 +282,7 @@ namespace Opm
 
         // fraction value of the primary variables
         // should we just use member variables to store them instead of calculating them again and again
-        EvalWell volumeFraction(const int seg, const int comp_idx) const;
+        EvalWell volumeFraction(const int seg, const unsigned comp_idx) const;
 
         // F_p / g_p, the basic usage of this value is because Q_p = G_t * F_p / G_p
         EvalWell volumeFractionScaled(const int seg, const int comp_idx) const;
@@ -328,8 +332,6 @@ namespace Opm
         void processFractions(const int seg) const;
 
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;
-
-        double scalingFactor(const int comp_idx) const;
 
         bool frictionalPressureLossConsidered() const;
 

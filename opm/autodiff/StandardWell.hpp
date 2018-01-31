@@ -26,6 +26,7 @@
 
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolver.hpp>
+#include <opm/autodiff/RateConverter.hpp>
 
 namespace Opm
 {
@@ -45,8 +46,9 @@ namespace Opm
         using typename Base::FluidSystem;
         using typename Base::MaterialLaw;
         using typename Base::ModelParameters;
-        using typename Base::BlackoilIndices;
+        using typename Base::Indices;
         using typename Base::PolymerModule;
+        using typename Base::RateConverterType;
 
         using Base::numEq;
 
@@ -54,7 +56,7 @@ namespace Opm
         // there are three primary variables, the second and the third ones are F_w and F_g
         // the first one can be total rate (G_t) or bhp, based on the control
 
-        static const bool gasoil = numEq == 2 && (BlackoilIndices::compositionSwitchIdx >= 0);
+        static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
         static const int XvarWell = 0;
         static const int WFrac = gasoil? -1000: 1;
         static const int GFrac = gasoil? 1: 2;
@@ -104,17 +106,17 @@ namespace Opm
 
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
 
-        // TODO: should these go to WellInterface?
-        static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
-        static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
-        static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
-        static const int polymerConcentrationIdx = BlackoilIndices::polymerConcentrationIdx;
+        using Base::contiSolventEqIdx;
+        using Base::contiPolymerEqIdx;
 
 
-        StandardWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param);
+        StandardWell(const Well* well, const int time_step, const Wells* wells,
+                     const ModelParameters& param,
+                     const RateConverterType& rate_converter,
+                     const int pvtRegionIdx,
+                     const int num_components);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
-                          const std::vector<bool>* active_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
                           const int num_cells);
@@ -129,8 +131,7 @@ namespace Opm
 
         /// updating the well state based the control mode specified with current
         // TODO: later will check wheter we need current
-        virtual void updateWellStateWithTarget(const int current,
-                                               WellState& xw) const;
+        virtual void updateWellStateWithTarget(WellState& well_state) const;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const;
@@ -161,14 +162,13 @@ namespace Opm
         // protected functions from the Base class
         using Base::getAllowCrossFlow;
         using Base::phaseUsage;
-        using Base::active;
-        using Base::flowPhaseToEbosPhaseIdx;
         using Base::flowPhaseToEbosCompIdx;
-        using Base::numComponents;
+        using Base::ebosCompIdxToFlowCompIdx;
         using Base::wsolvent;
         using Base::wpolymer;
         using Base::wellHasTHPConstraints;
         using Base::mostStrictBhpFromBhpLimits;
+        using Base::scalingFactor;
 
         // protected member variables from the Base class
         using Base::vfp_properties_;
@@ -187,6 +187,7 @@ namespace Opm
         using Base::index_of_well_;
         using Base::well_controls_;
         using Base::well_type_;
+        using Base::num_components_;
 
         using Base::perf_rep_radius_;
         using Base::perf_length_;
@@ -230,7 +231,7 @@ namespace Opm
 
         EvalWell wellVolumeFractionScaled(const int phase) const;
 
-        EvalWell wellVolumeFraction(const int phase) const;
+        EvalWell wellVolumeFraction(const unsigned compIdx) const;
 
         EvalWell wellSurfaceVolumeFraction(const int phase) const;
 
@@ -248,7 +249,7 @@ namespace Opm
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.
         void computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
-                                                         const WellState& xw,
+                                                         const WellState& well_state,
                                                          std::vector<double>& b_perf,
                                                          std::vector<double>& rsmax_perf,
                                                          std::vector<double>& rvmax_perf,
@@ -264,7 +265,7 @@ namespace Opm
 
         void computeConnectionPressureDelta();
 
-        void computeWellConnectionDensitesPressures(const WellState& xw,
+        void computeWellConnectionDensitesPressures(const WellState& well_state,
                                                     const std::vector<double>& b_perf,
                                                     const std::vector<double>& rsmax_perf,
                                                     const std::vector<double>& rvmax_perf,
@@ -274,7 +275,7 @@ namespace Opm
         void computeAccumWell();
 
         void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                                    const WellState& xw);
+                                                    const WellState& well_state);
 
         // TODO: to check whether all the paramters are required
         void computePerfRate(const IntensiveQuantities& intQuants,
@@ -302,7 +303,9 @@ namespace Opm
                          const int perf,
                          std::vector<EvalWell>& mob) const;
 
-        double scalingFactor(const int comp_idx) const;
+        void updateWaterMobilityWithPolymer(const Simulator& ebos_simulator,
+                                            const int perf,
+                                            std::vector<EvalWell>& mob_water) const;
     };
 
 }

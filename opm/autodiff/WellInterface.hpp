@@ -1,6 +1,7 @@
 /*
   Copyright 2017 SINTEF Digital, Mathematics and Cybernetics.
   Copyright 2017 Statoil ASA.
+  Copyright 2017 IRIS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -37,6 +38,7 @@
 #include <opm/autodiff/WellHelpers.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
+#include <opm/autodiff/RateConverter.hpp>
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
@@ -72,11 +74,11 @@ namespace Opm
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-        typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
+        typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
         typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
 
-        static const int numEq = BlackoilIndices::numEq;
+        static const int numEq = Indices::numEq;
         typedef double Scalar;
 
         typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
@@ -89,9 +91,19 @@ namespace Opm
 
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
+        static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
+        static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
+
+        // For the conversion between the surface volume rate and resrevoir voidage rate
+        using RateConverterType = RateConverter::
+        SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
 
         /// Constructor
-        WellInterface(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param);
+        WellInterface(const Well* well, const int time_step, const Wells* wells,
+                      const ModelParameters& param,
+                      const RateConverterType& rate_converter,
+                      const int pvtRegionIdx,
+                      const int num_components);
 
         /// Virutal destructor
         virtual ~WellInterface() {}
@@ -111,7 +123,6 @@ namespace Opm
         void setVFPProperties(const VFPProperties* vfp_properties_arg);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
-                          const std::vector<bool>* active_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
                           const int num_cells);
@@ -181,16 +192,15 @@ namespace Opm
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials) = 0;
 
-        virtual void updateWellStateWithTarget(const int current,
-                                               WellState& xw) const = 0;
+        virtual void updateWellStateWithTarget(WellState& well_state) const = 0;
 
-        void updateWellControl(WellState& xw,
+        void updateWellControl(WellState& well_state,
                                wellhelpers::WellSwitchingLogger& logger) const;
 
         virtual void updatePrimaryVariables(const WellState& well_state) const = 0;
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
-                                                 const WellState& xw) = 0; // should be const?
+                                                 const WellState& well_state) = 0; // should be const?
 
     protected:
 
@@ -258,22 +268,24 @@ namespace Opm
 
         bool getAllowCrossFlow() const;
 
-        const std::vector<bool>* active_;
-
         const VFPProperties* vfp_properties_;
 
         double gravity_;
 
-        const std::vector<bool>& active() const;
+        // For the conversion between the surface volume rate and resrevoir voidage rate
+        const RateConverterType& rateConverter_;
+
+        // The pvt region of the well. We assume
+        // We assume a well to not penetrate more than one pvt region.
+        const int pvtRegionIdx_;
+
+        const int num_components_;
 
         const PhaseUsage& phaseUsage() const;
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
 
-        int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
-
-        // TODO: it is dumplicated with BlackoilWellModel
-        int numComponents() const;
+        int ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const;
 
         double wsolvent() const;
 
@@ -303,6 +315,9 @@ namespace Opm
 
         RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                                              const WellState& well_state) const;
+
+        double scalingFactor(const int comp_idx) const;
+
 
     };
 

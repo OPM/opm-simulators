@@ -21,7 +21,7 @@
 
 #include <opm/simulators/flow_ebos_oilwater.hpp>
 
-#include <opm/common/ResetLocale.hpp>
+#include <opm/common/utility/ResetLocale.hpp>
 #include <ewoms/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <dune/grid/CpGrid.hpp>

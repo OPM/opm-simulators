@@ -20,7 +20,7 @@
 #ifndef OPM_POLYMERINFLOW_HEADER_INCLUDED
 #define OPM_POLYMERINFLOW_HEADER_INCLUDED
 
-#include <opm/core/utility/SparseVector.hpp>
+#include <opm/common/utility/numeric/SparseVector.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>

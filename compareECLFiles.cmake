@@ -35,7 +35,7 @@ function(add_test_compareECLFiles)
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${OPM_DATA_ROOT}/${PARAM_DIR} ${RESULT_PATH}
-                           ${CMAKE_BINARY_DIR}/bin
+                           ${PROJECT_BINARY_DIR}/bin
                            ${PARAM_FILENAME}
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_SUMMARY_COMMAND}
@@ -64,11 +64,12 @@ function(add_test_compare_restarted_simulation)
   opm_add_test(compareRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${OPM_DATA_ROOT}/${PARAM_CASENAME} ${RESULT_PATH}
-                           ${CMAKE_BINARY_DIR}/bin
+                           ${PROJECT_BINARY_DIR}/bin
                            ${PARAM_FILENAME}
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
+                           0
                TEST_ARGS ${TEST_ARGS})
 endfunction()
 
@@ -94,11 +95,42 @@ function(add_test_compare_parallel_simulation)
   opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${OPM_DATA_ROOT}/${PARAM_CASENAME} ${RESULT_PATH}
+                           ${PROJECT_BINARY_DIR}/bin
+                           ${PARAM_FILENAME}
+                           ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
+                           ${COMPARE_SUMMARY_COMMAND}
+                           ${COMPARE_ECL_COMMAND}
+               TEST_ARGS ${TEST_ARGS})
+endfunction()
+
+
+###########################################################################
+# TEST: add_test_compare_parallel_restarted_simulation
+###########################################################################
+
+# Input:
+#   - casename: basename (no extension)
+#
+# Details:
+#   - This test class compares the output from a restarted parallel simulation
+#     to that of a non-restarted parallel simulation.
+function(add_test_compare_parallel_restarted_simulation)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL)
+  set(multiValueArgs TEST_ARGS)
+  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
+  set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+  set(TEST_ARGS ${OPM_DATA_ROOT}/${PARAM_CASENAME}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
+
+  opm_add_test(compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
+               EXE_NAME ${PARAM_SIMULATOR}
+               DRIVER_ARGS ${OPM_DATA_ROOT}/${PARAM_CASENAME} ${RESULT_PATH}
                            ${CMAKE_BINARY_DIR}/bin
                            ${PARAM_FILENAME}
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
+                           1
                TEST_ARGS ${TEST_ARGS})
 endfunction()
 
@@ -132,6 +164,13 @@ add_test_compareECLFiles(CASENAME spe1_2p
 add_test_compareECLFiles(CASENAME spe1_2p
                          FILENAME SPE1CASE2_2P
                          SIMULATOR flow_legacy
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol}
+                         DIR spe1)
+
+add_test_compareECLFiles(CASENAME spe1_oilgas
+                         FILENAME SPE1CASE2_OILGAS
+                         SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
                          DIR spe1)
@@ -179,20 +218,19 @@ add_test_compareECLFiles(CASENAME msw_3d_hfa
                          REL_TOL ${rel_tol}
                          TEST_ARGS use_multisegment_well=true)
 
-foreach(SIM flow flow_polymer)
-  add_test_compareECLFiles(CASENAME polymer_simple2D
-                           FILENAME 2D_THREEPHASE_POLY_HETER
-                           SIMULATOR ${SIM}
-                           ABS_TOL ${abs_tol}
-                           REL_TOL ${coarse_rel_tol})
-endforeach()
+add_test_compareECLFiles(CASENAME polymer_simple2D
+                         FILENAME 2D_THREEPHASE_POLY_HETER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol}
+                         TEST_ARGS max_iter=20)
 
 add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS max_iter=13)
+                         TEST_ARGS max_iter=20)
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
@@ -228,6 +266,14 @@ endforeach()
 
 # Parallel tests
 if(MPI_FOUND)
+  opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
+  add_test_compare_parallel_restarted_simulation(CASENAME spe1
+                                                 FILENAME SPE1CASE2_ACTNUM
+                                                 SIMULATOR flow
+                                                 ABS_TOL ${abs_tol_restart}
+                                                 REL_TOL ${rel_tol_restart})
+
+
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-regressionTest.sh "")
 
   # Different tolerances for these tests

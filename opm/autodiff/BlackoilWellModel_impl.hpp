@@ -18,11 +18,6 @@ namespace Opm {
         const auto& eclState = ebosSimulator_.gridManager().eclState();
         phase_usage_ = phaseUsageFromDeck(eclState);
 
-        active_.resize(phase_usage_.MaxNumPhases, false);
-        for (int p = 0; p < phase_usage_.MaxNumPhases; ++p) {
-            active_[ p ] = phase_usage_.phase_used[ p ] != 0;
-        }
-
         const auto& gridView = ebosSimulator_.gridView();
 
         // calculate the number of elements of the compressed sequential grid. this needs
@@ -61,7 +56,7 @@ namespace Opm {
                                                 dynamic_list_econ_limited_,
                                                 grid.comm().size() > 1,
                                                 defunct_well_names) );
-	
+
         // Wells are active if they are active wells on at least
         // one process.
         wells_active_ = localWellsActive() ? 1 : 0;
@@ -119,7 +114,7 @@ namespace Opm {
         // TODO: to see whether we can postpone of the intialization of the well containers to
         // optimize the usage of the following several member variables
         for (auto& well : well_container_) {
-            well->init(&phase_usage_, &active_, depth_, gravity_, number_of_cells_);
+            well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
         }
 
         // calculate the efficiency factors for each well
@@ -221,10 +216,16 @@ namespace Opm {
 
                 const Well* well_ecl = wells_ecl_[index_well];
 
+                // Use the pvtRegionIdx from the top cell
+                const int well_cell_top = wells()->well_cells[wells()->well_connpos[w]];
+                const int pvtreg = pvt_region_idx_[well_cell_top];
+
                 if ( !well_ecl->isMultiSegment(time_step) || !param_.use_multisegment_well_) {
-                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(), param_) );
+                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
+                                                param_, *rateConverter_, pvtreg, numComponents() ) );
                 } else {
-                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(), param_) );
+                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(),
+                                                param_, *rateConverter_, pvtreg, numComponents() ) );
                 }
             }
         }
@@ -372,34 +373,17 @@ namespace Opm {
 
 
 
-
-    template<typename TypeTag>
-    int
-    BlackoilWellModel<TypeTag>::
-    flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
-    {
-        const auto& pu = phase_usage_;
-        if (active_[Water] && pu.phase_pos[Water] == phaseIdx)
-            return FluidSystem::waterPhaseIdx;
-        if (active_[Oil] && pu.phase_pos[Oil] == phaseIdx)
-            return FluidSystem::oilPhaseIdx;
-        if (active_[Gas] && pu.phase_pos[Gas] == phaseIdx)
-            return FluidSystem::gasPhaseIdx;
-
-        assert(phaseIdx < 3);
-        // for other phases return the index
-        return phaseIdx;
-    }
-
-
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     resetWellControlFromState() const
     {
         const int        nw   = numWells();
+
+        assert(nw == int(well_container_.size()) );
+
         for (int w = 0; w < nw; ++w) {
-            WellControls* wc = wells()->ctrls[w];
+            WellControls* wc = well_container_[w]->wellControls();
             well_controls_set_current( wc, well_state_.currentControls()[w]);
         }
     }
@@ -695,7 +679,7 @@ namespace Opm {
             well_state_.currentControls()[w] = control;
             // TODO: for VFP control, the perf_densities are still zero here, investigate better
             // way to handle it later.
-            well_container_[w]->updateWellStateWithTarget(control, well_state_);
+            well_container_[w]->updateWellStateWithTarget(well_state_);
 
             // The wells are not considered to be newly added
             // for next time step
@@ -941,12 +925,7 @@ namespace Opm {
             wellCollection().updateWellTargets(well_state_.wellRates());
 
             for (int w = 0; w < numWells(); ++w) {
-                // TODO: check whether we need current argument in updateWellStateWithTarget
-                // maybe there is some circumstances that the current is different from the one
-                // in the WellState.
-                // while probalby, the current argument can be removed
-                const int current = well_state_.currentControls()[w];
-                well_container_[w]->updateWellStateWithTarget(current, well_state_);
+                well_container_[w]->updateWellStateWithTarget(well_state_);
             }
         }
     }
@@ -1000,8 +979,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeAverageFormationFactor(std::vector<double>& B_avg) const
     {
-        const int np = numPhases();
-
         const auto& grid = ebosSimulator_.gridManager().grid();
         const auto& gridView = grid.leafGridView();
         ElementContext elemCtx(ebosSimulator_);
@@ -1016,12 +993,16 @@ namespace Opm {
             const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            for ( int phaseIdx = 0; phaseIdx < np; ++phaseIdx )
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
             {
-                auto& B  = B_avg[ phaseIdx ];
-                const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phaseIdx);
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
 
-                B += 1 / fs.invB(ebosPhaseIdx).value();
+                const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                auto& B  = B_avg[ compIdx ];
+
+                B += 1 / fs.invB(phaseIdx).value();
             }
             if (has_solvent_) {
                 auto& B  = B_avg[solventSaturationIdx];
@@ -1151,7 +1132,6 @@ namespace Opm {
 
             std::vector<double> distr (np);
             std::vector<double> hrates(np);
-            std::vector<double> prates(np);
 
             for (std::vector<int>::const_iterator
                      rp = resv_wells.begin(), e = resv_wells.end();
@@ -1167,22 +1147,19 @@ namespace Opm {
                     const int rctrl = SimFIBODetails::resv_control(ctrl);
 
                     if (0 <= rctrl) {
-                        const std::vector<double>::size_type off = (*rp) * np;
-
-                        if (is_producer) {
-                            // Convert to positive rates to avoid issues
-                            // in coefficient calculations.
-                            std::transform(well_state_.wellRates().begin() + (off + 0*np),
-                                           well_state_.wellRates().begin() + (off + 1*np),
-                                           prates.begin(), std::negate<double>());
-                        } else {
-                            std::copy(well_state_.wellRates().begin() + (off + 0*np),
-                                      well_state_.wellRates().begin() + (off + 1*np),
-                                      prates.begin());
-                        }
-
                         const int fipreg = 0; // Hack.  Ignore FIP regions.
                         rateConverter_->calcCoeff(fipreg, pvtreg, distr);
+
+                        if (!is_producer) { // injectors
+                            well_controls_assert_number_of_phases(ctrl, np);
+
+                            // original distr contains 0 and 1 to indicate phases under control
+                            const double* old_distr = well_controls_get_current_distr(ctrl);
+
+                            for (size_t p = 0; p < np; ++p) {
+                                distr[p] *= old_distr[p];
+                            }
+                        }
 
                         well_controls_iset_distr(ctrl, rctrl, & distr[0]);
                     }

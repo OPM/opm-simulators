@@ -40,7 +40,6 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
-#include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
@@ -70,19 +69,15 @@ namespace Opm {
             typedef WellStateFullyImplicitBlackoil WellState;
             typedef BlackoilModelParameters ModelParameters;
 
-            static const int Water = WellInterface<TypeTag>::Water;
-            static const int Oil = WellInterface<TypeTag>::Oil;
-            static const int Gas = WellInterface<TypeTag>::Gas;
-
             typedef typename GET_PROP_TYPE(TypeTag, Grid)                Grid;
             typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)         FluidSystem;
             typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
-            typedef typename GET_PROP_TYPE(TypeTag, Indices)             BlackoilIndices;
+            typedef typename GET_PROP_TYPE(TypeTag, Indices)             Indices;
             typedef typename GET_PROP_TYPE(TypeTag, Simulator)           Simulator;
             typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
 
-            static const int numEq = BlackoilIndices::numEq;
-            static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
+            static const int numEq = Indices::numEq;
+            static const int solventSaturationIdx = Indices::solventSaturationIdx;
 
             // TODO: where we should put these types, WellInterface or Well Model?
             // or there is some other strategy, like TypeTag
@@ -177,7 +172,6 @@ namespace Opm {
             bool has_polymer_;
             std::vector<int> pvt_region_idx_;
             PhaseUsage phase_usage_;
-            std::vector<bool>  active_;
             size_t global_nc_;
             // the number of the cells in the local grid
             size_t number_of_cells_;
@@ -218,7 +212,6 @@ namespace Opm {
                                          std::vector<double>& voidage_conversion_coeffs) const;
 
             // Calculating well potentials for each well
-            // TODO: getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.
             void computeWellPotentials(std::vector<double>& well_potentials);
 
             const std::vector<double>& wellPerfEfficiencyFactors() const;
@@ -242,9 +235,6 @@ namespace Opm {
             int numWells() const;
 
             int numPhases() const;
-
-
-            int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
             void resetWellControlFromState() const;
 

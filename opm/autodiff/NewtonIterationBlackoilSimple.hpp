@@ -23,7 +23,7 @@
 
 
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <memory>
 

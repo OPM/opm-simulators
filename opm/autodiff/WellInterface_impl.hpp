@@ -25,10 +25,17 @@ namespace Opm
 
     template<typename TypeTag>
     WellInterface<TypeTag>::
-    WellInterface(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param)
+    WellInterface(const Well* well, const int time_step, const Wells* wells,
+                  const ModelParameters& param,
+                  const RateConverterType& rate_converter,
+                  const int pvtRegionIdx,
+                  const int num_components)
     : well_ecl_(well)
     , current_step_(time_step)
     , param_(param)
+    , rateConverter_(rate_converter)
+    , pvtRegionIdx_(pvtRegionIdx)
+    , num_components_(num_components)
     {
         if (!well) {
             OPM_THROW(std::invalid_argument, "Null pointer of Well is used to construct WellInterface");
@@ -106,13 +113,11 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     init(const PhaseUsage* phase_usage_arg,
-         const std::vector<bool>* active_arg,
          const std::vector<double>& /* depth_arg */,
          const double gravity_arg,
          const int /* num_cells */)
     {
         phase_usage_ = phase_usage_arg;
-        active_ = active_arg;
         gravity_ = gravity_arg;
     }
 
@@ -179,21 +184,6 @@ namespace Opm
 
 
 
-
-    template<typename TypeTag>
-    const std::vector<bool>&
-    WellInterface<TypeTag>::
-    active() const
-    {
-        assert(active_);
-
-        return *active_;
-    }
-
-
-
-
-
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
@@ -226,60 +216,32 @@ namespace Opm
     flowPhaseToEbosCompIdx( const int phaseIdx ) const
     {
         const auto& pu = phaseUsage();
-        if (active()[Water] && pu.phase_pos[Water] == phaseIdx)
-            return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx)
-            return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx)
-            return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
+            return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
+            return Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
+            return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
 
         // for other phases return the index
         return phaseIdx;
     }
 
-
-
-
     template<typename TypeTag>
     int
     WellInterface<TypeTag>::
-    flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
+    ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const
     {
         const auto& pu = phaseUsage();
-        if (active()[Water] && pu.phase_pos[Water] == phaseIdx) {
-            return FluidSystem::waterPhaseIdx;
-        }
-        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx) {
-            return FluidSystem::oilPhaseIdx;
-        }
-        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx) {
-            return FluidSystem::gasPhaseIdx;
-        }
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == compIdx)
+            return pu.phase_pos[Water];
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == compIdx)
+            return pu.phase_pos[Oil];
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == compIdx)
+            return pu.phase_pos[Gas];
 
-        assert(phaseIdx < 3);
         // for other phases return the index
-        return phaseIdx;
-    }
-
-
-
-
-    template<typename TypeTag>
-    int
-    WellInterface<TypeTag>::
-    numComponents() const
-    {
-        // TODO: how about two phase polymer
-        if (number_of_phases_ == 2) {
-          return 2;
-        }
-
-        int numComp = FluidSystem::numComponents;
-
-        if (has_solvent) {
-            numComp++;
-        }
-        return numComp;
+        return compIdx;
     }
 
 
@@ -457,7 +419,7 @@ namespace Opm
         }
 
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
-            updateWellStateWithTarget(updated_control_index, well_state);
+            updateWellStateWithTarget(well_state);
         }
     }
 
@@ -475,7 +437,7 @@ namespace Opm
         const int np = number_of_phases_;
 
         if (econ_production_limits.onMinOilRate()) {
-            assert(active()[Oil]);
+            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
             const double oil_rate = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Oil ] ];
             const double min_oil_rate = econ_production_limits.minOilRate();
             if (std::abs(oil_rate) < min_oil_rate) {
@@ -484,7 +446,7 @@ namespace Opm
         }
 
         if (econ_production_limits.onMinGasRate() ) {
-            assert(active()[Gas]);
+            assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
             const double gas_rate = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Gas ] ];
             const double min_gas_rate = econ_production_limits.minGasRate();
             if (std::abs(gas_rate) < min_gas_rate) {
@@ -493,8 +455,8 @@ namespace Opm
         }
 
         if (econ_production_limits.onMinLiquidRate() ) {
-            assert(active()[Oil]);
-            assert(active()[Water]);
+            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+            assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
             const double oil_rate = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Oil ] ];
             const double water_rate = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Water ] ];
             const double liquid_rate = oil_rate + water_rate;
@@ -531,8 +493,8 @@ namespace Opm
         const Opm::PhaseUsage& pu = phaseUsage();
         const int well_number = index_of_well_;
 
-        assert(active()[Oil]);
-        assert(active()[Water]);
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
 
         const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
         const double water_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Water ] ];
@@ -848,6 +810,38 @@ namespace Opm
                 }
             }
         }
+    }
+
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::scalingFactor(const int phaseIdx) const
+    {
+        const WellControls* wc = well_controls_;
+        const double* distr = well_controls_get_current_distr(wc);
+
+        if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
+            if (has_solvent && phaseIdx == contiSolventEqIdx ) {
+                typedef Ewoms::BlackOilSolventModule<TypeTag> SolventModule;
+                double coeff = 0;
+                rateConverter_.template calcCoeffSolvent<SolventModule>(0, pvtRegionIdx_, coeff);
+                return coeff;
+            }
+            // TODO: use the rateConverter here as well.
+            return distr[phaseIdx];
+        }
+        const auto& pu = phaseUsage();
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
+            return 1.0;
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
+            return 1.0;
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
+            return 0.01;
+        if (has_solvent && phaseIdx == contiSolventEqIdx )
+            return 0.01;
+
+        // we should not come this far
+        assert(false);
+        return 1.0;
     }
 
 }

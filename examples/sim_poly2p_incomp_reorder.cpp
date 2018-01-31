@@ -33,7 +33,7 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/core/props/IncompPropertiesBasic.hpp>
 #include <opm/core/props/IncompPropertiesFromDeck.hpp>
@@ -83,6 +83,7 @@ try
 {
     using namespace Opm;
 
+    OpmLog::setupSimpleDefaultLogging(false, true, 10);
     std::cout << "\n================    Test program for incompressible two-phase flow with polymer    ===============\n\n";
     ParameterGroup param(argc, argv, false);
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;

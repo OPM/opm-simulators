@@ -57,6 +57,11 @@ namespace Opm
     public:
         typedef BaseType :: WellMapType WellMapType;
 
+        // TODO: same definition with WellInterface, eventually they should go to a common header file.
+        static const int Water = BlackoilPhases::Aqua;
+        static const int Oil = BlackoilPhases::Liquid;
+        static const int Gas = BlackoilPhases::Vapour;
+
         using BaseType :: wellRates;
         using BaseType :: bhp;
         using BaseType :: perfPress;
@@ -253,16 +258,16 @@ namespace Opm
 
             using rt = data::Rates::opt;
             std::vector< rt > phs( np );
-            if( pu.phase_used[BlackoilPhases::Aqua] ) {
-                phs.at( pu.phase_pos[BlackoilPhases::Aqua] ) = rt::wat;
+            if( pu.phase_used[Water] ) {
+                phs.at( pu.phase_pos[Water] ) = rt::wat;
             }
 
-            if( pu.phase_used[BlackoilPhases::Liquid] ) {
-                phs.at( pu.phase_pos[BlackoilPhases::Liquid] ) = rt::oil;
+            if( pu.phase_used[Oil] ) {
+                phs.at( pu.phase_pos[Oil] ) = rt::oil;
             }
 
-            if( pu.phase_used[BlackoilPhases::Vapour] ) {
-                phs.at( pu.phase_pos[BlackoilPhases::Vapour] ) = rt::gas;
+            if( pu.phase_used[Gas] ) {
+                phs.at( pu.phase_pos[Gas] ) = rt::gas;
             }
 
             if (pu.has_solvent) {
@@ -384,8 +389,8 @@ namespace Opm
                         const int start_perf = wells->well_connpos[w];
                         const int start_perf_next_well = wells->well_connpos[w + 1];
                         assert(nperf == (start_perf_next_well - start_perf)); // make sure the information from wells_ecl consistent with wells
-                        if (pu.phase_used[BlackoilPhases::Vapour]) {
-                            const int gaspos = pu.phase_pos[BlackoilPhases::Vapour];
+                        if (pu.phase_used[Gas]) {
+                            const int gaspos = pu.phase_pos[Gas];
                             // scale the phase rates for Gas to avoid too bad initial guess for gas fraction
                             // it will probably benefit the standard well too, while it needs to be justified
                             // TODO: to see if this strategy can benefit StandardWell too

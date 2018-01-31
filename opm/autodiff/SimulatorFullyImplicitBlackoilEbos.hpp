@@ -1,6 +1,7 @@
 /*
   Copyright 2013, 2015 SINTEF ICT, Applied Mathematics.
   Copyright 2015 Andreas Lauser
+  Copyright 2017 IRIS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -21,15 +22,13 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 
-#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
+#include <opm/autodiff/BlackoilOutputEbos.hpp>
 #include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/NonlinearSolver.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilWellModel.hpp>
-#include <opm/autodiff/RateConverter.hpp>
-#include <opm/autodiff/SimFIBODetails.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/core/utility/initHydroCarbonState.hpp>
@@ -62,12 +61,11 @@ public:
 
     typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilState ReservoirState;
-    typedef BlackoilOutputWriter OutputWriter;
+    typedef BlackoilOutputEbos<TypeTag> OutputWriter;
     typedef BlackoilModelEbos<TypeTag> Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
     typedef BlackoilWellModel<TypeTag> WellModel;
-    typedef RateConverter::SurfaceToReservoirVoidage<FluidSystem, std::vector<int> > RateConverterType;
 
 
     /// Initialise from parameters and objects to observe.
@@ -98,7 +96,6 @@ public:
                                        NewtonIterationBlackoilInterface& linsolver,
                                        const bool has_disgas,
                                        const bool has_vapoil,
-                                       const EclipseState& /* eclState */,
                                        OutputWriter& output_writer)
         : ebosSimulator_(ebosSimulator),
           param_(param),
@@ -122,6 +119,7 @@ public:
             is_parallel_run_ = ( info.communicator().size() > 1 );
         }
 #endif
+        createLocalFipnum();
     }
 
     /// Run the simulation.
@@ -130,56 +128,37 @@ public:
     /// \param[in,out] timer       governs the requested reporting timesteps
     /// \param[in,out] state       state of reservoir: pressure, fluxes
     /// \return                    simulation report, with timing data
-    SimulatorReport run(SimulatorTimer& timer,
-                        ReservoirState& state)
+    SimulatorReport run(SimulatorTimer& timer)
     {
+
+        ReservoirState dummy_state(0,0,0);
+
         WellState prev_well_state;
 
         ExtraData extra;
 
         failureReport_ = SimulatorReport();
 
-        // communicate the initial solution to ebos
-        if (timer.initialStep()) {
-            convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
-            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-        }
-
         if (output_writer_.isRestart()) {
-            // This is a restart, populate WellState and ReservoirState state objects from restart file
-            output_writer_.initFromRestartFile(phaseUsage_, grid(), state, prev_well_state, extra);
-            initHydroCarbonState(state, phaseUsage_, Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
-            initHysteresisParams(state);
-            // communicate the restart solution to ebos
-            convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
-            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+            // This is a restart, populate WellState
+            ReservoirState stateInit(Opm::UgGridHelpers::numCells(grid()),
+                                     Opm::UgGridHelpers::numFaces(grid()),
+                                     phaseUsage_.num_phases);
+            output_writer_.initFromRestartFile(phaseUsage_, grid(), stateInit, prev_well_state, extra);
         }
-
-        // Sync the overlap region of the inital solution. It was generated
-        // from the ReservoirState which has wrong values in the ghost region
-        // for some models (SPE9, Norne, Model 2)
-        ebosSimulator_.model().syncOverlap();
 
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
-        Opm::time::StopWatch step_timer;
         Opm::time::StopWatch total_timer;
         total_timer.start();
-        std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
-        std::ofstream tstep_os;
-
-        if ( output_writer_.output() && output_writer_.isIORank() )
-        {
-            tstep_os.open(tstep_filename.c_str());
-        }
 
         // adaptive time stepping
         const auto& events = schedule().getEvents();
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
+        const bool useTUNING = param_.getDefault("use_TUNING", false);
         if( param_.getDefault("timestep.adaptive", true ) )
         {
-
-            if (param_.getDefault("use_TUNING", false)) {
+            if (useTUNING) {
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule().getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
             } else {
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
@@ -192,39 +171,8 @@ public:
             }
         }
 
-        std::string restorefilename = param_.getDefault("restorefile", std::string("") );
-        if( ! restorefilename.empty() )
-        {
-            // -1 means that we'll take the last report step that was written
-            const int desiredRestoreStep = param_.getDefault("restorestep", int(-1) );
-
-            output_writer_.restore( timer,
-                                    state,
-                                    prev_well_state,
-                                    restorefilename,
-                                    desiredRestoreStep );
-            initHydroCarbonState(state, phaseUsage_, Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
-            initHysteresisParams(state);
-            // communicate the restart solution to ebos
-            convertInput(0, state, ebosSimulator_);
-            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-        }
-
         SimulatorReport report;
         SimulatorReport stepReport;
-
-        std::vector<int> fipnum_global = eclState().get3DProperties().getIntGridProperty("FIPNUM").getData();
-        //Get compressed cell fipnum.
-        std::vector<int> fipnum(Opm::UgGridHelpers::numCells(grid()));
-        if (fipnum_global.empty()) {
-            std::fill(fipnum.begin(), fipnum.end(), 0);
-        } else {
-            for (size_t c = 0; c < fipnum.size(); ++c) {
-                fipnum[c] = fipnum_global[Opm::UgGridHelpers::globalCell(grid())[c]];
-            }
-        }
-        std::vector<std::vector<double>> originalFluidInPlace;
-        std::vector<double> originalFluidInPlaceTotals;
 
         WellModel well_model(ebosSimulator_, model_param_, terminal_output_);
         if (output_writer_.isRestart()) {
@@ -236,12 +184,11 @@ public:
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
-            step_timer.start();
             if ( terminal_output_ )
             {
                 std::ostringstream ss;
                 timer.report(ss);
-                OpmLog::note(ss.str());
+                OpmLog::debug(ss.str());
             }
 
             // Run a multiple steps of the solver depending on the time step control.
@@ -251,18 +198,9 @@ public:
 
             auto solver = createSolver(well_model);
 
-            std::vector<std::vector<double>> currentFluidInPlace;
-            std::vector<double> currentFluidInPlaceTotals;
-
             // Compute orignal fluid in place if this has not been done yet
-            if (originalFluidInPlace.empty()) {
-                originalFluidInPlace = solver->computeFluidInPlace(fipnum);
-                originalFluidInPlaceTotals = FIPTotals(originalFluidInPlace);
-                FIPUnitConvert(eclState().getUnits(), originalFluidInPlace);
-                FIPUnitConvert(eclState().getUnits(), originalFluidInPlaceTotals);
-
-                currentFluidInPlace = originalFluidInPlace;
-                currentFluidInPlaceTotals = originalFluidInPlaceTotals;
+            if (originalFluidInPlace_.data.empty()) {
+                originalFluidInPlace_ = computeFluidInPlace(*solver);
             }
 
             // write the inital state at the report stage
@@ -271,15 +209,12 @@ public:
                 perfTimer.start();
 
                 if (terminal_output_) {
-                    outputFluidInPlace(originalFluidInPlaceTotals, currentFluidInPlaceTotals,eclState().getUnits(), 0);
-                    for (size_t reg = 0; reg < originalFluidInPlace.size(); ++reg) {
-                        outputFluidInPlace(originalFluidInPlace[reg], currentFluidInPlace[reg], eclState().getUnits(), reg+1);
-                    }
+                    outputFluidInPlace(timer, originalFluidInPlace_);
                 }
 
                 // No per cell data is written for initial step, but will be
                 // for subsequent steps, when we have started simulating
-                output_writer_.writeTimeStep( timer, state, well_model.wellState(), solver->model() );
+                output_writer_.writeTimeStep( timer, dummy_state, well_model.wellState(), solver->model() );
 
                 report.output_write_time += perfTimer.stop();
             }
@@ -289,7 +224,8 @@ public:
                 std::ostringstream step_msg;
                 boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
                 step_msg.imbue(std::locale(std::locale::classic(), facet));
-                step_msg << "\nTime step " << std::setw(4) <<timer.currentStepNum()
+                step_msg << "\nReport step " << std::setw(2) <<timer.currentStepNum()
+                         << "/" << timer.numSteps()
                          << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
                          << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
                          << ", date = " << timer.currentDateTime();
@@ -304,18 +240,24 @@ public:
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
             if( adaptiveTimeStepping ) {
+                if (useTUNING) {
+                    if(events.hasEvent(ScheduleEvents::TUNING_CHANGE,timer.currentStepNum())) {
+                        adaptiveTimeStepping->updateTUNING(schedule().getTuning(), timer.currentStepNum());
+                    }
+                }
+
                 bool event = events.hasEvent(ScheduleEvents::NEW_WELL, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE, timer.currentStepNum());
-                stepReport = adaptiveTimeStepping->step( timer, *solver, state, wellStateDummy, event, output_writer_,
-                                                         output_writer_.requireFIPNUM() ? &fipnum : nullptr );
+                stepReport = adaptiveTimeStepping->step( timer, *solver, dummy_state, wellStateDummy, event, output_writer_,
+                                                         output_writer_.requireFIPNUM() ? &fipnum_ : nullptr );
                 report += stepReport;
                 failureReport_ += adaptiveTimeStepping->failureReport();
             }
             else {
                 // solve for complete report step
-                stepReport = solver->step(timer, state, wellStateDummy);
+                stepReport = solver->step(timer, dummy_state, wellStateDummy);
                 report += stepReport;
                 failureReport_ += solver->failureReport();
 
@@ -343,50 +285,27 @@ public:
             // update timing.
             report.solver_time += solver_timer.secsSinceStart();
 
-            if ( output_writer_.output() && output_writer_.isIORank() )
-            {
-                stepReport.reportParam(tstep_os);
-            }
-
-            // We don't need the reservoir state anymore. It is just passed around to avoid
-            // code duplication. Pass empty state instead.
-            if (timer.initialStep()) {
-                ReservoirState stateTrivial(0,0,0);
-                state = stateTrivial;
-            }
-
             // Increment timer, remember well state.
             ++timer;
 
             // Compute current fluid in place.
-            currentFluidInPlace = solver->computeFluidInPlace(fipnum);
-            currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace);
-
-            const std::string version = moduleVersionName();
-
-            FIPUnitConvert(eclState().getUnits(), currentFluidInPlace);
-            FIPUnitConvert(eclState().getUnits(), currentFluidInPlaceTotals);
+            const auto currentFluidInPlace = computeFluidInPlace(*solver);
 
             if (terminal_output_ )
             {
-                outputTimestampFIP(timer, version);
-                outputFluidInPlace(originalFluidInPlaceTotals, currentFluidInPlaceTotals,eclState().getUnits(), 0);
-                for (size_t reg = 0; reg < originalFluidInPlace.size(); ++reg) {
-                    outputFluidInPlace(originalFluidInPlace[reg], currentFluidInPlace[reg], eclState().getUnits(), reg+1);
-                }
+                outputFluidInPlace(timer, currentFluidInPlace);
 
-                std::string msg;
-                msg =
+                std::string msg =
                     "Time step took " + std::to_string(solver_timer.secsSinceStart()) + " seconds; "
                     "total solver time " + std::to_string(report.solver_time) + " seconds.";
-                OpmLog::note(msg);
+                OpmLog::debug(msg);
             }
 
             // write simulation state at the report stage
             Dune::Timer perfTimer;
             perfTimer.start();
             const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
-            output_writer_.writeTimeStep( timer, state, well_model.wellState(), solver->model(), false, nextstep, report);
+            output_writer_.writeTimeStep( timer, dummy_state, well_model.wellState(), solver->model(), false, nextstep, report);
             report.output_write_time += perfTimer.stop();
 
         }
@@ -448,6 +367,22 @@ protected:
 
         return std::unique_ptr<Solver>(new Solver(solver_param_, std::move(model)));
     }
+
+
+    void createLocalFipnum()
+    {
+        const std::vector<int>& fipnum_global = eclState().get3DProperties().getIntGridProperty("FIPNUM").getData();
+        // Get compressed cell fipnum.
+        fipnum_.resize(Opm::UgGridHelpers::numCells(grid()));
+        if (fipnum_global.empty()) {
+            std::fill(fipnum_.begin(), fipnum_.end(), 0);
+        } else {
+            for (size_t c = 0; c < fipnum_.size(); ++c) {
+                fipnum_[c] = fipnum_global[Opm::UgGridHelpers::globalCell(grid())[c]];
+            }
+        }
+    }
+
 
     void FIPUnitConvert(const UnitSystem& units,
                         std::vector<std::vector<double>>& fip)
@@ -539,7 +474,45 @@ protected:
     }
 
 
-    void outputTimestampFIP(SimulatorTimer& timer, const std::string version)
+    struct FluidInPlace
+    {
+        std::vector<std::vector<double>> data;
+        std::vector<double> totals;
+    };
+
+
+    FluidInPlace computeFluidInPlace(const Solver& solver)
+    {
+        FluidInPlace fip;
+        fip.data = solver.computeFluidInPlace(fipnum_);
+        fip.totals = FIPTotals(fip.data);
+        FIPUnitConvert(eclState().getUnits(), fip.data);
+        FIPUnitConvert(eclState().getUnits(), fip.totals);
+        return fip;
+    }
+
+
+    void outputFluidInPlace(const SimulatorTimer& timer,
+                            const FluidInPlace& currentFluidInPlace)
+    {
+        if (!timer.initialStep()) {
+            const std::string version = moduleVersionName();
+            outputTimestampFIP(timer, version);
+        }
+        outputRegionFluidInPlace(originalFluidInPlace_.totals,
+                                 currentFluidInPlace.totals,
+                                 eclState().getUnits(),
+                                 0);
+        for (size_t reg = 0; reg < originalFluidInPlace_.data.size(); ++reg) {
+            outputRegionFluidInPlace(originalFluidInPlace_.data[reg],
+                                     currentFluidInPlace.data[reg],
+                                     eclState().getUnits(),
+                                     reg+1);
+        }
+    }
+
+
+    void outputTimestampFIP(const SimulatorTimer& timer, const std::string version)
     {
         std::ostringstream ss;
         boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d %b %Y");
@@ -554,7 +527,7 @@ protected:
     }
 
 
-    void outputFluidInPlace(const std::vector<double>& oip, const std::vector<double>& cip, const UnitSystem& units, const int reg)
+    void outputRegionFluidInPlace(const std::vector<double>& oip, const std::vector<double>& cip, const UnitSystem& units, const int reg)
     {
         std::ostringstream ss;
         if (!reg) {
@@ -604,150 +577,12 @@ protected:
     const Schedule& schedule() const
     { return ebosSimulator_.gridManager().schedule(); }
 
-    void initHysteresisParams(ReservoirState& state) {
-        const int num_cells = Opm::UgGridHelpers::numCells(grid());
-
-        typedef std::vector<double> VectorType;
-
-        const VectorType& somax = state.getCellData( "SOMAX" );
-
-        for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
-            ebosSimulator_.model().setMaxOilSaturation(somax[cellIdx], cellIdx);
-        }
-
-        if (ebosSimulator_.problem().materialLawManager()->enableHysteresis()) {
-            auto matLawManager = ebosSimulator_.problem().materialLawManager();
-
-            VectorType& pcSwMdc_ow = state.getCellData( "PCSWMDC_OW" );
-            VectorType& krnSwMdc_ow = state.getCellData( "KRNSWMDC_OW" );
-
-            VectorType& pcSwMdc_go = state.getCellData( "PCSWMDC_GO" );
-            VectorType& krnSwMdc_go = state.getCellData( "KRNSWMDC_GO" );
-
-            for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
-                matLawManager->setOilWaterHysteresisParams(
-                        pcSwMdc_ow[cellIdx],
-                        krnSwMdc_ow[cellIdx],
-                        cellIdx);
-                matLawManager->setGasOilHysteresisParams(
-                        pcSwMdc_go[cellIdx],
-                        krnSwMdc_go[cellIdx],
-                        cellIdx);
-            }
-        }
-    }
-
-
-    // Used to convert initial Reservoirstate to primary variables in the SolutionVector
-    void convertInput( const int iterationIdx,
-                       const ReservoirState& reservoirState,
-                       Simulator& simulator ) const
-    {
-        SolutionVector& solution = simulator.model().solution( 0 /* timeIdx */ );
-        const Opm::PhaseUsage pu = phaseUsage_;
-
-        const std::vector<bool> active = detail::activePhases(pu);
-        bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
-        bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
-
-        const int numCells = reservoirState.numCells();
-        const int numPhases = phaseUsage_.num_phases;
-        const auto& oilPressure = reservoirState.pressure();
-        const auto& saturations = reservoirState.saturation();
-        const auto& rs          = reservoirState.gasoilratio();
-        const auto& rv          = reservoirState.rv();
-        for( int cellIdx = 0; cellIdx<numCells; ++cellIdx )
-        {
-            // set non-switching primary variables
-            PrimaryVariables& cellPv = solution[ cellIdx ];
-            // set water saturation
-            if ( active[Water] ) {
-                cellPv[BlackoilIndices::waterSaturationIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Water]];
-            }
-
-            if (has_solvent) {
-                cellPv[BlackoilIndices::solventSaturationIdx] = reservoirState.getCellData( reservoirState.SSOL )[cellIdx];
-            }
-
-            if (has_polymer) {
-                cellPv[BlackoilIndices::polymerConcentrationIdx] = reservoirState.getCellData( reservoirState.POLYMER )[cellIdx];
-            }
-
-
-            // set switching variable and interpretation
-            if ( active[Gas] ) {
-                if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::OilOnly && has_disgas_ )
-                {
-                    cellPv[BlackoilIndices::compositionSwitchIdx] = rs[cellIdx];
-                    cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[cellIdx];
-                    cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Rs );
-                }
-                else if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasOnly && has_vapoil_ )
-                {
-                    // this case (-> gas only with vaporized oil in the gas) is
-                    // relatively expensive as it requires to compute the capillary
-                    // pressure in order to get the gas phase pressure. (the reason why
-                    // ebos uses the gas pressure here is that it makes the common case
-                    // of the primary variable switching code fast because to determine
-                    // whether the oil phase appears one needs to compute the Rv value
-                    // for the saturated gas phase and if this is not available as a
-                    // primary variable, it needs to be computed.) luckily for here, the
-                    // gas-only case is not too common, so the performance impact of this
-                    // is limited.
-                    typedef Opm::SimpleModularFluidState<double,
-                            /*numPhases=*/3,
-                            /*numComponents=*/3,
-                            FluidSystem,
-                            /*storePressure=*/false,
-                            /*storeTemperature=*/false,
-                            /*storeComposition=*/false,
-                            /*storeFugacity=*/false,
-                            /*storeSaturation=*/true,
-                            /*storeDensity=*/false,
-                            /*storeViscosity=*/false,
-                            /*storeEnthalpy=*/false> SatOnlyFluidState;
-                    SatOnlyFluidState fluidState;
-                    if ( active[Water] ) {
-                        fluidState.setSaturation(FluidSystem::waterPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Water]]);
-                    }
-                    else {
-                        fluidState.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
-                    }
-                    fluidState.setSaturation(FluidSystem::oilPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Oil]]);
-                    fluidState.setSaturation(FluidSystem::gasPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Gas]]);
-
-                    double pC[/*numPhases=*/3] = { 0.0, 0.0, 0.0 };
-                    const MaterialLawParams& matParams = simulator.problem().materialLawParams(cellIdx);
-                    MaterialLaw::capillaryPressures(pC, matParams, fluidState);
-                    double pg = oilPressure[cellIdx] + (pC[FluidSystem::gasPhaseIdx] - pC[FluidSystem::oilPhaseIdx]);
-
-                    cellPv[BlackoilIndices::compositionSwitchIdx] = rv[cellIdx];
-                    cellPv[BlackoilIndices::pressureSwitchIdx] = pg;
-                    cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_pg_Rv );
-                }
-                else
-                {
-                    assert( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasAndOil);
-                    cellPv[BlackoilIndices::compositionSwitchIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Gas]];
-                    cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[ cellIdx ];
-                    cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Sg );
-                }
-            } else {
-                // for oil-water case oil pressure should be used as primary variable
-                cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[cellIdx];
-            }
-        }
-
-        // store the solution at the beginning of the time step
-        if( iterationIdx == 0 )
-        {
-            simulator.model().solution( 1 /* timeIdx */ ) = solution;
-        }
-    }
-
 
     // Data.
     Simulator& ebosSimulator_;
+
+    std::vector<int> fipnum_;
+    FluidInPlace originalFluidInPlace_;
 
     typedef typename Solver::SolverParameters SolverParameters;
 
