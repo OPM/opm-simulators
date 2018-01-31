@@ -35,7 +35,7 @@
 #include <opm/common/Unused.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
-#include <opm/common/ConditionalStorage.hpp>
+#include <opm/common/utility/ConditionalStorage.hpp>
 
 namespace Opm {
 OPM_GENERATE_HAS_MEMBER(pvtRegionIndex, ) // Creates 'HasMember_pvtRegionIndex<T>'.
