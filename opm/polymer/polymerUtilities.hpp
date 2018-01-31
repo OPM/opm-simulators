@@ -28,7 +28,7 @@
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
-#include <opm/core/utility/SparseVector.hpp>
+#include <opm/common/utility/numeric/SparseVector.hpp>
 #include <vector>
 
 

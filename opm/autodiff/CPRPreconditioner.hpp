@@ -28,7 +28,7 @@
 #include <type_traits>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 
 #include <dune/istl/bvector.hh>
 #include <dune/istl/bcrsmatrix.hh>

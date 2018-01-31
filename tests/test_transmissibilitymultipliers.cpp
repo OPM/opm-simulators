@@ -28,7 +28,7 @@
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
 #include <opm/core/grid/GridManager.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>

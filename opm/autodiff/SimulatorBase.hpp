@@ -25,7 +25,7 @@
 #include <opm/autodiff/DuneMatrix.hpp>
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/autodiff/GeoProps.hpp>

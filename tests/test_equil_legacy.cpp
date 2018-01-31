@@ -23,7 +23,7 @@
 #include <opm/core/grid/cart_grid.h>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/utility/compressedToCartesian.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>

@@ -12,7 +12,7 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/props/IncompPropertiesBasic.hpp>
 #include <opm/core/props/IncompPropertiesShadow.hpp>
 

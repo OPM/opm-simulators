@@ -21,9 +21,9 @@
 #ifndef OPM_EQUILIBRATIONHELPERS_HEADER_INCLUDED
 #define OPM_EQUILIBRATIONHELPERS_HEADER_INCLUDED
 
-#include <opm/core/utility/linearInterpolation.hpp>
+#include <opm/common/utility/numeric/linearInterpolation.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
-#include <opm/core/utility/RootFinders.hpp>
+#include <opm/common/utility/numeric/RootFinders.hpp>
 
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 

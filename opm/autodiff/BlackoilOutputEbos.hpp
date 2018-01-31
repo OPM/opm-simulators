@@ -29,7 +29,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 

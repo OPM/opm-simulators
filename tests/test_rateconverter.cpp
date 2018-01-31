@@ -36,7 +36,7 @@
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>

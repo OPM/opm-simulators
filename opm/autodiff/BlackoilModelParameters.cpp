@@ -18,7 +18,7 @@
 */
 
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 
 namespace Opm

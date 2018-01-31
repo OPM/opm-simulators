@@ -21,7 +21,7 @@
 #define OPM_INCOMPPROPERTIESDEFAULTPOLYMER_HEADER_INCLUDED
 
 #include <opm/core/props/IncompPropertiesBasic.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <vector>

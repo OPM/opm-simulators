@@ -33,7 +33,7 @@
 
 #include <opm/core/pressure/msmfem/partition.h>
 
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <array>

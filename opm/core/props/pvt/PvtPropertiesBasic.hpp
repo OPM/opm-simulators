@@ -20,7 +20,7 @@
 #ifndef OPM_PVTPROPERTIESBASIC_HEADER_INCLUDED
 #define OPM_PVTPROPERTIESBASIC_HEADER_INCLUDED
 
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <vector>
 
