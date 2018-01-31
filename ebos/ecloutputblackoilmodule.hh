@@ -346,7 +346,11 @@ public:
             if (oilPressure_.size() > 0) {
                 oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
                 Opm::Valgrind::CheckDefined(oilPressure_[globalDofIdx]);
+            }
 
+            if (temperature_.size() > 0) {
+                temperature_[globalDofIdx] = Opm::getValue(fs.temperature(oilPhaseIdx));
+                Opm::Valgrind::CheckDefined(temperature_[globalDofIdx]);
             }
             if (gasDissolutionFactor_.size() > 0) {
                 Scalar SoMax = elemCtx.problem().maxOilSaturation(globalDofIdx);
