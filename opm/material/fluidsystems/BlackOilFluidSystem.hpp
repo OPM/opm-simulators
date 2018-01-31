@@ -971,10 +971,23 @@ public:
 
         const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+
         switch (phaseIdx) {
-        case oilPhaseIdx: return oilPvt_->enthalpy(regionIdx, T, p, Opm::BlackOil::template getRs_<ThisType, FluidState, LhsEval>(fluidState, regionIdx));
-        case gasPhaseIdx: return gasPvt_->enthalpy(regionIdx, T, p, Opm::BlackOil::template getRv_<ThisType, FluidState, LhsEval>(fluidState, regionIdx));
-        case waterPhaseIdx: return waterPvt_->enthalpy(regionIdx, T, p);
+        case oilPhaseIdx:
+            return
+                oilPvt_->internalEnergy(regionIdx, T, p, Opm::BlackOil::template getRs_<ThisType, FluidState, LhsEval>(fluidState, regionIdx))
+                + p/density<FluidState, LhsEval>(fluidState, phaseIdx, regionIdx);
+
+        case gasPhaseIdx:
+            return
+                gasPvt_->internalEnergy(regionIdx, T, p, Opm::BlackOil::template getRv_<ThisType, FluidState, LhsEval>(fluidState, regionIdx))
+                + p/density<FluidState, LhsEval>(fluidState, phaseIdx, regionIdx);
+
+        case waterPhaseIdx:
+            return
+                waterPvt_->internalEnergy(regionIdx, T, p)
+                + p/density<FluidState, LhsEval>(fluidState, phaseIdx, regionIdx);
+
         default: OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
         }
 

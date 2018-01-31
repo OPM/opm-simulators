@@ -207,8 +207,8 @@ private:
 
             auto& specrockParams = multiplexerParams.template getRealParams<SolidEnergyLawParams::specrockApproach>();
             const auto& temperatureColumn = specrockTable.getColumn("TEMPERATURE");
-            const auto& cpRockColumn = specrockTable.getColumn("CP_ROCK");
-            specrockParams.setHeatCapacities(temperatureColumn, cpRockColumn);
+            const auto& cvRockColumn = specrockTable.getColumn("CV_ROCK");
+            specrockParams.setHeatCapacities(temperatureColumn, cvRockColumn);
             specrockParams.finalize();
 
             multiplexerParams.finalize();
