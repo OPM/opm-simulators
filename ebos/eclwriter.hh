@@ -33,7 +33,7 @@
 
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include <ewoms/io/baseoutputwriter.hh>
-
+#include <ebos/ThreadHandle.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
@@ -48,6 +48,7 @@
 #include <sstream>
 #include <fstream>
 #include <type_traits>
+#include <thread>
 
 namespace Ewoms {
 namespace Properties {
@@ -95,6 +96,7 @@ public:
         : simulator_(simulator)
         , collectToIORank_(simulator_.vanguard())
         , eclOutputModule_(simulator, collectToIORank_)
+        , asyncOutput_()
     {
         globalGrid_ = simulator_.vanguard().grid();
         globalGrid_.switchToGlobalView();
@@ -102,6 +104,25 @@ public:
                                         Opm::UgGridHelpers::createEclipseGrid( globalGrid_ , simulator_.vanguard().eclState().getInputGrid() ),
                                         simulator_.vanguard().schedule(),
                                         simulator_.vanguard().summaryConfig()));
+
+        // create output thread if enabled and rank is I/O rank
+        // async output is enabled by default if pthread are enabled
+#if HAVE_PTHREAD
+        const bool asyncOutputDefault = true;
+#else
+        const bool asyncOutputDefault = false;
+#endif
+
+// TODO Add param
+        const bool isIORank = collectToIORank_.isParallel() && collectToIORank_.isIORank();
+        if( asyncOutputDefault && isIORank )
+        {
+#if HAVE_PTHREAD
+            asyncOutput_.reset( new Opm::ThreadHandle( isIORank ) );
+#else
+        throw std::runtime_error("Pthreads were not found, cannot enable async_output");
+#endif
+        }
     }
 
     ~EclWriter()
@@ -127,7 +148,7 @@ public:
     /*!
      * \brief collect and pass data and pass it to eclIO writer
      */
-    void writeOutput(const Opm::data::Wells& dw, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep)
+    void writeOutput(const Opm::data::Wells& localWellData, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep)
     {
 #if !HAVE_OPM_OUTPUT
         throw std::runtime_error("opm-output must be available to write ECL output!");
@@ -151,12 +172,12 @@ public:
         eclOutputModule_.outputErrorLog();
 
         // collect all data to I/O rank and assign to sol
-        Opm::data::Solution localCellData;
+        Opm::data::Solution localCellData = {};
         if (eclOutputModule_.outputRestart())
             eclOutputModule_.assignToSolution(localCellData);
 
         if (collectToIORank_.isParallel())
-            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockValues());
+            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockValues(), localWellData);
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
@@ -177,18 +198,35 @@ public:
             }
             bool enableDoublePrecisionOutput = EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
             const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
+            const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
+
             const std::map<std::pair<std::string, int>, double>& blockValues = collectToIORank_.isParallel() ? collectToIORank_.globalBlockValues() : eclOutputModule_.getBlockValues();
 
-            eclIO_->writeTimeStep(episodeIdx,
-                                  substep,
-                                  t,
-                                  cellData,
-                                  dw,
-                                  miscSummaryData,
-                                  regionData,
-                                  blockValues,
-                                  extraRestartData,
-                                  enableDoublePrecisionOutput);
+            if( asyncOutput_ ) {
+                // dispatch the write call to the extra thread
+                asyncOutput_->dispatch( WriterCall(*eclIO_,
+                                                   episodeIdx,
+                                                   substep,
+                                                   t,
+                                                   cellData,
+                                                   wellData,
+                                                   miscSummaryData,
+                                                   regionData,
+                                                   blockValues,
+                                                   extraRestartData,
+                                                   enableDoublePrecisionOutput ) );
+            } else {
+                eclIO_->writeTimeStep(episodeIdx,
+                                      substep,
+                                      t,
+                                      cellData,
+                                      wellData,
+                                      miscSummaryData,
+                                      regionData,
+                                      blockValues,
+                                      extraRestartData,
+                                      enableDoublePrecisionOutput);
+            }
         }
 #endif
     }
@@ -385,6 +423,64 @@ private:
         return nnc;
     }
 
+
+    struct WriterCall : public Opm::ThreadHandle :: ObjectInterface
+    {
+        Opm::EclipseIO& eclIO_;
+        int episodeIdx_;
+        bool isSubstep_;
+        double secondsElapsed_;
+        Opm::data::Solution cellData_;
+        Opm::data::Wells wellData_;
+        std::map<std::string, double> singleSummaryValues_;
+        std::map<std::string, std::vector<double>> regionSummaryValues_;
+        std::map<std::pair<std::string, int>, double> blockSummaryValues_;
+        std::map<std::string, std::vector<double>> extraRestartData_;
+        bool writeDoublePrecision_;
+
+        explicit WriterCall(
+                Opm::EclipseIO& eclIO,
+                int episodeIdx,
+                bool isSubstep,
+                double secondsElapsed,
+                Opm::data::Solution cellData,
+                Opm::data::Wells wellData,
+                const std::map<std::string, double>& singleSummaryValues,
+                const std::map<std::string, std::vector<double>>& regionSummaryValues,
+                const std::map<std::pair<std::string, int>, double>& blockSummaryValues,
+                const std::map<std::string, std::vector<double>>& extraRestartData,
+                bool writeDoublePrecision)
+            : eclIO_(eclIO),
+              episodeIdx_(episodeIdx),
+              isSubstep_(isSubstep),
+              secondsElapsed_(secondsElapsed),
+              cellData_(cellData),
+              wellData_(wellData),
+              singleSummaryValues_(singleSummaryValues),
+              regionSummaryValues_(regionSummaryValues),
+              blockSummaryValues_(blockSummaryValues),
+              extraRestartData_(extraRestartData),
+              writeDoublePrecision_(writeDoublePrecision)
+        {
+        }
+
+        // callback to eclIO serial writeTimeStep method
+        void run ()
+        {
+            // write data
+            eclIO_.writeTimeStep(episodeIdx_,
+                                 isSubstep_,
+                                 secondsElapsed_,
+                                 cellData_,
+                                 wellData_,
+                                 singleSummaryValues_,
+                                 regionSummaryValues_,
+                                 blockSummaryValues_,
+                                 extraRestartData_,
+                                 writeDoublePrecision_);
+        }
+    };
+
     const Opm::EclipseState& eclState() const
     { return simulator_.vanguard().eclState(); }
 
@@ -393,6 +489,8 @@ private:
     EclOutputBlackOilModule<TypeTag> eclOutputModule_;
     std::unique_ptr<Opm::EclipseIO> eclIO_;
     Grid globalGrid_;
+    std::unique_ptr< Opm::ThreadHandle > asyncOutput_;
+
 
 };
 } // namespace Ewoms
