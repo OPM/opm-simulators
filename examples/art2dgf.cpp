@@ -20,8 +20,7 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -60,9 +59,8 @@ namespace Ewoms {
         std::vector<std::vector<unsigned> > elements;
         std::ifstream inStream(artFileName);
         if (!inStream.is_open()) {
-            OPM_THROW(std::runtime_error,
-                      "File '" << artFileName
-                      << "' does not exist or is not readable");
+            throw std::runtime_error("File '"+artFileName
+                                     +"' does not exist or is not readable");
         }
         std::string curLine;
         ParseMode curParseMode = Vertex;

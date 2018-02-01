@@ -41,7 +41,7 @@
 
 #include <ewoms/disc/vcfv/vcfvstencil.hh>
 
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #if HAVE_DUNE_ALUGRID
 #define EWOMS_NO_ALUGRID_UNUSED
