@@ -361,7 +361,7 @@ namespace Ewoms
                     read( buffer, indexMap, data);
                 }
 
-                // write all block data
+                // read all block data
                 unsigned int size = 0;
                 buffer.read(size);
                 for (size_t i = 0; i < size; ++i) {

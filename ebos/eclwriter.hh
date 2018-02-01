@@ -94,8 +94,8 @@ class EclWriter
 public:
     EclWriter(const Simulator& simulator)
         : simulator_(simulator)
-        , eclOutputModule_(simulator)
         , collectToIORank_(simulator_.gridManager())
+        , eclOutputModule_(simulator, collectToIORank_)
     {
         globalGrid_ = simulator_.gridManager().grid();
         globalGrid_.switchToGlobalView();
@@ -140,7 +140,7 @@ public:
         const auto& gridView = simulator_.gridManager().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
-        eclOutputModule_.allocBuffers(numElements, episodeIdx, substep, log, collectToIORank_);
+        eclOutputModule_.allocBuffers(numElements, episodeIdx, substep, log);
 
         ElementContext elemCtx(simulator_);
         ElementIterator elemIt = gridView.template begin</*codim=*/0>();
@@ -218,7 +218,7 @@ public:
         unsigned episodeIdx = simulator_.episodeIndex();
         const auto& gridView = simulator_.gridManager().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
-        eclOutputModule_.allocBuffers(numElements, episodeIdx, /*substep=*/false, /*log=*/false, collectToIORank_);
+        eclOutputModule_.allocBuffers(numElements, episodeIdx, /*substep=*/false, /*log=*/false);
 
         auto restart_values = eclIO_->loadRestart(solution_keys, extra_keys);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
@@ -393,8 +393,8 @@ private:
     { return simulator_.gridManager().eclState(); }
 
     const Simulator& simulator_;
-    EclOutputBlackOilModule<TypeTag> eclOutputModule_;
     CollectDataToIORankType collectToIORank_;
+    EclOutputBlackOilModule<TypeTag> eclOutputModule_;
     std::unique_ptr<Opm::EclipseIO> eclIO_;
     Grid globalGrid_;
 

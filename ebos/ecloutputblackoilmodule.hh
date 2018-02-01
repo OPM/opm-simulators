@@ -101,19 +101,31 @@ class EclOutputBlackOilModule
     };
 
 public:
-    EclOutputBlackOilModule(const Simulator& simulator)
+    template<class CollectDataToIORankType>
+    EclOutputBlackOilModule(const Simulator& simulator, const CollectDataToIORankType& collectToIORank)
         : simulator_(simulator)
     {
         createLocalFipnum_();
-        firstStep_ = true;
+
+        // Summary output is for all steps
+        const Opm::SummaryConfig summaryConfig = simulator_.gridManager().summaryConfig();
+
+        // Initialize block output
+        for( const auto& node : summaryConfig ) {
+            if (node.type() == ECL_SMSPEC_BLOCK_VAR) {
+                if(collectToIORank.isGlobalIdxOnThisRank(node.num() - 1)) {
+                    std::pair<std::string, int> key = std::make_pair(node.keyword(), node.num());
+                    blockValues_[key] = 0.0;
+                }
+            }
+        }
     }
 
     /*!
      * \brief Allocate memory for the scalar fields we would like to
      *        write to ECL output files
      */
-    template<class CollectDataToIORankType>
-    void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const bool substep, const bool log, const CollectDataToIORankType& collectToIORank)
+    void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const bool substep, const bool log)
     {
 
         if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
@@ -121,19 +133,6 @@ public:
 
         // Summary output is for all steps
         const Opm::SummaryConfig summaryConfig = simulator_.gridManager().summaryConfig();
-
-        // block values
-        if (firstStep_) { // SummaryConfig doesn't change.
-            for( const auto& node : summaryConfig ) {
-                if (node.type() == ECL_SMSPEC_BLOCK_VAR) {
-                    if(collectToIORank.isGlobalIdxOnThisRank(node.num() - 1)) {
-                        std::pair<std::string, int> key = std::make_pair(node.keyword(), node.num());
-                        blockValues_[key] = 0.0;
-                    }
-                }
-            }
-            firstStep_ = false;
-        }
 
         // Only output RESTART_AUXILIARY asked for by the user.
         const Opm::RestartConfig& restartConfig = simulator_.gridManager().eclState().getRestartConfig();
@@ -1095,6 +1094,10 @@ private:
     ScalarBuffer computeFipForRegions_(const ScalarBuffer& fip, std::vector<int>& regionId, size_t maxNumberOfRegions, bool commSum = true)
     {
         ScalarBuffer totals(maxNumberOfRegions, 0.0);
+
+        if (fip.empty())
+            return totals;
+
         assert(regionId.size() == fip.size());
         for (size_t j = 0; j < regionId.size(); ++j) {
             const int regionIdx = regionId[j] - 1;
@@ -1231,7 +1234,6 @@ private:
 
     bool outputRestart_;
     bool outputFipRestart_;
-    bool firstStep_;
     bool computeFip_;
 
     ScalarBuffer saturation_[numPhases];
