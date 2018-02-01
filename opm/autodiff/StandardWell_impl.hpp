@@ -1120,7 +1120,8 @@ namespace Opm
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));// This code will not run if intensive quantity cache is disabled
             const auto& fs = intQuants.fluidState();
-
+            //bool has_cached= Ewoms::GET_PROP_VALUE(TypeTag,EnableIntensiveQuantityCache));
+            //static_assert(::Ewoms::Properties::GET_PROP_VALUE(TypeTag,EnableIntensiveQuantityCache));
             // TODO: this is another place to show why WellState need to be a vector of WellState.
             // TODO: to check why should be perf - 1
             const double p_above = perf == 0 ? well_state.bhp()[w] : well_state.perfPress()[first_perf_ + perf - 1];

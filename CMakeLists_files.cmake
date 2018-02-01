@@ -158,7 +158,11 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_parallel_linearsolver.cpp
   tests/test_satfunc.cpp
   tests/test_shadow.cpp
+<<<<<<< HEAD
   tests/test_equil_legacy.cpp
+=======
+  #tests/test_equil.cpp
+>>>>>>> global_cmake
   tests/test_blackoilstate.cpp
   tests/test_wellsmanager.cpp
   tests/test_wellcontrols.cpp
@@ -208,6 +212,7 @@ list (APPEND TEST_DATA_FILES
 
 # originally generated with the command:
 # find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
+<<<<<<< HEAD
 list (APPEND EXAMPLE_SOURCE_FILES
   #examples/find_zero.cpp
   #examples/flow_legacy.cpp
@@ -243,7 +248,54 @@ list (APPEND PROGRAM_SOURCE_FILES
 #  examples/sim_poly2p_comp_reorder.cpp
 #  examples/sim_poly2p_incomp_reorder.cpp
   )
+=======
+if(DEV_BUILD)
+	list (APPEND EXAMPLE_SOURCE_FILES
+		examples/flow_legacy.cpp
+		examples/flow.cpp
+		)
+	list (APPEND  PROGRAM_SOURCE_FILES
+		examples/flow_legacy.cpp
+		examples/flow.cpp
+		)
+else()
+	list (APPEND EXAMPLE_SOURCE_FILES
+		examples/find_zero.cpp
+		examples/flow_legacy.cpp
+		examples/flow_reorder.cpp
+		examples/flow_sequential.cpp
+		examples/flow.cpp
+		examples/sim_2p_incomp_ad.cpp
+		examples/sim_2p_comp_reorder.cpp
+		examples/sim_simple.cpp
+		examples/sim_poly2p_comp_reorder.cpp
+		examples/sim_poly2p_incomp_reorder.cpp
+		examples/wells_example.cpp
+		examples/compute_eikonal_from_files.cpp
+		examples/compute_initial_state.cpp
+		examples/compute_tof_from_files.cpp
+		examples/diagnose_relperm.cpp
+		#tutorials/tutorial1.cpp
+		tutorials/tutorial2.cpp
+		tutorials/tutorial3.cpp
+		tutorials/tutorial4.cpp
+		)
+>>>>>>> global_cmake
 
+	# programs listed here will not only be compiled, but also marked for
+	# installation
+	list (APPEND PROGRAM_SOURCE_FILES
+		examples/sim_2p_incomp.cpp
+		examples/sim_2p_incomp_ad.cpp
+		examples/sim_2p_comp_reorder.cpp
+		examples/flow.cpp
+		examples/flow_legacy.cpp
+		examples/flow_reorder.cpp
+		examples/flow_sequential.cpp
+		examples/sim_poly2p_comp_reorder.cpp
+		examples/sim_poly2p_incomp_reorder.cpp
+		)
+endif()
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
