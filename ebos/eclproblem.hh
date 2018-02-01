@@ -46,10 +46,10 @@
 #endif
 
 #if EBOS_USE_ALUGRID
-#include "eclalugridmanager.hh"
+#include "eclalugridvanguard.hh"
 #else
-//#include "eclpolyhedralgridmanager.hh"
-#include "eclcpgridmanager.hh"
+//#include "eclpolyhedralgridvanguard.hh"
+#include "eclcpgridvanguard.hh"
 #endif
 #include "eclwellmanager.hh"
 #include "eclequilinitializer.hh"
@@ -99,10 +99,10 @@ class EclProblem;
 
 namespace Properties {
 #if EBOS_USE_ALUGRID
-NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclAluGridManager, EclOutputBlackOil));
+NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclAluGridVanguard, EclOutputBlackOil));
 #else
-NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclCpGridManager, EclOutputBlackOil));
-//NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclPolyhedralGridManager, EclOutputBlackOil));
+NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclCpGridVanguard, EclOutputBlackOil));
+//NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclPolyhedralGridVanguard, EclOutputBlackOil));
 #endif
 
 // Write all solutions for visualization, not just the ones for the
@@ -336,15 +336,15 @@ public:
      */
     EclProblem(Simulator& simulator)
         : ParentType(simulator)
-        , transmissibilities_(simulator.gridManager())
+        , transmissibilities_(simulator.vanguard())
         , thresholdPressures_(simulator)
         , wellManager_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
     {
         // Tell the extra modules to initialize its internal data structures
-        const auto& gridManager = simulator.gridManager();
-        SolventModule::initFromDeck(gridManager.deck(), gridManager.eclState());
-        PolymerModule::initFromDeck(gridManager.deck(), gridManager.eclState());
+        const auto& vanguard = simulator.vanguard();
+        SolventModule::initFromDeck(vanguard.deck(), vanguard.eclState());
+        PolymerModule::initFromDeck(vanguard.deck(), vanguard.eclState());
 
         if (EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput)) {
             // retrieve the location where the output is supposed to go
@@ -364,7 +364,7 @@ public:
 
             // specify the directory output. This is not a very nice mechanism because
             // the eclState is supposed to be immutable here, IMO.
-            auto& eclState = this->simulator().gridManager().eclState();
+            auto& eclState = this->simulator().vanguard().eclState();
             auto& ioConfig = eclState.getIOConfig();
             ioConfig.setOutputDir(outputDir);
 
@@ -389,7 +389,7 @@ public:
         this->gravity_ = 0.0;
 
         // the "NOGRAV" keyword from Frontsim disables gravity...
-        const auto& deck = simulator.gridManager().deck();
+        const auto& deck = simulator.vanguard().deck();
         if (!deck.hasKeyword("NOGRAV") && EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
             this->gravity_[dim - 1] = 9.80665;
 
@@ -446,7 +446,7 @@ public:
         readInitialCondition_();
 
         // Set the start time of the simulation
-        const auto& timeMap = simulator.gridManager().schedule().getTimeMap();
+        const auto& timeMap = simulator.vanguard().schedule().getTimeMap();
         simulator.setStartTime( timeMap.getStartTime(/*timeStepIdx=*/0) );
 
         // We want the episode index to be the same as the report step index to make
@@ -460,8 +460,8 @@ public:
         updatePffDofData_();
 
         if (GET_PROP_VALUE(TypeTag, EnablePolymer)) {
-            const auto& gridManager = this->simulator().gridManager();
-            const auto& gridView = gridManager.gridView();
+            const auto& vanguard = this->simulator().vanguard();
+            const auto& gridView = vanguard.gridView();
             int numElements = gridView.size(/*codim=*/0);
             maxPolymerAdsorption_.resize(numElements, 0.0);
         }
@@ -507,8 +507,8 @@ public:
     {
         // Proceed to the next report step
         Simulator& simulator = this->simulator();
-        auto& eclState = this->simulator().gridManager().eclState();
-        const auto& schedule = this->simulator().gridManager().schedule();
+        auto& eclState = this->simulator().vanguard().eclState();
+        const auto& schedule = this->simulator().vanguard().schedule();
         const auto& events = schedule.getEvents();
         const auto& timeMap = schedule.getTimeMap();
 
@@ -566,8 +566,8 @@ public:
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells))
             // set up the wells
-            wellManager_.beginEpisode(this->simulator().gridManager().eclState(),
-                                      this->simulator().gridManager().schedule(), isOnRestart);
+            wellManager_.beginEpisode(this->simulator().vanguard().eclState(),
+                                      this->simulator().vanguard().schedule(), isOnRestart);
 
         if (doInvalidate)
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
@@ -641,7 +641,7 @@ public:
     void endEpisode()
     {
         auto& simulator = this->simulator();
-        const auto& schedule = simulator.gridManager().schedule();
+        const auto& schedule = simulator.vanguard().schedule();
 
         int episodeIdx = simulator.episodeIndex();
 
@@ -989,7 +989,7 @@ public:
      * \copydoc FvBaseProblem::name
      */
     std::string name() const
-    { return this->simulator().gridManager().caseName(); }
+    { return this->simulator().vanguard().caseName(); }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::temperature
@@ -1052,7 +1052,7 @@ public:
             // initialize the wells. Note that this needs to be done after initializing the
             // intrinsic permeabilities and the after applying the initial solution because
             // the well model uses these...
-            wellManager_.init(this->simulator().gridManager().eclState(), this->simulator().gridManager().schedule());
+            wellManager_.init(this->simulator().vanguard().eclState(), this->simulator().vanguard().schedule());
         }
 
         // the initialSolutionApplied is called recursively by readEclRestartSolution_()
@@ -1065,7 +1065,7 @@ public:
         // the initial solution.
         thresholdPressures_.finishInit();
 
-        const auto& eclState = this->simulator().gridManager().eclState();
+        const auto& eclState = this->simulator().vanguard().eclState();
         const auto& initconfig = eclState.getInitConfig();
         if(initconfig.restartRequested()) {
             restartApplied = true;
@@ -1074,7 +1074,7 @@ public:
         }
 
         // release the memory of the EQUIL grid since it's no longer needed after this point
-        this->simulator().gridManager().releaseEquilGrid();
+        this->simulator().vanguard().releaseEquilGrid();
 
         updateCompositionChangeLimits_();
     }
@@ -1199,8 +1199,8 @@ private:
 
     void updateElementDepths_()
     {
-        const auto& gridManager = this->simulator().gridManager();
-        const auto& gridView = gridManager.gridView();
+        const auto& vanguard = this->simulator().vanguard();
+        const auto& gridView = vanguard.gridView();
         const auto& elemMapper = this->elementMapper();;
 
         int numElements = gridView.size(/*codim=*/0);
@@ -1223,9 +1223,9 @@ private:
         // and overlap regions
         if (drsdtActive_) {
             ElementContext elemCtx(this->simulator());
-            const auto& gridManager = this->simulator().gridManager();
-            auto elemIt = gridManager.gridView().template begin</*codim=*/0>();
-            const auto& elemEndIt = gridManager.gridView().template end</*codim=*/0>();
+            const auto& vanguard = this->simulator().vanguard();
+            auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+            const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++elemIt) {
                 const Element& elem = *elemIt;
 
@@ -1252,9 +1252,9 @@ private:
         // and overlap regions
         if (drvdtActive_) {
             ElementContext elemCtx(this->simulator());
-            const auto& gridManager = this->simulator().gridManager();
-            auto elemIt = gridManager.gridView().template begin</*codim=*/0>();
-            const auto& elemEndIt = gridManager.gridView().template end</*codim=*/0>();
+            const auto& vanguard = this->simulator().vanguard();
+            auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+            const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++elemIt) {
                 const Element& elem = *elemIt;
 
@@ -1280,9 +1280,9 @@ private:
         // we use VAPPARS
         if (vapparsActive_) {
             ElementContext elemCtx(this->simulator());
-            const auto& gridManager = this->simulator().gridManager();
-            auto elemIt = gridManager.gridView().template begin</*codim=*/0>();
-            const auto& elemEndIt = gridManager.gridView().template end</*codim=*/0>();
+            const auto& vanguard = this->simulator().vanguard();
+            auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+            const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++elemIt) {
                 const Element& elem = *elemIt;
 
@@ -1308,9 +1308,9 @@ private:
 
     void readRockParameters_()
     {
-        const auto& deck = this->simulator().gridManager().deck();
-        const auto& eclState = this->simulator().gridManager().eclState();
-        const auto& gridManager = this->simulator().gridManager();
+        const auto& deck = this->simulator().vanguard().deck();
+        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& vanguard = this->simulator().vanguard();
 
         // the ROCK keyword has not been specified, so we don't need
         // to read rock parameters
@@ -1354,10 +1354,10 @@ private:
 
         const std::vector<int>& tablenumData =
             eclState.get3DProperties().getIntGridProperty(propName).getData();
-        unsigned numElem = gridManager.gridView().size(0);
+        unsigned numElem = vanguard.gridView().size(0);
         rockTableIdx_.resize(numElem);
         for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
-            unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
+            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
 
             // reminder: Eclipse uses FORTRAN-style indices
             rockTableIdx_[elemIdx] = tablenumData[cartElemIdx] - 1;
@@ -1366,9 +1366,9 @@ private:
 
     void readMaterialParameters_()
     {
-        const auto& gridManager = this->simulator().gridManager();
-        const auto& deck = gridManager.deck();
-        const auto& eclState = gridManager.eclState();
+        const auto& vanguard = this->simulator().vanguard();
+        const auto& deck = vanguard.deck();
+        const auto& eclState = vanguard.eclState();
 
         // the PVT and saturation region numbers
         updatePvtnum_();
@@ -1389,7 +1389,7 @@ private:
         size_t numDof = this->model().numGridDof();
         std::vector<int> compressedToCartesianElemIdx(numDof);
         for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
-            compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianIndex(elemIdx);
+            compressedToCartesianElemIdx[elemIdx] = vanguard.cartesianIndex(elemIdx);
 
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         materialLawManager_->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
@@ -1398,8 +1398,8 @@ private:
 
     void updatePorosity_()
     {
-        const auto& gridManager = this->simulator().gridManager();
-        const auto& eclState = gridManager.eclState();
+        const auto& vanguard = this->simulator().vanguard();
+        const auto& eclState = vanguard.eclState();
         const auto& eclGrid = eclState.getInputGrid();
         const auto& props = eclState.get3DProperties();
 
@@ -1415,7 +1415,7 @@ private:
         int nx = eclGrid.getNX();
         int ny = eclGrid.getNY();
         for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-            unsigned cartElemIdx = gridManager.cartesianIndex(dofIdx);
+            unsigned cartElemIdx = vanguard.cartesianIndex(dofIdx);
             Scalar poreVolume = porvData[cartElemIdx];
 
             // sum up the pore volume of the active cell and all inactive ones above it
@@ -1452,17 +1452,17 @@ private:
 
     void initFluidSystem_()
     {
-        const auto& deck = this->simulator().gridManager().deck();
-        const auto& eclState = this->simulator().gridManager().eclState();
+        const auto& deck = this->simulator().vanguard().deck();
+        const auto& eclState = this->simulator().vanguard().eclState();
 
         FluidSystem::initFromDeck(deck, eclState);
    }
 
     void readInitialCondition_()
     {
-        const auto& gridManager = this->simulator().gridManager();
+        const auto& vanguard = this->simulator().vanguard();
 
-        const auto& deck = gridManager.deck();
+        const auto& deck = vanguard.deck();
         if (!deck.hasKeyword("EQUIL"))
             readExplicitInitialCondition_();
         else
@@ -1523,8 +1523,8 @@ private:
 
     void readExplicitInitialCondition_()
     {
-        const auto& gridManager = this->simulator().gridManager();
-        const auto& eclState = gridManager.eclState();
+        const auto& vanguard = this->simulator().vanguard();
+        const auto& eclState = vanguard.eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         // the values specified in the deck do not need to be consistent,
@@ -1553,7 +1553,7 @@ private:
 
         initialFluidStates_.resize(numDof);
 
-        const auto& cartSize = this->simulator().gridManager().cartesianDimensions();
+        const auto& cartSize = this->simulator().vanguard().cartesianDimensions();
         size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
 
         std::vector<double> waterSaturationData;
@@ -1596,7 +1596,7 @@ private:
             auto& dofFluidState = initialFluidStates_[dofIdx];
 
             dofFluidState.setPvtRegionIndex(pvtRegionIndex(dofIdx));
-            size_t cartesianDofIdx = gridManager.cartesianIndex(dofIdx);
+            size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
             assert(0 <= cartesianDofIdx);
             assert(cartesianDofIdx <= numCartesianCells);
 
@@ -1650,15 +1650,15 @@ private:
 
     void readBlackoilExtentionsInitialConditions_()
     {
-        const auto& gridManager = this->simulator().gridManager();
-        const auto& eclState = gridManager.eclState();
+        const auto& vanguard = this->simulator().vanguard();
+        const auto& eclState = vanguard.eclState();
         size_t numDof = this->model().numGridDof();
 
         if (enableSolvent) {
             const std::vector<double>& solventSaturationData = eclState.get3DProperties().getDoubleGridProperty("SSOL").getData();
             solventSaturation_.resize(numDof,0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
-                size_t cartesianDofIdx = gridManager.cartesianIndex(dofIdx);
+                size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
                 assert(0 <= cartesianDofIdx);
                 assert(cartesianDofIdx <= solventSaturationData.size());
                 solventSaturation_[dofIdx] = solventSaturationData[cartesianDofIdx];
@@ -1669,7 +1669,7 @@ private:
             const std::vector<double>& polyConcentrationData = eclState.get3DProperties().getDoubleGridProperty("SPOLY").getData();
             polymerConcentration_.resize(numDof,0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
-                size_t cartesianDofIdx = gridManager.cartesianIndex(dofIdx);
+                size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
                 assert(0 <= cartesianDofIdx);
                 assert(cartesianDofIdx <= polyConcentrationData.size());
                 polymerConcentration_[dofIdx] = polyConcentrationData[cartesianDofIdx];
@@ -1688,9 +1688,9 @@ private:
         // we need to update the hysteresis data for _all_ elements (i.e., not just the
         // interior ones) to avoid desynchronization of the processes in the parallel case!
         ElementContext elemCtx(this->simulator());
-        const auto& gridManager = this->simulator().gridManager();
-        auto elemIt = gridManager.gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = gridManager.gridView().template end</*codim=*/0>();
+        const auto& vanguard = this->simulator().vanguard();
+        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& elem = *elemIt;
 
@@ -1708,9 +1708,9 @@ private:
     {
         // we need to update the max polymer adsoption data for all elements
         ElementContext elemCtx(this->simulator());
-        const auto& gridManager = this->simulator().gridManager();
-        auto elemIt = gridManager.gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = gridManager.gridView().template end</*codim=*/0>();
+        const auto& vanguard = this->simulator().vanguard();
+        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& elem = *elemIt;
 
@@ -1726,76 +1726,76 @@ private:
 
     void updatePvtnum_()
     {
-        const auto& eclState = this->simulator().gridManager().eclState();
+        const auto& eclState = this->simulator().vanguard().eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         if (!eclProps.hasDeckIntGridProperty("PVTNUM"))
             return;
 
         const auto& pvtnumData = eclProps.getIntGridProperty("PVTNUM").getData();
-        const auto& gridManager = this->simulator().gridManager();
+        const auto& vanguard = this->simulator().vanguard();
 
-        unsigned numElems = gridManager.gridView().size(/*codim=*/0);
+        unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         pvtnum_.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
+            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
             pvtnum_[elemIdx] = pvtnumData[cartElemIdx] - 1;
         }
     }
 
     void updateSatnum_()
     {
-        const auto& eclState = this->simulator().gridManager().eclState();
+        const auto& eclState = this->simulator().vanguard().eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         if (!eclProps.hasDeckIntGridProperty("SATNUM"))
             return;
 
         const auto& satnumData = eclProps.getIntGridProperty("SATNUM").getData();
-        const auto& gridManager = this->simulator().gridManager();
+        const auto& vanguard = this->simulator().vanguard();
 
-        unsigned numElems = gridManager.gridView().size(/*codim=*/0);
+        unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         satnum_.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
+            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
             satnum_[elemIdx] = satnumData[cartElemIdx] - 1;
         }
     }
 
     void updateMiscnum_()
     {
-        const auto& eclState = this->simulator().gridManager().eclState();
+        const auto& eclState = this->simulator().vanguard().eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         if (!eclProps.hasDeckIntGridProperty("MISCNUM"))
             return;
 
         const auto& miscnumData = eclProps.getIntGridProperty("MISCNUM").getData();
-        const auto& gridManager = this->simulator().gridManager();
+        const auto& vanguard = this->simulator().vanguard();
 
-        unsigned numElems = gridManager.gridView().size(/*codim=*/0);
+        unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         miscnum_.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
+            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
             miscnum_[elemIdx] = miscnumData[cartElemIdx] - 1;
         }
     }
 
     void updatePlmixnum_()
     {
-        const auto& eclState = this->simulator().gridManager().eclState();
+        const auto& eclState = this->simulator().vanguard().eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         if (!eclProps.hasDeckIntGridProperty("PLMIXNUM"))
             return;
 
         const auto& plmixnumData = eclProps.getIntGridProperty("PLMIXNUM").getData();
-        const auto& gridManager = this->simulator().gridManager();
+        const auto& vanguard = this->simulator().vanguard();
 
-        unsigned numElems = gridManager.gridView().size(/*codim=*/0);
+        unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         plmixnum_.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
+            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
             plmixnum_[elemIdx] = plmixnumData[cartElemIdx] - 1;
         }
     }

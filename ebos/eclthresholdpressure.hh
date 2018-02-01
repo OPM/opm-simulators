@@ -101,8 +101,8 @@ public:
         // sorry!
         assert(simulator_.model().numGridDof() == numElements);
 
-        const auto& gridManager = simulator_.gridManager();
-        const auto& eclState = gridManager.eclState();
+        const auto& vanguard = simulator_.vanguard();
+        const auto& eclState = vanguard.eclState();
         const auto& simConfig = eclState.getSimulationConfig();
 
         enableThresholdPressure_ = simConfig.hasThresholdPressure();
@@ -125,7 +125,7 @@ public:
             eclState.get3DProperties().getIntGridProperty("EQLNUM").getData();
         elemEquilRegion_.resize(numElements, 0);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-            int cartElemIdx = gridManager.cartesianIndex(elemIdx);
+            int cartElemIdx = vanguard.cartesianIndex(elemIdx);
 
             // ECL uses Fortran-style indices but we want C-style ones!
             elemEquilRegion_[elemIdx] = equilRegionData[cartElemIdx] - 1;
@@ -161,8 +161,8 @@ private:
     // compute the defaults of the threshold pressures using the initial condition
     void computeDefaultThresholdPressures_()
     {
-        const auto& gridManager = simulator_.gridManager();
-        const auto& gridView = gridManager.gridView();
+        const auto& vanguard = simulator_.vanguard();
+        const auto& gridView = vanguard.gridView();
 
         typedef Opm::MathToolbox<Evaluation> Toolbox;
         // loop over the whole grid and compute the maximum gravity adjusted pressure
@@ -233,10 +233,10 @@ private:
     // THPRES keyword.
     void applyExplicitThresholdPressures_()
     {
-        const auto& gridManager = simulator_.gridManager();
-        const auto& gridView = gridManager.gridView();
+        const auto& vanguard = simulator_.vanguard();
+        const auto& gridView = vanguard.gridView();
         const auto& elementMapper = simulator_.model().elementMapper();
-        const auto& eclState = simulator_.gridManager().eclState();
+        const auto& eclState = simulator_.vanguard().eclState();
         const Opm::SimulationConfig& simConfig = eclState.getSimulationConfig();
         const auto& thpres = simConfig.getThresholdPressure();
 

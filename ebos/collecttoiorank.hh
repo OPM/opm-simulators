@@ -45,11 +45,11 @@
 
 namespace Ewoms
 {
-    template < class GridManager >
+    template < class Vanguard >
     class CollectDataToIORank
     {
     public:
-        typedef typename GridManager :: Grid  Grid;
+        typedef typename Vanguard :: Grid  Grid;
         typedef typename Grid :: CollectiveCommunication  CollectiveCommunication;
 
         // global id
@@ -172,9 +172,9 @@ namespace Ewoms
         enum { ioRank = 0 };
 
         static const bool needsReordering = ! std::is_same<
-            typename GridManager::Grid, typename GridManager::EquilGrid > :: value ;
+            typename Vanguard::Grid, typename Vanguard::EquilGrid > :: value ;
 
-        CollectDataToIORank( const GridManager& gridManager )
+        CollectDataToIORank( const Vanguard& vanguard )
             : toIORankComm_( )
         {
             // index maps only have to be build when reordering is needed
@@ -183,12 +183,12 @@ namespace Ewoms
                 return ;
             }
 
-            const CollectiveCommunication& comm = gridManager.grid().comm();
+            const CollectiveCommunication& comm = vanguard.grid().comm();
 
             {
                 std::set< int > send, recv;
-		typedef typename GridManager::EquilGrid::LeafGridView EquilGridView;
-                const EquilGridView equilGridView = gridManager.equilGrid().leafGridView() ;
+		typedef typename Vanguard::EquilGrid::LeafGridView EquilGridView;
+                const EquilGridView equilGridView = vanguard.equilGrid().leafGridView() ;
 
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
                 typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView> EquilElementMapper;
@@ -200,16 +200,16 @@ namespace Ewoms
 
                 // We need a mapping from local to global grid, here we
                 // use equilGrid which represents a view on the global grid
-                const size_t globalSize = gridManager.equilGrid().leafGridView().size( 0 );
+                const size_t globalSize = vanguard.equilGrid().leafGridView().size( 0 );
                 // reserve memory
                 globalCartesianIndex_.resize(globalSize, -1);
 
                 // loop over all elements (global grid) and store Cartesian index
-                auto elemIt = gridManager.equilGrid().leafGridView().template begin<0>();
-                const auto& elemEndIt = gridManager.equilGrid().leafGridView().template end<0>();
+                auto elemIt = vanguard.equilGrid().leafGridView().template begin<0>();
+                const auto& elemEndIt = vanguard.equilGrid().leafGridView().template end<0>();
                 for (; elemIt != elemEndIt; ++elemIt) {
                     int elemIdx = equilElemMapper.index(*elemIt );
-                    int cartElemIdx = gridManager.equilCartesianIndexMapper().cartesianIndex(elemIdx);
+                    int cartElemIdx = vanguard.equilCartesianIndexMapper().cartesianIndex(elemIdx);
                     globalCartesianIndex_[elemIdx] = cartElemIdx;
                 }
 
@@ -230,15 +230,15 @@ namespace Ewoms
                 }
 
                 localIndexMap_.clear();
-                const size_t gridSize = gridManager.grid().size( 0 );
+                const size_t gridSize = vanguard.grid().size( 0 );
                 localIndexMap_.reserve( gridSize );
 
                 // store the local Cartesian index
                 IndexMapType distributedCartesianIndex;
                 distributedCartesianIndex.resize(gridSize, -1);
 
-                typedef typename GridManager::GridView LocalGridView;
-                const LocalGridView localGridView = gridManager.gridView() ;
+                typedef typename Vanguard::GridView LocalGridView;
+                const LocalGridView localGridView = vanguard.gridView() ;
 
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
                 typedef Dune::MultipleCodimMultipleGeomTypeMapper<LocalGridView> ElementMapper;
@@ -254,7 +254,7 @@ namespace Ewoms
                 {
                     const auto element = *it ;
                     int elemIdx = elemMapper.index( element );
-                    distributedCartesianIndex[elemIdx] = gridManager.cartesianIndex( elemIdx );
+                    distributedCartesianIndex[elemIdx] = vanguard.cartesianIndex( elemIdx );
 
                     // only store interior element for collection
                     //assert( element.partitionType() == Dune :: InteriorEntity );

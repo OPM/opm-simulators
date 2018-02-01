@@ -22,26 +22,26 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::EclPolyhedralGridManager
+ * \copydoc Ewoms::EclPolyhedralGridVanguard
  */
-#ifndef EWOMS_ECL_POLYHEDRAL_GRID_MANAGER_HH
-#define EWOMS_ECL_POLYHEDRAL_GRID_MANAGER_HH
+#ifndef EWOMS_ECL_POLYHEDRAL_GRID_VANGUARD_HH
+#define EWOMS_ECL_POLYHEDRAL_GRID_VANGUARD_HH
 
-#include "eclbasegridmanager.hh"
+#include "eclbasevanguard.hh"
 
 #include <dune/grid/polyhedralgrid.hh>
 
 namespace Ewoms {
 template <class TypeTag>
-class EclPolyhedralGridManager;
+class EclPolyhedralGridVanguard;
 
 namespace Properties {
-NEW_TYPE_TAG(EclPolyhedralGridManager, INHERITS_FROM(EclBaseGridManager));
+NEW_TYPE_TAG(EclPolyhedralGridVanguard, INHERITS_FROM(EclBaseVanguard));
 
 // declare the properties
-SET_TYPE_PROP(EclPolyhedralGridManager, GridManager, Ewoms::EclPolyhedralGridManager<TypeTag>);
-SET_TYPE_PROP(EclPolyhedralGridManager, Grid, Dune::PolyhedralGrid<3, 3>);
-SET_TYPE_PROP(EclPolyhedralGridManager, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
+SET_TYPE_PROP(EclPolyhedralGridVanguard, Vanguard, Ewoms::EclPolyhedralGridVanguard<TypeTag>);
+SET_TYPE_PROP(EclPolyhedralGridVanguard, Grid, Dune::PolyhedralGrid<3, 3>);
+SET_TYPE_PROP(EclPolyhedralGridVanguard, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
 } // namespace Properties
 
 /*!
@@ -52,10 +52,10 @@ SET_TYPE_PROP(EclPolyhedralGridManager, EquilGrid, typename GET_PROP_TYPE(TypeTa
  * This class uses Dune::PolyhedralGrid as the simulation grid.
  */
 template <class TypeTag>
-class EclPolyhedralGridManager : public EclBaseGridManager<TypeTag>
+class EclPolyhedralGridVanguard : public EclBaseVanguard<TypeTag>
 {
-    friend class EclBaseGridManager<TypeTag>;
-    typedef EclBaseGridManager<TypeTag> ParentType;
+    friend class EclBaseVanguard<TypeTag>;
+    typedef EclBaseVanguard<TypeTag> ParentType;
 
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
@@ -75,9 +75,9 @@ public:
     /*!
      * \brief Inherit the constructors from the base class.
      */
-    using EclBaseGridManager<TypeTag>::EclBaseGridManager;
+    using EclBaseVanguard<TypeTag>::EclBaseVanguard;
 
-    ~EclPolyhedralGridManager()
+    ~EclPolyhedralGridVanguard()
     {
         delete cartesianIndexMapper_;
         delete grid_;

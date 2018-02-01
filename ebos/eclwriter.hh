@@ -77,7 +77,7 @@ template <class TypeTag>
 class EclWriter
 {
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, GridManager) GridManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -86,22 +86,22 @@ class EclWriter
     typedef typename GridView::template Codim<0>::Entity Element;
     typedef typename GridView::template Codim<0>::Iterator ElementIterator;
 
-    typedef CollectDataToIORank< GridManager > CollectDataToIORankType;
+    typedef CollectDataToIORank< Vanguard > CollectDataToIORankType;
 
     typedef std::vector<Scalar> ScalarBuffer;
 
 public:
     EclWriter(const Simulator& simulator)
         : simulator_(simulator)
-        , collectToIORank_(simulator_.gridManager())
+        , collectToIORank_(simulator_.vanguard())
         , eclOutputModule_(simulator, collectToIORank_)
     {
-        globalGrid_ = simulator_.gridManager().grid();
+        globalGrid_ = simulator_.vanguard().grid();
         globalGrid_.switchToGlobalView();
-        eclIO_.reset(new Opm::EclipseIO(simulator_.gridManager().eclState(),
-                                        Opm::UgGridHelpers::createEclipseGrid( globalGrid_ , simulator_.gridManager().eclState().getInputGrid() ),
-                                        simulator_.gridManager().schedule(),
-                                        simulator_.gridManager().summaryConfig()));
+        eclIO_.reset(new Opm::EclipseIO(simulator_.vanguard().eclState(),
+                                        Opm::UgGridHelpers::createEclipseGrid( globalGrid_ , simulator_.vanguard().eclState().getInputGrid() ),
+                                        simulator_.vanguard().schedule(),
+                                        simulator_.vanguard().summaryConfig()));
     }
 
     ~EclWriter()
@@ -134,7 +134,7 @@ public:
 #else
 
         int episodeIdx = simulator_.episodeIndex() + 1;
-        const auto& gridView = simulator_.gridManager().gridView();
+        const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
         eclOutputModule_.allocBuffers(numElements, episodeIdx, substep, log);
@@ -212,7 +212,7 @@ public:
         };
 
         unsigned episodeIdx = simulator_.episodeIndex();
-        const auto& gridView = simulator_.gridManager().gridView();
+        const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
         eclOutputModule_.allocBuffers(numElements, episodeIdx, /*substep=*/false, /*log=*/false);
 
@@ -235,7 +235,7 @@ private:
 
     Opm::data::Solution computeTrans_() const
     {
-        const auto& cartMapper = simulator_.gridManager().cartesianIndexMapper();
+        const auto& cartMapper = simulator_.vanguard().cartesianIndexMapper();
         const auto& cartDims = cartMapper.cartesianDimensions();
         const int globalSize = cartDims[0]*cartDims[1]*cartDims[2];
 
@@ -261,7 +261,7 @@ private:
 
         const auto& cartesianCellIdx = globalGrid_.globalCell();
 
-        const auto* globalTrans = &(simulator_.gridManager().globalTransmissibility());
+        const auto* globalTrans = &(simulator_.vanguard().globalTransmissibility());
         if (!collectToIORank_.isParallel()) {
             // in the sequential case we must use the transmissibilites defined by
             // the problem. (because in the sequential case, the grid manager does
@@ -334,7 +334,7 @@ private:
         ElementMapper globalElemMapper(globalGridView);
 #endif
 
-        const auto* globalTrans = &(simulator_.gridManager().globalTransmissibility());
+        const auto* globalTrans = &(simulator_.vanguard().globalTransmissibility());
         if (!collectToIORank_.isParallel()) {
             // in the sequential case we must use the transmissibilites defined by
             // the problem. (because in the sequential case, the grid manager does
@@ -386,7 +386,7 @@ private:
     }
 
     const Opm::EclipseState& eclState() const
-    { return simulator_.gridManager().eclState(); }
+    { return simulator_.vanguard().eclState(); }
 
     const Simulator& simulator_;
     CollectDataToIORankType collectToIORank_;

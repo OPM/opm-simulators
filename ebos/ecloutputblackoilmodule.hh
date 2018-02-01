@@ -108,7 +108,7 @@ public:
         createLocalFipnum_();
 
         // Summary output is for all steps
-        const Opm::SummaryConfig summaryConfig = simulator_.gridManager().summaryConfig();
+        const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
 
         // Initialize block output
         for( const auto& node : summaryConfig ) {
@@ -132,10 +132,10 @@ public:
             return;
 
         // Summary output is for all steps
-        const Opm::SummaryConfig summaryConfig = simulator_.gridManager().summaryConfig();
+        const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
 
         // Only output RESTART_AUXILIARY asked for by the user.
-        const Opm::RestartConfig& restartConfig = simulator_.gridManager().eclState().getRestartConfig();
+        const Opm::RestartConfig& restartConfig = simulator_.vanguard().eclState().getRestartConfig();
         std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
         for (auto& keyValue : rstKeywords) {
             keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
@@ -440,7 +440,7 @@ public:
                     bubblePointPressure_[globalDofIdx] = Opm::getValue(FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()));
                 }
                 catch (const Opm::NumericalIssue& e) {
-                    const auto globalIdx = elemCtx.simulator().gridManager().grid().globalCell()[globalDofIdx];
+                    const auto globalIdx = elemCtx.simulator().vanguard().grid().globalCell()[globalDofIdx];
                     failedCellsPb_.push_back(globalIdx);
                 }
             }
@@ -450,7 +450,7 @@ public:
                     dewPointPressure_[globalDofIdx] = Opm::getValue(FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()));
                 }
                 catch (const Opm::NumericalIssue& e) {
-                    const auto globalIdx = elemCtx.simulator().gridManager().grid().globalCell()[globalDofIdx];
+                    const auto globalIdx = elemCtx.simulator().vanguard().grid().globalCell()[globalDofIdx];
                     failedCellsPd_.push_back(globalIdx);
                 }
             }
@@ -523,7 +523,7 @@ public:
             updateFluidInPlace_(elemCtx, dofIdx);
 
             // Adding block values
-            const auto globalIdx = elemCtx.simulator().gridManager().grid().globalCell()[globalDofIdx];
+            const auto globalIdx = elemCtx.simulator().vanguard().grid().globalCell()[globalDofIdx];
             for( auto& val : blockValues_ ) {
                 const auto& key = val.first;
                 int global_index = key.second - 1;
@@ -765,7 +765,7 @@ public:
         // the original Fip values are stored on the first step
         // TODO: Store initial Fip in the init file and restore them
         // and use them here.
-        const Opm::SummaryConfig summaryConfig = simulator_.gridManager().summaryConfig();
+        const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
         if ( isIORank_()) {
             // Field summary output
             for (int i = 0; i<FipDataType::numFipValues; i++) {
@@ -1069,9 +1069,9 @@ private:
 
     void createLocalFipnum_()
     {
-        const std::vector<int>& fipnum_global = simulator_.gridManager().eclState().get3DProperties().getIntGridProperty("FIPNUM").getData();
+        const std::vector<int>& fipnum_global = simulator_.vanguard().eclState().get3DProperties().getIntGridProperty("FIPNUM").getData();
         // Get compressed cell fipnum.
-        const auto& gridView = simulator_.gridManager().gridView();
+        const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
         fipnum_.resize(numElements, 0.0);
         if (!fipnum_global.empty()) {
@@ -1085,7 +1085,7 @@ private:
 
                 elemCtx.updatePrimaryStencil(elem);
                 const unsigned elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                fipnum_[elemIdx] = fipnum_global[simulator_.gridManager().cartesianIndex( elemIdx )];
+                fipnum_[elemIdx] = fipnum_global[simulator_.vanguard().cartesianIndex( elemIdx )];
             }
         }
     }
@@ -1139,7 +1139,7 @@ private:
 
     void fipUnitConvert_(ScalarBuffer& fip)
     {
-        const Opm::UnitSystem& units = simulator_.gridManager().eclState().getUnits();
+        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
             fip[FipDataType::WaterInPlace] = Opm::unit::convert::to(fip[FipDataType::WaterInPlace], Opm::unit::stb);
             fip[FipDataType::OilInPlace] = Opm::unit::convert::to(fip[FipDataType::OilInPlace], Opm::unit::stb);
@@ -1159,7 +1159,7 @@ private:
     }
 
     void pressureUnitConvert_(Scalar& pav) {
-        const Opm::UnitSystem& units = simulator_.gridManager().eclState().getUnits();
+        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
             pav = Opm::unit::convert::to(pav, Opm::unit::psia);
         } else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
@@ -1172,7 +1172,7 @@ private:
 
     void outputRegionFluidInPlace_(const ScalarBuffer& oip, const ScalarBuffer& cip, const Scalar& pav, const int reg)
     {
-        const Opm::UnitSystem& units = simulator_.gridManager().eclState().getUnits();
+        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         std::ostringstream ss;
         if (!reg) {
             ss << "                                                  ===================================================\n"
