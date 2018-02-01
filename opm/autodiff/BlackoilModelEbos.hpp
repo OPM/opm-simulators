@@ -184,6 +184,7 @@ namespace Opm {
             } else {
                 // set the initial solution.
                 ebosSimulator_.model().solution( 1 /* timeIdx */ ) = ebosSimulator_.model().solution( 0 /* timeIdx */ );
+                ebosSimulator_.problem().advanceTimeLevel();
             }
 
             // set the timestep size and index in ebos explicitly
@@ -345,7 +346,7 @@ namespace Opm {
 
             wellModel().timeStepSucceeded();
             ebosSimulator_.problem().endTimeStep();
-            ebosSimulator_.problem().advanceTimeLevel();
+            //ebosSimulator_.problem().advanceTimeLevel();
 
         }
 
