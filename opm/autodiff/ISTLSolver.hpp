@@ -20,7 +20,6 @@
 #ifndef OPM_ISTLSOLVER_HEADER_INCLUDED
 #define OPM_ISTLSOLVER_HEADER_INCLUDED
 
-#include <opm/autodiff/AdditionalObjectDeleter.hpp>
 #include <opm/autodiff/BlackoilAmg.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
@@ -418,7 +417,7 @@ namespace Opm
                     opA.reset( CPRSelectorType::makeOperator( linearOperator.getmat(), parallelInformation_arg ) );
                 }
 
-                const double relax = 1.0;
+                const double relax = parameters_.ilu_relaxation_;
                 if ( ! parameters_.amg_blackoil_system_ )
                 {
                     typedef typename CPRSelectorType::AMG AMG;

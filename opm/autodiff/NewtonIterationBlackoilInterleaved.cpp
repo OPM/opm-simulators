@@ -27,7 +27,6 @@
 #define FLOW_SUPPORT_AMG !defined(HAVE_UMFPACK)
 
 #include <opm/autodiff/DuneMatrix.hpp>
-#include <opm/autodiff/AdditionalObjectDeleter.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/NewtonIterationUtilities.hpp>

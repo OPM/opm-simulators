@@ -265,6 +265,26 @@ public:
         init( reinterpret_cast<const Matrix&>(A), n );
     }
 
+    /*! \brief Constructor gets all parameters to operate the prec.
+      \param A The matrix to operate on.
+      \param comm   communication object, e.g. Dune::OwnerOverlapCopyCommunication
+      \param n ILU fill in level (for testing). This does not work in parallel.
+      \param w The relaxation factor.
+    */
+    template<class BlockType, class Alloc>
+    ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
+                             const ParallelInfo& comm, const int n, const field_type w )
+        : lower_(),
+          upper_(),
+          inv_(),
+          comm_(&comm), w_(w),
+          relaxation_( std::abs( w - 1.0 ) > 1e-15 )
+    {
+        // BlockMatrix is a Subclass of FieldMatrix that just adds
+        // methods. Therefore this cast should be safe.
+        init( reinterpret_cast<const Matrix&>(A), n );
+    }
+
     /*! \brief Constructor.
 
       Constructor gets all parameters to operate the prec.
