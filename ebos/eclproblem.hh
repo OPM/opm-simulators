@@ -1529,10 +1529,9 @@ private:
         const auto& eclState = gridManager.eclState();
         const auto& eclProps = eclState.get3DProperties();
 
-        // since the values specified in the deck do not need to be consistent, we use an
-        // initial condition that conserves the total mass specified by these values, but
-        // for this to work all three phases must be active.
-        useMassConservativeInitialCondition_ = (FluidSystem::numActivePhases() == 3);
+        // the values specified in the deck do not need to be consistent,
+        // we still don't try to make the consistent.
+        useMassConservativeInitialCondition_ = false;
 
         // make sure all required quantities are enables
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && !eclProps.hasDeckDoubleGridProperty("SWAT"))
