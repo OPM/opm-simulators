@@ -314,7 +314,7 @@ public:
     const SimulatorReport& failureReport() const { return failureReport_; };
 
     const Grid& grid() const
-    { return ebosSimulator_.gridManager().grid(); }
+    { return ebosSimulator_.vanguard().grid(); }
 
 protected:
 
@@ -344,11 +344,11 @@ protected:
     }
 
     const EclipseState& eclState() const
-    { return ebosSimulator_.gridManager().eclState(); }
+    { return ebosSimulator_.vanguard().eclState(); }
 
 
     const Schedule& schedule() const
-    { return ebosSimulator_.gridManager().schedule(); }
+    { return ebosSimulator_.vanguard().schedule(); }
 
 
     // Data.

@@ -15,7 +15,7 @@ namespace Opm {
         , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
         , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
     {
-        const auto& eclState = ebosSimulator_.gridManager().eclState();
+        const auto& eclState = ebosSimulator_.vanguard().eclState();
         phase_usage_ = phaseUsageFromDeck(eclState);
 
         const auto& gridView = ebosSimulator_.gridView();
@@ -38,9 +38,9 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     beginReportStep(const int timeStepIdx)
     {
-        const Grid& grid = ebosSimulator_.gridManager().grid();
-        const auto& defunct_well_names = ebosSimulator_.gridManager().defunctWellNames();
-        const auto& eclState = ebosSimulator_.gridManager().eclState();
+        const Grid& grid = ebosSimulator_.vanguard().grid();
+        const auto& defunct_well_names = ebosSimulator_.vanguard().defunctWellNames();
+        const auto& eclState = ebosSimulator_.vanguard().eclState();
         wells_ecl_ = schedule().getWells(timeStepIdx);
 
         // Create wells and well state.
@@ -67,7 +67,7 @@ namespace Opm {
         size_t nc = number_of_cells_;
         std::vector<double> cellPressures(nc, 0.0);
         ElementContext elemCtx(ebosSimulator_);
-        const auto& gridView = ebosSimulator_.gridManager().gridView();
+        const auto& gridView = ebosSimulator_.vanguard().gridView();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         for (auto elemIt = gridView.template begin</*codim=*/0>();
              elemIt != elemEndIt;
@@ -531,7 +531,7 @@ namespace Opm {
         // checking NaN residuals
         {
             bool nan_residual_found = report.nan_residual_found;
-            const auto& grid = ebosSimulator_.gridManager().grid();
+            const auto& grid = ebosSimulator_.vanguard().grid();
             int value = nan_residual_found ? 1 : 0;
 
             nan_residual_found = grid.comm().max(value);
@@ -547,7 +547,7 @@ namespace Opm {
         // checking too large residuals
         {
             bool too_large_residual_found = report.too_large_residual_found;
-            const auto& grid = ebosSimulator_.gridManager().grid();
+            const auto& grid = ebosSimulator_.vanguard().grid();
             int value = too_large_residual_found ? 1 : 0;
 
             too_large_residual_found = grid.comm().max(value);
@@ -562,7 +562,7 @@ namespace Opm {
         // checking convergence
         bool converged_well = report.converged;
         {
-            const auto& grid = ebosSimulator_.gridManager().grid();
+            const auto& grid = ebosSimulator_.vanguard().grid();
             int value = converged_well ? 1 : 0;
 
             converged_well = grid.comm().min(value);
@@ -979,7 +979,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeAverageFormationFactor(std::vector<double>& B_avg) const
     {
-        const auto& grid = ebosSimulator_.gridManager().grid();
+        const auto& grid = ebosSimulator_.vanguard().grid();
         const auto& gridView = grid.leafGridView();
         ElementContext elemCtx(ebosSimulator_);
         const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
@@ -1036,7 +1036,7 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::extractLegacyCellPvtRegionIndex_()
     {
-        const auto& grid = ebosSimulator_.gridManager().grid();
+        const auto& grid = ebosSimulator_.vanguard().grid();
         const auto& eclProblem = ebosSimulator_.problem();
         const unsigned numCells = grid.size(/*codim=*/0);
 
@@ -1081,7 +1081,7 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::extractLegacyDepth_()
     {
-        const auto& grid = ebosSimulator_.gridManager().grid();
+        const auto& grid = ebosSimulator_.vanguard().grid();
         const unsigned numCells = grid.size(/*codim=*/0);
 
         depth_.resize(numCells);

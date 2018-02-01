@@ -48,11 +48,11 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
     const auto es2 = Opm::Parser::parse(filename2);
     const auto& eg2 = es2.getInputGrid();
 
-    GridManager gridManager1(eg1);
-    const UnstructuredGrid& grid1 = *gridManager1.c_grid();
+    GridManager vanguard1(eg1);
+    const UnstructuredGrid& grid1 = *vanguard1.c_grid();
 
-    GridManager gridManager2(eg2);
-    const UnstructuredGrid& grid2 = *gridManager2.c_grid();
+    GridManager vanguard2(eg2);
+    const UnstructuredGrid& grid2 = *vanguard2.c_grid();
 
     BlackoilState state1( UgGridHelpers::numCells( grid1 ) , UgGridHelpers::numFaces( grid1 ) , 3);
     BlackoilState state2( UgGridHelpers::numCells( grid2 ) , UgGridHelpers::numFaces( grid2 ) , 3);
@@ -73,8 +73,8 @@ BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
     std::vector<int> actnum = get_testBlackoilStateActnum();
     eg.resetACTNUM(actnum.data());
 
-    GridManager gridManager(eg);
-    const UnstructuredGrid& grid = *gridManager.c_grid();
+    GridManager vanguard(eg);
+    const UnstructuredGrid& grid = *vanguard.c_grid();
 
     BlackoilState state1( UgGridHelpers::numCells( grid ) , UgGridHelpers::numFaces( grid ) , 3);
     BlackoilState state2( UgGridHelpers::numCells( grid ) , UgGridHelpers::numFaces( grid ) , 3);

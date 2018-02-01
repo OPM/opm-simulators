@@ -190,7 +190,7 @@ namespace Opm {
             const Wells* wells() const { return wells_manager_->c_wells(); }
 
             const Schedule& schedule() const
-            { return ebosSimulator_.gridManager().schedule(); }
+            { return ebosSimulator_.vanguard().schedule(); }
 
             void updateWellControls();
 

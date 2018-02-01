@@ -470,7 +470,7 @@ namespace Opm {
 
                 // create map from cell to region
                 // and set all attributes to zero
-                const auto& grid = simulator.gridManager().grid();
+                const auto& grid = simulator.vanguard().grid();
                 const unsigned numCells = grid.size(/*codim=*/0);
                 std::vector<int> cell2region(numCells, -1);
                 for (const auto& reg : rmap_.activeRegions()) {

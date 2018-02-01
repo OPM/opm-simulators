@@ -136,7 +136,7 @@ namespace Opm {
                           const bool terminal_output
                           )
         : ebosSimulator_(ebosSimulator)
-        , grid_(ebosSimulator_.gridManager().grid())
+        , grid_(ebosSimulator_.vanguard().grid())
         , istlSolver_( dynamic_cast< const ISTLSolverType* > (&linsolver) )
         , phaseUsage_(phaseUsageFromDeck(eclState()))
         , has_disgas_(FluidSystem::enableDissolvedGas())
@@ -161,7 +161,7 @@ namespace Opm {
         { return  grid_.comm().size() > 1; }
 
         const EclipseState& eclState() const
-        { return ebosSimulator_.gridManager().eclState(); }
+        { return ebosSimulator_.vanguard().eclState(); }
 
         /// Called once before each time step.
         /// \param[in] timer                  simulation timer

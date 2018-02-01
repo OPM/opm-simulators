@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
     Opm::Parser parser;
     Opm::Deck deck(parser.parseFile(filename , parseContext));
     Opm::EclipseState eclipseState(deck , parseContext);
-    Opm::GridManager gridManager(eclipseState.getInputGrid());
+    Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
 
     // Both wells are open in the first schedule step
     {
-    Opm::WellsManager wellsManager(eclipseState , sched, 0, *gridManager.c_grid());
+    Opm::WellsManager wellsManager(eclipseState , sched, 0, *vanguard.c_grid());
     const Wells* wells = wellsManager.c_wells();
     const struct WellControls* ctrls0 = wells->ctrls[0];
     const struct WellControls* ctrls1 = wells->ctrls[1];
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
 
     // The injector is stopped
     {
-    Opm::WellsManager wellsManager(eclipseState, sched, 1 , *gridManager.c_grid());
+    Opm::WellsManager wellsManager(eclipseState, sched, 1 , *vanguard.c_grid());
     const Wells* wells = wellsManager.c_wells();
     const struct WellControls* ctrls0 = wells->ctrls[0];
     const struct WellControls* ctrls1 = wells->ctrls[1];
