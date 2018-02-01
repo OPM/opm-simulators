@@ -45,7 +45,7 @@
 
 // For the DUNE grid
 #include <dune/grid/yaspgrid.hh> /*@\label{tutorial1:include-grid-manager}@*/
-#include <ewoms/io/cubegridmanager.hh> /*@\label{tutorial1:include-grid-manager}@*/
+#include <ewoms/io/cubegridvanguard.hh> /*@\label{tutorial1:include-grid-manager}@*/
 
 // For Dune::FieldMatrix
 #include <dune/common/fmatrix.hh>
@@ -72,7 +72,7 @@ SET_TYPE_PROP(Tutorial1Problem, Problem,
 
 // Set grid and the grid manager to be used
 SET_TYPE_PROP(Tutorial1Problem, Grid, Dune::YaspGrid</*dim=*/2>); /*@\label{tutorial1:set-grid}@*/
-SET_TYPE_PROP(Tutorial1Problem, GridManager, Ewoms::CubeGridManager<TypeTag>); /*@\label{tutorial1:set-grid-manager}@*/
+SET_TYPE_PROP(Tutorial1Problem, Vanguard, Ewoms::CubeGridVanguard<TypeTag>); /*@\label{tutorial1:set-grid-manager}@*/
 
 // Set the wetting phase /*@\label{tutorial1:2p-system-start}@*/
 SET_TYPE_PROP(Tutorial1Problem,
