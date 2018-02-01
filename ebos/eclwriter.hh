@@ -36,9 +36,8 @@
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 
-#include <opm/common/Valgrind.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <boost/algorithm/string.hpp>
 
@@ -114,8 +113,7 @@ public:
     void writeInit()
     {
 #if !HAVE_OPM_OUTPUT
-        OPM_THROW(std::runtime_error,
-                  "Opm-output must be available to write ECL output!");
+        throw std::runtime_error("opm-output must be available to write ECL output!");
 #else
         if (collectToIORank_.isIORank()) {
             std::map<std::string, std::vector<int> > integerVectors;
@@ -132,8 +130,7 @@ public:
     void writeOutput(const Opm::data::Wells& dw, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep)
     {
 #if !HAVE_OPM_OUTPUT
-        OPM_THROW(std::runtime_error,
-                  "Opm-output must be available to write ECL output!");
+        throw std::runtime_error("opm-output must be available to write ECL output!");
 #else
 
         int episodeIdx = simulator_.episodeIndex() + 1;
@@ -193,7 +190,6 @@ public:
                                   extraRestartData,
                                   enableDoublePrecisionOutput);
         }
-
 #endif
     }
 

@@ -73,14 +73,13 @@
 #include <opm/material/fluidsystems/blackoilpvt/DeadOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -358,7 +357,7 @@ public:
                         boost::filesystem::create_directories(outputDir);
                     }
                     catch (...) {
-                        OPM_THROW(std::runtime_error, "Creation of output directory '"<<outputDir<<"' failed\n");
+                        throw std::runtime_error("Creation of output directory '"+outputDir+"' failed\n");
                     }
                 }
             }
@@ -1343,9 +1342,8 @@ private:
             else if (rockTableType == "ROCKNUM")
                 propName = "ROCKNUM";
             else {
-                OPM_THROW(std::runtime_error,
-                          "Unknown table type '" << rockTableType
-                          << " for the ROCKOPTS keyword given");
+                throw std::runtime_error("Unknown table type '"+rockTableType
+                                         +" for the ROCKOPTS keyword given");
             }
         }
 
@@ -1535,26 +1533,21 @@ private:
 
         // make sure all required quantities are enables
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && !eclProps.hasDeckDoubleGridProperty("SWAT"))
-            OPM_THROW(std::runtime_error,
-                      "The ECL input file requires the presence of the SWAT keyword if "
-                      "the water phase is active");
+            throw std::runtime_error("The ECL input file requires the presence of the SWAT keyword if "
+                                     "the water phase is active");
         if (FluidSystem::phaseIsActive(gasPhaseIdx) && !eclProps.hasDeckDoubleGridProperty("SGAS"))
-            OPM_THROW(std::runtime_error,
-                      "The ECL input file requires the presence of the SGAS keyword if "
-                      "the gas phase is active");
+            throw std::runtime_error("The ECL input file requires the presence of the SGAS keyword if "
+                                     "the gas phase is active");
 
         if (!eclProps.hasDeckDoubleGridProperty("PRESSURE"))
-             OPM_THROW(std::runtime_error,
-                      "The ECL input file requires the presence of the PRESSURE "
-                      "keyword if the model is initialized explicitly");
+             throw std::runtime_error("The ECL input file requires the presence of the PRESSURE "
+                                      "keyword if the model is initialized explicitly");
         if (FluidSystem::enableDissolvedGas() && !eclProps.hasDeckDoubleGridProperty("RS"))
-            OPM_THROW(std::runtime_error,
-                      "The ECL input file requires the RS keyword to be present if"
-                      " dissolved gas is enabled");
+            throw std::runtime_error("The ECL input file requires the RS keyword to be present if"
+                                     " dissolved gas is enabled");
         if (FluidSystem::enableVaporizedOil() && !eclProps.hasDeckDoubleGridProperty("RV"))
-            OPM_THROW(std::runtime_error,
-                      "The ECL input file requires the RV keyword to be present if"
-                      " vaporized oil is enabled");
+            throw std::runtime_error("The ECL input file requires the RV keyword to be present if"
+                                     " vaporized oil is enabled");
 
         size_t numDof = this->model().numGridDof();
 

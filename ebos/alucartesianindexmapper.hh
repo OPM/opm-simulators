@@ -25,8 +25,7 @@
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <array>
 #include <vector>
@@ -226,7 +225,7 @@ namespace Ewoms
               coords[ 0 ] = gc ;
           }
           else
-            OPM_THROW(Opm::NotImplemented,"cartesianCoordinate not implemented for dimension " << dimension );
+            throw std::invalid_argument("cartesianCoordinate not implemented for dimension " << dimension );
         }
 
         template <class GridView>

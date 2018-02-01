@@ -751,10 +751,10 @@ double minSaturations(const MaterialLawManager& materialLawManager, const int ph
         return scaledDrainageInfo.Sgl;
 
     case FluidSystem::oilPhaseIdx:
-        OPM_THROW(std::runtime_error, "Min saturation not implemented for oil phase.");
+        throw std::runtime_error("Min saturation not implemented for oil phase.");
 
     default:
-        OPM_THROW(std::runtime_error, "Unknown phaseIdx .");
+        throw std::runtime_error("Unknown phaseIdx .");
     }
     return -1.0;
 }
@@ -774,10 +774,10 @@ double maxSaturations(const MaterialLawManager& materialLawManager, const int ph
         return scaledDrainageInfo.Sgu;
 
     case FluidSystem::oilPhaseIdx:
-        OPM_THROW(std::runtime_error, "Max saturation not implemented for oil phase.");
+        throw std::runtime_error("Max saturation not implemented for oil phase.");
 
     default:
-        OPM_THROW(std::runtime_error, "Unknown phaseIdx .");
+        throw std::runtime_error("Unknown phaseIdx .");
     }
     return -1.0;
 }
@@ -837,9 +837,8 @@ double satFromPc(const MaterialLawManager& materialLawManager,
             return (s1 + s0)/2;
     }
 
-    OPM_THROW(std::runtime_error,
-              "Could not find solution for PcEq = 0.0 after " << maxIter
-              << " iterations.");
+    throw std::runtime_error("Could not find solution for PcEq = 0.0 after "+std::to_string(maxIter)
+                             +" iterations.");
 }
 
 
@@ -946,9 +945,8 @@ double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
             return (s1 + s0)/2;
     }
 
-    OPM_THROW(std::runtime_error,
-              "Could not find solution for PcEqSum = 0.0 after " << maxIter
-              << " iterations.");
+    throw std::runtime_error("Could not find solution for PcEqSum = 0.0 after "+std::to_string(maxIter)
+                             +" iterations.");
 }
 
 /// Compute saturation from depth. Used for constant capillary pressure function

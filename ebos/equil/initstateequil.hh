@@ -705,7 +705,7 @@ phaseSaturations(const Grid& grid,
                  std::vector< std::vector<double> >& phasePressures)
 {
     if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        OPM_THROW(std::runtime_error, "Cannot initialise: not handling water-gas cases.");
+        throw std::runtime_error("Cannot initialise: not handling water-gas cases.");
     }
 
     std::vector< std::vector<double> > phaseSaturations = phasePressures; // Just to get the right size.
@@ -898,7 +898,7 @@ getEquil(const Opm::EclipseState& state)
     const auto& init = state.getInitConfig();
 
     if(!init.hasEquil()) {
-        OPM_THROW(std::domain_error, "Deck does not provide equilibration data.");
+        throw std::domain_error("Deck does not provide equilibration data.");
     }
 
     const auto& equil = init.getEquil();
@@ -1000,16 +1000,15 @@ public:
                                                                                            depthColumn, pbubColumn));
 
                     } else {
-                        OPM_THROW(std::runtime_error, "Cannot initialise: RSVD or PBVD table not available.");
+                        throw std::runtime_error("Cannot initialise: RSVD or PBVD table not available.");
                     }
 
                 }
                 else {
                     if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
-                        OPM_THROW(std::runtime_error,
-                                  "Cannot initialise: when no explicit RSVD table is given, \n"
-                                  "datum depth must be at the gas-oil-contact. "
-                                  "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
+                        throw std::runtime_error("Cannot initialise: when no explicit RSVD table is given, \n"
+                                                 "datum depth must be at the gas-oil-contact. "
+                                                 "In EQUIL region "+std::to_string(i + 1)+"  (counting from 1), this does not hold.");
                     }
                     const double pContact = rec[i].datumDepthPressure();
                     const double TContact = 273.15 + 20; // standard temperature for now
@@ -1048,15 +1047,15 @@ public:
                         rvFunc_.push_back(std::make_shared<Miscibility::PDVD<FluidSystem>>(pvtIdx,
                                                                                            depthColumn, pdewColumn));
                     } else {
-                        OPM_THROW(std::runtime_error, "Cannot initialise: RVVD or PDCD table not available.");
+                        throw std::runtime_error("Cannot initialise: RVVD or PDCD table not available.");
                     }
                 }
                 else {
                     if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
-                        OPM_THROW(std::runtime_error,
+                        throw std::runtime_error(
                                   "Cannot initialise: when no explicit RVVD table is given, \n"
                                   "datum depth must be at the gas-oil-contact. "
-                                  "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
+                                  "In EQUIL region "+std::to_string(i + 1)+" (counting from 1), this does not hold.");
                     }
                     const double pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
                     const double TContact = 273.15 + 20; // standard temperature for now
