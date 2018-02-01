@@ -193,12 +193,13 @@ namespace Opm {
                 ebosSimulator_.model().solution( 1 /* timeIdx */ ) = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             }
             // update simulator form timer
+            /*
             ebosSimulator_.setTime( timer.simulationTimeElapsed() );
             ebosSimulator_.startNextEpisode( timer.currentStepLength() );
             ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
             ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
-
-
+            */
+            ebosSimulator_.setTime( timer.simulationTimeElapsed() );
             // set the timestep size and index in ebos explicitly
             // we use our own time stepper.
             ebosSimulator_.startNextEpisode( timer.currentStepLength() );
@@ -234,7 +235,7 @@ namespace Opm {
             --timer;
             std::cout << "Start Adjoint iteration" << std::endl;
             timer.report(std::cout);
-            //this->prepareStep(timer);//, /*initial_reservoir_state*/, /*initial_well_state*/);
+            this->prepareStep(timer);//, /*initial_reservoir_state*/, /*initial_well_state*/);
             std::cout << "Current time init " <<  timer.simulationTimeElapsed()  << std::endl;
             this->ebosDeserialize( timer.simulationTimeElapsed() );
             SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
@@ -243,7 +244,7 @@ namespace Opm {
             std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
             ++timer;// get back to current step
             timer.report(std::cout);
-            //this->prepareStep(timer);//NB this should not be nesseary  *initial_reservoir_state*/, /*initial_well_state*/);
+            this->prepareStep(timer);//NB this should not be nesseary  *initial_reservoir_state*/, /*initial_well_state*/);
              std::cout << "Current time end " <<  timer.simulationTimeElapsed()  << std::endl;
             this->ebosDeserialize( timer.simulationTimeElapsed() );
             double t = ebosSimulator_.time();
@@ -1344,51 +1345,51 @@ namespace Opm {
 
     private:
 
-        void assembleMassBalanceEq(const SimulatorTimerInterface& timer,
-                                   const int iterationIdx)
-        {
-            /* this should have been set
-            ebosSimulator_.startNextEpisode( timer.currentStepLength() );
-            ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
-            ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
-            ebosSimulator_.setTime( timer.simulationTimeElapsed() );
-            */
-            ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
+//        void assembleMassBalanceEq(const SimulatorTimerInterface& timer,
+//                                   const int iterationIdx)
+//        {
+//            /* this should have been set
+//            ebosSimulator_.startNextEpisode( timer.currentStepLength() );
+//            ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
+//            ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+//            ebosSimulator_.setTime( timer.simulationTimeElapsed() );
+//            */
+//            ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
 
-            static int prevEpisodeIdx = 10000;
+//            static int prevEpisodeIdx = 10000;
 
-            // notify ebos about the end of the previous episode and time step if applicable
-            if (isBeginReportStep_) {
-                isBeginReportStep_ = false;
-                ebosSimulator_.problem().beginEpisode();
-            }
+//            // notify ebos about the end of the previous episode and time step if applicable
+//            if (isBeginReportStep_) {
+//                isBeginReportStep_ = false;
+//                ebosSimulator_.problem().beginEpisode();
+//            }
 
-            // doing the notifactions here is conceptually wrong and also causes the
-            // endTimeStep() and endEpisode() methods to be not called for the
-            // simulation's last time step and episode.
-            if (ebosSimulator_.model().newtonMethod().numIterations() == 0
-                && prevEpisodeIdx < timer.reportStepNum())
-            {
-                ebosSimulator_.problem().endTimeStep();
-            }
+//            // doing the notifactions here is conceptually wrong and also causes the
+//            // endTimeStep() and endEpisode() methods to be not called for the
+//            // simulation's last time step and episode.
+//            if (ebosSimulator_.model().newtonMethod().numIterations() == 0
+//                && prevEpisodeIdx < timer.reportStepNum())
+//            {
+//                ebosSimulator_.problem().endTimeStep();
+//            }
 
-            ebosSimulator_.setTimeStepSize( timer.currentStepLength() );
-            if (ebosSimulator_.model().newtonMethod().numIterations() == 0)
-            {
-                ebosSimulator_.problem().beginTimeStep();
-            }
+//            ebosSimulator_.setTimeStepSize( timer.currentStepLength() );
+//            if (ebosSimulator_.model().newtonMethod().numIterations() == 0)
+//            {
+//                ebosSimulator_.problem().beginTimeStep();
+//            }
 
-            ebosSimulator_.problem().beginIteration();
-            ebosSimulator_.model().linearizer().linearize();
-            ebosSimulator_.problem().endIteration();
+//            ebosSimulator_.problem().beginIteration();
+//            ebosSimulator_.model().linearizer().linearize();
+//            ebosSimulator_.problem().endIteration();
 
-            prevEpisodeIdx = ebosSimulator_.episodeIndex();
+//            prevEpisodeIdx = ebosSimulator_.episodeIndex();
 
-            if (param_.update_equations_scaling_) {
-                std::cout << "equation scaling not suported yet" << std::endl;
-                //updateEquationsScaling();
-            }
-        }
+//            if (param_.update_equations_scaling_) {
+//                std::cout << "equation scaling not suported yet" << std::endl;
+//                //updateEquationsScaling();
+//            }
+//        }
 
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
