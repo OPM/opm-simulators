@@ -192,12 +192,6 @@ namespace Opm {
             } else {
                 ebosSimulator_.model().advanceTimeLevel();
             }
-            // update simulator form timer
-            ebosSimulator_.setTime( timer.simulationTimeElapsed() );
-            ebosSimulator_.startNextEpisode( timer.currentStepLength() );
-            ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
-            ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
-
 
             // set the timestep size and episode index for ebos explicitly. ebos needs to
             // know the report step/episode index because of timing dependend data
@@ -238,7 +232,7 @@ namespace Opm {
             --timer;
             std::cout << "Start Adjoint iteration" << std::endl;
             timer.report(std::cout);
-            //this->prepareStep(timer);//, /*initial_reservoir_state*/, /*initial_well_state*/);
+            this->prepareStep(timer);//, /*initial_reservoir_state*/, /*initial_well_state*/);
             std::cout << "Current time init " <<  timer.simulationTimeElapsed()  << std::endl;
             this->ebosDeserialize( timer.simulationTimeElapsed() );
             SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
@@ -247,7 +241,7 @@ namespace Opm {
             std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
             ++timer;// get back to current step
             timer.report(std::cout);
-            //this->prepareStep(timer);//NB this should not be nesseary  *initial_reservoir_state*/, /*initial_well_state*/);
+            this->prepareStep(timer);//NB this should not be nesseary  *initial_reservoir_state*/, /*initial_well_state*/);
              std::cout << "Current time end " <<  timer.simulationTimeElapsed()  << std::endl;
             this->ebosDeserialize( timer.simulationTimeElapsed() );
             double t = ebosSimulator_.time();
