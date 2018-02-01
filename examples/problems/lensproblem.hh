@@ -28,7 +28,7 @@
 #ifndef EWOMS_LENS_PROBLEM_HH
 #define EWOMS_LENS_PROBLEM_HH
 
-#include <ewoms/io/structuredgridmanager.hh>
+#include <ewoms/io/structuredgridvanguard.hh>
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
 #include <ewoms/disc/common/fvbaseadlocallinearizer.hh>
 
@@ -55,7 +55,7 @@ template <class TypeTag>
 class LensProblem;
 
 namespace Properties {
-NEW_TYPE_TAG(LensBaseProblem, INHERITS_FROM(StructuredGridManager));
+NEW_TYPE_TAG(LensBaseProblem, INHERITS_FROM(StructuredGridVanguard));
 
 // declare the properties specific for the lens problem
 NEW_PROP_TAG(LensLowerLeftX);

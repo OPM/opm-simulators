@@ -231,13 +231,13 @@ void test_PhasePressure()
         std::make_shared<Ewoms::EQUIL::Miscibility::NoMixing>(),
         0);
 
-    std::vector<int> cells(simulator->gridManager().grid().size(0));
+    std::vector<int> cells(simulator->vanguard().grid().size(0));
     std::iota(cells.begin(), cells.end(), 0);
 
     const double grav   = 10;
-    const PPress ppress = Ewoms::EQUIL::phasePressures<FluidSystem>(simulator->gridManager().grid(), region, cells, grav);
+    const PPress ppress = Ewoms::EQUIL::phasePressures<FluidSystem>(simulator->vanguard().grid(), region, cells, grav);
 
-    const int first = 0, last = simulator->gridManager().grid().size(0) - 1;
+    const int first = 0, last = simulator->vanguard().grid().size(0) - 1;
     const double reltol = 1.0e-8;
     CHECK_CLOSE(ppress[0][first] ,  90e3   , reltol);
     CHECK_CLOSE(ppress[0][last ] , 180e3   , reltol);
@@ -253,7 +253,7 @@ void test_CellSubset()
     typedef TTAG(TestEquilTypeTag) TypeTag;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     auto simulator = initSimulator<TypeTag>("data/equil_base.DATA");
-    const auto& eclipseState = simulator->gridManager().eclState();
+    const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
     initDefaultFluidSystem<TypeTag>();
@@ -289,7 +289,7 @@ void test_CellSubset()
     for (std::size_t d = 1; d < 3; ++d) { ncoarse *= cdim[d]; }
 
     std::vector< std::vector<int> > cells(ncoarse);
-    for (int c = 0; c < simulator->gridManager().grid().size(0); ++c) {
+    for (int c = 0; c < simulator->vanguard().grid().size(0); ++c) {
         int ci = c;
         const int i = ci % grid.cartdims[0];  ci /= grid.cartdims[0];
         const int j = ci % grid.cartdims[1];
@@ -304,7 +304,7 @@ void test_CellSubset()
         cells[ix].push_back(c);
     }
 
-    PPress ppress(2, PVal(simulator->gridManager().grid().size(0), 0));
+    PPress ppress(2, PVal(simulator->vanguard().grid().size(0), 0));
     for (std::vector< std::vector<int> >::const_iterator
              r = cells.begin(), e = cells.end();
          r != e; ++r)
@@ -312,7 +312,7 @@ void test_CellSubset()
         const int    rno  = int(r - cells.begin());
         const double grav = 10;
         const PPress p    =
-            Ewoms::EQUIL::phasePressures<FluidSystem>(simulator->gridManager().grid(), region[rno], *r, grav);
+            Ewoms::EQUIL::phasePressures<FluidSystem>(simulator->vanguard().grid(), region[rno], *r, grav);
 
         PVal::size_type i = 0;
         for (std::vector<int>::const_iterator
@@ -326,7 +326,7 @@ void test_CellSubset()
         }
     }
 
-    const int first = 0, last = simulator->gridManager().grid().size(0) - 1;
+    const int first = 0, last = simulator->vanguard().grid().size(0) - 1;
     const double reltol = 1.0e-8;
     CHECK_CLOSE(ppress[0][first] , 105e3   , reltol);
     CHECK_CLOSE(ppress[0][last ] , 195e3   , reltol);
@@ -370,7 +370,7 @@ void test_RegMapping()
         0)
         };
 
-    std::vector<int> eqlnum(simulator->gridManager().grid().size(0));
+    std::vector<int> eqlnum(simulator->vanguard().grid().size(0));
     // [ 0 1; 2 3]
     {
         for (int i = 0; i < 5; ++i) {
@@ -393,14 +393,14 @@ void test_RegMapping()
 
     Ewoms::RegionMapping<> eqlmap(eqlnum);
 
-    PPress ppress(2, PVal(simulator->gridManager().grid().size(0), 0));
+    PPress ppress(2, PVal(simulator->vanguard().grid().size(0), 0));
     for (const auto& r : eqlmap.activeRegions()) {
         const auto& rng = eqlmap.cells(r);
 
         const int    rno  = r;
         const double grav = 10;
         const PPress p    =
-            Ewoms::EQUIL::phasePressures<FluidSystem>(simulator->gridManager().grid(), region[rno], rng, grav);
+            Ewoms::EQUIL::phasePressures<FluidSystem>(simulator->vanguard().grid(), region[rno], rng, grav);
 
         PVal::size_type i = 0;
         for (const auto& c : rng) {
@@ -413,7 +413,7 @@ void test_RegMapping()
         }
     }
 
-    const int first = 0, last = simulator->gridManager().grid().size(0) - 1;
+    const int first = 0, last = simulator->vanguard().grid().size(0) - 1;
     const double reltol = 1.0e-8;
     CHECK_CLOSE(ppress[0][first] , 105e3   , reltol);
     CHECK_CLOSE(ppress[0][last ] , 195e3   , reltol);
@@ -425,11 +425,11 @@ void test_DeckAllDead()
 {
     typedef TTAG(TestEquilTypeTag) TypeTag;
     auto simulator = initSimulator<TypeTag>("data/equil_deadfluids.DATA");
-    const auto& eclipseState = simulator->gridManager().eclState();
+    const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->gridManager().grid(), 10.0);
+    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 10.0);
     const auto& pressures = comp.press();
     REQUIRE(pressures.size() == 3);
     REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -500,11 +500,11 @@ void test_DeckWithCapillary()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
     auto simulator = initSimulator<TypeTag>("data/equil_capillary.DATA");
-    auto& eclipseState = simulator->gridManager().eclState();
+    auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->gridManager().grid(), 10.0);
+    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 10.0);
 
     const auto& pressures = comp.press();
     REQUIRE(pressures.size() == 3);
@@ -538,11 +538,11 @@ void test_DeckWithCapillaryOverlap()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
     auto simulator = initSimulator<TypeTag>("data/equil_capillary_overlap.DATA");
-    const auto& eclipseState = simulator->gridManager().eclState();
+    const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->gridManager().grid(), 9.80665);
+    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
     const auto& pressures = comp.press();
     REQUIRE(pressures.size() == 3);
     REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -597,12 +597,12 @@ void test_DeckWithLiveOil()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
     auto simulator = initSimulator<TypeTag>("data/equil_liveoil.DATA");
-    const auto& eclipseState = simulator->gridManager().eclState();
+    const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
     // Initialize the fluid system
-    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->gridManager().grid(), 9.80665);
+    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
     const auto& pressures = comp.press();
     REQUIRE(pressures.size() == 3);
     REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -674,11 +674,11 @@ void test_DeckWithLiveGas()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
     auto simulator = initSimulator<TypeTag>("data/equil_livegas.DATA");
-    const auto& eclipseState = simulator->gridManager().eclState();
+    const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->gridManager().grid(), 9.80665);
+    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
     const auto& pressures = comp.press();
     REQUIRE(pressures.size() == 3);
     REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -754,11 +754,11 @@ void test_DeckWithRSVDAndRVVD()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
     auto simulator = initSimulator<TypeTag>("data/equil_rsvd_and_rvvd.DATA");
-    const auto& eclipseState = simulator->gridManager().eclState();
+    const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->gridManager().grid(), 9.80665);
+    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
     const auto& pressures = comp.press();
     REQUIRE(pressures.size() == 3);
     REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -854,11 +854,11 @@ void test_DeckWithPBVDAndPDVD()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
     auto simulator = initSimulator<TypeTag>("data/equil_pbvd_and_pdvd.DATA");
-    const auto& eclipseState = simulator->gridManager().eclState();
+    const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->gridManager().grid(), 9.80665);
+    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
     const auto& pressures = comp.press();
     REQUIRE(pressures.size() == 3);
     REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -945,7 +945,7 @@ void test_DeckWithSwatinit()
 #if 0
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
     auto simulator = initSimulator<TypeTag>("data/equil_capillary_swatinit.DATA");
-    const auto& eclipseState = simulator->gridManager().eclState();
+    const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
@@ -1029,9 +1029,9 @@ void test_DeckWithSwatinit()
 
     // compute the initial state
     // apply swatinit
-    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> compScaled(materialLawManagerScaled, eclipseState, simulator->gridManager().grid(), 9.81, true);
+    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> compScaled(materialLawManagerScaled, eclipseState, simulator->vanguard().grid(), 9.81, true);
     // don't apply swatinit
-    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> compUnscaled(*simulator->problem().materialLawManager(), eclipseState, simulator->gridManager().grid(), 9.81, false);
+    Ewoms::EQUIL::DeckDependent::InitialStateComputer<TypeTag> compUnscaled(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.81, false);
 
     // compute pc
     std::vector<double> pc_scaled(numCells * FluidSystem::numPhases);
