@@ -21,7 +21,7 @@
 #define OPM_SATURATIONPROPSFROMDECK_HEADER_INCLUDED
 
 #include <opm/core/props/satfunc/SaturationPropsInterface.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/grid.h>

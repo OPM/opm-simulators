@@ -47,7 +47,7 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/simulators/thresholdPressures.hpp> // Note: the GridHelpers must be included before this (to make overloads available). \TODO: Fix.
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
@@ -79,7 +79,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
-#include <opm/common/ResetLocale.hpp>
+#include <opm/common/utility/ResetLocale.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>

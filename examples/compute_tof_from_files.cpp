@@ -30,7 +30,7 @@
 #include <opm/core/utility/SparseTable.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/core/props/IncompPropertiesBasic.hpp>
 #include <opm/core/props/IncompPropertiesFromDeck.hpp>

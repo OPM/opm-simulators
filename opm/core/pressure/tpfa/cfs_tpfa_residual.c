@@ -8,7 +8,7 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
-#include <opm/core/linalg/blas_lapack.h>
+#include <opm/common/utility/numeric/blas_lapack.h>
 #include <opm/core/linalg/sparse_sys.h>
 
 #include <opm/core/pressure/tpfa/compr_quant_general.h>

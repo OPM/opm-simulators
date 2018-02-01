@@ -28,7 +28,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/core/linalg/LinearSolverFactory.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 
 #include <dune/common/version.hh>
 #include <memory>

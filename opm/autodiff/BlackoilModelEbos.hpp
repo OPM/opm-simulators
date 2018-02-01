@@ -42,7 +42,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
@@ -345,6 +345,7 @@ namespace Opm {
 
             wellModel().timeStepSucceeded();
             ebosSimulator_.problem().endTimeStep();
+            ebosSimulator_.problem().advanceTimeLevel();
 
         }
 

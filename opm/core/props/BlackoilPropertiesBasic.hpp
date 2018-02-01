@@ -25,7 +25,7 @@
 #include <opm/core/props/rock/RockBasic.hpp>
 #include <opm/core/props/pvt/PvtPropertiesBasic.hpp>
 #include <opm/core/props/satfunc/SaturationPropsBasic.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 
 namespace Opm
 {

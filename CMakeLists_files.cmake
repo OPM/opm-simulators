@@ -158,7 +158,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_parallel_linearsolver.cpp
   tests/test_satfunc.cpp
   tests/test_shadow.cpp
-  #tests/test_equil.cpp
+  tests/test_equil_legacy.cpp
   tests/test_blackoilstate.cpp
   tests/test_wellsmanager.cpp
   tests/test_wellcontrols.cpp
@@ -208,13 +208,14 @@ list (APPEND TEST_DATA_FILES
 
 # originally generated with the command:
 # find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
+
 if(DEV_BUILD)
 	list (APPEND EXAMPLE_SOURCE_FILES
-		examples/flow_legacy.cpp
+		#examples/flow_legacy.cpp
 		examples/flow.cpp
 		)
 	list (APPEND  PROGRAM_SOURCE_FILES
-		examples/flow_legacy.cpp
+		#examples/flow_legacy.cpp
 		examples/flow.cpp
 		)
 else()

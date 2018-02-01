@@ -27,7 +27,7 @@
 #include <opm/autodiff/DuneMatrix.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <dune/istl/scalarproducts.hh>
 #include <dune/istl/operators.hh>

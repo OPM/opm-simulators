@@ -46,7 +46,7 @@
 
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 
 /// \page tutorial3 Multiphase flow
 /// The Darcy law gives

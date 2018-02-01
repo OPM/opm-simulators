@@ -29,7 +29,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <boost/filesystem.hpp>
 #include <memory>
 #include <algorithm>

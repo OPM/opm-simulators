@@ -48,7 +48,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/well_controls.h>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
