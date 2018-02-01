@@ -205,13 +205,17 @@ list (APPEND TEST_DATA_FILES
   tests/norne_pvt.data
   )
 
+
+# originally generated with the command:
+# find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
+
 if(DEV_BUILD)
 	list (APPEND EXAMPLE_SOURCE_FILES
-                #examples/flow_legacy.cpp
+		#examples/flow_legacy.cpp
 		examples/flow.cpp
 		)
 	list (APPEND  PROGRAM_SOURCE_FILES
-                #examples/flow_legacy.cpp
+		#examples/flow_legacy.cpp
 		examples/flow.cpp
 		)
 else()
