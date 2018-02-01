@@ -207,11 +207,11 @@ list (APPEND TEST_DATA_FILES
 
 if(DEV_BUILD)
 	list (APPEND EXAMPLE_SOURCE_FILES
-		examples/flow_legacy.cpp
+                #examples/flow_legacy.cpp
 		examples/flow.cpp
 		)
 	list (APPEND  PROGRAM_SOURCE_FILES
-		examples/flow_legacy.cpp
+                #examples/flow_legacy.cpp
 		examples/flow.cpp
 		)
 else()
