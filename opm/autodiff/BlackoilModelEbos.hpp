@@ -345,6 +345,7 @@ namespace Opm {
 
             wellModel().timeStepSucceeded();
             ebosSimulator_.problem().endTimeStep();
+            ebosSimulator_.problem().advanceTimeLevel();
 
         }
 
