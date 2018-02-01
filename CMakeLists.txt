@@ -94,6 +94,7 @@ include (OpmLibMain)
 add_custom_target(opm-material_prepare)
 
 opm_add_test(test_blackoilfluidstate)
+opm_add_test(test_ConditionalStorage)
 opm_add_test(test_eclblackoilfluidsystem CONDITION OPM_PARSER_FOUND)
 opm_add_test(test_eclblackoilpvt CONDITION OPM_PARSER_FOUND)
 opm_add_test(test_eclmateriallawmanager CONDITION OPM_PARSER_FOUND)

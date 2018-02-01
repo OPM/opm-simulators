@@ -28,7 +28,6 @@
 #define OPM_MATERIAL_ENSURE_FINALIZED_HPP
 
 #include <cassert>
-#include <opm/common/ErrorMacros.hpp>
 
 // TODO: move this variable to config.h
 #define OPM_CHECK_PARAM_FINALIZED 1
@@ -63,10 +62,8 @@ protected:
     void check() const
     {
 #if USE_OPM_CHECK_PARAM_FINALIZED
-        if( ! finalized_ )
-        {
-            OPM_THROW(std::runtime_error,"Parameter class has not been finalized before usage!");
-        }
+        if (!finalized_)
+            throw std::runtime_error("Parameter class has not been finalized before usage!");
 #endif
     }
 

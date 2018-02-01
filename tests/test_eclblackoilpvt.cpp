@@ -52,9 +52,7 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/parallel/mpihelper.hh>
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 // values of strings based on the first SPE1 test case of opm-data.  note that in the
 // real world it does not make much sense to specify a fluid phase using more than a
@@ -235,9 +233,8 @@ inline void testAll()
     size_t numPvtRegions = pvtwKeyword.size();
 
     if (numPvtRegions != 2)
-        OPM_THROW(std::logic_error,
-                  "The number of PVT regions of the test deck must be 2. (is "
-                  << numPvtRegions << ")");
+        throw std::logic_error("The number of PVT regions of the test deck must be 2. (is "
+                               +std::to_string(numPvtRegions)+")");
 
     //////////
     // constant compressibility water
@@ -254,18 +251,16 @@ inline void testAll()
                                       /*temperature=*/273.15 + 20.0,
                                       /*pressure=*/1e5);
     if (std::abs(tmp - refTmp)  > tolerance)
-        OPM_THROW(std::logic_error,
-                  "The reference water viscosity at region 0 is supposed to be " << refTmp
-                  << ". (is " << tmp << ")");
+        throw std::logic_error("The reference water viscosity at region 0 is supposed to be "+std::to_string(refTmp)
+                               +". (is "+std::to_string(tmp)+")");
 
     refTmp = 1.2e-3;
     tmp = constCompWaterPvt.viscosity(/*regionIdx=*/1,
                                       /*temperature=*/273.15 + 20.0,
                                       /*pressure=*/2e5);
     if (std::abs(tmp - refTmp)  > tolerance)
-        OPM_THROW(std::logic_error,
-                  "The reference water viscosity at region 1 is supposed to be " << refTmp
-                  << ". (is " << tmp << ")");
+        throw std::logic_error("The reference water viscosity at region 1 is supposed to be "+std::to_string(refTmp)
+                               +". (is "+std::to_string(tmp)+")");
 
     //////////
     // the gas and oil PVT classes.

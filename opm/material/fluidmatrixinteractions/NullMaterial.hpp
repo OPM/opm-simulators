@@ -29,8 +29,7 @@
 
 #include "NullMaterialParams.hpp"
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
 #include <algorithm>
@@ -104,7 +103,7 @@ public:
     static void saturations(ContainerT& /*values*/,
                             const Params& /*params*/,
                             const FluidState& /*fluidState*/)
-    { OPM_THROW(std::logic_error, "Not defined: NullMaterial::saturations()"); }
+    { throw std::logic_error("Not defined: NullMaterial::saturations()"); }
 
     /*!
      * \brief The relative permeability of all phases.
@@ -142,12 +141,12 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Scalar Sw(const Params& /*params*/, const FluidState& /*fluidState*/)
-    { OPM_THROW(std::logic_error, "Not defined: Sw()"); }
+    { throw std::logic_error("Not defined: Sw()"); }
 
     template <class Evaluation>
     static typename std::enable_if<numPhases == 2, Evaluation>::type
     twoPhaseSatSw(const Params& /*params*/, const Evaluation& /*pcnw*/)
-    { OPM_THROW(std::logic_error, "Not defined: twoPhaseSatSw()"); }
+    { throw std::logic_error("Not defined: twoPhaseSatSw()"); }
 
     /*!
      * \brief Calculate non-wetting phase saturation given that the
@@ -155,12 +154,12 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Scalar Sn(const Params& /*params*/, const FluidState& /*fluidState*/)
-    { OPM_THROW(std::logic_error, "Not defined: Sn()"); }
+    { throw std::logic_error("Not defined: Sn()"); }
 
     template <class Evaluation>
     static typename std::enable_if<numPhases == 2, Evaluation>::type
     twoPhaseSatSn(const Params& /*params*/, const Evaluation& /*pcnw*/)
-    { OPM_THROW(std::logic_error, "Not defined: twoPhaseSatSn()"); }
+    { throw std::logic_error("Not defined: twoPhaseSatSn()"); }
 
     /*!
      * \brief Calculate gas phase saturation given that the rest of
@@ -171,7 +170,7 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static typename std::enable_if< (numPhases > 2), Evaluation>::type
     Sg(const Params& /*params*/, const FluidState& /*fluidState*/)
-    { OPM_THROW(std::logic_error, "Not defined: Sg()"); }
+    { throw std::logic_error("Not defined: Sg()"); }
 
     /*!
      * \brief The relative permability of the wetting phase

@@ -56,7 +56,7 @@ namespace Opm {
         break;                                                          \
     }                                                                   \
     case NoOilPvt:                                                      \
-        OPM_THROW(std::logic_error, "Not implemented: Oil PVT of this deck!"); \
+        throw std::logic_error("Not implemented: Oil PVT of this deck!"); \
     }
 
 /*!
@@ -251,7 +251,7 @@ public:
             break;
 
         case NoOilPvt:
-            OPM_THROW(std::logic_error, "Not implemented: Oil PVT of this deck!");
+            throw std::logic_error("Not implemented: Oil PVT of this deck!");
         }
 
         approach_ = appr;

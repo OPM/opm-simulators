@@ -60,9 +60,7 @@ namespace ComponentsTest {
 #include <opm/material/components/co2tables.inc>
 }}
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/parallel/mpihelper.hh>
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 template <class Scalar, class Evaluation>
 void testAllComponents()

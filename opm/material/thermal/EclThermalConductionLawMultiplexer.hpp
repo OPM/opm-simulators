@@ -78,7 +78,7 @@ public:
             return NullLaw::thermalConductivity(0, fluidState);
 
         default:
-            OPM_THROW(std::logic_error, "Invalid thermal conductivity approach: " << params.thermalConductionApproach());
+            throw std::logic_error("Invalid thermal conductivity approach: "+std::to_string(int(params.thermalConductionApproach())));
         }
     }
 };

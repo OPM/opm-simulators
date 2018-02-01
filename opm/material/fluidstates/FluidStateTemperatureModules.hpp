@@ -28,11 +28,10 @@
 #ifndef OPM_FLUID_STATE_TEMPERATURE_MODULES_HPP
 #define OPM_FLUID_STATE_TEMPERATURE_MODULES_HPP
 
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -167,7 +166,7 @@ public:
      * \brief The temperature of a fluid phase [-]
      */
     const Scalar& temperature(unsigned /* phaseIdx */) const
-    { OPM_THROW(std::runtime_error, "Temperature is not provided by this fluid state"); }
+    { throw std::runtime_error("Temperature is not provided by this fluid state"); }
 
     /*!
      * \brief Retrieve all parameters from an arbitrary fluid

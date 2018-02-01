@@ -43,9 +43,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/parallel/mpihelper.hh>
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 // values of strings taken from the SPE1 test case1 of opm-data
 static const char* fam1DeckString =
@@ -450,12 +448,10 @@ inline void testAll()
         materialLawManager.initFromDeck(deck, eclState, compressedToCartesianIdx);
 
         if (materialLawManager.enableEndPointScaling())
-            OPM_THROW(std::logic_error,
-                      "Discrepancy between the deck and the EclMaterialLawManager");
+            throw std::logic_error("Discrepancy between the deck and the EclMaterialLawManager");
 
         if (materialLawManager.enableHysteresis())
-            OPM_THROW(std::logic_error,
-                      "Discrepancy between the deck and the EclMaterialLawManager");
+            throw std::logic_error("Discrepancy between the deck and the EclMaterialLawManager");
 
         {
             const auto fam2Deck = parser.parseString(fam2DeckString, parseContext);
@@ -465,12 +461,10 @@ inline void testAll()
             fam2MaterialLawManager.initFromDeck(fam2Deck, fam2EclState, compressedToCartesianIdx);
 
             if (fam2MaterialLawManager.enableEndPointScaling())
-                OPM_THROW(std::logic_error,
-                          "Discrepancy between the deck and the EclMaterialLawManager");
+                throw std::logic_error("Discrepancy between the deck and the EclMaterialLawManager");
 
             if (fam2MaterialLawManager.enableHysteresis())
-                OPM_THROW(std::logic_error,
-                          "Discrepancy between the deck and the EclMaterialLawManager");
+                throw std::logic_error("Discrepancy between the deck and the EclMaterialLawManager");
 
             const auto hysterDeck = parser.parseString(hysterDeckString, parseContext);
             const Opm::EclipseState hysterEclState(hysterDeck, parseContext);
@@ -479,12 +473,10 @@ inline void testAll()
             hysterMaterialLawManager.initFromDeck(hysterDeck, hysterEclState, compressedToCartesianIdx);
 
             if (hysterMaterialLawManager.enableEndPointScaling())
-                OPM_THROW(std::logic_error,
-                          "Discrepancy between the deck and the EclMaterialLawManager");
+                throw std::logic_error("Discrepancy between the deck and the EclMaterialLawManager");
 
             if (hysterMaterialLawManager.enableHysteresis() != true)
-                OPM_THROW(std::logic_error,
-                          "Discrepancy between the deck and the EclMaterialLawManager");
+                throw std::logic_error("Discrepancy between the deck and the EclMaterialLawManager");
 
 
 
@@ -522,11 +514,9 @@ inline void testAll()
                         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
 
                             if (std::abs(pcFam1[phaseIdx] - pcFam2[phaseIdx]) > 1e-5)
-                                OPM_THROW(std::logic_error,
-                                          "Discrepancy between capillary pressure of family 1 and family 2 keywords");
+                                throw std::logic_error("Discrepancy between capillary pressure of family 1 and family 2 keywords");
                             if (std::abs(krFam1[phaseIdx] - krFam2[phaseIdx]) > 1e-1)
-                                OPM_THROW(std::logic_error,
-                                          "Discrepancy between relative permeabilities of family 1 and family 2 keywords");
+                                throw std::logic_error("Discrepancy between relative permeabilities of family 1 and family 2 keywords");
                         }
 
 
@@ -556,11 +546,9 @@ inline void testAll()
 
                         for (unsigned phasePairIdx = 0; phasePairIdx < 2; ++ phasePairIdx) {
                             if ((pcSwMdc_in[phasePairIdx] - pcSwMdc_out[phasePairIdx]) != 0.0)
-                                OPM_THROW(std::logic_error,
-                                          "Hysteresis parameters did not propagate correctly");
+                                throw std::logic_error("Hysteresis parameters did not propagate correctly");
                             if ((krnSwMdc_in[phasePairIdx] - krnSwMdc_out[phasePairIdx]) != 0.0)
-                                OPM_THROW(std::logic_error,
-                                          "Hysteresis parameters did not propagate correctly");
+                                throw std::logic_error("Hysteresis parameters did not propagate correctly");
 
                         }
                     }
@@ -613,11 +601,9 @@ inline void testAll()
                     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
 
                         if (std::abs(pcFam1[phaseIdx] - pcFam2[phaseIdx]) > 1e-5)
-                            OPM_THROW(std::logic_error,
-                                      "Discrepancy between capillary pressure of family 1 and family 2 keywords");
+                            throw std::logic_error("Discrepancy between capillary pressure of family 1 and family 2 keywords");
                         if (std::abs(krFam1[phaseIdx] - krFam2[phaseIdx]) > 1e-1)
-                            OPM_THROW(std::logic_error,
-                                      "Discrepancy between relative permeabilities of family 1 and family 2 keywords");
+                            throw std::logic_error("Discrepancy between relative permeabilities of family 1 and family 2 keywords");
                     }
                 }
             }

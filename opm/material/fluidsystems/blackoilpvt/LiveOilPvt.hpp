@@ -40,6 +40,10 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #endif
 
+#if HAVE_OPM_COMMON
+#include <opm/common/OpmLog/OpmLog.hpp>
+#endif
+
 namespace Opm {
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the oil phas
@@ -155,9 +159,8 @@ public:
                 }
 
                 if (masterTableIdx >= saturatedTable.numRows())
-                    OPM_THROW(std::runtime_error,
-                              "PVTO tables are invalid: The last table must exhibit at least one "
-                              "entry for undersaturated oil!");
+                    throw std::runtime_error("PVTO tables are invalid: The last table must exhibit at least one "
+                                             "entry for undersaturated oil!");
 
                 // extend the current table using the master table.
                 extendPvtoTable_(regionIdx,
@@ -417,8 +420,7 @@ public:
                         const Evaluation& pressure OPM_UNUSED,
                         const Evaluation& Rs OPM_UNUSED) const
     {
-        OPM_THROW(std::runtime_error,
-                  "Requested the enthalpy of oil but the thermal option is not enabled");
+        throw std::runtime_error("Requested the enthalpy of oil but the thermal option is not enabled");
     }
 
     /*!
@@ -570,8 +572,10 @@ public:
         errlog << "Finding saturation pressure did not converge:"
                << " pSat = " << pSat
                << ", Rs = " << Rs;
+#if HAVE_OPM_COMMON
         OpmLog::debug("Live oil saturation pressure", errlog.str());
-        OPM_THROW_NOLOG(NumericalProblem, errlog.str());
+#endif
+        throw NumericalIssue(errlog.str());
     }
 
 private:

@@ -33,9 +33,6 @@
 #include <cassert>
 #include <iostream>
 
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
-
 #include <opm/material/common/MathToolbox.hpp>
 
 namespace Opm {

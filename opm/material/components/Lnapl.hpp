@@ -29,7 +29,7 @@
 
 #include "Component.hpp"
 
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Unused.hpp>
 
 namespace Opm {
 /*!

@@ -37,8 +37,7 @@
 #include "EclThermalConductionLawMultiplexer.hpp"
 #include "EclThermalConductionLawMultiplexerParams.hpp"
 
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
@@ -112,9 +111,8 @@ public:
             return solidEnergyLawParams_[0];
 
         default:
-            OPM_THROW(std::runtime_error,
-                      "Attempting to retrieve solid energy storage parameters without "
-                      "a known approach being defined by the deck.");
+            throw std::runtime_error("Attempting to retrieve solid energy storage parameters "
+                                     "without a known approach being defined by the deck.");
         }
     }
 
@@ -130,9 +128,8 @@ public:
             return thermalConductionLawParams_[0];
 
         default:
-            OPM_THROW(std::runtime_error,
-                      "Attempting to retrieve thermal conduction parameters without "
-                      "a known approach being defined by the deck.");
+            throw std::runtime_error("Attempting to retrieve thermal conduction parameters without "
+                                     "a known approach being defined by the deck.");
         }
     }
 

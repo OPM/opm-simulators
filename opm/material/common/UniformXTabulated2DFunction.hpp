@@ -28,18 +28,17 @@
 #ifndef OPM_UNIFORM_X_TABULATED_2D_FUNCTION_HPP
 #define OPM_UNIFORM_X_TABULATED_2D_FUNCTION_HPP
 
-#include <opm/common/Valgrind.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/Unused.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
 #include <iostream>
 #include <vector>
 #include <limits>
 #include <tuple>
-
-#include <assert.h>
+#include <sstream>
+#include <cassert>
 
 namespace Opm {
 
@@ -265,15 +264,16 @@ public:
      * \brief Evaluate the function at a given (x,y) position.
      *
      * If this method is called for a value outside of the tabulated
-     * range, a \c Opm::NumericalProblem exception is thrown.
+     * range, a \c Opm::NumericalIssue exception is thrown.
      */
     template <class Evaluation>
     Evaluation eval(const Evaluation& x, const Evaluation& y, bool extrapolate=false) const
     {
 #ifndef NDEBUG
         if (!extrapolate && !applies(x, y)) {
-            OPM_THROW(NumericalProblem,
-                      "Attempt to get undefined table value (" << x << ", " << y << ")");
+            std::ostringstream oss;
+            oss << "Attempt to get undefined table value (" << x << ", " << y << ")";
+            throw NumericalIssue(oss.str());
         };
 #endif
 
@@ -319,9 +319,8 @@ public:
             samples_.insert(samples_.begin(), std::vector<SamplePoint>());
             return 0;
         }
-        OPM_THROW(std::invalid_argument,
-                  "Sampling points should be specified either monotonically "
-                  "ascending or descending.");
+        throw std::invalid_argument("Sampling points should be specified either monotonically "
+                                    "ascending or descending.");
     }
 
     /*!
@@ -344,9 +343,8 @@ public:
             return 0;
         }
 
-        OPM_THROW(std::invalid_argument,
-                  "Sampling points must be specified in either monotonically "
-                  "ascending or descending order.");
+        throw std::invalid_argument("Sampling points must be specified in either monotonically "
+                                    "ascending or descending order.");
     }
 
     /*!

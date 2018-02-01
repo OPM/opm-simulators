@@ -28,10 +28,8 @@
 #ifndef OPM_FLUID_STATE_FUGACITY_MODULES_HPP
 #define OPM_FLUID_STATE_FUGACITY_MODULES_HPP
 
-#include <opm/common/Valgrind.hpp>
-
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -188,13 +186,13 @@ public:
      * \brief The fugacity coefficient of a component in a phase []
      */
     const Scalar& fugacityCoefficient(unsigned /* phaseIdx */, unsigned /* compIdx */) const
-    { OPM_THROW(std::logic_error, "Fugacity coefficients are not provided by this fluid state"); }
+    { throw std::logic_error("Fugacity coefficients are not provided by this fluid state"); }
 
     /*!
      * \brief The fugacity of a component in a phase [Pa]
      */
     const Scalar& fugacity(unsigned /* phaseIdx */, unsigned /* compIdx */) const
-    { OPM_THROW(std::logic_error, "Fugacities coefficients are not provided by this fluid state"); }
+    { throw std::logic_error("Fugacities coefficients are not provided by this fluid state"); }
 
     /*!
      * \brief Make sure that all attributes are defined.

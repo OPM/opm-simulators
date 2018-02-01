@@ -57,7 +57,7 @@ namespace Opm {
         break;                                                          \
     }                                                                   \
     case NoGasPvt:                                                      \
-        OPM_THROW(std::logic_error, "Not implemented: Gas PVT of this deck!"); \
+        throw std::logic_error("Not implemented: Gas PVT of this deck!"); \
     }
 
 
@@ -148,7 +148,7 @@ public:
             break;
 
         case NoGasPvt:
-            OPM_THROW(std::logic_error, "Not implemented: Gas PVT of this deck!");
+            throw std::logic_error("Not implemented: Gas PVT of this deck!");
         }
 
         gasPvtApproach_ = gasPvtAppr;

@@ -32,7 +32,7 @@
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Unused.hpp>
 
 namespace Opm {
 /*!

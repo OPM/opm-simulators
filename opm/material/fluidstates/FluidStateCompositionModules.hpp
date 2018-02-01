@@ -28,11 +28,10 @@
 #ifndef OPM_FLUID_STATE_COMPOSITION_MODULES_HPP
 #define OPM_FLUID_STATE_COMPOSITION_MODULES_HPP
 
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -266,13 +265,13 @@ public:
      * \brief The mole fraction of a component in a phase []
      */
     Scalar moleFraction(unsigned /* phaseIdx */, unsigned /* compIdx */) const
-    { OPM_THROW(std::logic_error, "Mole fractions are not provided by this fluid state"); }
+    { throw std::logic_error("Mole fractions are not provided by this fluid state"); }
 
     /*!
      * \brief The mass fraction of a component in a phase []
      */
     Scalar massFraction(unsigned /* phaseIdx */, unsigned /* compIdx */) const
-    { OPM_THROW(std::logic_error, "Mass fractions are not provided by this fluid state"); }
+    { throw std::logic_error("Mass fractions are not provided by this fluid state"); }
 
     /*!
      * \brief The mean molar mass of a fluid phase [kg/mol]
@@ -283,7 +282,7 @@ public:
      * \f[ \bar M_\alpha = \sum_\kappa M^\kappa x_\alpha^\kappa \f]
      */
     Scalar averageMolarMass(unsigned /* phaseIdx */) const
-    { OPM_THROW(std::logic_error, "Mean molar masses are not provided by this fluid state"); }
+    { throw std::logic_error("Mean molar masses are not provided by this fluid state"); }
 
     /*!
      * \brief The concentration of a component in a phase [mol/m^3]
@@ -295,7 +294,7 @@ public:
      * http://en.wikipedia.org/wiki/Concentration
      */
     Scalar molarity(unsigned /* phaseIdx */, unsigned /* compIdx */) const
-    { OPM_THROW(std::logic_error, "Molarities are not provided by this fluid state"); }
+    { throw std::logic_error("Molarities are not provided by this fluid state"); }
 
     /*!
      * \brief Make sure that all attributes are defined.

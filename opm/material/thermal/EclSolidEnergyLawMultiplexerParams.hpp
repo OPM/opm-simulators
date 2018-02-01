@@ -73,8 +73,7 @@ public:
         solidEnergyApproach_ = newApproach;
         switch (solidEnergyApproach()) {
         case undefinedApproach:
-            OPM_THROW(std::logic_error,
-                      "Cannot set the approach for solid energy storage to 'undefined'!");
+            throw std::logic_error("Cannot set the approach for solid energy storage to 'undefined'!");
 
         case heatcrApproach:
             realParams_ = new HeatcrLawParams;

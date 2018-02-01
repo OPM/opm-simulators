@@ -36,9 +36,7 @@
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/parallel/mpihelper.hh>
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 template <class FluidSystem, class FluidState>
 void createSurfaceGasFluidSystem(FluidState& gasFluidState)
@@ -223,8 +221,7 @@ Scalar bringOilToSurface(FluidState& surfaceFluidState, Scalar alpha, const Flui
     ComponentVector tmpMolarities;
     for (int i = 0;; ++i) {
         if (i >= 20)
-            OPM_THROW(Opm::NumericalProblem,
-                       "Newton method did not converge after 20 iterations");
+            throw Opm::NumericalIssue("Newton method did not converge after 20 iterations");
 
         // calculate the deviation from the standard pressure
         tmpMolarities = molarities;

@@ -43,7 +43,7 @@
         break;                                                          \
     }                                                                   \
     case NoWaterPvt:                                                    \
-        OPM_THROW(std::logic_error, "Not implemented: Water PVT of this deck!"); \
+        throw std::logic_error("Not implemented: Water PVT of this deck!"); \
     }
 
 namespace Opm {
@@ -153,7 +153,7 @@ public:
             break;
 
         case NoWaterPvt:
-            OPM_THROW(std::logic_error, "Not implemented: Water PVT of this deck!");
+            throw std::logic_error("Not implemented: Water PVT of this deck!");
         }
 
         approach_ = appr;

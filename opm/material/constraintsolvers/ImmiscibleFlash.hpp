@@ -31,10 +31,8 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/common/Valgrind.hpp>
-
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -202,7 +200,7 @@ public:
 
             try { J.solve(deltaX, b); }
             catch (Dune::FMatrixError e) {
-                throw Opm::NumericalProblem(e.what());
+                throw Opm::NumericalIssue(e.what());
             }
             Valgrind::CheckDefined(deltaX);
 
@@ -215,10 +213,11 @@ public:
             }
         }
 
-        OPM_THROW(Opm::NumericalProblem,
-                  "ImmiscibleFlash solver failed: "
-                  "{c_alpha^kappa} = {" << globalMolarities << "}, "
-                  << "T = " << fluidState.temperature(/*phaseIdx=*/0));
+        std::ostringstream oss;
+        oss << "ImmiscibleFlash solver failed:"
+            << " {c_alpha^kappa} = {" << globalMolarities << "},"
+            << " T = " << fluidState.temperature(/*phaseIdx=*/0);
+    throw Opm::NumericalIssue(oss.str());
     }
 
 

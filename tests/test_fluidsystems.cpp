@@ -62,9 +62,7 @@ namespace FluidSystemsTest {
 #include <opm/material/components/co2tables.inc>
 } }
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/parallel/mpihelper.hh>
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 // check that the blackoil fluid system implements all non-standard functions
 template <class Evaluation, class FluidSystem>

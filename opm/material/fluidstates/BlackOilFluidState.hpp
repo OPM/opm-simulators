@@ -31,11 +31,10 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/common/HasMemberGeneratorMacros.hpp>
 
-#include <opm/common/Valgrind.hpp>
-#include <opm/common/Unused.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/utility/ConditionalStorage.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/Unused.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/ConditionalStorage.hpp>
 
 namespace Opm {
 OPM_GENERATE_HAS_MEMBER(pvtRegionIndex, ) // Creates 'HasMember_pvtRegionIndex<T>'.
@@ -392,8 +391,7 @@ public:
             break;
         }
 
-        OPM_THROW(std::logic_error,
-                  "Invalid phase or component index!");
+        throw std::logic_error("Invalid phase or component index!");
     }
 
     /*!
@@ -434,8 +432,7 @@ public:
             break;
         }
 
-        OPM_THROW(std::logic_error,
-                  "Invalid phase or component index!");
+        throw std::logic_error("Invalid phase or component index!");
     }
 
     /*!

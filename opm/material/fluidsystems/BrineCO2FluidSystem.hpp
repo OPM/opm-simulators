@@ -43,7 +43,7 @@
 #include <opm/material/binarycoefficients/Brine_CO2.hpp>
 #include <opm/material/binarycoefficients/H2O_N2.hpp>
 
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <iostream>
 
@@ -487,14 +487,16 @@ private:
         Valgrind::CheckDefined(xlCO2);
 
         if(T < 273.15) {
-            OPM_THROW(NumericalProblem,
-                      "Liquid density for Brine and CO2 is only "
-                      "defined above 273.15K (is " << T << "K)");
+            std::ostringstream oss;
+            oss << "Liquid density for Brine and CO2 is only "
+                "defined above 273.15K (is "<<T<<"K)";
+            throw NumericalIssue(oss.str());
         }
         if(pl >= 2.5e8) {
-            OPM_THROW(NumericalProblem,
-                      "Liquid density for Brine and CO2 is only "
-                      "defined below 250MPa (is " << pl << "Pa)");
+            std::ostringstream oss;
+            oss << "Liquid density for Brine and CO2 is only "
+                "defined below 250MPa (is "<<pl<<"Pa)";
+            throw NumericalIssue(oss.str());
         }
 
         const LhsEval& rho_brine = Brine::liquidDensity(T, pl);

@@ -28,11 +28,10 @@
 #ifndef OPM_FLUID_STATE_VISCOSITY_MODULES_HPP
 #define OPM_FLUID_STATE_VISCOSITY_MODULES_HPP
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <algorithm>
 
@@ -108,7 +107,7 @@ public:
      * \brief The viscosity of a fluid phase [-]
      */
     const Scalar& viscosity(unsigned /* phaseIdx */) const
-    { OPM_THROW(std::logic_error, "Viscosity is not provided by this fluid state"); }
+    { throw std::logic_error("Viscosity is not provided by this fluid state"); }
 
     /*!
      * \brief Retrieve all parameters from an arbitrary fluid

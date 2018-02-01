@@ -36,10 +36,9 @@
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/TabulatedComponent.hpp>
 #include <opm/material/binarycoefficients/H2O_N2.hpp>
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <iostream>
 #include <cassert>

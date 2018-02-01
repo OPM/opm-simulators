@@ -45,7 +45,7 @@
 #include <opm/material/fluidstates/NonEquilibriumFluidState.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Unused.hpp>
 #include <dune/common/classname.hh>
 
 #include <iostream>

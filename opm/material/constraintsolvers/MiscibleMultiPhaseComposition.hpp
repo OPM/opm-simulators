@@ -29,18 +29,11 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 
-
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
-
-
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Valgrind.hpp>
 
 namespace Opm {
 
@@ -261,8 +254,9 @@ public:
             M.solve(x, b);
         }
         catch (const Dune::FMatrixError& e) {
-            OPM_THROW(NumericalProblem,
-                      "Numerical problem in MiscibleMultiPhaseComposition::solve(): " << e.what() << "; M="<<M);
+            std::ostringstream oss;
+            oss << "Numerical problem in MiscibleMultiPhaseComposition::solve(): " << e.what() << "; M="<<M;
+            throw NumericalIssue(oss.str());
         }
         catch (...) {
             throw;

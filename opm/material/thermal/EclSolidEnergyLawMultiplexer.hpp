@@ -77,7 +77,7 @@ public:
             return NullLaw::solidInternalEnergy(0, fluidState);
 
         default:
-            OPM_THROW(std::logic_error, "Invalid solid energy approach: " << params.solidEnergyApproach());
+            throw std::logic_error("Invalid solid energy approach: "+std::to_string(int(params.solidEnergyApproach())));
         }
     }
 };

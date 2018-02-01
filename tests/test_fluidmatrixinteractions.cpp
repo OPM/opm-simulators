@@ -67,11 +67,9 @@
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/N2.hpp>
 
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Unused.hpp>
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/parallel/mpihelper.hh>
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 // this function makes sure that a capillary pressure law adheres to
 // the generic programming interface for such laws. This API _must_ be

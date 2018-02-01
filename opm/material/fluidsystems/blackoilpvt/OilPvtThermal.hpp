@@ -216,8 +216,7 @@ public:
                               const Evaluation& Rs OPM_UNUSED) const
     {
         if (!enableInternalEnergy_)
-            OPM_THROW(std::runtime_error,
-                      "Requested the internal energy of oil but it is disabled");
+            throw std::runtime_error("Requested the internal energy of oil but it is disabled");
 
         // compute the specific internal energy for the specified tempature. We use linear
         // interpolation here despite the fact that the underlying heat capacities are

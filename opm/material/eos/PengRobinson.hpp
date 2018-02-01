@@ -32,7 +32,7 @@
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/common/UniformTabulated2DFunction.hpp>
 
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Unused.hpp>
 #include <opm/material/common/PolynomialUtils.hpp>
 
 #include <csignal>
@@ -379,8 +379,10 @@ protected:
                         Vcrit = (maxVm + minVm)/2;
                         return;
                     }
-                    OPM_THROW(NumericalProblem,
-                               "Could not determine the critical point for a=" << a << ", b=" << b);
+
+                    std::ostringstream oss;
+                    oss << "Could not determine the critical point for a=" << a << ", b=" << b;
+                    throw NumericalIssue(oss.str());
                 }
 
                 if (findExtrema_(minVm, maxVm, minP, maxP, a, b, T - delta)) {

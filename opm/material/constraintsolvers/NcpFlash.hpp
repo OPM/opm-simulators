@@ -33,15 +33,12 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <limits>
 #include <iostream>
@@ -220,7 +217,7 @@ public:
             deltaX = 0.0;
             try { J.solve(deltaX, b); }
             catch (const Dune::FMatrixError& e) {
-                throw Opm::NumericalProblem(e.what());
+                throw Opm::NumericalIssue(e.what());
             }
             Valgrind::CheckDefined(deltaX);
 
@@ -233,10 +230,11 @@ public:
             }
         }
 
-        OPM_THROW(NumericalProblem,
-                  "NcpFlash solver failed: "
-                  "{c_alpha^kappa} = {" << globalMolarities << "}, "
-                  << "T = " << fluidState.temperature(/*phaseIdx=*/0));
+        std::ostringstream oss;
+        oss << "NcpFlash solver failed:"
+            << " {c_alpha^kappa} = {" << globalMolarities << "}, "
+            << " T = " << fluidState.temperature(/*phaseIdx=*/0);
+        throw NumericalIssue(oss.str());
     }
 
     /*!

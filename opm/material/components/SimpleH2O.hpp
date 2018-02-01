@@ -32,7 +32,7 @@
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <cmath>
 
@@ -304,8 +304,7 @@ public:
     template <class Evaluation>
     static Evaluation liquidPressure(const Evaluation& /*temperature*/, const Evaluation& /*density*/)
     {
-        OPM_THROW(std::logic_error,
-                  "The liquid pressure is undefined for incompressible fluids");
+        throw std::logic_error("The liquid pressure is undefined for incompressible fluids");
     }
 
     /*!

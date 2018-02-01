@@ -31,9 +31,8 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/IdealGas.hpp>
 
-#include <opm/common/Unused.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/material/common/Unused.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 namespace Opm {
 
@@ -54,7 +53,7 @@ public:
      * \brief Returns true iff the liquid phase is assumed to be compressible
      */
     static bool liquidIsCompressible()
-    { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidIsCompressible()"); }
+    { throw std::runtime_error("Not implemented: Component::liquidIsCompressible()"); }
 
     /*!
      * \brief A human readable name for the \f$Air\f$.
@@ -162,8 +161,7 @@ public:
     static Evaluation simpleGasViscosity(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
         if(temperature < 273.15 || temperature > 660.) {
-            OPM_THROW(NumericalProblem,
-                      "Air: Temperature (" << temperature << "K) out of range");
+            throw NumericalIssue("Air: Temperature "+std::to_string(Opm::scalarValue(temperature))+"K out of range");
         }
         return 1.496e-6*Opm::pow(temperature, 1.5)/(temperature + 120);
     }
