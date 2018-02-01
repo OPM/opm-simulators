@@ -27,6 +27,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/preconditioners.hh>
 #include <dune/istl/schwarz.hh>
+#include <dune/istl/operators.hh>
 #include <dune/istl/scalarproducts.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -53,6 +54,84 @@ namespace Opm
 namespace Detail
 {
 
+template<class M, class X, class Y, class T>
+Dune::MatrixAdapter<M,X,Y> createOperator(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
+{
+    return Dune::MatrixAdapter<M,X,Y>(matrix);
+}
+
+template<class M, class X, class Y, class T>
+Dune::OverlappingSchwarzOperator<M,X,Y,T> createOperator(const Dune::OverlappingSchwarzOperator<M,X,Y,T>&,
+                                                         const M& matrix, const T& comm)
+{
+    return Dune::OverlappingSchwarzOperator<M,X,Y,T>(matrix, comm);
+}
+
+//! \brief Applies diagonal scaling to the discretization Matrix (Scheichl, 2003)
+//!
+//! See section 3.2.3 of Scheichl, Masson: Decoupling and Block Preconditioning for
+//! Sedimentary Basin Simulations, 2003.
+//! \param op The operator that stems from the discretization.
+//! \param comm The communication objecte describing the data distribution.
+//! \param pressureIndex The index of the pressure in the matrix block
+//! \retun A pair of the scaled matrix and the associated operator-
+template<class Operator, class Communication>
+std::tuple<std::unique_ptr<typename Operator::matrix_type>, Operator>
+scaleMatrixQuasiImpes(const Operator& op, const Communication& comm,
+                      std::size_t pressureIndex)
+{
+    using Matrix = typename Operator::matrix_type;
+    using Block = typename Matrix::block_type;
+    std::unique_ptr<Matrix> matrix(new Matrix(op.getmat()));
+
+    for ( auto& row : *matrix )
+    {
+        for ( auto& block : row )
+        {
+            for ( std::size_t i = 0; i < Block::rows; i++ )
+            {
+                if ( i != pressureIndex )
+                {
+                    for(std::size_t j=0; j < Block::cols; j++)
+                    {
+                        block[pressureIndex][j] += block[i][j];
+                    }
+                }
+            }
+        }
+    }
+    return std::make_tuple(std::move(matrix), createOperator(op, *matrix, comm));
+}
+
+//! \brief Applies diagonal scaling to the discretization Matrix (Scheichl, 2003)
+//!
+//! See section 3.2.3 of Scheichl, Masson: Decoupling and Block Preconditioning for
+//! Sedimentary Basin Simulations, 2003.
+//! \param vector The vector to scale
+//! \param pressureIndex The index of the pressure in the matrix block
+template<class Vector>
+void scaleVectorQuasiImpes(Vector& vector, std::size_t pressureIndex)
+{
+    using Block = typename Vector::block_type;
+
+    for ( auto& block: vector)
+    {
+        for ( std::size_t i = 0; i < Block::dimension; i++ )
+        {
+            if ( i != pressureIndex )
+            {
+                block[pressureIndex] += block[i];
+            }
+        }
+    }
+}
+
+//! \brief TMP to create the scalar pendant to a real block matrix, vector, smoother, etc.
+//!
+//! \code
+//! using Scalar = ScalarType<BlockType>::value;
+//! \endcode
+//! will get the corresponding scalar type.
 template<typename NonScalarType>
 struct ScalarType
 {
@@ -656,6 +735,7 @@ class BlackoilAmg
 {
 public:
     using Operator = O;
+    using Matrix = typename Operator::matrix_type;
     using Criterion = C;
     using Communication = P;
     using Smoother = S;
@@ -698,10 +778,13 @@ public:
 
     BlackoilAmg(const Operator& fineOperator, const Criterion& criterion,
                 const SmootherArgs& smargs, const Communication& comm)
-        : smoother_(Detail::constructSmoother<Smoother>(fineOperator,smargs,comm)),
+        : scaledMatrixOperator_(Detail::scaleMatrixQuasiImpes(fineOperator, comm,
+                                                              COMPONENT_INDEX)),
+          smoother_(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
+                                                        smargs, comm)),
           levelTransferPolicy_(criterion, comm),
           coarseSolverPolicy_(smargs, criterion),
-          twoLevelMethod_(fineOperator, smoother_,
+          twoLevelMethod_(std::get<1>(scaledMatrixOperator_), smoother_,
                           levelTransferPolicy_,
                           coarseSolverPolicy_, 0, 1)
     {}
@@ -720,9 +803,12 @@ public:
     void apply(typename TwoLevelMethod::FineDomainType& v,
                const typename TwoLevelMethod::FineRangeType& d)
     {
-        twoLevelMethod_.apply(v, d);
+        auto scaledD = d;
+        Detail::scaleVectorQuasiImpes(scaledD, COMPONENT_INDEX);
+        twoLevelMethod_.apply(v, scaledD);
     }
 private:
+    std::tuple<std::unique_ptr<Matrix>, Operator> scaledMatrixOperator_;
     std::shared_ptr<Smoother> smoother_;
     LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;
