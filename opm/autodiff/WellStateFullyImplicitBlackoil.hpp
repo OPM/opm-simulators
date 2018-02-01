@@ -799,7 +799,7 @@ namespace Opm
      private:
         friend class boost::serialization::access;
         template<class Archive>
-        void myserialize(Archive & ar, const unsigned int version)
+        void serialize(Archive & ar, const unsigned int version)
         {
             ar & boost::serialization::base_object<BaseType>(*this);
             ar & perfphaserates_;
@@ -807,6 +807,7 @@ namespace Opm
             ar & perfRateSolvent_;
             ar & is_new_well_;
             ar & segrates_;
+            ar & segpress_;
             ar & top_segment_index_;
             ar & nseg_;
         }

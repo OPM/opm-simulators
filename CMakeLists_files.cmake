@@ -155,7 +155,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_multmatrixtransposed.cpp
   tests/test_multiphaseupwind.cpp
   tests/test_wellmodel.cpp
-#  tests/test_thresholdpressure.cpp
+  tests/test_thresholdpressure.cpp
   tests/test_wellswitchlogger.cpp
   tests/test_timer.cpp
   tests/test_invert.cpp
@@ -260,20 +260,6 @@ list (APPEND PROGRAM_SOURCE_FILES
   examples/sim_poly2p_incomp_reorder.cpp
   )
 
-	# programs listed here will not only be compiled, but also marked for
-	# installation
-	list (APPEND PROGRAM_SOURCE_FILES
-		examples/sim_2p_incomp.cpp
-		examples/sim_2p_incomp_ad.cpp
-		examples/sim_2p_comp_reorder.cpp
-		examples/flow.cpp
-		examples/flow_legacy.cpp
-		examples/flow_reorder.cpp
-		examples/flow_sequential.cpp
-		examples/sim_poly2p_comp_reorder.cpp
-		examples/sim_poly2p_incomp_reorder.cpp
-		)
-endif()
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
