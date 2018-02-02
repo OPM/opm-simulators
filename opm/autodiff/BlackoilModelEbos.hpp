@@ -238,7 +238,7 @@ namespace Opm {
             SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             // Store the initial previous.
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
-            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+            //std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
             ++timer;// get back to current step
             timer.report(std::cout);
             this->prepareStep(timer);//NB this should not be nesseary  *initial_reservoir_state*/, /*initial_well_state*/);
@@ -250,6 +250,12 @@ namespace Opm {
             ebosSimulator_.setTime(t);
             // seralizing may owerwrite prevois step since it was intended for restart ??
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
+            std::cout << "******* Start adjoint calculation ****** " << std::endl;
+            std::cout << "******* solution 1 ****** " << std::endl;
+            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+            std::cout << "******* solution 0 ****** " << std::endl;
+            std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
+
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
            // ebosSimulator_.model().update();
@@ -426,7 +432,20 @@ namespace Opm {
 
                 report.update_time += perfTimer.stop();
             }
-
+            else{
+                const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+                std::cout << "Printing pure residual in forward mode" << std::endl;
+                std::cout << ebosResid << std::endl;
+                // apply well residual to the residual.
+                wellModel().apply(ebosResid);
+                std::cout << "Printing pure residual in forward mode with well contributions" << std::endl;
+                std::cout << ebosResid << std::endl;
+                std::cout << "solution 1" << std::endl;
+                std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+                std::cout << "solution 0" << std::endl;
+                std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
+            }
             return report;
         }
 
@@ -610,12 +629,12 @@ namespace Opm {
             // apply well residual to the residual.
             wellModel().apply(ebosResid);
 
-            std::cout << "Printing pure residual in forward mode" << std::endl;
-            std::cout << ebosResid << std::endl;
-            std::cout << "solution 1" << std::endl;
-            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
-            std::cout << "solution 0" << std::endl;
-            std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
+//            std::cout << "Printing pure residual in forward mode" << std::endl;
+//            std::cout << ebosResid << std::endl;
+//            std::cout << "solution 1" << std::endl;
+//            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+//            std::cout << "solution 0" << std::endl;
+//            std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
 
             // set initial guess
             x = 0.0;

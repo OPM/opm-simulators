@@ -168,9 +168,7 @@ namespace Opm
             std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
             OPM_THROW_NOLOG(Opm::TooManyIterations, msg);
         }
-
-        // Do model-specific post-step actions.
-        model_->afterStep(timer, reservoir_state, well_state);
+        model_->afterStep(timer);
         model_->ebosSerialize();
         // well state do not have members of every thin
         {
