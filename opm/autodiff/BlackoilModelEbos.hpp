@@ -288,7 +288,8 @@ namespace Opm {
             std::cout << "Printing pure residual with out well contribution backward mode" << std::endl;
             std::cout << ebosResid << std::endl;
             double dt = timer.stepLengthTaken();
-            //int iterationIdx = 0;
+            //int
+            iterationIdx = 0;//for wells we need this to make update correctyin flow is make shift the state???
             assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
             wellModel().assemble(iterationIdx, ebosSimulator_.timeStepSize());
             wellModel().apply(ebosResid);
