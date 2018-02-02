@@ -90,7 +90,7 @@ namespace Opm
     /// Current step length.
     double SimulatorTimer::currentStepLength() const
     {
-        assert(!done());
+        //assert(!done());
         return timesteps_[current_step_];
     }
 
