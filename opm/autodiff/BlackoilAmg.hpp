@@ -317,12 +317,12 @@ public:
      * @param c The crition used for the aggregation within AMG.
      */
     OneStepAMGCoarseSolverPolicy(const SmootherArgs& args, const Criterion& c)
-        : smootherArgs_(args), criterion_(c)
+        : smootherArgs_(args), criterion_(c), use_amg_(true)
     {}
     /** @brief Copy constructor. */
     OneStepAMGCoarseSolverPolicy(const OneStepAMGCoarseSolverPolicy& other)
         : coarseOperator_(other.coarseOperator_), smootherArgs_(other.smootherArgs_),
-          criterion_(other.criterion_)
+          criterion_(other.criterion_), use_amg_(other.use_amg_)
     {}
 private:
     /**
@@ -336,9 +336,23 @@ private:
         AMGInverseOperator(const typename AMGType::Operator& op,
                            const Criterion& crit,
                            const typename AMGType::SmootherArgs& args,
-                           const Communication& comm)
-            : amg_(op, crit,args, comm), op_(op), comm_(comm), first_(true)
-        {}
+                           const Communication& comm,
+                           bool use_amg)
+            : amg_(), smoother_(), op_(op), comm_(comm), first_(true)
+        {
+            if ( use_amg )
+            {
+                amg_.reset(new AMGType(op, crit,args, comm));
+            }
+            else
+            {
+                typename Dune::Amg::ConstructionTraits<Smoother>::Arguments cargs;
+                cargs.setMatrix(op.getmat());
+                cargs.setComm(comm);
+                cargs.setArgs(args);
+                smoother_.reset(Dune::Amg::ConstructionTraits<Smoother>::construct(cargs));
+            }
+        }
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
         Dune::SolverCategory::Category category() const override
@@ -367,7 +381,12 @@ private:
             using Chooser = Dune::ScalarProductChooser<X,Communication,AMGType::category>;
             auto sp = Chooser::construct(comm_);
 #endif
-            Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, amg_, 1e-2, 25, 0);
+            Dune::Preconditioner<X,X>* prec = amg_.get();
+            if ( ! amg_ )
+            {
+                prec = smoother_.get();
+            }
+            Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec , 1e-2, 25, 0);
             solver.apply(x,b,res);
 #if ! DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             delete sp;
@@ -392,7 +411,8 @@ private:
         }
     private:
         X x_;
-        AMGType amg_;
+        std::unique_ptr<AMGType> amg_;
+        std::unique_ptr<Smoother> smoother_;
         const typename AMGType::Operator& op_;
         const Communication& comm_;
         bool first_;
@@ -417,7 +437,8 @@ public:
         AMGInverseOperator* inv = new AMGInverseOperator(*coarseOperator_,
                                                          criterion_,
                                                          smootherArgs_,
-                                                         transfer.getCoarseLevelCommunication());
+                                                         transfer.getCoarseLevelCommunication(),
+                                                         use_amg_);
 
         return inv; //std::shared_ptr<InverseOperator<X,X> >(inv);
 
@@ -430,6 +451,7 @@ private:
     SmootherArgs smootherArgs_;
     /** @brief The coarsening criterion. */
     Criterion criterion_;
+    bool use_amg_;
 };
 
 template<class Smoother, class Operator, class Communication>
