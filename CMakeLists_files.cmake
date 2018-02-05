@@ -26,6 +26,11 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
+  opm/simulators/flow_ebos_blackoil.cpp
+  opm/simulators/flow_ebos_gasoil.cpp
+  opm/simulators/flow_ebos_oilwater.cpp
+  opm/simulators/flow_ebos_polymer.cpp
+  opm/simulators/flow_ebos_solvent.cpp
   opm/autodiff/Compat.cpp
   opm/autodiff/ExtractParallelGridInformationToISTL.cpp
   opm/autodiff/NewtonIterationBlackoilCPR.cpp
@@ -113,11 +118,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/polymer/SimulatorPolymer.cpp
   opm/polymer/TransportSolverTwophaseCompressiblePolymer.cpp
   opm/polymer/TransportSolverTwophasePolymer.cpp
-  opm/simulators/flow_ebos_blackoil.cpp
-  opm/simulators/flow_ebos_gasoil.cpp
-  opm/simulators/flow_ebos_oilwater.cpp
-  opm/simulators/flow_ebos_polymer.cpp
-  opm/simulators/flow_ebos_solvent.cpp
   opm/simulators/ensureDirectoryExists.cpp
   opm/simulators/SimulatorCompressibleTwophase.cpp
   opm/simulators/WellSwitchingLogger.cpp
