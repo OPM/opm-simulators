@@ -615,15 +615,17 @@ public:
     typedef Communication ParallelInformation;
 
 public:
-    OneComponentAggregationLevelTransferPolicy(const Criterion& crit, const Communication& comm)
-        : criterion_(crit), communication_(&const_cast<Communication&>(comm)), use_aggregation_(false)
+    OneComponentAggregationLevelTransferPolicy(const Criterion& crit, const Communication& comm,
+                                               bool cpr_pressure_aggregation)
+        : criterion_(crit), communication_(&const_cast<Communication&>(comm)),
+          cpr_pressure_aggregation_(cpr_pressure_aggregation)
     {}
 
     void createCoarseLevelSystem(const Operator& fineOperator)
     {
         prolongDamp_ = 1;
 
-        if ( use_aggregation_ )
+        if ( cpr_pressure_aggregation_ )
         {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             typedef Dune::Amg::PropertiesGraphCreator<Operator,Communication> GraphCreator;
@@ -755,7 +757,7 @@ public:
         // Set coarse vector to zero
         this->rhs_=0;
 
-        if ( use_aggregation_ )
+        if ( cpr_pressure_aggregation_ )
         {
             auto end = fine.end(),  begin=fine.begin();
 
@@ -783,7 +785,7 @@ public:
 
     void moveToFineLevel(typename FatherType::FineDomainType& fine)
     {
-        if( use_aggregation_ )
+        if( cpr_pressure_aggregation_ )
         {
             this->lhs_ *= prolongDamp_;
             auto end=fine.end(), begin=fine.begin();
@@ -823,7 +825,7 @@ private:
     Communication* communication_;
     std::shared_ptr<Communication> coarseLevelCommunication_;
     std::shared_ptr<typename CoarseOperator::matrix_type> coarseLevelMatrix_;
-    bool use_aggregation_;
+    bool cpr_pressure_aggregation_;
 };
 
 template<typename O, typename S, typename C,
@@ -882,7 +884,7 @@ public:
                                                               COMPONENT_INDEX)),
           smoother_(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
                                                         smargs, comm)),
-          levelTransferPolicy_(criterion, comm),
+          levelTransferPolicy_(criterion, comm, param.cpr_pressure_aggregation_),
           coarseSolverPolicy_(&param, smargs, criterion),
           twoLevelMethod_(std::get<1>(scaledMatrixOperator_), smoother_,
                           levelTransferPolicy_,

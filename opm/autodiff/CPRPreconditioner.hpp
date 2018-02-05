@@ -240,6 +240,7 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
         bool cpr_use_amg_;
         bool cpr_use_bicgstab_;
         bool cpr_solver_verbose_;
+        bool cpr_pressure_aggregation_;
 
         CPRParameter() { reset(); }
 
@@ -255,6 +256,7 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
             cpr_use_amg_        = param.getDefault("cpr_use_amg", cpr_use_amg_);
             cpr_use_bicgstab_   = param.getDefault("cpr_use_bicgstab", cpr_use_bicgstab_);
             cpr_solver_verbose_ = param.getDefault("cpr_solver_verbose", cpr_solver_verbose_);
+            cpr_pressure_aggregation_ = param.getDefault("cpr_pressure_aggregation", cpr_pressure_aggregation_);
         }
 
         void reset()
@@ -266,6 +268,7 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
             cpr_use_amg_        = true;
             cpr_use_bicgstab_   = true;
             cpr_solver_verbose_ = false;
+            cpr_pressure_aggregation_ = false;
         }
     };
 
