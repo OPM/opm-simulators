@@ -26,11 +26,15 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
+	# place the flow_ebos_*.cpp files on top of the list because they
+	# take the longest to compile, and compiling them first speeds up
+	# parallel builds because it allows the jobserver to do better scheduling
   opm/simulators/flow_ebos_blackoil.cpp
   opm/simulators/flow_ebos_gasoil.cpp
   opm/simulators/flow_ebos_oilwater.cpp
   opm/simulators/flow_ebos_polymer.cpp
   opm/simulators/flow_ebos_solvent.cpp
+
   opm/autodiff/Compat.cpp
   opm/autodiff/ExtractParallelGridInformationToISTL.cpp
   opm/autodiff/NewtonIterationBlackoilCPR.cpp
