@@ -404,7 +404,7 @@ namespace Opm
             parallelInformation_arg.copyOwnerToAll(istlb, istlb);
 
 #if FLOW_SUPPORT_AMG // activate AMG if either flow_ebos is used or UMFPack is not available
-            if( parameters_.linear_solver_use_amg_ )
+            if( parameters_.linear_solver_use_amg_ || parameters_.use_cpr_)
             {
                 typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
                 typedef typename CPRSelectorType::Operator MatrixOperator;
@@ -418,7 +418,7 @@ namespace Opm
                 }
 
                 const double relax = parameters_.ilu_relaxation_;
-                if ( ! parameters_.amg_blackoil_system_ )
+                if ( ! parameters_.use_cpr_ )
                 {
                     typedef typename CPRSelectorType::AMG AMG;
                     std::unique_ptr< AMG > amg;
@@ -519,7 +519,7 @@ namespace Opm
         void
         constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax ) const
         {
-            ISTLUtility::template createAMGPreconditionerPointer<C>( *opA, relax, comm, amg );
+            ISTLUtility::template createAMGPreconditionerPointer<C>( *opA, relax, comm, amg, parameters_ );
         }
 
 
@@ -527,7 +527,7 @@ namespace Opm
         void
         constructAMGPrecond(MatrixOperator& opA, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >&, const double relax ) const
         {
-            ISTLUtility::template createAMGPreconditionerPointer<C>( opA, relax, comm, amg );
+            ISTLUtility::template createAMGPreconditionerPointer<C>( opA, relax, comm, amg, parameters_ );
         }
         /// \brief Solve the system using the given preconditioner and scalar product.
         template <class Operator, class ScalarProd, class Precond>

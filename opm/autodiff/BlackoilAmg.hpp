@@ -316,13 +316,13 @@ public:
      * @param args The arguments used for constructing the smoother.
      * @param c The crition used for the aggregation within AMG.
      */
-    OneStepAMGCoarseSolverPolicy(const SmootherArgs& args, const Criterion& c)
-        : smootherArgs_(args), criterion_(c), use_amg_(true)
+    OneStepAMGCoarseSolverPolicy(const CPRParameter* param, const SmootherArgs& args, const Criterion& c)
+        : param_(param), smootherArgs_(args), criterion_(c)
     {}
     /** @brief Copy constructor. */
     OneStepAMGCoarseSolverPolicy(const OneStepAMGCoarseSolverPolicy& other)
-        : coarseOperator_(other.coarseOperator_), smootherArgs_(other.smootherArgs_),
-          criterion_(other.criterion_), use_amg_(other.use_amg_)
+        : param_(other.param_), coarseOperator_(other.coarseOperator_), smootherArgs_(other.smootherArgs_),
+          criterion_(other.criterion_)
     {}
 private:
     /**
@@ -333,14 +333,14 @@ private:
      */
     struct AMGInverseOperator : public Dune::InverseOperator<X,X>
     {
-        AMGInverseOperator(const typename AMGType::Operator& op,
+        AMGInverseOperator(const CPRParameter* param,
+                           const typename AMGType::Operator& op,
                            const Criterion& crit,
                            const typename AMGType::SmootherArgs& args,
-                           const Communication& comm,
-                           bool use_amg)
-            : amg_(), smoother_(), op_(op), comm_(comm), first_(true)
+                           const Communication& comm)
+            : param_(param), amg_(), smoother_(), op_(op), comm_(comm), first_(true)
         {
-            if ( use_amg )
+            if ( param_->cpr_use_amg_ )
             {
                 amg_.reset(new AMGType(op, crit,args, comm));
             }
@@ -386,8 +386,24 @@ private:
             {
                 prec = smoother_.get();
             }
-            Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec , 1e-2, 25, 0);
-            solver.apply(x,b,res);
+            // Linear solver parameters
+            const double tolerance = param_->cpr_solver_tol_;
+            const int maxit        = param_->cpr_max_ell_iter_;
+            const int verbosity    = ( param_->cpr_solver_verbose_ &&
+                                       comm_.communicator().rank()==0 ) ? 1 : 0;
+            if ( param_->cpr_use_bicgstab_ )
+            {
+                Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
+                                               tolerance, maxit, verbosity);
+                solver.apply(x,b,res);
+            }
+            else
+            {
+                Dune::CGSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
+                                         tolerance, maxit, verbosity);
+                solver.apply(x,b,res);
+            }
+
 #if ! DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             delete sp;
 #endif
@@ -410,6 +426,7 @@ private:
         {
         }
     private:
+        const CPRParameter* param_;
         X x_;
         std::unique_ptr<AMGType> amg_;
         std::unique_ptr<Smoother> smoother_;
@@ -434,11 +451,11 @@ public:
         coarseOperator_=transferPolicy.getCoarseLevelOperator();
         const LevelTransferPolicy& transfer =
             reinterpret_cast<const LevelTransferPolicy&>(transferPolicy);
-        AMGInverseOperator* inv = new AMGInverseOperator(*coarseOperator_,
+        AMGInverseOperator* inv = new AMGInverseOperator(param_,
+                                                         *coarseOperator_,
                                                          criterion_,
                                                          smootherArgs_,
-                                                         transfer.getCoarseLevelCommunication(),
-                                                         use_amg_);
+                                                         transfer.getCoarseLevelCommunication());
 
         return inv; //std::shared_ptr<InverseOperator<X,X> >(inv);
 
@@ -447,11 +464,12 @@ public:
 private:
     /** @brief The coarse level operator. */
     std::shared_ptr<Operator> coarseOperator_;
+    /** @brief The parameters for the CPR preconditioner. */
+    const CPRParameter* param_;
     /** @brief The arguments used to construct the smoother. */
     SmootherArgs smootherArgs_;
     /** @brief The coarsening criterion. */
     Criterion criterion_;
-    bool use_amg_;
 };
 
 template<class Smoother, class Operator, class Communication>
@@ -856,14 +874,16 @@ public:
     };
 #endif
 
-    BlackoilAmg(const Operator& fineOperator, const Criterion& criterion,
+    BlackoilAmg(const CPRParameter& param,
+                const Operator& fineOperator, const Criterion& criterion,
                 const SmootherArgs& smargs, const Communication& comm)
-        : scaledMatrixOperator_(Detail::scaleMatrixQuasiImpes(fineOperator, comm,
+        : param_(param),
+          scaledMatrixOperator_(Detail::scaleMatrixQuasiImpes(fineOperator, comm,
                                                               COMPONENT_INDEX)),
           smoother_(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
                                                         smargs, comm)),
           levelTransferPolicy_(criterion, comm),
-          coarseSolverPolicy_(smargs, criterion),
+          coarseSolverPolicy_(&param, smargs, criterion),
           twoLevelMethod_(std::get<1>(scaledMatrixOperator_), smoother_,
                           levelTransferPolicy_,
                           coarseSolverPolicy_, 0, 1)
@@ -888,6 +908,7 @@ public:
         twoLevelMethod_.apply(v, scaledD);
     }
 private:
+    const CPRParameter& param_;
     std::tuple<std::unique_ptr<Matrix>, Operator> scaledMatrixOperator_;
     std::shared_ptr<Smoother> smoother_;
     LevelTransferPolicy levelTransferPolicy_;

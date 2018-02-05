@@ -52,6 +52,12 @@
 namespace Opm
 {
 
+struct CPRParameter;
+
+template<typename O, typename S, typename C,
+         typename P, std::size_t COMPONENT_INDEX>
+class BlackoilAmg;
+
 namespace ISTLUtility
 {
 ///
@@ -149,9 +155,36 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
     return EllipticPreconditionerPointer(new ParallelPreconditioner(Ae, comm, relax));
 }
 
+template < class C, class Op, class P, class S, std::size_t index >
+inline void
+createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
+                               std::unique_ptr< BlackoilAmg<Op,S,C,P,index> >& amgPtr,
+                               const CPRParameter& params = CPRParameter())
+{
+    using AMG = BlackoilAmg<Op,S,C,P,index>;
+    // TODO: revise choice of parameters
+    int coarsenTarget=1200;
+    using Criterion = C;
+    Criterion criterion(15, coarsenTarget);
+    criterion.setDebugLevel( 0 ); // no debug information, 1 for printing hierarchy information
+    criterion.setDefaultValuesIsotropic(2);
+    criterion.setNoPostSmoothSteps( 1 );
+    criterion.setNoPreSmoothSteps( 1 );
+
+    // for DUNE 2.2 we also need to pass the smoother args
+    typedef typename AMG::Smoother Smoother;
+    typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
+    SmootherArgs  smootherArgs;
+    smootherArgs.iterations = 1;
+    smootherArgs.relaxationFactor = relax;
+
+    amgPtr.reset( new AMG( params, opA, criterion, smootherArgs, comm ) );
+}
+
 template < class C, class Op, class P, class AMG >
 inline void
-createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm, std::unique_ptr< AMG >& amgPtr )
+createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm, std::unique_ptr< AMG >& amgPtr,
+                               const CPRParameter& params = CPRParameter())
 {
     // TODO: revise choice of parameters
     int coarsenTarget=1200;
