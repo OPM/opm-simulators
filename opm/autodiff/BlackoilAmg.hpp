@@ -54,12 +54,25 @@ namespace Opm
 namespace Detail
 {
 
+/**
+ * \brief Creates a MatrixAdapter as an operator
+ *
+ * The first argument is used to specify the return type using function overloading.
+ * \param matrix The matrix to wrap.
+ */
 template<class M, class X, class Y, class T>
 Dune::MatrixAdapter<M,X,Y> createOperator(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
 {
     return Dune::MatrixAdapter<M,X,Y>(matrix);
 }
 
+/**
+ * \brief Creates an OverlappingSchwarzOperator as an operator.
+ *
+ * The first argument is used to specify the return type using function overloading.
+ * \param matrix The matrix to wrap.
+ * \param comm The object encapsulating the parallelization information.
+ */
 template<class M, class X, class Y, class T>
 Dune::OverlappingSchwarzOperator<M,X,Y,T> createOperator(const Dune::OverlappingSchwarzOperator<M,X,Y,T>&,
                                                          const M& matrix, const T& comm)
@@ -828,20 +841,39 @@ private:
     bool cpr_pressure_aggregation_;
 };
 
+/**
+ * \brief An algebraic twolevel or multigrid approach for solving blackoil (supports CPR with and without AMG)
+ *
+ * This preconditioner first decouples the component used for coarsening using a simple scaling
+ * approach (e.g. Scheichl, Masson 2013,\see scaleMatrixQuasiImpes). Then it constructs the first
+ * coarse level system, either by simply extracting the coupling between the components at COMPONENT_INDEX
+ * in the matrix blocks or by extracting them and applying aggregation to the directly. This coarse level
+ * can be solved either by AMG or by ILU. The preconditioner is configured using CPRParameter.
+ * \tparam O The type of the operator (encapsulating a BCRSMatrix).
+ * \tparam S The type of the smoother.
+ * \tparam C The type of coarsening criterion to use.
+ * \tparam P The type of the class describing the parallelelization.
+ * \tparam COMPONENT_INDEX The index of the component to use for coarsening (usually the pressure).
+ */
 template<typename O, typename S, typename C,
          typename P, std::size_t COMPONENT_INDEX>
 class BlackoilAmg
     : public Dune::Preconditioner<typename O::domain_type, typename O::range_type>
 {
 public:
+    /** \brief The type of the operator (encapsulating a BCRSMatrix). */
     using Operator = O;
-    using Matrix = typename Operator::matrix_type;
+    /** \brief The type of coarsening criterion to use. */
     using Criterion = C;
+    /** \brief The type of the class describing the parallelelization. */
     using Communication = P;
+    /** \brief The type of the smoother. */
     using Smoother = S;
+    /** \brief The type of the smoother arguments for construction. */
+    using SmootherArgs   = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
 
 protected:
-    using SmootherArgs   = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
+    using Matrix = typename Operator::matrix_type;
     using CoarseOperator = typename Detail::ScalarType<Operator>::value;
     using CoarseSmoother = typename Detail::ScalarType<Smoother>::value;
     using FineCriterion  =
@@ -875,7 +907,14 @@ public:
         category = Operator::category
     };
 #endif
-
+    /**
+     * \brief Constructor.
+     * \param param The parameters used for configuring the solver.
+     * \param fineOperator The operator of the fine level.
+     * \param criterion The criterion describing the coarsening approach.
+     * \param smargs The arguments for constructing the smoother.
+     * \param comm The information about the parallelization.
+     */
     BlackoilAmg(const CPRParameter& param,
                 const Operator& fineOperator, const Criterion& criterion,
                 const SmootherArgs& smargs, const Communication& comm)
