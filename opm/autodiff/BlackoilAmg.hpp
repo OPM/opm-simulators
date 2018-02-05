@@ -406,15 +406,53 @@ private:
                                        comm_.communicator().rank()==0 ) ? 1 : 0;
             if ( param_->cpr_use_bicgstab_ )
             {
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
                                                tolerance, maxit, verbosity);
                 solver.apply(x,b,res);
+#else
+                // Category of preconditioner will be checked at compile time. Therefore we need
+                // to cast to the derived class
+                if ( !amg_ )
+                {
+                    Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
+                                                   reinterpret_cast<Smoother&>(*prec),
+                                                   tolerance, maxit, verbosity);
+                    solver.apply(x,b,res);
+                }
+                else
+                {
+                    Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
+                                                   reinterpret_cast<AMGType&>(*prec),
+                                                   tolerance, maxit, verbosity);
+                    solver.apply(x,b,res);
+                }
+#endif
             }
             else
             {
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 Dune::CGSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
                                          tolerance, maxit, verbosity);
                 solver.apply(x,b,res);
+#else
+                // Category of preconditioner will be checked at compile time. Therefore we need
+                // to cast to the derived class
+                if ( !amg_ )
+                {
+                  Dune::CGSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
+                                                 reinterpret_cast<Smoother&>(*prec),
+                                                 tolerance, maxit, verbosity);
+                  solver.apply(x,b,res);
+                }
+                else
+                {
+                    Dune::CGSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
+                                                   reinterpret_cast<AMGType&>(*prec),
+                                                   tolerance, maxit, verbosity);
+                    solver.apply(x,b,res);
+                }
+#endif
             }
 
 #if ! DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
