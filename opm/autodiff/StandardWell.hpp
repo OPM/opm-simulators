@@ -27,6 +27,7 @@
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolver.hpp>
 #include <opm/autodiff/RateConverter.hpp>
+#include <dune/istl/matrixmarket.hh>
 
 namespace Opm
 {
@@ -189,22 +190,19 @@ namespace Opm
             return param_.matrix_add_well_contributions_;
         }
 
-        void printMatrixes(){
+        void printMatrixes() const{
             std::cout << "duneB " << std::endl;
             Dune::writeMatrixMarket(duneB_, std::cout);
             std::cout << std::endl;
-            OffDiagMatWell duneB_;
             std::cout << "duneC " << std::endl;
             Dune::writeMatrixMarket(duneC_, std::cout);
             std::cout << std::endl;
             std::cout << "invDuneD " << std::endl;
             // diagonal matrix for the well
-            DiagMatWell invDuneD_;
             Dune::writeMatrixMarket(invDuneD_, std::cout);
-            std::cout << std::endl;
+            //std::cout << std::endl;
             // for adjoint
             std::cout << "duneCA " << std::endl;
-            OffDiagMatWellAdjoint duneCA_;
             Dune::writeMatrixMarket(duneCA_, std::cout);
             std::cout << std::endl;
             //OffDiagMatWellAdjoint duneCA_;

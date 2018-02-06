@@ -1,5 +1,10 @@
+/*
+ */
 
+#ifndef OPM_BLACKOILWELLMODEL_IMPL_HEADER_INCLUDED
+#define OPM_BLACKOILWELLMODEL_IMPL_HEADER_INCLUDED
 
+#include "BlackoilWellModel.hpp"
 
 namespace Opm {
     template<typename TypeTag>
@@ -432,6 +437,25 @@ namespace Opm {
             well->assembleWellEq(ebosSimulator_, dt, well_state_, only_wells);
         }
     }
+
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    printMatrixes() const
+    {
+        if ( ! localWellsActive() ) {
+            return;
+        }
+
+        for (auto& well : well_container_) {
+            std::cout << "********************************* " << std::endl;
+            std::cout << "Print matrixes for " << well->name() << std::endl;
+            well->printMatrixes();
+        }
+    }
+
 
     // applying the well residual to reservoir residuals
     // r = r - duneC_^T * invDuneD_ * resWell_
@@ -1391,3 +1415,5 @@ namespace Opm {
     }
 
 } // namespace Opm
+
+#endif //OPM_BLACKOILWELLMODEL_IMPL_HEADER_INCLUDED

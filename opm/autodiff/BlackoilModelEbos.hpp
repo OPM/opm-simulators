@@ -323,6 +323,7 @@ namespace Opm {
             assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
             wellModel().assemble(/*iterationIdx*/ 0, ebosSimulator_.timeStepSize());
             wellModel().apply(ebosResid);
+            wellModel().printMatrixes();
 
             //wellModel().recoverWellSolutionAndUpdateWellState(x);
             std::cout << "Printing pure residual in backward mode" << std::endl;

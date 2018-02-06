@@ -19,6 +19,10 @@
 */
 
 
+#ifndef OPM_STANDARDWELLS_IMPL_HEADER_INCLUDED
+#define OPM_STANDARDWELLS_IMPL_HEADER_INCLUDED
+
+#include "StandardWell.hpp"
 #include <opm/autodiff/StandardWells.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
 
@@ -1662,3 +1666,4 @@ namespace Opm
 
 
 } // namespace Opm
+#endif

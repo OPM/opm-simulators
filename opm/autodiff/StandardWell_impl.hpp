@@ -18,7 +18,10 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
+#define OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
 
+#include "StandardWell.hpp"
 
 namespace Opm
 {
@@ -143,35 +146,7 @@ namespace Opm
     StandardWell<TypeTag>::
     getBhp() const
     {
-<<<<<<< HEAD
         return primary_variables_evaluation_[Bhp];
-=======
-        const WellControls* wc = well_controls_;
-        if (well_controls_get_current_type(wc) == BHP) {
-            EvalWell bhp = 0.0;
-            const double target_rate = well_controls_get_current_target(wc);
-            bhp.setValue(target_rate);
-            bhp.setDerivative(control_index, 1.0);
-            return bhp;
-        } else if (well_controls_get_current_type(wc) == THP) {
-            const int control = well_controls_get_current(wc);
-
-            const Opm::PhaseUsage& pu = phaseUsage();
-            std::vector<EvalWell> rates(3, 0.0);
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                rates[ Water ]= getQs(pu.phase_pos[ Water]);
-            }
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                rates[ Oil ] = getQs(pu.phase_pos[ Oil ]);
-            }
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                rates[ Gas ] = getQs(pu.phase_pos[ Gas ]);
-            }
-            return calculateBhpFromThp(rates, control);
-        }
-
-        return primary_variables_evaluation_[XvarWell];
->>>>>>> added adjoint capability for well control
     }
 
 
@@ -183,89 +158,12 @@ namespace Opm
     StandardWell<TypeTag>::
     getWQTotal() const
     {
-<<<<<<< HEAD
         return primary_variables_evaluation_[WQTotal];
     }
-=======
-        EvalWell qs = 0.0;
-
-        const WellControls* wc = well_controls_;
-        const int np = number_of_phases_;
-        //const double target_rate = well_controls_get_current_target(wc);
-        const double target_rate_ctrl = well_controls_get_current_target(wc);
-        EvalWell target_rate = 0.0;
-        target_rate.setValue(target_rate_ctrl);
-        target_rate.setDerivative(control_index,1);
-
-        assert(comp_idx < num_components_);
-        const auto pu = phaseUsage();
-        const int legacyCompIdx = ebosCompIdxToFlowCompIdx(comp_idx);
-
-        // TODO: the formulation for the injectors decides it only work with single phase
-        // surface rate injection control. Improvement will be required.
-        if (well_type_ == INJECTOR) {
-            if (has_solvent) {
-                // TODO: investigate whether the use of the comp_frac is justified.
-                // The usage of the comp_frac is not correct, which should be changed later.
-                double comp_frac = 0.0;
-                if (has_solvent && comp_idx == contiSolventEqIdx) { // solvent
-                    comp_frac = comp_frac_[pu.phase_pos[ Gas ]] * wsolvent();
-                } else if (legacyCompIdx == pu.phase_pos[ Gas ]) {
-                    comp_frac = comp_frac_[legacyCompIdx] * (1.0 - wsolvent());
-                } else {
-                    comp_frac = comp_frac_[legacyCompIdx];
-                }
-                if (comp_frac == 0.0) {
-                    return qs; //zero
-                }
-
-                if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP) {
-                    return comp_frac * primary_variables_evaluation_[XvarWell];
-                }
-
-                qs = comp_frac * target_rate;
-                return qs;
-            }
-
-            const double comp_frac = comp_frac_[legacyCompIdx];
-            if (comp_frac == 0.0) {
-                return qs;
-            }
-
-            if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP) {
-                return primary_variables_evaluation_[XvarWell];
-            }
-            qs = target_rate;
-            return qs;
-        }
-
-        // Producers
-        if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP ) {
-            return primary_variables_evaluation_[XvarWell] * wellVolumeFractionScaled(comp_idx);
-        }
-
-        if (well_controls_get_current_type(wc) == SURFACE_RATE) {
-            // checking how many phases are included in the rate control
-            // to decide wheter it is a single phase rate control or not
-            const double* distr = well_controls_get_current_distr(wc);
-            int num_phases_under_rate_control = 0;
-            for (int phase = 0; phase < np; ++phase) {
-                if (distr[phase] > 0.0) {
-                    num_phases_under_rate_control += 1;
-                }
-            }
-
-            // there should be at least one phase involved
-            assert(num_phases_under_rate_control > 0);
-
-            // when it is a single phase rate limit
-            if (num_phases_under_rate_control == 1) {
->>>>>>> added adjoint capability for well control
 
 
 
 
-<<<<<<< HEAD
 
     template<typename TypeTag>
     typename StandardWell<TypeTag>::EvalWell
@@ -274,25 +172,6 @@ namespace Opm
     {
         // Note: currently, the WQTotal definition is still depends on Injector/Producer.
         assert(comp_idx < num_components_);
-=======
-                if (comp_idx == compIdx_under_control) {
-                    if (has_solvent && compIdx_under_control == FluidSystem::gasCompIdx) {
-                        qs = target_rate * wellVolumeFractionScaled(compIdx_under_control).value() / wellVolumeFractionScaledPhaseUnderControl.value() ;
-                        return qs;
-                    }
-                    qs = target_rate;
-                    return qs;
-                }
-
-                // TODO: not sure why the single phase under control will have near zero fraction
-                const double eps = 1e-6;
-                if (wellVolumeFractionScaledPhaseUnderControl < eps) {
-                    qs.setDerivative(control_index,1);
-                    return qs;
-                }
-                return (target_rate * wellVolumeFractionScaled(comp_idx) / wellVolumeFractionScaledPhaseUnderControl);
-            }
->>>>>>> added adjoint capability for well control
 
         if (well_type_ == INJECTOR) { // only single phase injection
             // TODO: using comp_frac here is dangerous, it should be changed later
@@ -2379,3 +2258,5 @@ namespace Opm
         }
     }
 }
+
+#endif

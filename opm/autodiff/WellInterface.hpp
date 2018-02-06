@@ -137,6 +137,8 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const = 0;
 
+        virtual void printMatrixes() const {};
+
         /// a struct to collect information about the convergence checking
         struct ConvergenceReport {
             struct ProblemWell {
