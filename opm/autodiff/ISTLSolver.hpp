@@ -418,18 +418,7 @@ namespace Opm
                 }
 
                 const double relax = parameters_.ilu_relaxation_;
-                if ( ! parameters_.use_cpr_ )
-                {
-                    typedef typename CPRSelectorType::AMG AMG;
-                    std::unique_ptr< AMG > amg;
-
-                    // Construct preconditioner.
-                    constructAMGPrecond( linearOperator, parallelInformation_arg, amg, opA, relax );
-
-                    // Solve.
-                    solve(linearOperator, x, istlb, *sp, *amg, result);
-                }
-                else
+                if (  parameters_.use_cpr_ )
                 {
                     using Matrix         = typename MatrixOperator::matrix_type;
                     using CouplingMetric = Dune::Amg::Diagonal<pressureIndex>;
@@ -442,6 +431,17 @@ namespace Opm
                     // Construct preconditioner.
                     Criterion crit(15, 2000);
                     constructAMGPrecond<Criterion>( linearOperator, parallelInformation_arg, amg, opA, relax );
+
+                    // Solve.
+                    solve(linearOperator, x, istlb, *sp, *amg, result);
+                }
+                else
+                {
+                    typedef typename CPRSelectorType::AMG AMG;
+                    std::unique_ptr< AMG > amg;
+
+                    // Construct preconditioner.
+                    constructAMGPrecond( linearOperator, parallelInformation_arg, amg, opA, relax );
 
                     // Solve.
                     solve(linearOperator, x, istlb, *sp, *amg, result);
