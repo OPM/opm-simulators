@@ -313,32 +313,24 @@ namespace Opm {
             wellModel().computeObj(dt);
             wellModel().rhsAdjointRes(lam, adjRhs);
 
-
-
-            // add object fucntion derivatives to rhs_
-            /*
-            BVector rhs=0.0;
-
-
-
             // then all well tings has tto be done
             // set initial guess
-            BVector x = 0.0;
+            BVector x(nc);
             // Solve system.
             if( isParallel() )
             {
                 typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, true > Operator;
-                Operator opA(ebosJac, well_model_, istlSolver().parallelInformation() );
-                assert( opA.comm() );
-                istlSolver().solve( opA, x, rhs, *(opA.comm()) );
+                Operator opAt(ebosJac, well_model_, istlSolver().parallelInformation() );
+                assert( opAt.comm() );
+                istlSolver().solve( opAt, x, adjRhs, *(opAt.comm()) );
             }
             else
             {
                 typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, false > Operator;
-                Operator opAT(ebosJac, well_model_);
-                istlSolver().solve( opAT, x, rhs );
+                Operator opAt(ebosJac, well_model_);
+                istlSolver().solve( opAt, x, adjRhs );
             }
-            */
+
 
             // Do model-specific post-step actions.
            // model_->afterStep(timer, reservoir_state, well_state);
