@@ -52,11 +52,54 @@
 namespace Opm
 {
 
-struct CPRParameter;
-
 template<typename O, typename S, typename C,
          typename P, std::size_t COMPONENT_INDEX>
 class BlackoilAmg;
+
+/**
+ * \brief Parameters used to configure the CPRPreconditioner.
+ */
+struct CPRParameter
+{
+    double cpr_relax_;
+    double cpr_solver_tol_;
+    int cpr_ilu_n_;
+    int cpr_max_ell_iter_;
+    bool cpr_use_amg_;
+    bool cpr_use_bicgstab_;
+    bool cpr_solver_verbose_;
+    bool cpr_pressure_aggregation_;
+
+    CPRParameter() { reset(); }
+
+    CPRParameter( const ParameterGroup& param)
+    {
+        // reset values to default
+        reset();
+
+        cpr_relax_          = param.getDefault("cpr_relax", cpr_relax_);
+        cpr_solver_tol_     = param.getDefault("cpr_solver_tol", cpr_solver_tol_);
+        cpr_ilu_n_          = param.getDefault("cpr_ilu_n", cpr_ilu_n_);
+        cpr_max_ell_iter_   = param.getDefault("cpr_max_elliptic_iter",cpr_max_ell_iter_);
+        cpr_use_amg_        = param.getDefault("cpr_use_amg", cpr_use_amg_);
+        cpr_use_bicgstab_   = param.getDefault("cpr_use_bicgstab", cpr_use_bicgstab_);
+        cpr_solver_verbose_ = param.getDefault("cpr_solver_verbose", cpr_solver_verbose_);
+        cpr_pressure_aggregation_ = param.getDefault("cpr_pressure_aggregation", cpr_pressure_aggregation_);
+    }
+
+    void reset()
+    {
+        cpr_relax_          = 1.0;
+        cpr_solver_tol_     = 1e-2;
+        cpr_ilu_n_          = 0;
+        cpr_max_ell_iter_   = 25;
+        cpr_use_amg_        = true;
+        cpr_use_bicgstab_   = true;
+        cpr_solver_verbose_ = false;
+        cpr_pressure_aggregation_ = false;
+    }
+};
+
 
 namespace ISTLUtility
 {
@@ -230,48 +273,6 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
 }
 
 } // end namespace ISTLUtility
-
-    struct CPRParameter
-    {
-        double cpr_relax_;
-        double cpr_solver_tol_;
-        int cpr_ilu_n_;
-        int cpr_max_ell_iter_;
-        bool cpr_use_amg_;
-        bool cpr_use_bicgstab_;
-        bool cpr_solver_verbose_;
-        bool cpr_pressure_aggregation_;
-
-        CPRParameter() { reset(); }
-
-        CPRParameter( const ParameterGroup& param)
-        {
-            // reset values to default
-            reset();
-
-            cpr_relax_          = param.getDefault("cpr_relax", cpr_relax_);
-            cpr_solver_tol_     = param.getDefault("cpr_solver_tol", cpr_solver_tol_);
-            cpr_ilu_n_          = param.getDefault("cpr_ilu_n", cpr_ilu_n_);
-            cpr_max_ell_iter_   = param.getDefault("cpr_max_elliptic_iter",cpr_max_ell_iter_);
-            cpr_use_amg_        = param.getDefault("cpr_use_amg", cpr_use_amg_);
-            cpr_use_bicgstab_   = param.getDefault("cpr_use_bicgstab", cpr_use_bicgstab_);
-            cpr_solver_verbose_ = param.getDefault("cpr_solver_verbose", cpr_solver_verbose_);
-            cpr_pressure_aggregation_ = param.getDefault("cpr_pressure_aggregation", cpr_pressure_aggregation_);
-        }
-
-        void reset()
-        {
-            cpr_relax_          = 1.0;
-            cpr_solver_tol_     = 1e-2;
-            cpr_ilu_n_          = 0;
-            cpr_max_ell_iter_   = 25;
-            cpr_use_amg_        = true;
-            cpr_use_bicgstab_   = true;
-            cpr_solver_verbose_ = false;
-            cpr_pressure_aggregation_ = false;
-        }
-    };
-
 
     /*!
       \brief CPR preconditioner.
