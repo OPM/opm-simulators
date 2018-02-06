@@ -302,8 +302,10 @@ void runBlackoilAmgLaplace()
     Criterion criterion;
 
     smootherArgs.iterations = 1;
+    Opm::CprParameter param;
 
-    Opm::BlackoilAmg<Operator,ParSmoother,Criterion,Communication,0> amg(fop, criterion,
+    Opm::BlackoilAmg<Operator,ParSmoother,Criterion,Communication,0> amg(param,
+                                                                         fop, criterion,
                                                                          smootherArgs,
                                                                          comm);
     Dune::CGSolver<Vector> amgCG(fop, sp, amg, 10e-8, 300, (ccomm.rank()==0) ? 2 : 0);
