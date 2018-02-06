@@ -68,6 +68,9 @@ namespace Opm
         invDuneD_.setSize(1, 1, 1);
         duneB_.setSize(1, num_cells, number_of_perforations_);
         duneC_.setSize(1, num_cells, number_of_perforations_);
+        //
+        duneCA_.setSize(1, num_cells, number_of_perforations_);
+        duneDA_.setSize(1, 1, 1);
 
         for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
             // Add nonzeros for diagonal
@@ -88,6 +91,21 @@ namespace Opm
                 row.insert(cell_idx);
             }
         }
+
+        // for adjoint
+        for (auto row = duneCA_.createbegin(), end = duneCA_.createend(); row!=end; ++row) {
+            for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
+                const int cell_idx = well_cells_[perf];
+                row.insert(cell_idx);
+            }
+        }
+
+        // make the C^T matrix
+        for (auto row=duneDA_.createbegin(), end = duneDA_.createend(); row!=end; ++row) {
+            // Add nonzeros for diagonal
+            row.insert(row.index());
+        }
+
 
         resWell_.resize(1);
 
@@ -130,6 +148,7 @@ namespace Opm
             EvalWell bhp = 0.0;
             const double target_rate = well_controls_get_current_target(wc);
             bhp.setValue(target_rate);
+            bhp.setDerivative(control_index, 1.0);
             return bhp;
         } else if (well_controls_get_current_type(wc) == THP) {
             const int control = well_controls_get_current(wc);
@@ -164,7 +183,11 @@ namespace Opm
 
         const WellControls* wc = well_controls_;
         const int np = number_of_phases_;
-        const double target_rate = well_controls_get_current_target(wc);
+        //const double target_rate = well_controls_get_current_target(wc);
+        const double target_rate_ctrl = well_controls_get_current_target(wc);
+        EvalWell target_rate = 0.0;
+        target_rate.setValue(target_rate_ctrl);
+        target_rate.setDerivative(control_index,1);
 
         assert(comp_idx < num_components_);
         const auto pu = phaseUsage();
@@ -192,7 +215,7 @@ namespace Opm
                     return comp_frac * primary_variables_evaluation_[XvarWell];
                 }
 
-                qs.setValue(comp_frac * target_rate);
+                qs = comp_frac * target_rate;
                 return qs;
             }
 
@@ -204,7 +227,7 @@ namespace Opm
             if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP) {
                 return primary_variables_evaluation_[XvarWell];
             }
-            qs.setValue(target_rate);
+            qs = target_rate;
             return qs;
         }
 
@@ -250,16 +273,17 @@ namespace Opm
 
                 if (comp_idx == compIdx_under_control) {
                     if (has_solvent && compIdx_under_control == FluidSystem::gasCompIdx) {
-                        qs.setValue(target_rate * wellVolumeFractionScaled(compIdx_under_control).value() / wellVolumeFractionScaledPhaseUnderControl.value() );
+                        qs = target_rate * wellVolumeFractionScaled(compIdx_under_control).value() / wellVolumeFractionScaledPhaseUnderControl.value() ;
                         return qs;
                     }
-                    qs.setValue(target_rate);
+                    qs = target_rate;
                     return qs;
                 }
 
                 // TODO: not sure why the single phase under control will have near zero fraction
                 const double eps = 1e-6;
                 if (wellVolumeFractionScaledPhaseUnderControl < eps) {
+                    qs.setDerivative(control_index,1);
                     return qs;
                 }
                 return (target_rate * wellVolumeFractionScaled(comp_idx) / wellVolumeFractionScaledPhaseUnderControl);
@@ -528,6 +552,9 @@ namespace Opm
             duneB_ = 0.0;
             duneC_ = 0.0;
         }
+        duneDA_ = 0.0;
+        duneCA_ = 0.0;
+
         invDuneD_ = 0.0;
         resWell_ = 0.0;
 
@@ -571,6 +598,7 @@ namespace Opm
                     }
                     invDuneD_[0][0][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx+numEq);
                 }
+                duneDA_[0][0][componentIdx][0] -= cq_s_effective.derivative(control_index);
 
                 for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
                     if (!only_wells) {
@@ -579,7 +607,7 @@ namespace Opm
                         duneB_[0][cell_idx][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx);
                     }
                 }
-
+                duneCA_[0][cell_idx][componentIdx][0] -= cq_s_effective.derivative(control_index);
                 // Store the perforation phase flux for later usage.
                 if (has_solvent && componentIdx == contiSolventEqIdx) {
                     well_state.perfRateSolvent()[first_perf_ + perf] = cq_s[componentIdx].value();
@@ -605,6 +633,7 @@ namespace Opm
                 }
             }
 
+
             // Store the perforation pressure for later usage.
             well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[index_of_well_] + perf_pressure_diffs_[perf];
         }
@@ -616,6 +645,7 @@ namespace Opm
             for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
+            duneDA_[0][0][componentIdx][0] += resWell_loc.derivative(control_index);
             resWell_[0][componentIdx] += resWell_loc.value();
         }
 
@@ -1879,7 +1909,7 @@ namespace Opm
         // However, when group control is involved, change of the rates might impacts other wells
         // so iterations on a higher level will be required. Some investigation might be needed when
         // we face problems under THP control.
-
+        assert(false);
         assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
 
         const ValueType aqua = rates[Water];
