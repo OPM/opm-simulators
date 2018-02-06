@@ -731,9 +731,6 @@ public:
     // write Fluid In Place to output log
     void outputFipLog(std::map<std::string, double>& miscSummaryData,  std::map<std::string, std::vector<double>>& regionData, const bool substep) {
 
-        if (substep)
-            return;
-
         const auto& comm = simulator_.gridView().comm();
         size_t ntFip = *std::max_element(fipnum_.begin(), fipnum_.end());
         ntFip = comm.max(ntFip);
