@@ -85,6 +85,7 @@ namespace Opm
         // TODO: we should have indices for the well equations and well primary variables separately
         static const int Bhp = numWellEq - numWellControlEq;
 
+
         using typename Base::Scalar;
         using typename Base::ConvergenceReport;
 
@@ -93,6 +94,10 @@ namespace Opm
         using Base::Water;
         using Base::Oil;
         using Base::Gas;
+
+        // TODO: with flow_ebos，for a 2P deck, // TODO: for the 2p deck, numEq will be 3, a dummy phase is already added from the reservoir side.
+        // it will cause problem here without processing the dummy phase.
+        static const int control_index=numEq + numWellEq;
 
         using typename Base::Mat;
         using typename Base::BVector;
@@ -108,14 +113,21 @@ namespace Opm
 
         // the matrix type for the diagonal matrix D
         typedef Dune::FieldMatrix<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
+        typedef Dune::FieldMatrix<Scalar, numWellEq, 1 > DiagMatrixBlockWellAdjointType;
 
         typedef Dune::BCRSMatrix <DiagMatrixBlockWellType> DiagMatWell;
+        typedef Dune::BCRSMatrix <DiagMatrixBlockWellAdjointType> DiagMatWellAdjoint;
 
         // the matrix type for the non-diagonal matrix B and C^T
         typedef Dune::FieldMatrix<Scalar, numWellEq, numEq>  OffDiagMatrixBlockWellType;
         typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellType> OffDiagMatWell;
 
-        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
+        // for adjoint
+        typedef Dune::FieldMatrix<Scalar, numEq, 1>  OffDiagMatrixBlockWellAdjointType;
+        typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellAdjointType> OffDiagMatWellAdjoint;
+
+        // added extra space in derivative to have control derivatives
+        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq+1> EvalWell;
 
         using Base::contiSolventEqIdx;
         using Base::contiPolymerEqIdx;
@@ -176,6 +188,30 @@ namespace Opm
         {
             return param_.matrix_add_well_contributions_;
         }
+
+        void printMatrixes(){
+            std::cout << "duneB " << std::endl;
+            Dune::writeMatrixMarket(duneB_, std::cout);
+            std::cout << std::endl;
+            OffDiagMatWell duneB_;
+            std::cout << "duneC " << std::endl;
+            Dune::writeMatrixMarket(duneC_, std::cout);
+            std::cout << std::endl;
+            std::cout << "invDuneD " << std::endl;
+            // diagonal matrix for the well
+            DiagMatWell invDuneD_;
+            Dune::writeMatrixMarket(invDuneD_, std::cout);
+            std::cout << std::endl;
+            // for adjoint
+            std::cout << "duneCA " << std::endl;
+            OffDiagMatWellAdjoint duneCA_;
+            Dune::writeMatrixMarket(duneCA_, std::cout);
+            std::cout << std::endl;
+            //OffDiagMatWellAdjoint duneCA_;
+            std::cout << "duneDA " << std::endl;
+            Dune::writeMatrixMarket(duneDA_, std::cout);
+            std::cout << std::endl;
+        }
     protected:
 
         // protected functions from the Base class
@@ -225,8 +261,15 @@ namespace Opm
         // two off-diagonal matrices
         OffDiagMatWell duneB_;
         OffDiagMatWell duneC_;
+
         // diagonal matrix for the well
         DiagMatWell invDuneD_;
+
+        // for adjoint
+        OffDiagMatWellAdjoint duneCA_;
+        //OffDiagMatWellAdjoint duneCA_;
+        DiagMatWellAdjoint duneDA_;
+
 
         // several vector used in the matrix calculation
         mutable BVectorWell Bx_;
@@ -235,6 +278,9 @@ namespace Opm
         // the values for the primary varibles
         // based on different solutioin strategies, the wells can have different primary variables
         mutable std::vector<double> primary_variables_;
+
+        // adjoint variables for well
+        mutable std::vector<double> adjoint_variables_;
 
         // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
         mutable std::vector<EvalWell> primary_variables_evaluation_;
