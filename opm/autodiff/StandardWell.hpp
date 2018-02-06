@@ -165,10 +165,18 @@ namespace Opm
         /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const;
 
+        /// Ax = Atx - Bt Dt^-1 C x
+        virtual void applyt(const BVector& x, BVector& Ax) const;
+        /// r = r - Bt Dt^-1 Rw
+        virtual void applyt(BVector& r) const;
+
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state) const;
+
+        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x) const;
+                                                           //WellState& well_state) const;
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
@@ -256,11 +264,15 @@ namespace Opm
         // residuals of the well equations
         BVectorWell resWell_;
 
+        // adjoint rhs of the well equations
+        BVectorWell adjWell_;
+
         // two off-diagonal matrices
         OffDiagMatWell duneB_;
         OffDiagMatWell duneC_;
 
         // diagonal matrix for the well
+        DiagMatWell duneD_;// not striktly neeed
         DiagMatWell invDuneD_;
 
         // for adjoint
@@ -268,10 +280,23 @@ namespace Opm
         //OffDiagMatWellAdjoint duneCA_;
         DiagMatWellAdjoint duneDA_;
 
+        // quatities forobjective function
+        double objval_;
+        // well, cells, res primary var
+        mutable BvectorRes  objder_adjres_;
+        // ... well, well_primary variables
+        mutable BvectorWell  objder_adjwell_;
+        // ... well, control variables
+        mutable BvectorWell_ objder_adjctrl_;
+
 
         // several vector used in the matrix calculation
         mutable BVectorWell Bx_;
         mutable BVectorWell invDrw_;
+
+        // several vector used in the matrix calculation of transpose solve
+        mutable BVectorWell Ctx_;
+        mutable BVectorWell invDtadj_;
 
         // the values for the primary varibles
         // based on different solutioin strategies, the wells can have different primary variables
@@ -305,9 +330,16 @@ namespace Opm
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
+        // recover well adoint variables
+        void recoverAdjointWell(const BVector& x, BVectorWell& xw) const;
+
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
                              WellState& well_state) const;
+
+        // updating the well_state based on well solution dwells
+        void updateAdjointState(const BVectorWell& dwells) const;
+                             //WellState& well_state) const;
 
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.

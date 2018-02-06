@@ -151,8 +151,16 @@ namespace Opm {
             // subtract B*inv(D)*C * x from A*x
             void apply(const BVector& x, BVector& Ax) const;
 
+            // substract Binv(D)rw from r;
+            void applyt( BVector& r) const;
+
+            // subtract B*inv(D)*C * x from A*x
+            void applyt(const BVector& x, BVector& Ax) const;
+
             // apply well model with scaling of alpha
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
+
+
 
             // using the solution x to recover the solution xw for wells and applying
             // xw to update Well State

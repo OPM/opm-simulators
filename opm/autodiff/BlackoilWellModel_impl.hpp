@@ -473,9 +473,37 @@ namespace Opm {
         }
     }
 
+    // applying the well residual to reservoir residuals
+    // r = r - duneBt_^T * invDuneDt_ * adjWell_
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    applyt( BVector& r) const
+    {
+        if ( ! localWellsActive() ) {
+            return;
+        }
 
+        for (auto& well : well_container_) {
+            well->applyt(r);
+        }
+    }
 
+    // Atx = At x - Bt Dt^-1 Ct x
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    applyt(const BVector& x, BVector& Atx) const
+    {
+        // TODO: do we still need localWellsActive()?
+        if ( ! localWellsActive() ) {
+            return;
+        }
 
+        for (auto& well : well_container_) {
+            well->applyt(x, Atx);
+        }
+    }
 
     // Ax = A x - C D^-1 B x
     template<typename TypeTag>
