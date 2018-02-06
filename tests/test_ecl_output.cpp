@@ -176,31 +176,30 @@ void test_summary()
 
 void test_readWriteWells() {
 
-    using namespace Opm;
-    using rt = data::Rates::opt;
+    using opt = Opm::data::Rates::opt;
 
-    data::Rates r1, r2, rc1, rc2, rc3;
-    r1.set( data::Rates::opt::wat, 5.67 );
-    r1.set( data::Rates::opt::oil, 6.78 );
-    r1.set( data::Rates::opt::gas, 7.89 );
+    Opm::data::Rates r1, r2, rc1, rc2, rc3;
+    r1.set( opt::wat, 5.67 );
+    r1.set( opt::oil, 6.78 );
+    r1.set( opt::gas, 7.89 );
 
-    r2.set( data::Rates::opt::wat, 8.90 );
-    r2.set( data::Rates::opt::oil, 9.01 );
-    r2.set( data::Rates::opt::gas, 10.12 );
+    r2.set( opt::wat, 8.90 );
+    r2.set( opt::oil, 9.01 );
+    r2.set( opt::gas, 10.12 );
 
-    rc1.set( data::Rates::opt::wat, 20.41 );
-    rc1.set( data::Rates::opt::oil, 21.19 );
-    rc1.set( data::Rates::opt::gas, 22.41 );
+    rc1.set( opt::wat, 20.41 );
+    rc1.set( opt::oil, 21.19 );
+    rc1.set( opt::gas, 22.41 );
 
-    rc2.set( data::Rates::opt::wat, 23.19 );
-    rc2.set( data::Rates::opt::oil, 24.41 );
-    rc2.set( data::Rates::opt::gas, 25.19 );
+    rc2.set( opt::wat, 23.19 );
+    rc2.set( opt::oil, 24.41 );
+    rc2.set( opt::gas, 25.19 );
 
-    rc3.set( data::Rates::opt::wat, 26.41 );
-    rc3.set( data::Rates::opt::oil, 27.19 );
-    rc3.set( data::Rates::opt::gas, 28.41 );
+    rc3.set( opt::wat, 26.41 );
+    rc3.set( opt::oil, 27.19 );
+    rc3.set( opt::gas, 28.41 );
 
-    data::Well w1, w2;
+    Opm::data::Well w1, w2;
     w1.rates = r1;
     w1.bhp = 1.23;
     w1.temperature = 3.45;
@@ -219,7 +218,7 @@ void test_readWriteWells() {
     w2.control = 2;
     w2.completions.push_back( { 188, rc3, 36.22, 19.28 } );
 
-    data::Wells wellRates;
+    Opm::data::Wells wellRates;
 
     wellRates["OP_1"] = w1;
     wellRates["OP_2"] = w2;
@@ -230,11 +229,11 @@ void test_readWriteWells() {
 
     wellRates.write(buffer);
 
-    data::Wells wellRatesCopy;
+    Opm::data::Wells wellRatesCopy;
     wellRatesCopy.read(buffer);
 
-    CHECK( wellRatesCopy.get( "OP_1" , data::Rates::opt::wat) , wellRates.get( "OP_1" , data::Rates::opt::wat));
-    CHECK( wellRatesCopy.get( "OP_2" , 188 , data::Rates::opt::wat) , wellRates.get( "OP_2" , 188 , data::Rates::opt::wat));
+    CHECK( wellRatesCopy.get( "OP_1" , opt::wat) , wellRates.get( "OP_1" , opt::wat));
+    CHECK( wellRatesCopy.get( "OP_2" , 188 , opt::wat) , wellRates.get( "OP_2" , 188 , opt::wat));
 }
 
 
