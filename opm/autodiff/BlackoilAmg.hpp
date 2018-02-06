@@ -534,8 +534,8 @@ buildOverlapVertices(const G& graph, const C& pinfo,
 
     const auto& lookup=pinfo.globalLookup();
 
-    for(auto vertex=graph.begin(); vertex != end; ++vertex) {
-        const auto* pair = lookup.pair(*vertex);
+    for ( const auto& vertex: graph ) {
+        const auto* pair = lookup.pair(vertex);
 
         if(pair!=0 && overlap.contains(pair->local().attribute()))
             ++overlapCount;
@@ -544,14 +544,14 @@ buildOverlapVertices(const G& graph, const C& pinfo,
     using Vertex =  typename G::VertexDescriptor;
     using OverlapVertex = Dune::Amg::OverlapVertex<Vertex>;
 
-    auto* overlapVertices = new OverlapVertex[overlapCount=0 ? 1 : overlapCount];
+    auto* overlapVertices = new OverlapVertex[overlapCount==0 ? 1 : overlapCount];
     if(overlapCount==0)
         return overlapVertices;
 
     // Initialize them
     overlapCount=0;
-    for(auto vertex=graph.begin(); vertex != end; ++vertex) {
-        const auto* pair = lookup.pair(*vertex);
+    for ( const auto& vertex: graph ) {
+        const auto* pair = lookup.pair(vertex);
 
         if(pair!=0 && overlap.contains(pair->local().attribute())) {
             overlapVertices[overlapCount].aggregate = &aggregates[pair->local()];
@@ -591,11 +591,10 @@ void buildCoarseSparseMatrix(M& coarseMatrix, G& fineGraph,
     const auto UNAGGREGATED = Dune::Amg::AggregatesMap<typename G::VertexDescriptor>::UNAGGREGATED;
 #endif
     const auto ISOLATED = Dune::Amg::AggregatesMap<typename G::VertexDescriptor>::ISOLATED;
-    auto vend = fineGraph.end();
 
-    for(auto vertex = fineGraph.begin(); vertex != vend; ++vertex) {
-        assert(aggregates[*vertex] != UNAGGREGATED);
-        put(visitedMap, *vertex, aggregates[*vertex]==ISOLATED);
+    for ( const auto& vertex: fineGraph ) {
+        assert(aggregates[vertex] != UNAGGREGATED);
+        put(visitedMap, vertex, aggregates[vertex]==ISOLATED);
     }
 
     Dune::Amg::SparsityBuilder<M> sparsityBuilder(coarseMatrix);
@@ -620,11 +619,10 @@ void buildCoarseSparseMatrix(M& coarseMatrix, G& fineGraph, const V& visitedMap,
     const auto UNAGGREGATED = Dune::Amg::AggregatesMap<typename G::VertexDescriptor>::UNAGGREGATED;
 #endif
     const auto ISOLATED = Dune::Amg::AggregatesMap<typename G::VertexDescriptor>::ISOLATED;
-    using Vertex = typename G::VertexIterator;
-    Vertex vend = fineGraph.end();
-    for(Vertex vertex = fineGraph.begin(); vertex != vend; ++vertex) {
-        assert(aggregates[*vertex] != UNAGGREGATED);
-        put(visitedMap, *vertex, aggregates[*vertex]==ISOLATED);
+
+    for(const auto& vertex: fineGraph ) {
+        assert(aggregates[vertex] != UNAGGREGATED);
+        put(visitedMap, vertex, aggregates[vertex]==ISOLATED);
     }
 
     Dune::Amg::SparsityBuilder<M> sparsityBuilder(coarseMatrix);
