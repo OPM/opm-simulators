@@ -24,6 +24,7 @@
 #ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 
+#include <ewoms/common/propertysystem.hh>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
@@ -142,7 +143,7 @@ namespace Opm {
             void endReportStep();
 
             const SimulatorReport& lastReport() const;
-
+            void printMatrixes() const;
         protected:
 
             Simulator& ebosSimulator_;

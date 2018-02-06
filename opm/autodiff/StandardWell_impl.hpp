@@ -18,7 +18,10 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
+#define OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
 
+#include "StandardWell.hpp"
 
 namespace Opm
 {
@@ -2053,3 +2056,5 @@ namespace Opm
         }
     }
 }
+
+#endif

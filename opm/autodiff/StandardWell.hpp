@@ -27,6 +27,7 @@
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolver.hpp>
 #include <opm/autodiff/RateConverter.hpp>
+#include <dune/istl/matrixmarket.hh>
 
 namespace Opm
 {
@@ -95,7 +96,7 @@ namespace Opm
         // including 2.5.0
         // the matrix type for the diagonal matrix D
         typedef Dune::FieldMatrix<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
-         typedef Dune::FieldMatrix<Scalar, numWellEq, 1 > DiagMatrixBlockWellAdjointType;
+        typedef Dune::FieldMatrix<Scalar, numWellEq, 1 > DiagMatrixBlockWellAdjointType;
 #else
         // the matrix type for the diagonal matrix D
         typedef Dune::MatrixBlock<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
@@ -167,22 +168,19 @@ namespace Opm
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state); // should be const?
-        void printMatrixes(){
+        void printMatrixes() const{
             std::cout << "duneB " << std::endl;
             Dune::writeMatrixMarket(duneB_, std::cout);
             std::cout << std::endl;
-            OffDiagMatWell duneB_;
             std::cout << "duneC " << std::endl;
             Dune::writeMatrixMarket(duneC_, std::cout);
             std::cout << std::endl;
             std::cout << "invDuneD " << std::endl;
             // diagonal matrix for the well
-            DiagMatWell invDuneD_;
             Dune::writeMatrixMarket(invDuneD_, std::cout);
-            std::cout << std::endl;
+            //std::cout << std::endl;
             // for adjoint
             std::cout << "duneCA " << std::endl;
-            OffDiagMatWellAdjoint duneCA_;
             Dune::writeMatrixMarket(duneCA_, std::cout);
             std::cout << std::endl;
             //OffDiagMatWellAdjoint duneCA_;

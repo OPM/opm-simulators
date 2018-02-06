@@ -18,7 +18,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_WELLINTERFACE_IMPL_HEADER_INCLUDED
+#define OPM_WELLINTERFACE_IMPL_HEADER_INCLUDED
 
+#include "WellInterface.hpp"
 namespace Opm
 {
 
@@ -845,3 +848,5 @@ namespace Opm
     }
 
 }
+
+#endif
