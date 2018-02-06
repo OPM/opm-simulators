@@ -214,7 +214,7 @@ createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
     criterion.setNoPostSmoothSteps( 1 );
     criterion.setNoPreSmoothSteps( 1 );
 
-    // for DUNE 2.2 we also need to pass the smoother args
+    // Since DUNE 2.2 we also need to pass the smoother args instead of steps directly
     typedef typename AMG::Smoother Smoother;
     typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
     SmootherArgs  smootherArgs;
