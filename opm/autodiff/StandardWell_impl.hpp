@@ -72,6 +72,7 @@ namespace Opm
         // B D] x_well]      res_well]
         // set the size of the matrices
         invDuneD_.setSize(1, 1, 1);
+        duneD_.setSize(1, 1, 1);
         duneB_.setSize(1, num_cells, number_of_perforations_);
         duneC_.setSize(1, num_cells, number_of_perforations_);
         //
@@ -79,6 +80,11 @@ namespace Opm
         duneDA_.setSize(1, 1, 1);
 
         for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
+            // Add nonzeros for diagonal
+            row.insert(row.index());
+        }
+
+        for (auto row=duneD_.createbegin(), end = duneD_.createend(); row!=end; ++row) {
             // Add nonzeros for diagonal
             row.insert(row.index());
         }
@@ -114,10 +120,16 @@ namespace Opm
 
 
         resWell_.resize(1);
-
+        adjWell_.resize(1);
         // resize temporary class variables
         Bx_.resize( duneB_.N() );
         invDrw_.resize( invDuneD_.N() );
+        Ctx_.resize( duneC_.M());
+        invDtadj_.resize( invDuneD_.N());
+        objder_.resize(1);
+        objder_adjres_.resize(num_cells);
+        objder_adjwell_.resize(1);// on block pr well
+        objder_adjctrl_.resize(1);// one block pr well
     }
 
 
