@@ -420,6 +420,22 @@ public:
 protected:
     void init( const Matrix& A, const int iluIteration )
     {
+        // (For older DUNE versions the communicator might be
+        // invalid if redistribution in AMG happened on the coarset level.
+        // Therefore we check for nonzero size
+        if ( comm_ && comm_->communicator().size()<=0 )
+        {
+            if ( A.N() > 0 )
+            {
+                OPM_THROW(std::logic_error, "Expected a matrix with zero rows for an invalid communicator.");
+            }
+            else
+            {
+                // simply set the communicator to null
+                comm_ = nullptr;
+            }
+        }
+
         int ilu_setup_successful = 1;
         std::string message;
         const int rank = ( comm_ ) ? comm_->communicator().rank() : 0;
