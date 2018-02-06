@@ -63,6 +63,8 @@
 #include <algorithm>
 //#include <fstream>
 
+//writing matrix
+#include <dune/istl/matrixmarket.hh>
 
 
 
@@ -260,19 +262,44 @@ namespace Opm {
             std::cout << "******* solution 0 ****** " << std::endl;
             std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
 
+
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
            // ebosSimulator_.model().update();
             //auto linsys =  ebosSimulator_.model().linearizer();
             // NB need to avoid storag cache to calculate prevois storage term correctly
-            int iterationIdx = 10;
-
-            ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
+            //int iterationIdx = 1;
+            ebosSimulator_.model().newtonMethod().setIterationIndex(/*iterationIdx*/ 1);
             ebosSimulator_.problem().beginIteration();
-            ebosSimulator_.model().linearizer().linearize();
+            ebosSimulator_.model().linearizer().linearize(1);
+            ebosSimulator_.problem().endIteration();
+            const auto& ebosJac1 = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosResid1 = ebosSimulator_.model().linearizer().residual();
+            std::cout << "Printing jacobian residual 1" << std::endl;
+            Dune::writeMatrixMarket(ebosJac1, std::cout);
+            std::cout << std::endl;
+            //std::cout << ebosJac << std::endl;
+
+
+
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+           // ebosSimulator_.model().update();
+            //auto linsys =  ebosSimulator_.model().linearizer();
+            // NB need to avoid storag cache to calculate prevois storage term correctly
+            //int iterationIdx = 1;// need tp be larger than 1
+            ebosSimulator_.model().newtonMethod().setIterationIndex(/*iterationIdx*/ 1);
+            ebosSimulator_.problem().beginIteration();
+            ebosSimulator_.model().linearizer().linearize(0);
             ebosSimulator_.problem().endIteration();
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            std::cout << "Printing jacobian residual 0" << std::endl;
+            Dune::writeMatrixMarket(ebosJac, std::cout);
+            std::cout << std::endl;
+            //std::cout << ebosJac << std::endl;
+
+
             //auto& well_state = wellModel().wellState();
             wellModel().beginTimeStep();
             WellState well_state;// =  this->wellModel().wellState();
@@ -289,19 +316,22 @@ namespace Opm {
                                        well_state,
                                        only_wells);
             */
+
+
             std::cout << "Printing pure residual with out well contribution backward mode" << std::endl;
             std::cout << ebosResid << std::endl;
             double dt = timer.stepLengthTaken();
             //int
-            iterationIdx = 0;//for wells we need this to make update correctyin flow is make shift the state???
+            //iterationIdx = 0;//for wells we need this to make update correctyin flow is make shift the state???
             assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
-            wellModel().assemble(iterationIdx, ebosSimulator_.timeStepSize());
+            wellModel().assemble(/*iterationIdx*/ 0, ebosSimulator_.timeStepSize());
             wellModel().apply(ebosResid);
 
             //wellModel().recoverWellSolutionAndUpdateWellState(x);
             std::cout << "Printing pure residual in backward mode" << std::endl;
             std::cout << ebosResid << std::endl;
-            // the calculation of right hand side is missing
+
+
 
 
             // then all well tings has tto be done
@@ -497,7 +527,8 @@ namespace Opm {
             // -------- Mass balance equations --------
             ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
             ebosSimulator_.problem().beginIteration();
-            ebosSimulator_.model().linearizer().linearize();
+            //assuem this alwasy is used in forward mode
+            ebosSimulator_.model().linearizer().linearize(/*focustimeindex=*/ 0);
             ebosSimulator_.problem().endIteration();
 
             // -------- Well equations ----------
