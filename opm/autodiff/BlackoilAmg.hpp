@@ -529,7 +529,6 @@ buildOverlapVertices(const G& graph, const C& pinfo,
                      std::size_t& overlapCount)
 {
     // count the overlap vertices.
-    auto end = graph.end();
     overlapCount = 0;
 
     const auto& lookup=pinfo.globalLookup();
