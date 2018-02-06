@@ -145,6 +145,8 @@ namespace Opm {
             void assemble(const int iterationIdx,
                           const double dt);
 
+            void rhsAdjointRes(const BVector& lamda_r, BVector& adjRes);
+            void computeObj(double dt);
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;
 
