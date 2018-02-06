@@ -869,12 +869,12 @@ private:
  * This preconditioner first decouples the component used for coarsening using a simple scaling
  * approach (e.g. Scheichl, Masson 2013,\see scaleMatrixQuasiImpes). Then it constructs the first
  * coarse level system, either by simply extracting the coupling between the components at COMPONENT_INDEX
- * in the matrix blocks or by extracting them and applying aggregation to the directly. This coarse level
+ * in the matrix blocks or by extracting them and applying aggregation to them directly. This coarse level
  * can be solved either by AMG or by ILU. The preconditioner is configured using CPRParameter.
  * \tparam O The type of the operator (encapsulating a BCRSMatrix).
  * \tparam S The type of the smoother.
  * \tparam C The type of coarsening criterion to use.
- * \tparam P The type of the class describing the parallelelization.
+ * \tparam P The type of the class describing the parallelization.
  * \tparam COMPONENT_INDEX The index of the component to use for coarsening (usually the pressure).
  */
 template<typename O, typename S, typename C,
@@ -887,7 +887,7 @@ public:
     using Operator = O;
     /** \brief The type of coarsening criterion to use. */
     using Criterion = C;
-    /** \brief The type of the class describing the parallelelization. */
+    /** \brief The type of the class describing the parallelization. */
     using Communication = P;
     /** \brief The type of the smoother. */
     using Smoother = S;
