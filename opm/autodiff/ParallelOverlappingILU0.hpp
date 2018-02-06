@@ -85,6 +85,13 @@ namespace Opm
       template<class M, class CRS, class InvVector>
       void convertToCRS(const M& A, CRS& lower, CRS& upper, InvVector& inv )
       {
+        // No need to do anything for 0 rows. Return to prevent indexing a
+        // a zero sized array.
+        if ( A.N() == 0 )
+        {
+          return;
+        }
+
         typedef typename M :: size_type size_type;
 
         lower.resize( A.N() );
