@@ -526,7 +526,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    rhsAdjointWell(const BvectorWell& lamda_w){
+    rhsAdjointWell(const BVectorWell& lambda_w){
         adjWell_=0.0;
         duneD_.mtv(adjoint_variables_, adjWell_);
         adjWell_+= objder_adjwell_;
@@ -536,21 +536,21 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    rhsAdjointRes(const BvectorWell& lamda_r, BvectorWell& adjRes){
+    rhsAdjointRes(const BVector& lambda_r, BVector& adjRes){
         //adjRes += Ct_(n+1)*lambda_r_(n+1);
         // this dould only have the explict terms in the well equations
-        duneC_.mtv(labmda_r_, adjRes);
-        // adjRes += obj_derres_
-        adjRes += obj_adjres_;
+        duneC_.mtv(lambda_r, adjRes);
+        adjRes += objder_adjres_;
     }
 
     template<typename TypeTag>
     void
-    StandardWell<TypeTag>::objectDerivative(const AvectorRes& lambda_r )
+    StandardWell<TypeTag>::objectDerivative(const BVector& lambda_r )
+    {
         // obj/dctrl = obj/ctrl + CA^T*lamda_r+DA^t*lamda_w
         objder_= objder_adjctrl_;
-        duneCA_.mtv(labmda_r_, objder_);
-        duneDA.mtv(lamda_w, objeder);
+        duneCA_.mtv(lambda_r, objder_);
+        duneDA_.mtv(adjoint_variables_, objder_);
     }
 
 

@@ -69,7 +69,7 @@
 
 //writing matrix
 #include <dune/istl/matrixmarket.hh>
-#include <opm/autodiff/matrixadapterutilities.hpp>
+#include <opm/autodiff/MatrixAdapterUtilities.hpp>
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>

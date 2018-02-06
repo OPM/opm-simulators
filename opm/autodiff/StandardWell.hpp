@@ -112,6 +112,10 @@ namespace Opm
         typedef Dune::FieldVector<Scalar, numWellEq> VectorBlockWellType;
         typedef Dune::BlockVector<VectorBlockWellType> BVectorWell;
 
+        // vector type or cntrl need for adjoint
+        typedef Dune::FieldVector<Scalar, 1> VectorBlockWellCtrlType;
+        typedef Dune::BlockVector<VectorBlockWellCtrlType> BVectorWellCtrl;
+
         // the matrix type for the diagonal matrix D
         typedef Dune::FieldMatrix<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
         typedef Dune::FieldMatrix<Scalar, numWellEq, 1 > DiagMatrixBlockWellAdjointType;
@@ -169,6 +173,19 @@ namespace Opm
         virtual void applyt(const BVector& x, BVector& Ax) const;
         /// r = r - Bt Dt^-1 Rw
         virtual void applyt(BVector& r) const;
+
+        //
+        void rhsAdjointWell(const BVectorWell& lamda_w);
+
+        void rhsAdjointRes(const BVector& lamda_r, BVector& adjRes);
+
+        // compute objective contribution from well
+        void computeObj(Simulator& ebosSimulator,
+                       const double dt);
+
+        // update derivative contribution from this well
+        void objectDerivative(const BVector& lambda_r );
+
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
@@ -281,13 +298,15 @@ namespace Opm
         DiagMatWellAdjoint duneDA_;
 
         // quatities forobjective function
-        double objval_;
+        Scalar objval_;
+        mutable BVectorWellCtrl objder_;
         // well, cells, res primary var
-        mutable BvectorRes  objder_adjres_;
+        mutable BVector  objder_adjres_;
         // ... well, well_primary variables
-        mutable BvectorWell  objder_adjwell_;
+        mutable BVectorWell  objder_adjwell_;
         // ... well, control variables
-        mutable BvectorWell_ objder_adjctrl_;
+        mutable BVectorWellCtrl objder_adjctrl_;
+
 
 
         // several vector used in the matrix calculation
@@ -303,7 +322,8 @@ namespace Opm
         mutable std::vector<double> primary_variables_;
 
         // adjoint variables for well
-        mutable std::vector<double> adjoint_variables_;
+        mutable BVectorWellCtrl adjoint_variables_;
+        //mutable std::vector<double> adjoint_variables_;
 
         // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
         mutable std::vector<EvalWell> primary_variables_evaluation_;
