@@ -351,7 +351,7 @@ private:
                            const Criterion& crit,
                            const typename AMGType::SmootherArgs& args,
                            const Communication& comm)
-            : param_(param), amg_(), smoother_(), op_(op), comm_(comm), first_(true)
+            : param_(param), amg_(), smoother_(), op_(op), comm_(comm)
         {
             if ( param_->cpr_use_amg_ )
             {
@@ -379,15 +379,7 @@ private:
         {
             DUNE_UNUSED_PARAMETER(reduction);
             DUNE_UNUSED_PARAMETER(res);
-            /*
-            if(first_)
-            {
-                amg_.pre(x,b);
-                first_=false;
-                x_=x;
-            }
-            amg_.apply(x,b);
-            */
+
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             auto sp = Dune::createScalarProduct<X,Communication>(comm_, op_.category());
 #else
@@ -466,14 +458,9 @@ private:
         }
 
         ~AMGInverseOperator()
-        {
-            /*
-            if(!first_)
-                amg_.post(x_);
-            */
-        }
+        {}
         AMGInverseOperator(const AMGInverseOperator& other)
-            : x_(other.x_), amg_(other.amg_), first_(other.first_)
+            : x_(other.x_), amg_(other.amg_)
         {
         }
     private:
@@ -483,7 +470,6 @@ private:
         std::unique_ptr<Smoother> smoother_;
         const typename AMGType::Operator& op_;
         const Communication& comm_;
-        bool first_;
     };
 
 public:
@@ -701,7 +687,7 @@ public:
             std::tie(noAggregates, isoAggregates, oneAggregates, skippedAggregates) =
                 aggregatesMap_->buildAggregates(fineOperator.getmat(), *(get<1>(graphs)),
                                                 criterion_, true);
-            //std::cout<<"no aggregates="<<noAggregates<<" iso="<<isoAggregates<<" one="<<oneAggregates<<" skipped="<<skippedAggregates<<std::endl;
+
             using CommunicationArgs = typename Dune::Amg::ConstructionTraits<Communication>::Arguments;
             CommunicationArgs commArgs(communication_->communicator(), communication_->getSolverCategory());
             coarseLevelCommunication_.reset(Dune::Amg::ConstructionTraits<Communication>::construct(commArgs));
