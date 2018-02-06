@@ -160,7 +160,7 @@ public:
     {
         A_.usmtv(alpha,x,y);
         // add scaled well model modification to y
-        wellMod_.applytScaleAdd( alpha, x, y );
+        wellMod_.applyScaleAdd( alpha, x, y );
 
 #if HAVE_MPI
         if( comm_ )
