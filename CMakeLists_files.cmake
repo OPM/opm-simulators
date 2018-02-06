@@ -27,6 +27,7 @@
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 if(DEV_BUILD)
     list (APPEND MAIN_SOURCE_FILES
+      opm/autodiff/matrixadapterutilities.hpp
       opm/autodiff/Compat.cpp
       opm/polymer/PolymerState.cpp
       opm/polymer/PolymerBlackoilState.cpp

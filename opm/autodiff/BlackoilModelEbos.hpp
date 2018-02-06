@@ -65,7 +65,7 @@
 
 //writing matrix
 #include <dune/istl/matrixmarket.hh>
-
+#include <opm/autodiff/matrixadapterutilities.hpp>
 
 
 
@@ -256,29 +256,16 @@ namespace Opm {
             ebosSimulator_.setTime(t);
             // seralizing may owerwrite prevois step since it was intended for restart ??
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
-            std::cout << "******* Start adjoint calculation ****** " << std::endl;
-            std::cout << "******* solution 1 ****** " << std::endl;
-            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
-            std::cout << "******* solution 0 ****** " << std::endl;
-            std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
 
 
-            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
-            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-           // ebosSimulator_.model().update();
-            //auto linsys =  ebosSimulator_.model().linearizer();
-            // NB need to avoid storag cache to calculate prevois storage term correctly
-            //int iterationIdx = 1;
-            ebosSimulator_.model().newtonMethod().setIterationIndex(/*iterationIdx*/ 1);
-            ebosSimulator_.problem().beginIteration();
-            ebosSimulator_.model().linearizer().linearize(1);
-            ebosSimulator_.problem().endIteration();
-            const auto& ebosJac1 = ebosSimulator_.model().linearizer().matrix();
-            auto& ebosResid1 = ebosSimulator_.model().linearizer().residual();
-            std::cout << "Printing jacobian residual 1" << std::endl;
-            Dune::writeMatrixMarket(ebosJac1, std::cout);
-            std::cout << std::endl;
-            //std::cout << ebosJac << std::endl;
+//            std::cout << "******* Start adjoint calculation ****** " << std::endl;
+//            std::cout << "******* solution 1 ****** " << std::endl;
+//            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+//            std::cout << "******* solution 0 ****** " << std::endl;
+//            std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
+
+
+
 
 
 
@@ -293,13 +280,14 @@ namespace Opm {
             ebosSimulator_.model().linearizer().linearize(0);
             ebosSimulator_.problem().endIteration();
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            /*
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             std::cout << "Printing jacobian residual 0" << std::endl;
             Dune::writeMatrixMarket(ebosJac, std::cout);
             std::cout << std::endl;
-            //std::cout << ebosJac << std::endl;
-
-
+            std::cout << "Printing pure residual with out well contribution backward mode" << std::endl;
+            std::cout << ebosResid << std::endl;
+            */
             //auto& well_state = wellModel().wellState();
             wellModel().beginTimeStep();
             WellState well_state;// =  this->wellModel().wellState();
@@ -309,54 +297,72 @@ namespace Opm {
                 boost::archive::text_iarchive oa(ifs);
                 oa >> well_state;
             }
-            wellModel().setRestartWellState(well_state);
-            /*
-            wellModel().assembleWellEq(ebosSimulator_,
-                                       ebosSimulator_.timeste,
-                                       well_state,
-                                       only_wells);
-            */
-
-
-            std::cout << "Printing pure residual with out well contribution backward mode" << std::endl;
-            std::cout << ebosResid << std::endl;
+            wellModel().setRestartWellState(well_state);          
             double dt = timer.stepLengthTaken();
             //int
             //iterationIdx = 0;//for wells we need this to make update correctyin flow is make shift the state???
             assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
             wellModel().assemble(/*iterationIdx*/ 0, ebosSimulator_.timeStepSize());
+            /*
             wellModel().apply(ebosResid);
             wellModel().printMatrixes();
 
             //wellModel().recoverWellSolutionAndUpdateWellState(x);
             std::cout << "Printing pure residual in backward mode" << std::endl;
             std::cout << ebosResid << std::endl;
+            */
 
+            // add object fucntion derivatives to rhs_
+            /*
+            BVector rhs=0.0;
 
 
 
             // then all well tings has tto be done
             // set initial guess
-            /*
+            BVector x = 0.0;
             // Solve system.
             if( isParallel() )
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
+                typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, true > Operator;
                 Operator opA(ebosJac, well_model_, istlSolver().parallelInformation() );
                 assert( opA.comm() );
-                istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
+                istlSolver().solve( opA, x, rhs, *(opA.comm()) );
             }
             else
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
-                Operator opA(ebosJac, well_model_);
-                istlSolver().solve( opA, x, ebosResid );
+                typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, false > Operator;
+                Operator opAT(ebosJac, well_model_);
+                istlSolver().solve( opAT, x, rhs );
             }
             */
 
             // Do model-specific post-step actions.
            // model_->afterStep(timer, reservoir_state, well_state);
-           return report;
+
+
+            //prepere right hand side for next step
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+           // ebosSimulator_.model().update();
+            //auto linsys =  ebosSimulator_.model().linearizer();
+            // NB need to avoid storag cache to calculate prevois storage term correctly
+            //int iterationIdx = 1;
+            ebosSimulator_.model().newtonMethod().setIterationIndex(/*iterationIdx*/ 1);
+            ebosSimulator_.problem().beginIteration();
+            ebosSimulator_.model().linearizer().linearize(1);
+            ebosSimulator_.problem().endIteration();
+            const auto& ebosJac1 = ebosSimulator_.model().linearizer().matrix();
+
+            /*
+            auto& ebosResid1 = ebosSimulator_.model().linearizer().residual();
+            std::cout << "Printing jacobian residual 1" << std::endl;
+            Dune::writeMatrixMarket(ebosJac1, std::cout);
+            std::cout << std::endl;
+            //std::cout << ebosJac << std::endl;
+            */
+
+            return report;
 
          }
         /// Called once per nonlinear iteration.
@@ -666,14 +672,14 @@ namespace Opm {
             // Solve system.
             if( isParallel() )
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, true > Operator;
                 Operator opA(ebosJac, wellModel(), istlSolver().parallelInformation() );
                 assert( opA.comm() );
                 istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
             }
             else
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, false > Operator;
                 Operator opA(ebosJac, wellModel());
                 istlSolver().solve( opA, x, ebosResid );
             }
@@ -688,89 +694,6 @@ namespace Opm {
 
            Adapts a matrix to the assembled linear operator interface
          */
-        template<class M, class X, class Y, class WellModel, bool overlapping >
-        class WellModelMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
-        {
-          typedef Dune::AssembledLinearOperator<M,X,Y> BaseType;
-
-        public:
-          typedef M matrix_type;
-          typedef X domain_type;
-          typedef Y range_type;
-          typedef typename X::field_type field_type;
-
-#if HAVE_MPI
-          typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
-#else
-          typedef Dune::CollectiveCommunication< Grid > communication_type;
-#endif
-
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
-          Dune::SolverCategory::Category category() const override
-          {
-            return overlapping ?
-                   Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
-          }
-#else
-          enum {
-            //! \brief The solver category.
-            category = overlapping ?
-                Dune::SolverCategory::overlapping :
-                Dune::SolverCategory::sequential
-          };
-#endif
-
-          //! constructor: just store a reference to a matrix
-          WellModelMatrixAdapter (const M& A, const WellModel& wellMod, const boost::any& parallelInformation = boost::any() )
-              : A_( A ), wellMod_( wellMod ), comm_()
-          {
-#if HAVE_MPI
-            if( parallelInformation.type() == typeid(ParallelISTLInformation) )
-            {
-              const ParallelISTLInformation& info =
-                  boost::any_cast<const ParallelISTLInformation&>( parallelInformation);
-              comm_.reset( new communication_type( info.communicator() ) );
-            }
-#endif
-          }
-
-          virtual void apply( const X& x, Y& y ) const
-          {
-            A_.mv( x, y );
-            // add well model modification to y
-            wellMod_.apply(x, y );
-
-#if HAVE_MPI
-            if( comm_ )
-              comm_->project( y );
-#endif
-          }
-
-          // y += \alpha * A * x
-          virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
-          {
-            A_.usmv(alpha,x,y);
-            // add scaled well model modification to y
-            wellMod_.applyScaleAdd( alpha, x, y );
-
-#if HAVE_MPI
-            if( comm_ )
-              comm_->project( y );
-#endif
-          }
-
-          virtual const matrix_type& getmat() const { return A_; }
-
-          communication_type* comm()
-          {
-              return comm_.operator->();
-          }
-
-        protected:
-          const matrix_type& A_ ;
-          const WellModel& wellMod_;
-          std::unique_ptr< communication_type > comm_;
-        };
 
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
