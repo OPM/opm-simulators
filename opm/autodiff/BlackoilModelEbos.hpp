@@ -234,6 +234,7 @@ namespace Opm {
         /// \param[in, out] well_state        well state variables
         SimulatorReport adjointIteration(SimulatorTimerInterface& timer)// WellState& well_state)
         {
+
             SimulatorReport report;
             --timer;
             std::cout << "Start Adjoint iteration" << std::endl;
@@ -257,16 +258,11 @@ namespace Opm {
             // seralizing may owerwrite prevois step since it was intended for restart ??
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
 
-
 //            std::cout << "******* Start adjoint calculation ****** " << std::endl;
 //            std::cout << "******* solution 1 ****** " << std::endl;
 //            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
 //            std::cout << "******* solution 0 ****** " << std::endl;
 //            std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
-
-
-
-
 
 
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
@@ -311,6 +307,15 @@ namespace Opm {
             std::cout << "Printing pure residual in backward mode" << std::endl;
             std::cout << ebosResid << std::endl;
             */
+            const int nc = UgGridHelpers::numCells(grid_);
+
+            BVector lam(nc);// this should be the prevois adjoint vector
+            BVector adjRhs(nc);// this should have contribution from prevois solve
+            // assume no contributions from pure reservoir
+            wellModel().computeObj(dt);
+            wellModel().rhsAdjointRes(lam, adjRhs);
+
+
 
             // add object fucntion derivatives to rhs_
             /*

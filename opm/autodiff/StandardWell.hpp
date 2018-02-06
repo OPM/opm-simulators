@@ -168,11 +168,11 @@ namespace Opm
         //
         void rhsAdjointWell(const BVectorWell& lamda_w);
 
-        void rhsAdjointRes(const BVector& lamda_r, BVector& adjRes);
+        void rhsAdjointRes(const BVector& lamda_r, BVector& adjRes) const;
 
         // compute objective contribution from well
         void computeObj(Simulator& ebosSimulator,
-                       const double dt);
+                        const double dt);
 
         // update derivative contribution from this well
         void objectDerivative(const BVector& lambda_r );

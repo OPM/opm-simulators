@@ -229,8 +229,11 @@ namespace Opm {
                     well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
                                                 param_, *rateConverter_, pvtreg, numComponents() ) );
                 } else {
+                    assert(false);
+                    /*
                     well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(),
                                                 param_, *rateConverter_, pvtreg, numComponents() ) );
+                    */
                 }
             }
         }
@@ -376,8 +379,30 @@ namespace Opm {
         }
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    computeObj(double dt)    {
+        if ( ! localWellsActive() ) {
+            return;
+        }
+        for (auto& well : well_container_) {
+            well->computeObj(ebosSimulator_, dt);
+        }
+    }
 
-
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    rhsAdjointRes(const BVector& lam , BVector& rhs)
+    {
+        if ( ! localWellsActive() ) {
+            return;
+        }
+        for (auto& well : well_container_) {
+            well->rhsAdjointRes(lam, rhs);
+        }
+    }
 
 
     // Ax = Ax - alpha * C D^-1 B x

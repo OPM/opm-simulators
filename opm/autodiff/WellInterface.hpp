@@ -187,9 +187,17 @@ namespace Opm
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const = 0;
 
+
         /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const = 0;
 
+        // Adjoint related transpose of the above
+        virtual void applyt(const BVector& x, BVector& Ax) const = 0;
+        virtual void applyt(BVector& r) const = 0;
+        virtual void rhsAdjointRes(const BVector& lamda_r, BVector& adjRes) const = 0;
+        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x) const = 0;
+        virtual void computeObj(Simulator& ebosSimulator,
+                                      const double dt) = 0;
         // TODO: before we decide to put more information under mutable, this function is not const
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,

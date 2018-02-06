@@ -569,15 +569,16 @@ namespace Opm
                 if(componentIdx==0){
                     const EvalWell cq_s_effective = cq_s[componentIdx] * well_efficiency_factor_;
                     // balue of objective fuction
-                    objval_ = +cq_s_effective.value();
+                    objval_ += cq_s_effective.value();
                     for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                     // derivative with respect to reservoir state
-                        objder_adjres_[0][cell_idx][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
+                        //objder_adjres_[0][cell_idx][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
+                        objder_adjres_[cell_idx][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
                         // derivative with respect to well primary variables
-                        objder_adjwell_[0][0][pvIdx] += cq_s_effective.derivative(pvIdx);
+                        objder_adjwell_[0][pvIdx] += cq_s_effective.derivative(pvIdx);
                     }
                     // derivative with respect to controls
-                    objder_adjctrl_[0][0][0] += cq_s_effective.derivative(control_index);
+                    objder_adjctrl_[0][0] += cq_s_effective.derivative(control_index);
                 }
             }
 
@@ -604,9 +605,9 @@ namespace Opm
             if(componentIdx==0){
                 resWell_loc += getQs(componentIdx) * well_efficiency_factor_;
                 for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
-                    objder_adjwell_[0][0][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
+                    objder_adjwell_[0][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
                 }
-                objder_adjctrl_[0][0][0] += resWell_loc.derivative(control_index);
+                objder_adjctrl_[0][0] += resWell_loc.derivative(control_index);
                 objval_+= resWell_loc.value();
             }
         }
@@ -626,7 +627,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    rhsAdjointRes(const BVector& lambda_r, BVector& adjRes){
+    rhsAdjointRes(const BVector& lambda_r, BVector& adjRes) const{
         //adjRes += Ct_(n+1)*lambda_r_(n+1);
         // this dould only have the explict terms in the well equations
         duneC_.mtv(lambda_r, adjRes);
