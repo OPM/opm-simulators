@@ -21,7 +21,7 @@
 #define OPM_PARALLELOVERLAPPINGILU0_HEADER_INCLUDED
 
 #include <opm/common/Exceptions.hpp>
-
+#include <opm/common/ErrorMacros.hpp>
 #include <dune/common/version.hh>
 #include <dune/istl/preconditioner.hh>
 #include <dune/istl/paamg/smoother.hh>
@@ -355,8 +355,7 @@ public:
         const size_type lastRow = iEnd - 1;
         if( iEnd != upper_.rows() )
         {
-            std::abort();
-           // OPM_THROW(std::logic_error,"ILU: lower and upper rows must be the same");
+            OPM_THROW(std::logic_error,"ILU: number of lower and upper rows must be the same");
         }
 
         // lower triangular solve
