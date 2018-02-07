@@ -202,7 +202,7 @@ template < class C, class Op, class P, class S, std::size_t index >
 inline void
 createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
                                std::unique_ptr< BlackoilAmg<Op,S,C,P,index> >& amgPtr,
-                               const CPRParameter& params = CPRParameter())
+                               const CPRParameter& params)
 {
     using AMG = BlackoilAmg<Op,S,C,P,index>;
     // TODO: revise choice of parameters
@@ -226,8 +226,7 @@ createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
 
 template < class C, class Op, class P, class AMG >
 inline void
-createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm, std::unique_ptr< AMG >& amgPtr,
-                               const CPRParameter& params = CPRParameter())
+createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm, std::unique_ptr< AMG >& amgPtr)
 {
     // TODO: revise choice of parameters
     int coarsenTarget=1200;
