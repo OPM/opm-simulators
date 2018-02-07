@@ -29,6 +29,12 @@ namespace Opm {
 
         extractLegacyCellPvtRegionIndex_();
         extractLegacyDepth_();
+
+        Grid grid = ebosSimulator_.gridManager().grid();
+        grid.switchToGlobalView();
+
+        const auto eclipse_grid = Opm::UgGridHelpers::createEclipseGrid(grid, ebosSimulator.gridManager().eclState().getInputGrid());
+        ebosSimulator_.gridManager().schedule().filterCompletions(eclipse_grid);
     }
 
 
@@ -92,10 +98,9 @@ namespace Opm {
         // handling MS well related
         if (param_.use_multisegment_well_) { // if we use MultisegmentWell model
             for (const auto& well : wells_ecl_) {
-                // TODO: this is acutally not very accurate, because sometimes a deck just claims a MS well
-                // while keep the well shut. More accurately, we should check if the well exisits in the Wells
-                // structure here
-                if (well->isMultiSegment(timeStepIdx) ) { // there is one well is MS well
+                // TODO: more accurately, we should check the Wells struct to see what the status of the well
+                // there is one active well is MS well
+                if (well->isMultiSegment(timeStepIdx) && well->getStatus(timeStepIdx) != WellCommon::SHUT) {
                     well_state_.initWellStateMSWell(wells(), wells_ecl_, timeStepIdx, phase_usage_, previous_well_state_);
                     break;
                 }
