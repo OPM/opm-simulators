@@ -151,6 +151,11 @@ protected:
         cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
     }
 
+    void filterCompletions_()
+    {
+        // not handling the removal of completions for this type of grid yet.
+    }
+
     GridPointer grid_;
     CartesianIndexMapperPointer cartesianIndexMapper_;
 };

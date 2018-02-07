@@ -31,6 +31,7 @@
 #include "ecltransmissibility.hh"
 
 #include <dune/grid/CpGrid.hpp>
+#include <dune/grid/cpgrid/GridHelpers.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
 
@@ -255,6 +256,16 @@ protected:
         equilCartesianIndexMapper_ = new CartesianIndexMapper(*equilGrid_);
 
         globalTrans_ = nullptr;
+    }
+
+    // removing some completions located in inactive grid cells
+    void filterCompletions_()
+    {
+        assert(grid_);
+        Grid grid = *grid_;
+        grid.switchToGlobalView();
+        const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(grid, this->eclState().getInputGrid());
+        this->schedule().filterCompletions(eclipseGrid);
     }
 
     Grid* grid_;

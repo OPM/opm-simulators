@@ -194,6 +194,7 @@ public:
         }
 
         asImp_().createGrids_();
+        asImp_().filterCompletions_();
         asImp_().finalizeInit_();
     }
 
@@ -216,6 +217,10 @@ public:
     { return *eclState_; }
 
     const Opm::Schedule& schedule() const {
+        return *schedule_;
+    }
+
+    Opm::Schedule& schedule() {
         return *schedule_;
     }
 
@@ -316,7 +321,7 @@ private:
     static Opm::Deck* externalDeck_;
     static Opm::EclipseState* externalEclState_;
     static Opm::Schedule* externalSchedule_;
-    static Opm::SummaryConfig* externalSummaryConfig_; 
+    static Opm::SummaryConfig* externalSummaryConfig_;
     std::unique_ptr<Opm::Deck> internalDeck_;
     std::unique_ptr<Opm::EclipseState> internalEclState_;
     std::unique_ptr<Opm::Schedule> internalSchedule_;

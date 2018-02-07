@@ -196,6 +196,11 @@ protected:
             new CartesianIndexMapper(*grid_, cartesianDimension_, cartesianCellId_);
     }
 
+    void filterCompletions_()
+    {
+        // not handling the removal of completions for this type of grid yet.
+    }
+
     Grid* grid_;
     EquilGrid* equilGrid_;
     std::vector<int> cartesianCellId_;
