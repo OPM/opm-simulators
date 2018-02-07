@@ -712,7 +712,7 @@ public:
         writeOutput(dw, t, false, totalSolverTime, nextstep, verbose);
     }
 
-    void writeOutput(const Opm::data::Wells& dw, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep, bool verbose = true)
+    void writeOutput(Opm::data::Wells& dw, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep, bool verbose = true)
     {
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.

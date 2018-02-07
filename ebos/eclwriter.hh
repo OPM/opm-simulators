@@ -148,7 +148,7 @@ public:
     /*!
      * \brief collect and pass data and pass it to eclIO writer
      */
-    void writeOutput(const Opm::data::Wells& localWellData, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep)
+    void writeOutput(Opm::data::Wells& localWellData, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep)
     {
 #if !HAVE_OPM_OUTPUT
         throw std::runtime_error("opm-output must be available to write ECL output!");
@@ -173,8 +173,12 @@ public:
 
         // collect all data to I/O rank and assign to sol
         Opm::data::Solution localCellData = {};
-        if (eclOutputModule_.outputRestart())
+        if (!substep)
             eclOutputModule_.assignToSolution(localCellData);
+
+        // add cell data to perforations for Rft output
+        if (!substep)
+            eclOutputModule_.addRftDataToWells(localWellData, episodeIdx);
 
         if (collectToIORank_.isParallel())
             collectToIORank_.collect(localCellData, eclOutputModule_.getBlockValues(), localWellData);
@@ -189,7 +193,7 @@ public:
             std::map<std::string, std::vector<double>> extraRestartData;
 
             // Add suggested next timestep to extra data.
-            if (eclOutputModule_.outputRestart())
+            if (!substep)
                 extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextstep);
 
             // Add TCPU
