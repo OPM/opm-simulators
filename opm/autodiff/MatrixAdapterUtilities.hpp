@@ -1,6 +1,7 @@
 #ifndef MATRIXADAPTERUTILITIES_HPP
 #define MATRIXADAPTERUTILITIES_HPP
 
+#include "transpose.hh"
 #include <dune/istl/operators.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/common/parallel/collectivecommunication.hh>
@@ -133,6 +134,7 @@ public:
     WellModelTransposeMatrixAdapter (const M& A, const WellModel& wellMod, const boost::any& parallelInformation = boost::any() )
         : A_( A ), wellMod_( wellMod ), comm_()
     {
+        Dune::MatrixVector::transpose<matrix_type>(A_, AT_);
 #if HAVE_MPI
         if( parallelInformation.type() == typeid(ParallelISTLInformation) )
         {
@@ -168,7 +170,13 @@ public:
 #endif
     }
 
-    virtual const matrix_type& getmat() const { return A_; }
+    virtual const matrix_type& getmat() const
+    {
+        //Dune::MatrixVector::Transposed<matrix_type> AT;
+        //Dune::MatrixVector::transpose<matrix_type>(A_, AT);
+        return AT_;
+        //return Dune::MatrixVector::TransposeHelper<matrix_type>_;
+    }
 
     communication_type* comm()
     {
@@ -177,6 +185,7 @@ public:
 
 protected:
     const matrix_type& A_ ;
+    Dune::MatrixVector::Transposed<matrix_type> AT_ ;
     const WellModel& wellMod_;
     std::unique_ptr< communication_type > comm_;
 };
