@@ -51,7 +51,7 @@ namespace Opm
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<double>& depth_arg,
          const double gravity_arg,
-         const int num_cells)
+         const size_t num_cells)
     {
         Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells);
 
