@@ -28,7 +28,7 @@
 
 #include <opm/autodiff/MissingFeatures.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
-#include <opm/common/utility/ResetLocale.hpp>
+#include <opm/material/common/ResetLocale.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
