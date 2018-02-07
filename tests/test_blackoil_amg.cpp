@@ -321,6 +321,7 @@ bool init_unit_test_func()
 int main(int argc, char** argv)
 {
     const auto& helper = Dune::MPIHelper::instance(argc, argv);
+    DUNE_UNUSED_PARAMETER(helper);
     boost::unit_test::unit_test_main(&init_unit_test_func,
                                      argc, argv);
 }
