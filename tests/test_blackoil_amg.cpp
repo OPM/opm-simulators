@@ -302,7 +302,7 @@ void runBlackoilAmgLaplace()
     Criterion criterion;
 
     smootherArgs.iterations = 1;
-    Opm::CprParameter param;
+    Opm::CPRParameter param;
 
     Opm::BlackoilAmg<Operator,ParSmoother,Criterion,Communication,0> amg(param,
                                                                          fop, criterion,
