@@ -175,9 +175,9 @@ namespace Opm
         virtual void applyt(BVector& r) const;
 
         //
-        void rhsAdjointWell(const BVectorWell& lamda_w);
+        void rhsAdjointWell();//(const BVectorWell& lamda_w);
 
-        void rhsAdjointRes(const BVector& lamda_r, BVector& adjRes) const;
+        void rhsAdjointRes(BVector& adjRes) const;
 
         // compute objective contribution from well
         void computeObj(Simulator& ebosSimulator,
@@ -192,8 +192,8 @@ namespace Opm
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state) const;
 
-        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x) const;
-                                                           //WellState& well_state) const;
+        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x,
+                                                             WellState& well_state);
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
@@ -358,8 +358,7 @@ namespace Opm
                              WellState& well_state) const;
 
         // updating the well_state based on well solution dwells
-        void updateAdjointState(const BVectorWell& dwells) const;
-                             //WellState& well_state) const;
+        void updateAdjointState(const BVectorWell& dwells, WellState& well_state) const;
 
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.

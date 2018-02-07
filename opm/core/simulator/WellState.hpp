@@ -200,6 +200,20 @@ namespace Opm
         std::vector<double>& perfPress() { return perfpress_; }
         const std::vector<double>& perfPress() const { return perfpress_; }
 
+
+        // Variables for Adjoint boiler plate to get them out
+        /// One pressure per well connection.
+        std::vector<double>& objDer() { return objder_; }
+        const std::vector<double>& objDer() const { return objder_; }
+
+        /// One pressure per well connection.
+        std::vector<double>& adjointVariables() { return adjoint_variables_; }
+        const std::vector<double>& adjointVariables() const { return adjoint_variables_; }
+
+        /// One pressure per well connection.
+        double&  objVal() { return objval_; }
+        const double& objVal() const { return objval_; }
+
         size_t getRestartBhpOffset() const {
             return 0;
         }
@@ -331,6 +345,11 @@ namespace Opm
         std::vector<double> perfpress_;
 
         WellMapType wellMap_;
+
+        // adjoint states
+        double objval_;
+        std::vector<double> objder_;
+        std::vector<double> adjoint_variables_;
 
     protected:
         struct wdel {

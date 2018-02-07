@@ -539,13 +539,14 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    rhsAdjointRes(const BVector& lam , BVector& rhs)
+    rhsAdjointRes(BVector& rhs)
     {
         if ( ! localWellsActive() ) {
             return;
         }
         for (auto& well : well_container_) {
-            well->rhsAdjointRes(lam, rhs);
+            well->rhsAdjointRes(rhs);
+            well->rhsAdjointWell();
         }
     }
 
@@ -571,7 +572,18 @@ namespace Opm {
         Ax.axpy( alpha, scaleAddRes_ );
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    recoverWellAdjointAndUpdateWellAdjoint(const BVector& x)
+    {
+        if (!localWellsActive())
+            return;
 
+        for (auto& well : well_container_) {
+            well->recoverWellAdjointAndUpdateAdjointState(x, well_state_);
+        }
+    }
 
 
 

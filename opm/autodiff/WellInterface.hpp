@@ -203,8 +203,11 @@ namespace Opm
         // Adjoint related transpose of the above
         virtual void applyt(const BVector& x, BVector& Ax) const = 0;
         virtual void applyt(BVector& r) const = 0;
-        virtual void rhsAdjointRes(const BVector& lamda_r, BVector& adjRes) const = 0;
-        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x) const = 0;
+        // interface for explite quatites not in
+        virtual void rhsAdjointRes(BVector& adjRes) const = 0;
+        virtual void rhsAdjointWell() = 0;
+
+        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x, WellState& well_state) = 0;
         virtual void computeObj(Simulator& ebosSimulator,
                                       const double dt) = 0;
         // TODO: before we decide to put more information under mutable, this function is not const

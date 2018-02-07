@@ -145,7 +145,7 @@ namespace Opm {
             void assemble(const int iterationIdx,
                           const double dt);
 
-            void rhsAdjointRes(const BVector& lamda_r, BVector& adjRes);
+            void rhsAdjointRes(BVector& adjRes);
             void computeObj(double dt);
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;
@@ -166,8 +166,8 @@ namespace Opm {
 
             // using the solution x to recover the solution xw for wells and applying
             // xw to update Well State
+            void recoverWellAdjointAndUpdateWellAdjoint(const BVector& x);
             void recoverWellSolutionAndUpdateWellState(const BVector& x);
-
             // Check if well equations is converged.
             bool getWellConvergence(const std::vector<Scalar>& B_avg) const;
 

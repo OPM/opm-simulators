@@ -311,7 +311,9 @@ namespace Opm {
             BVector adjRhs(nc);// this should have contribution from prevois solve
             // assume no contributions from pure reservoir
             wellModel().computeObj(dt);
-            wellModel().rhsAdjointRes(lam, adjRhs);
+            wellModel().rhsAdjointRes(adjRhs);
+            // add rhs from the schur complement of well equations
+            wellModel().applyt(adjRhs);
 
             // then all well tings has tto be done
             // set initial guess
@@ -330,7 +332,9 @@ namespace Opm {
                 Operator opAt(ebosJac, well_model_);
                 istlSolver().solve( opAt, x, adjRhs );
             }
-
+            std::cout << "******* lamda_r *****" << std::endl;
+            std::cout << x << std::endl;
+            wellModel().recoverWellAdjointAndUpdateWellAdjoint(x);
 
             //collect objective values, derivatives and well control state for output
             // assume most all is related to well
@@ -356,6 +360,11 @@ namespace Opm {
             // prepare rhs for next step
             BVector rhs_next(nc);
             ebosJac1.mtv(x,rhs_next);
+            std::cout << "******* rhs_next *****" << std::endl;
+            std::cout << rhs_next << std::endl;
+
+            // should also add explicite contributions rom wells to
+            // reservoir and well
 
 
 

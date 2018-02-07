@@ -477,32 +477,32 @@ namespace Opm
 
         const EvalWell& bhp = getBhp();
 
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
-            const int cell_idx = well_cells_[perf];
-            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
-            std::vector<EvalWell> cq_s(num_components_,0.0);
-            std::vector<EvalWell> mob(num_components_, 0.0);
-            getMobility(ebosSimulator, perf, mob);
-            computePerfRate(intQuants, mob, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf, cq_s);
+//        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+//            const int cell_idx = well_cells_[perf];
+//            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+//            std::vector<EvalWell> cq_s(num_components_,0.0);
+//            std::vector<EvalWell> mob(num_components_, 0.0);
+//            getMobility(ebosSimulator, perf, mob);
+//            computePerfRate(intQuants, mob, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf, cq_s);
 
-            for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
-                // the cq_s entering mass balance equations need to consider the efficiency factors.
-                // for now only oil
-                if(componentIdx==0){
-                    const EvalWell cq_s_effective = cq_s[componentIdx] * well_efficiency_factor_;
-                    // balue of objective fuction
-                    objval_ += cq_s_effective.value();
-                    for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
-                    // derivative with respect to reservoir state
-                        //objder_adjres_[0][cell_idx][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
-                        objder_adjres_[cell_idx][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
-                        // derivative with respect to well primary variables
-                        objder_adjwell_[0][pvIdx] += cq_s_effective.derivative(pvIdx);
-                    }
-                    // derivative with respect to controls
-                    objder_adjctrl_[0][0] += cq_s_effective.derivative(control_index);
-                }
-            }
+//            for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
+//                // the cq_s entering mass balance equations need to consider the efficiency factors.
+//                // for now only oil
+//                if(componentIdx==0){
+//                    const EvalWell cq_s_effective = cq_s[componentIdx] * well_efficiency_factor_;
+//                    // balue of objective fuction
+//                    objval_ += cq_s_effective.value();
+//                    for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+//                    // derivative with respect to reservoir state
+//                        //objder_adjres_[0][cell_idx][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
+//                        objder_adjres_[cell_idx][pvIdx] += cq_s_effective.derivative(pvIdx);
+//                        // derivative with respect to well primary variables
+//                        objder_adjwell_[0][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
+//                    }
+//                    // derivative with respect to controls
+//                    objder_adjctrl_[0][0] += cq_s_effective.derivative(control_index);
+//                }
+//            }
 
 //  drop plymer for now
 //            if (has_polymer) {
@@ -519,7 +519,7 @@ namespace Opm
 //                }
 //                objval_ -= cq_s_poly.value();
 //              }
-        }
+ //       }
 
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
@@ -535,13 +535,14 @@ namespace Opm
         }
     }
 
+    // NB functionallyto for adding contribution from previous step is not taken
      // this is local
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    rhsAdjointWell(const BVectorWell& lambda_w){
+    rhsAdjointWell(){ //const BVectorWell& lambda_w){
         adjWell_=0.0;
-        duneD_.mtv(adjoint_variables_, adjWell_);
+        //duneD_.mtv(lambda_w, adjWell_);// for prevois step
         adjWell_+= objder_adjwell_;
     }
 
@@ -549,10 +550,11 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    rhsAdjointRes(const BVector& lambda_r, BVector& adjRes) const{
+    //rhsAdjointRes(const BVector& lambda_r, BVector& adjRes) const{
+    rhsAdjointRes(BVector& adjRes) const{
         //adjRes += Ct_(n+1)*lambda_r_(n+1);
         // this dould only have the explict terms in the well equations
-        duneC_.mtv(lambda_r, adjRes);
+        //duneC_.mtv(lambda_r, adjRes); // for prevois step
         adjRes += objder_adjres_;
     }
 
@@ -561,9 +563,11 @@ namespace Opm
     StandardWell<TypeTag>::objectDerivative(const BVector& lambda_r )
     {
         // obj/dctrl = obj/ctrl + CA^T*lamda_r+DA^t*lamda_w
-        objder_= objder_adjctrl_;
-        duneCA_.mtv(lambda_r, objder_);
-        duneDA_.mtv(adjoint_variables_, objder_);
+
+        objder_ = objder_adjctrl_;
+        duneCA_.mmv(lambda_r, objder_);
+        //objder_ += objder_adjctrl_;
+        duneDA_.mmtv(adjoint_variables_, objder_);
     }
 
 
@@ -991,12 +995,20 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateAdjointState(const BVectorWell& adjval) const
+    updateAdjointState(const BVectorWell& adjval, WellState& well_state) const
     {
         //NB need to be checked
+        //objectDerivative(adjval);//
+        well_state.adjointVariables().resize(1);
+        adjoint_variables_.resize(1);
         for(int i=0; i <adjoint_variables_.size(); ++i){
             adjoint_variables_[i]=adjval[0][i];
+            well_state.adjointVariables()[i]=adjval[0][i];
         }
+        // do all for objective contributions
+        well_state.objVal() = objval_;
+        well_state.objDer().resize(1);
+        well_state.objDer()[0] = objder_[0][0];
     }
 
 
@@ -1862,6 +1874,14 @@ namespace Opm
         duneC_.mmtv(invDBx,Ax);
     }
 
+
+//  Matrix format
+//         A    C^t
+//         B      D
+
+
+
+
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
@@ -1870,8 +1890,8 @@ namespace Opm
         assert( Bx_.size() == duneB_.N() );
         assert( invDrw_.size() == invDuneD_.N() );
 
-        // Bx_ = duneC_^t * x
-        duneC_.mtv(x, Ctx_);
+        // Bx_ = duneC * x
+        duneC_.mv(x, Ctx_);
         // invDBx = invDuneD_ * Bx_
         // TODO: with this, we modified the content of the invDrw_.
         // Is it necessary to do this to save some memory?
@@ -1880,7 +1900,7 @@ namespace Opm
 
         // NB this to not flow article
         // A^tx = A^t x - duneB_* invDBx
-        duneC_.mmv(invDtCtx,Atx);
+        duneB_.mmtv(invDtCtx,Atx);
     }
 
 
@@ -1905,10 +1925,10 @@ namespace Opm
     {
         assert( invDrw_.size() == invDuneD_.N() );
 
-        // invDrw_ = invDuneD_ * resWell_
+        // invDrw_ = invDuneDt_ * resWell_
         invDuneD_.mtv(adjWell_, invDtadj_);
-        // r = r - duneC_^T * invDrw_
-        duneC_.mmtv(invDtadj_, r);
+        // r = r - duneB_^T * invDtrw_
+        duneB_.mmtv(invDtadj_, r);
     }
 
 
@@ -1953,12 +1973,12 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    recoverWellAdjointAndUpdateAdjointState(const BVector& x) const
-                                          //WellState& well_state) const
+    recoverWellAdjointAndUpdateAdjointState(const BVector& x, WellState& well_state)
     {
         BVectorWell xw(1);
         recoverAdjointWell(x, xw);
-        updateAdjointState(xw);//, well_state);
+        objectDerivative(x);
+        updateAdjointState(xw, well_state);
     }
 
 
