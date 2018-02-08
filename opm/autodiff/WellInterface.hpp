@@ -201,6 +201,7 @@ namespace Opm
         virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x, WellState& well_state) = 0;
         virtual void computeObj(Simulator& ebosSimulator,
                                       const double dt) = 0;
+        virtual void printObjective(std::ostream& os) const = 0;
         // TODO: before we decide to put more information under mutable, this function is not const
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,

@@ -118,6 +118,7 @@ namespace Opm {
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
 
 
+            void printObjective(std::ostream& os) const;
 
             // using the solution x to recover the solution xw for wells and applying
             // xw to update Well State

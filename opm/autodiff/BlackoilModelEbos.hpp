@@ -336,7 +336,10 @@ namespace Opm {
             }
             std::cout << "******* lamda_r *****" << std::endl;
             std::cout << x << std::endl;
-            wellModel().recoverWellAdjointAndUpdateWellAdjoint(x);
+            wellModel().recoverWellAdjointAndUpdateWellAdjoint(x);// also update objective
+
+            // print objective and well state to file
+            wellModel().printObjective(std::cout);
 
             //collect objective values, derivatives and well control state for output
             // assume most all is related to well
@@ -361,7 +364,7 @@ namespace Opm {
 
             // prepare rhs for next step
             BVector rhs_next(nc);
-            ebosJac1.mtv(x,rhs_next);
+            ebosJac1.mtv(x, rhs_next);
             std::cout << "******* rhs_next *****" << std::endl;
             std::cout << rhs_next << std::endl;
 

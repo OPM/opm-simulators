@@ -548,6 +548,19 @@ namespace Opm
         }
     }
 
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    printObjective(std::ostream& os) const
+    {
+        os << "Well name :" << this->name() << std::endl;
+        os << "Well type :" << this->wellType() << std::endl;
+        //WellContols ctrl = this->wellControls();
+        os << "objective value" << objval_ << std::endl;
+        os << "objective derivative" << objder_ << std::endl;
+
+    }
+
 
     template<typename TypeTag>
     void
@@ -633,7 +646,7 @@ namespace Opm
     rhsAdjointWell(){ //const BVectorWell& lambda_w){
         adjWell_=0.0;
         //duneD_.mtv(lambda_w, adjWell_);// for prevois step
-        adjWell_+= objder_adjwell_;
+        adjWell_-= objder_adjwell_;
     }
 
     // this is called outside in loop and accomulate terms
@@ -645,19 +658,19 @@ namespace Opm
         //adjRes += Ct_(n+1)*lambda_r_(n+1);
         // this dould only have the explict terms in the well equations
         //duneC_.mtv(lambda_r, adjRes); // for prevois step
-        adjRes += objder_adjres_;
+        adjRes -= objder_adjres_;
     }
 
     template<typename TypeTag>
     void
-    StandardWell<TypeTag>::objectDerivative(const BVector& lambda_r )
+    StandardWell<TypeTag>::objectDerivative(const BVector& lam_r, const BVectorWell & lam_w)
     {
         // obj/dctrl = obj/ctrl + CA^T*lamda_r+DA^t*lamda_w
 
         objder_ = objder_adjctrl_;
-        duneCA_.mmv(lambda_r, objder_);
+        duneCA_.mmv(lam_r, objder_);
         //objder_ += objder_adjctrl_;
-        duneDA_.mmtv(adjoint_variables_, objder_);
+        duneDA_.mmtv(lam_w, objder_);
     }
 
 
@@ -894,10 +907,10 @@ namespace Opm
     {
         //NB need to be checked
         //objectDerivative(adjval);//
-        well_state.adjointVariables().resize(1);
+        well_state.adjointVariables().resize(numEq);
         adjoint_variables_.resize(1);
-        for(int i=0; i <adjoint_variables_.size(); ++i){
-            adjoint_variables_[i]=adjval[0][i];
+        for(int i=0; i <numEq; ++i){
+            adjoint_variables_[0][i]=adjval[0][i];
             well_state.adjointVariables()[i]=adjval[0][i];
         }
         // do all for objective contributions
@@ -1816,7 +1829,7 @@ namespace Opm
     {
         BVectorWell xw(1);
         recoverAdjointWell(x, xw);
-        objectDerivative(x);
+        objectDerivative(x, xw);
         updateAdjointState(xw, well_state);
     }
 
