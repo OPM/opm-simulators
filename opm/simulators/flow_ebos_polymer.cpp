@@ -18,7 +18,7 @@
 
 #include <opm/simulators/flow_ebos_polymer.hpp>
 
-#include <opm/common/utility/ResetLocale.hpp>
+#include <opm/material/common/ResetLocale.hpp>
 #include <dune/grid/CpGrid.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>

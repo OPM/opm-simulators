@@ -370,7 +370,7 @@ namespace Opm {
             }
             catch ( const Dune::FMatrixError& e  )
             {
-                OPM_THROW(Opm::NumericalProblem,"Error encounted when solving well equations");
+                OPM_THROW(Opm::NumericalIssue,"Error encounted when solving well equations");
             }
 
             return wellModel().lastReport();
@@ -967,15 +967,15 @@ namespace Opm {
 
                 if (std::isnan(mass_balance_residual[compIdx])
                     || std::isnan(CNV[compIdx])) {
-                    OPM_THROW(Opm::NumericalProblem, "NaN residual for " << compName << " equation");
+                    OPM_THROW(Opm::NumericalIssue, "NaN residual for " << compName << " equation");
                 }
                 if (mass_balance_residual[compIdx] > maxResidualAllowed()
                     || CNV[compIdx] > maxResidualAllowed()) {
-                    OPM_THROW(Opm::NumericalProblem, "Too large residual for " << compName << " equation");
+                    OPM_THROW(Opm::NumericalIssue, "Too large residual for " << compName << " equation");
                 }
                 if (mass_balance_residual[compIdx] < 0
                     || CNV[compIdx] < 0) {
-                    OPM_THROW(Opm::NumericalProblem, "Negative residual for " << compName << " equation");
+                    OPM_THROW(Opm::NumericalIssue, "Negative residual for " << compName << " equation");
                 }
             }
 

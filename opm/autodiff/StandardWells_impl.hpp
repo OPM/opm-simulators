@@ -774,7 +774,7 @@ namespace Opm
                 ++number_iterations;
 
                 if (number_iterations > max_iterations) {
-                    OPM_THROW(Opm::NumericalProblem, "Could not find proper control within " << number_iterations << " iterations!");
+                    OPM_THROW(Opm::NumericalIssue, "Could not find proper control within " << number_iterations << " iterations!");
                     break;
                 }
             } while (constraint_violated);

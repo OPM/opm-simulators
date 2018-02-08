@@ -477,7 +477,7 @@ namespace Opm
                 const EvalWell d = 1.0 - rv * rs;
 
                 if (d.value() == 0.0) {
-                    OPM_THROW(Opm::NumericalProblem, "Zero d value obtained for well " << name() << " during flux calcuation"
+                    OPM_THROW(Opm::NumericalIssue, "Zero d value obtained for well " << name() << " during flux calcuation"
                                                   << " with rs " << rs << " and rv " << rv);
                 }
 
