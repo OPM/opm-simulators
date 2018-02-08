@@ -465,9 +465,12 @@ namespace Opm
     {
         os << "Well name :" << this->name() << std::endl;
         os << "Well type :" << this->wellType() << std::endl;
-        //WellContols ctrl = this->wellControls();
-        os << "objective value" << objval_ << std::endl;
-        os << "objective derivative" << objder_ << std::endl;
+        WellControls *ctrl = this->wellControls();
+        os << "Current control " << well_controls_get_current_type(ctrl) << std::endl;
+        const double* drst = well_controls_get_current_distr(ctrl);
+        os << "Current control " << drst[0] <<  " "  << drst[1] <<  "  "  << drst[2] <<  "  " << std::endl;
+        os << "objective value " << objval_ << std::endl;
+        os << "objective derivative " << objder_ << std::endl;
 
     }
 
@@ -480,13 +483,13 @@ namespace Opm
     {
         const int np = number_of_phases_;
 
-        auto& ebosJac = ebosSimulator.model().linearizer().matrix();
-        auto& ebosResid = ebosSimulator.model().linearizer().residual();
+       // auto& ebosJac = ebosSimulator.model().linearizer().matrix();
+        //auto& ebosResid = ebosSimulator.model().linearizer().residual();
 
         // TODO: it probably can be static member for StandardWell
         const double volume = 0.002831684659200; // 0.1 cu ft;
-        EvalWell objval=0;
-        const bool allow_cf = crossFlowAllowed(ebosSimulator);
+        //EvalWell objval=0;
+        //const bool allow_cf = crossFlowAllowed(ebosSimulator);
 
         const EvalWell& bhp = getBhp();
 
@@ -535,15 +538,16 @@ namespace Opm
  //       }
 
         // add vol * dF/dt + Q to the well equations;
+        objval_=0.0;
         for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
-            EvalWell resWell_loc = 0.0;
+            //EvalWell resWell_loc = 0.0;
             if(componentIdx==0){
-                resWell_loc += getQs(componentIdx) * well_efficiency_factor_;
+                EvalWell resWell_loc = getQs(componentIdx) * well_efficiency_factor_;
                 for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                     objder_adjwell_[0][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
                 }
                 objder_adjctrl_[0][0] += resWell_loc.derivative(control_index);
-                objval_+= resWell_loc.value();
+                objval_= resWell_loc.value()*dt;
             }
         }
     }
