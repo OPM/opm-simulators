@@ -28,11 +28,10 @@
 #ifndef OPM_FLUID_STATE_ENTHALPY_MODULES_HPP
 #define OPM_FLUID_STATE_ENTHALPY_MODULES_HPP
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <algorithm>
 

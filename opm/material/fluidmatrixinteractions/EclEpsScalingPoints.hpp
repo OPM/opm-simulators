@@ -381,8 +381,8 @@ struct EclEpsScalingPointsInfo
                     Opm::arithmeticMean((*epsProperties.permx)[cartesianCellIdx],
                                         (*epsProperties.permy)[cartesianCellIdx]);
             else
-                OPM_THROW(std::runtime_error, "Illegal direction indicator for the JFUNC "
-                          "keyword ("<<static_cast<int>(jfuncDir)<<")");
+                throw std::runtime_error("Illegal direction indicator for the JFUNC "
+                                         "keyword ("+std::to_string(int(jfuncDir))+")");
 
             // convert permeability from m^2 to mD
             perm *= 1.01325e15;

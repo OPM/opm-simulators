@@ -29,11 +29,10 @@
 
 #include "EclStone2MaterialParams.hpp"
 
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <algorithm>
 
@@ -254,7 +253,7 @@ public:
                             const Params& /* params */,
                             const FluidState& /* fluidState */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: saturations()");
+        throw std::logic_error("Not implemented: saturations()");
     }
 
     /*!
@@ -264,7 +263,7 @@ public:
     static Evaluation Sg(const Params& /* params */,
                          const FluidState& /* fluidState */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: Sg()");
+        throw std::logic_error("Not implemented: Sg()");
     }
 
     /*!
@@ -274,7 +273,7 @@ public:
     static Evaluation Sn(const Params& /* params */,
                          const FluidState& /* fluidState */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: Sn()");
+        throw std::logic_error("Not implemented: Sn()");
     }
 
     /*!
@@ -284,7 +283,7 @@ public:
     static Evaluation Sw(const Params& /* params */,
                          const FluidState& /* fluidState */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: Sw()");
+        throw std::logic_error("Not implemented: Sw()");
     }
 
     /*!

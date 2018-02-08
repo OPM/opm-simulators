@@ -432,7 +432,7 @@ protected:
         case C10Idx: return 1e10;
         case C15Idx: return 1e10;
         case C20Idx: return 1e10;
-        default: OPM_THROW(std::logic_error, "Unknown component index " << compIdx);
+        default: throw std::logic_error("Unknown component index "+std::to_string(compIdx));
         }
     }
 };

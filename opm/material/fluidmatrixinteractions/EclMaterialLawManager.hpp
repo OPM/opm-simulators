@@ -42,8 +42,11 @@
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#if HAVE_OPM_COMMON
+#include <opm/common/OpmLog/OpmLog.hpp>
+#endif
+
+#include <opm/material/common/Exceptions.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
@@ -229,9 +232,10 @@ public:
     {
         MaterialLawParams& mlp = *materialLawParams_[elemIdx];
 
-        if (enableHysteresis()) {
-            OPM_MESSAGE("Warning: Using non-defautl satnum regions for conenction is not tested in combination with hysteresis");
-        }
+#if HAVE_OPM_COMMON
+        if (enableHysteresis())
+            OpmLog::warning("Warning: Using non-default satnum regions for conenction is not tested in combination with hysteresis");
+#endif
         // Currently we don't support COMPIMP. I.e. use the same table lookup for the hysteresis curves.
         // unsigned impRegionIdx = satRegionIdx;
 
@@ -299,7 +303,7 @@ public:
             break;
 
         default:
-            OPM_THROW(std::logic_error, "Enum value for material approach unknown!");
+            throw std::logic_error("Enum value for material approach unknown!");
         }
 
         return mlp;
@@ -330,7 +334,7 @@ public:
                                   unsigned elemIdx) const
     {
         if (!enableHysteresis()) {
-            OPM_THROW(std::runtime_error, "Cannot get hysteresis parameters if hysteresis not enabled.");
+            throw std::runtime_error("Cannot get hysteresis parameters if hysteresis not enabled.");
         }
         const auto& params = materialLawParams(elemIdx);
         MaterialLaw::oilWaterHysteresisParams(pcSwMdc, krnSwMdc, params);
@@ -341,7 +345,7 @@ public:
                                      unsigned elemIdx)
     {
         if (!enableHysteresis()) {
-            OPM_THROW(std::runtime_error, "Cannot set hysteresis parameters if hysteresis not enabled.");
+            throw std::runtime_error("Cannot set hysteresis parameters if hysteresis not enabled.");
         }
         auto& params = materialLawParams(elemIdx);
         MaterialLaw::setOilWaterHysteresisParams(pcSwMdc, krnSwMdc, params);
@@ -352,7 +356,7 @@ public:
                                 unsigned elemIdx) const
     {
         if (!enableHysteresis()) {
-            OPM_THROW(std::runtime_error, "Cannot get hysteresis parameters if hysteresis not enabled.");
+            throw std::runtime_error("Cannot get hysteresis parameters if hysteresis not enabled.");
         }
         const auto& params = materialLawParams(elemIdx);
         MaterialLaw::gasOilHysteresisParams(pcSwMdc, krnSwMdc, params);
@@ -363,7 +367,7 @@ public:
                                    unsigned elemIdx)
     {
         if (!enableHysteresis()) {
-            OPM_THROW(std::runtime_error, "Cannot set hysteresis parameters if hysteresis not enabled.");
+            throw std::runtime_error("Cannot set hysteresis parameters if hysteresis not enabled.");
         }
         auto& params = materialLawParams(elemIdx);
         MaterialLaw::setGasOilHysteresisParams(pcSwMdc, krnSwMdc, params);
@@ -393,7 +397,7 @@ public:
             return realParams.oilWaterParams().drainageParams().scaledPoints();
         }
         default:
-            OPM_THROW(std::logic_error, "Enum value for material approach unknown!");
+            throw std::logic_error("Enum value for material approach unknown!");
         }
     }
 
@@ -433,8 +437,7 @@ private:
             + (waterEnabled?1:0);
 
         if (numEnabled < 2)
-            OPM_THROW(std::runtime_error,
-                      "At least two fluid phases must be enabled. (Is: " << numEnabled << ")");
+            throw std::runtime_error("At least two fluid phases must be enabled. (Is: "+std::to_string(numEnabled)+")");
 
         if (numEnabled == 2) {
             threePhaseApproach_ = Opm::EclTwoPhaseApproach;

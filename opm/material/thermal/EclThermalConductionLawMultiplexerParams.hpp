@@ -73,8 +73,7 @@ public:
         thermalConductionApproach_ = newApproach;
         switch (thermalConductionApproach()) {
         case undefinedApproach:
-            OPM_THROW(std::logic_error,
-                      "Cannot set the approach for thermal conduction to 'undefined'!");
+            throw std::logic_error("Cannot set the approach for thermal conduction to 'undefined'!");
 
         case thconrApproach:
             realParams_ = new ThconrLawParams;

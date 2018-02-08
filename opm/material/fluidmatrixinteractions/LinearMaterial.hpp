@@ -30,9 +30,8 @@
 #include "LinearMaterialParams.hpp"
 
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/common/Valgrind.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <algorithm>
 #include <type_traits>
@@ -122,7 +121,7 @@ public:
                             const Params& /*params*/,
                             const FluidState& /*state*/)
     {
-        OPM_THROW(std::runtime_error, "Not implemented: LinearMaterial::saturations()");
+        throw std::runtime_error("Not implemented: LinearMaterial::saturations()");
     }
 
     /*!
@@ -191,12 +190,12 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation Sw(const Params& /*params*/, const FluidState& /*fs*/)
-    { OPM_THROW(std::runtime_error, "Not implemented: Sw()"); }
+    { throw std::runtime_error("Not implemented: Sw()"); }
 
     template <class Evaluation = Scalar>
     static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
     twoPhaseSatSw(const Params& /*params*/, const Evaluation& /*Sw*/)
-    { OPM_THROW(std::runtime_error, "Not implemented: twoPhaseSatSw()"); }
+    { throw std::runtime_error("Not implemented: twoPhaseSatSw()"); }
 
     /*!
      * \brief Calculate non-wetting liquid phase saturation given that
@@ -204,12 +203,12 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation Sn(const Params& /*params*/, const FluidState& /*fs*/)
-    { OPM_THROW(std::runtime_error, "Not implemented: Sn()"); }
+    { throw std::runtime_error("Not implemented: Sn()"); }
 
     template <class Evaluation = Scalar>
     static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
     twoPhaseSatSn(const Params& /*params*/, const Evaluation& /*Sw*/)
-    { OPM_THROW(std::runtime_error, "Not implemented: twoPhaseSatSn()"); }
+    { throw std::runtime_error("Not implemented: twoPhaseSatSn()"); }
 
     /*!
      * \brief Calculate gas phase saturation given that the rest of
@@ -220,7 +219,7 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static typename std::enable_if<Traits::numPhases == 3, Evaluation>::type
     Sg(const Params& /*params*/, const FluidState& /*fs*/)
-    { OPM_THROW(std::runtime_error, "Not implemented: Sg()"); }
+    { throw std::runtime_error("Not implemented: Sg()"); }
 
     /*!
      * \brief The relative permability of the wetting phase

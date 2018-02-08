@@ -29,9 +29,8 @@
 #define OPM_FLUID_STATE_PRESSURE_MODULES_HPP
 
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/common/Valgrind.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <algorithm>
 
@@ -107,7 +106,7 @@ public:
      * \brief The pressure of a fluid phase [Pa]
      */
     const Scalar& pressure(unsigned /* phaseIdx */) const
-    { OPM_THROW(std::logic_error, "Pressure is not provided by this fluid state"); }
+    { throw std::logic_error("Pressure is not provided by this fluid state"); }
 
 
     /*!

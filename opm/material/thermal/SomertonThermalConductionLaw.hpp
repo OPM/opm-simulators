@@ -31,7 +31,7 @@
 
 #include <opm/material/common/Spline.hpp>
 
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
 #include <algorithm>

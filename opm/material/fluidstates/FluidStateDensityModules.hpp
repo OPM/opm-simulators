@@ -28,11 +28,10 @@
 #ifndef OPM_FLUID_STATE_DENSITY_MODULES_HPP
 #define OPM_FLUID_STATE_DENSITY_MODULES_HPP
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <algorithm>
 
@@ -124,19 +123,19 @@ public:
      * \brief The density of a fluid phase [kg/m^3]
      */
     const Scalar& density(unsigned /* phaseIdx */) const
-    { OPM_THROW(std::logic_error, "Density is not provided by this fluid state"); }
+    { throw std::logic_error("Density is not provided by this fluid state"); }
 
     /*!
      * \brief The molar density of a fluid phase [mol/m^3]
      */
     const Scalar& molarDensity(unsigned /* phaseIdx */) const
-    { OPM_THROW(std::logic_error, "Molar density is not provided by this fluid state"); }
+    { throw std::logic_error("Molar density is not provided by this fluid state"); }
 
     /*!
      * \brief The molar volume of a fluid phase [m^3/mol]
      */
     const Scalar& molarVolume(unsigned /* phaseIdx */) const
-    { OPM_THROW(std::logic_error, "Molar volume is not provided by this fluid state"); }
+    { throw std::logic_error("Molar volume is not provided by this fluid state"); }
 
     /*!
      * \brief Retrieve all parameters from an arbitrary fluid

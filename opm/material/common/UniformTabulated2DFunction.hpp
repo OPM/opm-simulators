@@ -28,8 +28,7 @@
 #ifndef OPM_UNIFORM_TABULATED_2D_FUNCTION_HPP
 #define OPM_UNIFORM_TABULATED_2D_FUNCTION_HPP
 
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
 
@@ -176,7 +175,7 @@ public:
      * \brief Evaluate the function at a given (x,y) position.
      *
      * If this method is called for a value outside of the tabulated
-     * range, a \c Opm::NumericalProblem exception is thrown.
+     * range, a \c Opm::NumericalIssue exception is thrown.
      */
     template <class Evaluation>
     Evaluation eval(const Evaluation& x, const Evaluation& y) const
@@ -184,12 +183,11 @@ public:
 #ifndef NDEBUG
         if (!applies(x,y))
         {
-            OPM_THROW(NumericalProblem,
-                       "Attempt to get tabulated value for ("
-                       << x << ", " << y
-                       << ") on a table of extend "
-                       << xMin() << " to " << xMax() << " times "
-                       << yMin() << " to " << yMax());
+            throw NumericalIssue("Attempt to get tabulated value for ("
+                                   +std::to_string(double(Opm::scalarValue(x)))+", "+std::to_string(double(Opm::scalarValue(y)))
+                                   +") on a table of extend "
+                                   +std::to_string(xMin())+" to "+std::to_string(xMax())+" times "
+                                   +std::to_string(yMin())+" to "+std::to_string(yMax()));
         };
 #endif
 

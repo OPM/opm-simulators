@@ -46,7 +46,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation henry(const Evaluation& /*temperature*/)
-    { OPM_THROW(std::runtime_error, "Not implemented: Henry coefficient of air in mesitylene"); }
+    { throw std::runtime_error("Not implemented: Henry coefficient of air in mesitylene"); }
 
     /*!
      * \brief Binary diffusion coefficent [m^2/s] for air and mesitylene.
@@ -95,7 +95,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation liquidDiffCoeff(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
-    { OPM_THROW(std::runtime_error, "Not implemented: Binary liquid diffusion coefficients of air and mesitylene"); }
+    { throw std::runtime_error("Not implemented: Binary liquid diffusion coefficients of air and mesitylene"); }
 };
 
 } // namespace BinaryCoeff

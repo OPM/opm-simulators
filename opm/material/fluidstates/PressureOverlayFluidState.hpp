@@ -27,7 +27,7 @@
 #ifndef OPM_PRESSURE_OVERLAY_FLUID_STATE_HPP
 #define OPM_PRESSURE_OVERLAY_FLUID_STATE_HPP
 
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <array>
 #include <utility>

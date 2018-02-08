@@ -35,10 +35,9 @@
 #include <opm/material/components/Air.hpp>
 #include <opm/material/components/H2O.hpp>
 #include <opm/material/components/TabulatedComponent.hpp>
-#include <opm/common/Valgrind.hpp>
 
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <iostream>
 #include <cassert>
@@ -90,7 +89,7 @@ public:
         case liquidPhaseIdx: return "liquid";
         case gasPhaseIdx: return "gas";
         };
-        OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
+        throw std::logic_error("Invalid phase index "+std::to_string(phaseIdx));
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
@@ -151,7 +150,7 @@ public:
         case H2OIdx: return H2O::name();
         case AirIdx: return Air::name();
         };
-        OPM_THROW(std::logic_error, "Invalid component index " << compIdx);
+        throw std::logic_error("Invalid component index "+std::to_string(compIdx));
     }
 
     //! \copydoc BaseFluidSystem::molarMass
@@ -299,7 +298,7 @@ public:
 
             return H2O::gasDensity(T, partialPressureH2O) + Air::gasDensity(T, partialPressureAir);
         }
-        OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
+        throw std::logic_error("Invalid phase index "+std::to_string(phaseIdx));
     }
 
     //! \copydoc BaseFluidSystem::viscosity
@@ -351,7 +350,7 @@ public:
             }
             return muResult;
         }
-        OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
+        throw std::logic_error("Invalid phase index "+std::to_string(phaseIdx));
     }
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
@@ -424,7 +423,7 @@ public:
                 Opm::decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, AirIdx));
             return result;
         }
-        OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
+        throw std::logic_error("Invalid phase index "+std::to_string(phaseIdx));
     }
 
     //! \copydoc BaseFluidSystem::thermalConductivity

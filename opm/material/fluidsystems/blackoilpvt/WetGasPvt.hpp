@@ -154,8 +154,7 @@ public:
                 }
 
                 if (masterTableIdx >= saturatedTable.numRows())
-                    OPM_THROW(std::runtime_error,
-                              "PVTG tables are invalid: The last table must exhibit at least one "
+                    throw std::runtime_error("PVTG tables are invalid: The last table must exhibit at least one "
                               "entry for undersaturated gas!");
 
 
@@ -447,8 +446,7 @@ public:
                         const Evaluation& pressure OPM_UNUSED,
                         const Evaluation& Rv OPM_UNUSED) const
     {
-        OPM_THROW(std::runtime_error,
-                  "Requested the enthalpy of gas but the thermal option is not enabled");
+        throw std::runtime_error("Requested the enthalpy of gas but the thermal option is not enabled");
     }
 
     /*!
@@ -598,8 +596,10 @@ public:
         errlog << "Finding saturation pressure did not converge:"
                << " pSat = " << pSat
                << ", Rv = " << Rv;
+#if HAVE_OPM_COMMON
         OpmLog::debug("Wet gas saturation pressure", errlog.str());
-        OPM_THROW_NOLOG(NumericalProblem, errlog.str());
+#endif
+        throw NumericalIssue(errlog.str());
     }
 
 private:

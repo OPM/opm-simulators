@@ -29,11 +29,10 @@
 
 #include "EclTwoPhaseMaterialParams.hpp"
 
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <algorithm>
 
@@ -237,7 +236,7 @@ public:
     static Evaluation pcgn(const Params& /* params */,
                            const FluidState& /* fs */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: pcgn()");
+        throw std::logic_error("Not implemented: pcgn()");
     }
 
     /*!
@@ -253,7 +252,7 @@ public:
     static Evaluation pcnw(const Params& /* params */,
                            const FluidState& /* fs */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: pcnw()");
+        throw std::logic_error("Not implemented: pcnw()");
     }
 
     /*!
@@ -264,7 +263,7 @@ public:
                             const Params& /* params */,
                             const FluidState& /* fs */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: saturations()");
+        throw std::logic_error("Not implemented: saturations()");
     }
 
     /*!
@@ -274,7 +273,7 @@ public:
     static Evaluation Sg(const Params& /* params */,
                          const FluidState& /* fluidState */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: Sg()");
+        throw std::logic_error("Not implemented: Sg()");
     }
 
     /*!
@@ -284,7 +283,7 @@ public:
     static Evaluation Sn(const Params& /* params */,
                          const FluidState& /* fluidState */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: Sn()");
+        throw std::logic_error("Not implemented: Sn()");
     }
 
     /*!
@@ -294,7 +293,7 @@ public:
     static Evaluation Sw(const Params& /* params */,
                          const FluidState& /* fluidState */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: Sw()");
+        throw std::logic_error("Not implemented: Sw()");
     }
 
     /*!
@@ -356,7 +355,7 @@ public:
     static Evaluation krg(const Params& /* params */,
                           const FluidState& /* fluidState */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: krg()");
+        throw std::logic_error("Not implemented: krg()");
     }
 
     /*!
@@ -366,7 +365,7 @@ public:
     static Evaluation krw(const Params& /* params */,
                           const FluidState& /* fluidState */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: krw()");
+        throw std::logic_error("Not implemented: krw()");
     }
 
     /*!
@@ -376,7 +375,7 @@ public:
     static Evaluation krn(const Params& /* params */,
                           const FluidState& /* fluidState */)
     {
-        OPM_THROW(std::logic_error, "Not implemented: krn()");
+        throw std::logic_error("Not implemented: krn()");
     }
 
 

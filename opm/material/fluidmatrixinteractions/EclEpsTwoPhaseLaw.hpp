@@ -30,8 +30,7 @@
 #include "EclEpsTwoPhaseLawParams.hpp"
 
 #include <opm/material/fluidstates/SaturationOverlayFluidState.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 namespace Opm {
 /*!
@@ -110,8 +109,7 @@ public:
     template <class Container, class FluidState>
     static void capillaryPressures(Container& /*values*/, const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        OPM_THROW(NotImplemented,
-                  "The capillaryPressures(fs) method is not yet implemented");
+        throw std::invalid_argument("The capillaryPressures(fs) method is not yet implemented");
     }
 
     /*!
@@ -127,8 +125,7 @@ public:
     template <class Container, class FluidState>
     static void relativePermeabilities(Container& /*values*/, const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        OPM_THROW(NotImplemented,
-                  "The pcnw(fs) method is not yet implemented");
+        throw std::invalid_argument("The pcnw(fs) method is not yet implemented");
     }
 
     /*!
@@ -145,8 +142,7 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation pcnw(const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        OPM_THROW(NotImplemented,
-                  "The pcnw(fs) method is not yet implemented");
+        throw std::invalid_argument("The pcnw(fs) method is not yet implemented");
     }
 
     template <class Evaluation>
@@ -171,8 +167,7 @@ public:
     template <class Container, class FluidState>
     static void saturations(Container& /*values*/, const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        OPM_THROW(NotImplemented,
-                  "The saturations(fs) method is not yet implemented");
+        throw std::invalid_argument("The saturations(fs) method is not yet implemented");
     }
 
     /*!
@@ -182,15 +177,13 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation Sw(const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        OPM_THROW(NotImplemented,
-                  "The Sw(fs) method is not yet implemented");
+        throw std::invalid_argument("The Sw(fs) method is not yet implemented");
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatSw(const Params& /*params*/, const Evaluation& /*pc*/)
     {
-        OPM_THROW(NotImplemented,
-                  "The twoPhaseSatSw(pc) method is not yet implemented");
+        throw std::invalid_argument("The twoPhaseSatSw(pc) method is not yet implemented");
     }
 
     /*!
@@ -200,15 +193,13 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation Sn(const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        OPM_THROW(NotImplemented,
-                  "The Sn(pc) method is not yet implemented");
+        throw std::invalid_argument("The Sn(pc) method is not yet implemented");
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatSn(const Params& /*params*/, const Evaluation& /*pc*/)
     {
-        OPM_THROW(NotImplemented,
-                  "The twoPhaseSatSn(pc) method is not yet implemented");
+        throw std::invalid_argument("The twoPhaseSatSn(pc) method is not yet implemented");
     }
 
     /*!
@@ -223,8 +214,7 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krw(const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        OPM_THROW(NotImplemented,
-                  "The krw(fs) method is not yet implemented");
+        throw std::invalid_argument("The krw(fs) method is not yet implemented");
     }
 
     template <class Evaluation>
@@ -249,8 +239,7 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krn(const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        OPM_THROW(NotImplemented,
-                  "The krn(fs) method is not yet implemented");
+        throw std::invalid_argument("The krn(fs) method is not yet implemented");
     }
 
     template <class Evaluation>

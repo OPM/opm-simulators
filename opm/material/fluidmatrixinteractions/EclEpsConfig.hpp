@@ -35,9 +35,8 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #endif
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <string>
 #include <cassert>
@@ -201,10 +200,9 @@ public:
             }
 
             if (enablePcScaling_ && enableLeverettScaling_)
-                OPM_THROW(std::runtime_error,
-                          "Capillary pressure scaling and the Leverett scaling function are "
-                          "mutually exclusive: The deck contains the PCW property and the "
-                          "JFUNC keyword applies to the water phase.");
+                throw std::runtime_error("Capillary pressure scaling and the Leverett scaling function are "
+                                         "mutually exclusive: The deck contains the PCW property and the "
+                                         "JFUNC keyword applies to the water phase.");
         }
         else {
             assert(twoPhaseSystemType == EclGasOilSystem);
@@ -219,10 +217,9 @@ public:
             }
 
             if (enablePcScaling_ && enableLeverettScaling_)
-                OPM_THROW(std::runtime_error,
-                          "Capillary pressure scaling and the Leverett scaling function are "
-                          "mutually exclusive: The deck contains the PCG property and the "
-                          "JFUNC keyword applies to the gas phase.");
+                throw std::runtime_error("Capillary pressure scaling and the Leverett scaling function are "
+                                         "mutually exclusive: The deck contains the PCG property and the "
+                                         "JFUNC keyword applies to the gas phase.");
         }
 
         // check if we are supposed to scale the Y axis of the wetting phase relperm

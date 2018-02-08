@@ -114,9 +114,8 @@ public:
         case oilPhaseIdx: return oilPhaseParams_.a();
         case gasPhaseIdx: return gasPhaseParams_.a();
         default:
-            OPM_THROW(std::logic_error,
-                       "The a() parameter is only defined for "
-                       "oil and gas phases");
+            throw std::logic_error("The a() parameter is only defined for "
+                                   "oil and gas phases");
         };
     }
 
@@ -132,9 +131,8 @@ public:
         case oilPhaseIdx: return oilPhaseParams_.b();
         case gasPhaseIdx: return gasPhaseParams_.b();
         default:
-            OPM_THROW(std::logic_error,
-                       "The b() parameter is only defined for "
-                       "oil and gas phases");
+            throw std::logic_error("The b() parameter is only defined for "
+                                   "oil and gas phases");
         };
     }
 
@@ -153,9 +151,8 @@ public:
         case oilPhaseIdx: return oilPhaseParams_.pureParams(compIdx).a();
         case gasPhaseIdx: return gasPhaseParams_.pureParams(compIdx).a();
         default:
-            OPM_THROW(std::logic_error,
-                       "The a() parameter is only defined for "
-                       "oil and gas phases");
+            throw std::logic_error("The a() parameter is only defined for "
+                                   "oil and gas phases");
         };
     }
 
@@ -173,9 +170,8 @@ public:
         case oilPhaseIdx: return oilPhaseParams_.pureParams(compIdx).b();
         case gasPhaseIdx: return gasPhaseParams_.pureParams(compIdx).b();
         default:
-            OPM_THROW(std::logic_error,
-                       "The b() parameter is only defined for "
-                       "oil and gas phases");
+            throw std::logic_error("The b() parameter is only defined for "
+                                   "oil and gas phases");
         };
     }
 

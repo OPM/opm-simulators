@@ -46,9 +46,9 @@
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/parallel/mpihelper.hh>
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
+#include <sstream>
 
 template <class Scalar, class FluidState>
 void checkSame(const FluidState& fsRef, const FluidState& fsFlash)
@@ -64,32 +64,37 @@ void checkSame(const FluidState& fsRef, const FluidState& fsFlash)
         // check the pressures
         error = 1 - fsRef.pressure(phaseIdx)/fsFlash.pressure(phaseIdx);
         if (std::abs(error) > tol) {
-            OPM_THROW(std::runtime_error,
-                      "pressure error phase " << phaseIdx << " is incorrect: "
-                      << fsFlash.pressure(phaseIdx)  << " flash vs "
-                      << fsRef.pressure(phaseIdx) << " reference"
-                      << " error=" << error);
+                std::ostringstream oss;
+                oss << "pressure error phase " << phaseIdx << " is incorrect: "
+                    << fsFlash.pressure(phaseIdx)  << " flash vs "
+                    << fsRef.pressure(phaseIdx) << " reference"
+                    << " error=" << error;
+                throw std::runtime_error(oss.str());
         }
 
         // check the saturations
         error = fsRef.saturation(phaseIdx) - fsFlash.saturation(phaseIdx);
-        if (std::abs(error) > tol)
-            OPM_THROW(std::runtime_error,
-                      "saturation error phase " << phaseIdx << " is incorrect: "
-                      << fsFlash.saturation(phaseIdx) << " flash vs "
-                      << fsRef.saturation(phaseIdx) << " reference"
-                      << " error=" << error);
+        if (std::abs(error) > tol) {
+            std::ostringstream oss;
+            oss << "saturation error phase " << phaseIdx << " is incorrect: "
+                << fsFlash.saturation(phaseIdx) << " flash vs "
+                << fsRef.saturation(phaseIdx) << " reference"
+                << " error=" << error;
+            throw std::runtime_error(oss.str());
+        }
 
         // check the compositions
         for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx) {
             error = fsRef.moleFraction(phaseIdx, compIdx) - fsFlash.moleFraction(phaseIdx, compIdx);
-            if (std::abs(error) > tol)
-                OPM_THROW(std::runtime_error,
-                          "composition error phase " << phaseIdx << ", component " << compIdx
-                          << " is incorrect: "
-                          << fsFlash.moleFraction(phaseIdx, compIdx) << " flash vs "
-                          << fsRef.moleFraction(phaseIdx, compIdx) << " reference"
-                          << " error=" << error);
+            if (std::abs(error) > tol) {
+                std::ostringstream oss;
+                oss << "composition error phase " << phaseIdx << ", component " << compIdx
+                    << " is incorrect: "
+                    << fsFlash.moleFraction(phaseIdx, compIdx) << " flash vs "
+                    << fsRef.moleFraction(phaseIdx, compIdx) << " reference"
+                    << " error=" << error;
+                throw std::runtime_error(oss.str());
+            }
         }
     }
 }

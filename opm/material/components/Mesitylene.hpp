@@ -80,13 +80,13 @@ public:
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at mesitylene's triple point.
      */
     static Scalar tripleTemperature()
-    { OPM_THROW(std::runtime_error, "Not implemented: tripleTemperature for mesitylene"); }
+    { throw std::runtime_error("Not implemented: tripleTemperature for mesitylene"); }
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at mesitylene's triple point.
      */
     static Scalar triplePressure()
-    { OPM_THROW(std::runtime_error, "Not implemented: triplePressure for mesitylene"); }
+    { throw std::runtime_error("Not implemented: triplePressure for mesitylene"); }
 
     /*!
      * \brief The saturation vapor pressure in \f$\mathrm{[Pa]}\f$ of

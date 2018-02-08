@@ -89,7 +89,7 @@ public:
      */
     template <class Scalar, class Evaluation = Scalar>
     static Evaluation liquidDiffCoeff(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
-    { OPM_THROW(std::runtime_error, "Not implemented: Binary liquid diffusion coefficients of CO2 and CH4"); }
+    { throw std::runtime_error("Not implemented: Binary liquid diffusion coefficients of CO2 and CH4"); }
 };
 
 } // namespace BinaryCoeff

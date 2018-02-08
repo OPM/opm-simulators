@@ -37,7 +37,7 @@
 #include <opm/material/components/N2.hpp>
 #include <opm/material/components/TabulatedComponent.hpp>
 
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <limits>
 #include <cassert>

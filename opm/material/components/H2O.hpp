@@ -27,20 +27,20 @@
 #ifndef OPM_H2O_HPP
 #define OPM_H2O_HPP
 
-#include <cmath>
-#include <cassert>
-
-#include <opm/material/IdealGas.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Valgrind.hpp>
-
-#include "Component.hpp"
-
 #include "iapws/Common.hpp"
 #include "iapws/Region1.hpp"
 #include "iapws/Region2.hpp"
 #include "iapws/Region4.hpp"
+
+#include "Component.hpp"
+
+#include <opm/material/IdealGas.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/Valgrind.hpp>
+
+#include <cmath>
+#include <cassert>
+#include <sstream>
 
 namespace Opm {
 
@@ -179,9 +179,11 @@ public:
     {
         if (!Region2::isValid(temperature, pressure))
         {
-            OPM_THROW(NumericalProblem,
-                      "Enthalpy of steam is only implemented for temperatures below 623.15K and "
-                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+            std::ostringstream oss;
+            oss << "Enthalpy of steam is only implemented for temperatures below 623.15K and "
+                << "pressures below 100MPa. (T = " << temperature << ", p=" << pressure;
+
+            throw NumericalIssue(oss.str());
         }
 
         // regularization
@@ -230,9 +232,11 @@ public:
     {
         if (!Region1::isValid(temperature, pressure))
         {
-            OPM_THROW(NumericalProblem,
-                      "Enthalpy of water is only implemented for temperatures below 623.15K and "
-                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+            std::ostringstream oss;
+            oss << "Enthalpy of water is only implemented for temperatures below 623.15K and "
+                << "pressures below 100MPa. (T = " << temperature << ", p=" << pressure;
+
+            throw NumericalIssue(oss.str());
         }
 
         // regularization
@@ -272,9 +276,11 @@ public:
     {
         if (!Region2::isValid(temperature, pressure))
         {
-            OPM_THROW(NumericalProblem,
-                      "Heat capacity of steam is only implemented for temperatures below 623.15K and "
-                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+            std::ostringstream oss;
+            oss << "Heat capacity of steam is only implemented for temperatures below 623.15K and "
+                << "pressures below 100MPa. (T = " << temperature << ", p=" << pressure;
+
+            throw NumericalIssue(oss.str());
         }
 
         // regularization
@@ -307,9 +313,10 @@ public:
     {
         if (!Region1::isValid(temperature, pressure))
         {
-            OPM_THROW(NumericalProblem,
-                      "heat Capacity of water is only implemented for temperatures below 623.15K and "
-                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+            std::ostringstream oss;
+            oss << "Heat capacity of water is only implemented for temperatures below 623.15K and "
+                << "pressures below 100MPa. (T = " << temperature << ", p=" << pressure;
+            throw NumericalIssue(oss.str());
         }
 
         // regularization
@@ -341,9 +348,11 @@ public:
     {
         if (!Region1::isValid(temperature, pressure))
         {
-            OPM_THROW(NumericalProblem,
-                      "Internal Energy of water is only implemented for temperatures below 623.15K and "
-                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+            std::ostringstream oss;
+            oss << "Internal Energy of water is only implemented for temperatures below 623.15K and "
+                << "pressures below 100MPa. (T = " << temperature << ", p=" << pressure;
+
+            throw NumericalIssue(oss.str());
         }
 
 
@@ -398,9 +407,10 @@ public:
     {
         if (!Region2::isValid(temperature, pressure))
         {
-            OPM_THROW(NumericalProblem,
-                      "Internal Energy of steam is only implemented for temperatures below 623.15K and "
-                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+            std::ostringstream oss;
+            oss <<"Internal energy of steam is only implemented for temperatures below 623.15K and "
+                << "pressures below 100MPa. (T = " << temperature << ", p=" << pressure;
+            throw NumericalIssue(oss.str());
         }
 
         // regularization
@@ -473,9 +483,11 @@ public:
     {
         if (!Region1::isValid(temperature, pressure))
         {
-            OPM_THROW(NumericalProblem,
-                      "Heat capacity of water is only implemented for temperatures below 623.15K and "
-                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+            std::ostringstream oss;
+            oss << "Heat capacity of water is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure;
+
+            throw NumericalIssue(oss.str());
         }
 
 
@@ -507,9 +519,10 @@ public:
     {
         if (!Region2::isValid(temperature, pressure))
         {
-            OPM_THROW(NumericalProblem,
-                      "Heat capacity of steam is only implemented for temperatures below 623.15K and "
-                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+            std::ostringstream oss;
+            oss << "Heat capacity of steam is only implemented for temperatures below 623.15K and "
+                << "pressures below 100MPa. (T = " << temperature << ", p=" << pressure;
+            throw NumericalIssue(oss.str());
         }
 
         // regularization
@@ -554,9 +567,10 @@ public:
     {
         if (!Region2::isValid(temperature, pressure))
         {
-            OPM_THROW(NumericalProblem,
-                      "Density of steam is only implemented for temperatures below 623.15K and "
-                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+            std::ostringstream oss;
+            oss << "Density of steam is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure;
+            throw NumericalIssue(oss.str());
         }
 
         // regularization
@@ -679,9 +693,10 @@ public:
     {
         if (!Region1::isValid(temperature, pressure))
         {
-            OPM_THROW(NumericalProblem,
-                      "Density of water is only implemented for temperatures below 623.15K and "
-                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+            std::ostringstream oss;
+            oss << "Density of water is only implemented for temperatures below 623.15K and "
+                << "pressures below 100MPa. (T = " << temperature << ", p=" << pressure;
+            throw NumericalIssue(oss.str());
         }
 
         // regularization
@@ -780,9 +795,10 @@ public:
     {
         if (!Region2::isValid(temperature, pressure))
         {
-            OPM_THROW(NumericalProblem,
-                      "Viscosity of steam is only implemented for temperatures below 623.15K and "
-                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+            std::ostringstream oss;
+            oss << "Viscosity of steam is only implemented for temperatures below 623.15K and "
+                << "pressures below 100MPa. (T = " << temperature << ", p=" << pressure;
+            throw NumericalIssue(oss.str());
         }
 
         Evaluation rho = gasDensity(temperature, pressure);
@@ -805,9 +821,10 @@ public:
     {
         if (!Region1::isValid(temperature, pressure))
         {
-            OPM_THROW(NumericalProblem,
-                      "Viscosity of water is only implemented for temperatures below 623.15K and "
-                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+            std::ostringstream oss;
+            oss << "Viscosity of water is only implemented for temperatures below 623.15K and "
+                << "pressures below 100MPa. (T = " << temperature << ", p=" << pressure;
+            throw NumericalIssue(oss.str());
         };
 
         const Evaluation& rho = liquidDensity(temperature, pressure);

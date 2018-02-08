@@ -32,7 +32,7 @@
 
 #include "ModularFluidState.hpp"
 
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 #include <algorithm>
 
 namespace Opm {

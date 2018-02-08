@@ -34,8 +34,7 @@
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #endif
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <string>
 #include <cassert>
@@ -138,9 +137,8 @@ public:
             return;
 
         if (!deck.hasKeyword("EHYSTR"))
-            OPM_THROW(std::runtime_error,
-                      "Enabling hysteresis via the HYST parameter for SATOPTS requires the "
-                      "presence of the EHYSTR keyword");
+            throw std::runtime_error("Enabling hysteresis via the HYST parameter for SATOPTS requires the "
+                                     "presence of the EHYSTR keyword");
 
         const auto& ehystrKeyword = deck.getKeyword("EHYSTR");
         if (deck.hasKeyword("NOHYKR"))
@@ -148,9 +146,8 @@ public:
         else {
             krHysteresisModel_ = ehystrKeyword.getRecord(0).getItem("relative_perm_hyst").get< int >(0);
             if (krHysteresisModel_ != 0)
-                OPM_THROW(std::runtime_error,
-                          "Only the Carlson kr hystersis model (indicated by a 0 on the second item"
-                          " of the 'EHYSTR' keyword) is supported");
+                throw std::runtime_error("Only the Carlson kr hystersis model (indicated by a 0 on the second item"
+                                         " of the 'EHYSTR' keyword) is supported");
         }
 
         if (deck.hasKeyword("NOHYPC"))

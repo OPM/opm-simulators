@@ -28,9 +28,8 @@
 #define OPM_TABULATED_1D_FUNCTION_HPP
 
 #include <opm/material/densead/Math.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -426,8 +425,7 @@ public:
                     y = (x - xValues_[n])*dy_dx + yValues_[n];
                 }
                 else {
-                    OPM_THROW(std::runtime_error,
-                              "The sampling points given to a function must be sorted by their x value!");
+                    throw std::runtime_error("The sampling points given to a function must be sorted by their x value!");
                 }
             }
             else {
@@ -444,8 +442,7 @@ private:
     size_t findSegmentIndex_(const Evaluation& x, bool extrapolate = false) const
     {
         if (!extrapolate && !applies(x))
-            OPM_THROW(Opm::NumericalProblem,
-                      "Tried to evaluate a tabulated function outside of its range");
+            throw Opm::NumericalIssue("Tried to evaluate a tabulated function outside of its range");
 
         // we need at least two sampling points!
         assert(xValues_.size() >= 2);

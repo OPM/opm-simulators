@@ -28,8 +28,6 @@
 #ifndef OPM_CO2_HPP
 #define OPM_CO2_HPP
 
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
 #include <opm/material/Constants.hpp>
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/components/Component.hpp>

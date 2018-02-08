@@ -200,8 +200,7 @@ public:
                         const Evaluation& pressure OPM_UNUSED,
                         const Evaluation& Rv OPM_UNUSED) const
     {
-        OPM_THROW(std::runtime_error,
-                  "Requested the enthalpy of gas but the thermal option is not enabled");
+        throw std::runtime_error("Requested the enthalpy of gas but the thermal option is not enabled");
     }
 
     /*!

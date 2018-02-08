@@ -354,7 +354,7 @@ public:
      */
     template <class Container, class FluidState>
     static void saturations(Container& /*values*/, const Params& /*params*/, const FluidState& /*fs*/)
-    { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::saturations()"); }
+    { throw std::logic_error("Not implemented: ParkerLenhard::saturations()"); }
 
     /*!
      * \brief Returns the relative permeabilities of the phases
@@ -422,11 +422,11 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation Sw(const Params& /*params*/, const FluidState& /*fs*/)
-    { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::Sw()"); }
+    { throw std::logic_error("Not implemented: ParkerLenhard::Sw()"); }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatSw(const Params& /*params*/, const Evaluation& /*pc*/)
-    { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::twoPhaseSatSw()"); }
+    { throw std::logic_error("Not implemented: ParkerLenhard::twoPhaseSatSw()"); }
 
     /*!
      * \brief Calculate the non-wetting phase saturations depending on
@@ -438,7 +438,7 @@ public:
 
     template <class Evaluation>
     static Evaluation twoPhaseSatSn(const Params& /*params*/, const Evaluation& /*pc*/)
-    { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::twoPhaseSatSn()"); }
+    { throw std::logic_error("Not implemented: ParkerLenhard::twoPhaseSatSn()"); }
 
     /*!
      * \brief The relative permeability for the wetting phase of

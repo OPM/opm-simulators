@@ -103,8 +103,7 @@ public:
                                    const Params& /* params */,
                                    const FluidState& /* fs */)
     {
-        OPM_THROW(NotImplemented,
-                  "The capillaryPressures(fs) method is not yet implemented");
+        throw std::invalid_argument("The capillaryPressures(fs) method is not yet implemented");
     }
 
     /*!
@@ -122,8 +121,7 @@ public:
                                        const Params& /* params */,
                                        const FluidState& /* fs */)
     {
-        OPM_THROW(NotImplemented,
-                  "The pcnw(fs) method is not yet implemented");
+        throw std::invalid_argument("The pcnw(fs) method is not yet implemented");
     }
 
     /*!
@@ -141,8 +139,7 @@ public:
     static Evaluation pcnw(const Params& /* params */,
                            const FluidState& /* fs */)
     {
-        OPM_THROW(NotImplemented,
-                  "The pcnw(fs) method is not yet implemented");
+        throw std::invalid_argument("The pcnw(fs) method is not yet implemented");
     }
 
     template <class Evaluation>
@@ -172,8 +169,7 @@ public:
                             const Params& /* params */,
                             const FluidState& /* fs */)
     {
-        OPM_THROW(NotImplemented,
-                  "The saturations(fs) method is not yet implemented");
+        throw std::invalid_argument("The saturations(fs) method is not yet implemented");
     }
 
     /*!
@@ -184,16 +180,14 @@ public:
     static Evaluation Sw(const Params& /* params */,
                          const FluidState& /* fs */)
     {
-        OPM_THROW(NotImplemented,
-                  "The Sw(fs) method is not yet implemented");
+        throw std::invalid_argument("The Sw(fs) method is not yet implemented");
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatSw(const Params& /* params */,
                                     const Evaluation& /* pc */)
     {
-        OPM_THROW(NotImplemented,
-                  "The twoPhaseSatSw(pc) method is not yet implemented");
+        throw std::invalid_argument("The twoPhaseSatSw(pc) method is not yet implemented");
     }
 
     /*!
@@ -204,16 +198,14 @@ public:
     static Evaluation Sn(const Params& /* params */,
                          const FluidState& /* fs */)
     {
-        OPM_THROW(NotImplemented,
-                  "The Sn(pc) method is not yet implemented");
+        throw std::invalid_argument("The Sn(pc) method is not yet implemented");
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatSn(const Params& /* params */,
                                     const Evaluation& /* pc */)
     {
-        OPM_THROW(NotImplemented,
-                  "The twoPhaseSatSn(pc) method is not yet implemented");
+        throw std::invalid_argument("The twoPhaseSatSn(pc) method is not yet implemented");
     }
 
     /*!
@@ -229,8 +221,7 @@ public:
     static Evaluation krw(const Params& /* params */,
                           const FluidState& /* fs */)
     {
-        OPM_THROW(NotImplemented,
-                  "The krw(fs) method is not yet implemented");
+        throw std::invalid_argument("The krw(fs) method is not yet implemented");
     }
 
     template <class Evaluation>
@@ -257,8 +248,7 @@ public:
     static Evaluation krn(const Params& /* params */,
                           const FluidState& /* fs */)
     {
-        OPM_THROW(NotImplemented,
-                  "The krn(fs) method is not yet implemented");
+        throw std::invalid_argument("The krn(fs) method is not yet implemented");
     }
 
     template <class Evaluation>

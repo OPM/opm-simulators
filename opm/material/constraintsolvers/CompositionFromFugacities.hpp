@@ -28,19 +28,11 @@
 #define OPM_COMPOSITION_FROM_FUGACITIES_HPP
 
 #include <opm/material/common/MathToolbox.hpp>
-
-
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
-
-
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/Valgrind.hpp>
 
 #include <limits>
 
@@ -141,7 +133,7 @@ public:
             x = 0.0;
             try { J.solve(x, b); }
             catch (Dune::FMatrixError e)
-            { throw Opm::NumericalProblem(e.what()); }
+            { throw Opm::NumericalIssue(e.what()); }
 
             //std::cout << "original delta: " << x << "\n";
 
@@ -175,12 +167,13 @@ public:
             }
         }
 
-        OPM_THROW(Opm::NumericalProblem,
-                  "Calculating the " << FluidSystem::phaseName(phaseIdx)
-                  << "Phase composition failed. Initial {x} = {"
-                  << xInit
-                  << "}, {fug_t} = {" << targetFug << "}, p = " << fluidState.pressure(phaseIdx)
-                  << ", T = " << fluidState.temperature(phaseIdx));
+        std::ostringstream oss;
+        oss << "Calculating the " << FluidSystem::phaseName(phaseIdx)
+            << "Phase composition failed. Initial {x} = {"
+            << xInit
+            << "}, {fug_t} = {" << targetFug << "}, p = " << fluidState.pressure(phaseIdx)
+            << ", T = " << fluidState.temperature(phaseIdx);
+        throw Opm::NumericalIssue(oss.str());
     }
 
 

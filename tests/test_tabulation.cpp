@@ -34,9 +34,7 @@
 #include <opm/material/components/H2O.hpp>
 #include <opm/material/components/TabulatedComponent.hpp>
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/parallel/mpihelper.hh>
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 extern bool success;
 bool success;

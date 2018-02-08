@@ -77,13 +77,13 @@ public:
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ at xylene's triple point.
      */
     static Scalar tripleTemperature()
-    { OPM_THROW(std::runtime_error, "Not implemented: tripleTemperature for xylene"); }
+    { throw std::runtime_error("Not implemented: tripleTemperature for xylene"); }
 
     /*!
      * \brief Returns the pressure \f$\mathrm{[Pa]}\f$ at xylene's triple point.
      */
     static Scalar triplePressure()
-    { OPM_THROW(std::runtime_error, "Not implemented: triplePressure for xylene"); }
+    { throw std::runtime_error("Not implemented: triplePressure for xylene"); }
 
     /*!
      * \brief The saturation vapor pressure in \f$\mathrm{[Pa]}\f$ of pure xylene

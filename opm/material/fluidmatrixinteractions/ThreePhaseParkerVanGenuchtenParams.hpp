@@ -27,16 +27,10 @@
 #ifndef OPM_THREE_PHASE_PARKER_VAN_GENUCHTEN_PARAMS_HPP
 #define OPM_THREE_PHASE_PARKER_VAN_GENUCHTEN_PARAMS_HPP
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/fvector.hh>
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
-
-#include <opm/common/Valgrind.hpp>
-
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
 
 #include <opm/material/common/EnsureFinalized.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <cassert>
 

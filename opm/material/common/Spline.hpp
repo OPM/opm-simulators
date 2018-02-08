@@ -29,9 +29,8 @@
 
 #include <opm/material/common/TridiagonalMatrix.hpp>
 #include <opm/material/common/PolynomialUtils.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/Unused.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <ostream>
 #include <vector>
@@ -535,7 +534,7 @@ public:
         else if (splineType == Monotonic)
             this->makeMonotonicSpline_(slopeVec_);
         else
-            OPM_THROW(std::runtime_error, "Spline type " << splineType << " not supported at this place");
+            throw std::runtime_error("Spline type "+std::to_string(int(splineType))+" not supported at this place");
     }
 
     /*!
@@ -574,7 +573,7 @@ public:
         else if (splineType == Monotonic)
             this->makeMonotonicSpline_(slopeVec_);
         else
-            OPM_THROW(std::runtime_error, "Spline type " << splineType << " not supported at this place");
+            throw std::runtime_error("Spline type "+std::to_string(int(splineType))+" not supported at this place");
     }
 
     /*!
@@ -617,7 +616,7 @@ public:
         else if (splineType == Monotonic)
             this->makeMonotonicSpline_(slopeVec_);
         else
-            OPM_THROW(std::runtime_error, "Spline type " << splineType << " not supported at this place");
+            throw std::runtime_error("Spline type "+std::to_string(int(splineType))+" not supported at this place");
     }
 
     /*!
@@ -660,7 +659,7 @@ public:
         else if (splineType == Monotonic)
             this->makeMonotonicSpline_(slopeVec_);
         else
-            OPM_THROW(std::runtime_error, "Spline type " << splineType << " not supported at this place");
+            throw std::runtime_error("Spline type "+std::to_string(int(splineType))+" not supported at this place");
     }
 
     /*!
@@ -703,7 +702,7 @@ public:
         else if (splineType == Monotonic)
             this->makeMonotonicSpline_(slopeVec_);
         else
-            OPM_THROW(std::runtime_error, "Spline type " << splineType << " not supported at this place");
+            throw std::runtime_error("Spline type "+std::to_string(int(splineType))+" not supported at this place");
     }
 
     /*!
@@ -771,8 +770,7 @@ public:
                     mono = (dy_dx>0)?1:-1;
                 }
                 else {
-                    OPM_THROW(std::runtime_error,
-                              "The sampling points given to a spline must be sorted by their x value!");
+                    throw std::runtime_error("The sampling points given to a spline must be sorted by their x value!");
                 }
             }
             else {
@@ -800,8 +798,7 @@ public:
     Evaluation eval(const Evaluation& x, bool extrapolate = false) const
     {
         if (!extrapolate && !applies(x))
-            OPM_THROW(Opm::NumericalProblem,
-                      "Tried to evaluate a spline outside of its range");
+            throw Opm::NumericalIssue("Tried to evaluate a spline outside of its range");
 
         // handle extrapolation
         if (extrapolate) {
@@ -837,8 +834,7 @@ public:
     Evaluation evalDerivative(const Evaluation& x, bool extrapolate = false) const
     {
         if (!extrapolate && !applies(x))
-            OPM_THROW(Opm::NumericalProblem,
-                      "Tried to evaluate the derivative of a spline outside of its range");
+            throw Opm::NumericalIssue("Tried to evaluate the derivative of a spline outside of its range");
 
         // handle extrapolation
         if (extrapolate) {
@@ -867,8 +863,7 @@ public:
     Evaluation evalSecondDerivative(const Evaluation& x, bool extrapolate = false) const
     {
         if (!extrapolate && !applies(x))
-            OPM_THROW(Opm::NumericalProblem,
-                      "Tried to evaluate the second derivative of a spline outside of its range");
+            throw Opm::NumericalIssue("Tried to evaluate the second derivative of a spline outside of its range");
         else if (extrapolate)
             return 0.0;
 
@@ -891,8 +886,7 @@ public:
     Evaluation evalThirdDerivative(const Evaluation& x, bool extrapolate = false) const
     {
         if (!extrapolate && !applies(x))
-            OPM_THROW(Opm::NumericalProblem,
-                      "Tried to evaluate the third derivative of a spline outside of its range");
+            throw Opm::NumericalIssue("Tried to evaluate the third derivative of a spline outside of its range");
         else if (extrapolate)
             return 0.0;
 
@@ -941,14 +935,12 @@ public:
 
             nSol += nCur;
             if (nSol > 1) {
-                OPM_THROW(std::runtime_error,
-                          "Spline has more than one intersection"); //<<a<<"x^3 + "<<b<"x^2 + "<<c<"x + "<<d);
+                throw std::runtime_error("Spline has more than one intersection"); //<<a<<"x^3 + "<<b<"x^2 + "<<c<"x + "<<d);
             }
         }
 
         if (nSol != 1)
-            OPM_THROW(std::runtime_error,
-                      "Spline has no intersection"); //<<a<"x^3 + " <<b<"x^2 + "<<c<"x + "<<d<<"!");
+            throw std::runtime_error("Spline has no intersection"); //<<a<"x^3 + " <<b<"x^2 + "<<c<"x + "<<d<<"!");
 
         return sol;
     }

@@ -134,7 +134,7 @@ public:
         case naplPhaseIdx: return "napl";
         case gasPhaseIdx: return "gas";
         };
-        OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
+        throw std::logic_error("Invalid phase index "+std::to_string(phaseIdx));
     }
 
     //! \copydoc BaseFluidSystem::componentName
@@ -145,7 +145,7 @@ public:
         case airIdx: return Air::name();
         case NAPLIdx: return NAPL::name();
         };
-        OPM_THROW(std::logic_error, "Invalid component index " << compIdx);
+        throw std::logic_error("Invalid component index "+std::to_string(compIdx));
     }
 
     //! \copydoc BaseFluidSystem::molarMass
@@ -288,9 +288,8 @@ public:
 
             if (compIdx==NAPLIdx) return (1.- xgw)/(xga/diffAW + xgc/diffWC);
             else if (compIdx==H2OIdx) return (1.- xgc)/(xgw/diffWC + xga/diffAC);
-            else if (compIdx==airIdx) OPM_THROW(std::logic_error,
-                                                "Diffusivity of air in the gas phase "
-                                                "is constraint by sum of diffusive fluxes = 0 !\n");
+            else if (compIdx==airIdx) throw std::logic_error("Diffusivity of air in the gas phase "
+                                                             "is constraint by sum of diffusive fluxes = 0 !\n");
         } else if (phaseIdx==waterPhaseIdx){
             Scalar diffACl = 1.e-9; // BinaryCoeff::Air_Xylene::liquidDiffCoeff(temperature, pressure);
             Scalar diffWCl = 1.e-9; // BinaryCoeff::H2O_Xylene::liquidDiffCoeff(temperature, pressure);
@@ -306,15 +305,13 @@ public:
             case airIdx:
                 return (1.- xwc)/(xww/diffWCl + xwa/diffACl);
             case H2OIdx:
-                OPM_THROW(std::logic_error,
-                          "Diffusivity of water in the water phase "
-                          "is constraint by sum of diffusive fluxes = 0 !\n");
+                throw std::logic_error("Diffusivity of water in the water phase "
+                                       "is constraint by sum of diffusive fluxes = 0 !\n");
             };
         } else if (phaseIdx==naplPhaseIdx) {
 
-            OPM_THROW(std::logic_error,
-                      "Diffusion coefficients of "
-                      "substances in liquid phase are undefined!\n");
+            throw std::logic_error("Diffusion coefficients of "
+                                   "substances in liquid phase are undefined!\n");
         }
         return 0;
     }
@@ -389,7 +386,7 @@ public:
 
             return result;
         }
-        OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
+        throw std::logic_error("Invalid phase index "+std::to_string(phaseIdx));
     }
 
 private:

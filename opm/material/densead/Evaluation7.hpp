@@ -34,7 +34,7 @@
 #include "Evaluation.hpp"
 #include "Math.hpp"
 
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/version.hh>
 
