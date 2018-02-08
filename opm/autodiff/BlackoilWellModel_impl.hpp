@@ -540,7 +540,7 @@ namespace Opm {
                 for (const auto& well : report.nan_residual_wells) {
                     OpmLog::debug("NaN residual found with phase " + well.phase_name + " for well " + well.well_name);
                 }
-                OPM_THROW(Opm::NumericalProblem, "NaN residual found!");
+                OPM_THROW(Opm::NumericalIssue, "NaN residual found!");
             }
         }
 
@@ -555,7 +555,7 @@ namespace Opm {
                 for (const auto& well : report.too_large_residual_wells) {
                     OpmLog::debug("Too large residual found with phase " + well.phase_name + " fow well " + well.well_name);
                 }
-                OPM_THROW(Opm::NumericalProblem, "Too large residual found!");
+                OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
             }
         }
 

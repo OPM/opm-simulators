@@ -55,7 +55,7 @@ namespace mswellhelpers
         for (size_t i_block = 0; i_block < y.size(); ++i_block) {
             for (size_t i_elem = 0; i_elem < y[i_block].size(); ++i_elem) {
                 if (std::isinf(y[i_block][i_elem]) || std::isnan(y[i_block][i_elem]) ) {
-                    OPM_THROW(Opm::NumericalProblem, "nan or inf value found in invDXDirect due to singular matrix");
+                    OPM_THROW(Opm::NumericalIssue, "nan or inf value found in invDXDirect due to singular matrix");
                 }
             }
         }
@@ -107,7 +107,7 @@ namespace mswellhelpers
         linsolver.apply(y, x, res);
 
         if ( !res.converged ) {
-            OPM_THROW(Opm::NumericalProblem, "the invDX does not get converged! ");
+            OPM_THROW(Opm::NumericalIssue, "the invDX does not get converged! ");
         }
 
         return y;

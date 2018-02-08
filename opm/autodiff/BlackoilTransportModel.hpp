@@ -529,12 +529,12 @@ namespace Opm {
                 if (std::isnan(mass_balance_residual[idx])
                     || std::isnan(CNV[idx])
                     || (idx < np && std::isnan(well_flux_residual[idx]))) {
-                    OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << materialName(idx));
+                    OPM_THROW(Opm::NumericalIssue, "NaN residual for phase " << materialName(idx));
                 }
                 if (mass_balance_residual[idx] > maxResidualAllowed()
                     || CNV[idx] > maxResidualAllowed()
                     || (idx < np && well_flux_residual[idx] > maxResidualAllowed())) {
-                    OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << materialName(idx));
+                    OPM_THROW(Opm::NumericalIssue, "Too large residual for phase " << materialName(idx));
                 }
             }
 
