@@ -28,7 +28,7 @@
 #ifndef EWOMS_FINGER_PROBLEM_HH
 #define EWOMS_FINGER_PROBLEM_HH
 
-#include <ewoms/io/structuredgridmanager.hh>
+#include <ewoms/io/structuredgridvanguard.hh>
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
@@ -61,7 +61,7 @@ template <class TypeTag>
 class FingerProblem;
 
 namespace Properties {
-NEW_TYPE_TAG(FingerBaseProblem, INHERITS_FROM(StructuredGridManager));
+NEW_TYPE_TAG(FingerBaseProblem, INHERITS_FROM(StructuredGridVanguard));
 
 #if HAVE_DUNE_ALUGRID
 // use dune-alugrid if available
@@ -219,7 +219,7 @@ public:
      */
     FingerProblem(Simulator& simulator)
         : ParentType(simulator),
-          materialParams_( simulator.gridManager().grid(), codim )
+          materialParams_( simulator.vanguard().grid(), codim )
     {
     }
 
