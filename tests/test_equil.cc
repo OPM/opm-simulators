@@ -26,8 +26,8 @@
 #include <ebos/eclproblem.hh>
 #include <ewoms/common/start.hh>
 
-#include <opm/core/grid.h>
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/GridManager.hpp>
 
 #include <opm/parser/eclipse/Units/Units.hpp>
 
