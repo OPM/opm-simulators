@@ -27,7 +27,7 @@
 #include <opm/output/data/Solution.hpp>
 
 //#if HAVE_OPM_GRID
-#include <dune/grid/common/p2pcommunicator.hh>
+#include <opm/grid/common/p2pcommunicator.hh>
 #include <dune/grid/utility/persistentcontainer.hh>
 #include <dune/grid/common/gridenums.hh>
 //#else

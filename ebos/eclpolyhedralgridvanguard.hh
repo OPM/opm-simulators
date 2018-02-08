@@ -29,7 +29,7 @@
 
 #include "eclbasevanguard.hh"
 
-#include <dune/grid/polyhedralgrid.hh>
+#include <opm/grid/polyhedralgrid.hh>
 
 namespace Ewoms {
 template <class TypeTag>

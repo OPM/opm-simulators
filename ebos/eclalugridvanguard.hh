@@ -32,7 +32,7 @@
 
 #include <dune/alugrid/grid.hh>
 #include <dune/alugrid/common/fromtogridfactory.hh>
-#include <dune/grid/CpGrid.hpp>
+#include <opm/grid/CpGrid.hpp>
 
 namespace Ewoms {
 template <class TypeTag>

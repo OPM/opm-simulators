@@ -34,7 +34,7 @@
 
 #include <ewoms/common/propertysystem.hh>
 
-#include <dune/grid/cpgrid/GridHelpers.hpp>
+#include <opm/grid/cpgrid/GridHelpers.hpp>
 
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>

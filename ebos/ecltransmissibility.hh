@@ -36,7 +36,7 @@
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 
-#include <dune/grid/CpGrid.hpp>
+#include <opm/grid/CpGrid.hpp>
 
 #include <opm/material/common/Exceptions.hpp>
 

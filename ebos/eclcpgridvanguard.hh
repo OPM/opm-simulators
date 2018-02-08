@@ -30,8 +30,8 @@
 #include "eclbasevanguard.hh"
 #include "ecltransmissibility.hh"
 
-#include <dune/grid/CpGrid.hpp>
-#include <dune/grid/cpgrid/GridHelpers.hpp>
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/GridHelpers.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
 
