@@ -181,7 +181,7 @@ namespace Opm
 
             // gives a dummy dynamic_list_econ_limited
             DynamicListEconLimited dummy_list_econ_limited;
-            const auto& defunct_well_names = ebosSimulator_.gridManager().defunctWellNames();
+            const auto& defunct_well_names = ebosSimulator_.vanguard().defunctWellNames();
             WellsManager wellsmanager(eclState(),
                                       schedule(),
                                       eclState().getInitConfig().getRestartStep(),
@@ -218,13 +218,13 @@ namespace Opm
         }
 
         const Grid& grid()
-        { return ebosSimulator_.gridManager().grid(); }
+        { return ebosSimulator_.vanguard().grid(); }
 
         const Schedule& schedule() const
-        { return ebosSimulator_.gridManager().schedule(); }
+        { return ebosSimulator_.vanguard().schedule(); }
 
         const EclipseState& eclState() const
-        { return ebosSimulator_.gridManager().eclState(); }
+        { return ebosSimulator_.vanguard().eclState(); }
 
         bool isRestart() const {
             const auto& initconfig = eclState().getInitConfig();

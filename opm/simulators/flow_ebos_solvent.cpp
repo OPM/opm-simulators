@@ -39,9 +39,9 @@ namespace Opm {
 void flowEbosSolventSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
     typedef TTAG(EclFlowSolventProblem) TypeTag;
-    typedef GET_PROP_TYPE(TypeTag, GridManager) GridManager;
+    typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
-    GridManager::setExternalDeck(&deck, &eclState, &schedule, &summaryConfig);
+    Vanguard::setExternalDeck(&deck, &eclState, &schedule, &summaryConfig);
 }
 
 

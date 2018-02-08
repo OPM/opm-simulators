@@ -450,19 +450,19 @@ namespace Opm
         }
 
         const Deck& deck() const
-        { return ebosSimulator_->gridManager().deck(); }
+        { return ebosSimulator_->vanguard().deck(); }
 
         Deck& deck()
-        { return ebosSimulator_->gridManager().deck(); }
+        { return ebosSimulator_->vanguard().deck(); }
 
         const EclipseState& eclState() const
-        { return ebosSimulator_->gridManager().eclState(); }
+        { return ebosSimulator_->vanguard().eclState(); }
 
         EclipseState& eclState()
-        { return ebosSimulator_->gridManager().eclState(); }
+        { return ebosSimulator_->vanguard().eclState(); }
 
         const Schedule& schedule() const
-        { return ebosSimulator_->gridManager().schedule(); }
+        { return ebosSimulator_->vanguard().schedule(); }
 
         // Extract messages from parser.
         // Writes to:
@@ -653,7 +653,7 @@ namespace Opm
         }
 
         Grid& grid()
-        { return ebosSimulator_->gridManager().grid(); }
+        { return ebosSimulator_->vanguard().grid(); }
 
         std::unique_ptr<EbosSimulator> ebosSimulator_;
         int  mpi_rank_ = 0;
