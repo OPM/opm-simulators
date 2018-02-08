@@ -115,10 +115,10 @@ void test_summary()
     const std::string casename = "summary_deck_non_constant_porosity";
 
     auto simulator = initSimulator<TypeTag>(filename.data());
-    typedef typename GET_PROP_TYPE(TypeTag, GridManager) GridManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef Ewoms::CollectDataToIORank< GridManager > CollectDataToIORankType;
-    CollectDataToIORankType collectToIORank(simulator->gridManager());
+    typedef Ewoms::CollectDataToIORank< Vanguard > CollectDataToIORankType;
+    CollectDataToIORankType collectToIORank(simulator->vanguard());
     Ewoms::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, collectToIORank);
 
     typedef Ewoms::EclWriter<TypeTag> EclWriterType;
