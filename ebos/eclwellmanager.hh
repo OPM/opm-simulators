@@ -39,8 +39,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/CompletionSet.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/parallel/threadedentityiterator.hh>
@@ -183,8 +182,7 @@ public:
                     well->setInjectedPhaseIndex(FluidSystem::oilPhaseIdx);
                     break;
                 case Opm::WellInjector::MULTI:
-                    OPM_THROW(std::runtime_error,
-                              "Not implemented: Multi-phase injector wells");
+                    throw std::runtime_error("Not implemented: Multi-phase injector wells");
                 }
 
                 switch (injectProperties.controlMode) {
@@ -205,8 +203,7 @@ public:
                     break;
 
                 case Opm::WellInjector::GRUP:
-                    OPM_THROW(std::runtime_error,
-                              "Not implemented: Well groups");
+                    throw std::runtime_error("Not implemented: Well groups");
 
                 case Opm::WellInjector::CMODE_UNDEFINED:
                     std::cout << "Warning: Control mode of injection well " << well->name()
@@ -229,8 +226,7 @@ public:
                     break;
 
                 case Opm::WellInjector::MULTI:
-                    OPM_THROW(std::runtime_error,
-                              "Not implemented: Multi-phase injection wells");
+                    throw std::runtime_error("Not implemented: Multi-phase injection wells");
                 }
 
                 well->setMaximumSurfaceRate(injectProperties.surfaceInjectionRate);
@@ -274,8 +270,7 @@ public:
                     break;
 
                 case Opm::WellProducer::CRAT:
-                    OPM_THROW(std::runtime_error,
-                              "Not implemented: Linearly combined rates");
+                    throw std::runtime_error("Not implemented: Linearly combined rates");
 
                 case Opm::WellProducer::RESV:
                     well->setControlMode(Well::ControlMode::VolumetricReservoirRate);
@@ -292,8 +287,7 @@ public:
                     break;
 
                 case Opm::WellProducer::GRUP:
-                    OPM_THROW(std::runtime_error,
-                              "Not implemented: Well groups");
+                    throw std::runtime_error("Not implemented: Well groups");
 
                 case Opm::WellProducer::NONE:
                     // fall-through
@@ -343,10 +337,7 @@ public:
         assert( hasWell( wellName ) );
         const auto& it = wellNameToIndex_.find(wellName);
         if (it == wellNameToIndex_.end())
-        {
-            OPM_THROW(std::runtime_error,
-                      "No well called '" << wellName << "'found");
-        }
+            throw std::runtime_error("No well called '"+wellName+"'found");
         return it->second;
     }
 

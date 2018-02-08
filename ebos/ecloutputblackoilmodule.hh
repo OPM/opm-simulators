@@ -32,7 +32,7 @@
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/output/data/Cells.hpp>
@@ -439,7 +439,7 @@ public:
                 try {
                     bubblePointPressure_[globalDofIdx] = Opm::getValue(FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()));
                 }
-                catch (const Opm::NumericalProblem& e) {
+                catch (const Opm::NumericalIssue& e) {
                     const auto globalIdx = elemCtx.simulator().gridManager().grid().globalCell()[globalDofIdx];
                     failedCellsPb_.push_back(globalIdx);
                 }
@@ -449,7 +449,7 @@ public:
                 try {
                     dewPointPressure_[globalDofIdx] = Opm::getValue(FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()));
                 }
-                catch (const Opm::NumericalProblem& e) {
+                catch (const Opm::NumericalIssue& e) {
                     const auto globalIdx = elemCtx.simulator().gridManager().grid().globalCell()[globalDofIdx];
                     failedCellsPd_.push_back(globalIdx);
                 }
@@ -1154,7 +1154,7 @@ private:
             // nothing to do
         }
         else {
-            OPM_THROW(std::runtime_error, "Unsupported unit type for fluid in place output.");
+            throw std::runtime_error("Unsupported unit type for fluid in place output.");
         }
     }
 
@@ -1166,7 +1166,7 @@ private:
             pav = Opm::unit::convert::to(pav, Opm::unit::barsa);
         }
         else {
-            OPM_THROW(std::runtime_error, "Unsupported unit type for fluid in place output.");
+            throw std::runtime_error("Unsupported unit type for fluid in place output.");
         }
     }
 

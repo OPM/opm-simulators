@@ -39,8 +39,8 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+
+#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/grid/common/gridenums.hh>
 #include <dune/common/version.hh>
@@ -113,8 +113,7 @@ public:
         if (numEquilRegions_ > 0xff) {
             // make sure that the index of an equilibration region can be stored in a
             // single byte
-            OPM_THROW(std::runtime_error,
-                      "The maximum number of supported equilibration regions is 255!");
+            throw std::runtime_error("The maximum number of supported equilibration regions is 255!");
         }
 
         // allocate the array which specifies the threshold pressures

@@ -38,8 +38,7 @@
 
 #include <dune/grid/CpGrid.hpp>
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
 
@@ -255,7 +254,7 @@ public:
                     break;
 
                 default:
-                    OPM_THROW(std::logic_error, "Could not determine a face direction");
+                    throw std::logic_error("Could not determine a face direction");
                 }
 
                 trans *= transMult.getRegionMultiplier(insideCartElemIdx,
@@ -343,9 +342,8 @@ private:
             // for now we don't care about non-diagonal entries
         }
         else
-            OPM_THROW(std::logic_error,
-                      "Can't read the intrinsic permeability from the ecl state. "
-                      "(The PERM{X,Y,Z} keywords are missing)");
+            throw std::logic_error("Can't read the intrinsic permeability from the ecl state. "
+                                   "(The PERM{X,Y,Z} keywords are missing)");
     }
 
     std::uint64_t isId_(unsigned elemIdx1, unsigned elemIdx2) const

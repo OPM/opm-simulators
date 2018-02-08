@@ -30,8 +30,7 @@
 
 #include <ewoms/disc/common/fvbaseproperties.hh>
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fvector.hh>
 
@@ -71,8 +70,7 @@ public:
                                 unsigned fapIdx OPM_UNUSED,
                                 const QuantityCallback& quantityCallback OPM_UNUSED) const
     {
-        OPM_THROW(std::logic_error,
-                  "Generic values are not supported by the ECL black-oil simulator");
+        throw std::logic_error("Generic values are not supported by the ECL black-oil simulator");
     }
 
     template <class QuantityCallback>
@@ -81,8 +79,7 @@ public:
                            unsigned fapIdx OPM_UNUSED,
                            const QuantityCallback& quantityCallback OPM_UNUSED) const
     {
-        OPM_THROW(std::logic_error,
-                  "Generic gradients are not supported by the ECL black-oil simulator");
+        throw std::logic_error("Generic gradients are not supported by the ECL black-oil simulator");
     }
 
     template <class QuantityCallback>
@@ -90,8 +87,7 @@ public:
                                   unsigned fapIdx OPM_UNUSED,
                                   const QuantityCallback& quantityCallback OPM_UNUSED)
     {
-        OPM_THROW(std::logic_error,
-                  "Generic boundary values are not supported by the ECL black-oil simulator");
+        throw std::logic_error("Generic boundary values are not supported by the ECL black-oil simulator");
     }
 
     template <class QuantityCallback>
@@ -100,8 +96,7 @@ public:
                                    unsigned fapIdx OPM_UNUSED,
                                    const QuantityCallback& quantityCallback OPM_UNUSED) const
     {
-        OPM_THROW(std::logic_error,
-                  "Generic boundary gradients are not supported by the ECL black-oil simulator");
+        throw std::logic_error("Generic boundary gradients are not supported by the ECL black-oil simulator");
     }
 };
 } // namespace Ewoms

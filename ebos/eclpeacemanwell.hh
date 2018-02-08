@@ -36,9 +36,8 @@
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
-#include <opm/common/Valgrind.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
@@ -1206,8 +1205,7 @@ protected:
                 }
             }
             else
-                OPM_THROW(std::logic_error,
-                          "Type of well \"" << name() << "\" is undefined");
+                throw std::logic_error("Type of well \""+name()+"\" is undefined");
 
             Opm::Valgrind::CheckDefined(pbh);
             Opm::Valgrind::CheckDefined(p);
@@ -1426,9 +1424,8 @@ protected:
             const auto& f = wellResidual_<BhpEval>(bhpEval);
 
             if (std::abs(f.derivative(0)) < 1e-20)
-                OPM_THROW(Opm::NumericalProblem,
-                          "Cannot determine the bottom hole pressure for well " << name()
-                          << ": Derivative of the well residual is too small");
+                throw Opm::NumericalIssue("Cannot determine the bottom hole pressure for well "+name()
+                                            +": Derivative of the well residual is too small");
             Scalar delta = f.value()/f.derivative(0);
 
             bhpEval.setValue(bhpEval.value() - delta);
@@ -1446,9 +1443,8 @@ protected:
                 return bhpEval.value();
         }
 
-        OPM_THROW(Opm::NumericalProblem,
-                  "Could not determine the bottom hole pressure of well '" << name()
-                  << "' within 20 iterations.");
+        throw Opm::NumericalIssue("Could not determine the bottom hole pressure of well '"+name()
+                                    +"' within 20 iterations.");
     }
 
     template <class BhpEval>

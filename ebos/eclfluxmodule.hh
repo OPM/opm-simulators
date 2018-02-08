@@ -35,9 +35,8 @@
 #include <ewoms/models/blackoil/blackoilproperties.hh>
 #include <ewoms/common/signum.hh>
 
-#include <opm/common/Valgrind.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -128,8 +127,7 @@ public:
      */
     const DimMatrix& intrinsicPermeability() const
     {
-        OPM_THROW(Opm::NotImplemented,
-                  "The ECL transmissibility module does not provide an explicit intrinsic permeability");
+        throw std::invalid_argument("The ECL transmissibility module does not provide an explicit intrinsic permeability");
     }
 
     /*!
@@ -140,8 +138,7 @@ public:
      */
     const EvalDimVector& potentialGrad(unsigned phaseIdx OPM_UNUSED) const
     {
-        OPM_THROW(Opm::NotImplemented,
-                  "The ECL transmissibility module does not provide explicit potential gradients");
+        throw std::invalid_argument("The ECL transmissibility module does not provide explicit potential gradients");
     }
 
     /*!
@@ -161,8 +158,7 @@ public:
      */
     const EvalDimVector& filterVelocity(unsigned phaseIdx OPM_UNUSED) const
     {
-        OPM_THROW(Opm::NotImplemented,
-                  "The ECL transmissibility module does not provide explicit filter velocities");
+        throw std::invalid_argument("The ECL transmissibility module does not provide explicit filter velocities");
     }
 
     /*!

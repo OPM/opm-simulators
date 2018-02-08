@@ -37,8 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
 
@@ -135,7 +134,7 @@ namespace Ewoms
             {
                 // we should only get one link
                 if( link != 0 ) {
-                    OPM_THROW(std::logic_error,"link in method pack is not 0 as execpted");
+                    throw std::logic_error("link in method pack is not 0 as execpted");
                 }
 
                 // pack all interior global cell id's
@@ -328,7 +327,7 @@ namespace Ewoms
             {
                 // we should only get one link
                 if( link != 0 ) {
-                    OPM_THROW(std::logic_error,"link in method pack is not 0 as expected");
+                    throw std::logic_error("link in method pack is not 0 as expected");
                 }
 
                 // write all cell data registered in local state
@@ -486,10 +485,10 @@ namespace Ewoms
             // the last indexMap is the local one
             const IndexMapType& indexMap = indexMaps_.back();
             if( indexMap.empty() )
-                OPM_THROW(std::logic_error,"index map is not created on this rank");
+                throw std::logic_error("index map is not created on this rank");
 
             if (localIdx > indexMap.size())
-                OPM_THROW(std::logic_error,"local index is outside map range");
+                throw std::logic_error("local index is outside map range");
 
             return indexMap[localIdx];
         }
@@ -510,7 +509,7 @@ namespace Ewoms
             // the last indexMap is the local one
             const IndexMapType& indexMap = indexMaps_.back();
             if( indexMap.empty() )
-                OPM_THROW(std::logic_error,"index map is not created on this rank");
+                throw std::logic_error("index map is not created on this rank");
 
             return std::find(indexMap.begin(), indexMap.end(), globalIdx) != indexMap.end();
         }
