@@ -112,7 +112,7 @@ namespace Opm
 #endif
 
         typedef Dune::BCRSMatrix <DiagMatrixBlockWellType> DiagMatWell;
-        typedef Dune::BCRSMatrix <DiagMatrixBlockWellAdjointType> DiagMatWellAdjoint;
+        typedef Dune::BCRSMatrix <DiagMatrixBlockWellAdjointType> DiagMatWellCtrl;
 
         // the matrix type for the non-diagonal matrix B and C^T
         typedef Dune::FieldMatrix<Scalar, numWellEq, numEq>  OffDiagMatrixBlockWellType;
@@ -120,7 +120,7 @@ namespace Opm
 
         // for adjoint
         typedef Dune::FieldMatrix<Scalar, numEq, 1>  OffDiagMatrixBlockWellAdjointType;
-        typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellAdjointType> OffDiagMatWellAdjoint;
+        typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellAdjointType> OffDiagMatWellCtrl;
 
         // added extra space in derivative to have control derivatives
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq+1> EvalWell;
@@ -275,9 +275,9 @@ namespace Opm
         DiagMatWell invDuneD_;
 
         // for adjoint
-        OffDiagMatWellAdjoint duneCA_;
+        OffDiagMatWellCtrl duneCA_;
         //OffDiagMatWellAdjoint duneCA_;
-        DiagMatWellAdjoint duneDA_;
+        DiagMatWellCtrl duneDA_;
 
         // quatities forobjective function
         Scalar objval_;
