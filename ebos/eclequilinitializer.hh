@@ -88,15 +88,19 @@ public:
         : simulator_(simulator)
     {
         const auto& vanguard = simulator.vanguard();
+        const auto& eclState = vanguard.eclState();
 
         unsigned numElems = vanguard.grid().size(0);
         unsigned numCartesianElems = vanguard.cartesianSize();
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
         EQUIL::DeckDependent::InitialStateComputer<TypeTag> initialState(materialLawManager,
-                                                                         vanguard.eclState(),
+                                                                         eclState,
                                                                          vanguard.grid(),
                                                                          simulator.problem().gravity()[dimWorld - 1]);
+
+        const std::vector<double>& tempiData =
+            eclState.get3DProperties().getDoubleGridProperty("TEMPI").getData();
 
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numCartesianElems);
@@ -127,10 +131,14 @@ public:
                 fluidState.setRv(0.0);
 
 
-            // set the temperature
-            // TODO Get the temperature from the initialState
-            Scalar T = FluidSystem::surfaceTemperature;
-            fluidState.setTemperature(T);
+            // set the temperature.
+            //
+            // TODO: setting temperature explicitly while computing static equilibirum
+            //       for everything else is a bit inconsistent, i.e.,
+            //       Opm::initStateEquil() should be extended to provide correct initial
+            //       temperatures
+            assert(std::isfinite(tempiData[cartesianElemIdx]));
+            fluidState.setTemperature(tempiData[cartesianElemIdx]);
 
             // set the phase pressures.
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
