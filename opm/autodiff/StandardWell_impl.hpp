@@ -44,6 +44,9 @@ namespace Opm
 
         duneB_.setBuildMode( OffDiagMatWell::row_wise );
         duneC_.setBuildMode( OffDiagMatWell::row_wise );
+        duneCA_.setBuildMode( OffDiagMatWellCtrl::row_wise );
+        duneDA_.setBuildMode( DiagMatWellCtrl::row_wise );
+        duneD_.setBuildMode( DiagMatWell::row_wise );
         invDuneD_.setBuildMode( DiagMatWell::row_wise );
     }
 
@@ -544,9 +547,9 @@ namespace Opm
             if(componentIdx==0){
                 EvalWell resWell_loc = getQs(componentIdx) * well_efficiency_factor_;
                 for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
-                    objder_adjwell_[0][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
+                    objder_adjwell_[0][pvIdx] += resWell_loc.derivative(pvIdx+numEq)*dt;
                 }
-                objder_adjctrl_[0][0] += resWell_loc.derivative(control_index);
+                objder_adjctrl_[0][0] += resWell_loc.derivative(control_index)*dt;
                 objval_= resWell_loc.value()*dt;
             }
         }
@@ -781,7 +784,10 @@ namespace Opm
 
         assembleControlEq();
 
-        duneD_=invDuneD_;// copy for adjoint
+        // do the local inversion of D.
+        //invDuneD_.compress();
+        //duneD_=DiagMatWell(invDuneD_);// copy for adjoint
+        duneD_= invDuneD_;
         // do the local inversion of D.
         // we do this manually with invertMatrix to always get our
         // specializations in for 3x3 and 4x4 matrices.
@@ -1912,12 +1918,12 @@ namespace Opm
         // invDBx = invDuneD_ * Bx_
         // TODO: with this, we modified the content of the invDrw_.
         // Is it necessary to do this to save some memory?
-        BVectorWell& invDtCtx = invDtadj_;
-        invDuneD_.mtv(Ctx_, invDtCtx);
+        BVectorWell& invDtCx = invDtadj_;
+        invDuneD_.mtv(Ctx_, invDtCx);
 
         // NB this to not flow article
         // A^tx = A^t x - duneB_* invDBx
-        duneB_.mmtv(invDtCtx,Atx);
+        duneB_.mmtv(invDtCx,Atx);
     }
 
 
@@ -1968,8 +1974,8 @@ namespace Opm
     {
         BVectorWell adjWell = adjWell_;
         // resWell = resWell - Ct * x
-        duneC_.mmtv(x, adjWell);
-        // xw = D^-1 * resWell
+        duneC_.mmv(x, adjWell);
+        // xw = Dt^-1 * resWell
         invDuneD_.mtv(adjWell, xw);
     }
 
