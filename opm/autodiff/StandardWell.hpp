@@ -183,8 +183,10 @@ namespace Opm
         void computeObj(Simulator& ebosSimulator,
                         const double dt);
 
+        void printObjective(std::ostream& os) const;
+
         // update derivative contribution from this well
-        void objectDerivative(const BVector& lambda_r );
+        void objectDerivative(const BVector& lam_r ,const BVectorWell& lam_w);
 
 
         /// using the solution x to recover the solution xw for wells and applying
@@ -322,7 +324,7 @@ namespace Opm
         mutable std::vector<double> primary_variables_;
 
         // adjoint variables for well
-        mutable BVectorWellCtrl adjoint_variables_;
+        mutable BVectorWell adjoint_variables_;
         //mutable std::vector<double> adjoint_variables_;
 
         // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation

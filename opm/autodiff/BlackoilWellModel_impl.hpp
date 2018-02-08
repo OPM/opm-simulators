@@ -550,6 +550,18 @@ namespace Opm {
         }
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    printObjective(std::ostream& os) const{
+        if ( ! localWellsActive() ) {
+            return;
+        }
+        for (auto& well : well_container_) {
+            well->printObjective(os);
+        }
+    }
+
 
     // Ax = Ax - alpha * C D^-1 B x
     template<typename TypeTag>
