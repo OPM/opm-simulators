@@ -588,9 +588,9 @@ namespace Opm
         // obj/dctrl = obj/ctrl + CA^T*lamda_r+DA^t*lamda_w
 
         objder_ = objder_adjctrl_;
-        duneCA_.mmv(lam_r, objder_);
+        duneCA_.umv(lam_r, objder_);
         //objder_ += objder_adjctrl_;
-        duneDA_.mmtv(lam_w, objder_);
+        duneDA_.umtv(lam_w, objder_);
     }
 
 
