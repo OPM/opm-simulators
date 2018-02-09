@@ -70,6 +70,9 @@ namespace Opm
         // setup sparsity pattern for the matrices
         //[A C^T    [x    =  [ res
         // B D] x_well]      res_well]
+        // full derivaives
+        //[A    C^T    CA^T ]
+        // B      D        DA]
         // set the size of the matrices
         invDuneD_.setSize(1, 1, 1);
         duneD_.setSize(1, 1, 1);
@@ -744,6 +747,7 @@ namespace Opm
                     invDuneD_[0][0][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx+numEq);
                 }
                 duneDA_[0][0][componentIdx][0] -= cq_s_effective.derivative(control_index);
+                duneCA_[0][cell_idx][0][componentIdx] -= cq_s_effective.derivative(control_index);
 
                 for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
                     if (!only_wells) {
@@ -752,7 +756,7 @@ namespace Opm
                         duneB_[0][cell_idx][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx);
                     }
                 }
-                duneCA_[0][cell_idx][componentIdx][0] -= cq_s_effective.derivative(control_index);
+
                 // Store the perforation phase flux for later usage.
                 if (has_solvent && componentIdx == contiSolventEqIdx) {
                     well_state.perfRateSolvent()[first_perf_ + perf] = cq_s[componentIdx].value();

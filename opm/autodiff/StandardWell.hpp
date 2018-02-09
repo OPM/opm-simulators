@@ -119,7 +119,7 @@ namespace Opm
         typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellType> OffDiagMatWell;
 
         // for adjoint
-        typedef Dune::FieldMatrix<Scalar, numEq, 1>  OffDiagMatrixBlockWellAdjointType;
+        typedef Dune::FieldMatrix<Scalar, 1, numEq>  OffDiagMatrixBlockWellAdjointType;
         typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellAdjointType> OffDiagMatWellCtrl;
 
         // added extra space in derivative to have control derivatives
@@ -206,6 +206,9 @@ namespace Opm
             std::cout << "duneC " << std::endl;
             Dune::writeMatrixMarket(duneC_, std::cout);
             std::cout << std::endl;
+            std::cout << "duneD " << std::endl;
+            // diagonal matrix for the well
+            Dune::writeMatrixMarket(duneD_, std::cout);
             std::cout << "invDuneD " << std::endl;
             // diagonal matrix for the well
             Dune::writeMatrixMarket(invDuneD_, std::cout);
@@ -218,6 +221,17 @@ namespace Opm
             std::cout << "duneDA " << std::endl;
             Dune::writeMatrixMarket(duneDA_, std::cout);
             std::cout << std::endl;
+            std::cout << "adjWell_ " << std::endl;
+            Dune::writeMatrixMarket(adjWell_, std::cout);
+            std::cout << "objder_adjres_ " << std::endl;
+            Dune::writeMatrixMarket(objder_adjres_, std::cout);
+            std::cout << "objder_adjwell_ " << std::endl;
+            Dune::writeMatrixMarket(objder_adjwell_, std::cout);
+            std::cout << "objder_adjctrl_ " << std::endl;
+            Dune::writeMatrixMarket(objder_adjctrl_, std::cout);
+            std::cout << "adjont_variables " << std::endl;
+            Dune::writeMatrixMarket(adjoint_variables_, std::cout);
+
         }
     protected:
 
