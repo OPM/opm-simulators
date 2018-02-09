@@ -180,7 +180,7 @@ public:
             eclOutputModule_.addRftDataToWells(localWellData, episodeIdx);
 
         if (collectToIORank_.isParallel())
-            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockValues(), localWellData);
+            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(), localWellData);
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
@@ -203,7 +203,7 @@ public:
             const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
             const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
 
-            const std::map<std::pair<std::string, int>, double>& blockValues = collectToIORank_.isParallel() ? collectToIORank_.globalBlockValues() : eclOutputModule_.getBlockValues();
+            const std::map<std::pair<std::string, int>, double>& blockData = collectToIORank_.isParallel() ? collectToIORank_.globalBlockData() : eclOutputModule_.getBlockData();
 
             if( asyncOutput_ ) {
                 // dispatch the write call to the extra thread
@@ -215,7 +215,7 @@ public:
                                                    wellData,
                                                    miscSummaryData,
                                                    regionData,
-                                                   blockValues,
+                                                   blockData,
                                                    extraRestartData,
                                                    enableDoublePrecisionOutput ) );
             } else {
@@ -226,7 +226,7 @@ public:
                                       wellData,
                                       miscSummaryData,
                                       regionData,
-                                      blockValues,
+                                      blockData,
                                       extraRestartData,
                                       enableDoublePrecisionOutput);
             }

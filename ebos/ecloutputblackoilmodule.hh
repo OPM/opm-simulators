@@ -115,7 +115,7 @@ public:
             if (node.type() == ECL_SMSPEC_BLOCK_VAR) {
                 if(collectToIORank.isGlobalIdxOnThisRank(node.num() - 1)) {
                     std::pair<std::string, int> key = std::make_pair(node.keyword(), node.num());
-                    blockValues_[key] = 0.0;
+                    blockData_[key] = 0.0;
                 }
             }
         }
@@ -540,9 +540,9 @@ public:
             // Add fluid in Place values
             updateFluidInPlace_(elemCtx, dofIdx);
 
-            // Adding block values
+            // Adding block data
             const auto globalIdx = elemCtx.simulator().vanguard().grid().globalCell()[globalDofIdx];
-            for( auto& val : blockValues_ ) {
+            for( auto& val : blockData_ ) {
                 const auto& key = val.first;
                 int global_index = key.second - 1;
                 if (global_index == globalIdx) {
@@ -1043,8 +1043,8 @@ public:
         return 0;
     }
 
-    const std::map<std::pair<std::string, int>, double>& getBlockValues() {
-        return blockValues_;
+    const std::map<std::pair<std::string, int>, double>& getBlockData() {
+        return blockData_;
     }
 
 private:
@@ -1340,7 +1340,7 @@ private:
     ScalarBuffer hydrocarbonPoreVolume_;
     ScalarBuffer pressureTimesPoreVolume_;
     ScalarBuffer pressureTimesHydrocarbonVolume_;
-    std::map<std::pair<std::string, int>, double> blockValues_;
+    std::map<std::pair<std::string, int>, double> blockData_;
     std::map<size_t, Scalar> oilCompletionPressures_;
     std::map<size_t, Scalar> waterCompletionSaturations_;
     std::map<size_t, Scalar> gasCompletionSaturations_;

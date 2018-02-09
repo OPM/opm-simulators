@@ -276,37 +276,23 @@ namespace Ewoms
             }
         }
 
-        class PackUnPack : public P2PCommunicatorType::DataHandleInterface
+        class PackUnPackCellData : public P2PCommunicatorType::DataHandleInterface
         {
             const Opm::data::Solution& localCellData_;
             Opm::data::Solution& globalCellData_;
-
-            const std::map<std::pair<std::string, int>, double>& localBlockData_;
-            std::map<std::pair<std::string, int>, double>& globalBlockValues_;
-
-            const Opm::data::Wells& localWellData_;
-            Opm::data::Wells& globalWellData_;
 
             const IndexMapType& localIndexMap_;
             const IndexMapStorageType& indexMaps_;
 
         public:
-            PackUnPack( const Opm::data::Solution& localCellData,
+            PackUnPackCellData( const Opm::data::Solution& localCellData,
                         Opm::data::Solution& globalCellData,
-                        const std::map<std::pair<std::string, int>, double>& localBlockData,
-                        std::map<std::pair<std::string, int>, double>& globalBlockValues,
-                        const Opm::data::Wells& localWellData,
-                        Opm::data::Wells& globalWellData,
                         const IndexMapType& localIndexMap,
                         const IndexMapStorageType& indexMaps,
                         const size_t globalSize,
                         const bool isIORank )
             : localCellData_( localCellData ),
               globalCellData_( globalCellData ),
-              localBlockData_( localBlockData ),
-              globalBlockValues_( globalBlockValues ),
-              localWellData_( localWellData ),
-              globalWellData_( globalWellData ),
               localIndexMap_( localIndexMap ),
               indexMaps_( indexMaps )
             {
@@ -345,17 +331,6 @@ namespace Ewoms
                     // write all data from local data to buffer
                     write( buffer, localIndexMap_, data);
                 }
-
-                localWellData_.write(buffer);
-
-                // write all block data
-                unsigned int size = localBlockData_.size();
-                buffer.write( size );
-                for (const auto& map : localBlockData_) {
-                    buffer.write(map.first.first);
-                    buffer.write(map.first.second);
-                    buffer.write(map.second);
-                }
             }
 
             void doUnpack( const IndexMapType& indexMap, MessageBufferType& buffer )
@@ -368,20 +343,6 @@ namespace Ewoms
 
                     //write all data from local cell data to buffer
                     read( buffer, indexMap, data);
-                }
-                globalWellData_.read(buffer);
-
-                // read all block data
-                unsigned int size = 0;
-                buffer.read(size);
-                for (size_t i = 0; i < size; ++i) {
-                    std::string name;
-                    int idx;
-                    double data;
-                    buffer.read( name );
-                    buffer.read( idx );
-                    buffer.read( data );
-                    globalBlockValues_[std::make_pair(name, idx)] = data;
                 }
             }
 
@@ -430,11 +391,112 @@ namespace Ewoms
 
         };
 
+        class PackUnPackWellData : public P2PCommunicatorType::DataHandleInterface
+        {
+            const Opm::data::Wells& localWellData_;
+            Opm::data::Wells& globalWellData_;
+
+        public:
+            PackUnPackWellData(const Opm::data::Wells& localWellData,
+                        Opm::data::Wells& globalWellData,
+                        const bool isIORank )
+              :localWellData_( localWellData ),
+              globalWellData_( globalWellData )
+            {
+                if( isIORank )
+                {
+                    MessageBufferType buffer;
+                    pack( 0, buffer );
+
+                    // pass a dummy_link to satisfy virtual class
+                    const int dummy_link = -1;
+                    unpack( dummy_link, buffer );
+                }
+            }
+
+            // pack all data associated with link
+            void pack( const int link, MessageBufferType& buffer )
+            {
+                // we should only get one link
+                if( link != 0 ) {
+                    throw std::logic_error("link in method pack is not 0 as expected");
+                }
+                localWellData_.write(buffer);
+            }
+
+            // unpack all data associated with link
+            void unpack( const int /*link*/, MessageBufferType& buffer )
+            {
+                globalWellData_.read(buffer);
+            }
+
+        };
+
+        class PackUnPackBlockData : public P2PCommunicatorType::DataHandleInterface
+        {
+            const std::map<std::pair<std::string, int>, double>& localBlockData_;
+            std::map<std::pair<std::string, int>, double>& globalBlockValues_;
+
+        public:
+            PackUnPackBlockData( const std::map<std::pair<std::string, int>, double>& localBlockData,
+                        std::map<std::pair<std::string, int>, double>& globalBlockValues,
+                        const bool isIORank )
+              : localBlockData_( localBlockData ),
+              globalBlockValues_( globalBlockValues )
+            {
+                if( isIORank )
+                {
+                    MessageBufferType buffer;
+                    pack( 0, buffer );
+
+                    // pass a dummy_link to satisfy virtual class
+                    const int dummy_link = -1;
+                    unpack( dummy_link, buffer );
+                }
+            }
+
+            // pack all data associated with link
+            void pack( const int link, MessageBufferType& buffer )
+            {
+                // we should only get one link
+                if( link != 0 ) {
+                    throw std::logic_error("link in method pack is not 0 as expected");
+                }
+
+                // write all block data
+                unsigned int size = localBlockData_.size();
+                buffer.write( size );
+                for (const auto& map : localBlockData_) {
+                    buffer.write(map.first.first);
+                    buffer.write(map.first.second);
+                    buffer.write(map.second);
+                }
+            }
+
+            // unpack all data associated with link
+            void unpack( const int /*link*/, MessageBufferType& buffer )
+            {
+                // read all block data
+                unsigned int size = 0;
+                buffer.read(size);
+                for (size_t i = 0; i < size; ++i) {
+                    std::string name;
+                    int idx;
+                    double data;
+                    buffer.read( name );
+                    buffer.read( idx );
+                    buffer.read( data );
+                    globalBlockValues_[std::make_pair(name, idx)] = data;
+                }
+            }
+
+        };
+
         // gather solution to rank 0 for EclipseWriter
-        void collect( const Opm::data::Solution& localCellData, const std::map<std::pair<std::string, int>, double>& localBlockValues, const Opm::data::Wells& localWellData)
+        void collect( const Opm::data::Solution& localCellData, const std::map<std::pair<std::string, int>, double>& localBlockData, const Opm::data::Wells& localWellData)
         {
             globalCellData_ = {};
-            globalBlockValues_.clear();
+            globalBlockData_.clear();
             globalWellData_.clear();
 
             // index maps only have to be build when reordering is needed
@@ -444,13 +506,9 @@ namespace Ewoms
             }
 
             // this also packs and unpacks the local buffers one ioRank
-            PackUnPack
-                packUnpack( localCellData,
+            PackUnPackCellData
+                packUnpackCellData( localCellData,
                             globalCellData_,
-                            localBlockValues,
-                            globalBlockValues_,
-                            localWellData,
-                            globalWellData_,
                             localIndexMap_,
                             indexMaps_,
                             numCells(),
@@ -462,8 +520,21 @@ namespace Ewoms
                 return;
             }
 
-            //toIORankComm_.exchangeCached( packUnpack );
-            toIORankComm_.exchange( packUnpack );
+            PackUnPackWellData
+                packUnpackWellData( localWellData,
+                            globalWellData_,
+                            isIORank() );
+
+            PackUnPackBlockData
+                packUnpackBlockData( localBlockData,
+                            globalBlockData_,
+                            isIORank() );
+
+            toIORankComm_.exchange( packUnpackCellData );
+            toIORankComm_.exchange( packUnpackWellData );
+            toIORankComm_.exchange( packUnpackBlockData );
+
+
 
 #ifndef NDEBUG
             // mkae sure every process is on the same page
@@ -471,9 +542,9 @@ namespace Ewoms
 #endif
         }
 
-        const std::map<std::pair<std::string, int>, double>& globalBlockValues() const
+        const std::map<std::pair<std::string, int>, double>& globalBlockData() const
         {
-            return globalBlockValues_;
+            return globalBlockData_;
         }
 
         const Opm::data::Solution& globalCellData() const
@@ -541,7 +612,7 @@ namespace Ewoms
         IndexMapStorageType             indexMaps_;
         std::vector<int>                globalRanks_;
         Opm::data::Solution             globalCellData_;
-        std::map<std::pair<std::string, int>, double> globalBlockValues_;
+        std::map<std::pair<std::string, int>, double> globalBlockData_;
         Opm::data::Wells globalWellData_;
     };
 
