@@ -21,12 +21,12 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/core/grid.h>
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/GridManager.hpp>
 #include <opm/core/props/IncompPropertiesBasic.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/core/utility/StopWatch.hpp>
-#include <opm/core/pressure/tpfa/trans_tpfa.h>
+#include <opm/grid/utility/StopWatch.hpp>
+#include <opm/grid/transmissibility/trans_tpfa.h>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #if HAVE_SUITESPARSE_UMFPACK_H

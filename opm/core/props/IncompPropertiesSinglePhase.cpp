@@ -21,7 +21,7 @@
 #include "config.h"
 
 #include <opm/core/props/IncompPropertiesSinglePhase.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/common/ErrorMacros.hpp>
 

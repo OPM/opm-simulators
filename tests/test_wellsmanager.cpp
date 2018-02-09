@@ -37,7 +37,7 @@
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/GridManager.hpp>
 
 void wells_static_check(const Wells* wells) {
     BOOST_CHECK_EQUAL(2, wells->number_of_wells);

@@ -27,7 +27,7 @@
 // Define making clear that the simulator supports AMG
 #define FLOW_SUPPORT_AMG !defined(HAVE_UMFPACK)
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/FlowMain.hpp>
 

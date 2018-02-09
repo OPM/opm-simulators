@@ -21,12 +21,12 @@
 
 #include <opm/polymer/TransportSolverTwophaseCompressiblePolymer.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
 #include <opm/common/utility/numeric/RootFinders.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
-#include <opm/core/pressure/tpfa/trans_tpfa.h>
+#include <opm/grid/transmissibility/trans_tpfa.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <cmath>
 #include <list>

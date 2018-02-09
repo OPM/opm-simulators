@@ -23,7 +23,7 @@
 
 #include <opm/common/data/SimulationDataContainer.hpp>
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <vector>
 

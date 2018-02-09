@@ -28,8 +28,8 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/core/flowdiagnostics/DGBasis.hpp>
-#include <opm/core/grid/GridManager.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/GridManager.hpp>
+#include <opm/grid/UnstructuredGrid.h>
 #include <cmath>
 
 using namespace Opm;

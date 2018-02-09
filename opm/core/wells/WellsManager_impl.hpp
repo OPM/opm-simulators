@@ -1,9 +1,9 @@
 #include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/core/grid/GridHelpers.hpp>
+#include <opm/grid/GridHelpers.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/core/utility/compressedToCartesian.hpp>
+#include <opm/grid/utility/compressedToCartesian.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/CompletionSet.hpp>

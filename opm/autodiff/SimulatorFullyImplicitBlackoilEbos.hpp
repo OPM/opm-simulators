@@ -31,7 +31,7 @@
 #include <opm/autodiff/BlackoilWellModel.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
-#include <opm/core/utility/StopWatch.hpp>
+#include <opm/grid/utility/StopWatch.hpp>
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>

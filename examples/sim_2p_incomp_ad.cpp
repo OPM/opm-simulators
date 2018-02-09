@@ -25,8 +25,8 @@
 
 #include <opm/core/pressure/FlowBCManager.hpp>
 
-#include <opm/core/grid.h>
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/GridManager.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/common/ErrorMacros.hpp>

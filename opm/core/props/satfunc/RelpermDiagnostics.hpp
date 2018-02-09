@@ -27,9 +27,9 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/grid.h>
-#include <opm/core/grid/GridManager.hpp>
-#include <opm/core/grid/GridHelpers.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/GridManager.hpp>
+#include <opm/grid/GridHelpers.hpp>
 #include <opm/common/utility/numeric/linearInterpolation.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>

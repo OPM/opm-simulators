@@ -35,7 +35,7 @@
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/GridManager.hpp>
 
 
 using namespace Opm;

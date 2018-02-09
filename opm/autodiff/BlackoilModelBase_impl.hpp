@@ -39,7 +39,7 @@
 #include <opm/autodiff/VFPProdProperties.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>

@@ -23,20 +23,11 @@
 
 #include <opm/core/props/IncompPropertiesSinglePhase.hpp>
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
-#include <opm/core/pressure/tpfa/trans_tpfa.h>
-// #include <opm/core/pressure/mimetic/mimetic.h>
-// #include <opm/core/pressure/flow_bc.h>
+#include <opm/grid/transmissibility/trans_tpfa.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/linalg/sparse_sys.h>
-// #include <opm/core/simulator/TwophaseState.hpp>
-// #include <opm/core/simulator/WellState.hpp>
 #include <opm/common/ErrorMacros.hpp>
-// #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/wells.h>
-// #include <iostream>
-// #include <iomanip>
-// #include <cmath>
-// #include <algorithm>
 
 namespace Opm
 {

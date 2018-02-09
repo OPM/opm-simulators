@@ -23,8 +23,8 @@
 
 #include <functional>
 
-#include <opm/core/grid.h>
-#include <opm/core/grid/GridHelpers.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/GridHelpers.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 
@@ -34,9 +34,9 @@
 #include <boost/range/iterator_range.hpp>
 
 #ifdef HAVE_OPM_GRID
-#include <dune/grid/CpGrid.hpp>
-#include <dune/grid/cpgrid/GridHelpers.hpp>
-#include <dune/grid/polyhedralgrid.hh>
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/GridHelpers.hpp>
+#include <opm/grid/polyhedralgrid.hh>
 #endif
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>

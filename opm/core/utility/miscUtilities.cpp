@@ -20,7 +20,7 @@
 #include "config.h"
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
