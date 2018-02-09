@@ -33,7 +33,7 @@
 
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include <ewoms/io/baseoutputwriter.hh>
-#include <ebos/ThreadHandle.hpp>
+#include <ebos/threadhandle.hh>
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
@@ -48,7 +48,6 @@
 #include <sstream>
 #include <fstream>
 #include <type_traits>
-#include <thread>
 
 namespace Ewoms {
 namespace Properties {
