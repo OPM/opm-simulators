@@ -678,9 +678,9 @@ namespace Opm
         // obj/dctrl = obj/ctrl + CA^T*lamda_r+DA^t*lamda_w
 
         objder_ = objder_adjctrl_;
-        duneCA_.mmv(lam_r, objder_);
+        duneCA_.umv(lam_r, objder_);
         //objder_ += objder_adjctrl_;
-        duneDA_.mmtv(lam_w, objder_);
+        duneDA_.umtv(lam_w, objder_);
     }
 
 
@@ -789,7 +789,7 @@ namespace Opm
 
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
-            EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
+            EvalWell resWell_loc = 0.0;//(wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
             resWell_loc += getQs(componentIdx) * well_efficiency_factor_;
             for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
