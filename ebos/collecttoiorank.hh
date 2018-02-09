@@ -25,6 +25,7 @@
 
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Solution.hpp>
+#include <opm/output/data/Wells.hpp>
 
 //#if HAVE_OPM_GRID
 #include <opm/grid/common/p2pcommunicator.hh>
@@ -283,6 +284,9 @@ namespace Ewoms
             const std::map<std::pair<std::string, int>, double>& localBlockData_;
             std::map<std::pair<std::string, int>, double>& globalBlockValues_;
 
+            const Opm::data::Wells& localWellData_;
+            Opm::data::Wells& globalWellData_;
+
             const IndexMapType& localIndexMap_;
             const IndexMapStorageType& indexMaps_;
 
@@ -291,6 +295,8 @@ namespace Ewoms
                         Opm::data::Solution& globalCellData,
                         const std::map<std::pair<std::string, int>, double>& localBlockData,
                         std::map<std::pair<std::string, int>, double>& globalBlockValues,
+                        const Opm::data::Wells& localWellData,
+                        Opm::data::Wells& globalWellData,
                         const IndexMapType& localIndexMap,
                         const IndexMapStorageType& indexMaps,
                         const size_t globalSize,
@@ -299,6 +305,8 @@ namespace Ewoms
               globalCellData_( globalCellData ),
               localBlockData_( localBlockData ),
               globalBlockValues_( globalBlockValues ),
+              localWellData_( localWellData ),
+              globalWellData_( globalWellData ),
               localIndexMap_( localIndexMap ),
               indexMaps_( indexMaps )
             {
@@ -338,6 +346,8 @@ namespace Ewoms
                     write( buffer, localIndexMap_, data);
                 }
 
+                localWellData_.write(buffer);
+
                 // write all block data
                 unsigned int size = localBlockData_.size();
                 buffer.write( size );
@@ -359,6 +369,7 @@ namespace Ewoms
                     //write all data from local cell data to buffer
                     read( buffer, indexMap, data);
                 }
+                globalWellData_.read(buffer);
 
                 // read all block data
                 unsigned int size = 0;
@@ -420,10 +431,12 @@ namespace Ewoms
         };
 
         // gather solution to rank 0 for EclipseWriter
-        void collect( const Opm::data::Solution& localCellData, const std::map<std::pair<std::string, int>, double>& localBlockValues)
+        void collect( const Opm::data::Solution& localCellData, const std::map<std::pair<std::string, int>, double>& localBlockValues, const Opm::data::Wells& localWellData)
         {
             globalCellData_ = {};
             globalBlockValues_.clear();
+            globalWellData_.clear();
+
             // index maps only have to be build when reordering is needed
             if( ! needsReordering && ! isParallel() )
             {
@@ -436,6 +449,8 @@ namespace Ewoms
                             globalCellData_,
                             localBlockValues,
                             globalBlockValues_,
+                            localWellData,
+                            globalWellData_,
                             localIndexMap_,
                             indexMaps_,
                             numCells(),
@@ -464,6 +479,11 @@ namespace Ewoms
         const Opm::data::Solution& globalCellData() const
         {
             return globalCellData_;
+        }
+
+        const Opm::data::Wells& globalWellData() const
+        {
+            return globalWellData_;
         }
 
         bool isIORank() const
@@ -522,6 +542,7 @@ namespace Ewoms
         std::vector<int>                globalRanks_;
         Opm::data::Solution             globalCellData_;
         std::map<std::pair<std::string, int>, double> globalBlockValues_;
+        Opm::data::Wells globalWellData_;
     };
 
 } // end namespace Opm

@@ -170,10 +170,10 @@ public:
 
         // Well RFT data
         if (!substep) {
-            for ( const auto& well : simulator_.gridManager().schedule().getWells( reportStepNum )) {
+            for ( const auto& well : simulator_.vanguard().schedule().getWells( reportStepNum )) {
 
                 // don't bother with wells not on this process
-                const auto& defunct_well_names = simulator_.gridManager().defunctWellNames();
+                const auto& defunct_well_names = simulator_.vanguard().defunctWellNames();
                 if ( defunct_well_names.find(well->name()) != defunct_well_names.end() ) {
                     continue;
                 }
@@ -186,7 +186,7 @@ public:
                     const size_t i = size_t( completion.getI() );
                     const size_t j = size_t( completion.getJ() );
                     const size_t k = size_t( completion.getK() );
-                    const size_t index = simulator_.gridManager().eclState().getInputGrid().getGlobalIndex( i, j, k );
+                    const size_t index = simulator_.vanguard().eclState().getInputGrid().getGlobalIndex( i, j, k );
 
                     oilCompletionPressures_.emplace(std::make_pair(index, 0.0));
                     waterCompletionSaturations_.emplace(std::make_pair(index, 0.0));
@@ -644,10 +644,10 @@ public:
 
     void addRftDataToWells(Opm::data::Wells& wellDatas, size_t reportStepNum)
     {            
-        for ( const auto& well : simulator_.gridManager().schedule().getWells( reportStepNum )) {
+        for ( const auto& well : simulator_.vanguard().schedule().getWells( reportStepNum )) {
 
             // don't bother with wells not on this process
-            const auto& defunct_well_names = simulator_.gridManager().defunctWellNames();
+            const auto& defunct_well_names = simulator_.vanguard().defunctWellNames();
             if ( defunct_well_names.find(well->name()) != defunct_well_names.end() ) {
                 continue;
             }
@@ -667,7 +667,7 @@ public:
                     const size_t j = size_t( completion.getJ() );
                     const size_t k = size_t( completion.getK() );
 
-                    const size_t index = simulator_.gridManager().eclState().getInputGrid().getGlobalIndex( i, j, k );
+                    const size_t index = simulator_.vanguard().eclState().getInputGrid().getGlobalIndex( i, j, k );
                     auto& completionData = wellData.completions[ count ];
                     completionData.index = index;
                     count++;
