@@ -274,14 +274,13 @@ namespace Opm {
             ebosSimulator_.model().linearizer().linearize(0);
             ebosSimulator_.problem().endIteration();
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
-            /*
+
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             std::cout << "Printing jacobian residual 0" << std::endl;
-            Dune::writeMatrixMarket(ebosJac, std::cout);
             std::cout << std::endl;
             std::cout << "Printing pure residual with out well contribution backward mode" << std::endl;
             std::cout << ebosResid << std::endl;
-            */
+
             //auto& well_state = wellModel().wellState();
             wellModel().beginTimeStep();
             WellState well_state;// =  this->wellModel().wellState();
@@ -297,14 +296,14 @@ namespace Opm {
             //iterationIdx = 0;//for wells we need this to make update correctyin flow is make shift the state???
             assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
             wellModel().assemble(/*iterationIdx*/ 0, ebosSimulator_.timeStepSize());
-            /*
+
             wellModel().apply(ebosResid);
-            wellModel().printMatrixes();
+            //wellModel().printMatrixes();
 
             //wellModel().recoverWellSolutionAndUpdateWellState(x);
             std::cout << "Printing pure residual in backward mode" << std::endl;
             std::cout << ebosResid << std::endl;
-            */
+
             const int nc = UgGridHelpers::numCells(grid_);
 
             BVector lam(nc);// this should be the prevois adjoint vector
@@ -336,15 +335,18 @@ namespace Opm {
             std::cout << x << std::endl;
             wellModel().recoverWellAdjointAndUpdateWellAdjoint(x);// also update objective
 
-            // print objective and well state to file
-            wellModel().printObjective(std::cout);
 
+            std::cout << "print all matrixes" << std::endl;
+            Dune::writeMatrixMarket(ebosJac, std::cout);
+            std::cout << "*** Well Matrixes " << std::endl;
+            wellModel().printMatrixes();
             //collect objective values, derivatives and well control state for output
             // assume most all is related to well
             //AdjointStepType adjointStep = wellModel().collectObjective(x);
             // Do model-specific post-step actions.
            // model_->afterStep(timer, reservoir_state, well_state);
-
+            // print objective and well state to file
+            wellModel().printObjective(std::cout);
 
             //prepere right hand side for next step
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
