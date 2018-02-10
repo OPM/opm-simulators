@@ -31,6 +31,7 @@
 #include <opm/core/utility/extractPvtTableIndex.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -970,7 +971,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             try {
                 Pb[i] = FluidSystem::oilPvt().saturationPressure(pvtRegionIdx, T[i], rs[i]);
             }
-            catch (const NumericalProblem&) {
+            catch (const NumericalIssue&) {
                 // Ignore
             }
         }
@@ -994,7 +995,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             try {
                 Pd[i] = FluidSystem::gasPvt().saturationPressure(pvtRegionIdx, T[i], rv[i]);
             }
-            catch (const NumericalProblem&) {
+            catch (const NumericalIssue&) {
                 // Ignore
             }
         }

@@ -184,7 +184,7 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
     Opm::Deck deck = parser.parseFile(filename, parseContext);
 
     Opm::EclipseState eclipseState(deck, parseContext);
-    Opm::GridManager gridManager(eclipseState.getInputGrid());
+    Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
@@ -192,19 +192,19 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
  
     {
-        Opm::WellsManager wellsManager(eclipseState, sched, 0, *gridManager.c_grid());
+        Opm::WellsManager wellsManager(eclipseState, sched, 0, *vanguard.c_grid());
         wells_static_check(wellsManager.c_wells());
         check_controls_epoch0(wellsManager.c_wells()->ctrls);
     }
 
     {
-        Opm::WellsManager wellsManager(eclipseState, sched, 1, *gridManager.c_grid());
+        Opm::WellsManager wellsManager(eclipseState, sched, 1, *vanguard.c_grid());
         wells_static_check(wellsManager.c_wells());
         check_controls_epoch1(wellsManager.c_wells()->ctrls);
     }
 
     {
-        Opm::WellsManager wellsManager(eclipseState, sched, 3, *gridManager.c_grid());
+        Opm::WellsManager wellsManager(eclipseState, sched, 3, *vanguard.c_grid());
         const Wells* wells = wellsManager.c_wells();
 
         // There is 3 wells in total in the deck at the 3rd schedule step.
@@ -225,15 +225,15 @@ BOOST_AUTO_TEST_CASE(WellsEqual) {
     Opm::Parser parser;
     Opm::Deck deck(parser.parseFile(filename, parseContext));
     Opm::EclipseState eclipseState(deck, parseContext);
-    Opm::GridManager gridManager(eclipseState.getInputGrid());
+    Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Schedule sched(deck, grid, eclipseProperties, Opm::Phases(true, true, true), parseContext );
 
 
-    Opm::WellsManager wellsManager0(eclipseState, sched, 0, *gridManager.c_grid());
-    Opm::WellsManager wellsManager1(eclipseState, sched, 1, *gridManager.c_grid());
+    Opm::WellsManager wellsManager0(eclipseState, sched, 0, *vanguard.c_grid());
+    Opm::WellsManager wellsManager1(eclipseState, sched, 1, *vanguard.c_grid());
 
     BOOST_CHECK(wells_equal( wellsManager0.c_wells() , wellsManager0.c_wells(),false));
     BOOST_CHECK(!wells_equal( wellsManager0.c_wells() , wellsManager1.c_wells(),false));
@@ -245,7 +245,7 @@ BOOST_AUTO_TEST_CASE(ControlsEqual) {
     Opm::Parser parser;
     Opm::Deck deck(parser.parseFile(filename, parseContext));
     Opm::EclipseState eclipseState(deck, parseContext);
-    Opm::GridManager gridManager(eclipseState.getInputGrid());
+    Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
@@ -253,8 +253,8 @@ BOOST_AUTO_TEST_CASE(ControlsEqual) {
 
 
 
-    Opm::WellsManager wellsManager0(eclipseState, sched, 0, *gridManager.c_grid());
-    Opm::WellsManager wellsManager1(eclipseState, sched, 1, *gridManager.c_grid());
+    Opm::WellsManager wellsManager0(eclipseState, sched, 0, *vanguard.c_grid());
+    Opm::WellsManager wellsManager1(eclipseState, sched, 1, *vanguard.c_grid());
 
     BOOST_CHECK(well_controls_equal( wellsManager0.c_wells()->ctrls[0] , wellsManager0.c_wells()->ctrls[0] , false));
     BOOST_CHECK(well_controls_equal( wellsManager0.c_wells()->ctrls[1] , wellsManager0.c_wells()->ctrls[1] , false));
@@ -273,19 +273,19 @@ BOOST_AUTO_TEST_CASE(WellShutOK) {
     Opm::Parser parser;
     Opm::Deck deck(parser.parseFile(filename, parseContext));
     Opm::EclipseState eclipseState(deck, parseContext);
-    Opm::GridManager gridManager(eclipseState.getInputGrid());
+    Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Schedule sched(deck, grid, eclipseProperties, Opm::Phases(true, true, true), parseContext );
 
 
-    Opm::WellsManager wellsManager2(eclipseState, sched, 2, *gridManager.c_grid());
+    Opm::WellsManager wellsManager2(eclipseState, sched, 2, *vanguard.c_grid());
 
     // Shut wells are not added to the deck. i.e number of wells should be 2-1
     BOOST_CHECK(wellsManager2.c_wells()->number_of_wells == 1);
 
-    //BOOST_CHECK_NO_THROW( Opm::WellsManager wellsManager2(eclipseState , 2 , *gridManager.c_grid(), NULL));
+    //BOOST_CHECK_NO_THROW( Opm::WellsManager wellsManager2(eclipseState , 2 , *vanguard.c_grid(), NULL));
 }
 
 BOOST_AUTO_TEST_CASE(WellSTOPOK) {
@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE(WellSTOPOK) {
     Opm::Parser parser;
     Opm::Deck deck(parser.parseFile(filename, parseContext));
     Opm::EclipseState eclipseState(deck, parseContext);
-    Opm::GridManager gridManager(eclipseState.getInputGrid());
+    Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
@@ -302,7 +302,7 @@ BOOST_AUTO_TEST_CASE(WellSTOPOK) {
 
 
 
-    Opm::WellsManager wellsManager(eclipseState, sched, 0, *gridManager.c_grid());
+    Opm::WellsManager wellsManager(eclipseState, sched, 0, *vanguard.c_grid());
 
     const Wells* wells = wellsManager.c_wells();
     const struct WellControls* ctrls0 = wells->ctrls[0];

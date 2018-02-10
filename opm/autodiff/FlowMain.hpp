@@ -79,7 +79,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
-#include <opm/common/utility/ResetLocale.hpp>
+#include <opm/material/common/ResetLocale.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>

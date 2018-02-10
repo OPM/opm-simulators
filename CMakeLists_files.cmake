@@ -25,6 +25,7 @@
 
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
+
 if(DEV_BUILD)
     list (APPEND MAIN_SOURCE_FILES
       opm/autodiff/MatrixAdapterUtilities.hpp
@@ -79,25 +80,7 @@ if(DEV_BUILD)
       opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
       opm/simulators/timestepping/SimulatorTimer.cpp
       )
-    list (APPEND TEST_SOURCE_FILES
-        tests/test_parallel_linearsolver.cpp
-        tests/test_parallelistlinformation.cpp
-        )
-    list (APPEND TEST_DATA_FILES
-        )
-
-
-# originally generated with the command:
-# find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
-        list (APPEND EXAMPLE_SOURCE_FILES
-                #examples/flow_legacy.cpp
-                examples/flow.cpp
-                )
-        list (APPEND  PROGRAM_SOURCE_FILES
-                #examples/flow_legacy.cpp
-                examples/flow.cpp
-                )
-
+  
 else()
             list (APPEND MAIN_SOURCE_FILES
 

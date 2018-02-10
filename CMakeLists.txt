@@ -39,7 +39,7 @@ if(SIBLING_SEARCH AND NOT opm-common_DIR)
       set(opm-common_DIR ${_parent_full_dir}/${_opm_common_leaf})
     elseif(IS_DIRECTORY ${_parent_full_dir}/opm-common)
       # All modules are in a common build dir
-      set(opm-common_DIR "${_parent_full_dir}/opm-common}")
+      set(opm-common_DIR "${_parent_full_dir}/opm-common")
     endif()
   endif()
 endif()

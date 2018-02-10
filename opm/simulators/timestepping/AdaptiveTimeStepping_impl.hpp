@@ -255,7 +255,7 @@ namespace Opm {
                 detail::logException(e, solver_verbose_);
                 // since linearIterations is < 0 this will restart the solver
             }
-            catch (const Opm::NumericalProblem& e) {
+            catch (const Opm::NumericalIssue& e) {
                 substepReport += solver.failureReport();
                 cause_of_failure = "Solver convergence failure - Numerical problem encountered";
 
@@ -333,7 +333,7 @@ namespace Opm {
                     perfTimer.start();
                     bool substep = true;
                     const auto& physicalModel = solver.model();
-                    outputWriter->writeTimeStep( substepTimer, state, well_state, physicalModel, substep);
+                    outputWriter->writeTimeStep( substepTimer, state, well_state, physicalModel, substep, -1.0, substepReport);
                     report.output_write_time += perfTimer.secsSinceStart();
                 }
 
@@ -361,7 +361,7 @@ namespace Opm {
                     if (solver_verbose_) {
                         OpmLog::error(msg);
                     }
-                    OPM_THROW_NOLOG(Opm::NumericalProblem, msg);
+                    OPM_THROW_NOLOG(Opm::NumericalIssue, msg);
                 }
 
                 const double newTimeStep = restart_factor_ * dt;

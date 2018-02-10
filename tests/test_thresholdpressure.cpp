@@ -48,8 +48,8 @@ BOOST_AUTO_TEST_CASE(CreateSimulationConfig) {
     EclipseState state(*deck, parseContext);
     EclipseGridConstPtr eclipseGrid = state.getInputGrid();
     std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
-    GridManager gridManager( eclipseState->getInputGrid(), porv );
-    const Grid& grid = *(gridManager.c_grid());
+    GridManager vanguard( eclipseState->getInputGrid(), porv );
+    const Grid& grid = *(vanguard.c_grid());
 
     std::vector<double> threshold_pressures = thresholdPressures(parseContext, eclipseState, grid);
     BOOST_CHECK( threshold_pressures.size() > 0 );
