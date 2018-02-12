@@ -22,7 +22,7 @@
 #endif // HAVE_CONFIG_H
 
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/autodiff/SimulatorSequentialBlackoil.hpp>
 #include <opm/autodiff/FlowMainSequential.hpp>
 #include <opm/autodiff/BlackoilPressureModel.hpp>

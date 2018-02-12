@@ -24,7 +24,7 @@
 #include <opm/material/common/ResetLocale.hpp>
 #include <ewoms/models/blackoil/blackoiltwophaseindices.hh>
 
-#include <dune/grid/CpGrid.hpp>
+#include <opm/grid/CpGrid.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
 

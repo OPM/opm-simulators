@@ -21,7 +21,7 @@
 #include "config.h"
 #include <opm/core/pressure/FlowBCManager.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <vector>
 
 namespace Opm

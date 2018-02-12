@@ -41,7 +41,7 @@
 
 #ifdef HAVE_OPM_GRID
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
-#include <dune/grid/CpGrid.hpp>
+#include <opm/grid/CpGrid.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 #endif
 

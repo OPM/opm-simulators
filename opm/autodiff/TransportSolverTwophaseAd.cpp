@@ -20,10 +20,10 @@
 #include <config.h>
 
 #include <opm/autodiff/TransportSolverTwophaseAd.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
-#include <opm/core/pressure/tpfa/trans_tpfa.h>
+#include <opm/grid/transmissibility/trans_tpfa.h>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>

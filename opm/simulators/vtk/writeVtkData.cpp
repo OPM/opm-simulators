@@ -21,7 +21,7 @@
 #include <opm/simulators/vtk/writeVtkData.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <set>
 #include <cmath>
 #include <algorithm>

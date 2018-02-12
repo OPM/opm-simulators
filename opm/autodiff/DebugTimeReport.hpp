@@ -21,7 +21,7 @@
 #define OPM_DEBUGTIMEREPORT_HEADER_INCLUDED
 
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/core/utility/StopWatch.hpp>
+#include <opm/grid/utility/StopWatch.hpp>
 #include <string>
 
 namespace Opm

@@ -22,7 +22,7 @@
 
 
 #include <opm/core/wells/WellsManager.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/common/ErrorMacros.hpp>

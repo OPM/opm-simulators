@@ -27,13 +27,13 @@
 
 #include <opm/core/pressure/CompressibleTpfa.hpp>
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/wells.h>
 #include <opm/core/pressure/flow_bc.h>
 
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
-#include <opm/core/utility/StopWatch.hpp>
+#include <opm/grid/utility/StopWatch.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/simulators/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
@@ -44,7 +44,7 @@
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
-#include <opm/core/grid/ColumnExtract.hpp>
+#include <opm/grid/ColumnExtract.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>

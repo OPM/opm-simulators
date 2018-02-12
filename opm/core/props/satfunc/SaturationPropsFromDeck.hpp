@@ -24,7 +24,7 @@
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>

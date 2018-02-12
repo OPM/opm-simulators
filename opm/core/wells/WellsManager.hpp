@@ -29,7 +29,7 @@
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/GroupTree.hpp>
 
-#include <opm/core/utility/CompressedPropertyAccess.hpp>
+#include <opm/grid/utility/CompressedPropertyAccess.hpp>
 
 struct Wells;
 struct UnstructuredGrid;

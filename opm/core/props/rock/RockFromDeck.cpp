@@ -20,12 +20,12 @@
 
 #include "config.h"
 #include <opm/core/props/rock/RockFromDeck.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
-#include <opm/core/utility/CompressedPropertyAccess.hpp>
+#include <opm/grid/utility/CompressedPropertyAccess.hpp>
 
 #include <array>
 #include <string>

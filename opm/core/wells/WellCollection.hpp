@@ -23,7 +23,7 @@
 #include <memory>
 
 #include <opm/core/wells/WellsGroup.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>

@@ -25,7 +25,7 @@
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/DebugTimeReport.hpp>
 #include <opm/autodiff/multiPhaseUpwind.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
 #include <opm/core/simulator/BlackoilState.hpp>
 

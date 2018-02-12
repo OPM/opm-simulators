@@ -24,8 +24,8 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/GeoProps.hpp>
-#include <opm/core/grid.h>
-#include <opm/core/grid/PinchProcessor.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/PinchProcessor.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 
 #include <opm/common/ErrorMacros.hpp>

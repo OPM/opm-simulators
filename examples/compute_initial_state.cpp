@@ -23,15 +23,15 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/grid.h>
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/GridManager.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/simulator/initStateEquil.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/utility/compressedToCartesian.hpp>
+#include <opm/grid/utility/compressedToCartesian.hpp>
 
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>

@@ -23,7 +23,7 @@
 #include <ebos/eclproblem.hh>
 #include <ewoms/common/start.hh>
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -57,7 +57,7 @@
 #include <boost/filesystem.hpp>
 
 #ifdef HAVE_OPM_GRID
-#include <dune/grid/CpGrid.hpp>
+#include <opm/grid/CpGrid.hpp>
 #endif
 namespace Opm
 {
