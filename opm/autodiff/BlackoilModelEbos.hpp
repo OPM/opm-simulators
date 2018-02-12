@@ -230,7 +230,7 @@ namespace Opm {
         /// \param[in] nonlinear_solver       nonlinear solver used (for oscillation/relaxation control)
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        SimulatorReport adjointIteration(SimulatorTimerInterface& timer)// WellState& well_state)
+        SimulatorReport adjointIteration(SimulatorTimerInterface& timer,const BVector& rhs,BVector& rhs_next)// WellState& well_state)
         {
 
             SimulatorReport report;
@@ -304,11 +304,12 @@ namespace Opm {
             std::cout << "Printing pure residual in backward mode" << std::endl;
             std::cout << ebosResid << std::endl;
 
-            const int nc = UgGridHelpers::numCells(grid_);
 
+            const int nc = UgGridHelpers::numCells(grid_);
             BVector lam(nc);// this should be the prevois adjoint vector
-            BVector adjRhs(nc);// this should have contribution from prevois solve
+            //BVector adjRhs(nc);// this should have contribution from prevois solve
             // assume no contributions from pure reservoir
+            BVector adjRhs = rhs;
             wellModel().computeObj(dt);
             wellModel().rhsAdjointRes(adjRhs);
             // add rhs from the schur complement of well equations
@@ -363,7 +364,7 @@ namespace Opm {
 
 
             // prepare rhs for next step
-            BVector rhs_next(nc);
+            //BVector rhs_next(nc);
             ebosJac1.mtv(x, rhs_next);
             std::cout << "******* rhs_next *****" << std::endl;
             std::cout << rhs_next << std::endl;
