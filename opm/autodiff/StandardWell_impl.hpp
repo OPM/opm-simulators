@@ -329,6 +329,7 @@ namespace Opm
             }
         } else if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
             // ReservoirRate
+
             return target_rate * wellVolumeFractionScaled(comp_idx);
         } else {
             OPM_THROW(std::logic_error, "Unknown control type for well " << name());
@@ -445,7 +446,10 @@ namespace Opm
         std::vector<EvalWell> cmix_s(num_components_,0.0);
         for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
             cmix_s[componentIdx] = wellSurfaceVolumeFraction(componentIdx);
+             // mixture is boundary condition in this case not a primary variable
+            //cmix_s[componentIdx].clearDerivatives();
         }
+
         const auto& fs = intQuants.fluidState();
         const EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
         const EvalWell rs = extendEval(fs.Rs());
@@ -494,6 +498,10 @@ namespace Opm
             if (!allow_cf && well_type_ == PRODUCER) {
                 return;
             }
+            // cmix_s should only be used for  injecting perforations
+
+
+
 
             // Using total mobilities
             EvalWell total_mob_dense = mob_perfcells_dense[0];
@@ -503,11 +511,15 @@ namespace Opm
 
             // injection perforations total volume rates
             const EvalWell cqt_i = - Tw * (total_mob_dense * drawdown);
+            // NB NB !!!!cmix_s should normally have now derivatives for injectors since it is given
+            // best would probably be to use mix in density calculations
+
 
             // compute volume ratio between connection at standard conditions
             EvalWell volumeRatio = 0.0;
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+
                 volumeRatio += cmix_s[waterCompIdx] / b_perfcells_dense[waterCompIdx];
             }
 
@@ -549,7 +561,11 @@ namespace Opm
             EvalWell cqt_is = cqt_i/volumeRatio;
             //std::cout << "volrat " << volumeRatio << " " << volrat_perf_[perf] << std::endl;
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
-                cq_s[componentIdx] = cmix_s[componentIdx] * cqt_is; // * b_perfcells_dense[phase];
+                // for injecting perforations the composition should not have derivatives
+                EvalWell cmix_s_abs=cmix_s[componentIdx];
+                //cmix_s_abs.clearDerivatives();
+                cq_s[componentIdx] = cmix_s_abs* cqt_is; // * b_perfcells_dense[phase];
+                //cq_s[componentIdx] = cmix_s_abs[componentIdx]* cqt_is; // * b_perfcells_dense[phase];
             }
         }
     }
@@ -637,8 +653,11 @@ namespace Opm
         objval_=0.0;
         for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
             //EvalWell resWell_loc = 0.0;
-            if(componentIdx==0){
+            if( (componentIdx==1)  ){
                 EvalWell resWell_loc = getQs(componentIdx) * well_efficiency_factor_;
+                if (resWell_loc < 0){
+                    // resWell_loc *= -1.0;
+                }
                 for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                     objder_adjwell_[0][pvIdx] += resWell_loc.derivative(pvIdx+numEq)*dt;
                 }
@@ -789,7 +808,7 @@ namespace Opm
 
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
-            EvalWell resWell_loc = 0.0;//(wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
+            EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
             resWell_loc += getQs(componentIdx) * well_efficiency_factor_;
             for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
