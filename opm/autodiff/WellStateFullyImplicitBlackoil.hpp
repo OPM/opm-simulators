@@ -534,30 +534,15 @@ namespace Opm
             return solvent_well_rate;
         }
 
-        /* const std::vector<double>& wellReservoirRates() const
-        {
-            return well_reservoir_rates_;
-        } */
-
         std::vector<double>& wellReservoirRates()
         {
             return well_reservoir_rates_;
         }
 
-        /* const std::vector<double>& wellDissolvedGasRates() const
-        {
-            return well_dissolved_gas_rates_;
-        } */
-
         std::vector<double>& wellDissolvedGasRates()
         {
             return well_dissolved_gas_rates_;
         }
-
-        /* const std::vector<double>& wellVaporizedOilRates() const
-        {
-            return well_vaporized_oil_rates_;
-        } */
 
         std::vector<double>& wellVaporizedOilRates()
         {
