@@ -347,13 +347,27 @@ public:
         //ebosSimulator_.problem().setEnableStorageCache(false);
         //ElementContext elemCtx(ebosSimulator_);
         //elemCtx.setEnableStorageCache(false);// Do not know if this work
+         typedef double Scalar;
+         static const int numEq = BlackoilIndices::numEq;
+        // static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
+        // static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
+        // static const int solventSaturationIdx = Indices::solventSaturationIdx;
+        // static const int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
+
+        typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
+        //typedef Dune::FieldMatrix<Scalar, numEq, numEq >        MatrixBlockType;
+        //typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
+        typedef Dune::BlockVector<VectorBlockType>      BVector;
+        const int nc = UgGridHelpers::numCells(grid());
+        BVector rhs(nc);
+        BVector rhs_next(nc);
         while (!timer.initialStep()) {
             well_model.beginReportStep(timer.currentStepNum());// this should really be clean to make a better initialization for backward simulation
             timer.report(std::cout);
             //WellState prev_well_state// assume we can read all of this inside;
             //output_writer_.initFromRestartFile(phaseUsage_, grid(), state, prev_well_state, extra);
             auto solver = createSolver(well_model);
-            adjoint_report = solver->stepAdjoint(timer);// state, well_state);
+            adjoint_report = solver->stepAdjoint(timer, rhs, rhs_next);// state, well_state);
             --timer;
             // std::cout << timer << std::endl;
             // WellModel well_model;
