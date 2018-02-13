@@ -19,10 +19,10 @@
 
 #include <opm/core/simulator/initStateEquil.hpp>
 
-#include <opm/core/grid.h>
-#include <opm/core/grid/cart_grid.h>
-#include <opm/core/grid/GridManager.hpp>
-#include <opm/core/utility/compressedToCartesian.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/cart_grid.h>
+#include <opm/grid/GridManager.hpp>
+#include <opm/grid/utility/compressedToCartesian.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>

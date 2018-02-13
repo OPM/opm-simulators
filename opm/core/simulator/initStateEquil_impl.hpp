@@ -23,8 +23,8 @@
 #ifndef OPM_INITSTATEEQUIL_IMPL_HEADER_INCLUDED
 #define OPM_INITSTATEEQUIL_IMPL_HEADER_INCLUDED
 
-#include <opm/core/grid.h>
-#include <opm/core/grid/GridHelpers.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/GridHelpers.hpp>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 

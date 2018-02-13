@@ -22,7 +22,7 @@
 #define OPM_EQUILIBRATIONHELPERS_HEADER_INCLUDED
 
 #include <opm/common/utility/numeric/linearInterpolation.hpp>
-#include <opm/core/utility/RegionMapping.hpp>
+#include <opm/grid/utility/RegionMapping.hpp>
 #include <opm/common/utility/numeric/RootFinders.hpp>
 
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>

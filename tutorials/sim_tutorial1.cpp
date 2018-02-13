@@ -35,8 +35,8 @@
 #include "config.h"
 #endif
 
-#include <opm/core/grid.h>
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/GridManager.hpp>
 // 17.03.2016 Temporarily removed while moving functionality to opm-output
 #ifdef DISABLE_OUTPUT
 #include <opm/core/io/vtk/writeVtkData.hpp>

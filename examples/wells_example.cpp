@@ -6,11 +6,11 @@
 #include <opm/core/simulator/initState.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/core/wells/WellsManager.hpp>
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/GridManager.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/props/IncompPropertiesFromDeck.hpp>
 #include <opm/core/wells.h>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>

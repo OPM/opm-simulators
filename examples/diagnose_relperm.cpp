@@ -23,12 +23,12 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/grid.h>
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/GridManager.hpp>
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 #include <opm/core/props/satfunc/RelpermDiagnostics_impl.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/core/utility/StopWatch.hpp>
+#include <opm/grid/utility/StopWatch.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 

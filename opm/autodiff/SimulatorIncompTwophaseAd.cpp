@@ -29,14 +29,14 @@
 
 #include <opm/core/pressure/IncompTpfa.hpp>
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/pressure/flow_bc.h>
 
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
-#include <opm/core/utility/StopWatch.hpp>
+#include <opm/grid/utility/StopWatch.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/simulators/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>

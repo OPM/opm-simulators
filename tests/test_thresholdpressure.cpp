@@ -2,9 +2,9 @@
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/grid/cornerpoint_grid.h>
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/GridManager.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/simulators/thresholdPressures.hpp> // Note: the GridHelpers must be included before this (to make overloads available)
 

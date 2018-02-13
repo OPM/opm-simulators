@@ -20,8 +20,8 @@
 #include "config.h"
 #include <opm/core/transport/reorder/ReorderSolverInterface.hpp>
 #include <opm/core/transport/reorder/reordersequence.h>
-#include <opm/core/grid.h>
-#include <opm/core/utility/StopWatch.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/utility/StopWatch.hpp>
 
 #include <vector>
 #include <cassert>

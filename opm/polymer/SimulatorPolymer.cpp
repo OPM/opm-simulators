@@ -28,14 +28,14 @@
 
 #include <opm/polymer/IncompTpfaPolymer.hpp>
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/pressure/flow_bc.h>
 
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
-#include <opm/core/utility/StopWatch.hpp>
+#include <opm/grid/utility/StopWatch.hpp>
 #include <opm/autodiff/Compat.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/simulators/vtk/writeVtkData.hpp>
@@ -46,7 +46,7 @@
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
-#include <opm/core/grid/ColumnExtract.hpp>
+#include <opm/grid/ColumnExtract.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>

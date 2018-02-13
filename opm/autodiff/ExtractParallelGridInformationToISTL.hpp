@@ -21,7 +21,7 @@
 #define OPM_EXTRACTPARALLELGRIDINFORMATIONTOISTL_HEADER_INCLUDED
 #ifdef HAVE_OPM_GRID
 
-#include<dune/grid/CpGrid.hpp>
+#include<opm/grid/CpGrid.hpp>
 #include<boost/any.hpp>
 
 namespace Opm

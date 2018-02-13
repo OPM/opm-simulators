@@ -1,7 +1,7 @@
 #include <config.h>
 
-#include <opm/core/grid/GridManager.hpp>
-#include <opm/core/grid/GridHelpers.hpp>
+#include <opm/grid/GridManager.hpp>
+#include <opm/grid/GridHelpers.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -21,7 +21,7 @@
 #include <vector>
 #include <string>
 
-#include "opm/core/grid/GridManager.hpp"
+#include "opm/grid/GridManager.hpp"
 #include "opm/core/simulator/BlackoilState.hpp"
 
 using namespace Opm;

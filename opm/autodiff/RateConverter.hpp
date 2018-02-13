@@ -24,7 +24,7 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/utility/RegionMapping.hpp>
+#include <opm/grid/utility/RegionMapping.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
 #include <dune/grid/common/gridenums.hh>

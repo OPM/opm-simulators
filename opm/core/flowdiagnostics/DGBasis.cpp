@@ -19,7 +19,7 @@
 
 #include "config.h"
 #include <opm/core/flowdiagnostics/DGBasis.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <numeric>
 

@@ -21,7 +21,7 @@
 #define OPM_POLYMERUTILITIES_HEADER_INCLUDED
 
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/polymer/PolymerProperties.hpp>

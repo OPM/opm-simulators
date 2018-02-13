@@ -19,9 +19,9 @@
 
 #include "config.h"
 #include <opm/core/flowdiagnostics/TofReorder.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/core/utility/SparseTable.hpp>
+#include <opm/grid/utility/SparseTable.hpp>
 
 #include <algorithm>
 #include <numeric>

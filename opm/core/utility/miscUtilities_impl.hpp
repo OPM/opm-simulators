@@ -1,4 +1,4 @@
-#include <opm/core/grid/GridHelpers.hpp>
+#include <opm/grid/GridHelpers.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 

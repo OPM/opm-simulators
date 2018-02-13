@@ -22,10 +22,10 @@
 
 #include <opm/polymer/TransportSolverTwophasePolymer.hpp>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/common/utility/numeric/RootFinders.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/pressure/tpfa/trans_tpfa.h>
+#include <opm/grid/transmissibility/trans_tpfa.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <cmath>
 #include <list>

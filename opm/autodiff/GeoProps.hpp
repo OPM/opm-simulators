@@ -20,18 +20,17 @@
 #ifndef OPM_GEOPROPS_HEADER_INCLUDED
 #define OPM_GEOPROPS_HEADER_INCLUDED
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/common/ErrorMacros.hpp>
-//#include <opm/core/pressure/tpfa/trans_tpfa.h>
-#include <opm/core/pressure/tpfa/TransTpfa.hpp>
+#include <opm/grid/transmissibility/TransTpfa.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperty.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
-#include <opm/core/grid/PinchProcessor.hpp>
+#include <opm/grid/PinchProcessor.hpp>
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Solution.hpp>
@@ -40,7 +39,7 @@
 
 #ifdef HAVE_OPM_GRID
 #include <dune/common/version.hh>
-#include <dune/grid/CpGrid.hpp>
+#include <opm/grid/CpGrid.hpp>
 #include <dune/grid/common/mcmgmapper.hh>
 #endif
 

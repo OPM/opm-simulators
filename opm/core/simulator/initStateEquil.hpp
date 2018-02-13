@@ -23,10 +23,10 @@
 #ifndef OPM_INITSTATEEQUIL_HEADER_INCLUDED
 #define OPM_INITSTATEEQUIL_HEADER_INCLUDED
 
-#include <opm/core/grid/GridHelpers.hpp>
+#include <opm/grid/GridHelpers.hpp>
 #include <opm/core/simulator/EquilibrationHelpers.hpp>
-#include <opm/core/utility/RegionMapping.hpp>
-#include <opm/core/utility/extractPvtTableIndex.hpp>
+#include <opm/grid/utility/RegionMapping.hpp>
+#include <opm/grid/utility/extractPvtTableIndex.hpp>
 
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>

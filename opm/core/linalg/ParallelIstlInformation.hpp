@@ -22,7 +22,7 @@
 #define OPM_PARALLELISTLINFORMTION_HEADER_INCLUDED
 
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <boost/any.hpp>
 #include <exception>

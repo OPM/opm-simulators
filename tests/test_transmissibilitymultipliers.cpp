@@ -27,7 +27,7 @@
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/GridManager.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -38,10 +38,10 @@
 #if HAVE_OPM_GRID
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
-#include <dune/grid/CpGrid.hpp>
+#include <opm/grid/CpGrid.hpp>
 #endif
 
-#include <opm/core/grid/GridHelpers.hpp>
+#include <opm/grid/GridHelpers.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <string>

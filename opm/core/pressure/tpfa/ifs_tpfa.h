@@ -30,7 +30,7 @@
  * connection fluxes.
  */
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 
 #ifdef __cplusplus
 extern "C" {

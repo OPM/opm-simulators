@@ -32,7 +32,7 @@
 
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/GridManager.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 

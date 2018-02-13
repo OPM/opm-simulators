@@ -24,7 +24,7 @@
 #include <utility>
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
-#include <opm/core/utility/compressedToCartesian.hpp>
+#include <opm/grid/utility/compressedToCartesian.hpp>
 
 namespace Opm {
 

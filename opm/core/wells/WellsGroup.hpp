@@ -22,7 +22,7 @@
 
 #include <opm/core/wells/InjectionSpecification.hpp>
 #include <opm/core/wells/ProductionSpecification.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>

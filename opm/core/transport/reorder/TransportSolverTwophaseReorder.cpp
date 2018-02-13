@@ -20,12 +20,12 @@
 #include "config.h"
 #include <opm/core/transport/reorder/TransportSolverTwophaseReorder.hpp>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
-#include <opm/core/grid/ColumnExtract.hpp>
+#include <opm/grid/ColumnExtract.hpp>
 #include <opm/common/utility/numeric/RootFinders.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/pressure/tpfa/trans_tpfa.h>
+#include <opm/grid/transmissibility/trans_tpfa.h>
 
 #include <iostream>
 #include <fstream>

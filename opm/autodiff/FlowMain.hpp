@@ -32,7 +32,7 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/GridManager.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/createGlobalCellArray.hpp>
 #include <opm/autodiff/GridInit.hpp>

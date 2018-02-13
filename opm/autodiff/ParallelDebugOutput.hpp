@@ -24,7 +24,7 @@
 #include <opm/common/data/SimulationDataContainer.hpp>
 
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 
@@ -34,7 +34,7 @@
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 
 #if HAVE_OPM_GRID
-#include <dune/grid/common/p2pcommunicator.hh>
+#include <opm/grid/common/p2pcommunicator.hh>
 #endif
 
 namespace Opm

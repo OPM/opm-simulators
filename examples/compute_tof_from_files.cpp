@@ -22,13 +22,13 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/grid.h>
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/GridManager.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/core/utility/SparseTable.hpp>
-#include <opm/core/utility/StopWatch.hpp>
+#include <opm/grid/utility/SparseTable.hpp>
+#include <opm/grid/utility/StopWatch.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 

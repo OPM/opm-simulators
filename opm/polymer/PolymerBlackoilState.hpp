@@ -22,7 +22,7 @@
 
 
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <vector>
 
 namespace Opm

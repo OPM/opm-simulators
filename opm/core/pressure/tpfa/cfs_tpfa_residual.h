@@ -20,7 +20,7 @@
 #ifndef OPM_CFS_TPFA_HEADER_INCLUDED
 #define OPM_CFS_TPFA_HEADER_INCLUDED
 
-#include <opm/core/grid.h>
+#include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/wells.h>
 
 #include <opm/core/pressure/tpfa/compr_source.h>

@@ -22,11 +22,11 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/grid/GridManager.hpp>
 
 #if HAVE_OPM_GRID
-#include <dune/grid/polyhedralgrid.hh>
-#include <dune/grid/CpGrid.hpp>
+#include <opm/grid/polyhedralgrid.hh>
+#include <opm/grid/CpGrid.hpp>
 #endif
 
 
