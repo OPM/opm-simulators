@@ -235,19 +235,19 @@ namespace Opm {
 
             SimulatorReport report;
             --timer;
-            std::cout << "Start Adjoint iteration" << std::endl;
-            timer.report(std::cout);
+            //std::cout << "Start Adjoint iteration" << std::endl;
+            //timer.report(std::cout);
             this->prepareStep(timer);//, /*initial_reservoir_state*/, /*initial_well_state*/);
-            std::cout << "Current time init " <<  timer.simulationTimeElapsed()  << std::endl;
+            //std::cout << "Current time init " <<  timer.simulationTimeElapsed()  << std::endl;
             this->ebosDeserialize( timer.simulationTimeElapsed() );
             SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             // Store the initial previous.
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
             //std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
             ++timer;// get back to current step
-            timer.report(std::cout);
+            //timer.report(std::cout);
             this->prepareStep(timer);//NB this should not be nesseary  *initial_reservoir_state*/, /*initial_well_state*/);
-             std::cout << "Current time end " <<  timer.simulationTimeElapsed()  << std::endl;
+            // std::cout << "Current time end " <<  timer.simulationTimeElapsed()  << std::endl;
             this->ebosDeserialize( timer.simulationTimeElapsed() );
             double t = ebosSimulator_.time();
             ebosSimulator_.setTime(-t);
@@ -276,11 +276,12 @@ namespace Opm {
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
 
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            /*
             std::cout << "Printing jacobian residual 0" << std::endl;
             std::cout << std::endl;
             std::cout << "Printing pure residual with out well contribution backward mode" << std::endl;
             std::cout << ebosResid << std::endl;
-
+            */
             //auto& well_state = wellModel().wellState();
             wellModel().beginTimeStep();
             WellState well_state;// =  this->wellModel().wellState();
@@ -310,9 +311,10 @@ namespace Opm {
             //BVector adjRhs(nc);// this should have contribution from prevois solve
             // assume no contributions from pure reservoir
             BVector adjRhs = rhs;
+            /*
             std::cout << "******* rhs  *****" << std::endl;
             std::cout << adjRhs << std::endl;
-
+            */
             wellModel().computeObj(dt);
             wellModel().rhsAdjointRes(adjRhs);
             // add rhs from the schur complement of well equations
@@ -370,12 +372,12 @@ namespace Opm {
             //BVector rhs_next(nc);
             ebosJac1.mtv(x, rhs_next);
             rhs_next *= -1.0;
-
+            /*
             std::cout << "print all matrixes" << std::endl;
             Dune::writeMatrixMarket(ebosJac1, std::cout);
             std::cout << "******* rhs_next *****" << std::endl;
             std::cout << rhs_next << std::endl;
-
+            */
             // should also add explicite contributions rom wells to
             // reservoir and well
 
