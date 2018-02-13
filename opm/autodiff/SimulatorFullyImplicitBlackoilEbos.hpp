@@ -337,8 +337,11 @@ public:
         const int nc = UgGridHelpers::numCells(grid());
         BVector rhs(nc);
         BVector rhs_next(nc);
+        std::cout << "Start Adjoint iteration" << std::endl;
         while (!timer.initialStep()) {
-            well_model.beginReportStep(timer.currentStepNum());// this should really be clean to make a better initialization for backward simulation
+            // opefulle the -1 is ok we ar pressent at end of the timestep we nned
+            // the prevois eclipse state
+            well_model.beginReportStep(timer.currentStepNum()-1);// this should really be clean to make a better initialization for backward simulation
             timer.report(std::cout);
             //WellState prev_well_state// assume we can read all of this inside;
             //output_writer_.initFromRestartFile(phaseUsage_, grid(), state, prev_well_state, extra);
