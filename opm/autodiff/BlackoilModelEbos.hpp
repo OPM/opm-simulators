@@ -310,6 +310,9 @@ namespace Opm {
             //BVector adjRhs(nc);// this should have contribution from prevois solve
             // assume no contributions from pure reservoir
             BVector adjRhs = rhs;
+            std::cout << "******* rhs  *****" << std::endl;
+            std::cout << adjRhs << std::endl;
+
             wellModel().computeObj(dt);
             wellModel().rhsAdjointRes(adjRhs);
             // add rhs from the schur complement of well equations
@@ -336,11 +339,11 @@ namespace Opm {
             std::cout << x << std::endl;
             wellModel().recoverWellAdjointAndUpdateWellAdjoint(x);// also update objective
 
-
+            /*
             std::cout << "print all matrixes" << std::endl;
             Dune::writeMatrixMarket(ebosJac, std::cout);
             std::cout << "*** Well Matrixes " << std::endl;
-            wellModel().printMatrixes();
+            wellModel().printMatrixes();*/
             //collect objective values, derivatives and well control state for output
             // assume most all is related to well
             //AdjointStepType adjointStep = wellModel().collectObjective(x);
@@ -366,6 +369,10 @@ namespace Opm {
             // prepare rhs for next step
             //BVector rhs_next(nc);
             ebosJac1.mtv(x, rhs_next);
+            rhs_next *= -1.0;
+
+            std::cout << "print all matrixes" << std::endl;
+            Dune::writeMatrixMarket(ebosJac1, std::cout);
             std::cout << "******* rhs_next *****" << std::endl;
             std::cout << rhs_next << std::endl;
 

@@ -190,7 +190,7 @@ namespace Opm
     template <class PhysicalModel>
     template <class Bvector>
 
-    SimulatorReport NonlinearSolver<PhysicalModel>::stepAdjoint(SimulatorTimerInterface& timer,const Bvector& rhs,Bvector rhs_next)
+    SimulatorReport NonlinearSolver<PhysicalModel>::stepAdjoint(SimulatorTimerInterface& timer,const Bvector& rhs,Bvector& rhs_next)
     {
         SimulatorReport itreport;
 
