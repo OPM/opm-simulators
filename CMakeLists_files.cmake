@@ -80,7 +80,10 @@ if(DEV_BUILD)
       opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
       opm/simulators/timestepping/SimulatorTimer.cpp
       )
-  
+    list (APPEND TEST_SOURCE_FILES
+         tests/test_parallel_linearsolver.cpp
+         tests/test_parallelistlinformation.cpp
+      )
 else()
             list (APPEND MAIN_SOURCE_FILES
 
@@ -590,7 +593,7 @@ else()
           opm/simulators/flow_ebos_polymer.hpp
           opm/simulators/flow_ebos_solvent.hpp
           opm/simulators/ensureDirectoryExists.hpp
-          opm/simulators/ParallelFileMerger.hpp
+          opm/simulators/ParallelFileMerger.hpptest
           opm/simulators/SimulatorCompressibleTwophase.hpp
           opm/simulators/thresholdPressures.hpp
           opm/simulators/WellSwitchingLogger.hpp
@@ -604,3 +607,4 @@ else()
           opm/simulators/timestepping/SimulatorTimerInterface.hpp
         )
 endif()
+

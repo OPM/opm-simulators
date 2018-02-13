@@ -344,8 +344,9 @@ public:
             //output_writer_.initFromRestartFile(phaseUsage_, grid(), state, prev_well_state, extra);
             auto solver = createSolver(well_model);
             adjoint_report = solver->stepAdjoint(timer, rhs, rhs_next);// state, well_state);
+            rhs=rhs_next;
             --timer;
-            // std::cout << timer << std::endl;
+            std::cout << rhs << std::endl;
             // WellModel well_model;
             // auto solver = createSolver(well_model);
             // adjoint_report = solver_>step(timer, state, well_state);
