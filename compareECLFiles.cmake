@@ -125,7 +125,7 @@ function(add_test_compare_parallel_restarted_simulation)
   opm_add_test(compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${OPM_DATA_ROOT}/${PARAM_CASENAME} ${RESULT_PATH}
-                           ${CMAKE_BINARY_DIR}/bin
+                           ${PROJECT_BINARY_DIR}/bin
                            ${PARAM_FILENAME}
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_SUMMARY_COMMAND}
