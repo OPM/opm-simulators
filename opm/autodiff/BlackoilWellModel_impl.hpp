@@ -1067,14 +1067,14 @@ namespace Opm {
     int
     BlackoilWellModel<TypeTag>:: numWells() const
     {
-        return wells()->number_of_wells;
+        return wells() ? wells()->number_of_wells : 0;
     }
 
     template<typename TypeTag>
     int
     BlackoilWellModel<TypeTag>:: numPhases() const
     {
-        return wells()->number_of_phases;
+        return wells() ? wells()->number_of_phases : 1;
     }
 
     template<typename TypeTag>
