@@ -1,6 +1,3 @@
-# -*- mode: cmake; tab-width: 2; indent-tabs-mode: t; truncate-lines: t; compile-command: "cmake -Wdev" -*-
-# vim: set filetype=cmake autoindent tabstop=2 shiftwidth=2 noexpandtab softtabstop=2 nowrap:
-
 # This file sets up five lists:
 # MAIN_SOURCE_FILES     List of compilation units which will be included in
 #                       the library. If it isn't on this list, it won't be
@@ -64,7 +61,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/linalg/LinearSolverFactory.cpp
   opm/core/linalg/LinearSolverInterface.cpp
   opm/core/linalg/LinearSolverIstl.cpp
-  opm/core/linalg/LinearSolverPetsc.cpp
   opm/core/linalg/LinearSolverUmfpack.cpp
   opm/core/linalg/call_umfpack.c
   opm/core/linalg/sparse_sys.c
@@ -131,6 +127,10 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/SimulatorTimer.cpp
   )
 
+if(PETSc_FOUND)
+  list(APPEND MAIN_SOURCE_FILES opm/core/linalg/LinearSolverPetsc.cpp)
+endif()
+
 
 # originally generated with the command:
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
@@ -156,10 +156,8 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_event.cpp
   tests/test_dgbasis.cpp
   tests/test_flowdiagnostics.cpp
-  tests/test_parallelistlinformation.cpp
   tests/test_wells.cpp
   tests/test_linearsolver.cpp
-  tests/test_parallel_linearsolver.cpp
   tests/test_satfunc.cpp
   tests/test_shadow.cpp
   tests/test_equil_legacy.cpp
@@ -174,6 +172,11 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_relpermdiagnostics.cpp
   tests/test_norne_pvt.cpp
   )
+
+if(MPI_FOUND)
+  list(APPEND TEST_SOURCE_FILES tests/test_parallel_linearsolver.cpp
+                                tests/test_parallelistlinformation.cpp)
+endif()
 
 list (APPEND TEST_DATA_FILES
   tests/fluid.data
@@ -229,10 +232,13 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/compute_tof_from_files.cpp
   examples/diagnose_relperm.cpp
   tutorials/sim_tutorial1.cpp
-  tutorials/sim_tutorial2.cpp
-  tutorials/sim_tutorial3.cpp
-  tutorials/sim_tutorial4.cpp
   )
+
+if(SuiteSparse_FOUND)
+  list(APPEND EXAMPLE_SOURCE_FILES tutorials/sim_tutorial2.cpp
+                                   tutorials/sim_tutorial3.cpp
+                                   tutorials/sim_tutorial4.cpp)
+endif()
 
 # programs listed here will not only be compiled, but also marked for
 # installation
