@@ -20,10 +20,6 @@
 
 #include <config.h>
 
-#if HAVE_DYNAMIC_BOOST_TEST
-#define BOOST_TEST_DYN_LINK
-#endif
-
 #define NVERBOSE  // Suppress own messages when throw()ing
 
 #define BOOST_TEST_MODULE OPM-multiPhaseUpwind

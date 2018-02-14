@@ -19,9 +19,6 @@
 
 #include <config.h>
 
-#if HAVE_DYNAMIC_BOOST_TEST
-#define BOOST_TEST_DYN_LINK
-#endif
 #define NVERBOSE // to suppress our messages when throwing
 
 #define BOOST_TEST_MODULE OPM-ParallelIterativeSolverTest

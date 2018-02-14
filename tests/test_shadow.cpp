@@ -2,9 +2,6 @@
    This file is licensed under the GNU General Public License v3.0 or later. */
 #include <config.h>
 
-#if HAVE_DYNAMIC_BOOST_TEST
-#define BOOST_TEST_DYN_LINK
-#endif
 #define NVERBOSE // to suppress our messages when throwing
 
 #define BOOST_TEST_MODULE ShadowTest
