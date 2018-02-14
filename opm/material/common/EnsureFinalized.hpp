@@ -28,6 +28,7 @@
 #define OPM_MATERIAL_ENSURE_FINALIZED_HPP
 
 #include <cassert>
+#include <stdexcept>
 
 // TODO: move this variable to config.h
 #define OPM_CHECK_PARAM_FINALIZED 1
