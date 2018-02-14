@@ -230,10 +230,10 @@ namespace Opm {
         /// \param[in] nonlinear_solver       nonlinear solver used (for oscillation/relaxation control)
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        SimulatorReport adjointIteration(SimulatorTimerInterface& timer,const BVector& rhs,BVector& rhs_next)// WellState& well_state)
+        AdjointResults adjointIteration(SimulatorTimerInterface& timer,const BVector& rhs,BVector& rhs_next)// WellState& well_state)
         {
 
-            SimulatorReport report;
+            //SimulatorReport report;
             --timer;
             //std::cout << "Start Adjoint iteration" << std::endl;
             //timer.report(std::cout);
@@ -353,7 +353,7 @@ namespace Opm {
            // model_->afterStep(timer, reservoir_state, well_state);
             // print objective and well state to file
             wellModel().printObjective(std::cout);
-
+            AdjointResults adjres = wellModel().adjointResults();
             //prepere right hand side for next step
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
@@ -391,7 +391,7 @@ namespace Opm {
             //std::cout << ebosJac << std::endl;
             */
 
-            return report;
+            return adjres;
 
          }
         /// Called once per nonlinear iteration.

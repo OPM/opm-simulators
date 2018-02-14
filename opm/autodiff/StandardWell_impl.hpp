@@ -493,7 +493,23 @@ namespace Opm
         os << "objective derivative " << objder_ << std::endl;
 
     }
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    addAdjointResult(AdjointResults& adjres) const{
+        adjres.well_names.push_back( this->name() );
+        adjres.derivative.push_back(objder_[0]);
+        adjres.objective.push_back(objval_);
+        WellControls *ctrl = this->wellControls();
+        const double* drst = well_controls_get_current_distr(ctrl);
+        /*
+        control_state =  "Current control " + well_controls_get_current_type(ctrl) + "  " +
+                drst[0] + " "  + drst[1] <<  "  "  + drst[2]  +  "  " ;
+        */
+        //adjres.control_state.push_back("what ??");
+        //adjres.schedule_step.push_back()
 
+    }
 
     template<typename TypeTag>
     void

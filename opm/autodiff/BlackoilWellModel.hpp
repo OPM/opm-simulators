@@ -210,6 +210,8 @@ namespace Opm {
 
             void printMatrixes() const;
 
+            AdjointResults adjointResults() const;
+
         protected:
             void extractLegacyPressure_(std::vector<double>& cellPressure) const
             {

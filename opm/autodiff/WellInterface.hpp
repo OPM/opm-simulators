@@ -60,7 +60,36 @@
 
 namespace Opm
 {
+    class AdjointResults
+    {
+    public:
+        void print(std::ostream& os){
+            os << "% Control step " << schedule_step << std::endl;
+            os << "% ";
+            for (auto s: well_names){
+                os << s << '\t';
+            }
+            for (auto s: control_state){
+                os << s << '\t';
+            }
+            os << std::endl;
+            for (auto s: objective){
+                os << s << '\t';
+            }
+            os << std::endl;
+            for (auto s: derivative){
+                os << s << '\t';
+            }
+            os << std::endl;
 
+        }
+
+        std::vector<std::string> well_names;
+        std::vector<double> derivative;
+        std::vector<double> objective;
+        std::vector<std::string> control_state;
+        int schedule_step;
+    };
 
     template<typename TypeTag>
     class WellInterface
@@ -127,7 +156,7 @@ namespace Opm
 
         /// Well controls
         WellControls* wellControls() const;
-
+        virtual void addAdjointResult(AdjointResults& adjres) const = 0;
         void setVFPProperties(const VFPProperties* vfp_properties_arg);
 
         virtual void init(const PhaseUsage* phase_usage_arg,

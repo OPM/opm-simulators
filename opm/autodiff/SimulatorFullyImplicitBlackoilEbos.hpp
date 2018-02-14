@@ -362,6 +362,7 @@ public:
         BVector rhs(nc);
         BVector rhs_next(nc);
         std::cout << "Start Adjoint iteration" << std::endl;
+        std::list<AdjointResults> adjoint_res;
         while (!timer.initialStep()) {
             // opefulle the -1 is ok we ar pressent at end of the timestep we nned
             // the prevois eclipse state
@@ -370,13 +371,23 @@ public:
             //WellState prev_well_state// assume we can read all of this inside;
             //output_writer_.initFromRestartFile(phaseUsage_, grid(), state, prev_well_state, extra);
             auto solver = createSolver(well_model);
-            adjoint_report = solver->stepAdjoint(timer, rhs, rhs_next);// state, well_state);
+            //adjoint_report = solver->stepAdjoint(timer, rhs, rhs_next);// state, well_state);
+            AdjointResults adjres = solver->model().adjointIteration(timer, rhs, rhs_next);// state, well_state);
+            adjoint_res.push_front(adjres);
             rhs=rhs_next;
             --timer;
             std::cout << rhs << std::endl;
             // WellModel well_model;
             // auto solver = createSolver(well_model);
             // adjoint_report = solver_>step(timer, state, well_state);
+        }
+        std::string filename = param_.getDefault("adjoint_result_file", std::string("adjoint_results.txt"));
+        std::string output_dir = param_.get<std::string>("output_dir");
+        std::string adjoint_output = output_dir + "/" + filename;
+        std::ofstream ofile(adjoint_output);
+        for (auto& adjres: adjoint_res){
+            adjres.print(std::cout);
+            adjres.print(ofile);
         }
 
         return adjoint_report;
