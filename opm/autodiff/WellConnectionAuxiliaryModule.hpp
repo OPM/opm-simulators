@@ -23,7 +23,7 @@
 
 #include <ewoms/aux/baseauxiliarymodule.hh>
 
-#include <dune/grid/CpGrid.hpp>
+#include <opm/grid/CpGrid.hpp>
 
 #include <opm/core/wells.h>
 
