@@ -24,7 +24,8 @@
 #define OPM_WELLINTERFACE_HEADER_INCLUDED
 
 #include <opm/common/OpmLog/OpmLog.hpp>
-
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <opm/core/wells.h>
