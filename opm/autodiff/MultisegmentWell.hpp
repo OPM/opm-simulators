@@ -172,7 +172,9 @@ namespace Opm
         virtual void printObjective(std::ostream& os) const {
             OPM_THROW(std::runtime_error,"Adjoint not implemted");
         }
-
+        virtual void addAdjointResult(AdjointResults& adjres) const {
+            OPM_THROW(std::runtime_error,"Adjoint not implemted");
+        }
         /// number of segments for this well
         /// int number_of_segments_;
         int numberOfSegments() const;
