@@ -155,6 +155,10 @@ namespace Opm {
 
             const SimulatorReport& lastReport() const;
             void printMatrixes() const;
+
+
+            AdjointResults adjointResults() const;
+
         protected:
 
             Simulator& ebosSimulator_;

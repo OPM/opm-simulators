@@ -100,9 +100,9 @@ namespace Opm {
              WellState& well_state);
 
         // adjont step method is here since it must correspont to the solve step
-        template<class Bvector>
-        SimulatorReport
-        stepAdjoint(SimulatorTimerInterface& timer,const Bvector& rhs,Bvector& rhs_next);
+        //template<class Bvector>
+        //SimulatorReport
+        //stepAdjoint(SimulatorTimerInterface& timer,const Bvector& rhs,Bvector& rhs_next);
 
         /// return the statistics if the step() method failed
         const SimulatorReport& failureReport() const

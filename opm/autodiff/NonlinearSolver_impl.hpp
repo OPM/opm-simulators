@@ -187,23 +187,23 @@ namespace Opm
 
 
 
-    template <class PhysicalModel>
-    template <class Bvector>
+ //   template <class PhysicalModel>
+  //  template <class Bvector>
+//    SimulatorReport NonlinearSolver<PhysicalModel>::stepAdjoint(SimulatorTimerInterface& timer,const Bvector& rhs,Bvector& rhs_next)
+//    {
+//        SimulatorReport itreport;
 
-    SimulatorReport NonlinearSolver<PhysicalModel>::stepAdjoint(SimulatorTimerInterface& timer,const Bvector& rhs,Bvector& rhs_next)
-    {
-        SimulatorReport itreport;
+//        // Do model-specific once-per-step calculations
+//        //--timer;// set for previous step this
+//        // This is only to fill the previous state
+//        //model_->prepareStep(timer);
+//        // /*initial_reservoir_state*/,/*initial_well_state*/);
+//        //model_->ebosDeserialize();
+//        //SimulatorReport      adjointIteration(SimulatorTimerInterface& timer)
+//        itreport = model_->adjointIteration(timer,rhs,rhs_next);
+//        return itreport;
+//    }
 
-        // Do model-specific once-per-step calculations
-        //--timer;// set for previous step this
-        // This is only to fill the previous state
-        //model_->prepareStep(timer);
-        // /*initial_reservoir_state*/,/*initial_well_state*/);
-        //model_->ebosDeserialize();
-        //SimulatorReport      adjointIteration(SimulatorTimerInterface& timer)
-        itreport = model_->adjointIteration(timer,rhs,rhs_next);
-        return itreport;
-    }
 
 
     template <class PhysicalModel>

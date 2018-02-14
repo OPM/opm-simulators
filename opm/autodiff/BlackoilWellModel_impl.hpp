@@ -416,7 +416,19 @@ namespace Opm {
             well->printObjective(os);
         }
     }
-
+    template<typename TypeTag>
+    AdjointResults
+    BlackoilWellModel<TypeTag>::
+    adjointResults() const{
+        AdjointResults adjres;
+        if ( ! localWellsActive() ) {
+            return adjres;
+        }
+        for (auto& well : well_container_) {
+            well->addAdjointResult(adjres);
+        }
+        return adjres;
+    }
 
     // Ax = Ax - alpha * C D^-1 B x
     template<typename TypeTag>

@@ -169,7 +169,7 @@ namespace Opm
         void rhsAdjointWell();//(const BVectorWell& lamda_w);
 
         void rhsAdjointRes(BVector& adjRes) const;
-
+        void addAdjointResult(AdjointResults& adjres) const;
         // compute objective contribution from well
         void computeObj(Simulator& ebosSimulator,
                         const double dt);
