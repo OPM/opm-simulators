@@ -237,25 +237,22 @@ namespace Opm {
             --timer;
             //std::cout << "Start Adjoint iteration" << std::endl;
             //timer.report(std::cout);
-            this->prepareStep(timer);//, /*initial_reservoir_state*/, /*initial_well_state*/);
+            WellState dummy_well_state;//only for the interface due to flow_legacy
+            ReservoirState dummy_res_state(0, 0, 0);
+            this->prepareStep(timer, dummy_res_state, dummy_well_state);//, /*initial_reservoir_state*/, /*initial_well_state*/);
             //std::cout << "Current time init " <<  timer.simulationTimeElapsed()  << std::endl;
-            this->ebosDeserialize( timer.simulationTimeElapsed() );
+            this->deserialize_reservoir( timer.simulationTimeElapsed() );
             SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             // Store the initial previous.
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
             //std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
             ++timer;// get back to current step
             //timer.report(std::cout);
-            this->prepareStep(timer);//NB this should not be nesseary  *initial_reservoir_state*/, /*initial_well_state*/);
+            this->prepareStep(timer, dummy_res_state, dummy_well_state);
             // std::cout << "Current time end " <<  timer.simulationTimeElapsed()  << std::endl;
-            this->ebosDeserialize( timer.simulationTimeElapsed() );
-            double t = ebosSimulator_.time();
-            ebosSimulator_.setTime(-t);
-            this->ebosSerialize();
-            ebosSimulator_.setTime(t);
+            this->deserialize_reservoir( timer.simulationTimeElapsed() );
             // seralizing may owerwrite prevois step since it was intended for restart ??
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
-
 //            std::cout << "******* Start adjoint calculation ****** " << std::endl;
 //            std::cout << "******* solution 1 ****** " << std::endl;
 //            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
@@ -284,13 +281,14 @@ namespace Opm {
             */
             //auto& well_state = wellModel().wellState();
             wellModel().beginTimeStep();
-            WellState well_state;// =  this->wellModel().wellState();
-            {
-                std::string filename =  well_state.getWellFile(ebosSimulator_, ebosSimulator_.time());
-                std::ifstream ifs(filename.c_str());
-                boost::archive::text_iarchive oa(ifs);
-                oa >> well_state;
-            }
+            WellState well_state;
+            deserialize_well(well_state);// =  this->wellModel().wellState();
+//            {
+//                std::string filename =  well_state.getWellFile(ebosSimulator_, ebosSimulator_.time());
+//                std::ifstream ifs(filename.c_str());
+//                boost::archive::text_iarchive oa(ifs);
+//                oa >> well_state;
+//            }
             wellModel().setRestartWellState(well_state);          
             double dt = timer.stepLengthTaken();
             //int
@@ -1140,12 +1138,33 @@ namespace Opm {
         }
 
         void ebosSerialize(){
-
             ebosSimulator_.serialize();
         }
 
-        void ebosDeserialize(Scalar t){
+        void adjoint_serialize(){
+            // may hav if here for adjoint run
+            if(param_.do_adjoint_){
+                ebosSimulator_.serialize();
+                serialize_well();
+            }
+        }
 
+        void serialize_well(){
+            WellState well_state_proper =  this->wellModel().wellState();//to avoid the const problem with serialize else have to make splitted
+            std::string filename =  well_state_proper.getWellFile(this->ebosSimulator(),this->ebosSimulator().time());
+            std::ofstream ofs(filename.c_str());
+            boost::archive::text_oarchive oa(ofs);
+            oa << well_state_proper;
+        }
+
+        void deserialize_well(WellState& well_state){
+            std::string filename =  well_state.getWellFile(ebosSimulator_, ebosSimulator_.time());
+            std::ifstream ifs(filename.c_str());
+            boost::archive::text_iarchive oa(ifs);
+            oa >> well_state;
+        }
+        void deserialize_reservoir(Scalar t){
+            // intended only for adjoint simulation
             ebosSimulator_.deserializeAll(t);
         }
 
@@ -1221,6 +1240,7 @@ namespace Opm {
 
     public:
         std::vector<bool> wasSwitched_;
+
     };
 } // namespace Opm
 

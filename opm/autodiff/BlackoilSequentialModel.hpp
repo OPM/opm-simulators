@@ -314,6 +314,8 @@ namespace Opm {
         const SimulatorReport& failureReport() const
         { return failureReport_; }
 
+        // only for fullfilling the interface to Nonlinear solver
+        void adjoint_serialize(){}
     protected:
         SimulatorReport failureReport_;
 

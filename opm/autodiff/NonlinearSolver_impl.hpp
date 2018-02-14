@@ -129,9 +129,9 @@ namespace Opm
         // Do model-specific once-per-step calculations
         // NB tis do anything with initialising  the states
 
-        model_->prepareStep(timer);//, initial_reservoir_state, initial_well_state);
+        model_->prepareStep(timer, initial_reservoir_state, initial_well_state);
         if (timer.initialStep()){
-            model_->ebosSerialize();
+            model_->adjoint_serialize();
         }
 
         int iteration = 0;
@@ -168,17 +168,19 @@ namespace Opm
             std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
             OPM_THROW_NOLOG(Opm::TooManyIterations, msg);
         }
-        model_->afterStep(timer);
-        model_->ebosSerialize();
+        model_->afterStep(timer, reservoir_state, well_state);
+        model_->adjoint_serialize();
+        //model_->serialize_reservoir();
+        //model_->serialize_well();
         // well state do not have members of every thin
-        {
-            WellState well_state_proper =  model_->wellModel().wellState();//to avoid the const problem with serialize else have to make splitted
-            std::string filename =  well_state_proper.getWellFile(model_->ebosSimulator(), model_->ebosSimulator().time());
-            std::ofstream ofs(filename.c_str());
-            boost::archive::text_oarchive oa(ofs);
-            oa << well_state_proper;
-        }
-        //well_state_->serialize(model_->ebosSimulator())
+//        {
+//            WellState well_state_proper =  model_->wellModel().wellState();//to avoid the const problem with serialize else have to make splitted
+//            std::string filename =  well_state_proper.getWellFile(model_->ebosSimulator(), model_->ebosSimulator().time());
+//            std::ofstream ofs(filename.c_str());
+//            boost::archive::text_oarchive oa(ofs);
+//            oa << well_state_proper;
+//        }
+//        //well_state_->serialize(model_->ebosSimulator())
 
         report.converged = true;
 
