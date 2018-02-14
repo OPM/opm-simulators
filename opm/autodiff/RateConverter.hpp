@@ -641,6 +641,86 @@ namespace Opm {
 
 
             /**
+             * Converting surface volume rates to reservoir voidage rates
+             *
+             * \tparam Rates Type representing contiguous collection
+             * of surface-to-reservoir conversion coefficients.  Must
+             * support direct indexing through \code operator[]()
+             * \endcode.
+             *
+             *
+             * \param[in] r Fluid-in-place region of the well
+             * \param[in] pvtRegionIdx PVT region of the well
+             * \param[in] surface_rates surface voluem rates for
+             * all active phases
+             *
+             * \param[out] voidage_rates reservoir volume rates for
+             * all active phases
+             */
+            template <class Rates >
+            void
+            calcReservoirVoidageRates(const RegionId r, const int pvtRegionIdx, const Rates& surface_rates,
+                                      Rates& voidage_rates) const
+            {
+                assert(voidage_rates.size() == surface_rates.size());
+
+                const auto& pu = phaseUsage_;
+                const auto& ra = attr_.attributes(r);
+                const double p = ra.pressure;
+                const double T = ra.temperature;
+
+                const int   iw = Details::PhasePos::water(pu);
+                const int   io = Details::PhasePos::oil  (pu);
+                const int   ig = Details::PhasePos::gas  (pu);
+
+                if (Details::PhaseUsed::water(pu)) {
+                    // q[w]_r = q[w]_s / bw
+
+                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+
+                    voidage_rates[iw] = surface_rates[iw] / bw;
+                }
+
+                // Determinant of 'R' matrix
+                const double detR = 1.0 - (ra.rs * ra.rv);
+
+                if (Details::PhaseUsed::oil(pu)) {
+                    // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
+
+                    const double Rs = ra.rs;
+                    const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
+                    const double den = bo * detR;
+
+                    voidage_rates[io] = surface_rates[io];
+
+                    if (Details::PhaseUsed::gas(pu)) {
+                        const double Rv = ra.rv;
+                        voidage_rates[io] -= Rv * surface_rates[ig];
+                    }
+
+                    voidage_rates[io] /= den;
+                }
+
+                if (Details::PhaseUsed::gas(pu)) {
+                    // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
+
+                    const double Rv = ra.rv;
+                    const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
+                    const double den = bg * detR;
+
+                    voidage_rates[ig] = surface_rates[ig];
+
+                    if (Details::PhaseUsed::oil(pu)) {
+                        const double Rs = ra.rs;
+                        voidage_rates[ig] -= Rs * surface_rates[io];
+                    }
+
+                    voidage_rates[ig] /= den;
+                }
+            }
+
+
+            /**
              * Compute coefficients for surface-to-reservoir voidage
              * conversion for solvent.
              *

@@ -180,6 +180,12 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     timeStepSucceeded() {
+        // TODO: when necessary
+        rateConverter_->template defineState<ElementContext>(ebosSimulator_);
+        for (const auto& well : well_container_) {
+            well->calculateReservoirRates(well_state_);
+        }
+
         previous_well_state_ = well_state_;
     }
 

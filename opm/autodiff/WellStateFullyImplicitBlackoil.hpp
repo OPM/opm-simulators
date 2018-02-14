@@ -296,7 +296,7 @@ namespace Opm
                 }
 
                 if ( pu.phase_used[Gas] ) {
-                    well.rates.set( rt::reservoir_oil, this->well_reservoir_rates_[well_rate_index + pu.phase_pos[Gas]] );
+                    well.rates.set( rt::reservoir_gas, this->well_reservoir_rates_[well_rate_index + pu.phase_pos[Gas]] );
                 }
 
                 well.rates.set( rt::dissolved_gas, this->well_dissolved_gas_rates_[w] );
@@ -548,7 +548,6 @@ namespace Opm
         {
             return well_vaporized_oil_rates_;
         }
-
 
         const std::vector<double>& segRates() const
         {

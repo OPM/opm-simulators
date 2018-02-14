@@ -563,9 +563,9 @@ namespace Opm
 
         const EvalWell& bhp = getBhp();
 
-        // the solution gas rate and solution oil rate needs to be updated for well_state.
-        std::fill(well_state.wellVaporizedOilRates().begin(), well_state.wellVaporizedOilRates().end(), 0.0);
-        std::fill(well_state.wellDissolvedGasRates().begin(), well_state.wellDissolvedGasRates().end(), 0.0);
+        // the solution gas rate and solution oil rate needs to be reset to be zero for well_state.
+        well_state.wellVaporizedOilRates()[index_of_well_] = 0.;
+        well_state.wellDissolvedGasRates()[index_of_well_] = 0.;
 
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
 
