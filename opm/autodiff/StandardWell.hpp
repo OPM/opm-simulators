@@ -78,6 +78,7 @@ namespace Opm
         // TODO: with flow_ebos，for a 2P deck, // TODO: for the 2p deck, numEq will be 3, a dummy phase is already added from the reservoir side.
         // it will cause problem here without processing the dummy phase.
         static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // number of wellEq is only numEq - 1 for polymer
+        static const int numAdjoint = GET_PROP_VALUE(TypeTag, numAdjoint);
         static const int control_index=numEq + numWellEq;
         using typename Base::Mat;
         using typename Base::BVector;
@@ -123,7 +124,7 @@ namespace Opm
         typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellAdjointType> OffDiagMatWellCtrl;
 
         // added extra space in derivative to have control derivatives
-        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq+1> EvalWell;
+        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq+numAdjoint> EvalWell;
 
         using Base::contiSolventEqIdx;
         using Base::contiPolymerEqIdx;
@@ -165,19 +166,31 @@ namespace Opm
         /// r = r - Bt Dt^-1 Rw
         virtual void applyt(BVector& r) const;
 
-        //
+        // adjoint right hand side of well equations
+        // this may at a later point depend on the adjont vectors for prevois step of
+        // reservoir and well equations
         void rhsAdjointWell();//(const BVectorWell& lamda_w);
 
+        // add the contributions of the well to the righ has side of the reservoir
+        // adjoint equations
         void rhsAdjointRes(BVector& adjRes) const;
-        void addAdjointResult(AdjointResults& adjres) const;
-        // compute objective contribution from well
+
+        // compute objective derivative contributions used for forming the right hand side
+        // and calculating the objective
         void computeObj(Simulator& ebosSimulator,
                         const double dt);
 
-        void printObjective(std::ostream& os) const;
 
         // update derivative contribution from this well
         void objectDerivative(const BVector& lam_r ,const BVectorWell& lam_w);
+
+        // get the results NB only valid after compute objective Derivative
+        void addAdjointResult(AdjointResults& adjres) const;
+        // print object function
+        void printObjective(std::ostream& os) const;
+        // recover adjoint variables for wells and update well_state
+        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x,
+                                                             WellState& well_state);
 
 
         /// using the solution x to recover the solution xw for wells and applying
@@ -185,8 +198,7 @@ namespace Opm
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state) const;
 
-        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x,
-                                                             WellState& well_state);
+
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,

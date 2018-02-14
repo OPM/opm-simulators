@@ -79,17 +79,20 @@ namespace Opm
         duneB_.setSize(1, num_cells, number_of_perforations_);
         duneC_.setSize(1, num_cells, number_of_perforations_);
         //
-        duneCA_.setSize(1, num_cells, number_of_perforations_);
-        duneDA_.setSize(1, 1, 1);
+        if(numAdjoint>0){
+            duneCA_.setSize(1, num_cells, number_of_perforations_);
+            duneDA_.setSize(1, 1, 1);
+        }
 
         for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
             // Add nonzeros for diagonal
             row.insert(row.index());
         }
-
-        for (auto row=duneD_.createbegin(), end = duneD_.createend(); row!=end; ++row) {
-            // Add nonzeros for diagonal
-            row.insert(row.index());
+        if(numAdjoint>0){// only need for adjoint runs
+            for (auto row=duneD_.createbegin(), end = duneD_.createend(); row!=end; ++row) {
+                // Add nonzeros for diagonal
+                row.insert(row.index());
+            }
         }
 
         for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
@@ -106,33 +109,38 @@ namespace Opm
                 row.insert(cell_idx);
             }
         }
-
-        // for adjoint
-        for (auto row = duneCA_.createbegin(), end = duneCA_.createend(); row!=end; ++row) {
-            for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
-                const int cell_idx = well_cells_[perf];
-                row.insert(cell_idx);
+        if(numAdjoint>0){
+            // for adjoint
+            for (auto row = duneCA_.createbegin(), end = duneCA_.createend(); row!=end; ++row) {
+                for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
+                    const int cell_idx = well_cells_[perf];
+                    row.insert(cell_idx);
+                }
             }
         }
 
-        // make the C^T matrix
-        for (auto row=duneDA_.createbegin(), end = duneDA_.createend(); row!=end; ++row) {
-            // Add nonzeros for diagonal
-            row.insert(row.index());
+        if(numAdjoint>0){
+            // make the C^T matrix
+            for (auto row=duneDA_.createbegin(), end = duneDA_.createend(); row!=end; ++row) {
+                // Add nonzeros for diagonal
+                row.insert(row.index());
+            }
         }
 
 
         resWell_.resize(1);
-        adjWell_.resize(1);
         // resize temporary class variables
         Bx_.resize( duneB_.N() );
         invDrw_.resize( invDuneD_.N() );
-        Ctx_.resize( duneC_.M());
-        invDtadj_.resize( invDuneD_.N());
-        objder_.resize(1);
-        objder_adjres_.resize(num_cells);
-        objder_adjwell_.resize(1);// on block pr well
-        objder_adjctrl_.resize(1);// one block pr well
+        if(numAdjoint>0){
+            adjWell_.resize(1);
+            Ctx_.resize( duneC_.M());
+            invDtadj_.resize( invDuneD_.N());
+            objder_.resize(1);
+            objder_adjres_.resize(num_cells);
+            objder_adjwell_.resize(1);// on block pr well
+            objder_adjctrl_.resize(1);// one block pr well
+        }
     }
 
 
@@ -169,7 +177,9 @@ namespace Opm
             EvalWell bhp = 0.0;
             const double target_rate = well_controls_get_current_target(wc);
             bhp.setValue(target_rate);
-            bhp.setDerivative(control_index, 1.0);
+            if(numAdjoint){
+                bhp.setDerivative(control_index, 1.0);
+            }
             return bhp;
         } else if (well_controls_get_current_type(wc) == THP) {
             const int control = well_controls_get_current(wc);
@@ -208,7 +218,9 @@ namespace Opm
         const double target_rate_ctrl = well_controls_get_current_target(wc);
         EvalWell target_rate = 0.0;
         target_rate.setValue(target_rate_ctrl);
-        target_rate.setDerivative(control_index,1);
+        if(numAdjoint>0){
+            target_rate.setDerivative(control_index,1.0);
+        }
 
         assert(comp_idx < num_components_);
         const auto pu = phaseUsage();
@@ -734,10 +746,12 @@ namespace Opm
             duneB_ = 0.0;
             duneC_ = 0.0;
         }
-        duneDA_ = 0.0;
-        duneCA_ = 0.0;
+        if(numAdjoint>0){
+            duneDA_ = 0.0;
+            duneCA_ = 0.0;
+            duneD_ = 0.0;
+        }
 
-        duneD_ = 0.0;
         invDuneD_ = 0.0;
         resWell_ = 0.0;
 
@@ -781,8 +795,10 @@ namespace Opm
                     }
                     invDuneD_[0][0][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx+numEq);
                 }
-                duneDA_[0][0][componentIdx][0] -= cq_s_effective.derivative(control_index);
-                duneCA_[0][cell_idx][0][componentIdx] -= cq_s_effective.derivative(control_index);
+                if(numAdjoint>0){// NB we should probably also have a runtime switch here
+                    duneDA_[0][0][componentIdx][0] -= cq_s_effective.derivative(control_index);
+                    duneCA_[0][cell_idx][0][componentIdx] -= cq_s_effective.derivative(control_index);
+                }
 
                 for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
                     if (!only_wells) {
@@ -829,14 +845,18 @@ namespace Opm
             for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
-            duneDA_[0][0][componentIdx][0] += resWell_loc.derivative(control_index);
+            if(numAdjoint>0){//
+                duneDA_[0][0][componentIdx][0] += resWell_loc.derivative(control_index);
+            }
             resWell_[0][componentIdx] += resWell_loc.value();
         }
 
         // do the local inversion of D.
         //invDuneD_.compress();
         //duneD_=DiagMatWell(invDuneD_);// copy for adjoint
-        duneD_= invDuneD_;
+        if(numAdjoint>0){
+            duneD_= invDuneD_;
+        }
         invDuneD_[0][0].invert();
     }
 
