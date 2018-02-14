@@ -60,6 +60,8 @@
 
 namespace Opm
 {
+    // class to store and print adjoint contributions from all wells
+    // at a given time step
     class AdjointResults
     {
     public:
@@ -166,6 +168,8 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const = 0;
 
+
+
         virtual void printMatrixes() const {};
 
         /// a struct to collect information about the convergence checking
@@ -217,14 +221,15 @@ namespace Opm
 
         void computeRepRadiusPerfLength(const Grid& grid, const std::map<int, int>& cartesian_to_compressed);
 
+
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state) const = 0;
 
+         // adjoint related
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const = 0;
-
 
         /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const = 0;
@@ -235,11 +240,13 @@ namespace Opm
         // interface for explite quatites not in
         virtual void rhsAdjointRes(BVector& adjRes) const = 0;
         virtual void rhsAdjointWell() = 0;
-
         virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x, WellState& well_state) = 0;
         virtual void computeObj(Simulator& ebosSimulator,
                                       const double dt) = 0;
         virtual void printObjective(std::ostream& os) const = 0;
+
+
+
         // TODO: before we decide to put more information under mutable, this function is not const
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,

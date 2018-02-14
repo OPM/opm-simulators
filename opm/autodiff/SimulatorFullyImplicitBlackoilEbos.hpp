@@ -336,7 +336,16 @@ public:
     SimulatorReport runAdjoint(SimulatorTimer& timer)
                        // ReservoirState& state)
     {
-         SimulatorReport adjoint_report;
+        static const int numAdjoint = GET_PROP_VALUE(TypeTag, numAdjoint);
+        if(numAdjoint==0){
+            OPM_THROW(std::runtime_error,"Compilation do not support adjoint change  GET_PROP_VALUE(TypeTag, numAdjoint)");
+        }
+        static const int storagecache = GET_PROP_VALUE(TypeTag, EnableStorageCache);
+        if(storagecache){
+            OPM_THROW(std::runtime_error,"Compilation/implementation do not support adjoint change  GET_PROP_VALUE(TypeTag, EnableStorageCache)");
+        }
+        //ebosSimulator_.problem().setEnableStorageCache(false);
+        SimulatorReport adjoint_report;
         // Main simulation loop
 
          WellModel well_model(ebosSimulator_, model_param_, terminal_output_);
