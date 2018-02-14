@@ -151,7 +151,7 @@ namespace Opm
 
         /// Well controls
         WellControls* wellControls() const;
-        virtual void addAdjointResult(AdjointResults& adjres) const = 0;
+
         void setVFPProperties(const VFPProperties* vfp_properties_arg);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
@@ -235,7 +235,7 @@ namespace Opm
         virtual void computeObj(Simulator& ebosSimulator,
                                       const double dt) = 0;
         virtual void printObjective(std::ostream& os) const = 0;
-
+        virtual void addAdjointResult(AdjointResults& adjres) const = 0;
 
 
         // TODO: before we decide to put more information under mutable, this function is not const
