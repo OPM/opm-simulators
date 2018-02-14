@@ -260,13 +260,15 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
     for (int w = 0; w < num_wells; ++w) {
         num_perfs += wellperf_data[w].size();
     }
-
     // Create the well data structures.
-    w_ = create_wells(phaseUsage.num_phases, num_wells, num_perfs);
-    if (!w_) {
+    struct Wells* w = create_wells(phaseUsage.num_phases, num_wells, num_perfs);
+
+    if (!w) {
         OPM_THROW(std::runtime_error, "Failed creating Wells struct.");
     }
 
+    std::swap( w, w_ );
+    destroy_wells( w );
 
     // Add wells.
     for (int w = 0; w < num_wells; ++w) {
@@ -320,7 +322,7 @@ WellsManager(const Opm::EclipseState& eclipseState,
              const DynamicListEconLimited&   list_econ_limited,
              bool                            is_parallel_run,
              const std::unordered_set<std::string>&    deactivated_wells)
-    : w_(0), is_parallel_run_(is_parallel_run)
+    : w_(create_wells(0,0,0)), is_parallel_run_(is_parallel_run)
 {
   init(eclipseState, schedule, timeStep, number_of_cells, global_cell,
          cart_dims, dimensions,

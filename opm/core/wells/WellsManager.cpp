@@ -315,7 +315,7 @@ namespace Opm
 
     /// Default constructor.
     WellsManager::WellsManager()
-        : w_(0), is_parallel_run_(false)
+        : w_(create_wells(0,0,0)), is_parallel_run_(false)
     {
     }
 
@@ -330,7 +330,7 @@ namespace Opm
                                const Opm::Schedule& schedule,
                                const size_t timeStep,
                                const UnstructuredGrid& grid)
-        : w_(0), is_parallel_run_(false)
+        : w_(create_wells(0,0,0)), is_parallel_run_(false)
     {
         // TODO: not sure about the usage of this WellsManager constructor
         // TODO: not sure whether this is the correct thing to do here.
