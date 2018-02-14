@@ -91,6 +91,9 @@ namespace Opm
         /// The file name of the deck
         std::string deck_file_name_;
 
+        //
+        bool do_adjoint_;
+
         /// Construct from user parameters or defaults.
         explicit BlackoilModelParameters( const ParameterGroup& param );
 
