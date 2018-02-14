@@ -232,7 +232,9 @@ namespace Opm {
         /// \param[in, out] well_state        well state variables
         AdjointResults adjointIteration(SimulatorTimerInterface& timer,const BVector& rhs,BVector& rhs_next)// WellState& well_state)
         {
-
+            if(!param_.do_adjoint_){
+                OPM_THROW(std::runtime_error,"Forward simulation was not done with adjoint output enabled");
+            }
             //SimulatorReport report;
             --timer;
             //std::cout << "Start Adjoint iteration" << std::endl;
@@ -503,20 +505,20 @@ namespace Opm {
 
                 report.update_time += perfTimer.stop();
             }
-            else{
-                const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
-                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-                std::cout << "Printing pure residual in forward mode" << std::endl;
-                std::cout << ebosResid << std::endl;
-                // apply well residual to the residual.
-                wellModel().apply(ebosResid);
-                std::cout << "Printing pure residual in forward mode with well contributions" << std::endl;
-                std::cout << ebosResid << std::endl;
-                std::cout << "solution 1" << std::endl;
-                std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
-                std::cout << "solution 0" << std::endl;
-                std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
-            }
+//            else{
+//                const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+//                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+//                std::cout << "Printing pure residual in forward mode" << std::endl;
+//                std::cout << ebosResid << std::endl;
+//                // apply well residual to the residual.
+//                wellModel().apply(ebosResid);
+//                std::cout << "Printing pure residual in forward mode with well contributions" << std::endl;
+//                std::cout << ebosResid << std::endl;
+//                std::cout << "solution 1" << std::endl;
+//                std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+//                std::cout << "solution 0" << std::endl;
+//                std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
+//            }
             return report;
         }
 
