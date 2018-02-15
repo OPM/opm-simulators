@@ -181,6 +181,13 @@ add_test_compareECLFiles(CASENAME spe1
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
+add_test_compareECLFiles(CASENAME spe1_nowells
+                         FILENAME SPE1CASE2_NOWELLS
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe1)
+
 foreach(SIM flow flow_legacy)
   add_test_compareECLFiles(CASENAME spe3
                            FILENAME SPE3CASE1
