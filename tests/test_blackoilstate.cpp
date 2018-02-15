@@ -8,9 +8,6 @@
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
-#if HAVE_DYNAMIC_BOOST_TEST
-#define BOOST_TEST_DYN_LINK
-#endif
 #define NVERBOSE // to suppress our messages when throwing
 #define BOOST_TEST_MODULE BlackoilStateTest
 #define BOOST_TEST_MAIN
