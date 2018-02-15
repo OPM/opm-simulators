@@ -302,8 +302,8 @@ namespace Opm {
             //wellModel().printMatrixes();
 
             //wellModel().recoverWellSolutionAndUpdateWellState(x);
-            std::cout << "Printing pure residual in backward mode" << std::endl;
-            std::cout << ebosResid << std::endl;
+            //std::cout << "Printing pure residual in backward mode" << std::endl;
+            //std::cout << ebosResid << std::endl;
 
 
             const int nc = UgGridHelpers::numCells(grid_);
@@ -337,8 +337,8 @@ namespace Opm {
                 Operator opAt(ebosJac, well_model_);
                 istlSolver().solve( opAt, x, adjRhs );
             }
-            std::cout << "******* lamda_r *****" << std::endl;
-            std::cout << x << std::endl;
+            //std::cout << "******* lamda_r *****" << std::endl;
+            //std::cout << x << std::endl;
             wellModel().recoverWellAdjointAndUpdateWellAdjoint(x);// also update objective
 
             /*
@@ -352,7 +352,7 @@ namespace Opm {
             // Do model-specific post-step actions.
            // model_->afterStep(timer, reservoir_state, well_state);
             // print objective and well state to file
-            wellModel().printObjective(std::cout);
+            //wellModel().printObjective(std::cout);
             AdjointResults adjres = wellModel().adjointResults();
             //prepere right hand side for next step
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
@@ -460,6 +460,7 @@ namespace Opm {
                 // Compute the nonlinear update.
                 const int nc = UgGridHelpers::numCells(grid_);
                 BVector x(nc);
+                std::cout << "print all matrixes" << std::endl;
 
                 try {
                     solveJacobianSystem(x);
@@ -708,6 +709,11 @@ namespace Opm {
             }
             else
             {
+                //std::cout.precision(16);
+                //std::cout << x << std::endl;
+                //Dune::writeMatrixMarket(ebosJac, std::cout);
+                //wellModel().printMatrixes();
+                //std::cout << ebosResid << std::endl;
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, false > Operator;
                 Operator opA(ebosJac, wellModel());
                 istlSolver().solve( opA, x, ebosResid );
