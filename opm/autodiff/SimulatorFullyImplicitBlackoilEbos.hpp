@@ -385,13 +385,13 @@ public:
             adjoint_res.push_front(adjres);
             rhs=rhs_next;
             --timer;
-            std::cout << rhs << std::endl;
+            //std::cout << rhs << std::endl;
             // WellModel well_model;
             // auto solver = createSolver(well_model);
             // adjoint_report = solver_>step(timer, state, well_state);
         }
         std::string filename = param_.getDefault("adjoint_result_file", std::string("adjoint_results.txt"));
-        std::string output_dir = param_.get<std::string>("output_dir");
+        std::string output_dir = param_.get<std::string>("output_dir");//NB hack where should this be taken from
         std::string adjoint_output = output_dir + "/" + filename;
         std::ofstream ofile(adjoint_output);
         for (auto& adjres: adjoint_res){
