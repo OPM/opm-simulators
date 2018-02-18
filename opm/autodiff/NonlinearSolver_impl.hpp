@@ -126,12 +126,15 @@ namespace Opm
         SimulatorReport report;
         failureReport_ = SimulatorReport();
 
-        // Do model-specific once-per-step calculations.
+        // Do model-specific once-per-step calculations
+        // NB tis do anything with initialising  the states
+
         model_->prepareStep(timer, initial_reservoir_state, initial_well_state);
+        if (timer.initialStep()){
+            model_->adjoint_serialize();
+        }
 
         int iteration = 0;
-
-        // Let the model do one nonlinear iteration.
 
         // Set up for main solver loop.
         bool converged = false;
@@ -165,13 +168,43 @@ namespace Opm
             std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
             OPM_THROW_NOLOG(Opm::TooManyIterations, msg);
         }
-
-        // Do model-specific post-step actions.
         model_->afterStep(timer, reservoir_state, well_state);
+        model_->adjoint_serialize();
+        //model_->serialize_reservoir();
+        //model_->serialize_well();
+        // well state do not have members of every thin
+//        {
+//            WellState well_state_proper =  model_->wellModel().wellState();//to avoid the const problem with serialize else have to make splitted
+//            std::string filename =  well_state_proper.getWellFile(model_->ebosSimulator(), model_->ebosSimulator().time());
+//            std::ofstream ofs(filename.c_str());
+//            boost::archive::text_oarchive oa(ofs);
+//            oa << well_state_proper;
+//        }
+//        //well_state_->serialize(model_->ebosSimulator())
+
         report.converged = true;
 
         return report;
     }
+
+
+
+ //   template <class PhysicalModel>
+  //  template <class Bvector>
+//    SimulatorReport NonlinearSolver<PhysicalModel>::stepAdjoint(SimulatorTimerInterface& timer,const Bvector& rhs,Bvector& rhs_next)
+//    {
+//        SimulatorReport itreport;
+
+//        // Do model-specific once-per-step calculations
+//        //--timer;// set for previous step this
+//        // This is only to fill the previous state
+//        //model_->prepareStep(timer);
+//        // /*initial_reservoir_state*/,/*initial_well_state*/);
+//        //model_->ebosDeserialize();
+//        //SimulatorReport      adjointIteration(SimulatorTimerInterface& timer)
+//        itreport = model_->adjointIteration(timer,rhs,rhs_next);
+//        return itreport;
+//    }
 
 
 

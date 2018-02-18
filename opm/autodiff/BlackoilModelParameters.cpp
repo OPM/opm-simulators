@@ -65,6 +65,7 @@ namespace Opm
         update_equations_scaling_ = param.getDefault("update_equations_scaling", update_equations_scaling_);
         use_update_stabilization_ = param.getDefault("use_update_stabilization", use_update_stabilization_);
         deck_file_name_ = param.template get<std::string>("deck_filename");
+        do_adjoint_ = param.getDefault("do_adjoint",false);
     }
 
 
@@ -93,6 +94,7 @@ namespace Opm
         update_equations_scaling_ = false;
         use_update_stabilization_ = true;
         use_multisegment_well_ = false;
+        do_adjoint_=false;
     }
 
 

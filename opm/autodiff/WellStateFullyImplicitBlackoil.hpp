@@ -35,6 +35,16 @@
 #include <algorithm>
 #include <array>
 
+#include <boost/archive/tmpdir.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/utility.hpp>
+#include <boost/serialization/list.hpp>
+#include <boost/serialization/assume_abstract.hpp>
+
 namespace Opm
 {
 
@@ -542,8 +552,48 @@ namespace Opm
 
             return top_segment_index_[w];
         }
+       /*
+        template<class ebossimulator>
+        void serialize(ebossimulator & simulator, double t){
+            std::string filename =  getWellFile(simulator, t);
+            std::ofstream ofs(filename.c_str());
+            boost::archive::text_oarchive oa(ofs);
+            oa << this;
+        }
 
-    private:
+        template<class ebossimulator>
+        void deserialize(ebossimulator & simulator, double t){
+            filename =  getWellFile(simulator, t);
+            std::ifstream ifs(filename.c_str());
+            boost::archive::text_oarchive oa(ifs);
+            oa >> this;
+        }
+        */
+
+        template<class ebossimulator>
+        std::string getWellFile(ebossimulator & simulator, double t){
+            int rank = simulator.gridView().comm().rank();
+            std::string simName =simulator.problem().name();
+            std::ostringstream oss;
+            oss <<  "wellstate_" << simName << "_time=" << t << "_rank=" << rank << ".ers";
+            return oss.str();
+        }
+     private:
+        friend class boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version)
+        {
+            ar & boost::serialization::base_object<BaseType>(*this);
+            ar & perfphaserates_;
+            ar & current_controls_;
+            ar & perfRateSolvent_;
+            ar & is_new_well_;
+            ar & segrates_;
+            ar & segpress_;
+            ar & top_segment_index_;
+            ar & nseg_;
+        }
+
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
         std::vector<double> perfRateSolvent_;
@@ -563,7 +613,12 @@ namespace Opm
         std::vector<int> top_segment_index_;
         int nseg_; // total number of the segments
 
+        //std::copy(perfphaserate_.begin(),perfphaserate_.end(),std::ostream_iterator<double>(oss,"\n"));
+        //std::copy(perfphaserate_.begin(),current_controls.end(),std::ostream_iterator<double>(oss,"\n"));
+
     };
+
+
 
 } // namespace Opm
 

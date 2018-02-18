@@ -28,6 +28,7 @@
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/StandardWells.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 namespace Opm {
 

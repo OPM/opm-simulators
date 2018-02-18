@@ -104,6 +104,9 @@ namespace Opm
         /// advance time by currentStepLength
         SimulatorTimer& operator++();
 
+        /// propagate backwards in current run
+        SimulatorTimer& operator--();
+
         /// advance time by currentStepLength
         void advance() { this->operator++(); }
 
@@ -117,6 +120,15 @@ namespace Opm
         /// return copy of object
         virtual std::unique_ptr< SimulatorTimerInterface > clone() const;
 
+//        std::ostream& write(std::ostream& stream ) const{
+//            stream << "Current Timestep " << current_step_ << std::endl;
+//            stream <<" Current time " << current_time_ << std::endl;
+//            stream <<" Total time "    <<  total_time_ << std::endl;
+//            stream << " Time step dt " <<  timesteps_[current_step_] << std::endl;
+//            return stream;
+//        }
+
+
     private:
         std::vector<double> timesteps_;
         int current_step_;
@@ -124,7 +136,10 @@ namespace Opm
         double total_time_;
         boost::gregorian::date start_date_;
     };
-
+//    std::ostream &operator<<(std::ostream &os, SimulatorTimer const &m) {
+//       // since `write` is public, we can call it without any problem.
+//       return m.write(os);
+//    }
 
 } // namespace Opm
 

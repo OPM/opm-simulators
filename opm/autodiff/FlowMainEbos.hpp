@@ -546,7 +546,9 @@ namespace Opm
 
                 SimulatorReport successReport = simulator_->run(simtimer);
                 SimulatorReport failureReport = simulator_->failureReport();
-
+                if(param_.getDefault("do_adjoint",false)){
+                    SimulatorReport successReport_adjoint = simulator_->runAdjoint(simtimer);//, *state_);
+                }
                 if (output_cout_) {
                     std::ostringstream ss;
                     ss << "\n\n================    End of simulation     ===============\n\n";

@@ -24,6 +24,7 @@
 #ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 
+#include <ewoms/common/propertysystem.hh>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
@@ -96,22 +97,33 @@ namespace Opm {
 
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
-            void assemble(const int iterationIdx,
+            void assemble(const int iterationIdx, const bool solve_well_equation,
                                      const double dt);
 
+            void rhsAdjointRes(BVector& adjRes);
+            void computeObj(double dt);
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;
 
             // subtract B*inv(D)*C * x from A*x
             void apply(const BVector& x, BVector& Ax) const;
 
+            // substract Binv(D)rw from r;
+            void applyt( BVector& r) const;
+
+            // subtract B*inv(D)*C * x from A*x
+            void applyt(const BVector& x, BVector& Ax) const;
+
             // apply well model with scaling of alpha
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
 
+
+            void printObjective(std::ostream& os) const;
+
             // using the solution x to recover the solution xw for wells and applying
             // xw to update Well State
+            void recoverWellAdjointAndUpdateWellAdjoint(const BVector& x);
             void recoverWellSolutionAndUpdateWellState(const BVector& x);
-
             // Check if well equations is converged.
             bool getWellConvergence(const std::vector<Scalar>& B_avg) const;
 
@@ -142,6 +154,10 @@ namespace Opm {
             void endReportStep();
 
             const SimulatorReport& lastReport() const;
+            void printMatrixes() const;
+
+
+            AdjointResults adjointResults() const;
 
         protected:
 

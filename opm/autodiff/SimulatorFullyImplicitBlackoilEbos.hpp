@@ -309,6 +309,75 @@ public:
         return report;
     }
 
+    SimulatorReport runAdjoint(SimulatorTimer& timer)
+                       // ReservoirState& state)
+    {
+        static const int numAdjoint = GET_PROP_VALUE(TypeTag, numAdjoint);
+        if(numAdjoint==0){
+            OPM_THROW(std::runtime_error,"Compilation do not support adjoint change  GET_PROP_VALUE(TypeTag, numAdjoint)");
+        }
+        static const int storagecache = GET_PROP_VALUE(TypeTag, EnableStorageCache);
+        if(storagecache){
+            OPM_THROW(std::runtime_error,"Compilation/implementation do not support adjoint change  GET_PROP_VALUE(TypeTag, EnableStorageCache)");
+        }
+        //ebosSimulator_.problem().setEnableStorageCache(false);
+        SimulatorReport adjoint_report;
+        // Main simulation loop
+
+         WellModel well_model(ebosSimulator_, model_param_, terminal_output_);
+        //if (output_writer_.isRestart()) {
+         //   well_model.setRestartWellState(prev_well_state); // Neccessary for perfect restarts
+        //}
+        //SET_BOOL_PROP(EclBaseProblem, EnableStorageCache, false)
+        //ebosSimulator_.problem().setEnableStorageCache(false);
+        //ElementContext elemCtx(ebosSimulator_);
+        //elemCtx.setEnableStorageCache(false);// Do not know if this work
+         typedef double Scalar;
+         static const int numEq = BlackoilIndices::numEq;
+        // static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
+        // static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
+        // static const int solventSaturationIdx = Indices::solventSaturationIdx;
+        // static const int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
+
+        typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
+        //typedef Dune::FieldMatrix<Scalar, numEq, numEq >        MatrixBlockType;
+        //typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
+        typedef Dune::BlockVector<VectorBlockType>      BVector;
+        const int nc = UgGridHelpers::numCells(grid());
+        BVector rhs(nc);
+        BVector rhs_next(nc);
+        std::cout << "Start Adjoint iteration" << std::endl;
+        std::list<AdjointResults> adjoint_res;
+        while (!timer.initialStep()) {
+            // opefulle the -1 is ok we ar pressent at end of the timestep we nned
+            // the prevois eclipse state
+            well_model.beginReportStep(timer.currentStepNum()-1);// this should really be clean to make a better initialization for backward simulation
+            timer.report(std::cout);
+            //WellState prev_well_state// assume we can read all of this inside;
+            //output_writer_.initFromRestartFile(phaseUsage_, grid(), state, prev_well_state, extra);
+            auto solver = createSolver(well_model);
+            //adjoint_report = solver->stepAdjoint(timer, rhs, rhs_next);// state, well_state);
+            AdjointResults adjres = solver->model().adjointIteration(timer, rhs, rhs_next);// state, well_state);
+            adjoint_res.push_front(adjres);
+            rhs=rhs_next;
+            --timer;
+            //std::cout << rhs << std::endl;
+            // WellModel well_model;
+            // auto solver = createSolver(well_model);
+            // adjoint_report = solver_>step(timer, state, well_state);
+        }
+        std::string filename = param_.getDefault("adjoint_result_file", std::string("adjoint_results.txt"));
+        std::string output_dir = param_.get<std::string>("output_dir");//NB hack where should this be taken from
+        std::string adjoint_output = output_dir + "/" + filename;
+        std::ofstream ofile(adjoint_output);
+        for (auto& adjres: adjoint_res){
+            adjres.print(std::cout);
+            adjres.print(ofile);
+        }
+
+        return adjoint_report;
+    }
+
     /** \brief Returns the simulator report for the failed substeps of the simulation.
      */
     const SimulatorReport& failureReport() const { return failureReport_; };

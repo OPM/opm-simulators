@@ -58,13 +58,28 @@ namespace Opm
 
 AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
     {
-        ++current_step_;
-        current_time_ += dt_;
-        // store used time step sizes
-        steps_.push_back( dt_ );
+        if  (current_step_ == steps_.size() ){
+            current_time_ += dt_;
+            steps_.push_back( dt_ );
+         }else if (current_step_ < steps_.size() ){
+            dt_ = steps_[current_step_];
+            current_time_ += dt_;
+        }else{
+            assert(false);
+        }
+        ++current_step_;             
+        // store used tie step sizes
         return *this;
     }
 
+AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator-- ()
+    {
+        double dt= steps_[current_step_];
+        --current_step_;
+        current_time_ -= dt;
+        dt_ = steps_[current_step_];
+        return *this;
+    }
     void AdaptiveSimulatorTimer::
     provideTimeStepEstimate( const double dt_estimate )
     {

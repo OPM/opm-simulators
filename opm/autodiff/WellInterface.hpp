@@ -23,8 +23,9 @@
 #ifndef OPM_WELLINTERFACE_HEADER_INCLUDED
 #define OPM_WELLINTERFACE_HEADER_INCLUDED
 
-#include <opm/common/OpmLog/OpmLog.hpp>
+#include <ewoms/common/propertysystem.hh>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <opm/core/wells.h>
@@ -56,7 +57,38 @@
 
 namespace Opm
 {
+    // class to store and print adjoint contributions from all wells
+    // at a given time step
+    class AdjointResults
+    {
+    public:
+        void print(std::ostream& os){
+            os << "% Control step " << schedule_step << std::endl;
+            os << "% ";
+            for (auto s: well_names){
+                os << s << '\t';
+            }
+            for (auto s: control_state){
+                os << s << '\t';
+            }
+            os << std::endl;
+            for (auto s: objective){
+                os << s << '\t';
+            }
+            os << std::endl;
+            for (auto s: derivative){
+                os << s << '\t';
+            }
+            os << std::endl;
 
+        }
+
+        std::vector<std::string> well_names;
+        std::vector<double> derivative;
+        std::vector<double> objective;
+        std::vector<std::string> control_state;
+        int schedule_step;
+    };
 
     template<typename TypeTag>
     class WellInterface
@@ -129,6 +161,10 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const = 0;
 
+
+
+        virtual void printMatrixes() const {};
+
         /// a struct to collect information about the convergence checking
         struct ConvergenceReport {
             struct ProblemWell {
@@ -176,16 +212,31 @@ namespace Opm
 
         void computeRepRadiusPerfLength(const Grid& grid, const std::map<int, int>& cartesian_to_compressed);
 
+
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state) const = 0;
 
+         // adjoint related
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const = 0;
 
         /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const = 0;
+
+        // Adjoint related transpose of the above
+        virtual void applyt(const BVector& x, BVector& Ax) const = 0;
+        virtual void applyt(BVector& r) const = 0;
+        // interface for explite quatites not in
+        virtual void rhsAdjointRes(BVector& adjRes) const = 0;
+        virtual void rhsAdjointWell() = 0;
+        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x, WellState& well_state) = 0;
+        virtual void computeObj(Simulator& ebosSimulator,
+                                      const double dt) = 0;
+        virtual void printObjective(std::ostream& os) const = 0;
+        virtual void addAdjointResult(AdjointResults& adjres) const = 0;
+
 
         // TODO: before we decide to put more information under mutable, this function is not const
         virtual void computeWellPotentials(const Simulator& ebosSimulator,

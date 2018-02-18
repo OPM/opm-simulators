@@ -80,6 +80,14 @@ namespace Opm
         /// advance time by currentStepLength
         virtual void advance() = 0 ;
 
+        // \brief advance time by currentStepLength
+        virtual SimulatorTimerInterface& operator++ ()  = 0;
+
+         // \brief step back ward and retrive timesteps done
+        virtual SimulatorTimerInterface& operator-- ()  = 0;
+
+        // report method
+        virtual void report(std::ostream& os) const = 0;
         /// Return true if timer indicates that simulation of timer interval is finished
         virtual bool done() const = 0;
 

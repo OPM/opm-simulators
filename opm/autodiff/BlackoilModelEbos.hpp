@@ -63,6 +63,15 @@
 #include <algorithm>
 //#include <fstream>
 
+//writing matrix
+#include <dune/istl/matrixmarket.hh>
+#include <opm/autodiff/MatrixAdapterUtilities.hpp>
+
+
+
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
 
 
 namespace Ewoms {
@@ -182,8 +191,16 @@ namespace Opm {
             } else {
                 // set the initial solution.
                 ebosSimulator_.model().solution( 1 /* timeIdx */ ) = ebosSimulator_.model().solution( 0 /* timeIdx */ );
+                ebosSimulator_.problem().advanceTimeLevel();
             }
-
+            // update simulator form timer
+            /*
+            ebosSimulator_.setTime( timer.simulationTimeElapsed() );
+            ebosSimulator_.startNextEpisode( timer.currentStepLength() );
+            ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
+            ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+            */
+            ebosSimulator_.setTime( timer.simulationTimeElapsed() );
             // set the timestep size and index in ebos explicitly
             // we use our own time stepper.
             ebosSimulator_.startNextEpisode( timer.currentStepLength() );
@@ -204,8 +221,179 @@ namespace Opm {
                 //updateEquationsScaling();
             }
         }
+        /// Called once per nonlinear iteration.
+        /// This model will perform a Newton-Raphson update, changing reservoir_state
+        /// and well_state. It will also use the nonlinear_solver to do relaxation of
+        /// updates if necessary.
+        /// \param[in] iteration              should be 0 for the first call of a new timestep
+        /// \param[in] timer                  simulation timer
+        /// \param[in] nonlinear_solver       nonlinear solver used (for oscillation/relaxation control)
+        /// \param[in, out] reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        AdjointResults adjointIteration(SimulatorTimerInterface& timer,const BVector& rhs,BVector& rhs_next)// WellState& well_state)
+        {
+            if(!param_.do_adjoint_){
+                OPM_THROW(std::runtime_error,"Forward simulation was not done with adjoint output enabled");
+            }
+            //SimulatorReport report;
+            --timer;
+            //std::cout << "Start Adjoint iteration" << std::endl;
+            //timer.report(std::cout);
+            WellState dummy_well_state;//only for the interface due to flow_legacy
+            ReservoirState dummy_res_state(0, 0, 0);
+            this->prepareStep(timer, dummy_res_state, dummy_well_state);//, /*initial_reservoir_state*/, /*initial_well_state*/);
+            //std::cout << "Current time init " <<  timer.simulationTimeElapsed()  << std::endl;
+            this->deserialize_reservoir( timer.simulationTimeElapsed() );
+            SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
+            // Store the initial previous.
+            ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
+            //std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+            ++timer;// get back to current step
+            //timer.report(std::cout);
+            this->prepareStep(timer, dummy_res_state, dummy_well_state);
+            // std::cout << "Current time end " <<  timer.simulationTimeElapsed()  << std::endl;
+            this->deserialize_reservoir( timer.simulationTimeElapsed() );
+            // seralizing may owerwrite prevois step since it was intended for restart ??
+            ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
+//            std::cout << "******* Start adjoint calculation ****** " << std::endl;
+//            std::cout << "******* solution 1 ****** " << std::endl;
+//            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+//            std::cout << "******* solution 0 ****** " << std::endl;
+//            std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
 
 
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+           // ebosSimulator_.model().update();
+            //auto linsys =  ebosSimulator_.model().linearizer();
+            // NB need to avoid storag cache to calculate prevois storage term correctly
+            //int iterationIdx = 1;// need tp be larger than 1
+            ebosSimulator_.model().newtonMethod().setIterationIndex(/*iterationIdx*/ 1);
+            ebosSimulator_.problem().beginIteration();
+            ebosSimulator_.model().linearizer().linearize(0);
+            ebosSimulator_.problem().endIteration();
+            const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+
+            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            /*
+            std::cout << "Printing jacobian residual 0" << std::endl;
+            std::cout << std::endl;
+            std::cout << "Printing pure residual with out well contribution backward mode" << std::endl;
+            std::cout << ebosResid << std::endl;
+            */
+            //auto& well_state = wellModel().wellState();
+            wellModel().beginTimeStep();
+            WellState well_state;
+            deserialize_well(well_state);// =  this->wellModel().wellState();
+//            {
+//                std::string filename =  well_state.getWellFile(ebosSimulator_, ebosSimulator_.time());
+//                std::ifstream ifs(filename.c_str());
+//                boost::archive::text_iarchive oa(ifs);
+//                oa >> well_state;
+//            }
+            wellModel().setRestartWellState(well_state);          
+            double dt = timer.stepLengthTaken();
+            //int
+            //iterationIdx = 0;//for wells we need this to make update correctyin flow is make shift the state???
+            assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
+            wellModel().assemble(/*iterationIdx*/ 0, true, ebosSimulator_.timeStepSize());
+
+            wellModel().apply(ebosResid);
+            //wellModel().printMatrixes();
+
+            //wellModel().recoverWellSolutionAndUpdateWellState(x);
+            //std::cout << "Printing pure residual in backward mode" << std::endl;
+            //std::cout << ebosResid << std::endl;
+
+
+            const int nc = UgGridHelpers::numCells(grid_);
+            BVector lam(nc);// this should be the prevois adjoint vector
+            //BVector adjRhs(nc);// this should have contribution from prevois solve
+            // assume no contributions from pure reservoir
+            BVector adjRhs = rhs;
+            /*
+            std::cout << "******* rhs  *****" << std::endl;
+            std::cout << adjRhs << std::endl;
+            */
+            wellModel().computeObj(dt);
+            wellModel().rhsAdjointRes(adjRhs);
+            // add rhs from the schur complement of well equations
+            wellModel().applyt(adjRhs);
+
+            // then all well tings has tto be done
+            // set initial guess
+            BVector x(nc);
+            // Solve system.
+            if( isParallel() )
+            {
+                typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, true > Operator;
+                Operator opAt(ebosJac, well_model_, istlSolver().parallelInformation() );
+                assert( opAt.comm() );
+                istlSolver().solve( opAt, x, adjRhs, *(opAt.comm()) );
+            }
+            else
+            {
+                typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, false > Operator;
+                Operator opAt(ebosJac, well_model_);
+                istlSolver().solve( opAt, x, adjRhs );
+            }
+            //std::cout << "******* lamda_r *****" << std::endl;
+            //std::cout << x << std::endl;
+            wellModel().recoverWellAdjointAndUpdateWellAdjoint(x);// also update objective
+
+            /*
+            std::cout << "print all matrixes" << std::endl;
+            Dune::writeMatrixMarket(ebosJac, std::cout);
+            std::cout << "*** Well Matrixes " << std::endl;
+            wellModel().printMatrixes();*/
+            //collect objective values, derivatives and well control state for output
+            // assume most all is related to well
+            //AdjointStepType adjointStep = wellModel().collectObjective(x);
+            // Do model-specific post-step actions.
+           // model_->afterStep(timer, reservoir_state, well_state);
+            // print objective and well state to file
+            //wellModel().printObjective(std::cout);
+            AdjointResults adjres = wellModel().adjointResults();
+            //prepere right hand side for next step
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+           // ebosSimulator_.model().update();
+            //auto linsys =  ebosSimulator_.model().linearizer();
+            // NB need to avoid storag cache to calculate prevois storage term correctly
+            //int iterationIdx = 1;
+            ebosSimulator_.model().newtonMethod().setIterationIndex(/*iterationIdx*/ 1);
+            ebosSimulator_.problem().beginIteration();
+            ebosSimulator_.model().linearizer().linearize(1);
+            ebosSimulator_.problem().endIteration();
+            const auto& ebosJac1 = ebosSimulator_.model().linearizer().matrix();
+
+
+            // prepare rhs for next step
+            //BVector rhs_next(nc);
+            ebosJac1.mtv(x, rhs_next);
+            rhs_next *= -1.0;
+            /*
+            std::cout << "print all matrixes" << std::endl;
+            Dune::writeMatrixMarket(ebosJac1, std::cout);
+            std::cout << "******* rhs_next *****" << std::endl;
+            std::cout << rhs_next << std::endl;
+            */
+            // should also add explicite contributions rom wells to
+            // reservoir and well
+
+
+
+            /*
+            auto& ebosResid1 = ebosSimulator_.model().linearizer().residual();
+            std::cout << "Printing jacobian residual 1" << std::endl;
+            Dune::writeMatrixMarket(ebosJac1, std::cout);
+            std::cout << std::endl;
+            //std::cout << ebosJac << std::endl;
+            */
+
+            return adjres;
+
+         }
         /// Called once per nonlinear iteration.
         /// This model will perform a Newton-Raphson update, changing reservoir_state
         /// and well_state. It will also use the nonlinear_solver to do relaxation of
@@ -272,6 +460,7 @@ namespace Opm {
                 // Compute the nonlinear update.
                 const int nc = UgGridHelpers::numCells(grid_);
                 BVector x(nc);
+                //std::cout << "print all matrixes" << std::endl;
 
                 try {
                     solveJacobianSystem(x);
@@ -317,7 +506,20 @@ namespace Opm {
 
                 report.update_time += perfTimer.stop();
             }
-
+//            else{
+//                const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+//                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+//                std::cout << "Printing pure residual in forward mode" << std::endl;
+//                std::cout << ebosResid << std::endl;
+//                // apply well residual to the residual.
+//                wellModel().apply(ebosResid);
+//                std::cout << "Printing pure residual in forward mode with well contributions" << std::endl;
+//                std::cout << ebosResid << std::endl;
+//                std::cout << "solution 1" << std::endl;
+//                std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+//                std::cout << "solution 0" << std::endl;
+//                std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
+//            }
             return report;
         }
 
@@ -334,15 +536,21 @@ namespace Opm {
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         void afterStep(const SimulatorTimerInterface& timer,
-                       const ReservoirState& reservoir_state,
-                       WellState& well_state)
+                       const ReservoirState& /*reservoir_state*/,
+                       WellState& /*well_state*/)
         {
-            DUNE_UNUSED_PARAMETER(timer);
-            DUNE_UNUSED_PARAMETER(reservoir_state);
-            DUNE_UNUSED_PARAMETER(well_state);
+            //ebosSimulator_.startNextEpisode( timer.currentStepLength() );
+            //ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
+            // ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+            double time = timer.simulationTimeElapsed()  + timer.currentStepLength();
+            ebosSimulator_.setTime( time);
+            //DUNE_UNUSED_PARAMETER(timer);
+            //DUNE_UNUSED_PARAMETER(reservoir_state);
+            //DUNE_UNUSED_PARAMETER(well_state);
 
             wellModel().timeStepSucceeded();
             ebosSimulator_.problem().endTimeStep();
+            //ebosSimulator_.problem().advanceTimeLevel();
 
         }
 
@@ -356,7 +564,8 @@ namespace Opm {
             // -------- Mass balance equations --------
             ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
             ebosSimulator_.problem().beginIteration();
-            ebosSimulator_.model().linearizer().linearize();
+            //assuem this alwasy is used in forward mode
+            ebosSimulator_.model().linearizer().linearize(/*focustimeindex=*/ 0);
             ebosSimulator_.problem().endIteration();
 
             // -------- Well equations ----------
@@ -366,7 +575,7 @@ namespace Opm {
             {
                 // assembles the well equations and applies the wells to
                 // the reservoir equations as a source term.
-                wellModel().assemble(iterationIdx, dt);
+                wellModel().assemble(iterationIdx, false, dt);
             }
             catch ( const Dune::FMatrixError& e  )
             {
@@ -480,20 +689,32 @@ namespace Opm {
             // apply well residual to the residual.
             wellModel().apply(ebosResid);
 
+//            std::cout << "Printing pure residual in forward mode" << std::endl;
+//            std::cout << ebosResid << std::endl;
+//            std::cout << "solution 1" << std::endl;
+//            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+//            std::cout << "solution 0" << std::endl;
+//            std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
+
             // set initial guess
             x = 0.0;
 
             // Solve system.
             if( isParallel() )
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, true > Operator;
                 Operator opA(ebosJac, wellModel(), istlSolver().parallelInformation() );
                 assert( opA.comm() );
                 istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
             }
             else
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
+                //std::cout.precision(16);
+                //std::cout << x << std::endl;
+                //Dune::writeMatrixMarket(ebosJac, std::cout);
+                //wellModel().printMatrixes();
+                //std::cout << ebosResid << std::endl;
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, false > Operator;
                 Operator opA(ebosJac, wellModel());
                 istlSolver().solve( opA, x, ebosResid );
             }
@@ -508,89 +729,6 @@ namespace Opm {
 
            Adapts a matrix to the assembled linear operator interface
          */
-        template<class M, class X, class Y, class WellModel, bool overlapping >
-        class WellModelMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
-        {
-          typedef Dune::AssembledLinearOperator<M,X,Y> BaseType;
-
-        public:
-          typedef M matrix_type;
-          typedef X domain_type;
-          typedef Y range_type;
-          typedef typename X::field_type field_type;
-
-#if HAVE_MPI
-          typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
-#else
-          typedef Dune::CollectiveCommunication< Grid > communication_type;
-#endif
-
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
-          Dune::SolverCategory::Category category() const override
-          {
-            return overlapping ?
-                   Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
-          }
-#else
-          enum {
-            //! \brief The solver category.
-            category = overlapping ?
-                Dune::SolverCategory::overlapping :
-                Dune::SolverCategory::sequential
-          };
-#endif
-
-          //! constructor: just store a reference to a matrix
-          WellModelMatrixAdapter (const M& A, const WellModel& wellMod, const boost::any& parallelInformation = boost::any() )
-              : A_( A ), wellMod_( wellMod ), comm_()
-          {
-#if HAVE_MPI
-            if( parallelInformation.type() == typeid(ParallelISTLInformation) )
-            {
-              const ParallelISTLInformation& info =
-                  boost::any_cast<const ParallelISTLInformation&>( parallelInformation);
-              comm_.reset( new communication_type( info.communicator() ) );
-            }
-#endif
-          }
-
-          virtual void apply( const X& x, Y& y ) const
-          {
-            A_.mv( x, y );
-            // add well model modification to y
-            wellMod_.apply(x, y );
-
-#if HAVE_MPI
-            if( comm_ )
-              comm_->project( y );
-#endif
-          }
-
-          // y += \alpha * A * x
-          virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
-          {
-            A_.usmv(alpha,x,y);
-            // add scaled well model modification to y
-            wellMod_.applyScaleAdd( alpha, x, y );
-
-#if HAVE_MPI
-            if( comm_ )
-              comm_->project( y );
-#endif
-          }
-
-          virtual const matrix_type& getmat() const { return A_; }
-
-          communication_type* comm()
-          {
-              return comm_.operator->();
-          }
-
-        protected:
-          const matrix_type& A_ ;
-          const WellModel& wellMod_;
-          std::unique_ptr< communication_type > comm_;
-        };
 
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
@@ -999,6 +1137,8 @@ namespace Opm {
 
         /// Should not be called
         std::vector<std::vector<double> >
+
+
         computeFluidInPlace(const std::vector<int>& /*fipnum*/) const
         {            
             //assert(true)
@@ -1010,6 +1150,60 @@ namespace Opm {
         const Simulator& ebosSimulator() const
         { return ebosSimulator_; }
 
+        void adjoint_serialize(){
+            // may hav if here for adjoint run
+            if(param_.do_adjoint_){
+                ebosSimulator_.serialize();
+                serialize_well();
+            }
+        }
+
+        std::string iofilename(){
+            namespace fs = boost::filesystem;
+            std::string output_dir_name = ebosSimulator_.vanguard().eclState().getIOConfig().getOutputDir();
+            //std::string filename =  well_state_proper.getWellFile(this->ebosSimulator(),this->ebosSimulator().time());
+            double t = this->ebosSimulator().time();
+            int rank = ebosSimulator_.gridView().comm().rank();
+            std::string simName = ebosSimulator_.problem().name();
+            std::ostringstream oss;
+            oss <<  "wellstate_" << simName << "_time=" << t << "_rank=" << rank << ".ers";
+            std::string filename = oss.str();
+            fs::path output_dir(output_dir_name);
+            fs::path subdir("ebos_restart");
+            output_dir = output_dir / subdir;
+            // creat subdir for adjoint temp files if not existing
+            if(!(fs::exists(output_dir))){
+                    fs::create_directory(output_dir);
+             }
+            fs::path output_file(filename);
+            fs::path full_path = output_dir / output_file;
+            return full_path.string();
+        }
+
+        void serialize_well(){
+            //namespace fs = boost::filesystem;
+            //fs::path output_dir = ebosSimulator_.vanguard().eclState().getIOConfig().getOutputDir();
+            WellState well_state_proper =  this->wellModel().wellState();//to avoid the const problem with serialize else have to make splitted
+            //std::string filename =  well_state_proper.getWellFile(this->ebosSimulator(),this->ebosSimulator().time());
+            std::string filename = this->iofilename();
+            // could be changed to binary: for wells not for now
+            std::ofstream ofs(filename.c_str());
+            boost::archive::text_oarchive oa(ofs);
+            oa << well_state_proper;
+        }
+
+        void deserialize_well(WellState& well_state){
+            //std::string filename =  well_state.getWellFile(ebosSimulator_, ebosSimulator_.time());
+            std::string filename = this->iofilename();
+            // could be changed to binary: for wells not for now
+            std::ifstream ifs(filename.c_str());
+            boost::archive::text_iarchive oa(ifs);
+            oa >> well_state;
+        }
+        void deserialize_reservoir(Scalar t){
+            // intended only for adjoint simulation
+            ebosSimulator_.deserializeAll(t);
+        }
         /// return the statistics if the nonlinearIteration() method failed
         const SimulatorReport& failureReport() const
         { return failureReport_; }
@@ -1067,6 +1261,53 @@ namespace Opm {
 
     private:
 
+//        void assembleMassBalanceEq(const SimulatorTimerInterface& timer,
+//                                   const int iterationIdx)
+//        {
+//            /* this should have been set
+//            ebosSimulator_.startNextEpisode( timer.currentStepLength() );
+//            ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
+//            ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+//            ebosSimulator_.setTime( timer.simulationTimeElapsed() );
+//            */
+//            ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
+
+//            static int prevEpisodeIdx = 10000;
+
+//            // notify ebos about the end of the previous episode and time step if applicable
+//            if (isBeginReportStep_) {
+//                isBeginReportStep_ = false;
+//                ebosSimulator_.problem().beginEpisode();
+//            }
+
+//            // doing the notifactions here is conceptually wrong and also causes the
+//            // endTimeStep() and endEpisode() methods to be not called for the
+//            // simulation's last time step and episode.
+//            if (ebosSimulator_.model().newtonMethod().numIterations() == 0
+//                && prevEpisodeIdx < timer.reportStepNum())
+//            {
+//                ebosSimulator_.problem().endTimeStep();
+//            }
+
+//            ebosSimulator_.setTimeStepSize( timer.currentStepLength() );
+//            if (ebosSimulator_.model().newtonMethod().numIterations() == 0)
+//            {
+//                ebosSimulator_.problem().beginTimeStep();
+//            }
+
+//            ebosSimulator_.problem().beginIteration();
+//            ebosSimulator_.model().linearizer().linearize();
+//            ebosSimulator_.problem().endIteration();
+
+//            prevEpisodeIdx = ebosSimulator_.episodeIndex();
+
+//            if (param_.update_equations_scaling_) {
+//                std::cout << "equation scaling not suported yet" << std::endl;
+//                //updateEquationsScaling();
+//            }
+//        }
+
+
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
         double drMaxRel() const { return param_.dr_max_rel_; }
@@ -1074,6 +1315,7 @@ namespace Opm {
 
     public:
         std::vector<bool> wasSwitched_;
+
     };
 } // namespace Opm
 

@@ -27,6 +27,7 @@
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolver.hpp>
 #include <opm/autodiff/RateConverter.hpp>
+#include <dune/istl/matrixmarket.hh>
 
 namespace Opm
 {
@@ -62,6 +63,7 @@ namespace Opm
         static const int GFrac = gasoil? 1: 2;
         static const int SFrac = 3;
 
+
         using typename Base::Scalar;
         using typename Base::ConvergenceReport;
 
@@ -76,6 +78,8 @@ namespace Opm
         // TODO: with flow_ebos，for a 2P deck, // TODO: for the 2p deck, numEq will be 3, a dummy phase is already added from the reservoir side.
         // it will cause problem here without processing the dummy phase.
         static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // number of wellEq is only numEq - 1 for polymer
+        static const int numAdjoint = GET_PROP_VALUE(TypeTag, numAdjoint);
+        static const int control_index=numEq + numWellEq;
         using typename Base::Mat;
         using typename Base::BVector;
         using typename Base::Eval;
@@ -88,23 +92,39 @@ namespace Opm
         typedef Dune::FieldVector<Scalar, numWellEq> VectorBlockWellType;
         typedef Dune::BlockVector<VectorBlockWellType> BVectorWell;
 
+        // vector type or cntrl need for adjoint
+        typedef Dune::FieldVector<Scalar, 1> VectorBlockWellCtrlType;
+        typedef Dune::BlockVector<VectorBlockWellCtrlType> BVectorWellCtrl;
+
+        // vector type for res need for adjoint
+        //typedef Dune::FieldVector<Scalar, numEq >        VectorBlockResType;
+        //typedef Dune::BlockVector<VectorBlockResType>      BVectorRes;
+
 #if  DUNE_VERSION_NEWER_REV(DUNE_ISTL, 2 , 5, 1)
         // 3x3 matrix block inversion was unstable from at least 2.3 until and
         // including 2.5.0
         // the matrix type for the diagonal matrix D
         typedef Dune::FieldMatrix<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
+        typedef Dune::FieldMatrix<Scalar, numWellEq, 1 > DiagMatrixBlockWellAdjointType;
 #else
         // the matrix type for the diagonal matrix D
         typedef Dune::MatrixBlock<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
+        typedef Dune::MatrixBlock<Scalar, numWellEq, 1 > DiagMatrixBlockWellAdjointType;
 #endif
 
         typedef Dune::BCRSMatrix <DiagMatrixBlockWellType> DiagMatWell;
+        typedef Dune::BCRSMatrix <DiagMatrixBlockWellAdjointType> DiagMatWellCtrl;
 
         // the matrix type for the non-diagonal matrix B and C^T
         typedef Dune::FieldMatrix<Scalar, numWellEq, numEq>  OffDiagMatrixBlockWellType;
         typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellType> OffDiagMatWell;
 
-        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
+        // for adjoint
+        typedef Dune::FieldMatrix<Scalar, 1, numEq>  OffDiagMatrixBlockWellAdjointType;
+        typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellAdjointType> OffDiagMatWellCtrl;
+
+        // added extra space in derivative to have control derivatives
+        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq+numAdjoint> EvalWell;
 
         using Base::contiSolventEqIdx;
         using Base::contiPolymerEqIdx;
@@ -141,10 +161,44 @@ namespace Opm
         /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const;
 
+        /// Ax = Atx - Bt Dt^-1 C x
+        virtual void applyt(const BVector& x, BVector& Ax) const;
+        /// r = r - Bt Dt^-1 Rw
+        virtual void applyt(BVector& r) const;
+
+        // adjoint right hand side of well equations
+        // this may at a later point depend on the adjont vectors for prevois step of
+        // reservoir and well equations
+        void rhsAdjointWell();//(const BVectorWell& lamda_w);
+
+        // add the contributions of the well to the righ has side of the reservoir
+        // adjoint equations
+        void rhsAdjointRes(BVector& adjRes) const;
+
+        // compute objective derivative contributions used for forming the right hand side
+        // and calculating the objective
+        void computeObj(Simulator& ebosSimulator,
+                        const double dt);
+
+
+        // update derivative contribution from this well
+        void objectDerivative(const BVector& lam_r ,const BVectorWell& lam_w);
+
+        // get the results NB only valid after compute objective Derivative
+        void addAdjointResult(AdjointResults& adjres) const;
+        // print object function
+        void printObjective(std::ostream& os) const;
+        // recover adjoint variables for wells and update well_state
+        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x,
+                                                             WellState& well_state);
+
+
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state) const;
+
+
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
@@ -157,6 +211,40 @@ namespace Opm
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state); // should be const?
+        void printMatrixes() const{
+            std::cout << "duneB " << std::endl;
+            Dune::writeMatrixMarket(duneB_, std::cout);
+            std::cout << std::endl;
+            std::cout << "duneC " << std::endl;
+            Dune::writeMatrixMarket(duneC_, std::cout);
+            std::cout << std::endl;
+            std::cout << "duneD " << std::endl;
+            // diagonal matrix for the well
+            Dune::writeMatrixMarket(duneD_, std::cout);
+            std::cout << "invDuneD " << std::endl;
+            // diagonal matrix for the well
+            Dune::writeMatrixMarket(invDuneD_, std::cout);
+            //std::cout << std::endl;
+            // for adjoint
+            std::cout << "duneCA " << std::endl;
+            Dune::writeMatrixMarket(duneCA_, std::cout);
+            std::cout << std::endl;
+            //OffDiagMatWellAdjoint duneCA_;
+            std::cout << "duneDA " << std::endl;
+            Dune::writeMatrixMarket(duneDA_, std::cout);
+            std::cout << std::endl;
+            std::cout << "adjWell_ " << std::endl;
+            Dune::writeMatrixMarket(adjWell_, std::cout);
+            std::cout << "objder_adjres_ " << std::endl;
+            Dune::writeMatrixMarket(objder_adjres_, std::cout);
+            std::cout << "objder_adjwell_ " << std::endl;
+            Dune::writeMatrixMarket(objder_adjwell_, std::cout);
+            std::cout << "objder_adjctrl_ " << std::endl;
+            Dune::writeMatrixMarket(objder_adjctrl_, std::cout);
+            std::cout << "adjont_variables " << std::endl;
+            Dune::writeMatrixMarket(adjoint_variables_, std::cout);
+
+        }
     protected:
 
         // protected functions from the Base class
@@ -201,19 +289,49 @@ namespace Opm
         // residuals of the well equations
         BVectorWell resWell_;
 
+        // adjoint rhs of the well equations
+        BVectorWell adjWell_;
+
         // two off-diagonal matrices
         OffDiagMatWell duneB_;
         OffDiagMatWell duneC_;
+
         // diagonal matrix for the well
+        DiagMatWell duneD_;// not striktly neeed
         DiagMatWell invDuneD_;
+
+        // for adjoint
+        OffDiagMatWellCtrl duneCA_;
+        //OffDiagMatWellAdjoint duneCA_;
+        DiagMatWellCtrl duneDA_;
+
+        // quatities forobjective function
+        Scalar objval_;
+        mutable BVectorWellCtrl objder_;
+        // well, cells, res primary var
+        mutable BVector  objder_adjres_;
+        // ... well, well_primary variables
+        mutable BVectorWell  objder_adjwell_;
+        // ... well, control variables
+        mutable BVectorWellCtrl objder_adjctrl_;
+
+
 
         // several vector used in the matrix calculation
         mutable BVectorWell Bx_;
         mutable BVectorWell invDrw_;
 
+        // several vector used in the matrix calculation of transpose solve
+        mutable BVectorWell Ctx_;
+        mutable BVectorWell invDtadj_;
+
         // the values for the primary varibles
         // based on different solutioin strategies, the wells can have different primary variables
         mutable std::vector<double> primary_variables_;
+
+        // adjoint variables for well
+        mutable BVectorWell adjoint_variables_;
+        //mutable std::vector<double> adjoint_variables_;
 
         // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
         mutable std::vector<EvalWell> primary_variables_evaluation_;
@@ -242,9 +360,15 @@ namespace Opm
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
+        // recover well adoint variables
+        void recoverAdjointWell(const BVector& x, BVectorWell& xw) const;
+
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
                              WellState& well_state) const;
+
+        // updating the well_state based on well solution dwells
+        void updateAdjointState(const BVectorWell& dwells, WellState& well_state) const;
 
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.

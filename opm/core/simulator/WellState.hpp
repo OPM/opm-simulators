@@ -33,6 +33,17 @@
 #include <cassert>
 #include <cstddef>
 
+#include <boost/archive/tmpdir.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/utility.hpp>
+#include <boost/serialization/list.hpp>
+#include <boost/serialization/assume_abstract.hpp>
+#include <boost/serialization/map.hpp>
+
 namespace Opm
 {
     /// The state of a set of wells.
@@ -189,6 +200,20 @@ namespace Opm
         std::vector<double>& perfPress() { return perfpress_; }
         const std::vector<double>& perfPress() const { return perfpress_; }
 
+
+        // Variables for Adjoint boiler plate to get them out
+        /// One pressure per well connection.
+        std::vector<double>& objDer() { return objder_; }
+        const std::vector<double>& objDer() const { return objder_; }
+
+        /// One pressure per well connection.
+        std::vector<double>& adjointVariables() { return adjoint_variables_; }
+        const std::vector<double>& adjointVariables() const { return adjoint_variables_; }
+
+        /// One pressure per well connection.
+        double&  objVal() { return objval_; }
+        const double& objVal() const { return objval_; }
+
         size_t getRestartBhpOffset() const {
             return 0;
         }
@@ -299,6 +324,19 @@ namespace Opm
         }
 
     private:
+        friend class boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version)
+        {
+            //ar & boost::serialization::base_object<BaseType>(*this);
+            ar & bhp_;
+            ar & thp_;
+            ar & temperature_;
+            ar & wellrates_;
+            ar & perfrates_;
+            ar & perfpress_;
+            ar & wellMap_;
+        }
         std::vector<double> bhp_;
         std::vector<double> thp_;
         std::vector<double> temperature_;
@@ -307,6 +345,11 @@ namespace Opm
         std::vector<double> perfpress_;
 
         WellMapType wellMap_;
+
+        // adjoint states
+        double objval_;
+        std::vector<double> objder_;
+        std::vector<double> adjoint_variables_;
 
     protected:
         struct wdel {
