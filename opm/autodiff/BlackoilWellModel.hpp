@@ -97,7 +97,7 @@ namespace Opm {
 
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
-            void assemble(const int iterationIdx,
+            void assemble(const int iterationIdx, const bool solve_well_equation,
                                      const double dt);
 
             void rhsAdjointRes(BVector& adjRes);

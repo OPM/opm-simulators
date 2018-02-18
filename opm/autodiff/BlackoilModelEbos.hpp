@@ -296,7 +296,7 @@ namespace Opm {
             //int
             //iterationIdx = 0;//for wells we need this to make update correctyin flow is make shift the state???
             assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
-            wellModel().assemble(/*iterationIdx*/ 0, ebosSimulator_.timeStepSize());
+            wellModel().assemble(/*iterationIdx*/ 0, true, ebosSimulator_.timeStepSize());
 
             wellModel().apply(ebosResid);
             //wellModel().printMatrixes();
@@ -460,7 +460,7 @@ namespace Opm {
                 // Compute the nonlinear update.
                 const int nc = UgGridHelpers::numCells(grid_);
                 BVector x(nc);
-                std::cout << "print all matrixes" << std::endl;
+                //std::cout << "print all matrixes" << std::endl;
 
                 try {
                     solveJacobianSystem(x);
@@ -575,7 +575,7 @@ namespace Opm {
             {
                 // assembles the well equations and applies the wells to
                 // the reservoir equations as a source term.
-                wellModel().assemble(iterationIdx, dt);
+                wellModel().assemble(iterationIdx, false, dt);
             }
             catch ( const Dune::FMatrixError& e  )
             {
@@ -1157,16 +1157,45 @@ namespace Opm {
                 serialize_well();
             }
         }
+
+        std::string iofilename(){
+            namespace fs = boost::filesystem;
+            std::string output_dir_name = ebosSimulator_.vanguard().eclState().getIOConfig().getOutputDir();
+            //std::string filename =  well_state_proper.getWellFile(this->ebosSimulator(),this->ebosSimulator().time());
+            double t = this->ebosSimulator().time();
+            int rank = ebosSimulator_.gridView().comm().rank();
+            std::string simName = ebosSimulator_.problem().name();
+            std::ostringstream oss;
+            oss <<  "wellstate_" << simName << "_time=" << t << "_rank=" << rank << ".ers";
+            std::string filename = oss.str();
+            fs::path output_dir(output_dir_name);
+            fs::path subdir("ebos_restart");
+            output_dir = output_dir / subdir;
+            // creat subdir for adjoint temp files if not existing
+            if(!(fs::exists(output_dir))){
+                    fs::create_directory(output_dir);
+             }
+            fs::path output_file(filename);
+            fs::path full_path = output_dir / output_file;
+            return full_path.string();
+        }
+
         void serialize_well(){
+            //namespace fs = boost::filesystem;
+            //fs::path output_dir = ebosSimulator_.vanguard().eclState().getIOConfig().getOutputDir();
             WellState well_state_proper =  this->wellModel().wellState();//to avoid the const problem with serialize else have to make splitted
-            std::string filename =  well_state_proper.getWellFile(this->ebosSimulator(),this->ebosSimulator().time());
+            //std::string filename =  well_state_proper.getWellFile(this->ebosSimulator(),this->ebosSimulator().time());
+            std::string filename = this->iofilename();
+            // could be changed to binary: for wells not for now
             std::ofstream ofs(filename.c_str());
             boost::archive::text_oarchive oa(ofs);
             oa << well_state_proper;
         }
 
         void deserialize_well(WellState& well_state){
-            std::string filename =  well_state.getWellFile(ebosSimulator_, ebosSimulator_.time());
+            //std::string filename =  well_state.getWellFile(ebosSimulator_, ebosSimulator_.time());
+            std::string filename = this->iofilename();
+            // could be changed to binary: for wells not for now
             std::ifstream ifs(filename.c_str());
             boost::archive::text_iarchive oa(ifs);
             oa >> well_state;
