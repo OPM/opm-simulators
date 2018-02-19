@@ -565,7 +565,7 @@ public:
         }
 
         bool doInvalidate = updateHysteresis_();
-        doInvalidate = doInvalidate || updateMaxOilSaturation_();
+        doInvalidate = updateMaxOilSaturation_() || doInvalidate;
 
         if (GET_PROP_VALUE(TypeTag, EnablePolymer))
             updateMaxPolymerAdsorption_();
