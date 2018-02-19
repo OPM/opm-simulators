@@ -49,6 +49,9 @@ namespace Opm
         /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
         void init(const TimeMap& timeMap, size_t report_step = 0);
 
+        // init form given steps
+        void init(std::vector<double> time_steps,std::vector<int> report_stepindx);
+
         /// Whether the current step is the first step.
         bool initialStep() const;
 
@@ -61,6 +64,12 @@ namespace Opm
         /// is timestep number zero.
         int currentStepNum() const;
 
+        // get current report step which is the same give the index to the
+        // state of the well configuration
+        int reportStepNum() const;
+
+        // get the previos report step number
+        int prevReportStepNum() const;
         /// Set current step number.
         void setCurrentStepNum(int step);
 
@@ -128,9 +137,11 @@ namespace Opm
 //            return stream;
 //        }
 
+        std::vector<double> getTimeSteps(){return timesteps_;}
 
     private:
         std::vector<double> timesteps_;
+        std::vector<int> report_stepindx_;
         int current_step_;
         double current_time_;
         double total_time_;

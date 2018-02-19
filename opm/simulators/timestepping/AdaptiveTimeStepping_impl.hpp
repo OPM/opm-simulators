@@ -284,6 +284,7 @@ namespace Opm {
             if( substepReport.converged )
             {
                 // advance by current dt
+                this->addLocalTimestep(dt,simulatorTimer.reportStepNum());
                 ++substepTimer;
 
                 // create object to compute the time error, simply forwards the call to the model

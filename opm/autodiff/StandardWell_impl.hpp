@@ -606,11 +606,18 @@ namespace Opm
         adjres.objective.push_back(objval_);
         WellControls *ctrl = this->wellControls();
         const double* drst = well_controls_get_current_distr(ctrl);
-        /*
-        control_state =  "Current control " + well_controls_get_current_type(ctrl) + "  " +
-                drst[0] + " "  + drst[1] <<  "  "  + drst[2]  +  "  " ;
-        */
-        //adjres.control_state.push_back("what ??");
+        std::stringstream control_state;
+        control_state <<  "Current control " << well_controls_get_current_type(ctrl) << "  " <<
+                drst[0] << " "  << drst[1] <<  "  "  << drst[2]  ;
+        adjres.control_state.push_back(control_state.str());
+        int cont_indx = well_controls_get_current_type(ctrl);
+        // hack to have some idea of state
+        for(int i=0; i < 3;i++){
+            if(drst[i]>0.5){
+                cont_indx += i*10;
+            }
+        }
+        adjres.control_indx.push_back(cont_indx);
         //adjres.schedule_step.push_back()
 
     }
