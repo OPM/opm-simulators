@@ -905,59 +905,60 @@ public:
     void setRestart(const Opm::data::Solution& sol, unsigned elemIdx, unsigned globalDofIndex) 
     {
         Scalar so = 1.0;
-        if( sol.has( "SWAT" ) ) {
+        if( saturation_[waterPhaseIdx].size() > 0 && sol.has( "SWAT" ) ) {
             saturation_[waterPhaseIdx][elemIdx] = sol.data("SWAT")[globalDofIndex];
             so -= sol.data("SWAT")[globalDofIndex];
         }
 
-        if( sol.has( "SGAS" ) ) {
+        if( saturation_[gasPhaseIdx].size() > 0 && sol.has( "SGAS" ) ) {
             saturation_[gasPhaseIdx][elemIdx] = sol.data("SGAS")[globalDofIndex];
             so -= sol.data("SGAS")[globalDofIndex];
         }
 
+        assert(saturation_[oilPhaseIdx].size() > 0);
         saturation_[oilPhaseIdx][elemIdx] = so;
 
-        if( sol.has( "PRESSURE" ) ) {
+        if( oilPressure_.size() > 0 && sol.has( "PRESSURE" ) ) {
             oilPressure_[elemIdx] = sol.data( "PRESSURE" )[globalDofIndex];
         }
 
-        if( sol.has( "TEMP" ) ) {
+        if( temperature_.size() > 0 && sol.has( "TEMP" ) ) {
             temperature_[elemIdx] = sol.data( "TEMP" )[globalDofIndex];
         }
 
-        if( sol.has( "RS" ) ) {
+        if( rs_.size() > 0 && sol.has( "RS" ) ) {
             rs_[elemIdx] = sol.data("RS")[globalDofIndex];
         }
 
-        if( sol.has( "RV" ) ) {
+        if( rv_.size() > 0 && sol.has( "RV" ) ) {
             rv_[elemIdx] = sol.data("RV")[globalDofIndex];
         }
 
-        if ( sol.has( "SSOL" ) ) {
+        if ( sSol_.size() > 0 && sol.has( "SSOL" ) ) {
             sSol_[elemIdx] = sol.data("SSOL")[globalDofIndex];
         }
 
-        if ( sol.has("POLYMER" ) ) {
+        if ( cPolymer_.size() > 0 && sol.has("POLYMER" ) ) {
             cPolymer_[elemIdx] = sol.data("POLYMER")[globalDofIndex];
         }
 
-        if ( sol.has("SOMAX" ) ) {
+        if ( soMax_.size() > 0 && sol.has("SOMAX" ) ) {
             soMax_[elemIdx] = sol.data("SOMAX")[globalDofIndex];
         }
 
-        if ( sol.has("PCSWM_OW" ) ) {
+        if ( pcSwMdcOw_.size() > 0 &&sol.has("PCSWM_OW" ) ) {
             pcSwMdcOw_[elemIdx] = sol.data("PCSWM_OW")[globalDofIndex];
         }
 
-        if ( sol.has("KRNSW_OW" ) ) {
+        if ( krnSwMdcOw_.size() > 0 && sol.has("KRNSW_OW" ) ) {
             krnSwMdcOw_[elemIdx] = sol.data("KRNSW_OW")[globalDofIndex];
         }
 
-        if ( sol.has("PCSWM_GO" ) ) {
+        if ( pcSwMdcGo_.size() > 0 && sol.has("PCSWM_GO" ) ) {
             pcSwMdcGo_[elemIdx] = sol.data("PCSWM_GO")[globalDofIndex];
         }
 
-        if ( sol.has("KRNSW_GO" ) ) {
+        if ( krnSwMdcGo_.size() > 0 && sol.has("KRNSW_GO" ) ) {
             krnSwMdcGo_[elemIdx] = sol.data("KRNSW_GO")[globalDofIndex];
         }
     }
