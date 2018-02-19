@@ -1008,7 +1008,7 @@ public:
     void initHysteresisParams(Simulator& simulator, unsigned elemIdx) const {
 
         if (soMax_.size() > 0)
-            simulator.problem().setMaxOilSaturation(soMax_[elemIdx], elemIdx);
+            simulator.problem().setMaxOilSaturation(elemIdx, soMax_[elemIdx]);
 
         if (simulator.problem().materialLawManager()->enableHysteresis()) {
             auto matLawManager = simulator.problem().materialLawManager();
