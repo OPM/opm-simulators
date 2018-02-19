@@ -347,8 +347,16 @@ public:
         PolymerModule::initFromDeck(vanguard.deck(), vanguard.eclState());
 
         if (EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput)) {
-            // retrieve the location where the output is supposed to go
-            const auto& outputDir = EWOMS_GET_PARAM(TypeTag, std::string, EclOutputDir);
+            // retrieve the location set by the user
+            std::string outputDir = EWOMS_GET_PARAM(TypeTag, std::string, EclOutputDir);
+
+            auto& eclState = this->simulator().vanguard().eclState();
+            auto& ioConfig = eclState.getIOConfig();
+            if (outputDir == ".") {
+                // Default output directory is the directory where the deck is found.
+                const std::string default_output_dir = ioConfig.getOutputDir();
+                outputDir = default_output_dir;
+            }
 
             // ensure that the output directory exists and that it is a directory
             if (outputDir != ".") { // Do not try to create the current directory.
@@ -364,8 +372,6 @@ public:
 
             // specify the directory output. This is not a very nice mechanism because
             // the eclState is supposed to be immutable here, IMO.
-            auto& eclState = this->simulator().vanguard().eclState();
-            auto& ioConfig = eclState.getIOConfig();
             ioConfig.setOutputDir(outputDir);
 
             // create the actual ECL writer
