@@ -1959,8 +1959,8 @@ namespace Opm
     {
         const SpiralICD& sicd = *segmentSet()[seg].spiralICD();
 
-        const EvalWell& density = segment_densities_[seg];
-        const EvalWell base_strength = sicd.strength() / density;
+        const double density_cali = sicd.densityCalibration();
+        const double base_strength = sicd.strength() / density_cali;
 
         const std::vector<EvalWell>& phase_fractions = segment_phase_fractions_[seg];
         const std::vector<EvalWell>& phase_viscosities = segment_phase_viscosities_[seg];
@@ -2000,11 +2000,11 @@ namespace Opm
 
         const EvalWell reservoir_rate_icd = reservoir_rate * sicd.scalingFactor();
 
-        const double density_cali = sicd.densityCalibration();
         const double viscosity_cali = sicd.viscosityCalibration();
 
         using MathTool = MathToolbox<EvalWell>;
 
+        const EvalWell& density = segment_densities_[seg];
         const EvalWell temp_value1 = MathTool::pow(density / density_cali, 0.75);
         const EvalWell temp_value2 = MathTool::pow(mixture_viscosity / viscosity_cali, 0.25);
 
