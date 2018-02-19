@@ -274,8 +274,9 @@ namespace Opm
                 baseName = path(fpath.filename()).string();
             }
 
-            logFileStream << output_dir_ << "/" << baseName;
-            debugFileStream << output_dir_ << "/" << "." << baseName;
+            const std::string& output_dir = eclState().getIOConfig().getOutputDir();
+            logFileStream << output_dir << "/" << baseName;
+            debugFileStream << output_dir << "/" << "." << baseName;
 
             if ( must_distribute_ && mpi_rank_ != 0 )
             {
@@ -375,13 +376,13 @@ namespace Opm
 
             namespace fs = boost::filesystem;
             fs::path output_path(".");
+            const std::string& output_dir = eclState().getIOConfig().getOutputDir();
             if ( param_.has("output_dir") )
             {
-                output_path = fs::path(output_dir_);
+                output_path = fs::path(output_dir);
             }
 
             fs::path deck_filename(param_.get<std::string>("deck_filename"));
-
             std::for_each(fs::directory_iterator(output_path),
                           fs::directory_iterator(),
                           detail::ParallelFileMerger(output_path, deck_filename.stem().string()));
@@ -398,12 +399,12 @@ namespace Opm
             deckFileParam += deckFileName;
             argv.push_back(deckFileParam.c_str());
 
-            const std::string default_output_dir = boost::filesystem::basename(deckFileName);
-            output_dir_ = param_.getDefault("output_dir", default_output_dir);
-
             std::string outputDirParam("--ecl-output-dir=");
-            outputDirParam += output_dir_;
-            argv.push_back(outputDirParam.c_str());
+            if (param_.has("output_dir")) {
+                const std::string& output_dir = param_.get<std::string>("output_dir");
+                outputDirParam += output_dir;
+                argv.push_back(outputDirParam.c_str());
+            }
 
             const bool restart_double_si  = param_.getDefault("restart_double_si", false);
             std::string outputDoublePrecisionParam("--ecl-output-double-precision=");
@@ -662,7 +663,6 @@ namespace Opm
         bool must_distribute_ = false;
         ParameterGroup param_;
         bool output_to_files_ = false;
-        std::string output_dir_ = std::string(".");
         std::unique_ptr<OutputWriter> output_writer_;
         boost::any parallel_information_;
         std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver_;
