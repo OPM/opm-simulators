@@ -242,14 +242,14 @@ namespace mswellhelpers
                                 const double oil_fraction, const ValueType& oil_viscosity,
                                 const SpiralICD& sicd)
     {
-        const double width_transition = sicd.width_transition_region;
+        const double width_transition = sicd.widthTransitionRegion();
 
         // it is just for now, we should be able to treat it.
         if (width_transition <= 0.) {
             OPM_THROW(std::runtime_error, "Not handling non-positive transition width now");
         }
 
-        const double critical_value = sicd.critical_value;
+        const double critical_value = sicd.criticalValue();
         const double transition_start_value = critical_value - width_transition / 2.0;
         const double transition_end_value = critical_value + width_transition / 2.0;
 
@@ -261,7 +261,7 @@ namespace mswellhelpers
 
         const double water_liquid_fraction = water_fraction / liquid_fraction;
 
-        const double max_visco_ratio = sicd.max_viscosity_ratio;
+        const double max_visco_ratio = sicd.maxViscosityRatio();
         if (water_liquid_fraction <= transition_start_value) {
             return WIOEmulsionViscosity(oil_viscosity, water_liquid_fraction, max_visco_ratio);
         } else if(water_liquid_fraction >= transition_end_value) {
