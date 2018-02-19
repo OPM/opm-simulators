@@ -216,6 +216,7 @@ public:
             solverTimer.start();
 
             wellModel.beginReportStep(timer.currentStepNum());
+for adjoint is well changes and control changes
 
             auto solver = createSolver(wellModel, aquifer_model);
 
@@ -330,6 +331,17 @@ public:
         report.total_time = totalTimer.secsSinceStart();
         report.converged = true;
 
+        if(adaptiveTimeStepping){
+            report.time_steps = adaptiveTimeStepping->getAllTimeStepsTaken();
+            report.report_stepindx = adaptiveTimeStepping->getAllGlobalstepIndx();
+        }else{
+            report.time_steps = timer.getTimeSteps();
+            auto num_steps = timer.reportStepNum();
+            report.report_stepindx.resize(num_steps);
+            for(int i=0;i<num_steps;i++){
+                report.report_stepindx[i] = i;
+            }
+        }
         return report;
     }
 
@@ -350,7 +362,7 @@ public:
 
          WellModel well_model(ebosSimulator_, model_param_, terminal_output_);
         //if (output_writer_.isRestart()) {
-         //   well_model.setRestartWellState(prev_well_state); // Neccessary for perfect restarts
+         //   well_model.setRestartWellState(prev_well_state); // Neccessary for perfect restarts ??
         //}
         //SET_BOOL_PROP(EclBaseProblem, EnableStorageCache, false)
         //ebosSimulator_.problem().setEnableStorageCache(false);
@@ -364,36 +376,34 @@ public:
         // static const int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
 
         typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
-        //typedef Dune::FieldMatrix<Scalar, numEq, numEq >        MatrixBlockType;
-        //typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
         typedef Dune::BlockVector<VectorBlockType>      BVector;
         const int nc = UgGridHelpers::numCells(grid());
         BVector rhs(nc);
         BVector rhs_next(nc);
         std::cout << "Start Adjoint iteration" << std::endl;
         std::list<AdjointResults> adjoint_res;
+        // we are after ebd step
+
         while (!timer.initialStep()) {
-            // opefulle the -1 is ok we ar pressent at end of the timestep we nned
+            // hopefulle the -1 is ok we ar pressent at end of the timestep we nned
             // the prevois eclipse state
-            well_model.beginReportStep(timer.currentStepNum()-1);// this should really be clean to make a better initialization for backward simulation
+            // we are before we move back
+            well_model.beginReportStep(timer.prevReportStepNum());// this should really be clean to make a better initialization for backward simulation
             timer.report(std::cout);
             //WellState prev_well_state// assume we can read all of this inside;
             //output_writer_.initFromRestartFile(phaseUsage_, grid(), state, prev_well_state, extra);
             auto solver = createSolver(well_model);
-            //adjoint_report = solver->stepAdjoint(timer, rhs, rhs_next);// state, well_state);
             AdjointResults adjres = solver->model().adjointIteration(timer, rhs, rhs_next);// state, well_state);
             adjoint_res.push_front(adjres);
             rhs=rhs_next;
             --timer;
-            //std::cout << rhs << std::endl;
-            // WellModel well_model;
-            // auto solver = createSolver(well_model);
-            // adjoint_report = solver_>step(timer, state, well_state);
         }
-        std::string filename = param_.getDefault("adjoint_result_file", std::string("adjoint_results.txt"));
-        std::string output_dir = param_.get<std::string>("output_dir");//NB hack where should this be taken from
-        std::string adjoint_output = output_dir + "/" + filename;
-        std::ofstream ofile(adjoint_output);
+        namespace fs = boost::filesystem;
+        fs::path filename( param_.getDefault( "adjoint_result_file",  std::string("adjoint_results.txt") ) );
+        std::string output_dir_name = ebosSimulator_.vanguard().eclState().getIOConfig().getOutputDir();
+        fs::path output_dir(output_dir_name);
+        fs::path adjoint_output = output_dir / filename;
+        std::ofstream ofile(adjoint_output.string());
         for (auto& adjres: adjoint_res){
             adjres.print(std::cout);
             adjres.print(ofile);

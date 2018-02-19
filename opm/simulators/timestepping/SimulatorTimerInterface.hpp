@@ -50,7 +50,7 @@ namespace Opm
 
         /// Current report step number. This might differ from currentStepNum in case of sub stepping
         virtual int reportStepNum() const { return currentStepNum(); }
-
+        virtual int prevReportStepNum() const {return currentStepNum()-1; }
         /// Current step length. This is the length of the step
         /// the simulator will take in the next iteration.
         ///

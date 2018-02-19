@@ -106,7 +106,16 @@ namespace Opm {
             timestep_after_event_ = tuning.getTMAXWC(time_step);
         }
 
-
+        void addLocalTimestep(double dt,int global_step_indx){
+            local_timesteps_.push_back(dt);
+            local_globalstepindx_.push_back(global_step_indx);
+        }
+        std::vector<double> getAllTimeStepsTaken() const{
+            return local_timesteps_;
+        }
+        std::vector<int> getAllGlobalstepIndx() const{
+            return local_globalstepindx_;
+        }
     protected:
         template <class Solver, class State, class WellState, class Output>
         SimulatorReport stepImpl( const SimulatorTimer& timer,
@@ -132,6 +141,8 @@ namespace Opm {
         bool full_timestep_initially_;        //!< beginning with the size of the time step from data file
         double timestep_after_event_;         //!< suggested size of timestep after an event
         bool use_newton_iteration_;           //!< use newton iteration count for adaptive time step control
+        std::vector<double> local_timesteps_;
+        std::vector<int>       local_globalstepindx_;
     };
 }
 

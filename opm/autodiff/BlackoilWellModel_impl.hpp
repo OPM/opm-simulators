@@ -569,6 +569,7 @@ namespace Opm {
         for (auto& well : well_container_) {
             well->addAdjointResult(adjres);
         }
+        adjres.schedule_step = ebosSimulator_.episodeIndex();
         return adjres;
     }
 

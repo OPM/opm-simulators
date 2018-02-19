@@ -71,25 +71,35 @@ namespace Opm
             for (auto s: well_names){
                 os << s << '\t';
             }
+            os << std::endl;
+            os << "% ";
             for (auto s: control_state){
                 os << s << '\t';
             }
             os << std::endl;
+            // for easy read in octave and matlab add control index as first number on all numerical lines
+            os << schedule_step << '\t';
+            for (auto s: control_indx){
+                os << s << '\t';
+            }
+            os << std::endl;
+            os << schedule_step << '\t';
             for (auto s: objective){
                 os << s << '\t';
             }
             os << std::endl;
+            os << schedule_step << '\t';
             for (auto s: derivative){
                 os << s << '\t';
             }
             os << std::endl;
 
         }
-
         std::vector<std::string> well_names;
         std::vector<double> derivative;
         std::vector<double> objective;
         std::vector<std::string> control_state;
+        std::vector<int> control_indx;
         int schedule_step;
     };
 
