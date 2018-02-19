@@ -40,7 +40,7 @@
 #include <opm/autodiff/ParallelDebugOutput.hpp>
 
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/ThreadHandle.hpp>
+#include <ebos/threadhandle.hh>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -317,6 +317,7 @@ namespace Opm
         const SummaryConfig& summaryConfig_;
 
         std::unique_ptr< ThreadHandle > asyncOutput_;
+        const int* globalCellIdxMap_;
     };
 
 
@@ -348,7 +349,8 @@ namespace Opm
         eclipseState_(eclipseState),
         schedule_(schedule),
         summaryConfig_(summaryConfig),
-        asyncOutput_()
+        asyncOutput_(),
+        globalCellIdxMap_(Opm::UgGridHelpers::globalCell(grid))
     {
         // For output.
         if ( output_ )

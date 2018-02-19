@@ -339,7 +339,7 @@ namespace Opm
                                       substep,
                                       timer.simulationTimeElapsed(),
                                       simProps,
-                                      wellState.report(phaseUsage_),
+                                      wellState.report(phaseUsage_, globalCellIdxMap_),
                                       miscSummaryData,
                                       {}, //regionData
                                       {}, //blockData
