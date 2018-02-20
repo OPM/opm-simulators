@@ -111,8 +111,8 @@ ERT::ert_unique_ptr< ecl_sum_type, ecl_sum_free > readsum( const std::string& ba
 void test_summary()
 {
     typedef typename TTAG(TestEclOutputTypeTag) TypeTag;
-    const std::string filename = "data/summary_deck_non_constant_porosity.DATA";
-    const std::string casename = "summary_deck_non_constant_porosity";
+    const std::string filename = "data/SUMMARY_DECK_NON_CONSTANT_POROSITY.DATA";
+    const std::string casename = "data/SUMMARY_DECK_NON_CONSTANT_POROSITY";
 
     auto simulator = initSimulator<TypeTag>(filename.data());
     typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
