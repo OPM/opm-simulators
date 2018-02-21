@@ -582,7 +582,13 @@ namespace Opm {
              *
              *
              * \param[out] coeff Surface-to-reservoir conversion
-             * coefficients for all active phases.
+             * coefficients that can be used to compute total reservoir
+             * volumes from surface volumes with the formula
+             *               q_{rT} = \sum_p coeff[p] q_{sp}.
+             * However, individual phase reservoir volumes cannot be calculated from
+             * these coefficients (i.e. q_{rp} is not equal to coeff[p] q_{sp})
+             * since they can depend on more than one surface volume rate when
+             * we have dissolved gas or vaporized oil.
              */
             template <class Coeff>
             void
@@ -663,6 +669,8 @@ namespace Opm {
                                       Rates& voidage_rates) const
             {
                 assert(voidage_rates.size() == surface_rates.size());
+
+                std::fill(voidage_rates.begin(), voidage_rates.end(), 0.0);
 
                 const auto& pu = phaseUsage_;
                 const auto& ra = attr_.attributes(r);

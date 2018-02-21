@@ -857,7 +857,7 @@ namespace Opm
 
         std::vector<double> surface_rates(np, 0.0);
         const int well_rate_index = np * index_of_well_;
-        for (int p =0; p < np; ++p) {
+        for (int p = 0; p < np; ++p) {
             surface_rates[p] = well_state.wellRates()[well_rate_index + p];
         }
 

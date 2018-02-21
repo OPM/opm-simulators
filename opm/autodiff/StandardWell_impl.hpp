@@ -522,10 +522,21 @@ namespace Opm
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                     const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                    // TODO: not sure if this is the correct way
+                    // TODO: the formulations here remain to be tested with cases with strong crossflow through production wells
+                    // s means standard condition, r means reservoir condition
+                    // q_os = q_or * b_o + rv * q_gr * b_g
+                    // q_gs = q_gr * g_g + rs * q_or * b_o
+                    // d = 1.0 - rs * rv
+                    // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
+                    // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
+
                     const double d = 1.0 - rv.value() * rs.value();
-                    perf_vap_oil_rate = (rv.value() * cq_s[gasCompIdx].value()) / d;
-                    perf_dis_gas_rate = (rs.value() * cq_s[oilCompIdx].value()) / d;
+                    // vaporized oil into gas
+                    // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
+                    perf_vap_oil_rate = rv.value() * (cq_s[gasCompIdx].value() - rs.value() * cq_s[oilCompIdx].value()) / d;
+                    // dissolved of gas in oil
+                    // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
+                    perf_dis_gas_rate = rs.value() * (cq_s[oilCompIdx].value() - rv.value() * cq_s[gasCompIdx].value()) / d;
                 }
             }
         }
