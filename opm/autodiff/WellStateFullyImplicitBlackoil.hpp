@@ -80,11 +80,17 @@ namespace Opm
             }
 
             const int nw = wells->number_of_wells;
+
             if( nw == 0 ) return ;
 
             // Initialize perfphaserates_, which must be done here.
             const int np = wells->number_of_phases;
             const int nperf = wells->well_connpos[nw];
+
+            well_reservoir_rates_.resize(nw * np, 0.0);
+            well_dissolved_gas_rates_.resize(nw, 0.0);
+            well_vaporized_oil_rates_.resize(nw, 0.0);
+
             // Ensure that we start out with zero rates by default.
             perfphaserates_.clear();
             perfphaserates_.resize(nperf * np, 0.0);
@@ -278,6 +284,23 @@ namespace Opm
                 const auto w = wt.second[ 0 ];
                 auto& well = res.at( wt.first );
                 well.control = this->currentControls()[ w ];
+
+                const int well_rate_index = w * pu.num_phases;
+
+                if ( pu.phase_used[Water] ) {
+                    well.rates.set( rt::reservoir_water, this->well_reservoir_rates_[well_rate_index + pu.phase_pos[Water]] );
+                }
+
+                if ( pu.phase_used[Oil] ) {
+                    well.rates.set( rt::reservoir_oil, this->well_reservoir_rates_[well_rate_index + pu.phase_pos[Oil]] );
+                }
+
+                if ( pu.phase_used[Gas] ) {
+                    well.rates.set( rt::reservoir_gas, this->well_reservoir_rates_[well_rate_index + pu.phase_pos[Gas]] );
+                }
+
+                well.rates.set( rt::dissolved_gas, this->well_dissolved_gas_rates_[w] );
+                well.rates.set( rt::vaporized_oil, this->well_vaporized_oil_rates_[w] );
 
                 int local_comp_index = 0;
                 for( auto& comp : well.completions ) {
@@ -511,6 +534,21 @@ namespace Opm
             return solvent_well_rate;
         }
 
+        std::vector<double>& wellReservoirRates()
+        {
+            return well_reservoir_rates_;
+        }
+
+        std::vector<double>& wellDissolvedGasRates()
+        {
+            return well_dissolved_gas_rates_;
+        }
+
+        std::vector<double>& wellVaporizedOilRates()
+        {
+            return well_vaporized_oil_rates_;
+        }
+
         const std::vector<double>& segRates() const
         {
             return segrates_;
@@ -547,6 +585,18 @@ namespace Opm
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
         std::vector<double> perfRateSolvent_;
+
+        // phase rates under reservoir condition for wells
+        // or voidage phase rates
+        std::vector<double> well_reservoir_rates_;
+
+        // dissolved gas rates or solution gas production rates
+        // should be zero for injection wells
+        std::vector<double> well_dissolved_gas_rates_;
+
+        // vaporized oil rates or solution oil producation rates
+        // should be zero for injection wells
+        std::vector<double> well_vaporized_oil_rates_;
 
         // marking whether the well is just added
         // for newly added well, the current initialized rates from WellState

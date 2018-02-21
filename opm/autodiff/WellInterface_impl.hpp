@@ -844,4 +844,29 @@ namespace Opm
         return 1.0;
     }
 
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::calculateReservoirRates(WellState& well_state) const
+    {
+        const int fipreg = 0; // not considering the region for now
+        const int np = number_of_phases_;
+
+        std::vector<double> surface_rates(np, 0.0);
+        const int well_rate_index = np * index_of_well_;
+        for (int p = 0; p < np; ++p) {
+            surface_rates[p] = well_state.wellRates()[well_rate_index + p];
+        }
+
+        std::vector<double> voidage_rates(np, 0.0);
+        rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegionIdx_, surface_rates, voidage_rates);
+
+        for (int p = 0; p < np; ++p) {
+            well_state.wellReservoirRates()[well_rate_index + p] = voidage_rates[p];
+        }
+    }
+
 }

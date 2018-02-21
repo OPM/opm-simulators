@@ -202,6 +202,9 @@ namespace Opm
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state) = 0; // should be const?
 
+        // updating the voidage rates in well_state when requested
+        void calculateReservoirRates(WellState& well_state) const;
+
     protected:
 
         // to indicate a invalid connection
@@ -317,7 +320,6 @@ namespace Opm
                                              const WellState& well_state) const;
 
         double scalingFactor(const int comp_idx) const;
-
 
     };
 

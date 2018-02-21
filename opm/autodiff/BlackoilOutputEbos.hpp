@@ -41,7 +41,6 @@
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 
 #include <string>

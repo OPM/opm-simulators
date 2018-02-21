@@ -281,7 +281,8 @@ namespace Opm
         void computePerfRate(const IntensiveQuantities& intQuants,
                              const std::vector<EvalWell>& mob_perfcells_dense,
                              const double Tw, const EvalWell& bhp, const double& cdp,
-                             const bool& allow_cf, std::vector<EvalWell>& cq_s) const;
+                             const bool& allow_cf, std::vector<EvalWell>& cq_s,
+                             double& perf_dis_gas_rate, double& perf_vap_oil_rate) const;
 
         // TODO: maybe we should provide a light version of computePerfRate, which does not include the
         // calculation of the derivatives
