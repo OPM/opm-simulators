@@ -236,17 +236,18 @@ public:
 
     void restartBegin()
     {
+        bool enableHysteresis = simulator_.problem().materialLawManager()->enableHysteresis();
         std::map<std::string, Opm::RestartKey> solution_keys {{"PRESSURE" , Opm::RestartKey(Opm::UnitSystem::measure::pressure)},
                                                          {"SWAT" , Opm::RestartKey(Opm::UnitSystem::measure::identity, FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
                                                          {"SGAS" , Opm::RestartKey(Opm::UnitSystem::measure::identity, FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
                                                          {"TEMP" , Opm::RestartKey(Opm::UnitSystem::measure::temperature)}, // always required for now
                                                          {"RS" , Opm::RestartKey(Opm::UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas())},
                                                          {"RV" , Opm::RestartKey(Opm::UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil())},
-                                                         {"SOMAX", {Opm::UnitSystem::measure::identity, false}},
-                                                         {"PCSWM_OW", {Opm::UnitSystem::measure::identity, false}},
-                                                         {"KRNSW_OW", {Opm::UnitSystem::measure::identity, false}},
-                                                         {"PCSWM_GO", {Opm::UnitSystem::measure::identity, false}},
-                                                         {"KRNSW_GO", {Opm::UnitSystem::measure::identity, false}}};
+                                                         {"SOMAX", {Opm::UnitSystem::measure::identity, simulator_.problem().vapparsActive()}},
+                                                         {"PCSWM_OW", {Opm::UnitSystem::measure::identity, enableHysteresis}},
+                                                         {"KRNSW_OW", {Opm::UnitSystem::measure::identity, enableHysteresis}},
+                                                         {"PCSWM_GO", {Opm::UnitSystem::measure::identity, enableHysteresis}},
+                                                         {"KRNSW_GO", {Opm::UnitSystem::measure::identity, enableHysteresis}}};
 
         std::map<std::string, bool> extra_keys {
             {"OPMEXTRA" , false}

@@ -564,8 +564,9 @@ public:
             simulator.setTimeStepSize(dt);
         }
 
-        bool doInvalidate = updateHysteresis_();
-        doInvalidate = doInvalidate || updateMaxOilSaturation_();
+        const bool invalidateFromHyst = updateHysteresis_();
+        const bool invalidateFromMaxOilSat = updateMaxOilSaturation_();
+        const bool doInvalidate = invalidateFromHyst || invalidateFromMaxOilSat;
 
         if (GET_PROP_VALUE(TypeTag, EnablePolymer))
             updateMaxPolymerAdsorption_();
