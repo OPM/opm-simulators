@@ -2097,7 +2097,6 @@ namespace Opm
         {
             const auto row_index = colC.index();
             auto& row = mat[row_index];
-            auto colB = duneB_[0].begin();
             auto col = row.begin();
             
             for ( auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB )
