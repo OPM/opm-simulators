@@ -94,7 +94,7 @@ namespace Opm
         update_equations_scaling_ = false;
         use_update_stabilization_ = true;
         use_multisegment_well_ = false;
-        matrix_add_well_contributions_=false;
+        matrix_add_well_contributions_ = false;
     }
 
 
