@@ -116,7 +116,7 @@ public:
     void applyInitial()
     {}
 
-    void linearize(JacobianMatrix& matrix, GlobalEqVector& residual)
+    void linearize(JacobianMatrix& , GlobalEqVector&)
     {
         // Linearization is done in StandardDenseWells
     }
