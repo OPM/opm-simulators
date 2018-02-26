@@ -294,18 +294,6 @@ namespace Opm {
         }
     }
 
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    addWellContributions(Mat& mat) const
-    {
-        for(const auto& well: well_container_)
-        {
-            well->addWellContributions(mat);
-        }
-    }
-
     // applying the well residual to reservoir residuals
     // r = r - duneC_^T * invDuneD_ * resWell_
     template<typename TypeTag>
@@ -333,7 +321,8 @@ namespace Opm {
     apply(const BVector& x, BVector& Ax) const
     {
         // TODO: do we still need localWellsActive()?
-        if ( ! localWellsActive() ) {
+        if ( ! localWellsActive() ||
+             well_container_[0]->jacobianContainsWellContributions() ) {
             return;
         }
 
@@ -352,7 +341,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const
     {
-        if ( ! localWellsActive() ) {
+        if ( ! localWellsActive() ||
+             well_container_[0]->jacobianContainsWellContributions() ) {
             return;
         }
 

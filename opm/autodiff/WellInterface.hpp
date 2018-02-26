@@ -203,7 +203,11 @@ namespace Opm
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state) = 0; // should be const?
 
-        virtual void addWellContributions(Mat& mat) const;
+        /// \brief Wether the Jacobian will also have well contributions in it.
+        virtual bool jacobianContainsWellContributions() const
+        {
+            return false;
+        }
 
         // updating the voidage rates in well_state when requested
         void calculateReservoirRates(WellState& well_state) const;

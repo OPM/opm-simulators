@@ -157,12 +157,6 @@ namespace Opm {
 
             const SimulatorReport& lastReport() const;
 
-            /// \! brief Modifies matrix to include influences of the well perforations.
-            ///
-            /// \param mat The linear system with the assembled mass balance
-            ///            equations
-            void addWellContributions(Mat& mat) const;
-
 
         protected:
 

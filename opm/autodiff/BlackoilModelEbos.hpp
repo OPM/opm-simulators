@@ -565,11 +565,8 @@ namespace Opm {
           {
             A_.mv( x, y );
 
-            if ( ! matrix_add_well_contributions_ )
-            {
-              // add well model modification to y
-              wellMod_.apply(x, y );
-            }
+            // add well model modification to y
+            wellMod_.apply(x, y );
 
 #if HAVE_MPI
             if( comm_ )
@@ -582,11 +579,8 @@ namespace Opm {
           {
             A_.usmv(alpha,x,y);
 
-            if ( ! matrix_add_well_contributions_ )
-            {
-              // add scaled well model modification to y
-              wellMod_.applyScaleAdd( alpha, x, y );
-            }
+            // add scaled well model modification to y
+            wellMod_.applyScaleAdd( alpha, x, y );
 
 #if HAVE_MPI
             if( comm_ )
