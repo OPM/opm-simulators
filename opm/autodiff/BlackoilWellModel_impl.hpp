@@ -321,13 +321,15 @@ namespace Opm {
     apply(const BVector& x, BVector& Ax) const
     {
         // TODO: do we still need localWellsActive()?
-        if ( ! localWellsActive() ||
-             well_container_[0]->jacobianContainsWellContributions() ) {
+        if ( ! localWellsActive() ) {
             return;
         }
 
         for (auto& well : well_container_) {
-            well->apply(x, Ax);
+            if ( ! well->jacobianContainsWellContributions() )
+            {
+                well->apply(x, Ax);
+            }
         }
     }
 
@@ -341,8 +343,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const
     {
-        if ( ! localWellsActive() ||
-             well_container_[0]->jacobianContainsWellContributions() ) {
+        if ( ! localWellsActive() ) {
             return;
         }
 
