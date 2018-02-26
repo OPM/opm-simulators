@@ -2112,7 +2112,7 @@ namespace Detail
         // A -= C^T D^-1 B
         // D is diagonal
         // B and C have 1 row, nc colums and nonzero
-        // at (i,j) only if well i has perforation at cell j.
+        // at (0,j) only if this well has a perforation at cell j.
 
         for ( auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC )
         {
@@ -2124,7 +2124,7 @@ namespace Detail
             for ( auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB )
             {
                 const auto col_index = colB.index();
-                // Move col to index pj
+                // Move col to index col_index
                 while ( col != row.end() && col.index() < col_index ) ++col;
                 assert(col != row.end() && col.index() == col_index);
 
