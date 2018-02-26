@@ -27,6 +27,7 @@
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolver.hpp>
 #include <opm/autodiff/RateConverter.hpp>
+#include <opm/autodiff/ISTLSolver.hpp>
 
 namespace Opm
 {
@@ -88,15 +89,8 @@ namespace Opm
         typedef Dune::FieldVector<Scalar, numWellEq> VectorBlockWellType;
         typedef Dune::BlockVector<VectorBlockWellType> BVectorWell;
 
-#if  DUNE_VERSION_NEWER_REV(DUNE_ISTL, 2 , 5, 1)
-        // 3x3 matrix block inversion was unstable from at least 2.3 until and
-        // including 2.5.0
         // the matrix type for the diagonal matrix D
         typedef Dune::FieldMatrix<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
-#else
-        // the matrix type for the diagonal matrix D
-        typedef Dune::MatrixBlock<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
-#endif
 
         typedef Dune::BCRSMatrix <DiagMatrixBlockWellType> DiagMatWell;
 
