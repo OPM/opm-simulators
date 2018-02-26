@@ -547,7 +547,7 @@ namespace Opm {
           //! constructor: just store a reference to a matrix
           WellModelMatrixAdapter (const M& A, const WellModel& wellMod,
                                   bool matrix_add_well_contributions,
-                                   const boost::any& parallelInformation = boost::any() )
+                                  const boost::any& parallelInformation = boost::any() )
               : A_( A ), wellMod_( wellMod ), comm_(),
                 matrix_add_well_contributions_(matrix_add_well_contributions)
           {

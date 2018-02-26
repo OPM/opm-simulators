@@ -2111,16 +2111,18 @@ namespace Detail
         // B and C have 1 row, nc colums and nonzero
         // at (i,j) only if well i has perforation at cell j.
 
-        for(auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC) {
+        for ( auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC )
+        {
             const auto row_index = colC.index();
             auto& row = mat[row_index];
             auto colB = duneB_[0].begin();
             auto col = row.begin();
             
-            for(auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB) {
+            for ( auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB )
+            {
                 const auto col_index = colB.index();
                 // Move col to index pj
-                while(col != row.end() && col.index() < col_index) ++col;
+                while ( col != row.end() && col.index() < col_index ) ++col;
                 assert(col != row.end() && col.index() == col_index);
 
                 Dune::FieldMatrix<Scalar, numWellEq, numEq> tmp;

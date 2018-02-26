@@ -55,23 +55,25 @@ public:
         std::vector<int> cartesianToCompressed(size, -1);
         auto begin = globalCell.begin();
 
-        for(auto cell = begin, end= globalCell.end(); cell != end; ++cell)
+        for ( auto cell = begin, end= globalCell.end(); cell != end; ++cell )
         {
             cartesianToCompressed[ *cell ] = cell - begin;
         }
 
-        int last_time_step = schedule.getTimeMap().size()-1;
+        int last_time_step = schedule.getTimeMap().size() - 1;
         const auto& schedule_wells = schedule.getWells();
         wells_.reserve(schedule_wells.size());
 
         // initialize the additional cell connections introduced by wells.
-        for (const auto well : schedule_wells) {
+        for ( const auto well : schedule_wells )
+        {
             std::vector<int> compressed_well_perforations;
             // All possible completions of the well
             const auto& completionSet = well->getCompletions(last_time_step);
             compressed_well_perforations.reserve(completionSet.size());
 
-            for (size_t c=0; c<completionSet.size(); c++) {
+            for ( size_t c=0; c < completionSet.size(); c++ )
+            {
                 const auto& completion = completionSet.get(c);
                 int i = completion.getI();
                 int j = completion.getJ();
@@ -85,7 +87,7 @@ public:
                 }
             }
 
-            if( ! compressed_well_perforations.empty() )
+            if ( ! compressed_well_perforations.empty() )
             {
                 std::sort(compressed_well_perforations.begin(),
                           compressed_well_perforations.end());
