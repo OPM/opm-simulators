@@ -61,14 +61,9 @@
 
 namespace Opm {
 
-        template<typename TypeTag>
-        class BlackoilModelEbos;
-
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
         class BlackoilWellModel {
-            // Needs acces to wells_ecl_
-            friend class BlackoilModelEbos<TypeTag>;
         public:
             // ---------      Types      ---------
             typedef WellStateFullyImplicitBlackoil WellState;
