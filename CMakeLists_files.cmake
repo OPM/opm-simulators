@@ -147,6 +147,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_welldensitysegmented.cpp
   tests/test_vfpproperties.cpp
   tests/test_singlecellsolves.cpp
+  tests/test_multmatrixtransposed.cpp
   tests/test_multiphaseupwind.cpp
   tests/test_wellmodel.cpp
 #  tests/test_thresholdpressure.cpp
