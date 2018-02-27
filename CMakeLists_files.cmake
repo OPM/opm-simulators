@@ -31,6 +31,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow_ebos_oilwater.cpp
   opm/simulators/flow_ebos_polymer.cpp
   opm/simulators/flow_ebos_solvent.cpp
+  opm/simulators/flow_ebos_oilwater_polymer.cpp
 
   opm/autodiff/Compat.cpp
   opm/autodiff/ExtractParallelGridInformationToISTL.cpp
@@ -444,6 +445,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow_ebos_oilwater.hpp
   opm/simulators/flow_ebos_polymer.hpp
   opm/simulators/flow_ebos_solvent.hpp
+  opm/simulators/flow_ebos_oilwater_polymer.hpp
   opm/simulators/ensureDirectoryExists.hpp
   opm/simulators/ParallelFileMerger.hpp
   opm/simulators/SimulatorCompressibleTwophase.hpp

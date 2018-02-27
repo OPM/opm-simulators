@@ -25,6 +25,7 @@
 #include <opm/simulators/flow_ebos_oilwater.hpp>
 #include <opm/simulators/flow_ebos_solvent.hpp>
 #include <opm/simulators/flow_ebos_polymer.hpp>
+#include <opm/simulators/flow_ebos_oilwater_polymer.hpp>
 
 #include <opm/autodiff/MissingFeatures.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
@@ -166,8 +167,21 @@ int main(int argc, char** argv)
         }
         // Polymer case
         else if ( phases.active( Opm::Phase::POLYMER ) ) {
-            Opm::flowEbosPolymerSetDeck(*deck, *eclipseState, *schedule, *summary_config);
-            return Opm::flowEbosPolymerMain(argc, argv);
+
+            if ( !phases.active( Opm::Phase::WATER) ) {
+                if (outputCout)
+                    std::cerr << "No valid configuration is found for polymer simulation, valid options include "
+                              << "oilwater + polymer and blackoil + polymer" << std::endl;
+                return EXIT_FAILURE;
+            }
+
+            if ( phases.size() == 3 ) { // oil water polymer case
+                Opm::flowEbosOilWaterPolymerSetDeck(*deck, *eclipseState, *schedule, *summary_config);
+                return Opm::flowEbosOilWaterPolymerMain(argc, argv);
+            } else {
+                Opm::flowEbosPolymerSetDeck(*deck, *eclipseState, *schedule, *summary_config);
+                return Opm::flowEbosPolymerMain(argc, argv);
+            }
         }
         // Solvent case
         else if ( phases.active( Opm::Phase::SOLVENT ) ) {
