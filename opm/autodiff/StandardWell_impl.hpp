@@ -22,6 +22,7 @@
 
 namespace Opm
 {
+
     template<typename TypeTag>
     StandardWell<TypeTag>::
     StandardWell(const Well* well, const int time_step, const Wells* wells,
@@ -666,7 +667,15 @@ namespace Opm
         }
 
         // do the local inversion of D.
-        invDuneD_[0][0].invert();
+        // we do this manually with invertMatrix to always get our
+        // specializations in for 3x3 and 4x4 matrices.
+        auto original = invDuneD_[0][0];
+        Dune::FMatrixHelp::invertMatrix(original, invDuneD_[0][0]);
+
+        if ( param_.matrix_add_well_contributions_ )
+        {
+            addWellContributions( ebosJac );
+        }
     }
 
 
@@ -2071,6 +2080,38 @@ namespace Opm
                                                                 water_velocity);
              // modify the mobility with the shear factor.
             mob[waterCompIdx] /= shear_factor;
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::addWellContributions(Mat& mat) const
+    {
+        // We need to change matrx A as follows
+        // A -= C^T D^-1 B
+        // D is diagonal
+        // B and C have 1 row, nc colums and nonzero
+        // at (0,j) only if this well has a perforation at cell j.
+
+        for ( auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC )
+        {
+            const auto row_index = colC.index();
+            auto& row = mat[row_index];
+            auto col = row.begin();
+            
+            for ( auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB )
+            {
+                const auto col_index = colB.index();
+                // Move col to index col_index
+                while ( col != row.end() && col.index() < col_index ) ++col;
+                assert(col != row.end() && col.index() == col_index);
+
+                Dune::FieldMatrix<Scalar, numWellEq, numEq> tmp;
+                typename Mat::block_type tmp1;
+                Dune::FMatrixHelp::multMatrix(invDuneD_[0][0],  (*colB), tmp);
+                Detail::multMatrixTransposed((*colC), tmp, tmp1);
+                (*col) -= tmp1;
+            }
         }
     }
 }

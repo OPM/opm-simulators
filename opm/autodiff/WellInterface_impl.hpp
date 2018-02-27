@@ -847,7 +847,6 @@ namespace Opm
 
 
 
-
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::calculateReservoirRates(WellState& well_state) const

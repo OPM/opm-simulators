@@ -24,7 +24,8 @@
 #define OPM_WELLINTERFACE_HEADER_INCLUDED
 
 #include <opm/common/OpmLog/OpmLog.hpp>
-
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <opm/core/wells.h>
@@ -201,6 +202,12 @@ namespace Opm
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state) = 0; // should be const?
+
+        /// \brief Wether the Jacobian will also have well contributions in it.
+        virtual bool jacobianContainsWellContributions() const
+        {
+            return false;
+        }
 
         // updating the voidage rates in well_state when requested
         void calculateReservoirRates(WellState& well_state) const;

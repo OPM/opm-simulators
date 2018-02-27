@@ -147,6 +147,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_welldensitysegmented.cpp
   tests/test_vfpproperties.cpp
   tests/test_singlecellsolves.cpp
+  tests/test_multmatrixtransposed.cpp
   tests/test_multiphaseupwind.cpp
   tests/test_wellmodel.cpp
 #  tests/test_thresholdpressure.cpp
@@ -315,6 +316,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/SimulatorIncompTwophaseAd.hpp
   opm/autodiff/SimulatorSequentialBlackoil.hpp
   opm/autodiff/TransportSolverTwophaseAd.hpp
+  opm/autodiff/WellConnectionAuxiliaryModule.hpp
   opm/autodiff/WellDensitySegmented.hpp
   opm/autodiff/WellStateFullyImplicitBlackoil.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp

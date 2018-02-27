@@ -294,10 +294,6 @@ namespace Opm {
         }
     }
 
-
-
-
-
     // applying the well residual to reservoir residuals
     // r = r - duneC_^T * invDuneD_ * resWell_
     template<typename TypeTag>
@@ -330,7 +326,10 @@ namespace Opm {
         }
 
         for (auto& well : well_container_) {
-            well->apply(x, Ax);
+            if ( ! well->jacobianContainsWellContributions() )
+            {
+                well->apply(x, Ax);
+            }
         }
     }
 
