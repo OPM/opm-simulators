@@ -225,6 +225,12 @@ add_test_compareECLFiles(CASENAME msw_3d_hfa
                          REL_TOL ${rel_tol}
                          TEST_ARGS use_multisegment_well=true)
 
+add_test_compareECLFiles(CASENAME polymer_oilwater
+                         FILENAME 2D_OILWATER_POLYMER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
+
 add_test_compareECLFiles(CASENAME polymer_simple2D
                          FILENAME 2D_THREEPHASE_POLY_HETER
                          SIMULATOR flow

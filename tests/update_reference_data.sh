@@ -107,6 +107,15 @@ for test_name in ${tests}; do
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
 
+  if grep -q "polymer_oilwater" <<< $test_name
+  then
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow+polymer_oilwater/ \
+      $OPM_DATA_ROOT/polymer_oilwater/opm-simulation-reference/flow \
+      2D_OILWATER_POLYMER \
+      EGRID INIT SMSPEC UNRST UNSMRY
+  fi
+
   if grep -q "polymer2d" <<< $test_name
   then
     copyToReferenceDir \
