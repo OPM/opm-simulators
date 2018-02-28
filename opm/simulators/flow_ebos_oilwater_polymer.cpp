@@ -40,13 +40,13 @@ NEW_TYPE_TAG(EclFlowOilWaterPolymerProblem, INHERITS_FROM(EclFlowProblem));
 SET_BOOL_PROP(EclFlowOilWaterPolymerProblem, EnablePolymer, true);
 //! The indices required by the model
 SET_TYPE_PROP(EclFlowOilWaterPolymerProblem, Indices,
-              Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent)?1:0,
-                GET_PROP_VALUE(TypeTag, EnablePolymer)?1:0,
-                /*PVOffset=*/0, /*disabledCompIdx=*/2>);
+              Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent) ? 1 : 0,
+              GET_PROP_VALUE(TypeTag, EnablePolymer) ? 1 : 0,
+              /*PVOffset =*/ 0, /*disabledCompIdx=*/ 2>);
 }}
 
 namespace Opm {
-void flowEbosOilWaterPolymerSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosOilWaterPolymerSetDeck(Deck& deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
     typedef TTAG(EclFlowOilWaterPolymerProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;

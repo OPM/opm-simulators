@@ -24,7 +24,7 @@
 
 
 namespace Opm {
-  void flowEbosOilWaterPolymerSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summary_config);
+  void flowEbosOilWaterPolymerSetDeck(Deck& deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summary_config);
   int flowEbosOilWaterPolymerMain(int argc, char** argv);
 }
 
