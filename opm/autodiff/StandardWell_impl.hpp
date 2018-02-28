@@ -965,15 +965,40 @@ namespace Opm
                 if (well_controls_iget_type(wc, current) == SURFACE_RATE) {
                     if (well_type_ == PRODUCER) {
 
-                        const double* distr = well_controls_iget_distr(wc, current);
-
                         double F_target = 0.0;
+                        const double* distr = well_controls_iget_distr(wc, current);
                         for (int p = 0; p < np; ++p) {
                             F_target += distr[p] * F[p];
                         }
-                        for (int p = 0; p < np; ++p) {
-                            well_state.wellRates()[np * index_of_well_ + p] = F[p] * target_rate / F_target;
+
+                        if (F_target > 0.) {
+                            for (int p = 0; p < np; ++p) {
+                                well_state.wellRates()[np * index_of_well_ + p] = F[p] * target_rate / F_target;
+                            }
+                        } else {
+                            // F_target == 0., which creates some difficulties in term of handling things perfectly.
+                            // The following are some temporary solution by putting all rates to be zero, while some better
+                            // solution is required to analyze all the rate/bhp limits situation and give a more reasonable
+                            // solution. However, it is still possible the situation is not solvable, which requires some
+                            // test cases to find out good solution for these situation.
+
+                            if (target_rate == 0.) { // zero target rate for producer
+                                const std::string msg = " Setting all rates to be zero for well " + name()
+                                                      + " due to zero target rate for the phase that does not exist in the wellbore."
+                                                      + " however, there is no unique solution for the situation";
+                                OpmLog::warning("NOT_UNIQUE_WELL_SOLUTION", msg);
+                            } else {
+                                const std::string msg = " Setting all rates to be zero for well " + name()
+                                                      + " due to un-solvable situation. There is non-zero target for the phase "
+                                                      + " that does not exist in the wellbore for the situation";
+                                OpmLog::warning("NON_SOLVABLE_WELL_SOLUTION", msg);
+                            }
+
+                            for (int p = 0; p < np; ++p) {
+                                well_state.wellRates()[np * index_of_well_ + p] = 0.;
+                            }
                         }
+
                     } else {
 
                         for (int p = 0; p < np; ++p) {
