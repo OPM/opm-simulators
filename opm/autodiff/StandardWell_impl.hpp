@@ -672,10 +672,10 @@ namespace Opm
         auto original = invDuneD_[0][0];
         Dune::FMatrixHelp::invertMatrix(original, invDuneD_[0][0]);
 
-        if ( param_.matrix_add_well_contributions_ )
-        {
-            addWellContributions( ebosJac );
-        }
+        // if ( param_.matrix_add_well_contributions_ )
+        // {
+        //     addWellContributions( ebosJac );
+        // }
     }
 
 

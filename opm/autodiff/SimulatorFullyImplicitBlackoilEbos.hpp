@@ -179,12 +179,12 @@ public:
 
         WellState wellStateDummy; //not used. Only passed to make the old interfaces happy
 
-        if ( model_param_.matrix_add_well_contributions_ )
-        {
+        // if ( model_param_.matrix_add_well_contributions_ )
+        // {
             ebosSimulator_.model().clearAuxiliaryModules();
             auto auxMod = std::make_shared<WellConnectionAuxiliaryModule<TypeTag> >(schedule(), grid());
             ebosSimulator_.model().addAuxiliaryModule(auxMod);
-        }
+        // }
 
         // Main simulation loop.
         while (!timer.done()) {

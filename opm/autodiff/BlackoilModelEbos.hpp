@@ -374,6 +374,12 @@ namespace Opm {
                 OPM_THROW(Opm::NumericalIssue,"Error encounted when solving well equations");
             }
 
+            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            matrix_for_preconditioner_ = ebosJac;
+            if (param_.matrix_add_well_contributions_) {
+                wellModel().addWellContributions(ebosJac);
+            }
+
             return wellModel().lastReport();
         }
 
@@ -488,7 +494,7 @@ namespace Opm {
             if( isParallel() )
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
-                Operator opA(ebosJac, wellModel(),
+                Operator opA(ebosJac, matrix_for_preconditioner_, wellModel(),
                              param_.matrix_add_well_contributions_,
                              istlSolver().parallelInformation() );
                 assert( opA.comm() );
@@ -497,7 +503,7 @@ namespace Opm {
             else
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
-                Operator opA(ebosJac, wellModel(),
+                Operator opA(ebosJac, matrix_for_preconditioner_, wellModel(),
                              param_.matrix_add_well_contributions_ );
                 istlSolver().solve( opA, x, ebosResid );
             }
@@ -545,10 +551,12 @@ namespace Opm {
 #endif
 
           //! constructor: just store a reference to a matrix
-          WellModelMatrixAdapter (const M& A, const WellModel& wellMod,
+          WellModelMatrixAdapter (const M& A,
+                                  const M& A_for_precond,
+                                  const WellModel& wellMod,
                                   bool matrix_add_well_contributions,
                                   const boost::any& parallelInformation = boost::any() )
-              : A_( A ), wellMod_( wellMod ), comm_(),
+              : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_(),
                 matrix_add_well_contributions_(matrix_add_well_contributions)
           {
 #if HAVE_MPI
@@ -588,7 +596,7 @@ namespace Opm {
 #endif
           }
 
-          virtual const matrix_type& getmat() const { return A_; }
+          virtual const matrix_type& getmat() const { return A_for_precond_; }
 
           communication_type* comm()
           {
@@ -597,6 +605,7 @@ namespace Opm {
 
         protected:
           const matrix_type& A_ ;
+          const matrix_type& A_for_precond_ ;
           const WellModel& wellMod_;
           std::unique_ptr< communication_type > comm_;
           bool matrix_add_well_contributions_;
@@ -1056,6 +1065,8 @@ namespace Opm {
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
         BVector dx_old_;
+
+        Mat matrix_for_preconditioner_;
 
     public:
         /// return the StandardWells object

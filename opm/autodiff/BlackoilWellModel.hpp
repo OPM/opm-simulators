@@ -153,6 +153,16 @@ namespace Opm {
             const SimulatorReport& lastReport() const;
 
 
+            void addWellContributions(Mat& mat)
+            {
+                for (int w = 0; w < numWells(); ++w) {
+                    auto* well = dynamic_cast<StandardWell<TypeTag>*>(well_container_[w].get());
+                    if (well) {
+                        well->addWellContributions(mat);
+                    }
+                }
+            }
+
         protected:
 
             Simulator& ebosSimulator_;
