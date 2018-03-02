@@ -490,12 +490,12 @@ namespace Opm {
             // set initial guess
             x = 0.0;
 
+            const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac;
             // Solve system.
             if( isParallel() )
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
                 Operator opA(ebosJac, matrix_for_preconditioner_, wellModel(),
-                             param_.matrix_add_well_contributions_,
                              istlSolver().parallelInformation() );
                 assert( opA.comm() );
                 istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
@@ -504,7 +504,6 @@ namespace Opm {
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
                 Operator opA(ebosJac, matrix_for_preconditioner_, wellModel(),
-                             param_.matrix_add_well_contributions_ );
                 istlSolver().solve( opA, x, ebosResid );
             }
         }
@@ -554,10 +553,8 @@ namespace Opm {
           WellModelMatrixAdapter (const M& A,
                                   const M& A_for_precond,
                                   const WellModel& wellMod,
-                                  bool matrix_add_well_contributions,
                                   const boost::any& parallelInformation = boost::any() )
-              : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_(),
-                matrix_add_well_contributions_(matrix_add_well_contributions)
+              : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_()
           {
 #if HAVE_MPI
             if( parallelInformation.type() == typeid(ParallelISTLInformation) )
@@ -608,7 +605,6 @@ namespace Opm {
           const matrix_type& A_for_precond_ ;
           const WellModel& wellMod_;
           std::unique_ptr< communication_type > comm_;
-          bool matrix_add_well_contributions_;
         };
 
         /// Apply an update to the primary variables, chopped if appropriate.
