@@ -326,10 +326,7 @@ namespace Opm {
         }
 
         for (auto& well : well_container_) {
-            if ( ! well->jacobianContainsWellContributions() )
-            {
-                well->apply(x, Ax);
-            }
+            well->apply(x, Ax);
         }
     }
 

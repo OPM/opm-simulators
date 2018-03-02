@@ -375,9 +375,9 @@ namespace Opm {
             }
 
             auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
-            matrix_for_preconditioner_ = ebosJac;
             if (param_.matrix_add_well_contributions_) {
-                wellModel().addWellContributions(ebosJac);
+                matrix_for_preconditioner_ .reset(new Mat(ebosJac));
+                wellModel().addWellContributions(*matrix_for_preconditioner_);
             }
 
             return wellModel().lastReport();
@@ -495,7 +495,7 @@ namespace Opm {
             if( isParallel() )
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
-                Operator opA(ebosJac, matrix_for_preconditioner_, wellModel(),
+                Operator opA(ebosJac, actual_mat_for_prec, wellModel(),
                              istlSolver().parallelInformation() );
                 assert( opA.comm() );
                 istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
@@ -503,7 +503,7 @@ namespace Opm {
             else
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
-                Operator opA(ebosJac, matrix_for_preconditioner_, wellModel(),
+                Operator opA(ebosJac, actual_mat_for_prec, wellModel());
                 istlSolver().solve( opA, x, ebosResid );
             }
         }
@@ -1062,7 +1062,7 @@ namespace Opm {
         double current_relaxation_;
         BVector dx_old_;
 
-        Mat matrix_for_preconditioner_;
+        std::unique_ptr<Mat> matrix_for_preconditioner_;
 
     public:
         /// return the StandardWells object
