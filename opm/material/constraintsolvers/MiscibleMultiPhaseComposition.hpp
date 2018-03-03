@@ -250,7 +250,8 @@ public:
 
         // solve for all mole fractions
         try {
-            Dune::FMatrixPrecision<Scalar>::set_singular_limit(1e-50);
+            static constexpr Scalar eps = std::numeric_limits<Scalar>::min()*1000.0;
+            Dune::FMatrixPrecision<Scalar>::set_singular_limit(eps);
             M.solve(x, b);
         }
         catch (const Dune::FMatrixError& e) {
