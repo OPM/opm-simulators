@@ -296,7 +296,6 @@ void testQuadrature()
 {
     std::cout << "testing SCV quadrature...\n";
 
-    std::bitset<dim> isPeriodic(false);
     std::array<int, dim> cellRes;
 
     std::fill(cellRes.begin(), cellRes.end(), 10);
