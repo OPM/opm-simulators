@@ -369,7 +369,7 @@ namespace Opm {
                 // the reservoir equations as a source term.
                 wellModel().assemble(iterationIdx, dt);
             }
-            catch ( const Dune::FMatrixError& e  )
+            catch ( const Dune::FMatrixError& )
             {
                 OPM_THROW(Opm::NumericalIssue,"Error encounted when solving well equations");
             }
