@@ -763,7 +763,7 @@ protected:
                 try {
                     eclWell->setRadius(elemCtx, dofIdx, 0.5*completion->getDiameter());
                 }
-                catch (const std::logic_error& e)
+                catch (const std::logic_error&)
                 {}
 
                 // overwrite the automatically computed effective

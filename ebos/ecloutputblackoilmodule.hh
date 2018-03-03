@@ -457,7 +457,7 @@ public:
                 try {
                     bubblePointPressure_[globalDofIdx] = Opm::getValue(FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()));
                 }
-                catch (const Opm::NumericalIssue& e) {
+                catch (const Opm::NumericalIssue&) {
                     const auto globalIdx = elemCtx.simulator().vanguard().grid().globalCell()[globalDofIdx];
                     failedCellsPb_.push_back(globalIdx);
                 }
@@ -467,7 +467,7 @@ public:
                 try {
                     dewPointPressure_[globalDofIdx] = Opm::getValue(FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()));
                 }
-                catch (const Opm::NumericalIssue& e) {
+                catch (const Opm::NumericalIssue&) {
                     const auto globalIdx = elemCtx.simulator().vanguard().grid().globalCell()[globalDofIdx];
                     failedCellsPd_.push_back(globalIdx);
                 }
