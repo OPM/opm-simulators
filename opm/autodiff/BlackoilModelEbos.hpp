@@ -183,6 +183,7 @@ namespace Opm {
             } else {
                 // set the initial solution.
                 ebosSimulator_.model().solution( 1 /* timeIdx */ ) = ebosSimulator_.model().solution( 0 /* timeIdx */ );
+                ebosSimulator_.model().shiftIntensiveQuantityCache(/*numSlots=*/1);
             }
 
             // set the timestep size and index in ebos explicitly
