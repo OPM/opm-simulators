@@ -324,12 +324,6 @@ inline VFPEvaluation operator*(
 /**
  * Helper function which interpolates data using the indices etc. given in the inputs.
  */
-#ifdef __GNUC__
-#pragma GCC push_options
-#pragma GCC optimize ("unroll-loops")
-#endif
-
-
 inline VFPEvaluation interpolate(
         const VFPProdTable::array_type& array,
         const InterpData& flo_i,
@@ -501,17 +495,6 @@ inline VFPEvaluation interpolate(
 
     return nn[0][0];
 }
-
-
-
-
-#ifdef __GNUC__
-#pragma GCC pop_options //unroll loops
-#endif
-
-
-
-
 
 inline VFPEvaluation bhp(const VFPProdTable* table,
         const double& aqua,
