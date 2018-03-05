@@ -155,11 +155,8 @@ namespace Opm {
 
             void addWellContributions(Mat& mat)
             {
-                for (int w = 0; w < numWells(); ++w) {
-                    auto* well = dynamic_cast<StandardWell<TypeTag>*>(well_container_[w].get());
-                    if (well) {
+                for ( const auto& well: well_container_ ) {
                         well->addWellContributions(mat);
-                    }
                 }
             }
 

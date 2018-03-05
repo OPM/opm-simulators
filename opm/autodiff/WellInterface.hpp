@@ -212,6 +212,9 @@ namespace Opm
         // updating the voidage rates in well_state when requested
         void calculateReservoirRates(WellState& well_state) const;
 
+        // Add well contributions to matrix
+        virtual void addWellContributions(Mat&) const
+        {}
     protected:
 
         // to indicate a invalid connection
