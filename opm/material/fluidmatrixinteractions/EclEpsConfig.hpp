@@ -27,7 +27,7 @@
 #ifndef OPM_ECL_EPS_CONFIG_HPP
 #define OPM_ECL_EPS_CONFIG_HPP
 
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
@@ -155,7 +155,7 @@ public:
     bool enableLeverettScaling() const
     { return enableLeverettScaling_; }
 
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
     /*!
      * \brief Reads all relevant material parameters form a cell of a parsed ECL deck.
      *

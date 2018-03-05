@@ -11,4 +11,4 @@ Maintainer: opm@opm-project.org
 MaintainerName: The Open Porous Media Project
 Url: http://opm-project.org
 Depends: dune-common (>= 2.4)
-Suggests: opm-common opm-parser
+Suggests: opm-common

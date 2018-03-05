@@ -1,14 +1,12 @@
 #!/bin/bash
 
 declare -a upstreams
-upstreams=(opm-common
-           libecl
-           opm-parser)
+upstreams=(libecl
+           opm-common)
 
 declare -A upstreamRev
-upstreamRev[opm-common]=master
 upstreamRev[libecl]=master
-upstreamRev[opm-parser]=master
+upstreamRev[opm-common]=master
 
 if grep -q "opm-common=" <<< $ghprbCommentBody
 then
@@ -17,14 +15,12 @@ fi
 
 # Downstream revisions
 declare -a downstreams
-downstreams=(opm-output
-             opm-grid
+downstreams=(opm-grid
              ewoms
              opm-simulators
              opm-upscaling)
 
 declare -A downstreamRev
-downstreamRev[opm-output]=master
 downstreamRev[opm-grid]=master
 downstreamRev[ewoms]=master
 downstreamRev[opm-simulators]=master

@@ -84,7 +84,7 @@ public:
         }
     }
 
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
     /*!
      * \brief Initialize the parameters for water using an ECL deck.
      *
@@ -103,7 +103,7 @@ public:
 
         OPM_WATER_PVT_MULTIPLEXER_CALL(pvtImpl.initFromDeck(deck, eclState));
     }
-#endif // HAVE_OPM_PARSER
+#endif // HAVE_ECL_INPUT
 
     void initEnd()
     { OPM_WATER_PVT_MULTIPLEXER_CALL(pvtImpl.initEnd()); }

@@ -30,8 +30,8 @@
  */
 #include "config.h"
 
-#if !HAVE_OPM_PARSER
-#error "The test for EclMaterialLawManager requires the opm-parser module"
+#if !HAVE_ECL_INPUT
+#error "The test for EclMaterialLawManager requires eclipse input support in opm-common"
 #endif
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>

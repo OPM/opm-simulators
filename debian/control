@@ -7,7 +7,7 @@ Build-Depends: build-essential, debhelper (>= 9), libboost-filesystem-dev,
                libdune-common-dev, libdune-istl-dev, cmake, bc,
                libecl-dev, git, zlib1g-dev, libtool, doxygen,
                texlive-latex-extra, texlive-latex-recommended, ghostscript,
-               libopm-parser-dev, libboost-iostreams-dev, mpi-default-dev,
+               libboost-iostreams-dev, mpi-default-dev,
                mpi-default-bin
 Standards-Version: 3.9.2
 Section: libs

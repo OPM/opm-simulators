@@ -32,7 +32,7 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/Spline.hpp>
 
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
@@ -52,7 +52,7 @@ class ConstantCompressibilityOilPvt
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
     /*!
      * \brief Sets the pressure-dependent oil viscosity and density
      *        using the Eclipse PVCDO keyword.
