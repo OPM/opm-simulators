@@ -33,10 +33,16 @@
 #include <ewoms/common/parametersystem.hh>
 
 #include <opm/material/common/Valgrind.hpp>
+
+#if HAVE_ECL_INPUT
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#endif
+
+#if HAVE_ECL_OUTPUT
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
+#endif
 
 
 #include <dune/common/fvector.hh>
