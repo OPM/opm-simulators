@@ -472,7 +472,8 @@ public:
             maxPolymerAdsorption_.resize(numElements, 0.0);
         }
 
-        eclWriter_->writeInit();
+        if (eclWriter_)
+            eclWriter_->writeInit();
     }
 
     void prefetch(const Element& elem) const
