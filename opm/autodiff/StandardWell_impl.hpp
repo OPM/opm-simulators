@@ -1599,6 +1599,11 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
+        if ( param_.matrix_add_well_contributions_ )
+        {
+            // Contributions are already in the matrix itself
+            return;
+        }
         assert( Bx_.size() == duneB_.N() );
         assert( invDrw_.size() == invDuneD_.N() );
 
