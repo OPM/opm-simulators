@@ -29,8 +29,8 @@
  */
 #include "config.h"
 
-#if !HAVE_OPM_PARSER
-#error "The test for the black oil PVT classes requires the opm-parser module"
+#if !HAVE_ECL_INPUT
+#error "The test for the black oil PVT classes requires eclipse input support in opm-common"
 #endif
 
 #include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>

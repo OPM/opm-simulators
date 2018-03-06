@@ -71,7 +71,7 @@ void ensureBlackoilApi()
     // here we don't want to call these methods at runtime, we just want to make sure
     // that they compile
     while (false) {
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
         Opm::Deck deck;
         Opm::EclipseState eclState(deck);
         FluidSystem::initFromDeck(deck, eclState);

@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::EclMaterialLawManager
  */
-#if ! HAVE_OPM_PARSER
-#error "The opm-parser module is required to use the ECL material manager!"
+#if ! HAVE_ECL_INPUT
+#error "Eclipse input support in opm-common is required to use the ECL material manager!"
 #endif
 
 #ifndef OPM_ECL_MATERIAL_LAW_MANAGER_HPP

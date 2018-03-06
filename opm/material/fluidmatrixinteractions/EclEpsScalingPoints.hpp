@@ -29,7 +29,7 @@
 
 #include "EclEpsConfig.hpp"
 
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckRecord.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -65,7 +65,7 @@ class EclEpsGridProperties
     typedef std::vector<double> DoubleData;
 
 public:
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
     void initFromDeck(const Opm::Deck& /* deck */,
                       const Opm::EclipseState& eclState,
                       bool useImbibition)
@@ -130,7 +130,7 @@ public:
     const DoubleData* permz;
 
 private:
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
     // this method makes sure that a grid property is not created if it is not explicitly
     // mentioned in the deck. (saves memory.)
     void retrieveGridPropertyData_(const DoubleData **data,
@@ -213,7 +213,7 @@ struct EclEpsScalingPointsInfo
                   << "    maxKrog: " << maxKrog << "\n";
     }
 
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
     /*!
      * \brief Extract the values of the unscaled scaling parameters.
      *
@@ -420,7 +420,7 @@ struct EclEpsScalingPointsInfo
 #endif
 
 private:
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
     void extractUnscaledSgof_(const Opm::SgofTable& sgofTable)
     {
         // minimum gas and oil-in-gas-oil saturation
@@ -645,7 +645,7 @@ private:
         maxKrow = sof2Table.getKroColumn().back();
         maxKrog = maxKrow;
     }
-#endif // HAVE_OPM_PARSER
+#endif // HAVE_ECL_INPUT
 
     void extractGridPropertyValue_(Scalar& targetValue,
                                    const std::vector<double>* propData,

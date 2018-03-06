@@ -34,7 +34,7 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/Spline.hpp>
 
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
@@ -68,7 +68,7 @@ public:
     ~GasPvtThermal()
     { delete isothermalPvt_; }
 
-#if HAVE_OPM_PARSER
+#if HAVE_ECL_INPUT
     /*!
      * \brief Implement the temperature part of the gas PVT properties.
      */
@@ -160,7 +160,7 @@ public:
             }
         }
     }
-#endif // HAVE_OPM_PARSER
+#endif // HAVE_ECL_INPUT
 
     /*!
      * \brief Set the number of PVT-regions considered by this object.
