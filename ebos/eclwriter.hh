@@ -34,7 +34,10 @@
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include <ewoms/io/baseoutputwriter.hh>
 #include <ebos/threadhandle.hh>
+
+#if HAVE_ECL_OUTPUT
 #include <opm/output/eclipse/EclipseIO.hpp>
+#endif
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Exceptions.hpp>
@@ -132,8 +135,8 @@ public:
 
     void writeInit()
     {
-#if !HAVE_OPM_OUTPUT
-        throw std::runtime_error("opm-output must be available to write ECL output!");
+#if !HAVE_ECL_OUTPUT
+        throw std::runtime_error("Eclipse output support not available in opm-common, unable to write ECL output!");
 #else
         if (collectToIORank_.isIORank()) {
             std::map<std::string, std::vector<int> > integerVectors;
@@ -149,8 +152,8 @@ public:
      */
     void writeOutput(Opm::data::Wells& localWellData, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep)
     {
-#if !HAVE_OPM_OUTPUT
-        throw std::runtime_error("opm-output must be available to write ECL output!");
+#if !HAVE_ECL_OUTPUT
+        throw std::runtime_error("Eclipse output support not available in opm-common, unable to write ECL output!");
 #else
 
         int episodeIdx = simulator_.episodeIndex() + 1;
