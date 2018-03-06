@@ -39,13 +39,15 @@ set (opm-simulators_DEPS
   "SuperLU"
   # OPM dependency
   "opm-common REQUIRED"
-  "opm-parser REQUIRED"
   "opm-material REQUIRED"
   "opm-grid REQUIRED"
-  "opm-output REQUIRED"
   "ewoms REQUIRED"
   # Eigen
   "Eigen3 3.2.0"
   )
 
 find_package_deps(opm-simulators)
+
+if(NOT HAVE_ECL_INPUT OR NOT HAVE_ECL_OUTPUT)
+  message(FATAL_ERROR "Eclipse input/output support required in opm-common")
+endif()
