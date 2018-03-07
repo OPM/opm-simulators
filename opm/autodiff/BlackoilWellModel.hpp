@@ -153,6 +153,13 @@ namespace Opm {
             const SimulatorReport& lastReport() const;
 
 
+            void addWellContributions(Mat& mat)
+            {
+                for ( const auto& well: well_container_ ) {
+                        well->addWellContributions(mat);
+                }
+            }
+
         protected:
 
             Simulator& ebosSimulator_;

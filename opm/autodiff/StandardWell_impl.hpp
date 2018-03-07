@@ -671,11 +671,6 @@ namespace Opm
         // specializations in for 3x3 and 4x4 matrices.
         auto original = invDuneD_[0][0];
         Dune::FMatrixHelp::invertMatrix(original, invDuneD_[0][0]);
-
-        if ( param_.matrix_add_well_contributions_ )
-        {
-            addWellContributions( ebosJac );
-        }
     }
 
 
@@ -1604,6 +1599,11 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
+        if ( param_.matrix_add_well_contributions_ )
+        {
+            // Contributions are already in the matrix itself
+            return;
+        }
         assert( Bx_.size() == duneB_.N() );
         assert( invDrw_.size() == invDuneD_.N() );
 
