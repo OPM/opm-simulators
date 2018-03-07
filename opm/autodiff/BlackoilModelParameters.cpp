@@ -67,7 +67,9 @@ namespace Opm
         use_update_stabilization_ = param.getDefault("use_update_stabilization", use_update_stabilization_);
         deck_file_name_ = param.template get<std::string>("deck_filename");
         matrix_add_well_contributions_ = param.getDefault("matrix_add_well_contributions", matrix_add_well_contributions_);
-        preconditioner_add_well_contributions_ = param.getDefault("preconditioner_add_well_contributions", preconditioner_add_well_cont        do_adjoint_ = param.getDefault("do_adjoint",false);
+        preconditioner_add_well_contributions_ = param.getDefault("preconditioner_add_well_contributions", preconditioner_add_well_contributions_);
+        do_adjoint_ = param.getDefault("do_adjoint",false);
+        use_amgcl_ = param.getDefault("use_amgcl", use_amgcl_);
     }
 
 
@@ -100,6 +102,7 @@ namespace Opm
         matrix_add_well_contributions_ = false;
         preconditioner_add_well_contributions_ = false;
         do_adjoint_=false;
+        use_amgcl_ = false;
     }
 
 

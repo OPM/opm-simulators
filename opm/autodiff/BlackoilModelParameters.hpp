@@ -102,6 +102,9 @@ namespace Opm
         //
         bool do_adjoint_;
 
+        // Use amgcl instead of dune-istl
+        bool use_amgcl_;
+
         /// Construct from user parameters or defaults.
         explicit BlackoilModelParameters( const ParameterGroup& param );
 
