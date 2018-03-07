@@ -55,6 +55,13 @@
 #include <dune/common/timer.hh>
 #include <dune/common/unused.hh>
 
+#include <amgcl/make_solver.hpp>
+#include <amgcl/solver/bicgstab.hpp>
+#include <amgcl/amg.hpp>
+#include <amgcl/coarsening/smoothed_aggregation.hpp>
+#include <amgcl/relaxation/spai0.hpp>
+#include <amgcl/adapter/crs_tuple.hpp>
+
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -500,22 +507,85 @@ namespace Opm {
             // set initial guess
             x = 0.0;
 
-            const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac;
-            // Solve system.
-            if( isParallel() )
-            {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
-                Operator opA(ebosJac, actual_mat_for_prec, wellModel(),
-                             istlSolver().parallelInformation() );
-                assert( opA.comm() );
-                istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
+
+            // Create matrix for amgcl
+            const int n = ebosResid.size();
+            assert(ebosResid.size() == ebosJac.N());
+            const int np = numPhases();
+            const int sz = n * np;
+            const int nnz = ebosJac.nonzeroes();
+            assert(x.size() == ebosResid.size());
+            std::vector<int>    ptr(sz + 1,         -1);
+            std::vector<int>    col(nnz * np * np,  -1);
+            std::vector<double> val(nnz * np * np, 0.0);
+            std::vector<double> rhs(sz,            0.0);
+            ptr[0] = 0;
+            int index = 0;
+            for (int row_index = 0; row_index < n; ++row_index) {
+                const auto& row = ebosJac[row_index];
+                const auto* dataptr = row.getptr();
+                const auto* indexptr = row.getindexptr();
+                for (int brow = 0; brow < np; ++brow) {
+                    ptr[row_index*np + brow + 1] = ptr[row_index*np + brow] + row.N() * np;
+                    for (int elem = 0; elem < row.N(); ++elem) {
+                        const int istlcol = indexptr[elem];
+                        const auto& block = dataptr[elem];
+                        for (int bcol = 0; bcol < np; ++bcol) {
+                            val[index] = block[brow][bcol];
+                            col[index] = np*istlcol + bcol;
+                            ++index;
+                        }
+                    }
+                }
             }
-            else
-            {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
-                Operator opA(ebosJac, actual_mat_for_prec, wellModel());
-                istlSolver().solve( opA, x, ebosResid );
+            for (int cell = 0; cell < n; ++cell) {
+                for (int phase = 0; phase < np; ++phase) {
+                    rhs[np*cell + phase] = ebosResid[cell][phase];
+                }
             }
+
+            // Call amgcl to solve system
+            typedef amgcl::backend::builtin<double> Backend;
+            typedef amgcl::make_solver<
+                // Use AMG as preconditioner:
+                amgcl::amg<
+                    Backend,
+                    amgcl::coarsening::smoothed_aggregation,
+                    amgcl::relaxation::spai0
+                    >,
+                // And BiCGStab as iterative solver:
+                amgcl::solver::bicgstab<Backend>
+                > Solver;
+            Solver solve( boost::tie(sz, ptr, col, val) );
+            std::vector<double> sol(sz, 0.0);
+            int    iters;
+            double error;
+            boost::tie(iters, error) = solve(rhs, sol);
+
+            // Extract solution
+            assert(sol.size() == x.size() * numPhases());
+            for (int cell = 0; cell < n; ++cell) {
+                for (int phase = 0; phase < np; ++phase) {
+                    x[cell][phase] = sol[np*cell + phase];
+                }
+            }
+
+            // const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac;
+            // // Solve system.
+            // if( isParallel() )
+            // {
+            //     typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
+            //     Operator opA(ebosJac, actual_mat_for_prec, wellModel(),
+            //                  istlSolver().parallelInformation() );
+            //     assert( opA.comm() );
+            //     istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
+            // }
+            // else
+            // {
+            //     typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
+            //     Operator opA(ebosJac, actual_mat_for_prec, wellModel());
+            //     istlSolver().solve( opA, x, ebosResid );
+            // }
         }
 
         //=====================================================================
