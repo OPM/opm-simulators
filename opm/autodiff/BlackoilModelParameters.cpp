@@ -68,6 +68,7 @@ namespace Opm
         deck_file_name_ = param.template get<std::string>("deck_filename");
         matrix_add_well_contributions_ = param.getDefault("matrix_add_well_contributions", matrix_add_well_contributions_);
         preconditioner_add_well_contributions_ = param.getDefault("preconditioner_add_well_contributions", preconditioner_add_well_contributions_);
+        use_amgcl_ = param.getDefault("use_amgcl", use_amgcl_);
     }
 
 
@@ -99,6 +100,7 @@ namespace Opm
         use_multisegment_well_ = false;
         matrix_add_well_contributions_ = false;
         preconditioner_add_well_contributions_ = false;
+        use_amgcl_ = false;
     }
 
 

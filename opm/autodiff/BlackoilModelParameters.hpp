@@ -99,6 +99,9 @@ namespace Opm
         // Whether to add influences of wells between cells to the preconditioner matrix only
         bool preconditioner_add_well_contributions_;
 
+        // Use amgcl instead of dune-istl
+        bool use_amgcl_;
+
         /// Construct from user parameters or defaults.
         explicit BlackoilModelParameters( const ParameterGroup& param );
 
