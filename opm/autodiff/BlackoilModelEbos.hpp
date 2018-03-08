@@ -818,6 +818,7 @@ namespace Opm {
             const double dt = timer.currentStepLength();
             const double tol_mb    = param_.tolerance_mb_;
             const double tol_cnv   = param_.tolerance_cnv_;
+            const double tol_cnv_relaxed = param_.tolerance_cnv_relaxed_;
 
             const int numComp = numEq;
 
@@ -904,8 +905,11 @@ namespace Opm {
             {
                 CNV[compIdx]                    = B_avg[compIdx] * dt * maxCoeff[compIdx];
                 mass_balance_residual[compIdx]  = std::abs(B_avg[compIdx]*R_sum[compIdx]) * dt / pvSum;
-                converged_MB                = converged_MB && (mass_balance_residual[compIdx] < tol_mb);
-                converged_CNV               = converged_CNV && (CNV[compIdx] < tol_cnv);
+                converged_MB                    = converged_MB && (mass_balance_residual[compIdx] < tol_mb);
+                if (iteration < param_.max_strict_iter_)
+                    converged_CNV = converged_CNV && (CNV[compIdx] < tol_cnv);
+                else
+                    converged_CNV = converged_CNV && (CNV[compIdx] < tol_cnv_relaxed);
 
                 residual_norms.push_back(CNV[compIdx]);
             }
@@ -914,10 +918,7 @@ namespace Opm {
 
             bool converged = converged_MB && converged_Well;
 
-            // do not care about the cell based residual in the last two Newton
-            // iterations
-            if (iteration < param_.max_strict_iter_)
-                converged = converged && converged_CNV;
+            converged = converged && converged_CNV;
 
             if ( terminal_output_ )
             {
