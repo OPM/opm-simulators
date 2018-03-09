@@ -17,8 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
-#if HAVE_DYNAMIC_BOOST_TEST && HAVE_MPI
-#define BOOST_TEST_DYN_LINK
+#if HAVE_MPI
 #define BOOST_TEST_MODULE BlackoilAmgTest
 #define BOOST_TEST_NO_MAIN
 #include <boost/test/unit_test.hpp>
@@ -327,4 +326,4 @@ int main(int argc, char** argv)
 }
 #else
 int main () { return 0; }
-#endif // #if HAVE_DYNAMIC_BOOST_TEST
+#endif // #if HAVE_MPI
