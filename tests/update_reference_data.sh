@@ -230,7 +230,7 @@ then
 else
   echo -e "Reason: $REASON\n" >> /tmp/cmsg
 fi
-for dep in libecl opm-common opm-core opm-grid opm-material opm-parser opm-output ewoms
+for dep in libecl opm-common opm-grid opm-material ewoms
 do
   pushd $WORKSPACE/deps/$dep > /dev/null
   name=`printf "%-14s" $dep`
