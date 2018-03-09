@@ -23,6 +23,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/grid/utility/StopWatch.hpp>
 #include <string>
+#include <sstream>
 
 namespace Opm
 {
