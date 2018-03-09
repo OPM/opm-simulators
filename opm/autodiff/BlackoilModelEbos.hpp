@@ -36,6 +36,7 @@
 #include <opm/autodiff/WellConnectionAuxiliaryModule.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
+#include <opm/autodiff/LinearSolverAmgcl.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
@@ -57,13 +58,6 @@
 #include <dune/common/parallel/collectivecommunication.hh>
 #include <dune/common/timer.hh>
 #include <dune/common/unused.hh>
-
-#include <amgcl/make_solver.hpp>
-#include <amgcl/solver/bicgstab.hpp>
-#include <amgcl/amg.hpp>
-#include <amgcl/coarsening/smoothed_aggregation.hpp>
-#include <amgcl/relaxation/spai0.hpp>
-#include <amgcl/adapter/crs_tuple.hpp>
 
 #include <cassert>
 #include <cmath>
@@ -757,22 +751,12 @@ namespace Opm {
                 }
 
                 // Call amgcl to solve system
-                typedef amgcl::backend::builtin<double> Backend;
-                typedef amgcl::make_solver<
-                    // Use AMG as preconditioner:
-                    amgcl::amg<
-                        Backend,
-                        amgcl::coarsening::smoothed_aggregation,
-                        amgcl::relaxation::spai0
-                        >,
-                    // And BiCGStab as iterative solver:
-                    amgcl::solver::bicgstab<Backend>
-                    > Solver;
-                Solver solve( boost::tie(sz, ptr, col, val) );
+                const double tol = 1e-2;
+                const int maxiter = 150;
                 std::vector<double> sol(sz, 0.0);
                 int    iters;
                 double error;
-                boost::tie(iters, error) = solve(rhs, sol);
+                LinearSolverAmgcl::solve(sz, ptr, col, val, rhs, tol, maxiter, sol, iters, error);
 
                 // Extract solution
                 assert(sol.size() == x.size() * numPhases());

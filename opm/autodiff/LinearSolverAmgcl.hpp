@@ -21,6 +21,8 @@
 #ifndef OPM_LINEARSOLVERAMGCL_HEADER_INCLUDED
 #define OPM_LINEARSOLVERAMGCL_HEADER_INCLUDED
 
+#include <vector>
+
 namespace Opm
 {
 
@@ -31,6 +33,10 @@ namespace Opm
                           const std::vector<int>& ptr,
                           const std::vector<int>& col,
                           const std::vector<double>& val,
+                          const std::vector<double>& rhs,
+                          const double tolerance,
+                          const int maxiter,
+                          std::vector<double>& sol,
                           int& iters,
                           double& error);
     };
