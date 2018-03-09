@@ -577,7 +577,14 @@ namespace Opm
         void setupLinearSolver()
         {
             typedef typename BlackoilModelEbos<TypeTag> :: ISTLSolverType ISTLSolverType;
-
+            const std::string cprSolver = "cpr";
+            if (!param_.has("solver_approach") )
+            {
+                if ( eclState().getSimulationConfig().useCPR() )
+                {
+                    param_.insertParameter("solver_approach", cprSolver);
+                }
+            }
             extractParallelGridInformationToISTL(grid(), parallel_information_);
             fis_solver_.reset( new ISTLSolverType( param_, parallel_information_ ) );
         }

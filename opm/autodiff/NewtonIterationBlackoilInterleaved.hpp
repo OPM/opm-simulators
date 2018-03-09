@@ -25,6 +25,7 @@
 #ifndef OPM_NEWTONITERATIONBLACKOILINTERLEAVED_HEADER_INCLUDED
 #define OPM_NEWTONITERATIONBLACKOILINTERLEAVED_HEADER_INCLUDED
 
+#include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 
@@ -35,6 +36,7 @@ namespace Opm
 {
     /// This class carries all parameters for the NewtonIterationBlackoilInterleaved class
     struct NewtonIterationBlackoilInterleavedParameters
+        : public CPRParameter
     {
         double linear_solver_reduction_;
         double ilu_relaxation_;
@@ -46,10 +48,12 @@ namespace Opm
         bool   require_full_sparsity_pattern_;
         bool   ignoreConvergenceFailure_;
         bool   linear_solver_use_amg_;
+        bool   use_cpr_;
 
         NewtonIterationBlackoilInterleavedParameters() { reset(); }
         // read values from parameter class
         NewtonIterationBlackoilInterleavedParameters( const ParameterGroup& param )
+            : CPRParameter(param)
         {
             // set default parameters
             reset();
@@ -65,11 +69,16 @@ namespace Opm
             linear_solver_use_amg_    = param.getDefault("linear_solver_use_amg", linear_solver_use_amg_ );
             ilu_relaxation_           = param.getDefault("ilu_relaxation", ilu_relaxation_ );
             ilu_fillin_level_         = param.getDefault("ilu_fillin_level",  ilu_fillin_level_ );
+
+            // Check whether to use cpr approach
+            const std::string cprSolver = "cpr";
+            use_cpr_ = ( param.getDefault("solver_approach", std::string()) == cprSolver );
         }
 
         // set default values
         void reset()
         {
+            use_cpr_     = false;
             newton_use_gmres_        = false;
             linear_solver_reduction_ = 1e-2;
             linear_solver_maxiter_   = 150;

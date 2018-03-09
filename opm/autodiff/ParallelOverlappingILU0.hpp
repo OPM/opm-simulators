@@ -21,7 +21,7 @@
 #define OPM_PARALLELOVERLAPPINGILU0_HEADER_INCLUDED
 
 #include <opm/common/Exceptions.hpp>
-
+#include <opm/common/ErrorMacros.hpp>
 #include <dune/common/version.hh>
 #include <dune/istl/preconditioner.hh>
 #include <dune/istl/paamg/smoother.hh>
@@ -85,6 +85,13 @@ namespace Opm
       template<class M, class CRS, class InvVector>
       void convertToCRS(const M& A, CRS& lower, CRS& upper, InvVector& inv )
       {
+        // No need to do anything for 0 rows. Return to prevent indexing a
+        // a zero sized array.
+        if ( A.N() == 0 )
+        {
+          return;
+        }
+
         typedef typename M :: size_type size_type;
 
         lower.resize( A.N() );
@@ -265,6 +272,26 @@ public:
         init( reinterpret_cast<const Matrix&>(A), n );
     }
 
+    /*! \brief Constructor gets all parameters to operate the prec.
+      \param A The matrix to operate on.
+      \param comm   communication object, e.g. Dune::OwnerOverlapCopyCommunication
+      \param n ILU fill in level (for testing). This does not work in parallel.
+      \param w The relaxation factor.
+    */
+    template<class BlockType, class Alloc>
+    ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
+                             const ParallelInfo& comm, const int n, const field_type w )
+        : lower_(),
+          upper_(),
+          inv_(),
+          comm_(&comm), w_(w),
+          relaxation_( std::abs( w - 1.0 ) > 1e-15 )
+    {
+        // BlockMatrix is a Subclass of FieldMatrix that just adds
+        // methods. Therefore this cast should be safe.
+        init( reinterpret_cast<const Matrix&>(A), n );
+    }
+
     /*! \brief Constructor.
 
       Constructor gets all parameters to operate the prec.
@@ -328,8 +355,7 @@ public:
         const size_type lastRow = iEnd - 1;
         if( iEnd != upper_.rows() )
         {
-            std::abort();
-           // OPM_THROW(std::logic_error,"ILU: lower and upper rows must be the same");
+            OPM_THROW(std::logic_error,"ILU: number of lower and upper rows must be the same");
         }
 
         // lower triangular solve
@@ -393,6 +419,22 @@ public:
 protected:
     void init( const Matrix& A, const int iluIteration )
     {
+        // (For older DUNE versions the communicator might be
+        // invalid if redistribution in AMG happened on the coarset level.
+        // Therefore we check for nonzero size
+        if ( comm_ && comm_->communicator().size()<=0 )
+        {
+            if ( A.N() > 0 )
+            {
+                OPM_THROW(std::logic_error, "Expected a matrix with zero rows for an invalid communicator.");
+            }
+            else
+            {
+                // simply set the communicator to null
+                comm_ = nullptr;
+            }
+        }
+
         int ilu_setup_successful = 1;
         std::string message;
         const int rank = ( comm_ ) ? comm_->communicator().rank() : 0;

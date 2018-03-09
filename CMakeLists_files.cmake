@@ -138,6 +138,7 @@ endif()
 list (APPEND TEST_SOURCE_FILES
   tests/test_autodiffhelpers.cpp
   tests/test_autodiffmatrix.cpp
+  tests/test_blackoil_amg.cpp
   tests/test_block.cpp
   tests/test_boprops_ad.cpp
   tests/test_rateconverter.cpp
@@ -259,11 +260,11 @@ list (APPEND PROGRAM_SOURCE_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
-  opm/autodiff/AdditionalObjectDeleter.hpp
   opm/autodiff/AutoDiffBlock.hpp
   opm/autodiff/AutoDiffHelpers.hpp
   opm/autodiff/AutoDiffMatrix.hpp
   opm/autodiff/AutoDiff.hpp
+  opm/autodiff/BlackoilAmg.hpp
   opm/autodiff/BlackoilDetails.hpp
   opm/autodiff/BlackoilLegacyDetails.hpp
   opm/autodiff/BlackoilModel.hpp

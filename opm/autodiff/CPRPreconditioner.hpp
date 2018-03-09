@@ -47,11 +47,59 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/autodiff/AdditionalObjectDeleter.hpp>
 #include <opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp>
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
 namespace Opm
 {
+
+template<typename O, typename S, typename C,
+         typename P, std::size_t COMPONENT_INDEX>
+class BlackoilAmg;
+
+/**
+ * \brief Parameters used to configure the CPRPreconditioner.
+ */
+struct CPRParameter
+{
+    double cpr_relax_;
+    double cpr_solver_tol_;
+    int cpr_ilu_n_;
+    int cpr_max_ell_iter_;
+    bool cpr_use_amg_;
+    bool cpr_use_bicgstab_;
+    bool cpr_solver_verbose_;
+    bool cpr_pressure_aggregation_;
+
+    CPRParameter() { reset(); }
+
+    CPRParameter( const ParameterGroup& param)
+    {
+        // reset values to default
+        reset();
+
+        cpr_relax_          = param.getDefault("cpr_relax", cpr_relax_);
+        cpr_solver_tol_     = param.getDefault("cpr_solver_tol", cpr_solver_tol_);
+        cpr_ilu_n_          = param.getDefault("cpr_ilu_n", cpr_ilu_n_);
+        cpr_max_ell_iter_   = param.getDefault("cpr_max_elliptic_iter",cpr_max_ell_iter_);
+        cpr_use_amg_        = param.getDefault("cpr_use_amg", cpr_use_amg_);
+        cpr_use_bicgstab_   = param.getDefault("cpr_use_bicgstab", cpr_use_bicgstab_);
+        cpr_solver_verbose_ = param.getDefault("cpr_solver_verbose", cpr_solver_verbose_);
+        cpr_pressure_aggregation_ = param.getDefault("cpr_pressure_aggregation", cpr_pressure_aggregation_);
+    }
+
+    void reset()
+    {
+        cpr_relax_          = 1.0;
+        cpr_solver_tol_     = 1e-2;
+        cpr_ilu_n_          = 0;
+        cpr_max_ell_iter_   = 25;
+        cpr_use_amg_        = true;
+        cpr_use_bicgstab_   = true;
+        cpr_solver_verbose_ = false;
+        cpr_pressure_aggregation_ = false;
+    }
+};
+
 
 namespace ISTLUtility
 {
@@ -67,47 +115,13 @@ template<class M, class X, class Y, class P>
 struct CPRSelector
 {
     /// \brief The information about the parallelization and communication
-    typedef Dune::Amg::SequentialInformation ParallelInformation;
-    /// \brief The operator type;
-    typedef Dune::MatrixAdapter<M, X, Y> Operator;
-    /// \brief The type of the preconditioner used for the elliptic part.
-    typedef Dune::SeqILU0<M,X,X> EllipticPreconditioner;
-    /// \brief The type of the unique pointer to the preconditioner of the elliptic part.
-    typedef std::unique_ptr<EllipticPreconditioner> EllipticPreconditionerPointer;
-
-    /// \brief type of AMG used to precondition the elliptic system.
-    typedef EllipticPreconditioner Smoother;
-    typedef Dune::Amg::AMG<Operator, X, Smoother, ParallelInformation> AMG;
-
-    /// \brief creates an Operator from the matrix
-    /// \param M The matrix to use.
-    /// \param p The parallel information to use.
-    static Operator* makeOperator(const M& m, const P&)
-    {
-        return new Operator(m);
-    }
-
-};
-
-#if HAVE_MPI
-/// \copydoc CPRSelector<M,X,X,Y,P>
-template<class M, class X, class Y, class I1, class I2>
-struct CPRSelector<M,X,Y,Dune::OwnerOverlapCopyCommunication<I1,I2> >
-{
-    /// \brief The information about the parallelization and communication
-    typedef Dune::OwnerOverlapCopyCommunication<I1,I2> ParallelInformation;
+    using ParallelInformation = P;
     /// \brief The operator type;
     typedef Dune::OverlappingSchwarzOperator<M,X,X,ParallelInformation> Operator;
-    /// \brief The type of the preconditioner used for the elliptic part.
-    //typedef Dune::BlockPreconditioner<X, X, ParallelInformation, Dune::SeqILU0<M,X,X> >
-    //EllipticPreconditioner;
-    //typedef ParallelRestrictedOverlappingSchwarz<X, X, ParallelInformation, Dune::SeqILU0<M,X,X> >
-    //EllipticPreconditioner;
     typedef ParallelOverlappingILU0<M,X, X, ParallelInformation>
     EllipticPreconditioner;
     /// \brief The type of the unique pointer to the preconditioner of the elliptic part.
-    typedef std::unique_ptr<EllipticPreconditioner,
-                            AdditionalObjectDeleter<Dune::SeqILU0<M,X,X> > >
+    typedef std::unique_ptr<EllipticPreconditioner>
     EllipticPreconditionerPointer;
 
     typedef EllipticPreconditioner Smoother;
@@ -122,154 +136,116 @@ struct CPRSelector<M,X,Y,Dune::OwnerOverlapCopyCommunication<I1,I2> >
     }
 };
 
-//! \brief Creates the deleter needed for the parallel ILU preconditioners.
-//! \tparam ILU The type of the underlying sequential ILU preconditioner.
-//! \tparam I1 The global index type.
-//! \tparam I2 The local index type.
-//! \param  ilu A reference to the wrapped preconditioner
-//! \param  p The parallel information for template parameter deduction.
-template<class ILU, class I1, class I2>
-AdditionalObjectDeleter<ILU>
-createParallelDeleter(ILU& ilu, const Dune::OwnerOverlapCopyCommunication<I1,I2>& p)
-    {
-        (void) p;
-        return AdditionalObjectDeleter<ILU>(ilu);
-    }
-#endif
+template<class M, class X, class Y>
+struct CPRSelector<M,X,Y,Dune::Amg::SequentialInformation>
+{
+    /// \brief The information about the parallelization and communication
+    typedef Dune::Amg::SequentialInformation ParallelInformation;
+    /// \brief The operator type;
+    typedef Dune::MatrixAdapter<M, X, Y> Operator;
+    /// \brief The type of the preconditioner used for the elliptic part.
+    typedef ParallelOverlappingILU0<M,X, X, ParallelInformation>
+    EllipticPreconditioner;
+    /// \brief The type of the unique pointer to the preconditioner of the elliptic part.
+    typedef std::unique_ptr<EllipticPreconditioner> EllipticPreconditionerPointer;
 
+    /// \brief type of AMG used to precondition the elliptic system.
+    typedef EllipticPreconditioner Smoother;
+    typedef Dune::Amg::AMG<Operator, X, Smoother, ParallelInformation> AMG;
+
+    /// \brief creates an Operator from the matrix
+    /// \param M The matrix to use.
+    /// \param p The parallel information to use.
+    static Operator* makeOperator(const M& m, const ParallelInformation&)
+    {
+        return new Operator(m);
+    }
+
+};
 //! \brief Creates and initializes a unique pointer to an sequential ILU0 preconditioner.
 //! \param A     The matrix of the linear system to solve.
 //! \param relax The relaxation factor to use.
-template<class M, class X>
-std::shared_ptr<Dune::SeqILU0<M,X,X> >
-createILU0Ptr(const M& A, double relax, const Dune::Amg::SequentialInformation&)
+template<class M, class X, class C>
+std::shared_ptr<ParallelOverlappingILU0<M,X,X,C> >
+createILU0Ptr(const M& A, const C& comm, double relax)
 {
-    return std::shared_ptr<Dune::SeqILU0<M,X,X> >(new Dune::SeqILU0<M,X,X>( A, relax) );
+    return std::make_shared<ParallelOverlappingILU0<M,X,X,C> >(A, comm, relax);
 }
 //! \brief Creates and initializes a shared pointer to an ILUn preconditioner.
 //! \param A     The matrix of the linear system to solve.
 //! \param ilu_n The n parameter for the extension of the nonzero pattern.
 //! \param relax The relaxation factor to use.
-template<class M, class X>
-std::shared_ptr<Dune::SeqILUn<M,X,X> >
-createILUnPtr(const M& A, int ilu_n, double relax, const Dune::Amg::SequentialInformation&)
+template<class M, class X, class C>
+std::shared_ptr<ParallelOverlappingILU0<M,X,X,C> >
+createILUnPtr(const M& A, const C& comm, int ilu_n, double relax)
 {
-    return std::shared_ptr<Dune::SeqILUn<M,X,X> >(new Dune::SeqILUn<M,X,X>( A, ilu_n, relax) );
+    return std::make_shared<ParallelOverlappingILU0<M,X,X,C> >( A, comm, ilu_n, relax);
 }
-
-#if HAVE_MPI
-template<class ILU, class I1, class I2>
-struct SelectParallelILUSharedPtr
-{
-    typedef std::shared_ptr<
-        Dune::BlockPreconditioner<
-            typename ILU::range_type,
-            typename ILU::domain_type,
-            Dune::OwnerOverlapCopyCommunication<I1,I2>,
-            ILU
-            >
-        > type;
-};
-
-//! \brief Creates and initializes a shared pointer to an ILUn preconditioner.
-//! \param A     The matrix of the linear system to solve.
-//! \param relax The relaxation factor to use.
-/// \param comm  The object describing the parallelization information and communication.
-template<class M, class X, class I1, class I2>
-typename SelectParallelILUSharedPtr<Dune::SeqILU0<M,X,X>, I1, I2>::type
-createILU0Ptr(const M& A, double relax,
-              const Dune::OwnerOverlapCopyCommunication<I1,I2>& comm)
-{
-    typedef Dune::BlockPreconditioner<
-        X,
-        X,
-        Dune::OwnerOverlapCopyCommunication<I1,I2>,
-        Dune::SeqILU0<M,X,X>
-        > PointerType;
-    Dune::SeqILU0<M,X,X>* ilu = nullptr;
-    int ilu_setup_successful = 1;
-    std::string message;
-    try {
-        ilu = new Dune::SeqILU0<M,X,X>(A, relax);
-    }
-    catch ( Dune::MatrixBlockError error )
-    {
-                message = error.what();
-                std::cerr<<"Exception occured on process " <<
-                    comm.communicator().rank() << " during " <<
-                    "setup of ILU0 preconditioner with message: " <<
-                    message<<std::endl;
-                ilu_setup_successful = 0;
-    }
-    // Check whether there was a problem on some process
-    if ( comm.communicator().min(ilu_setup_successful) == 0 )
-    {
-        if ( ilu ) // not null if constructor succeeded
-        {
-            // prevent memory leak
-            delete ilu;
-        }
-        throw Dune::MatrixBlockError();
-    }
-    return typename SelectParallelILUSharedPtr<Dune::SeqILU0<M,X,X>, I1, I2>
-        ::type ( new PointerType(*ilu, comm), createParallelDeleter(*ilu, comm));
-}
-
-//! \brief Creates and initializes a shared pointer to an ILUn preconditioner.
-//! \param A     The matrix of the linear system to solve.
-//! \param ilu_n The n parameter for the extension of the nonzero pattern.
-//! \param relax The relaxation factor to use.
-/// \param comm  The object describing the parallelization information and communication.
-template<class M, class X, class I1, class I2>
-typename SelectParallelILUSharedPtr<Dune::SeqILUn<M,X,X>, I1, I2>::type
-createILUnPtr(const M& A, int ilu_n, double relax,
-              const Dune::OwnerOverlapCopyCommunication<I1,I2>& comm)
-{
-    typedef Dune::BlockPreconditioner<
-        X,
-        X,
-        Dune::OwnerOverlapCopyCommunication<I1,I2>,
-        Dune::SeqILUn<M,X,X>
-        > PointerType;
-    Dune::SeqILUn<M,X,X>* ilu = new Dune::SeqILUn<M,X,X>( A, ilu_n, relax);
-
-    return typename SelectParallelILUSharedPtr<Dune::SeqILUn<M,X,X>, I1, I2>::type
-        (new PointerType(*ilu, comm),createParallelDeleter(*ilu, comm));
-}
-#endif
-
-/// \brief Creates the elliptic preconditioner (ILU0)
-/// \param Ae The matrix of the elliptic system.
-/// \param relax The relaxation parameter for ILU0
-template<class M, class X=typename M::range_type>
-std::unique_ptr<Dune::SeqILU0<M,X,X> >
-createEllipticPreconditionerPointer(const M& Ae, double relax,
-                                    const Dune::Amg::SequentialInformation&)
-{
-    return std::unique_ptr<Dune::SeqILU0<M,X,X> >(new Dune::SeqILU0<M,X,X>(Ae, relax));
-}
-
-#if HAVE_MPI
 /// \brief Creates the elliptic preconditioner (ILU0)
 /// \param Ae    The matrix of the elliptic system.
 /// \param relax The relaxation parameter for ILU0.
 /// \param comm  The object describing the parallelization information and communication.
-template<class M, class X=typename M::range_type, class I1, class I2>
-typename CPRSelector<M,X,X,Dune::OwnerOverlapCopyCommunication<I1,I2> >
-::EllipticPreconditionerPointer
+template<class M, class X=typename M::range_type, class P>
+typename CPRSelector<M,X,X,P>::EllipticPreconditionerPointer
 createEllipticPreconditionerPointer(const M& Ae, double relax,
-                                    const Dune::OwnerOverlapCopyCommunication<I1,I2>& comm)
+                                    const P& comm)
 {
-    typedef typename CPRSelector<M,X,X,Dune::OwnerOverlapCopyCommunication<I1,I2> >
+    typedef typename CPRSelector<M,X,X,P >
         ::EllipticPreconditioner ParallelPreconditioner;
 
-    //Dune::SeqILU0<M,X,X>* ilu=new Dune::SeqILU0<M,X,X>(Ae, relax);
-    typedef typename CPRSelector<M,X,X,Dune::OwnerOverlapCopyCommunication<I1,I2> >
+    typedef typename CPRSelector<M,X,X,P>
         ::EllipticPreconditionerPointer EllipticPreconditionerPointer;
     return EllipticPreconditionerPointer(new ParallelPreconditioner(Ae, comm, relax));
 }
 
-#endif // #if HAVE_MPI
+template < class C, class Op, class P, class S, std::size_t index >
+inline void
+createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
+                               std::unique_ptr< BlackoilAmg<Op,S,C,P,index> >& amgPtr,
+                               const CPRParameter& params)
+{
+    using AMG = BlackoilAmg<Op,S,C,P,index>;
+    // TODO: revise choice of parameters
+    int coarsenTarget=1200;
+    using Criterion = C;
+    Criterion criterion(15, coarsenTarget);
+    criterion.setDebugLevel( 0 ); // no debug information, 1 for printing hierarchy information
+    criterion.setDefaultValuesIsotropic(2);
+    criterion.setNoPostSmoothSteps( 1 );
+    criterion.setNoPreSmoothSteps( 1 );
+
+    // Since DUNE 2.2 we also need to pass the smoother args instead of steps directly
+    typedef typename AMG::Smoother Smoother;
+    typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
+    SmootherArgs  smootherArgs;
+    smootherArgs.iterations = 1;
+    smootherArgs.relaxationFactor = relax;
+
+    amgPtr.reset( new AMG( params, opA, criterion, smootherArgs, comm ) );
+}
+
+template < class C, class Op, class P, class AMG >
+inline void
+createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm, std::unique_ptr< AMG >& amgPtr)
+{
+    // TODO: revise choice of parameters
+    int coarsenTarget=1200;
+    using Criterion = C;
+    Criterion criterion(15, coarsenTarget);
+    criterion.setDebugLevel( 0 ); // no debug information, 1 for printing hierarchy information
+    criterion.setDefaultValuesIsotropic(2);
+    criterion.setNoPostSmoothSteps( 1 );
+    criterion.setNoPreSmoothSteps( 1 );
+
+    // for DUNE 2.2 we also need to pass the smoother args
+    typedef typename AMG::Smoother Smoother;
+    typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
+    SmootherArgs  smootherArgs;
+    smootherArgs.iterations = 1;
+    smootherArgs.relaxationFactor = relax;
+
+    amgPtr.reset( new AMG(opA, criterion, smootherArgs, comm ) );
+}
 
 /// \brief Creates the elliptic preconditioner (ILU0)
 /// \param opA     The operator representing the matrix of the system.
@@ -292,64 +268,10 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
     // The coarsening criterion used in the AMG
     typedef Dune::Amg::CoarsenCriterion<CritBase> Criterion;
 
-    // TODO: revise choice of parameters
-    int coarsenTarget=1200;
-    Criterion criterion(15,coarsenTarget);
-    criterion.setDebugLevel( 0 ); // no debug information, 1 for printing hierarchy information
-    criterion.setDefaultValuesIsotropic(2);
-    criterion.setNoPostSmoothSteps( 1 );
-    criterion.setNoPreSmoothSteps( 1 );
-
-    // for DUNE 2.2 we also need to pass the smoother args
-    typedef typename AMG::Smoother Smoother;
-    typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
-    SmootherArgs  smootherArgs;
-    smootherArgs.iterations = 1;
-    smootherArgs.relaxationFactor = relax;
-
-    amgPtr.reset( new AMG(opA, criterion, smootherArgs, comm ) );
+    createAMGPreconditionerPointer<Criterion>(opA, relax, comm, amgPtr);
 }
 
 } // end namespace ISTLUtility
-
-    struct CPRParameter
-    {
-        double cpr_relax_;
-        double cpr_solver_tol_;
-        int cpr_ilu_n_;
-        int cpr_max_ell_iter_;
-        bool cpr_use_amg_;
-        bool cpr_use_bicgstab_;
-        bool cpr_solver_verbose_;
-
-        CPRParameter() { reset(); }
-
-        CPRParameter( const ParameterGroup& param)
-        {
-            // reset values to default
-            reset();
-
-            cpr_relax_          = param.getDefault("cpr_relax", cpr_relax_);
-            cpr_solver_tol_     = param.getDefault("cpr_solver_tol", cpr_solver_tol_);
-            cpr_ilu_n_          = param.getDefault("cpr_ilu_n", cpr_ilu_n_);
-            cpr_max_ell_iter_   = param.getDefault("cpr_max_elliptic_iter",cpr_max_ell_iter_);
-            cpr_use_amg_        = param.getDefault("cpr_use_amg", cpr_use_amg_);
-            cpr_use_bicgstab_   = param.getDefault("cpr_use_bicgstab", cpr_use_bicgstab_);
-            cpr_solver_verbose_ = param.getDefault("cpr_solver_verbose", cpr_solver_verbose_);
-        }
-
-        void reset()
-        {
-            cpr_relax_          = 1.0;
-            cpr_solver_tol_     = 1e-2;
-            cpr_ilu_n_          = 0;
-            cpr_max_ell_iter_   = 25;
-            cpr_use_amg_        = true;
-            cpr_use_bicgstab_   = true;
-            cpr_solver_verbose_ = false;
-        }
-    };
-
 
     /*!
       \brief CPR preconditioner.
@@ -448,10 +370,10 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
 
             // create the preconditioner for the whole system.
             if( param_.cpr_ilu_n_ == 0 ) {
-                pre_ = ISTLUtility::createILU0Ptr<M,X>( A_, param_.cpr_relax_, comm_ );
+                pre_ = ISTLUtility::createILU0Ptr<M,X>( A_, comm, param_.cpr_relax_ );
             }
             else {
-                pre_ = ISTLUtility::createILUnPtr<M,X>( A_, param_.cpr_ilu_n_, param_.cpr_relax_, comm_ );
+                pre_ = ISTLUtility::createILUnPtr<M,X>( A_, comm, param_.cpr_ilu_n_, param_.cpr_relax_);
             }
         }
 
