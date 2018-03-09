@@ -174,15 +174,10 @@ namespace Opm {
         {
 
             // update the solution variables in ebos
-
-            // if the last time step failed we need to update the curent solution
-            // and recalculate the Intesive Quantities.
             if ( timer.lastStepFailed() ) {
-                ebosSimulator_.model().solution( 0 /* timeIdx */ ) = ebosSimulator_.model().solution( 1 /* timeIdx */ );
-                ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+                ebosSimulator_.model().updateFailed();
             } else {
-                // set the initial solution.
-                ebosSimulator_.model().solution( 1 /* timeIdx */ ) = ebosSimulator_.model().solution( 0 /* timeIdx */ );
+                ebosSimulator_.model().advanceTimeLevel();
             }
 
             // set the timestep size and index in ebos explicitly
