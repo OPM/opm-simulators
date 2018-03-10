@@ -1483,6 +1483,7 @@ namespace Opm
                 case Phase::SOLVENT: OPM_THROW(std::invalid_argument, "Solvent injector is not supported.");
                 case Phase::POLYMER: OPM_THROW(std::invalid_argument, "Polymer injector is not supported.");
                 case Phase::ENERGY:  OPM_THROW(std::invalid_argument, "Energy injector is not supported.");
+                case Phase::POLYMW:  OPM_THROW(std::invalid_argument, "PolyMW injector is not supported.");
             }
             OPM_THROW(std::logic_error, "Invalid state." );
         }
