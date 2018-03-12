@@ -34,6 +34,7 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/version.hh>
 
 namespace Opm {
 
@@ -250,8 +251,10 @@ public:
 
         // solve for all mole fractions
         try {
+#if ! DUNE_VERSION_NEWER(DUNE_COMMON, 2,7)
             static constexpr Scalar eps = std::numeric_limits<Scalar>::min()*1000.0;
             Dune::FMatrixPrecision<Scalar>::set_singular_limit(eps);
+#endif
             M.solve(x, b);
         }
         catch (const Dune::FMatrixError& e) {

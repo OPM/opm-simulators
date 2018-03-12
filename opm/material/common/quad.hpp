@@ -29,7 +29,10 @@
 #if !defined OPM_COMMON_QUAD_HPP && HAVE_QUAD
 #define OPM_COMMON_QUAD_HPP
 
+#include <opm/material/common/Unused.hpp>
+
 #include <cmath>
+#include <complex>
 #include <string>
 #include <stdexcept>
 #include <limits>
@@ -258,6 +261,18 @@ inline std::istream& operator>>(std::istream& is, quad& val)
     val = tmp;
     return ret;
 }
+
+inline quad real(quad val)
+{ return val; }
+
+inline quad real(const std::complex<quad>& val)
+{ return val.real(); }
+
+inline quad imag(quad val OPM_UNUSED)
+{ return 0.0; }
+
+inline quad imag(const std::complex<quad>& val)
+{ return val.imag(); }
 
 inline quad abs(quad val)
 { return (val < 0) ? -val : val; }
