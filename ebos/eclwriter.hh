@@ -89,7 +89,7 @@ class EclWriter
     typedef typename GridView::template Codim<0>::Entity Element;
     typedef typename GridView::template Codim<0>::Iterator ElementIterator;
 
-    typedef CollectDataToIORank< Vanguard > CollectDataToIORankType;
+    typedef CollectDataToIORank<Vanguard> CollectDataToIORankType;
 
     typedef std::vector<Scalar> ScalarBuffer;
 
@@ -142,7 +142,7 @@ public:
     /*!
      * \brief collect and pass data and pass it to eclIO writer
      */
-    void writeOutput(Opm::data::Wells& localWellData, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep)
+    void writeOutput(Opm::data::Wells& localWellData, Scalar curTime, bool isSubStep, Scalar totalSolverTime, Scalar nextStepSize)
     {
 #if !HAVE_ECL_OUTPUT
         throw std::runtime_error("Eclipse output support not available in opm-common, unable to write ECL output!");
@@ -152,7 +152,7 @@ public:
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
-        eclOutputModule_.allocBuffers(numElements, episodeIdx, substep, log);
+        eclOutputModule_.allocBuffers(numElements, episodeIdx, isSubStep, log);
 
         ElementContext elemCtx(simulator_);
         ElementIterator elemIt = gridView.template begin</*codim=*/0>();
@@ -167,11 +167,11 @@ public:
 
         // collect all data to I/O rank and assign to sol
         Opm::data::Solution localCellData = {};
-        if (!substep)
+        if (!isSubStep)
             eclOutputModule_.assignToSolution(localCellData);
 
         // add cell data to perforations for Rft output
-        if (!substep)
+        if (!isSubStep)
             eclOutputModule_.addRftDataToWells(localWellData, episodeIdx);
 
         if (collectToIORank_.isParallel())
@@ -179,15 +179,15 @@ public:
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
-        eclOutputModule_.outputFipLog(miscSummaryData, regionData, substep);
+        eclOutputModule_.outputFipLog(miscSummaryData, regionData, isSubStep);
 
         // write output on I/O rank
         if (collectToIORank_.isIORank()) {
             std::map<std::string, std::vector<double>> extraRestartData;
 
             // Add suggested next timestep to extra data.
-            if (!substep)
-                extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextstep);
+            if (!isSubStep)
+                extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextStepSize);
 
             // Add TCPU
             if (totalSolverTime != 0.0)
@@ -205,8 +205,8 @@ public:
             // first, create a tasklet to write the data for the current time step to disk
             auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(*eclIO_,
                                                                      episodeIdx,
-                                                                     substep,
-                                                                     t,
+                                                                     isSubStep,
+                                                                     curTime,
                                                                      cellData,
                                                                      wellData,
                                                                      miscSummaryData,
@@ -247,7 +247,7 @@ public:
         unsigned episodeIdx = simulator_.episodeIndex();
         const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
-        eclOutputModule_.allocBuffers(numElements, episodeIdx, /*substep=*/false, /*log=*/false);
+        eclOutputModule_.allocBuffers(numElements, episodeIdx, /*isSubStep=*/false, /*log=*/false);
 
         auto restart_values = eclIO_->loadRestart(solution_keys, extra_keys);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
@@ -256,10 +256,8 @@ public:
         }
     }
 
-
-    const EclOutputBlackOilModule<TypeTag>& eclOutputModule() const {
-        return eclOutputModule_;
-    }
+    const EclOutputBlackOilModule<TypeTag>& eclOutputModule() const
+    { return eclOutputModule_; }
 
 
 private:
@@ -293,9 +291,9 @@ private:
 #endif
 
         const auto& cartesianCellIdx = globalGrid_.globalCell();
-
         const auto* globalTrans = &(simulator_.vanguard().globalTransmissibility());
-        if (!collectToIORank_.isParallel()) {
+
+        if (!collectToIORank_.isParallel())
             // in the sequential case we must use the transmissibilites defined by
             // the problem. (because in the sequential case, the grid manager does
             // not compute "global" transmissibilities for performance reasons. in
@@ -303,7 +301,6 @@ private:
             // because this object refers to the distributed grid and we need the
             // sequential version here.)
             globalTrans = &simulator_.problem().eclTransmissibilities();
-        }
 
         auto elemIt = globalGridView.template begin</*codim=*/0>();
         const auto& elemEndIt = globalGridView.template end</*codim=*/0>();
@@ -316,38 +313,31 @@ private:
                 const auto& is = *isIt;
 
                 if (!is.neighbor())
-                {
                     continue; // intersection is on the domain boundary
-                }
 
                 unsigned c1 = globalElemMapper.index(is.inside());
                 unsigned c2 = globalElemMapper.index(is.outside());
 
                 if (c1 > c2)
-                {
                     continue; // we only need to handle each connection once, thank you.
-                }
 
 
                 int gc1 = std::min(cartesianCellIdx[c1], cartesianCellIdx[c2]);
                 int gc2 = std::max(cartesianCellIdx[c1], cartesianCellIdx[c2]);
-                if (gc2 - gc1 == 1) {
+                if (gc2 - gc1 == 1)
                     tranx.data[gc1] = globalTrans->transmissibility(c1, c2);
-                }
 
-                if (gc2 - gc1 == cartDims[0]) {
+                if (gc2 - gc1 == cartDims[0])
                     trany.data[gc1] = globalTrans->transmissibility(c1, c2);
-                }
 
-                if (gc2 - gc1 == cartDims[0]*cartDims[1]) {
+                if (gc2 - gc1 == cartDims[0]*cartDims[1])
                     tranz.data[gc1] = globalTrans->transmissibility(c1, c2);
-                }
             }
         }
 
-        return {{"TRANX" , tranx},
-                {"TRANY" , trany} ,
-                {"TRANZ" , tranz}};
+        return {{"TRANX", tranx},
+                {"TRANY", trany} ,
+                {"TRANZ", tranz}};
     }
 
     Opm::NNC exportNncStructure_() const
@@ -389,17 +379,13 @@ private:
                 const auto& is = *isIt;
 
                 if (!is.neighbor())
-                {
                     continue; // intersection is on the domain boundary
-                }
 
                 unsigned c1 = globalElemMapper.index(is.inside());
                 unsigned c2 = globalElemMapper.index(is.outside());
 
                 if (c1 > c2)
-                {
                     continue; // we only need to handle each connection once, thank you.
-                }
 
                 // TODO (?): use the cartesian index mapper to make this code work
                 // with grids other than Dune::CpGrid. The problem is that we need
@@ -458,9 +444,8 @@ private:
         { }
 
         // callback to eclIO serial writeTimeStep method
-        void run ()
+        void run()
         {
-            // write data
             eclIO_.writeTimeStep(episodeIdx_,
                                  isSubStep_,
                                  secondsElapsed_,
