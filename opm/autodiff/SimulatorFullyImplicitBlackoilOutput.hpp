@@ -40,7 +40,7 @@
 #include <opm/autodiff/ParallelDebugOutput.hpp>
 
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
-#include <ebos/threadhandle.hh>
+#include <opm/autodiff/ThreadHandle.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
