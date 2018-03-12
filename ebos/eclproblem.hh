@@ -112,9 +112,6 @@ NEW_PROP_TAG(EnableWriteAllSolutions);
 // The number of time steps skipped between writing two consequtive restart files
 NEW_PROP_TAG(RestartWritingInterval);
 
-// The default location for the ECL output files
-NEW_PROP_TAG(EclOutputDir);
-
 // Disable well treatment (for users which do this externally)
 NEW_PROP_TAG(DisableWells);
 
@@ -316,6 +313,7 @@ public:
     static void registerParameters()
     {
         ParentType::registerParameters();
+        EclWriterType::registerParameters();
 
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWriteAllSolutions,
                              "Write all solutions to disk instead of only the ones for the "
@@ -323,8 +321,6 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEclOutput,
                              "Write binary output which is compatible with the commercial "
                              "Eclipse simulator");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, EclOutputDir,
-                             "The directory to which the ECL result files are written");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclOutputDoublePrecision,
                              "Tell the output writer to use double precision. Useful for 'perfect' restarts");
         EWOMS_REGISTER_PARAM(TypeTag, unsigned, RestartWritingInterval,
@@ -341,42 +337,14 @@ public:
         , wellManager_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
     {
-        // Tell the extra modules to initialize its internal data structures
+        // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
         SolventModule::initFromDeck(vanguard.deck(), vanguard.eclState());
         PolymerModule::initFromDeck(vanguard.deck(), vanguard.eclState());
 
-        if (EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput)) {
-            // retrieve the location set by the user
-            std::string outputDir = EWOMS_GET_PARAM(TypeTag, std::string, EclOutputDir);
-
-            auto& eclState = this->simulator().vanguard().eclState();
-            auto& ioConfig = eclState.getIOConfig();
-            if (outputDir == ".") {
-                // Default output directory is the directory where the deck is found.
-                const std::string default_output_dir = ioConfig.getOutputDir();
-                outputDir = default_output_dir;
-            }
-
-            // ensure that the output directory exists and that it is a directory
-            if (outputDir != ".") { // Do not try to create the current directory.
-                if (!boost::filesystem::is_directory(outputDir)) {
-                    try {
-                        boost::filesystem::create_directories(outputDir);
-                    }
-                    catch (...) {
-                        throw std::runtime_error("Creation of output directory '"+outputDir+"' failed\n");
-                    }
-                }
-            }
-
-            // specify the directory output. This is not a very nice mechanism because
-            // the eclState is supposed to be immutable here, IMO.
-            ioConfig.setOutputDir(outputDir);
-
-            // create the actual ECL writer
+        if (EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput))
+            // create the ECL writer
             eclWriter_.reset(new EclWriterType(simulator));
-        }
 
         // Hack to compute the initial thpressure values for restarts
         restartApplied = false;

@@ -60,8 +60,10 @@ NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(EquilGrid);
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(EclDeckFileName);
+NEW_PROP_TAG(EclOutputDir);
 
 SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "ECLDECK.DATA");
+SET_STRING_PROP(EclBaseVanguard, EclOutputDir, ".");
 } // namespace Properties
 
 /*!
@@ -92,6 +94,8 @@ public:
     {
         EWOMS_REGISTER_PARAM(TypeTag, std::string, EclDeckFileName,
                              "The name of the file which contains the ECL deck to be simulated");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, EclOutputDir,
+                             "The directory to which the ECL result files are written");
     }
 
     /*!
@@ -192,6 +196,31 @@ public:
             schedule_ = externalSchedule_;
             summaryConfig_ = externalSummaryConfig_;
         }
+
+        // retrieve the location set by the user
+        std::string outputDir = EWOMS_GET_PARAM(TypeTag, std::string, EclOutputDir);
+
+        // update the location for output
+        auto& ioConfig = eclState_->getIOConfig();
+        if (outputDir == "")
+            // If no output directory parameter is specified, use the output directory
+            // which Opm::IOConfig thinks that should be used. Normally this is the
+            // directory in which the input files are located.
+            outputDir = ioConfig.getOutputDir();
+
+        // ensure that the output directory exists and that it is a directory
+        if (!boost::filesystem::is_directory(outputDir)) {
+            try {
+                boost::filesystem::create_directories(outputDir);
+            }
+            catch (...) {
+                 throw std::runtime_error("Creation of output directory '"+outputDir+"' failed\n");
+            }
+        }
+
+        // specify the directory output. This is not a very nice mechanism because
+        // the eclState is supposed to be immutable here, IMO.
+        ioConfig.setOutputDir(outputDir);
 
         asImp_().createGrids_();
         asImp_().filterCompletions_();
