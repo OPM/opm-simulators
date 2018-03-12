@@ -206,9 +206,14 @@ SET_BOOL_PROP(EclBaseProblem, EnableVtkOutput, false);
 // ... but enable the ECL output by default
 SET_BOOL_PROP(EclBaseProblem, EnableEclOutput, true);
 
-// Output single precision is default
+// If available, write the ECL output in a non-blocking manner
+SET_BOOL_PROP(EclBaseProblem, EnableAsyncEclOutput, true);
+
+// By default, use single precision for the ECL formated results
 SET_BOOL_PROP(EclBaseProblem, EclOutputDoublePrecision, false);
 
+// The default location for the ECL output files
+SET_STRING_PROP(EclBaseProblem, EclOutputDir, ".");
 
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
@@ -222,9 +227,6 @@ SET_TYPE_PROP(EclBaseProblem, FluxModule, Ewoms::EclTransFluxModule<TypeTag>);
 
 // Use the dummy gradient calculator in order not to do unnecessary work.
 SET_TYPE_PROP(EclBaseProblem, GradientCalculator, Ewoms::EclDummyGradientCalculator<TypeTag>);
-
-// The default location for the ECL output files
-SET_STRING_PROP(EclBaseProblem, EclOutputDir, ".");
 
 // The frequency of writing restart (*.ers) files. This is the number of time steps
 // between writing restart files

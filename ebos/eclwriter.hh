@@ -33,7 +33,7 @@
 
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include <ewoms/io/baseoutputwriter.hh>
-#include <ebos/threadhandle.hh>
+#include <ewoms/parallel/tasklets.hh>
 
 #if HAVE_ECL_OUTPUT
 #include <opm/output/eclipse/EclipseIO.hpp>
@@ -51,6 +51,7 @@
 namespace Ewoms {
 namespace Properties {
 NEW_PROP_TAG(EnableEclOutput);
+NEW_PROP_TAG(EnableAsyncEclOutput);
 NEW_PROP_TAG(EclOutputDoublePrecision);
 }
 
@@ -93,11 +94,16 @@ class EclWriter
     typedef std::vector<Scalar> ScalarBuffer;
 
 public:
+    static void registerParameters()
+    {
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAsyncEclOutput,
+                             "Write the ECL-formated results in a non-blocking way (i.e., using a separate thread).");
+    }
+
     EclWriter(const Simulator& simulator)
         : simulator_(simulator)
         , collectToIORank_(simulator_.vanguard())
         , eclOutputModule_(simulator, collectToIORank_)
-        , asyncOutput_()
     {
         globalGrid_ = simulator_.vanguard().grid();
         globalGrid_.switchToGlobalView();
@@ -108,22 +114,9 @@ public:
 
         // create output thread if enabled and rank is I/O rank
         // async output is enabled by default if pthread are enabled
-#if HAVE_PTHREAD
-        const bool asyncOutputDefault = true;
-#else
-        const bool asyncOutputDefault = false;
-#endif
-
-// TODO Add param
-        const bool isIORank = collectToIORank_.isParallel() && collectToIORank_.isIORank();
-        if( asyncOutputDefault && isIORank )
-        {
-#if HAVE_PTHREAD
-            asyncOutput_.reset( new Opm::ThreadHandle( isIORank ) );
-#else
-        throw std::runtime_error("Pthreads were not found, cannot enable async_output");
-#endif
-        }
+        bool enableAsyncOutput = EWOMS_GET_PARAM(TypeTag, bool, EnableAsyncEclOutput);
+        bool createOutputThread = enableAsyncOutput && collectToIORank_.isIORank();
+        taskletRunner_.reset(new TaskletRunner(createOutputThread));
     }
 
     ~EclWriter()
@@ -190,7 +183,6 @@ public:
 
         // write output on I/O rank
         if (collectToIORank_.isIORank()) {
-
             std::map<std::string, std::vector<double>> extraRestartData;
 
             // Add suggested next timestep to extra data.
@@ -198,40 +190,37 @@ public:
                 extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextstep);
 
             // Add TCPU
-            if (totalSolverTime != 0.0) {
+            if (totalSolverTime != 0.0)
                 miscSummaryData["TCPU"] = totalSolverTime;
-            }
+
             bool enableDoublePrecisionOutput = EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
             const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
             const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
 
-            const std::map<std::pair<std::string, int>, double>& blockData = collectToIORank_.isParallel() ? collectToIORank_.globalBlockData() : eclOutputModule_.getBlockData();
+            const std::map<std::pair<std::string, int>, double>& blockData
+                = collectToIORank_.isParallel()
+                ? collectToIORank_.globalBlockData()
+                : eclOutputModule_.getBlockData();
 
-            if( asyncOutput_ ) {
-                // dispatch the write call to the extra thread
-                asyncOutput_->dispatch( WriterCall(*eclIO_,
-                                                   episodeIdx,
-                                                   substep,
-                                                   t,
-                                                   cellData,
-                                                   wellData,
-                                                   miscSummaryData,
-                                                   regionData,
-                                                   blockData,
-                                                   extraRestartData,
-                                                   enableDoublePrecisionOutput ) );
-            } else {
-                eclIO_->writeTimeStep(episodeIdx,
-                                      substep,
-                                      t,
-                                      cellData,
-                                      wellData,
-                                      miscSummaryData,
-                                      regionData,
-                                      blockData,
-                                      extraRestartData,
-                                      enableDoublePrecisionOutput);
-            }
+            // first, create a tasklet to write the data for the current time step to disk
+            auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(*eclIO_,
+                                                                     episodeIdx,
+                                                                     substep,
+                                                                     t,
+                                                                     cellData,
+                                                                     wellData,
+                                                                     miscSummaryData,
+                                                                     regionData,
+                                                                     blockData,
+                                                                     extraRestartData,
+                                                                     enableDoublePrecisionOutput);
+
+            // then, make sure that the previous I/O request has been completed and the
+            // number of incomplete tasklets does not increase between time steps
+            taskletRunner_->barrier();
+
+            // finally, start a new output writing job
+            taskletRunner_->dispatch(eclWriteTasklet);
         }
 #endif
     }
@@ -429,12 +418,12 @@ private:
         return nnc;
     }
 
-
-    struct WriterCall : public Opm::ThreadHandle :: ObjectInterface
+    struct EclWriteTasklet
+        : public TaskletInterface
     {
         Opm::EclipseIO& eclIO_;
         int episodeIdx_;
-        bool isSubstep_;
+        bool isSubStep_;
         double secondsElapsed_;
         Opm::data::Solution cellData_;
         Opm::data::Wells wellData_;
@@ -444,38 +433,36 @@ private:
         std::map<std::string, std::vector<double>> extraRestartData_;
         bool writeDoublePrecision_;
 
-        explicit WriterCall(
-                Opm::EclipseIO& eclIO,
-                int episodeIdx,
-                bool isSubstep,
-                double secondsElapsed,
-                Opm::data::Solution cellData,
-                Opm::data::Wells wellData,
-                const std::map<std::string, double>& singleSummaryValues,
-                const std::map<std::string, std::vector<double>>& regionSummaryValues,
-                const std::map<std::pair<std::string, int>, double>& blockSummaryValues,
-                const std::map<std::string, std::vector<double>>& extraRestartData,
-                bool writeDoublePrecision)
-            : eclIO_(eclIO),
-              episodeIdx_(episodeIdx),
-              isSubstep_(isSubstep),
-              secondsElapsed_(secondsElapsed),
-              cellData_(cellData),
-              wellData_(wellData),
-              singleSummaryValues_(singleSummaryValues),
-              regionSummaryValues_(regionSummaryValues),
-              blockSummaryValues_(blockSummaryValues),
-              extraRestartData_(extraRestartData),
-              writeDoublePrecision_(writeDoublePrecision)
-        {
-        }
+        explicit EclWriteTasklet(Opm::EclipseIO& eclIO,
+                                 int episodeIdx,
+                                 bool isSubStep,
+                                 double secondsElapsed,
+                                 Opm::data::Solution cellData,
+                                 Opm::data::Wells wellData,
+                                 const std::map<std::string, double>& singleSummaryValues,
+                                 const std::map<std::string, std::vector<double>>& regionSummaryValues,
+                                 const std::map<std::pair<std::string, int>, double>& blockSummaryValues,
+                                 const std::map<std::string, std::vector<double>>& extraRestartData,
+                                 bool writeDoublePrecision)
+            : eclIO_(eclIO)
+            , episodeIdx_(episodeIdx)
+            , isSubStep_(isSubStep)
+            , secondsElapsed_(secondsElapsed)
+            , cellData_(cellData)
+            , wellData_(wellData)
+            , singleSummaryValues_(singleSummaryValues)
+            , regionSummaryValues_(regionSummaryValues)
+            , blockSummaryValues_(blockSummaryValues)
+            , extraRestartData_(extraRestartData)
+            , writeDoublePrecision_(writeDoublePrecision)
+        { }
 
         // callback to eclIO serial writeTimeStep method
         void run ()
         {
             // write data
             eclIO_.writeTimeStep(episodeIdx_,
-                                 isSubstep_,
+                                 isSubStep_,
                                  secondsElapsed_,
                                  cellData_,
                                  wellData_,
@@ -495,7 +482,7 @@ private:
     EclOutputBlackOilModule<TypeTag> eclOutputModule_;
     std::unique_ptr<Opm::EclipseIO> eclIO_;
     Grid globalGrid_;
-    std::unique_ptr< Opm::ThreadHandle > asyncOutput_;
+    std::unique_ptr<TaskletRunner> taskletRunner_;
 
 
 };
