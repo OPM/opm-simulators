@@ -39,18 +39,14 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 #endif
 
+#include <opm/grid/GridHelpers.hpp>
+
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Exceptions.hpp>
-
-#include <boost/algorithm/string.hpp>
 
 #include <list>
 #include <utility>
 #include <string>
-#include <limits>
-#include <sstream>
-#include <fstream>
-#include <type_traits>
 
 namespace Ewoms {
 namespace Properties {
@@ -60,6 +56,9 @@ NEW_PROP_TAG(EclOutputDoublePrecision);
 
 template <class TypeTag>
 class EclWriter;
+
+template <class TypeTag>
+class EclOutputBlackOilModule;
 
 /*!
  * \ingroup EclBlackOilSimulator

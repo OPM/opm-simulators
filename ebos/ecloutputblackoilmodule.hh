@@ -29,6 +29,8 @@
 
 #include "eclwriter.hh"
 
+#include <ewoms/models/blackoil/blackoilproperties.hh>
+
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 
@@ -44,6 +46,7 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 #endif
 
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <dune/common/fvector.hh>
 
@@ -649,7 +652,7 @@ public:
     }
 
     void addRftDataToWells(Opm::data::Wells& wellDatas, size_t reportStepNum)
-    {            
+    {
         for ( const auto& well : simulator_.vanguard().schedule().getWells( reportStepNum )) {
 
             // don't bother with wells not on this process

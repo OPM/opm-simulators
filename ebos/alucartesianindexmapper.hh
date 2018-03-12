@@ -225,7 +225,7 @@ namespace Ewoms
               coords[ 0 ] = gc ;
           }
           else
-            throw std::invalid_argument("cartesianCoordinate not implemented for dimension " << dimension );
+              throw std::invalid_argument("cartesianCoordinate not implemented for dimension " + std::to_string(dimension) );
         }
 
         template <class GridView>
