@@ -131,8 +131,13 @@ SET_STRING_PROP(WaterAirBaseProblem, GridFile, "./data/waterair.dgf");
 SET_TAG_PROP(WaterAirBaseProblem, LinearSolverSplice, ParallelIstlLinearSolver);
 SET_TYPE_PROP(WaterAirBaseProblem, LinearSolverWrapper,
               Ewoms::Linear::SolverWrapperRestartedGMRes<TypeTag>);
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
+SET_TYPE_PROP(WaterAirBaseProblem, PreconditionerWrapper,
+              Ewoms::Linear::PreconditionerWrapperILU<TypeTag>);
+#else
 SET_TYPE_PROP(WaterAirBaseProblem, PreconditionerWrapper,
               Ewoms::Linear::PreconditionerWrapperILUn<TypeTag>);
+#endif
 SET_INT_PROP(WaterAirBaseProblem, PreconditionerOrder, 2);
 } // namespace Properties
 } // namespace Ewoms
