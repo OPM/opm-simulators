@@ -89,8 +89,6 @@ public:
             return;
         }
 
-        //Dune::FMatrixPrecision<Scalar>::set_singular_limit(1e-25);
-
         // save initial composition in case something goes wrong
         Dune::FieldVector<Evaluation, numComponents> xInit;
         for (unsigned i = 0; i < numComponents; ++i) {
