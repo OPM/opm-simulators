@@ -35,19 +35,24 @@ BOOST_AUTO_TEST_CASE(testmultmatrixtrans)
 
     using Mat2 =  FieldMatrix<double,2,2>;
 
-    
+
     Mat2 a2 = {{ 1, 2 }, { 3, 4} }, b2 = {{ 3, 4 }, { 5, 6} };
-    Mat2 res2 = {{}, {}}, resExpect2 = {{ 18, 22 }, {26, 32} };
+    // resulting matrix filled with temporay values to avoid initialization error
+    // from dune 2.4.1
+    Mat2 res2 = {{0, 0}, {0, 0}};
+    Mat2 resExpect2 = {{ 18, 22 }, {26, 32} };
     multMatrixTransposed(a2, b2, res2);
     BOOST_CHECK_EQUAL(res2, resExpect2);
-    
+
     using Mat3 =  FieldMatrix<double,3,3>;
 
-    
+
     Mat3 a3 = {{ 1, 2, 3 }, { 3, 4, 5}, {6, 7, 8} };
-    
+
     Mat3 b3 = {{ 3, 4, 5 }, { 5, 6, 7}, {7, 8, 9} };
-    Mat3 res3 = {{}, {}, {}};
+    // resulting matrix filled with temporay values to avoid initialization error
+    // from dune 2.4.1
+    Mat3 res3 = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
     Mat3 resExpect3 = {{ 60, 70, 80 }, {75, 88, 101}, { 90, 106, 122 } };
     multMatrixTransposed(a3, b3, res3);
     BOOST_CHECK_EQUAL(res3, resExpect3);
