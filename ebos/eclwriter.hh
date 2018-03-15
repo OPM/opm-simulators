@@ -115,8 +115,10 @@ public:
         // create output thread if enabled and rank is I/O rank
         // async output is enabled by default if pthread are enabled
         bool enableAsyncOutput = EWOMS_GET_PARAM(TypeTag, bool, EnableAsyncEclOutput);
-        bool createOutputThread = enableAsyncOutput && collectToIORank_.isIORank();
-        taskletRunner_.reset(new TaskletRunner(createOutputThread));
+        int numWorkerThreads = 0;
+        if (enableAsyncOutput && collectToIORank_.isIORank())
+            numWorkerThreads = 1;
+        taskletRunner_.reset(new TaskletRunner(numWorkerThreads));
     }
 
     ~EclWriter()
