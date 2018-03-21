@@ -79,6 +79,7 @@ namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(TestEclOutputTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem));
 SET_BOOL_PROP(TestEclOutputTypeTag, EnableGravity, false);
+SET_BOOL_PROP(TestEclOutputTypeTag, EnableAsyncEclOutput, false);
 }}
 
 static const int day = 24 * 60 * 60;
