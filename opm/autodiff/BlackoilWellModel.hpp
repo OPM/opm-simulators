@@ -194,6 +194,7 @@ namespace Opm {
             size_t number_of_cells_;
             double gravity_;
             std::vector<double> depth_;
+            bool initial_step_;
 
             DynamicListEconLimited dynamic_list_econ_limited_;
             std::unique_ptr<RateConverterType> rateConverter_;

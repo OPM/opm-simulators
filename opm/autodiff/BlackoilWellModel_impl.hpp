@@ -29,6 +29,7 @@ namespace Opm {
 
         extractLegacyCellPvtRegionIndex_();
         extractLegacyDepth_();
+        initial_step_ = true;
     }
 
 
@@ -273,6 +274,12 @@ namespace Opm {
         if (param_.solve_welleq_initially_ && iterationIdx == 0) {
             // solve the well equations as a pre-processing step
             last_report_ = solveWellEq(dt);
+            if (initial_step_) {
+                // update the explixit quanteties to get the initial fluid distribution in the well correct.
+                calculateExplicitQuantities();
+                last_report_ = solveWellEq(dt);
+                initial_step_ = false;
+            }
         }
         assembleWellEq(dt, false);
 
