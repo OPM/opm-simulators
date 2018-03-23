@@ -275,7 +275,7 @@ namespace Opm {
             // solve the well equations as a pre-processing step
             last_report_ = solveWellEq(dt);
             if (initial_step_) {
-                // update the explixit quanteties to get the initial fluid distribution in the well correct.
+                // update the explicit quantities to get the initial fluid distribution in the well correct.
                 calculateExplicitQuantities();
                 last_report_ = solveWellEq(dt);
                 initial_step_ = false;
@@ -1196,9 +1196,9 @@ namespace Opm {
                             // observed phase rates translated to
                             // reservoir conditions.  Recall sign
                             // convention: Negative for producers.
-                            const double target =
-                                - std::inner_product(distr.begin(), distr.end(),
-                                                     hrates.begin(), 0.0);
+                            std::vector<double> hrates_resv(np);
+                            rateConverter_->calcReservoirVoidageRates(fipreg, pvtreg, hrates, hrates_resv);
+                            const double target = -std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
 
                             well_controls_clear(ctrl);
                             well_controls_assert_number_of_phases(ctrl, int(np));
