@@ -32,7 +32,7 @@ REQUIREMENTS
 
 opm-simulators requires several other OPM modules, see
 http://opm-project.org/?page_id=274. In addition, opm-simulators
-requires the Dune modue dune-istl and Eigen, version 3.1 (has not been
+requires the Dune module dune-istl and Eigen, version 3.1 (has not been
 tested with later versions).
 
 
