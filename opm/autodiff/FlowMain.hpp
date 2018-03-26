@@ -108,7 +108,6 @@ namespace Opm
     namespace detail
     {
         boost::filesystem::path simulationCaseName( const std::string& casename );
-        int64_t convertMessageType(const Message::type& mtype);
     }
 
 
@@ -145,7 +144,6 @@ namespace Opm
             asImpl().readDeckInput();
             asImpl().setupOutput();
             asImpl().setupLogging();
-            asImpl().extractMessages();
             asImpl().setupGridAndProps();
             asImpl().runDiagnostics();
             asImpl().setupState();
@@ -741,44 +739,6 @@ namespace Opm
         }
 
 
-
-
-
-        // Extract messages from parser.
-        // Writes to:
-        //    OpmLog singleton.
-        void extractMessages()
-        {
-            if ( !output_cout_ )
-            {
-                return;
-            }
-
-            auto extractMessage = [](const Message& msg) {
-                auto log_type = detail::convertMessageType(msg.mtype);
-                const auto& location = msg.location;
-                if (location) {
-                    OpmLog::addTaggedMessage(log_type, "Parser message", Log::fileMessage(location.filename, location.lineno, msg.message));
-                } else {
-                    OpmLog::addTaggedMessage(log_type, "Parser message", msg.message);
-                }
-            };
-
-            // Extract messages from Deck.
-            for(const auto& msg : deck_->getMessageContainer()) {
-                extractMessage(msg);
-            }
-
-            // Extract messages from EclipseState.
-            for (const auto& msg : eclipse_state_->getMessageContainer()) {
-                extractMessage(msg);
-            }
-        }
-
-
-
-
-
         // Run diagnostics.
         // Writes to:
         //   OpmLog singleton.
@@ -1001,31 +961,6 @@ namespace Opm
             }
 
             throw std::invalid_argument( "Cannot find input case " + casename );
-        }
-
-
-
-
-
-        int64_t convertMessageType(const Message::type& mtype)
-        {
-            switch (mtype) {
-            case Message::type::Debug:
-                return Log::MessageType::Debug;
-            case Message::type::Info:
-                return Log::MessageType::Info;
-            case Message::type::Warning:
-                return Log::MessageType::Warning;
-            case Message::type::Error:
-                return Log::MessageType::Error;
-            case Message::type::Problem:
-                return Log::MessageType::Problem;
-            case Message::type::Bug:
-                return Log::MessageType::Bug;
-            case Message::type::Note:
-                return Log::MessageType::Note;
-            }
-            throw std::logic_error("Invalid messages type!\n");
         }
 
 
