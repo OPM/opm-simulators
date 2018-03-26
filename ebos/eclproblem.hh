@@ -123,6 +123,10 @@ NEW_PROP_TAG(DisableWells);
 // print statements in debug mode.
 NEW_PROP_TAG(EnableDebuggingChecks);
 
+// if thermal flux boundaries are enabled an effort is made to preserve the initial
+// thermal gradient specified via the TEMPVD keyword
+NEW_PROP_TAG(EnableThermalFluxBoundaries);
+
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 
@@ -277,6 +281,8 @@ SET_BOOL_PROP(EclBaseProblem, EnablePolymer, false);
 SET_BOOL_PROP(EclBaseProblem, EnableSolvent, false);
 SET_BOOL_PROP(EclBaseProblem, EnableEnergy, false);
 
+// disable thermal flux boundaries by default
+SET_BOOL_PROP(EclBaseProblem, EnableThermalFluxBoundaries, false);
 } // namespace Properties
 
 /*!
@@ -307,6 +313,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
     enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableThermalFluxBoundaries = GET_PROP_VALUE(TypeTag, EnableThermalFluxBoundaries) };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -795,10 +802,11 @@ public:
      */
     template <class Context>
     Scalar thermalHalfTransmissibility(const Context& context,
-                                       unsigned OPM_OPTIM_UNUSED fromDofLocalIdx,
-                                       unsigned toDofLocalIdx) const
+                                       unsigned faceIdx,
+                                       unsigned timeIdx) const
     {
-        assert(fromDofLocalIdx == 0);
+        const auto& face = context.stencil(timeIdx).interiorFace(faceIdx);
+        unsigned toDofLocalIdx = face.exteriorIndex();
         return *pffDofData_.get(context.element(), toDofLocalIdx).thermalHalfTrans;
     }
 
@@ -1094,7 +1102,7 @@ public:
                   unsigned spaceIdx,
                   unsigned timeIdx) const
     {
-        if (!enableEnergy)
+        if (!enableEnergy || !enableThermalFluxBoundaries)
             values.setNoFlow();
         else {
             // in the energy case we need to specify a non-trivial boundary condition

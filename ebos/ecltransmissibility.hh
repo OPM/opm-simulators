@@ -167,7 +167,7 @@ public:
         // if energy is enabled, let's do the same for the "thermal half transmissibilities"
         if (enableEnergy) {
             thermalHalfTrans_->clear();
-            thermalHalfTrans_->reserve(numElements*3*1.05);
+            thermalHalfTrans_->reserve(numElements*6*1.05);
 
             thermalHalfTransBoundary_.clear();
         }
@@ -186,7 +186,7 @@ public:
                 const auto& intersection = *isIt;
 
                 // deal with grid boundaries
-                if (!intersection.neighbor()) {
+                if (intersection.boundary()) {
                     // compute the transmissibilty for the boundary intersection
                     const auto& geometry = intersection.geometry();
                     const auto& faceCenterInside = geometry.center();
@@ -213,29 +213,29 @@ public:
                     // half transmissibilities
                     if (enableEnergy) {
                         const auto& n = intersection.centerUnitOuterNormal();
-                        Scalar A = intersection.geometry().volume();
-
                         const auto& inPos = elem.geometry().center();
                         const auto& outPos = intersection.geometry().center();
                         const auto& d = outPos - inPos;
 
-                        Scalar thermalHalfTrans =
-                            A * std::abs(n*d)/(d*d);
+                        // eWoms expects fluxes to be area specific, i.e. we must *not*
+                        // the transmissibility with the face area here
+                        Scalar thermalHalfTrans = std::abs(n*d)/(d*d);
 
-                        thermalHalfTransBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] = thermalHalfTrans;
+                        thermalHalfTransBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] =
+                            thermalHalfTrans;
                     }
 
                     ++ boundaryIsIdx;
                     continue;
                 }
 
+                if (!intersection.neighbor())
+                    // elements can be on process boundaries, i.e. they are not on the
+                    // domain boundary yet they don't have neighbors.
+                    continue;
+
                 const auto& outsideElem = intersection.outside();
                 unsigned outsideElemIdx = elemMapper.index(outsideElem);
-
-                // we only need to calculate a face's transmissibility
-                // once...
-                if (elemIdx > outsideElemIdx)
-                    continue;
 
                 // update the "thermal half transmissibility" for the intersection
                 if (enableEnergy) {
@@ -243,12 +243,17 @@ public:
                     Scalar A = intersection.geometry().volume();
 
                     const auto& inPos = elem.geometry().center();
-                    const auto& outPos = outsideElem.geometry().center();
+                    const auto& outPos = intersection.geometry().center();
                     const auto& d = outPos - inPos;
 
-                    (*thermalHalfTrans_)[isId_(elemIdx, outsideElemIdx)] =
-                        A * std::abs(n*d)/(d*d);
+                    (*thermalHalfTrans_)[directionalIsId_(elemIdx, outsideElemIdx)] =
+                        A * (n*d)/(d*d);
                 }
+
+                // we only need to calculate a face's transmissibility
+                // once...
+                if (elemIdx > outsideElemIdx)
+                    continue;
 
                 unsigned insideCartElemIdx = cartMapper.cartesianIndex(elemIdx);
                 unsigned outsideCartElemIdx = cartMapper.cartesianIndex(outsideElemIdx);
@@ -365,17 +370,17 @@ public:
      *        elements.
      *
      * The "half transmissibility" features all sub-expressions of the "thermal
-     * transmissibility" which can be precomputed and is not dependent on the current
-     * solution:
+     * transmissibility" which can be precomputed, i.e. they are not dependent on the
+     * current solution:
      *
-     * H_t = A* (n*d)/(d*d);
+     * H_t = A * (n*d)/(d*d);
      *
      * where A is the area of the intersection between the inside and outside elements, n
-     * is the outer unit normal and d is the distance between the centers of the adjacent
-     * elements
+     * is the outer unit normal, and d is the distance between the center of the inside
+     * cell and the center of the intersection.
      */
     Scalar thermalHalfTrans(unsigned insideElemIdx, unsigned outsideElemIdx) const
-    { return thermalHalfTrans_->at(isId_(insideElemIdx, outsideElemIdx)); }
+    { return thermalHalfTrans_->at(directionalIsId_(insideElemIdx, outsideElemIdx)); }
 
     Scalar thermalHalfTransBoundary(unsigned insideElemIdx, unsigned boundaryFaceIdx) const
     { return thermalHalfTransBoundary_.at(std::make_pair(insideElemIdx, boundaryFaceIdx)); }
@@ -462,6 +467,13 @@ private:
         std::uint64_t elemBIdx = std::max(elemIdx1, elemIdx2);
 
         return (elemBIdx<<elemIdxShift) + elemAIdx;
+    }
+
+    std::uint64_t directionalIsId_(unsigned elemIdx1, unsigned elemIdx2) const
+    {
+        static const unsigned elemIdxShift = 32; // bits
+
+        return (std::uint64_t(elemIdx1)<<elemIdxShift) + elemIdx2;
     }
 
     void computeHalfTrans_(Scalar& halfTrans,
