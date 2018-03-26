@@ -53,6 +53,10 @@ namespace Opm
 
         using Base::numEq;
 
+        using Base::has_solvent;
+        using Base::has_polymer;
+        using Base::has_energy;
+
         // the positions of the primary variables for StandardWell
         // there are three primary variables, the second and the third ones are F_w and F_g
         // the first one can be total rate (G_t) or bhp, based on the control
@@ -61,22 +65,23 @@ namespace Opm
         static const int XvarWell = 0;
         static const int WFrac = gasoil? -1000: 1;
         static const int GFrac = gasoil? 1: 2;
-        static const int SFrac = 3;
+        static const int SFrac = !has_solvent ? -1000 : 3;
 
         using typename Base::Scalar;
         using typename Base::ConvergenceReport;
 
 
-        using Base::has_solvent;
-        using Base::has_polymer;
         using Base::name;
         using Base::Water;
         using Base::Oil;
         using Base::Gas;
+        using Base::Energy;
 
-        // TODO: with flow_ebos，for a 2P deck, // TODO: for the 2p deck, numEq will be 3, a dummy phase is already added from the reservoir side.
-        // it will cause problem here without processing the dummy phase.
-        static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // number of wellEq is only numEq - 1 for polymer
+        // polymer concentration and temperature are already known by the well, so
+        // polymer and energy conservation do not need to be considered explicitly
+        static const int numPolymerEq = has_polymer ? 1 : 0;
+        static const int numEnergyEq = has_energy ? 1 : 0;
+        static const int numWellEq =numEq - numPolymerEq - numEnergyEq;
         using typename Base::Mat;
         using typename Base::BVector;
         using typename Base::Eval;
@@ -102,6 +107,8 @@ namespace Opm
 
         using Base::contiSolventEqIdx;
         using Base::contiPolymerEqIdx;
+        static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
+        static const int temperatureIdx = Indices::temperatureIdx;
 
 
         StandardWell(const Well* well, const int time_step, const Wells* wells,

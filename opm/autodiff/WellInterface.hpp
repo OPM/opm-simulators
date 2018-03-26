@@ -71,6 +71,7 @@ namespace Opm
         static const int Water = BlackoilPhases::Aqua;
         static const int Oil = BlackoilPhases::Liquid;
         static const int Gas = BlackoilPhases::Vapour;
+        static const int Energy = BlackoilPhases::Energy;
 
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
@@ -92,6 +93,7 @@ namespace Opm
 
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
+        static const bool has_energy = GET_PROP_VALUE(TypeTag, EnableEnergy);
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
 
