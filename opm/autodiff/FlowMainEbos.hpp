@@ -106,7 +106,6 @@ namespace Opm
                 setupOutput();
                 setupLogging();
                 printPRTHeader();
-                extractMessages();
                 runDiagnostics();
                 setupOutputWriter();
                 setupLinearSolver();
@@ -465,36 +464,6 @@ namespace Opm
         const Schedule& schedule() const
         { return ebosSimulator_->vanguard().schedule(); }
 
-        // Extract messages from parser.
-        // Writes to:
-        //    OpmLog singleton.
-        void extractMessages()
-        {
-            if ( !output_cout_ )
-            {
-                return;
-            }
-
-            auto extractMessage = [this](const Message& msg) {
-                auto log_type = this->convertMessageType(msg.mtype);
-                const auto& location = msg.location;
-                if (location) {
-                    OpmLog::addMessage(log_type, Log::fileMessage(location.filename, location.lineno, msg.message));
-                } else {
-                    OpmLog::addMessage(log_type, msg.message);
-                }
-            };
-
-            // Extract messages from Deck.
-            for(const auto& msg : deck().getMessageContainer()) {
-                extractMessage(msg);
-            }
-
-            // Extract messages from EclipseState.
-            for (const auto& msg : eclState().getMessageContainer()) {
-                extractMessage(msg);
-            }
-        }
 
         // Run diagnostics.
         // Writes to:
@@ -639,26 +608,6 @@ namespace Opm
             return pages * page_size;
         }
 
-        int64_t convertMessageType(const Message::type& mtype)
-        {
-            switch (mtype) {
-            case Message::type::Debug:
-                return Log::MessageType::Debug;
-            case Message::type::Info:
-                return Log::MessageType::Info;
-            case Message::type::Warning:
-                return Log::MessageType::Warning;
-            case Message::type::Error:
-                return Log::MessageType::Error;
-            case Message::type::Problem:
-                return Log::MessageType::Problem;
-            case Message::type::Bug:
-                return Log::MessageType::Bug;
-            case Message::type::Note:
-                return Log::MessageType::Note;
-            }
-            throw std::logic_error("Invalid messages type!\n");
-        }
 
         Grid& grid()
         { return ebosSimulator_->vanguard().grid(); }
