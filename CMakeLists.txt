@@ -62,9 +62,9 @@ endmacro (dir_hook)
 # the build starts, so it makes sense to keep the data there then.
 include (OpmInit)
 
-# Look for the opm-data repository; if found the variable
-# HAVE_OPM_DATA will be set to true.
-include( Findopm-data )
+# Look for the opm-tests repository; if found the variable
+# HAVE_OPM_TESTS will be set to true.
+include(Findopm-tests)
 
 # list of prerequisites for this particular project; this is in a
 # separate file (in cmake/Modules sub-directory) because it is shared
@@ -115,6 +115,6 @@ endif (NOT EIGEN3_FOUND)
 
 
 
-if (HAVE_OPM_DATA)
+if (HAVE_OPM_TESTS)
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
 endif()
