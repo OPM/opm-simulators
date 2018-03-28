@@ -77,10 +77,7 @@ public:
             Scalar c_v1 = heatCapacity[i + 1];
             Scalar T0 = temperature[i];
             Scalar T1 = temperature[i + 1];
-            Scalar m = (c_v1 - c_v0)/(T1 - T0);
-            Scalar c = c_v0 - m*T0;
-            Scalar deltaU = 0.5*m*(T1*T1 - T0*T0) + c*(T1 - T0);
-            curU += deltaU;
+            curU += 0.5*(c_v0 + c_v1)*(T1 - T0);
         }
 
         internalEnergyFunction_.setXYContainers(T, u);

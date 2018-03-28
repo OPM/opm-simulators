@@ -162,10 +162,7 @@ public:
                     Scalar c_v1 = cvOilColumn[i + 1];
                     Scalar T0 = temperatureColumn[i];
                     Scalar T1 = temperatureColumn[i + 1];
-                    Scalar m = (c_v1 - c_v0)/(T1 - T0);
-                    Scalar c = c_v0 - m*T0;
-                    Scalar deltaU = 0.5*m*(T1*T1 - T0*T0) + c*(T1 - T0);
-                    u += deltaU;
+                    u += 0.5*(c_v0 + c_v1)*(T1 - T0);
                 }
 
                 internalEnergyCurves_[regionIdx].setXYContainers(temperatureColumn.vectorCopy(), uSamples);
