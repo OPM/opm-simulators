@@ -21,11 +21,11 @@
 #ifndef OPM_AQUIFERCT_HEADER_INCLUDED
 #define OPM_AQUIFERCT_HEADER_INCLUDED
 
-#include <Eigen/QR>
 #include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
 #include <opm/autodiff/BlackoilAquiferModel.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/utility/numeric/linearInterpolation.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 
@@ -223,40 +223,14 @@ namespace Opm
             Scalar dt_, pa0_, gravity_;
             bool p0_defaulted_;
             Eval W_flux_;
-            // Also return the polynomial fit
-            std::vector<Scalar> coeff_;
+
             
-
-            // We fit the tabular data using a polynomial fit
-            // Modified from Copyright (C) 2014  Clifford Wolf <clifford@clifford.at> 
-            // http://svn.clifford.at/handicraft/2014/polyfit/polyfit.cc
-            inline void polynomial_fit( const std::vector<Scalar> &X, const std::vector<Scalar> &y, 
-                                        std::vector<Scalar> &coeff, int order, bool bias) const
-            {
-                size_t colNum = (bias)? order + 1 : order;
-                Eigen::MatrixXd A(X.size(), colNum);
-                Eigen::VectorXd y_mapped = Eigen::VectorXd::Map(&y.front(), y.size());
-                Eigen::VectorXd result;
-
-                assert(X.size() == y.size());
-                assert(X.size() >= colNum);
-
-                // create matrix
-                for (size_t i = 0; i < X.size(); i++)
-                for (size_t j = 0; j < colNum; j++)
-                    A(i, j) = (bias)? pow(X.at(i), j) : pow(X.at(i), j+1);
-
-                // solve for linear least squares fit
-                result = A.householderQr().solve(y_mapped);
-
-                coeff.resize(colNum);
-                for (size_t i = 0; i < colNum; i++)
-                    coeff[i] = result[i];
-            }
 
             inline void get_influence_table_values(Scalar& pitd, Scalar& pitd_prime, const Scalar& td)
             {
-                // http://kluge.in-chemnitz.de/opensource/spline/
+                // We use the opm-common numeric linear interpolator
+                pitd = Opm::linearInterpolation(aqutab_td_, aqutab_pi_, td);
+                pitd_prime = Opm::linearInterpolationDerivative(aqutab_td_, aqutab_pi_, td);
             }
 
             inline void init_quantities(const Aquancon::AquanconOutput& connection)
@@ -272,8 +246,6 @@ namespace Opm
                 pressure_previous_.resize(cell_idx_.size(), 0.);
                 pressure_current_.resize(cell_idx_.size(), 0.);
                 Qai_.resize(cell_idx_.size(), 0.0);
-
-                polynomial_fit(aqutab_td_, aqutab_pi_, coeff_, 1, true);
             }
 
             inline void get_current_Pressure_cell(std::vector<Eval>& pressure_water, const int idx, const IntensiveQuantities& intQuants)
@@ -301,9 +273,9 @@ namespace Opm
                 Scalar Tc = time_constant();
                 Scalar td_plus_dt = (timer.currentStepLength() + timer.simulationTimeElapsed()) / Tc;
                 Scalar td = timer.simulationTimeElapsed() / Tc;
-
-                Scalar PItdprime = coeff_.at(1);
-                Scalar PItd = coeff_.at(0) + coeff_.at(1)*td_plus_dt;
+                Scalar PItdprime = 0.;
+                Scalar PItd = 0.;
+                get_influence_table_values(PItd, PItdprime, td_plus_dt);
                 a = 1.0/Tc * ( (beta * dpai(idx)) - (W_flux_.value() * PItdprime) ) / ( PItd - td*PItdprime );
                 b = beta / (Tc * ( PItd - td*PItdprime));
             }
@@ -418,11 +390,7 @@ namespace Opm
                 temperature_aq = fs_aquifer.temperature(0);
                 pa0_mean = pa0_;
 
-                // rho_mean = FluidSystem::referenceDensity(waterPhaseIdx, pvttableIdx)
-                //             *FluidSystem::waterPvt().inverseFormationVolumeFactor(pvttableIdx, temperature_aq, pa0_mean);
-
                 Eval mu_w_aquifer = FluidSystem::waterPvt().viscosity(pvttableIdx, temperature_aq, pa0_mean);
-                std::cout << "Pa0 = " << pa0_mean << ", viscosity = " << mu_w_aquifer.value() << std::endl;
 
                 mu_w_ = mu_w_aquifer.value();
 
