@@ -61,8 +61,9 @@ public:
 
         // integrate the heat capacity to compute the internal energy
         Scalar curU = temperature[0]*heatCapacity[0];
-        std::vector<Scalar> T(temperature.size());
-        std::vector<Scalar> u(heatCapacity.size());
+        unsigned n = temperature.size();
+        std::vector<Scalar> T(n);
+        std::vector<Scalar> u(n);
         for (unsigned i = 0; i < temperature.size(); ++ i) {
             T[i] = temperature[i];
             u[i] = curU;
@@ -72,13 +73,11 @@ public:
 
             // integrate to the heat capacity from the current sampling point to the next
             // one. this leads to a quadratic polynomial.
-            Scalar u0 = heatCapacity[i];
-            Scalar u1 = heatCapacity[i + 1];
+            Scalar c_v0 = heatCapacity[i];
+            Scalar c_v1 = heatCapacity[i + 1];
             Scalar T0 = temperature[i];
             Scalar T1 = temperature[i + 1];
-            Scalar m = (u1 - u0)/(T1 - T0);
-            Scalar deltaU = 0.5*m*(T1*T1 - T0*T0) + u0*(T1 - T0);
-            curU += deltaU;
+            curU += 0.5*(c_v0 + c_v1)*(T1 - T0);
         }
 
         internalEnergyFunction_.setXYContainers(T, u);
