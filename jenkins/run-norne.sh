@@ -1,7 +1,7 @@
 #!/bin/bash
 
 pushd .
-cd deps/opm-data
+cd deps/opm-tests
 test -z $SIM && SIM=flow
 
 # Run the norne case
