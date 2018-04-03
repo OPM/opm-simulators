@@ -10,7 +10,7 @@ function dotest {
 }
 
 pushd .
-cd deps/opm-data
+cd deps/opm-tests
 
 EXE=flow_legacy
 
