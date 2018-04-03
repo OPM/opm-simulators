@@ -184,7 +184,6 @@ namespace MissingFeatures {
             "WLIMTOL",
             "WORKTHP",
             "WPAVE",
-            "WPIMULT",
             "WPITAB",
             "WTEMP",
             "WTEST",
