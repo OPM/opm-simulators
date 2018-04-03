@@ -76,6 +76,8 @@ namespace MissingFeatures {
             "AQUCT",
             "AQUTAB",
             "AQUNUM"
+            "CARFIN"
+            "COMPDATL",
             "COMPLUMP",
             "CONNECTION",
             "CPR",
@@ -83,6 +85,7 @@ namespace MissingFeatures {
             "ECHO",
             "EDITNNC",
             "ENDACTIO",
+            "ENDFIN"
             "ENDNUM",
             "ENDSKIP",
             "ENKSRVD",
@@ -103,6 +106,7 @@ namespace MissingFeatures {
             "IMKRVD",
             "IMPES",
             "IMPTVD",
+            "LGR",
             "LIFTOPT",
             "MAPUNITS",
             "MAXVALUE",
@@ -140,6 +144,7 @@ namespace MissingFeatures {
             "PLYADSS",
             "PLYDHFLF",
             "PPCWMAX",
+            "REFINE",
             "RADFIN4",
             "RHO",
             "RKTRMDIR",
@@ -179,6 +184,7 @@ namespace MissingFeatures {
             "WARN",
             "WATVISCT",
             "WELPI",
+            "WELSPECL",
             "WGASPROD",
             "WINJMULT",
             "WLIMTOL",
