@@ -287,7 +287,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/ExtractParallelGridInformationToISTL.hpp
   opm/autodiff/FlowMain.hpp
   opm/autodiff/FlowMainEbos.hpp
-  opm/autodiff/FlowMainPolymer.hpp
   opm/autodiff/FlowMainSequential.hpp
   opm/autodiff/GeoProps.hpp
   opm/autodiff/GridHelpers.hpp
