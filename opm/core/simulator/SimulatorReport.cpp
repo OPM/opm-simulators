@@ -18,10 +18,12 @@
 */
 
 #include "config.h"
-#include <opm/core/simulator/SimulatorReport.hpp>
-#include <ostream>
-#include <iomanip>
 
+#include <opm/core/simulator/SimulatorReport.hpp>
+
+#include <iomanip>
+#include <ostream>
+#include <sstream>
 
 namespace Opm
 {
