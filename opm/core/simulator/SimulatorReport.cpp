@@ -20,6 +20,8 @@
 #include "config.h"
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <ostream>
+#include <iomanip>
+
 
 namespace Opm
 {
@@ -67,6 +69,22 @@ namespace Opm
                << "\n  Overall Newton Iterations:  " << total_newton_iterations
                << "\n  Overall Linear Iterations:  " << total_linear_iterations
                << std::endl;
+        }
+    }
+
+    void SimulatorReport::reportStep(std::ostringstream& ss)
+    {
+        if ( verbose_ )
+        {
+            ss << "Time step summary: ";
+            if (total_well_iterations != 0) {
+                ss << "well its = " << std::setw(2) << total_well_iterations << ", ";
+            }
+            ss << "newton its = " << std::setw(2) << total_newton_iterations << ", "
+               << "linearizations = "  << std::setw(2) << total_linearizations
+               << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << assemble_time << " sec), "
+               << "linear its = " << std::setw(3) << total_linear_iterations
+               << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << linear_solve_time << " sec)";
         }
     }
 

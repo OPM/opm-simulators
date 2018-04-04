@@ -309,15 +309,7 @@ namespace Opm {
                 if( timestep_verbose_ )
                 {
                     std::ostringstream ss;
-                    ss << "Time step summary: ";
-                    if (substepReport.total_well_iterations != 0) {
-                        ss << "well its = " << std::setw(2) << substepReport.total_well_iterations << ", ";
-                    }
-                    ss << "newton its = " << std::setw(2) << substepReport.total_newton_iterations << ", "
-                       << "linearizations = "  << std::setw(2) << substepReport.total_linearizations
-                       << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << substepReport.assemble_time << " sec), "
-                       << "linear its = " << std::setw(3) << substepReport.total_linear_iterations
-                       << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << substepReport.linear_solve_time << " sec)";
+                    substepReport.reportStep(ss);
                     OpmLog::info(ss.str());
                 }
 
