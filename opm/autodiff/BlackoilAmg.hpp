@@ -198,7 +198,7 @@ struct ScalarType<Dune::SeqScalarProduct<X> >
                      typename ScalarType<X>::value,     \
                      typename ScalarType<Y>::value,     \
                      l> value;                          \
-    };
+    }
 
 ComposeScalarTypeForSeqPrecond(Dune::SeqJac);
 ComposeScalarTypeForSeqPrecond(Dune::SeqSOR);
