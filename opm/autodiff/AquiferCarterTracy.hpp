@@ -308,6 +308,14 @@ namespace Opm
                 const auto& grid = eclState.getInputGrid();
 
                 cell_idx_ = connection.global_index;
+                auto globalCellIdx = ugrid.globalCell();
+                // for (auto globalCells : globalCellIdx){
+                //     std::cout << "global id = " << globalCells << std::endl;
+                // }
+
+                // for (auto cellidx : cell_idx_){
+                //     std::cout << "aqucell id = " << cellidx << std::endl;
+                // }
 
                 assert( cell_idx_ == connection.global_index);
                 assert( (cell_idx_.size() == connection.influx_coeff.size()) );
@@ -318,9 +326,13 @@ namespace Opm
                 cell_depth_.resize(cell_idx_.size(), d0_);
                 alphai_.resize(cell_idx_.size(), 1.0);
                 faceArea_connected_.resize(cell_idx_.size(),0.0);
+                Scalar faceArea;
 
                 auto cell2Faces = Opm::UgGridHelpers::cell2Faces(ugrid);
                 auto faceCells  = Opm::AutoDiffGrid::faceCells(ugrid);
+
+
+                // static_assert(decltype(faceCells)::dummy_error, "DUMP MY TYPE" );
 
                 // Translate the C face tag into the enum used by opm-parser's TransMult class
                 Opm::FaceDir::DirEnum faceDirection;
@@ -355,7 +367,11 @@ namespace Opm
 
                         if (faceDirection == connection.reservoir_face_dir.at(idx))
                         {
-                            faceArea_connected_.at(idx) = Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
+                            // Check now if the face is outside of the reservoir, or if it adjoins an inactive cell
+                            // Do not make the connection if the product of the two cellIdx > 0. This is because the
+                            // face is within the reservoir/not connected to boundary. (We still have yet to check for inactive cell adjoining)
+                            faceArea = (faceCells(faceIdx,0)*faceCells(faceIdx,1) > 0)? 0. : Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
+                            faceArea_connected_.at(idx) = faceArea;
                             denom_face_areas += faceArea_connected_.at(idx);
                         }
                     }
