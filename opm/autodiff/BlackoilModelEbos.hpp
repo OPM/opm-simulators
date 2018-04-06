@@ -76,6 +76,12 @@ SET_BOOL_PROP(EclFlowProblem, ExportGlobalTransmissibility, true);
 // default in flow is to formulate the equations in surface volumes
 SET_BOOL_PROP(EclFlowProblem, BlackoilConserveSurfaceVolume, true);
 SET_BOOL_PROP(EclFlowProblem, UseVolumetricResidual, false);
+
+// disable all extensions supported by black oil model. this should not really be
+// necessary but it makes things a bit more explicit
+SET_BOOL_PROP(EclFlowProblem, EnablePolymer, false);
+SET_BOOL_PROP(EclFlowProblem, EnableSolvent, false);
+SET_BOOL_PROP(EclFlowProblem, EnableEnergy, false);
 }}
 
 namespace Opm {
