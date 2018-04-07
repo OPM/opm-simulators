@@ -170,9 +170,6 @@ namespace Opm {
 
             using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
             // a vector of all the wells.
-            // eventually, the wells_ above should be gone.
-            // the name is just temporary
-            // later, might make share_ptr const later.
             std::vector<WellInterfacePtr > well_container_;
 
             using ConvergenceReport = typename WellInterface<TypeTag>::ConvergenceReport;

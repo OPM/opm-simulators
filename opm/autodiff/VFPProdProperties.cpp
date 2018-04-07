@@ -20,7 +20,6 @@
 #include "config.h"
 
 #include <opm/autodiff/VFPProdProperties.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
@@ -51,7 +50,7 @@ VFPProdProperties::VFPProdProperties(const VFPProdTable* table){
 
 VFPProdProperties::VFPProdProperties(const std::map<int, VFPProdTable>& tables) {
     for (const auto& table : tables) {
-        m_tables[table.first] = &table.second;
+        m_tables[table.first] = &(table.second);
     }
 }
 

@@ -24,7 +24,6 @@
 #include "config.h"
 
 #include <opm/autodiff/VFPInjProperties.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
@@ -64,7 +63,7 @@ VFPInjProperties::VFPInjProperties(const VFPInjTable* table){
 
 VFPInjProperties::VFPInjProperties(const std::map<int, VFPInjTable>& tables) {
     for (const auto& table : tables) {
-        m_tables[table.first] = &table.second;
+        m_tables[table.first] = &(table.second);
     }
 }
 

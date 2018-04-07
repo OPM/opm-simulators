@@ -201,7 +201,7 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            const WellModel well_model(wells, &(wells_manager.wellCollection()));
+            const WellModel well_model(wells, &(wells_manager.wellCollection()), timer.currentStepNum());
 
             std::unique_ptr<Solver> solver = asImpl().createSolver(well_model);
 
