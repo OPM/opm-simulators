@@ -613,13 +613,16 @@ namespace Opm {
                     coeff[iw] = 1.0 / bw;
                 }
 
+                // Actual Rs and Rv:
+                double Rs = ra.rs;
+                double Rv = ra.rv;
+
                 // Determinant of 'R' matrix
-                const double detR = 1.0 - (ra.rs * ra.rv);
+                const double detR = 1.0 - (Rs * Rv);
 
                 if (Details::PhaseUsed::oil(pu)) {
                     // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
 
-                    const double Rs = ra.rs;
                     const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
                     const double den = bo * detR;
 
@@ -633,7 +636,6 @@ namespace Opm {
                 if (Details::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
-                    const double Rv = ra.rv;
                     const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
                     const double den = bg * detR;
 
@@ -689,20 +691,22 @@ namespace Opm {
                     voidage_rates[iw] = surface_rates[iw] / bw;
                 }
 
+                // Use average Rs and Rv:
+                double Rs = std::min(ra.rs, surface_rates[ig]/(surface_rates[io]+1.0e-15));
+                double Rv = std::min(ra.rv, surface_rates[io]/(surface_rates[ig]+1.0e-15));
+
                 // Determinant of 'R' matrix
-                const double detR = 1.0 - (ra.rs * ra.rv);
+                const double detR = 1.0 - (Rs * Rv);
 
                 if (Details::PhaseUsed::oil(pu)) {
                     // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
 
-                    const double Rs = ra.rs;
                     const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
                     const double den = bo * detR;
 
                     voidage_rates[io] = surface_rates[io];
 
                     if (Details::PhaseUsed::gas(pu)) {
-                        const double Rv = ra.rv;
                         voidage_rates[io] -= Rv * surface_rates[ig];
                     }
 
@@ -712,14 +716,12 @@ namespace Opm {
                 if (Details::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
-                    const double Rv = ra.rv;
                     const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
                     const double den = bg * detR;
 
                     voidage_rates[ig] = surface_rates[ig];
 
                     if (Details::PhaseUsed::oil(pu)) {
-                        const double Rs = ra.rs;
                         voidage_rates[ig] -= Rs * surface_rates[io];
                     }
 
