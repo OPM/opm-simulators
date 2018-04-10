@@ -46,7 +46,13 @@ namespace Dune
 
     template <int codim>
     class EntityPointer;
+  }
 
+  template <int dim, int cdim>
+  auto referenceElement(const Dune::cpgrid::Geometry<dim, cdim>& geo)
+      -> decltype(referenceElement<double, dim>(geo.type()))
+  {
+      return referenceElement<double, dim>(geo.type());
   }
 
   // specialization of dune-fem compatiblity functions for CpGrid, since CpGrid does not use the interface classes.
