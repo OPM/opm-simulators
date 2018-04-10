@@ -69,21 +69,12 @@ namespace Opm
 
             typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
             typedef Opm::BlackOilFluidState<Eval, FluidSystem> FluidState;
-            typedef typename FluidSystem::WaterPvt WaterPvt;
-
-            typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
 
-
-
-            static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
-            static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
-            static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
-            static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
 
 
             explicit AquiferCarterTracy( const AquiferCT::AQUCT_data& params, const Aquancon::AquanconOutput& connection,
-                                         const int numComponents, const Scalar gravity, const Simulator& ebosSimulator    )
+                                         const Scalar gravity, const Simulator& ebosSimulator                               )
             : phi_aq_ (params.phi_aq), //
               C_t_ (params.C_t), //
               r_o_ (params.r_o), //
@@ -100,21 +91,11 @@ namespace Opm
               aquiferID_ (params.aquiferID),
               inftableID_ (params.inftableID),
               pvttableID_ (params.pvttableID),
-              num_components_ (numComponents),
               gravity_ (gravity),
               ebos_simulator_ (ebosSimulator)
             {
                 init_quantities(connection);
             }
-
-            inline const PhaseUsage&
-            phaseUsage() const
-            {
-                assert(phase_usage_);
-
-                return *phase_usage_;
-            }
-
 
             inline void assembleAquiferEq(Simulator& ebosSimulator, const SimulatorTimerInterface& timer)
             {
@@ -166,10 +147,6 @@ namespace Opm
                 }
             }
 
-            inline const double area_fraction(const size_t i)
-            {
-                return alphai_.at(i);
-            }
 
             inline const std::vector<int> cell_id() const
             {
@@ -183,13 +160,11 @@ namespace Opm
 
 
         private:
-            const PhaseUsage* phase_usage_;
             const Simulator& ebos_simulator_;
 
 
             // Aquifer ID, and other IDs
             int aquiferID_, inftableID_, pvttableID_;
-            int num_components_;
 
             // Grid variables
 
@@ -225,6 +200,10 @@ namespace Opm
             Eval W_flux_;
 
             
+            inline const double area_fraction(const size_t i)
+            {
+                return alphai_.at(i);
+            }
 
             inline void get_influence_table_values(Scalar& pitd, Scalar& pitd_prime, const Scalar& td)
             {
@@ -309,13 +288,6 @@ namespace Opm
 
                 cell_idx_ = connection.global_index;
                 auto globalCellIdx = ugrid.globalCell();
-                // for (auto globalCells : globalCellIdx){
-                //     std::cout << "global id = " << globalCells << std::endl;
-                // }
-
-                // for (auto cellidx : cell_idx_){
-                //     std::cout << "aqucell id = " << cellidx << std::endl;
-                // }
 
                 assert( cell_idx_ == connection.global_index);
                 assert( (cell_idx_.size() == connection.influx_coeff.size()) );
@@ -331,8 +303,6 @@ namespace Opm
                 auto cell2Faces = Opm::UgGridHelpers::cell2Faces(ugrid);
                 auto faceCells  = Opm::AutoDiffGrid::faceCells(ugrid);
 
-
-                // static_assert(decltype(faceCells)::dummy_error, "DUMP MY TYPE" );
 
                 // Translate the C face tag into the enum used by opm-parser's TransMult class
                 Opm::FaceDir::DirEnum faceDirection;

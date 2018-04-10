@@ -86,7 +86,6 @@ namespace Opm {
         {
             Base::prepareStep(timer, reservoir_state, well_state);
             Base::param_.solve_welleq_initially_ = false;
-            Base::param_.solve_aquifereq_initially_ = false;
             SolutionState state0 = variableState(reservoir_state, well_state);
             asImpl().makeConstantState(state0);
             asImpl().computeAccum(state0, 0);
