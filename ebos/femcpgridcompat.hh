@@ -20,8 +20,16 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef EWOMS_DUNE_COMPATIBILITY_HH
-#define EWOMS_DUNE_COMPATIBILITY_HH
+/*!
+ * \file
+ *
+ * \brief This file ensures that ebos can be compiled in the presence of dune-fem
+ *
+ * It implements a few work-arounds for some incompatibilities with the Dune grid
+ * interface of CpGrid. A better way would be to make CpGrid conforming.
+ */
+#ifndef EWOMS_FEM_CPGRID_COMPAT_HH
+#define EWOMS_FEM_CPGRID_COMPAT_HH
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/common/gridpart.hh>
@@ -114,4 +122,4 @@ namespace Dune
 
 #endif // #if HAVE_DUNE_FEM
 
-#endif // #ifndef EWOMS_DUNE_COMPATIBILITY_HH
+#endif // EWOMS_FEM_CPGRID_COMPAT_HH

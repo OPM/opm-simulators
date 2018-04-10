@@ -29,6 +29,7 @@
 
 #include "eclbasevanguard.hh"
 #include "ecltransmissibility.hh"
+#include "femcpgridcompat.hh"
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
