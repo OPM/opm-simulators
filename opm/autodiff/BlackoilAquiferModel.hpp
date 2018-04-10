@@ -92,18 +92,8 @@ namespace Opm {
             void assemble( const SimulatorTimerInterface& timer,
                            const int iterationIdx                );
 
-            // called at the beginning of a time step
-            void beginTimeStep();
             // called at the end of a time step
             void timeStepSucceeded(const SimulatorTimerInterface& timer);
-
-            // called at the beginning of a report step
-            void beginReportStep(const int time_step);
-
-            // called at the end of a report step
-            void endReportStep();
-
-            const SimulatorReport& lastReport() const;
 
             inline const Simulator& simulator() const
             {
@@ -119,11 +109,7 @@ namespace Opm {
 
             const ModelParameters param_;
             bool terminal_output_;
-            bool has_solvent_;
-            bool has_polymer_;
-            std::vector<int> pvt_region_idx_;
-            PhaseUsage phase_usage_;
-            std::vector<bool>  active_;
+
             size_t global_nc_;
             // the number of the cells in the local grid
             size_t number_of_cells_;
@@ -132,23 +118,12 @@ namespace Opm {
             std::vector<Aquifer_object> aquifers_;
 
 
-            SimulatorReport last_report_;
-
-
             void updateConnectionIntensiveQuantities() const;
-
-            // The number of components in the model.
-            int numComponents() const;
 
             int numAquifers() const;
 
-            int numPhases() const;
-
             void assembleAquiferEq(const SimulatorTimerInterface& timer);
 
-            SimulatorReport solveAquiferEq(const SimulatorTimerInterface& timer);
-
-            // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(const SimulatorTimerInterface& timer);
 

@@ -63,7 +63,6 @@ namespace Opm
                 param.getDefault("max_single_precision_days", unit::convert::to( maxSinglePrecisionTimeStep_, unit::day) ), unit::day );
         max_strict_iter_ = param.getDefault("max_strict_iter",8);
         solve_welleq_initially_ = param.getDefault("solve_welleq_initially",solve_welleq_initially_);
-        solve_aquifereq_initially_ = param.getDefault("solve_aquifereq_initially",solve_aquifereq_initially_);
         update_equations_scaling_ = param.getDefault("update_equations_scaling", update_equations_scaling_);
         use_update_stabilization_ = param.getDefault("use_update_stabilization", use_update_stabilization_);
         deck_file_name_ = param.template get<std::string>("deck_filename");
@@ -95,7 +94,6 @@ namespace Opm
         max_inner_iter_ms_wells_ = 10;
         maxSinglePrecisionTimeStep_ = unit::convert::from( 20.0, unit::day );
         solve_welleq_initially_ = true;
-        solve_aquifereq_initially_ = true;
         update_equations_scaling_ = false;
         use_update_stabilization_ = true;
         use_multisegment_well_ = false;

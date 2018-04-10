@@ -209,7 +209,6 @@ namespace Opm {
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
-            aquiferModel().beginTimeStep();
             wellModel().beginTimeStep();
 
             if (param_.update_equations_scaling_) {
@@ -1126,20 +1125,6 @@ namespace Opm {
 
         const BlackoilAquiferModel<TypeTag>&
         aquiferModel() const { return aquifer_model_; }
-
-        int ebosPhaseToFlowCanonicalPhaseIdx( const int phaseIdx ) const
-        {
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::waterPhaseIdx == phaseIdx)
-                return Water;
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::oilPhaseIdx == phaseIdx)
-                return Oil;
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::gasPhaseIdx == phaseIdx)
-                return Gas;
-
-            assert(phaseIdx < 3);
-            // for other phases return the index
-            return phaseIdx;
-        }
 
         void beginReportStep()
         {

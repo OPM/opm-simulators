@@ -208,8 +208,6 @@ public:
 
             well_model.beginReportStep(timer.currentStepNum());
 
-            aquifer_model.beginReportStep(timer.currentStepNum());
-
             auto solver = createSolver(well_model, aquifer_model);
 
             // write the inital state at the report stage
@@ -274,7 +272,6 @@ public:
             }
 
             solver->model().endReportStep();
-            aquifer_model.endReportStep();
             well_model.endReportStep();
 
             // take time that was used to solve system for this reportStep
@@ -317,8 +314,6 @@ public:
         total_timer.stop();
         report.total_time = total_timer.secsSinceStart();
         report.converged = true;
-
-        auto reportaquifer = aquifer_model.lastReport();
 
         return report;
     }
