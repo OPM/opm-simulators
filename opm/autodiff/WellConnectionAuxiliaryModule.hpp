@@ -21,7 +21,7 @@
 #ifndef OPM_WELLCONNECTIONAUXILIARYMODULE_HEADER_INCLUDED
 #define OPM_WELLCONNECTIONAUXILIARYMODULE_HEADER_INCLUDED
 
-#include <ewoms/aux/baseauxiliarymodule.hh>
+#include <ewoms/disc/common/baseauxiliarymodule.hh>
 
 #include <opm/grid/CpGrid.hpp>
 
