@@ -50,10 +50,6 @@ namespace Opm
         public:
             typedef BlackoilModelParameters ModelParameters;
 
-            static const int Water = BlackoilPhases::Aqua;
-            static const int Oil = BlackoilPhases::Liquid;
-            static const int Gas = BlackoilPhases::Vapour;
-
             typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
             typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
             typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
@@ -70,29 +66,31 @@ namespace Opm
             typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
             typedef Opm::BlackOilFluidState<Eval, FluidSystem> FluidState;
 
+            static const auto waterCompIdx = FluidSystem::waterCompIdx;
+            static const auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
 
 
             explicit AquiferCarterTracy( const AquiferCT::AQUCT_data& params, const Aquancon::AquanconOutput& connection,
                                          const Scalar gravity, const Simulator& ebosSimulator                               )
-            : phi_aq_ (params.phi_aq), //
+            :  ebos_simulator_ (ebosSimulator),
+              aquiferID_ (params.aquiferID),
+              inftableID_ (params.inftableID),
+              pvttableID_ (params.pvttableID),
+              phi_aq_ (params.phi_aq), //
+              d0_ (params.d0),
               C_t_ (params.C_t), //
               r_o_ (params.r_o), //
               k_a_ (params.k_a), //
               c1_ (params.c1),
               h_ (params.h), //
-              p0_defaulted_ (params.p0_defaulted),
-              pa0_ (params.p0),
               theta_ (params.theta), //
               c2_ (params.c2), //
-              d0_ (params.d0),
               aqutab_td_ (params.td),
               aqutab_pi_ (params.pi),
-              aquiferID_ (params.aquiferID),
-              inftableID_ (params.inftableID),
-              pvttableID_ (params.pvttableID),
+              pa0_ (params.p0),
               gravity_ (gravity),
-              ebos_simulator_ (ebosSimulator)
+              p0_defaulted_ (params.p0_defaulted)
             {
                 init_quantities(connection);
             }
@@ -118,12 +116,12 @@ namespace Opm
                     get_current_density_cell(rhow_,idx,intQuants);
                     calculate_inflow_rate(idx, timer);
                     qinflow = Qai_.at(idx);
-                    ebosResid[*cellID][(FluidSystem::waterCompIdx)] -= qinflow.value();
+                    ebosResid[*cellID][waterCompIdx] -= qinflow.value();
 
                     for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) 
                     {
                         // also need to consider the efficiency factor when manipulating the jacobians.
-                        ebosJac[*cellID][*cellID][(FluidSystem::waterCompIdx)][pvIdx] -= qinflow.derivative(pvIdx);
+                        ebosJac[*cellID][*cellID][waterCompIdx][pvIdx] -= qinflow.derivative(pvIdx);
                     }
                 }
             }
@@ -230,13 +228,13 @@ namespace Opm
             inline void get_current_Pressure_cell(std::vector<Eval>& pressure_water, const int idx, const IntensiveQuantities& intQuants)
             {
                 const auto& fs = intQuants.fluidState();
-                pressure_water.at(idx) = fs.pressure(FluidSystem::waterPhaseIdx);
+                pressure_water.at(idx) = fs.pressure(waterPhaseIdx);
             }
 
             inline void get_current_density_cell(std::vector<Eval>& rho_water, const int idx, const IntensiveQuantities& intQuants)
             {
                 const auto& fs = intQuants.fluidState();
-                rho_water.at(idx) = fs.density(FluidSystem::waterPhaseIdx);
+                rho_water.at(idx) = fs.density(waterPhaseIdx);
             }
 
             inline Scalar dpai(int idx)
@@ -303,6 +301,13 @@ namespace Opm
                 auto cell2Faces = Opm::UgGridHelpers::cell2Faces(ugrid);
                 auto faceCells  = Opm::AutoDiffGrid::faceCells(ugrid);
 
+                for (auto influxCoeff: connection.influx_coeff){
+                    std::cout << "influx_coeff = " << influxCoeff << std::endl;
+                }
+
+                for (auto influxMult: connection.influx_multiplier){
+                    std::cout << "influx_multiplier = " << influxMult << std::endl;
+                }
 
                 // Translate the C face tag into the enum used by opm-parser's TransMult class
                 Opm::FaceDir::DirEnum faceDirection;
@@ -342,7 +347,7 @@ namespace Opm
                             // face is within the reservoir/not connected to boundary. (We still have yet to check for inactive cell adjoining)
                             faceArea = (faceCells(faceIdx,0)*faceCells(faceIdx,1) > 0)? 0. : Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
                             faceArea_connected_.at(idx) = faceArea;
-                            denom_face_areas += faceArea_connected_.at(idx);
+                            denom_face_areas += ( connection.influx_multiplier.at(idx) * faceArea_connected_.at(idx) );
                         }
                     }
                     auto cellCenter = grid.getCellCenter(cell_idx_.at(idx));
@@ -351,7 +356,7 @@ namespace Opm
 
                 for (size_t idx = 0; idx < cell_idx_.size(); ++idx)
                 {
-                    alphai_.at(idx) = faceArea_connected_.at(idx)/denom_face_areas;
+                    alphai_.at(idx) = ( connection.influx_multiplier.at(idx) * faceArea_connected_.at(idx) )/denom_face_areas;
                 }
             }
 
@@ -394,8 +399,8 @@ namespace Opm
                     const auto& intQuants = *(ebos_simulator_.model().cachedIntensiveQuantities(cellIDx, /*timeIdx=*/ 0));
                     const auto& fs = intQuants.fluidState();
                     
-                    water_pressure_reservoir.push_back( fs.pressure(FluidSystem::waterPhaseIdx).value() );
-                    rho_water_reservoir.at(idx) = fs.density(FluidSystem::waterPhaseIdx);
+                    water_pressure_reservoir.push_back( fs.pressure(waterPhaseIdx).value() );
+                    rho_water_reservoir.at(idx) = fs.density(waterPhaseIdx);
                     pw_aquifer.push_back( (water_pressure_reservoir.at(idx) - rho_water_reservoir.at(idx).value()*gravity_*(cell_depth_.at(idx) - d0_))*area_fraction(idx) );
                 }
 

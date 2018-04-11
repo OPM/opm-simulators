@@ -10,12 +10,10 @@ namespace Opm {
         , param_(param)
         , terminal_output_(terminal_output)
     {
-        const auto& eclState = ebosSimulator_.vanguard().eclState();
+        // const auto& gridView = ebosSimulator_.gridView();
 
-        const auto& gridView = ebosSimulator_.gridView();
-
-        number_of_cells_ = gridView.size(/*codim=*/0);
-        global_nc_ = gridView.comm().sum(number_of_cells_);
+        // number_of_cells_ = gridView.size(/*codim=*/0);
+        // global_nc_ = gridView.comm().sum(number_of_cells_);
         gravity_ = ebosSimulator_.problem().gravity()[2];
         init(ebosSimulator_, aquifers_);
     }
@@ -129,7 +127,7 @@ namespace Opm {
         assert( aquifersData.size() == aquifer_connect.size() );
 
 
-        for (int i = 0; i < aquifersData.size(); ++i)
+        for (size_t i = 0; i < aquifersData.size(); ++i)
         {
             aquifers.push_back( 
                                  AquiferCarterTracy<TypeTag> (aquifersData.at(i), aquifer_connection.at(i), gravity_, ebosSimulator_) 
