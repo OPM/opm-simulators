@@ -78,9 +78,6 @@ namespace Opm {
             typedef typename GET_PROP_TYPE(TypeTag, Simulator)           Simulator;
             typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
 
-            static const int numEq = BlackoilIndices::numEq;
-            static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
-
             typedef AquiferCarterTracy<TypeTag> Aquifer_object;
 
             BlackoilAquiferModel(Simulator& ebosSimulator,
@@ -110,11 +107,7 @@ namespace Opm {
             const ModelParameters param_;
             bool terminal_output_;
 
-            size_t global_nc_;
-            // the number of the cells in the local grid
-            size_t number_of_cells_;
             double gravity_;
-            std::vector<double> depth_;
             std::vector<Aquifer_object> aquifers_;
 
 
