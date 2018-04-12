@@ -659,8 +659,21 @@ public:
         }
 
         // we no longer need the initial soluiton
-        if (this->simulator().episodeIndex() == 0)
+        if (this->simulator().episodeIndex() == 0 && !initialFluidStates_.empty())  {
+            // we always need to provide a temperature and if energy is not conserved, we
+            // use the initial one. This means we have to "salvage" the temperature from
+            // the initial fluid states before deleting the array.
+            if (!enableEnergy) {
+                initialTemperature_.resize(initialFluidStates_.size());
+                for (unsigned i = 0; i < initialFluidStates_.size(); ++i) {
+                    const auto& fs = initialFluidStates_[i];
+                    initialTemperature_[i] = fs.temperature(/*phaseIdx=*/0);
+                }
+            }
+
             initialFluidStates_.clear();
+        }
+
 
         updateCompositionChangeLimits_();
     }
@@ -1088,7 +1101,9 @@ public:
         // use the temporally constant temperature, i.e. use the initial temperature of
         // the DOF
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
+        if (!initialFluidStates_.empty())
+            return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
+        return initialTemperature_[globalDofIdx];
     }
 
     /*!
@@ -1275,9 +1290,8 @@ public:
     { return wellManager_; }
 
     // temporary solution to facilitate output of initial state from flow
-    const InitialFluidState& initialFluidState(unsigned globalDofIdx ) const {
-        return initialFluidStates_[globalDofIdx];
-    }
+    const InitialFluidState& initialFluidState(unsigned globalDofIdx ) const
+    { return initialFluidStates_[globalDofIdx]; }
 
     const Opm::EclipseIO& eclIO() const
     { return eclWriter_->eclIO(); }
@@ -1979,6 +1993,7 @@ private:
 
     bool useMassConservativeInitialCondition_;
     std::vector<InitialFluidState> initialFluidStates_;
+    std::vector<Scalar> initialTemperature_;
 
     std::vector<Scalar> polymerConcentration_;
     std::vector<Scalar> solventSaturation_;
