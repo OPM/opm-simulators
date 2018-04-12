@@ -20,7 +20,7 @@
 #ifndef OPM_AUTODIFF_VFPINJPROPERTIES_HPP_
 #define OPM_AUTODIFF_VFPINJPROPERTIES_HPP_
 
-#include <opm/parser/eclipse/EclipseState/Tables/VFPInjTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/core/wells.h>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>

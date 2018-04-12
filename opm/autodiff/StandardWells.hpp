@@ -71,7 +71,7 @@ namespace Opm {
                                             Eigen::Dynamic,
                                             Eigen::RowMajor>;
             // ---------  Public methods  ---------
-            StandardWells(const Wells* wells_arg, WellCollection* well_collection);
+            StandardWells(const Wells* wells_arg, WellCollection* well_collection, const int current_step);
 
             void init(const BlackoilPropsAdFromDeck* fluid_arg,
                       const std::vector<bool>* active_arg,
@@ -203,6 +203,8 @@ namespace Opm {
             template<class WellState>
             const WellState& wellState(const WellState& well_state) const { return well_state; }
 
+            int currentStep() const;
+
 
         protected:
             bool wells_active_;
@@ -210,6 +212,8 @@ namespace Opm {
             const WellOps  wops_;
             // It will probably need to be updated during running time.
             WellCollection* well_collection_;
+
+            const int current_step_;
 
             // The efficiency factor for each connection
             // It is specified based on wells and groups

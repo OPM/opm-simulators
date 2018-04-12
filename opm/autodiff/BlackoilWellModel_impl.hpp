@@ -128,10 +128,14 @@ namespace Opm {
             }
         }
 
-        // compute VFP properties
+        // update VFP properties
         vfp_properties_.reset (new VFPProperties (
-                                   eclState.getTableManager().getVFPInjTables(),
-                                   eclState.getTableManager().getVFPProdTables()) );
+                                   schedule().getVFPInjTables(timeStepIdx),
+                                   schedule().getVFPProdTables(timeStepIdx)) );
+
+        for (auto& well : well_container_) {
+            well->setVFPProperties(vfp_properties_.get());
+        }
 
         // update the previous well state. This is used to restart failed steps.
         previous_well_state_ = well_state_;

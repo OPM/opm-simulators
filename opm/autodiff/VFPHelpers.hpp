@@ -22,8 +22,8 @@
 #define OPM_AUTODIFF_VFPHELPERS_HPP_
 
 
-#include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/VFPInjTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>

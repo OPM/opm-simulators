@@ -116,8 +116,8 @@ typedef Eigen::Array<double,
         , geo_   (geo)
         , rock_comp_props_(rock_comp_props)
         , vfp_properties_(
-                    eclState->getTableManager().getVFPInjTables(),
-                    eclState->getTableManager().getVFPProdTables())
+                    schedule->getVFPInjTables(well_model.currentStep()),
+                    schedule->getVFPProdTables(well_model.currentStep() ) )
         , linsolver_ (linsolver)
         , active_(detail::activePhases(fluid.phaseUsage()))
         , canph_ (detail::active2Canonical(fluid.phaseUsage()))

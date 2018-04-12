@@ -39,7 +39,7 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/autodiff/VFPProperties.hpp>
@@ -371,9 +371,6 @@ struct TrivialFixture {
         }
     }
 
-
-    inline void initTable() {
-    }
 
     inline void initProperties() {
         //Initialize table
@@ -1047,8 +1044,7 @@ VFPPROD \n\
     BOOST_REQUIRE(deck.hasKeyword("VFPPROD"));
     BOOST_CHECK_EQUAL(deck.count("VFPPROD"), 1);
 
-    Opm::VFPProdTable table;
-    table.init(deck.getKeyword("VFPPROD", 0), units);
+    Opm::VFPProdTable table(deck.getKeyword("VFPPROD", 0), units);
 
     Opm::VFPProdProperties properties(&table);
 
@@ -1110,8 +1106,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     BOOST_REQUIRE(deck.hasKeyword("VFPPROD"));
     BOOST_CHECK_EQUAL(deck.count("VFPPROD"), 1);
 
-    Opm::VFPProdTable table;
-    table.init(deck.getKeyword("VFPPROD", 0), units);
+    Opm::VFPProdTable table(deck.getKeyword("VFPPROD", 0), units);
 
     Opm::VFPProdProperties properties(&table);
 
