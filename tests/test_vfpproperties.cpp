@@ -373,22 +373,20 @@ struct TrivialFixture {
 
 
     inline void initProperties() {
-        //Initialize table
-        table.init(table_ids[0],
-                   1000.0,
-                   Opm::VFPProdTable::FLO_OIL,
-                   Opm::VFPProdTable::WFR_WOR,
-                   Opm::VFPProdTable::GFR_GOR,
-                   Opm::VFPProdTable::ALQ_UNDEF,
-                   flo_axis,
-                   thp_axis,
-                   wfr_axis,
-                   gfr_axis,
-                   alq_axis,
-                   data);
+        table.reset(new Opm::VFPProdTable(1,
+                                          1000.0,
+                                          Opm::VFPProdTable::FLO_OIL,
+                                          Opm::VFPProdTable::WFR_WOR,
+                                          Opm::VFPProdTable::GFR_GOR,
+                                          Opm::VFPProdTable::ALQ_UNDEF,
+                                          flo_axis,
+                                          thp_axis,
+                                          wfr_axis,
+                                          gfr_axis,
+                                          alq_axis,
+                                          data));
 
-        //Initialize properties that use the table
-        properties.reset(new Opm::VFPProdProperties(&table));
+        properties.reset(new Opm::VFPProdProperties(table.get()));
     }
 
 
@@ -403,7 +401,7 @@ struct TrivialFixture {
     }
 
     std::shared_ptr<Opm::VFPProdProperties> properties;
-    Opm::VFPProdTable table;
+    std::shared_ptr<Opm::VFPProdTable> table;
     std::vector<int> table_ids;
 
 private:
@@ -461,7 +459,7 @@ BOOST_AUTO_TEST_CASE(GetTable)
     ADB qs_adb = ADB::constant(qs_adb_v);
 
     //Check that our reference has not changed
-    Opm::detail::VFPEvaluation ref = Opm::detail::bhp(&table, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
+    Opm::detail::VFPEvaluation ref = Opm::detail::bhp(table.get(), aqua_d, liquid_d, vapour_d, thp_d, alq_d);
     BOOST_CHECK_CLOSE(ref.value, 1.0923565702101556,  max_d_tol);
     BOOST_CHECK_CLOSE(ref.dthp,  0.13174065498177251, max_d_tol);
     BOOST_CHECK_CLOSE(ref.dwfr, -1.2298177745501071,  max_d_tol);
@@ -585,9 +583,9 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
                         const double liquid = -m / static_cast<double>(n);
 
                         //Find values that should be in table
-                        double flo = Opm::detail::getFlo(aqua, liquid, vapour, table.getFloType());
-                        double wfr = Opm::detail::getWFR(aqua, liquid, vapour, table.getWFRType());
-                        double gfr = Opm::detail::getGFR(aqua, liquid, vapour, table.getGFRType());
+                        double flo = Opm::detail::getFlo(aqua, liquid, vapour, table->getFloType());
+                        double wfr = Opm::detail::getWFR(aqua, liquid, vapour, table->getWFRType());
+                        double gfr = Opm::detail::getGFR(aqua, liquid, vapour, table->getGFRType());
 
                         //Calculate reference
                         double reference = thp + 2*wfr + 3*gfr+ 4*alq - 5*flo;
@@ -640,9 +638,9 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlane)
                         const double liquid = -m / static_cast<double>(n);
 
                         //Find values that should be in table
-                        double v = Opm::detail::getFlo(aqua, liquid, vapour, table.getFloType());
-                        double y = Opm::detail::getWFR(aqua, liquid, vapour, table.getWFRType());
-                        double z = Opm::detail::getGFR(aqua, liquid, vapour, table.getGFRType());
+                        double v = Opm::detail::getFlo(aqua, liquid, vapour, table->getFloType());
+                        double y = Opm::detail::getWFR(aqua, liquid, vapour, table->getWFRType());
+                        double z = Opm::detail::getGFR(aqua, liquid, vapour, table->getGFRType());
 
                         double reference = x + 2*y + 3*z+ 4*u - 5*v;
                         reference_sum += reference;
@@ -727,9 +725,9 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
                         double reference = 0.0;
                         for (int w=0; w < num_wells; ++w) {
                             //Find values that should be in table
-                            double v = Opm::detail::getFlo(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getFloType());
-                            double y = Opm::detail::getWFR(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getWFRType());
-                            double z = Opm::detail::getGFR(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getGFRType());
+                            double v = Opm::detail::getFlo(aqua*(w+1), liquid*(w+1), vapour*(w+1), table->getFloType());
+                            double y = Opm::detail::getWFR(aqua*(w+1), liquid*(w+1), vapour*(w+1), table->getWFRType());
+                            double z = Opm::detail::getGFR(aqua*(w+1), liquid*(w+1), vapour*(w+1), table->getGFRType());
 
                             reference = x*(w+1) + 2*y + 3*z + 4*u*(w+1) - 5*v;
                             value = bhp_val[w];
@@ -879,9 +877,9 @@ BOOST_AUTO_TEST_CASE(PartialDerivatives)
                         const double liquid = -m / static_cast<double>(n);
 
                         //Find values that should be in table
-                        double flo = Opm::detail::getFlo(aqua, liquid, vapour, table.getFloType());
-                        double wfr = Opm::detail::getWFR(aqua, liquid, vapour, table.getWFRType());
-                        double gfr = Opm::detail::getGFR(aqua, liquid, vapour, table.getGFRType());
+                        double flo = Opm::detail::getFlo(aqua, liquid, vapour, table->getFloType());
+                        double wfr = Opm::detail::getWFR(aqua, liquid, vapour, table->getWFRType());
+                        double gfr = Opm::detail::getGFR(aqua, liquid, vapour, table->getGFRType());
 
                         //Calculate reference
                         VFPEvaluation reference;
@@ -894,7 +892,7 @@ BOOST_AUTO_TEST_CASE(PartialDerivatives)
 
                         //Calculate actual
                         //Note order of arguments: id, aqua, liquid, vapour, thp, alq
-                        VFPEvaluation actual = Opm::detail::bhp(&table, aqua, liquid, vapour, thp, alq);
+                        VFPEvaluation actual = Opm::detail::bhp(table.get(), aqua, liquid, vapour, thp, alq);
 
                         VFPEvaluation abs_diff = actual - reference;
                         abs_diff.value = std::abs(abs_diff.value);
