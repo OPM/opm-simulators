@@ -87,7 +87,9 @@ try
     /// We open an output file stream for the output
     /// \snippet tutorial1.cpp output stream
     /// \internal [output stream]
+#ifdef DISABLE_OUTPUT
     std::ofstream vtkfile("tutorial1.vtu");
+#endif
     /// \internal [output stream]
     /// \endinternal
     /// \page tutorial1
