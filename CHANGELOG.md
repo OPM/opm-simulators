@@ -11,18 +11,34 @@ Instead, version numbers indicate the year and month of release.
 
 ### Added
 - More integration tests for Flow, in particular for multisegment wells, solvent and polymer.
+- Support placing the TUNING keyword (first line only, time limits for simulator steps) in the SCHEDULE section.
+- Support RESV-controlled wells for solvent runs.
+- More output options supported, such as dissolved gas and reservoir volume rates.
+- Support two-phase oil-water with polymer without a dummy gas phase.
+- Experimental CPR preconditioner is available for Flow.
 
 ### Changed
+- Some parts of the former opm-core module has been moved to this module.
 - Refactoring: well models are now more independent and self-contained.
-- Other minor refactoring: SimulatorBlackoilEbos::run().
+- Refactoring: the Schedule objects are now independent of the EclipseState objects and can be modified from the initial deck-given state.
+- Refactoring: EQUIL initialization has been refactored and moved to the ewoms module.
+- Refactoring: use refactored output facilities.
+- Refactoring: more flexible treatment of linear solver.
+- Improved and cleaned up log and PRT output from Flow.
+- Changed some default tuning parameters for Flow: default initial timestep size is 1 day, maximum pressure change per iteration is limited, allow setting the relaxed convergence tolerance.
+- Other minor refactoring: SimulatorBlackoilEbos::run(), BlackoilModelEbos::prepareStep() and afterStep(), SimulatorReport usage, cleanup component and phase index usage.
+- Allow using Dune 2.6.
 
 ### Fixed
 - Fix bugs related to running Flow in parallel that caused slightly wrong results and bad performance in some cases, in particular the "model 2" case with 8 threads.
+- Fix bugs for polymer simulation, in particular relating to partially mixed polymer and shear-dependent behaviour.
+- Fix a bug related to wells with a zero rate target.
+- Fixed various minor bugs, including bugs in equilibration initialization, printing very long timesteps, single-phase RESV injection controls, RESV controls in the presence of undersaturated fluids, logging for old two-phase simulators.
 
 ### Removed
-- The ebos-based (i.e. using the new assembly approach) Flow variants as well as most of the legacy variants have been removed, use Flow instead.
-
-
+- The stand-alone ebos-based (i.e. using the new assembly approach) Flow variants as well as most of the legacy variants have been removed, use Flow instead.
+- The legacy Flow variants for polymer, solvent etc. have been removed, since that functionality is all present in the main Flow executable.
+- The old implicit solver for incompressible two-phase transport has been removed, the ad-based version is simply better.
 
 ## [2017.10] - 2017-10-31
 
