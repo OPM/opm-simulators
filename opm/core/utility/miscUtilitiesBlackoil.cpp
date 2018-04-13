@@ -318,7 +318,6 @@ namespace Opm
 
 
         //double res_vol;
-        double tot_sat;
         const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
 
         for (int c = 0; c < nc; ++c) {
@@ -332,7 +331,7 @@ namespace Opm
 
             dgesv_(&n, &nrhs, &A[0], &lda, &piv[0], &s[0], &ldb, &info);
 
-            tot_sat = 0;
+            double tot_sat = 0;
             for (int p = 0; p < np; ++p){
                 if (s[p] < epsilon) // saturation may be less then zero due to round of errors
                     s[p] = 0;
