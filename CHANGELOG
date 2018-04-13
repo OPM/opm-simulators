@@ -1,3 +1,20 @@
+Changes in opm-material 2018.04
+===============================
+
+- The thermal laws for heat conduction and for the internal energy of
+  the solid matrix have been overhauled:
+  - They are now two independent laws, so it is possible to mix-and-match
+    any approach for heat conduction with any law for solid heat capacity.
+- Support for the thermal ECL keywords has been added
+- A fluid state specialized for the black-oil assumptions has been added.
+- opm-material can now be build without opm-common if the alternative
+  build system described in the INSTALL file of eWoms is used. In this
+  case most ECL-specific functionality will be unavailable.
+- The code now works with DUNE 2.6 and the latest development version
+  of DUNE 2.7 at time of release. The minimum required DUNE version
+  stays 2.4.
+- Many smaller bug fixes and improvements.
+
 Changes in opm-material 2017.10
 ===============================
 
