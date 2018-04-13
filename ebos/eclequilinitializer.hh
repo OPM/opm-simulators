@@ -44,6 +44,7 @@ NEW_PROP_TAG(FluidSystem);
 NEW_PROP_TAG(GridView);
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(MaterialLaw);
+NEW_PROP_TAG(EnableTemperature);
 NEW_PROP_TAG(EnableEnergy);
 }
 
