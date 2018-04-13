@@ -197,7 +197,7 @@ namespace Opm
         mu_w_eff = 1./mu_w_eff;
     }
 
-    void PolymerProperties::effectiveViscWithDer(const double c, const double mu_w, double& mu_w_eff, double dmu_w_eff_dc) const {
+    void PolymerProperties::effectiveViscWithDer(const double c, const double mu_w, double& mu_w_eff, double& dmu_w_eff_dc) const {
         effectiveInvViscWithDer(c, mu_w, mu_w_eff, dmu_w_eff_dc);
         mu_w_eff = 1./mu_w_eff;
         dmu_w_eff_dc = -dmu_w_eff_dc*mu_w_eff*mu_w_eff;

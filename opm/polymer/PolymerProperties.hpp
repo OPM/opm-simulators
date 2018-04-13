@@ -283,7 +283,7 @@ namespace Opm
 
         void effectiveViscWithDer(const double c, const double visc
                                                      , double& mu_w_eff
-                                                     , double dmu_w_eff_dc) const;
+                                                     , double& dmu_w_eff_dc) const;
 
         void effectiveInvVisc(const double c, const double mu_w,
                                                  double& inv_mu_w_eff) const;

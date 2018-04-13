@@ -306,7 +306,7 @@ namespace Opm
         mutable double s; // Mutable in order to change it with every operator() call to be the last computed s value.
         TransportSolverTwophaseCompressiblePolymer::ResidualEquation& res_eq_;
         explicit ResidualC(TransportSolverTwophaseCompressiblePolymer::ResidualEquation& res_eq)
-            : res_eq_(res_eq)
+            : s(0.0), res_eq_(res_eq)
         {}
 
         void computeBothResiduals(const double s_arg, const double c_arg, double& res_s, double& res_c, double& mc, double& ff) const
