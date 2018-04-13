@@ -18,7 +18,7 @@
 
 struct SortByAbsFlux
 {
-    SortByAbsFlux(const double* flux)
+    explicit SortByAbsFlux(const double* flux)
         : flux_(flux)
     {}
     bool operator() (int f1, int f2)

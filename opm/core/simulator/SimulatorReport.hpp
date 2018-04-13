@@ -45,7 +45,7 @@ namespace Opm
         bool converged;
 
         /// Default constructor initializing all times to 0.0.
-        SimulatorReport(bool verbose=true);
+        explicit SimulatorReport(bool verbose=true);
         /// Copy constructor
         SimulatorReport(const SimulatorReport&) = default;
         /// Increment this report's times by those in sr.
