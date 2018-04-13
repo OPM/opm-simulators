@@ -1,6 +1,6 @@
 #!/bin/bash
 
-OPM_DATA_ROOT=$1
+OPM_TESTS_ROOT=$1
 
 # Copy results from a test run to refence dir
 # $1 = source directory to copy data from
@@ -36,7 +36,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_sequential+spe1/ \
-      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_sequential \
+      $OPM_TESTS_ROOT/spe1/opm-simulation-reference/flow_sequential \
       SPE1CASE1 \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -45,13 +45,13 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_legacy+spe1/ \
-      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_legacy \
+      $OPM_TESTS_ROOT/spe1/opm-simulation-reference/flow_legacy \
       SPE1CASE2 \
       EGRID INIT SMSPEC UNRST UNSMRY
 
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+spe1/ \
-      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/spe1/opm-simulation-reference/flow \
       SPE1CASE2 \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -60,13 +60,13 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+spe1_2p/ \
-      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/spe1/opm-simulation-reference/flow \
       SPE1CASE2_2P \
       EGRID INIT SMSPEC UNRST UNSMRY
 
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_legacy+spe1_2p/ \
-      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_legacy \
+      $OPM_TESTS_ROOT/spe1/opm-simulation-reference/flow_legacy \
       SPE1CASE2_2P \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -75,7 +75,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+spe1_oilgas/ \
-      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/spe1/opm-simulation-reference/flow \
       SPE1CASE2_OILGAS \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -84,7 +84,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+spe1_nowells/ \
-      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/spe1/opm-simulation-reference/flow \
       SPE1CASE2_NOWELLS \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -93,7 +93,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+msw_2d_h/ \
-      $OPM_DATA_ROOT/msw_2d_h/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/msw_2d_h/opm-simulation-reference/flow \
       2D_H__ \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -102,7 +102,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+msw_3d_hfa/ \
-      $OPM_DATA_ROOT/msw_3d_hfa/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/msw_3d_hfa/opm-simulation-reference/flow \
       3D_MSW \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -111,7 +111,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+polymer_oilwater/ \
-      $OPM_DATA_ROOT/polymer_oilwater/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/polymer_oilwater/opm-simulation-reference/flow \
       2D_OILWATER_POLYMER \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -120,7 +120,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+polymer_simple2D/ \
-      $OPM_DATA_ROOT/polymer_simple2D/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/polymer_simple2D/opm-simulation-reference/flow \
       2D_THREEPHASE_POLY_HETER    \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -129,13 +129,13 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_legacy+spe3/ \
-      $OPM_DATA_ROOT/spe3/opm-simulation-reference/flow_legacy \
+      $OPM_TESTS_ROOT/spe3/opm-simulation-reference/flow_legacy \
       SPE3CASE1 \
       EGRID INIT PRT SMSPEC UNRST UNSMRY
 
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+spe3/ \
-      $OPM_DATA_ROOT/spe3/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/spe3/opm-simulation-reference/flow \
       SPE3CASE1 \
       EGRID INIT PRT SMSPEC UNRST UNSMRY
   fi
@@ -144,7 +144,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+spe5/ \
-      $OPM_DATA_ROOT/spe5/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/spe5/opm-simulation-reference/flow \
       SPE5CASE1    \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -153,20 +153,20 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+spe9group/ \
-      $OPM_DATA_ROOT/spe9group/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/spe9group/opm-simulation-reference/flow \
       SPE9_CP_GROUP \
       EGRID INIT PRT SMSPEC UNRST UNSMRY
   elif grep -q "spe9" <<< $test_name
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+spe9/ \
-      $OPM_DATA_ROOT/spe9/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/spe9/opm-simulation-reference/flow \
       SPE9_CP_SHORT \
       EGRID INIT PRT SMSPEC UNRST UNSMRY
 
       copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_legacy+spe9/ \
-      $OPM_DATA_ROOT/spe9/opm-simulation-reference/flow_legacy \
+      $OPM_TESTS_ROOT/spe9/opm-simulation-reference/flow_legacy \
       SPE9_CP_SHORT \
       EGRID INIT PRT SMSPEC UNRST UNSMRY
   fi
@@ -175,13 +175,13 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/init/flow+norne/ \
-      $OPM_DATA_ROOT/norne/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/norne/opm-simulation-reference/flow \
       NORNE_ATW2013 \
       EGRID INIT
 
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/init/flow_legacy+norne/ \
-      $OPM_DATA_ROOT/norne/opm-simulation-reference/flow_legacy \
+      $OPM_TESTS_ROOT/norne/opm-simulation-reference/flow_legacy \
       NORNE_ATW2013 \
       EGRID INIT
   fi
@@ -190,13 +190,13 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       deps/opm-data/norne/flow/ \
-      $OPM_DATA_ROOT/norne/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/norne/opm-simulation-reference/flow \
       NORNE_ATW2013 \
       UNSMRY
 
     copyToReferenceDir \
       deps/opm-data/norne/flow_legacy/ \
-      $OPM_DATA_ROOT/norne/opm-simulation-reference/flow_legacy \
+      $OPM_TESTS_ROOT/norne/opm-simulation-reference/flow_legacy \
       NORNE_ATW2013 \
       UNSMRY
   fi
@@ -205,7 +205,7 @@ done
 if [ -z "${@:2}" ]
 then
   # User did not specify tests to update, probe
-  pushd $OPM_DATA_ROOT > /dev/null
+  pushd $OPM_TESTS_ROOT > /dev/null
   tests=""
   git status | grep "SPE1CASE1" && tests="spe11"
   git status | grep "SPE1CASE2" && tests="$tests spe12"
@@ -240,7 +240,7 @@ do
 done
 echo -e "opm-simulators = `git rev-parse HEAD`" >> /tmp/cmsg
 
-cd $OPM_DATA_ROOT
+cd $OPM_TESTS_ROOT
 if [ -n "$BRANCH_NAME" ]
 then
   git checkout -b $BRANCH_NAME origin/master
