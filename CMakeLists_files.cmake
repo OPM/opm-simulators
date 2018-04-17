@@ -179,86 +179,86 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_norne_pvt.cpp
   )
 
-if(MPI_FOUND)
-  list(APPEND TEST_SOURCE_FILES tests/test_parallel_linearsolver.cpp
-                                tests/test_parallelistlinformation.cpp)
-endif()
+    if(MPI_FOUND)
+        list(APPEND TEST_SOURCE_FILES tests/test_parallel_linearsolver.cpp
+            tests/test_parallelistlinformation.cpp)
+    endif()
 
-list (APPEND TEST_DATA_FILES
-  tests/fluid.data
-  tests/VFPPROD1
-  tests/VFPPROD2
-  tests/msw.data
-  tests/TESTTIMER.DATA
-  tests/TESTWELLMODEL.DATA
-  tests/liveoil.DATA
-  tests/capillary.DATA
-  tests/capillary_overlap.DATA
-  tests/capillarySwatinit.DATA
-  tests/deadfluids.DATA
-  tests/equil_livegas.DATA
-  tests/equil_liveoil.DATA
-  tests/equil_rsvd_and_rvvd.DATA
-  tests/wetgas.DATA
-  tests/satfuncStandard.DATA
-  tests/satfuncEPSBase.DATA
-  tests/satfuncEPS_A.DATA
-  tests/satfuncEPS_B.DATA
-  tests/satfuncEPS_C.DATA
-  tests/satfuncEPS_D.DATA
-  tests/testBlackoilState1.DATA
-  tests/testBlackoilState2.DATA
-  tests/testPinch1.DATA
-  tests/wells_manager_data.data
-  tests/wells_manager_data_expanded.data
-  tests/wells_manager_data_wellSTOP.data
-  tests/wells_group.data
-  tests/wells_stopped.data
-  tests/relpermDiagnostics.DATA
-  tests/norne_pvt.data
-  )
+    list (APPEND TEST_DATA_FILES
+        tests/fluid.data
+        tests/VFPPROD1
+        tests/VFPPROD2
+        tests/msw.data
+        tests/TESTTIMER.DATA
+        tests/TESTWELLMODEL.DATA
+        tests/liveoil.DATA
+        tests/capillary.DATA
+        tests/capillary_overlap.DATA
+        tests/capillarySwatinit.DATA
+        tests/deadfluids.DATA
+        tests/equil_livegas.DATA
+        tests/equil_liveoil.DATA
+        tests/equil_rsvd_and_rvvd.DATA
+        tests/wetgas.DATA
+        tests/satfuncStandard.DATA
+        tests/satfuncEPSBase.DATA
+        tests/satfuncEPS_A.DATA
+        tests/satfuncEPS_B.DATA
+        tests/satfuncEPS_C.DATA
+        tests/satfuncEPS_D.DATA
+        tests/testBlackoilState1.DATA
+        tests/testBlackoilState2.DATA
+        tests/testPinch1.DATA
+        tests/wells_manager_data.data
+        tests/wells_manager_data_expanded.data
+        tests/wells_manager_data_wellSTOP.data
+        tests/wells_group.data
+        tests/wells_stopped.data
+        tests/relpermDiagnostics.DATA
+        tests/norne_pvt.data
+        )
 
 
-# originally generated with the command:
-# find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
-list (APPEND EXAMPLE_SOURCE_FILES
-  examples/find_zero.cpp
-  examples/flow_legacy.cpp
-  examples/flow_reorder.cpp
-  examples/flow_sequential.cpp
-  examples/flow.cpp
-  examples/sim_2p_incomp_ad.cpp
-  examples/sim_2p_comp_reorder.cpp
-  examples/sim_simple.cpp
-  examples/sim_poly2p_comp_reorder.cpp
-  examples/sim_poly2p_incomp_reorder.cpp
-  examples/wells_example.cpp
-  examples/compute_eikonal_from_files.cpp
-  examples/compute_initial_state.cpp
-  examples/compute_tof_from_files.cpp
-  examples/diagnose_relperm.cpp
-  tutorials/sim_tutorial1.cpp
-  )
+    # originally generated with the command:
+    # find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
+    list (APPEND EXAMPLE_SOURCE_FILES
+        examples/find_zero.cpp
+        examples/flow_legacy.cpp
+        examples/flow_reorder.cpp
+        examples/flow_sequential.cpp
+        examples/flow.cpp
+        examples/sim_2p_incomp_ad.cpp
+        examples/sim_2p_comp_reorder.cpp
+        examples/sim_simple.cpp
+        examples/sim_poly2p_comp_reorder.cpp
+        examples/sim_poly2p_incomp_reorder.cpp
+        examples/wells_example.cpp
+        examples/compute_eikonal_from_files.cpp
+        examples/compute_initial_state.cpp
+        examples/compute_tof_from_files.cpp
+        examples/diagnose_relperm.cpp
+        tutorials/sim_tutorial1.cpp
+        )
 
-if(SuiteSparse_FOUND)
-  list(APPEND EXAMPLE_SOURCE_FILES tutorials/sim_tutorial2.cpp
-                                   tutorials/sim_tutorial3.cpp
-                                   tutorials/sim_tutorial4.cpp)
-endif()
+    if(SuiteSparse_FOUND)
+        list(APPEND EXAMPLE_SOURCE_FILES tutorials/sim_tutorial2.cpp
+            tutorials/sim_tutorial3.cpp
+            tutorials/sim_tutorial4.cpp)
+    endif()
 
-# programs listed here will not only be compiled, but also marked for
-# installation
-list (APPEND PROGRAM_SOURCE_FILES
-  examples/sim_2p_incomp.cpp
-  examples/sim_2p_incomp_ad.cpp
-  examples/sim_2p_comp_reorder.cpp
-  examples/flow.cpp
-  examples/flow_legacy.cpp
-  examples/flow_reorder.cpp
-  examples/flow_sequential.cpp
-  examples/sim_poly2p_comp_reorder.cpp
-  examples/sim_poly2p_incomp_reorder.cpp
-  )
+    # programs listed here will not only be compiled, but also marked for
+    # installation
+    list (APPEND PROGRAM_SOURCE_FILES
+        examples/sim_2p_incomp.cpp
+        examples/sim_2p_incomp_ad.cpp
+        examples/sim_2p_comp_reorder.cpp
+        examples/flow.cpp
+        examples/flow_legacy.cpp
+        examples/flow_reorder.cpp
+        examples/flow_sequential.cpp
+        examples/sim_poly2p_comp_reorder.cpp
+        examples/sim_poly2p_incomp_reorder.cpp
+        )
 
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
