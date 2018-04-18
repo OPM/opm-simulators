@@ -102,6 +102,9 @@ namespace Opm
         // Use amgcl instead of dune-istl
         bool use_amgcl_;
 
+        // Use UMFPACK instead of dune-istl
+        bool use_umfpack_;
+
         /// Construct from user parameters or defaults.
         explicit BlackoilModelParameters( const ParameterGroup& param );
 

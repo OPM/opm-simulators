@@ -36,7 +36,7 @@
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
-#include <opm/core/linalg/LinearSolverInterface.hpp>
+#include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -554,6 +554,59 @@ namespace Opm {
                     }
                 }
                 const_cast<int&>(linear_iters_last_solve_) = iters;
+                return;
+            }
+
+            if (param_.use_umfpack_) {
+                // Create matrix for amgcl // NOTE: copied from amgcl block
+                const int n = ebosResid.size();
+                assert(ebosResid.size() == ebosJac.N());
+                const int np = numPhases();
+                const int sz = n * np;
+                const int nnz = ebosJac.nonzeroes();
+                assert(x.size() == ebosResid.size());
+                std::vector<int>    ptr(sz + 1,         -1);
+                std::vector<int>    col(nnz * np * np,  -1);
+                std::vector<double> val(nnz * np * np, 0.0);
+                std::vector<double> rhs(sz,            0.0);
+                ptr[0] = 0;
+                int index = 0;
+                for (int row_index = 0; row_index < n; ++row_index) {
+                    const auto& row = ebosJac[row_index];
+                    const auto* dataptr = row.getptr();
+                    const auto* indexptr = row.getindexptr();
+                    for (int brow = 0; brow < np; ++brow) {
+                        ptr[row_index*np + brow + 1] = ptr[row_index*np + brow] + row.N() * np;
+                        for (int elem = 0; elem < row.N(); ++elem) {
+                            const int istlcol = indexptr[elem];
+                            const auto& block = dataptr[elem];
+                            for (int bcol = 0; bcol < np; ++bcol) {
+                                val[index] = block[brow][bcol];
+                                col[index] = np*istlcol + bcol;
+                                ++index;
+                            }
+                        }
+                    }
+                }
+                for (int cell = 0; cell < n; ++cell) {
+                    for (int phase = 0; phase < np; ++phase) {
+                        rhs[np*cell + phase] = ebosResid[cell][phase];
+                    }
+                }
+
+                // Call UMFPACK to solve system
+                std::vector<double> sol(sz, 0.0);
+                LinearSolverUmfpack solver;
+                solver.solve(sz, nnz, ptr.data(), col.data(), val.data(), rhs.data(), sol.data());
+
+                // Extract solution   // NOTE: copied from amgcl block
+                assert(sol.size() == x.size() * numPhases());
+                for (int cell = 0; cell < n; ++cell) {
+                    for (int phase = 0; phase < np; ++phase) {
+                        x[cell][phase] = sol[np*cell + phase];
+                    }
+                }
+                const_cast<int&>(linear_iters_last_solve_) = 0;
                 return;
             }
 
