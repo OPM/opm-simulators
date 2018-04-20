@@ -57,7 +57,7 @@ public:
      * Takes *no* ownership of data.
      * @param inj_tables A map of different VFPINJ tables.
      */
-    explicit VFPInjProperties(const std::map<int, VFPInjTable>& inj_tables);
+    explicit VFPInjProperties(const std::map<int, std::shared_ptr<const VFPInjTable> >& inj_tables);
 
     /**
      * Linear interpolation of bhp as function of the input parameters.

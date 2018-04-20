@@ -48,9 +48,9 @@ VFPProdProperties::VFPProdProperties(const VFPProdTable* table){
 
 
 
-VFPProdProperties::VFPProdProperties(const std::map<int, VFPProdTable>& tables) {
+VFPProdProperties::VFPProdProperties(const std::map<int, std::shared_ptr<const VFPProdTable> >& tables) {
     for (const auto& table : tables) {
-        m_tables[table.first] = &(table.second);
+        m_tables[table.first] = table.second.get();
     }
 }
 

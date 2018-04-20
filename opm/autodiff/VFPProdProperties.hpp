@@ -61,7 +61,7 @@ public:
      * Takes *no* ownership of data.
      * @param prod_tables A map of different VFPPROD tables.
      */
-    explicit VFPProdProperties(const std::map<int, VFPProdTable>& prod_tables);
+    explicit VFPProdProperties(const std::map<int, std::shared_ptr<const VFPProdTable> >& prod_tables);
 
     /**
      * Linear interpolation of bhp as function of the input parameters.

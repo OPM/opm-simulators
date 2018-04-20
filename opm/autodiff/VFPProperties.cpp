@@ -38,8 +38,8 @@ VFPProperties::VFPProperties(const VFPInjTable* inj_table, const VFPProdTable* p
     }
 }
 
-VFPProperties::VFPProperties(const std::map<int, VFPInjTable>& inj_tables,
-                             const std::map<int, VFPProdTable>& prod_tables) {
+VFPProperties::VFPProperties(const std::map<int, std::shared_ptr<const VFPInjTable> >& inj_tables,
+                             const std::map<int, std::shared_ptr<const VFPProdTable> >& prod_tables) {
     m_inj.reset(new VFPInjProperties(inj_tables));
     m_prod.reset(new VFPProdProperties(prod_tables));
 }

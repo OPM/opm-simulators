@@ -61,9 +61,9 @@ VFPInjProperties::VFPInjProperties(const VFPInjTable* table){
 
 
 
-VFPInjProperties::VFPInjProperties(const std::map<int, VFPInjTable>& tables) {
+VFPInjProperties::VFPInjProperties(const std::map<int, std::shared_ptr<const VFPInjTable> >& tables) {
     for (const auto& table : tables) {
-        m_tables[table.first] = &(table.second);
+        m_tables[table.first] = table.second.get();
     }
 }
 
