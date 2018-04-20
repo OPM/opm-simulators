@@ -58,7 +58,7 @@ namespace Opm
                 std::cout << "*                                                                    *\n";
                 std::cout << "*    Flow-Sequential is a simulator for fully implicit three-phase,  *\n";
                 std::cout << "*                  black-oil flow, and is part of OPM.               *\n";
-                std::cout << "*           For more information see http://opm-project.org          *\n";
+                std::cout << "*           For more information see https://opm-project.org          *\n";
                 std::cout << "*                                                                    *\n";
                 std::cout << "**********************************************************************\n\n";
 
