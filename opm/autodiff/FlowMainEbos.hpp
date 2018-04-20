@@ -189,7 +189,7 @@ namespace Opm
                 std::cout << "*                                                                    *\n";
                 std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
                 std::cout << "*             including solvent and polymer capabilities.            *\n";
-                std::cout << "*          For more information, see http://opm-project.org          *\n";
+                std::cout << "*          For more information, see https://opm-project.org          *\n";
                 std::cout << "*                                                                    *\n";
                 std::cout << "**********************************************************************\n\n";
             }
@@ -347,7 +347,7 @@ namespace Opm
               ss << " #         #         #      #     # # # #   \n";
               ss << " #         #######    ######       #   #    \n\n";
               ss << "Flow is a simulator for fully implicit three-phase black-oil flow,";
-              ss << " and is part of OPM.\nFor more information visit: http://opm-project.org \n\n";
+              ss << " and is part of OPM.\nFor more information visit: https://opm-project.org \n\n";
               ss << "Flow Version  =  " + version + "\n";
               if (uname(&arch) == 0) {
                  ss << "System        =  " << arch.nodename << " (Number of cores: " << num_cpu;
