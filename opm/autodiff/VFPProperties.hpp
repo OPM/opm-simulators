@@ -52,8 +52,8 @@ public:
      * @param inj_tables A map of different VFPINJ tables.
      * @param prod_tables A map of different VFPPROD tables.
      */
-    VFPProperties(const std::map<int, VFPInjTable>& inj_tables,
-                  const std::map<int, VFPProdTable>& prod_tables);
+    VFPProperties(const std::map<int, std::shared_ptr<const VFPInjTable> >& inj_tables,
+                  const std::map<int, std::shared_ptr<const VFPProdTable> >& prod_tables);
 
     /**
      * Returns the VFP properties for injection wells
