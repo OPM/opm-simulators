@@ -33,6 +33,8 @@
 #include <chrono>
 #include <iostream>
 
+Ewoms::TaskletRunner *runner;
+
 class SleepTasklet : public Ewoms::TaskletInterface
 {
 public:
@@ -45,8 +47,9 @@ public:
 
     void run()
     {
+        assert(0 <= runner->workerThreadIndex() && runner->workerThreadIndex() < runner->numWorkerThreads());
         std::this_thread::sleep_for(std::chrono::milliseconds(mseconds_));
-        std::cout << "Sleep tasklet " << n_ << " of " << mseconds_ << " ms finished" << std::endl;
+        std::cout << "Sleep tasklet " << n_ << " of " << mseconds_ << " ms completed by worker thread " << runner->workerThreadIndex() << std::endl;
     }
 
 private:
@@ -59,22 +62,29 @@ int SleepTasklet::numInstantiated_ = 0;
 
 int main()
 {
-    Ewoms::TaskletRunner tr(2);
+    int numWorkers = 2;
+    runner = new Ewoms::TaskletRunner(numWorkers);
+
+    // the master thread is not a worker thread
+    assert(runner->workerThreadIndex() < 0);
+    assert(runner->numWorkerThreads() == numWorkers);
 
     for (int i = 0; i < 5; ++ i) {
         //auto st = std::make_shared<SleepTasklet>((i + 1)*1000);
         auto st = std::make_shared<SleepTasklet>(100);
-        tr.dispatch(st);
+        runner->dispatch(st);
     }
 
     std::cout << "before barrier" << std::endl;
-    tr.barrier();
+    runner->barrier();
     std::cout << "after barrier" << std::endl;
 
     for (int i = 0; i < 7; ++ i) {
         auto st = std::make_shared<SleepTasklet>(500);
-        tr.dispatch(st);
+        runner->dispatch(st);
     }
+
+    delete runner;
 
     return 0;
 }
