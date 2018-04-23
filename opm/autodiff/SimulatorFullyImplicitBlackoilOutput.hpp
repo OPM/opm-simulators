@@ -439,7 +439,11 @@ namespace Opm
         DynamicListEconLimited dummy_list_econ_limited;
         WellsManager wellsmanager(eclipseState_,
                                   schedule_,
-                                  eclipseState_.getInitConfig().getRestartStep(),
+                                  // The restart step value is used to identify wells present at the given time step.
+                                  // Wells that are added at the same time step as RESTART is initiated will not be
+                                  // present in a restart file. Use the previous time step to retrieve wells
+                                  // that have information written to the restart file.
+                                  std::max(eclipseState_.getInitConfig().getRestartStep() - 1, 0),
                                   Opm::UgGridHelpers::numCells(grid),
                                   Opm::UgGridHelpers::globalCell(grid),
                                   Opm::UgGridHelpers::cartDims(grid),
