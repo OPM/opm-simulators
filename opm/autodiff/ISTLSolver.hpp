@@ -479,16 +479,15 @@ namespace Detail
             }
         }
 
-#if DUNE_VERSION_NEWER_REV(DUNE_ISTL, 2 , 5, 1)
-        // 3x3 matrix block inversion was unstable at least 2.3 until and including
-        // 2.5.0
-        typedef ParallelOverlappingILU0<Matrix,Vector,Vector> SeqPreconditioner;
-#else
+
+	// 3x3 matrix block inversion was unstable at least 2.3 until and including
+	// 2.5.0. There may still be some issue with the 4x4 matrix block inversion
+	// we therefore still use the block inversion in OPM
         typedef ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::MatrixBlock<typename Matrix::field_type,
                                                                            Matrix::block_type::rows,
                                                                            Matrix::block_type::cols> >,
-                                        Vector, Vector> SeqPreconditioner;
-#endif
+                                        				   Vector, Vector> SeqPreconditioner;
+
 
         template <class Operator>
         std::unique_ptr<SeqPreconditioner> constructPrecond(Operator& opA, const Dune::Amg::SequentialInformation&) const
