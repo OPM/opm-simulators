@@ -485,6 +485,9 @@ namespace Opm {
         /// (The name is not CRSMatrix to avoid confusing with the C struct of that name.)
         struct CRSMatrixHelper
         {
+            CRSMatrixHelper()
+            {
+            }
             CRSMatrixHelper(const int sz, const int nnz)
                 : ptr(sz + 1, -1)
                 , col(nnz, -1)
@@ -504,6 +507,7 @@ namespace Opm {
         {
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
 
+#if 1
             const int n = ebosJac.N();
             const int np = numPhases();
             const int sz = n * np;
@@ -529,6 +533,46 @@ namespace Opm {
                 }
             }
             return A;
+#else
+            // This variant builds a matrix A with fewer elements, by ignoring
+            // explicit zeros in the non-zero blocks. Experiment not very
+            // successful: amgcl (CPR) even failed on SPE9 with this.
+            // Also, this code is slow, probably due to the push_back, in spite
+            // of the reserve() calls.
+            //
+            // Code retained for future experimentation.
+            const int n = ebosJac.N();
+            const int np = numPhases();
+            const int sz = n * np;
+            const int nnz_max = ebosJac.nonzeroes() * np * np;
+            CRSMatrixHelper A;
+            A.ptr.resize(sz + 1, -1);
+            A.ptr[0] = 0;
+            A.col.reserve(nnz_max);
+            A.val.reserve(nnz_max);
+            int index = 0;
+            for (int row_index = 0; row_index < n; ++row_index) {
+                const auto& row = ebosJac[row_index];
+                const auto* dataptr = row.getptr();
+                const auto* indexptr = row.getindexptr();
+                for (int brow = 0; brow < np; ++brow) {
+                    for (int elem = 0; elem < row.N(); ++elem) {
+                        const int istlcol = indexptr[elem];
+                        const auto& block = dataptr[elem];
+                        for (int bcol = 0; bcol < np; ++bcol) {
+                            const double val = block[brow][bcol];
+                            if (val != 0.0) {
+                                A.val.push_back(val);
+                                A.col.push_back(np*istlcol + bcol);
+                                ++index;
+                            }
+                        }
+                    }
+                    A.ptr[row_index*np + brow + 1] = index;
+                }
+            }
+            return A;
+#endif
         }
 
 
