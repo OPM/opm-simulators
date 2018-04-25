@@ -768,6 +768,11 @@ namespace Opm {
             x = 0.0;
 
             if (param_.use_amgcl_ || param_.use_umfpack_) {
+                if (!param_.matrix_add_well_contributions_) {
+                    // This should be handled by combining interacting options into a single one eventually.
+                    OPM_THROW(std::runtime_error, "Cannot run with amgcl or UMFPACK without also using 'matrix_add_well_contributions=true'.");
+                }
+
                 // Create matrix for external linear solvers.
                 CRSMatrixHelper matrix = buildCRSMatrixNoBlocks();
 
