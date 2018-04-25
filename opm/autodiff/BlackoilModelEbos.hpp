@@ -706,7 +706,7 @@ namespace Opm {
 
         /// Build a CRS matrix (not block-structured) from
         /// the block structured system matrix.
-        CRSMatrixHelper buildCRSMatrix() const
+        CRSMatrixHelper buildCRSMatrixNoBlocks() const
         {
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
 
@@ -767,11 +767,11 @@ namespace Opm {
             // set initial guess
             x = 0.0;
 
-            if (param_.use_amgcl_) {
-                // Create matrix for amgcl
-                CRSMatrixHelper matrix = buildCRSMatrix();
+            if (param_.use_amgcl_ || param_.use_umfpack_) {
+                // Create matrix for external linear solvers.
+                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks();
 
-                // Copy right-hand side.
+                // Copy right-hand side (blocked structure -> unblocked).
                 const int n = ebosResid.size();
                 const int np = numPhases();
                 const int sz = n * np;
@@ -782,57 +782,34 @@ namespace Opm {
                     }
                 }
 
-                // Call amgcl to solve system
-                const double tol = 1e-2;
-                const int maxiter = 150;
                 std::vector<double> sol(sz, 0.0);
-                int    iters;
-                double error;
-                LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
+                if (param_.use_amgcl_) {
+                    // Call amgcl to solve system
+                    const double tol = 1e-2;
+                    const int maxiter = 150;
+                    int    iters;
+                    double error;
+                    LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
+                    const_cast<int&>(linear_iters_last_solve_) = iters;
+                } else if (param_.use_umfpack_) {
+                    // Call UMFPACK to solve system
+                    const int nnz = matrix.ptr[sz];
+                    LinearSolverUmfpack solver;
+                    solver.solve(sz, nnz, matrix.ptr.data(), matrix.col.data(), matrix.val.data(), rhs.data(), sol.data());
+                    const_cast<int&>(linear_iters_last_solve_) = 0;
+                }
 
-                // Extract solution
+                // Extract solution (unblocked structure -> blocked).
                 assert(sol.size() == x.size() * numPhases());
                 for (int cell = 0; cell < n; ++cell) {
                     for (int phase = 0; phase < np; ++phase) {
                         x[cell][phase] = sol[np*cell + phase];
                     }
                 }
-                const_cast<int&>(linear_iters_last_solve_) = iters;
                 return;
             }
 
-            if (param_.use_umfpack_) {
-                // Create matrix for umfpack
-                CRSMatrixHelper matrix = buildCRSMatrix();
-
-                // Copy right-hand side.
-                const int n = ebosResid.size();
-                const int np = numPhases();
-                const int sz = n * np;
-                std::vector<double> rhs(sz, 0.0);
-                for (int cell = 0; cell < n; ++cell) {
-                    for (int phase = 0; phase < np; ++phase) {
-                        rhs[np*cell + phase] = ebosResid[cell][phase];
-                    }
-                }
-
-                // Call UMFPACK to solve system
-                const int nnz = matrix.ptr[sz];
-                std::vector<double> sol(sz, 0.0);
-                LinearSolverUmfpack solver;
-                solver.solve(sz, nnz, matrix.ptr.data(), matrix.col.data(), matrix.val.data(), rhs.data(), sol.data());
-
-                // Extract solution   // NOTE: copied from amgcl block
-                assert(sol.size() == x.size() * numPhases());
-                for (int cell = 0; cell < n; ++cell) {
-                    for (int phase = 0; phase < np; ++phase) {
-                        x[cell][phase] = sol[np*cell + phase];
-                    }
-                }
-                const_cast<int&>(linear_iters_last_solve_) = 0;
-                return;
-            }
-
+            // Use the default ISTLSolver to solve the system.
             const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac;
             // Solve system.
             if( isParallel() )
