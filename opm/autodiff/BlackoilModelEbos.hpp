@@ -274,7 +274,18 @@ namespace Opm {
             ebosSimulator_.problem().beginIteration();
             ebosSimulator_.model().linearizer().linearize(0);
             ebosSimulator_.problem().endIteration();
-            const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            //NB we get the linerized version from the reservoir part to be modified
+            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            std::unique_ptr<Mat> adj_matrix_for_preconditioner;
+            if (param_.matrix_add_well_contributions_) {
+                wellModel().addWellContributions(ebosJac);
+            }
+            if ( param_.preconditioner_add_well_contributions_ &&
+                 ! param_.matrix_add_well_contributions_ ) {
+                adj_matrix_for_preconditioner.reset(new Mat(ebosJac));
+                wellModel().addWellContributions(*adj_matrix_for_preconditioner);
+            }
+
 
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             /*
@@ -326,17 +337,18 @@ namespace Opm {
             // set initial guess
             BVector x(nc);
             // Solve system.
+            const Mat& actual_mat_for_prec = adj_matrix_for_preconditioner ? *adj_matrix_for_preconditioner.get() : ebosJac;
             if( isParallel() )
             {
                 typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, true > Operator;
-                Operator opAt(ebosJac, well_model_, istlSolver().parallelInformation() );
+                Operator opAt(ebosJac,  actual_mat_for_prec, well_model_, istlSolver().parallelInformation() );
                 assert( opAt.comm() );
                 istlSolver().solve( opAt, x, adjRhs, *(opAt.comm()) );
             }
             else
             {
                 typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, false > Operator;
-                Operator opAt(ebosJac, well_model_);
+                Operator opAt(ebosJac,  actual_mat_for_prec, well_model_);
                 istlSolver().solve( opAt, x, adjRhs );
             }
             //std::cout << "******* lamda_r *****" << std::endl;
@@ -871,6 +883,18 @@ namespace Opm {
             }
             else
             {
+<<<<<<< HEAD
+=======
+
+                //std::cout.precision(16);
+                //std::cout << x << std::endl;
+                //Dune::writeMatrixMarket(ebosJac, std::cout);
+                //wellModel().printMatrixes();
+                //std::cout << ebosResid << std::endl;
+  //              typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, false > Operator;
+  //              Operator opA(ebosJac, wellModel());
+
+>>>>>>> after merge
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
                 Operator opA(ebosJac, actual_mat_for_prec, wellModel());
                 istlSolver().solve( opA, x, ebosResid );

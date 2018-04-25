@@ -131,10 +131,13 @@ public:
 #endif
 
     //! constructor: just store a reference to a matrix
-    WellModelTransposeMatrixAdapter (const M& A, const WellModel& wellMod, const boost::any& parallelInformation = boost::any() )
-        : A_( A ), wellMod_( wellMod ), comm_()
+    WellModelTransposeMatrixAdapter (const M& A,
+                                     const M& A_for_precond,
+                                     const WellModel& wellMod,
+                                     const boost::any& parallelInformation = boost::any() )
+        : A_( A ),  A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_()
     {
-        Dune::MatrixVector::transpose<matrix_type>(A_, AT_);
+        Dune::MatrixVector::transpose<matrix_type>(A_for_precond_, AT_precond_);
 #if HAVE_MPI
         if( parallelInformation.type() == typeid(ParallelISTLInformation) )
         {
@@ -174,7 +177,7 @@ public:
     {
         //Dune::MatrixVector::Transposed<matrix_type> AT;
         //Dune::MatrixVector::transpose<matrix_type>(A_, AT);
-        return AT_;
+        return AT_precond_;
         //return Dune::MatrixVector::TransposeHelper<matrix_type>_;
     }
 
@@ -185,7 +188,8 @@ public:
 
 protected:
     const matrix_type& A_ ;
-    Dune::MatrixVector::Transposed<matrix_type> AT_ ;
+    const matrix_type& A_for_precond_;
+    Dune::MatrixVector::Transposed<matrix_type> AT_precond_ ;
     const WellModel& wellMod_;
     std::unique_ptr< communication_type > comm_;
 };

@@ -261,7 +261,14 @@ namespace Opm
             Dune::writeMatrixMarket(objder_adjctrl_, std::cout);
             std::cout << "adjont_variables " << std::endl;
             Dune::writeMatrixMarket(adjoint_variables_, std::cout);
+        }
 
+        virtual void  addWellContributions(Mat& mat) const;
+
+        /// \brief Wether the Jacobian will also have well contributions in it.
+        virtual bool jacobianContainsWellContributions() const
+        {
+            return param_.matrix_add_well_contributions_;
         }
     protected:
 
