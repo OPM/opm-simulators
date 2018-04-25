@@ -479,6 +479,59 @@ namespace Opm {
             return linear_iters_last_solve_;
         }
 
+
+
+        /// A struct to hold the data for a CRS matrix.
+        /// (The name is not CRSMatrix to avoid confusing with the C struct of that name.)
+        struct CRSMatrixHelper
+        {
+            CRSMatrixHelper(const int sz, const int nnz)
+                : ptr(sz + 1, -1)
+                , col(nnz, -1)
+                , val(nnz, 0.0)
+            {
+            }
+
+            std::vector<int>    ptr;
+            std::vector<int>    col;
+            std::vector<double> val;
+        };
+
+
+        /// Build a CRS matrix (not block-structured) from
+        /// the block structured system matrix.
+        CRSMatrixHelper buildCRSMatrix() const
+        {
+            const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+
+            const int n = ebosJac.N();
+            const int np = numPhases();
+            const int sz = n * np;
+            const int nnz = ebosJac.nonzeroes() * np * np;
+            CRSMatrixHelper A(sz, nnz);
+            A.ptr[0] = 0;
+            int index = 0;
+            for (int row_index = 0; row_index < n; ++row_index) {
+                const auto& row = ebosJac[row_index];
+                const auto* dataptr = row.getptr();
+                const auto* indexptr = row.getindexptr();
+                for (int brow = 0; brow < np; ++brow) {
+                    A.ptr[row_index*np + brow + 1] = A.ptr[row_index*np + brow] + row.N() * np;
+                    for (int elem = 0; elem < row.N(); ++elem) {
+                        const int istlcol = indexptr[elem];
+                        const auto& block = dataptr[elem];
+                        for (int bcol = 0; bcol < np; ++bcol) {
+                            A.val[index] = block[brow][bcol];
+                            A.col[index] = np*istlcol + bcol;
+                            ++index;
+                        }
+                    }
+                }
+            }
+            return A;
+        }
+
+
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
         void solveJacobianSystem(BVector& x) const
@@ -503,35 +556,13 @@ namespace Opm {
 
             if (param_.use_amgcl_) {
                 // Create matrix for amgcl
+                CRSMatrixHelper matrix = buildCRSMatrix();
+
+                // Copy right-hand side.
                 const int n = ebosResid.size();
-                assert(ebosResid.size() == ebosJac.N());
                 const int np = numPhases();
                 const int sz = n * np;
-                const int nnz = ebosJac.nonzeroes();
-                assert(x.size() == ebosResid.size());
-                std::vector<int>    ptr(sz + 1,         -1);
-                std::vector<int>    col(nnz * np * np,  -1);
-                std::vector<double> val(nnz * np * np, 0.0);
-                std::vector<double> rhs(sz,            0.0);
-                ptr[0] = 0;
-                int index = 0;
-                for (int row_index = 0; row_index < n; ++row_index) {
-                    const auto& row = ebosJac[row_index];
-                    const auto* dataptr = row.getptr();
-                    const auto* indexptr = row.getindexptr();
-                    for (int brow = 0; brow < np; ++brow) {
-                        ptr[row_index*np + brow + 1] = ptr[row_index*np + brow] + row.N() * np;
-                        for (int elem = 0; elem < row.N(); ++elem) {
-                            const int istlcol = indexptr[elem];
-                            const auto& block = dataptr[elem];
-                            for (int bcol = 0; bcol < np; ++bcol) {
-                                val[index] = block[brow][bcol];
-                                col[index] = np*istlcol + bcol;
-                                ++index;
-                            }
-                        }
-                    }
-                }
+                std::vector<double> rhs(sz, 0.0);
                 for (int cell = 0; cell < n; ++cell) {
                     for (int phase = 0; phase < np; ++phase) {
                         rhs[np*cell + phase] = ebosResid[cell][phase];
@@ -544,7 +575,7 @@ namespace Opm {
                 std::vector<double> sol(sz, 0.0);
                 int    iters;
                 double error;
-                LinearSolverAmgcl::solve(sz, ptr, col, val, rhs, tol, maxiter, sol, iters, error);
+                LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
 
                 // Extract solution
                 assert(sol.size() == x.size() * numPhases());
@@ -558,36 +589,14 @@ namespace Opm {
             }
 
             if (param_.use_umfpack_) {
-                // Create matrix for amgcl // NOTE: copied from amgcl block
+                // Create matrix for umfpack
+                CRSMatrixHelper matrix = buildCRSMatrix();
+
+                // Copy right-hand side.
                 const int n = ebosResid.size();
-                assert(ebosResid.size() == ebosJac.N());
                 const int np = numPhases();
                 const int sz = n * np;
-                const int nnz = ebosJac.nonzeroes();
-                assert(x.size() == ebosResid.size());
-                std::vector<int>    ptr(sz + 1,         -1);
-                std::vector<int>    col(nnz * np * np,  -1);
-                std::vector<double> val(nnz * np * np, 0.0);
-                std::vector<double> rhs(sz,            0.0);
-                ptr[0] = 0;
-                int index = 0;
-                for (int row_index = 0; row_index < n; ++row_index) {
-                    const auto& row = ebosJac[row_index];
-                    const auto* dataptr = row.getptr();
-                    const auto* indexptr = row.getindexptr();
-                    for (int brow = 0; brow < np; ++brow) {
-                        ptr[row_index*np + brow + 1] = ptr[row_index*np + brow] + row.N() * np;
-                        for (int elem = 0; elem < row.N(); ++elem) {
-                            const int istlcol = indexptr[elem];
-                            const auto& block = dataptr[elem];
-                            for (int bcol = 0; bcol < np; ++bcol) {
-                                val[index] = block[brow][bcol];
-                                col[index] = np*istlcol + bcol;
-                                ++index;
-                            }
-                        }
-                    }
-                }
+                std::vector<double> rhs(sz, 0.0);
                 for (int cell = 0; cell < n; ++cell) {
                     for (int phase = 0; phase < np; ++phase) {
                         rhs[np*cell + phase] = ebosResid[cell][phase];
@@ -595,9 +604,10 @@ namespace Opm {
                 }
 
                 // Call UMFPACK to solve system
+                const int nnz = matrix.ptr[sz];
                 std::vector<double> sol(sz, 0.0);
                 LinearSolverUmfpack solver;
-                solver.solve(sz, nnz, ptr.data(), col.data(), val.data(), rhs.data(), sol.data());
+                solver.solve(sz, nnz, matrix.ptr.data(), matrix.col.data(), matrix.val.data(), rhs.data(), sol.data());
 
                 // Extract solution   // NOTE: copied from amgcl block
                 assert(sol.size() == x.size() * numPhases());
