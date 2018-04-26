@@ -30,8 +30,6 @@
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/BlackoilWellModel.hpp>
 #include <opm/autodiff/BlackoilAquiferModel.hpp>
-#include <opm/autodiff/GridHelpers.hpp>
-#include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/WellConnectionAuxiliaryModule.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
@@ -349,7 +347,7 @@ namespace Opm {
                        const ReservoirState& reservoir_state,
                        WellState& well_state)
         {
-            // DUNE_UNUSED_PARAMETER(timer);
+            DUNE_UNUSED_PARAMETER(timer);
             DUNE_UNUSED_PARAMETER(reservoir_state);
             DUNE_UNUSED_PARAMETER(well_state);
 
@@ -372,18 +370,18 @@ namespace Opm {
             ebosSimulator_.model().linearizer().linearize();
             ebosSimulator_.problem().endIteration();
 
-            // -------- Well and aquifer common variables ----------
-            double dt = timer.currentStepLength();
-
+            // -------- Current time step length ----------
+            const double dt = timer.currentStepLength();
+            
             // -------- Aquifer models ----------
             try
             {
                 // Modify the Jacobian and residuals according to the aquifer models
                 aquiferModel().assemble(timer, iterationIdx);
             }
-            catch( const Dune::FMatrixError& e )
+            catch( ... )
             {
-                OPM_THROW(Opm::NumericalProblem,"Error when assembling aquifer models");
+                OPM_THROW(Opm::NumericalIssue,"Error when assembling aquifer models");
             }
 
             // -------- Well equations ----------

@@ -3,19 +3,10 @@ namespace Opm {
 
     template<typename TypeTag>
     BlackoilAquiferModel<TypeTag>::
-    BlackoilAquiferModel(Simulator& ebosSimulator,
-                      const ModelParameters& param,
-                      const bool terminal_output)
+    BlackoilAquiferModel(Simulator& ebosSimulator)
         : ebosSimulator_(ebosSimulator)
-        , param_(param)
-        , terminal_output_(terminal_output)
     {
-        // const auto& gridView = ebosSimulator_.gridView();
-
-        // number_of_cells_ = gridView.size(/*codim=*/0);
-        // global_nc_ = gridView.comm().sum(number_of_cells_);
-        gravity_ = ebosSimulator_.problem().gravity()[2];
-        init(ebosSimulator_, aquifers_);
+        init();
     }
 
 
@@ -26,7 +17,7 @@ namespace Opm {
     {
         for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
         {
-            aquifer->after_time_step(timer);
+            aquifer->afterTimeStep(timer);
         }
     }
 
@@ -65,16 +56,6 @@ namespace Opm {
         }
     }
 
-
-    // Protected function: Return number of aquifers in the model.
-    template<typename TypeTag>
-    int
-    BlackoilAquiferModel<TypeTag>:: numAquifers() const
-    {
-        return aquifers_.size();
-    }
-
-
     // Protected function which calls the individual aquifer models
     template<typename TypeTag>
     void
@@ -82,7 +63,7 @@ namespace Opm {
     {
         for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
         {
-            aquifer->assembleAquiferEq(ebosSimulator_, timer);
+            aquifer->assembleAquiferEq(timer);
         }
     }
 
@@ -95,43 +76,34 @@ namespace Opm {
         // Here we can ask each carter tracy aquifers to get the current previous time step's pressure
         for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
         {
-            aquifer->before_time_step(ebosSimulator_, timer);
+            aquifer->beforeTimeStep(timer);
         }
     }
-
-    // Protected function: Returns a reference to the aquifers members in the model
-    template<typename TypeTag>
-    const std::vector< AquiferCarterTracy<TypeTag> >&
-    BlackoilAquiferModel<TypeTag>:: aquifers()
-    {
-        return aquifers_;
-    }
-
 
     // Initialize the aquifers in the deck
     template<typename TypeTag>
     void
-    BlackoilAquiferModel<TypeTag>:: init(const Simulator& ebosSimulator, std::vector< AquiferCarterTracy<TypeTag> >& aquifers)
+    BlackoilAquiferModel<TypeTag>:: init()
     {
         updateConnectionIntensiveQuantities();
-        const auto& deck = ebosSimulator.vanguard().deck();
-        const auto& eclState = ebosSimulator.vanguard().eclState();
+        const auto& deck = ebosSimulator_.vanguard().deck();
+        const auto& eclState = ebosSimulator_.vanguard().eclState();
         
         // Get all the carter tracy aquifer properties data and put it in aquifers vector
-        AquiferCT aquiferct = AquiferCT(eclState,deck);
-        Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
+        const AquiferCT aquiferct = AquiferCT(eclState,deck);
+        const Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
 
         std::vector<AquiferCT::AQUCT_data> aquifersData = aquiferct.getAquifers();
         std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
 
-        assert( aquifersData.size() == aquifer_connect.size() );
+        assert( aquifersData.size() == aquifer_connection.size() );
 
 
         for (size_t i = 0; i < aquifersData.size(); ++i)
         {
-            aquifers.push_back( 
-                                 AquiferCarterTracy<TypeTag> (aquifersData.at(i), aquifer_connection.at(i), gravity_, ebosSimulator_) 
-                              );
+            aquifers_.push_back( 
+                                  AquiferCarterTracy<TypeTag> (aquifersData.at(i), aquifer_connection.at(i), ebosSimulator_)
+                               );
         }
     }
 

@@ -30,8 +30,6 @@
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilWellModel.hpp>
 #include <opm/autodiff/BlackoilAquiferModel.hpp>
-#include <opm/autodiff/RateConverter.hpp>
-#include <opm/autodiff/SimFIBODetails.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/grid/utility/StopWatch.hpp>
@@ -191,7 +189,7 @@ public:
             ebosSimulator_.model().addAuxiliaryModule(auxMod);
         }
 
-        AquiferModel aquifer_model(ebosSimulator_, model_param_, terminal_output_);
+        AquiferModel aquifer_model(ebosSimulator_);
 
         // Main simulation loop.
         while (!timer.done()) {
