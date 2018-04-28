@@ -846,6 +846,11 @@ public:
     Scalar thresholdPressure(unsigned elem1Idx, unsigned elem2Idx) const
     { return thresholdPressures_.thresholdPressure(elem1Idx, elem2Idx); }
 
+
+    const EclThresholdPressure<TypeTag>& thresholdPressure() const {
+        return thresholdPressures_;
+    }
+
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */

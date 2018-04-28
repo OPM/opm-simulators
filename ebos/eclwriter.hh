@@ -37,7 +37,10 @@
 
 #if HAVE_ECL_OUTPUT
 #include <opm/output/eclipse/EclipseIO.hpp>
+#include <opm/output/eclipse/RestartValue.hpp>
 #endif
+
+#include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/grid/GridHelpers.hpp>
 
@@ -146,9 +149,10 @@ public:
      */
     void writeOutput(Opm::data::Wells& localWellData, Scalar curTime, bool isSubStep, Scalar totalSolverTime, Scalar nextStepSize)
     {
-#if !HAVE_ECL_OUTPUT
-        throw std::runtime_error("Eclipse output support not available in opm-common, unable to write ECL output!");
-#else
+
+#if !HAVE_ECL_INPUT
+        throw std::runtime_error("Unit support not available in opm-common.");
+#endif
 
         int episodeIdx = simulator_.episodeIndex() + 1;
         const auto& gridView = simulator_.vanguard().gridView();
@@ -185,11 +189,8 @@ public:
 
         // write output on I/O rank
         if (collectToIORank_.isIORank()) {
-            std::map<std::string, std::vector<double>> extraRestartData;
-
-            // Add suggested next timestep to extra data.
-            if (!isSubStep)
-                extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextStepSize);
+            const auto& eclState = simulator_.vanguard().eclState();
+            const auto& simConfig = eclState.getSimulationConfig();
 
             // Add TCPU
             if (totalSolverTime != 0.0)
@@ -198,23 +199,29 @@ public:
             bool enableDoublePrecisionOutput = EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
             const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
             const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
+            Opm::RestartValue restartValue(cellData, wellData);
 
             const std::map<std::pair<std::string, int>, double>& blockData
                 = collectToIORank_.isParallel()
                 ? collectToIORank_.globalBlockData()
                 : eclOutputModule_.getBlockData();
 
+            // Add suggested next timestep to extra data.
+            if (!isSubStep)
+                restartValue.addExtra("OPMEXTRA", std::vector<double>(1, nextStepSize));
+
+            if (simConfig.hasThresholdPressure())
+                restartValue.addExtra("THPRES", Opm::UnitSystem::measure::pressure, simulator_.problem().thresholdPressure().data());
+
             // first, create a tasklet to write the data for the current time step to disk
             auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(*eclIO_,
                                                                      episodeIdx,
                                                                      isSubStep,
                                                                      curTime,
-                                                                     cellData,
-                                                                     wellData,
+                                                                     restartValue,
                                                                      miscSummaryData,
                                                                      regionData,
                                                                      blockData,
-                                                                     extraRestartData,
                                                                      enableDoublePrecisionOutput);
 
             // then, make sure that the previous I/O request has been completed and the
@@ -224,27 +231,24 @@ public:
             // finally, start a new output writing job
             taskletRunner_->dispatch(eclWriteTasklet);
         }
-#endif
     }
 
     void restartBegin()
     {
         bool enableHysteresis = simulator_.problem().materialLawManager()->enableHysteresis();
-        std::map<std::string, Opm::RestartKey> solution_keys {{"PRESSURE" , Opm::RestartKey(Opm::UnitSystem::measure::pressure)},
-                                                         {"SWAT" , Opm::RestartKey(Opm::UnitSystem::measure::identity, FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
-                                                         {"SGAS" , Opm::RestartKey(Opm::UnitSystem::measure::identity, FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
-                                                         {"TEMP" , Opm::RestartKey(Opm::UnitSystem::measure::temperature)}, // always required for now
-                                                         {"RS" , Opm::RestartKey(Opm::UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas())},
-                                                         {"RV" , Opm::RestartKey(Opm::UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil())},
-                                                         {"SOMAX", {Opm::UnitSystem::measure::identity, simulator_.problem().vapparsActive()}},
-                                                         {"PCSWM_OW", {Opm::UnitSystem::measure::identity, enableHysteresis}},
-                                                         {"KRNSW_OW", {Opm::UnitSystem::measure::identity, enableHysteresis}},
-                                                         {"PCSWM_GO", {Opm::UnitSystem::measure::identity, enableHysteresis}},
-                                                         {"KRNSW_GO", {Opm::UnitSystem::measure::identity, enableHysteresis}}};
+        std::vector<Opm::RestartKey> solution_keys {{"PRESSURE" , Opm::UnitSystem::measure::pressure},
+                                                    {"SWAT" ,     Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
+                                                    {"SGAS" ,     Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
+                                                    {"TEMP" ,     Opm::UnitSystem::measure::temperature}, // always required for now
+                                                    {"RS" ,       Opm::UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
+                                                    {"RV" ,       Opm::UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
+                                                    {"SOMAX",     Opm::UnitSystem::measure::identity, simulator_.problem().vapparsActive()},
+                                                    {"PCSWM_OW",  Opm::UnitSystem::measure::identity, enableHysteresis},
+                                                    {"KRNSW_OW",  Opm::UnitSystem::measure::identity, enableHysteresis},
+                                                    {"PCSWM_GO",  Opm::UnitSystem::measure::identity, enableHysteresis},
+                                                    {"KRNSW_GO",  Opm::UnitSystem::measure::identity, enableHysteresis}};
 
-        std::map<std::string, bool> extra_keys {
-            {"OPMEXTRA" , false}
-        };
+        std::vector<Opm::RestartKey> extra_keys = {{"OPMEXTRA", Opm::UnitSystem::measure::identity, false}};
 
         unsigned episodeIdx = simulator_.episodeIndex();
         const auto& gridView = simulator_.vanguard().gridView();
@@ -413,35 +417,29 @@ private:
         int episodeIdx_;
         bool isSubStep_;
         double secondsElapsed_;
-        Opm::data::Solution cellData_;
-        Opm::data::Wells wellData_;
+        Opm::RestartValue restartValue_;
         std::map<std::string, double> singleSummaryValues_;
         std::map<std::string, std::vector<double>> regionSummaryValues_;
         std::map<std::pair<std::string, int>, double> blockSummaryValues_;
-        std::map<std::string, std::vector<double>> extraRestartData_;
         bool writeDoublePrecision_;
 
         explicit EclWriteTasklet(Opm::EclipseIO& eclIO,
                                  int episodeIdx,
                                  bool isSubStep,
                                  double secondsElapsed,
-                                 Opm::data::Solution cellData,
-                                 Opm::data::Wells wellData,
+                                 Opm::RestartValue restartValue,
                                  const std::map<std::string, double>& singleSummaryValues,
                                  const std::map<std::string, std::vector<double>>& regionSummaryValues,
                                  const std::map<std::pair<std::string, int>, double>& blockSummaryValues,
-                                 const std::map<std::string, std::vector<double>>& extraRestartData,
                                  bool writeDoublePrecision)
             : eclIO_(eclIO)
             , episodeIdx_(episodeIdx)
             , isSubStep_(isSubStep)
             , secondsElapsed_(secondsElapsed)
-            , cellData_(cellData)
-            , wellData_(wellData)
+            , restartValue_(restartValue)
             , singleSummaryValues_(singleSummaryValues)
             , regionSummaryValues_(regionSummaryValues)
             , blockSummaryValues_(blockSummaryValues)
-            , extraRestartData_(extraRestartData)
             , writeDoublePrecision_(writeDoublePrecision)
         { }
 
@@ -451,12 +449,10 @@ private:
             eclIO_.writeTimeStep(episodeIdx_,
                                  isSubStep_,
                                  secondsElapsed_,
-                                 cellData_,
-                                 wellData_,
+                                 restartValue_,
                                  singleSummaryValues_,
                                  regionSummaryValues_,
                                  blockSummaryValues_,
-                                 extraRestartData_,
                                  writeDoublePrecision_);
         }
     };
