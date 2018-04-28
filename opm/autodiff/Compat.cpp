@@ -131,11 +131,11 @@ data::Solution simToSolution( const SimulationDataContainer& reservoir,
 
 
 
-void solutionToSim( const data::Solution& sol,
-                    const std::map<std::string,std::vector<double> >& /* extra */,
+void solutionToSim( const RestartValue& restart_value,
                     PhaseUsage phases,
                     SimulationDataContainer& state ) {
 
+    const auto& sol = restart_value.solution;
     const auto stride = phases.num_phases;
 
     if( sol.has( "SWAT" ) ) {

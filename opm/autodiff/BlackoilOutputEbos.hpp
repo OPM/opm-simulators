@@ -40,6 +40,7 @@
 
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
+#include <opm/parser/eclipse/Units/UnitSystem.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 
@@ -124,8 +125,8 @@ namespace Opm
                                  WellState& wellstate,
                                  ExtraData& extra)   {
 
-            std::map<std::string, bool> extra_keys {
-                {"OPMEXTRA" , false}
+            std::vector<RestartKey> extra_keys = {
+              {"OPMEXTRA" , Opm::UnitSystem::measure::identity, false}
             };
 
             // gives a dummy dynamic_list_econ_limited
@@ -150,7 +151,7 @@ namespace Opm
 
             const Wells* wells = wellsmanager.c_wells();
 
-            std::map<std::string, RestartKey> solution_keys {};
+            std::vector<RestartKey> solution_keys = {};
             auto restart_values = ebosSimulator_.problem().eclIO().loadRestart(solution_keys, extra_keys);
 
             const int nw = wells->number_of_wells;
@@ -159,9 +160,8 @@ namespace Opm
                 wellsToState( restart_values.wells, phaseUsage_, wellstate );
             }
 
-            const auto opmextra_iter = restart_values.extra.find("OPMEXTRA");
-            if (opmextra_iter != restart_values.extra.end()) {
-                std::vector<double> opmextra = opmextra_iter->second;
+            if (restart_values.hasExtra("OPMEXTRA")) {
+                std::vector<double> opmextra = restart_values.getExtra("OPMEXTRA");
                 assert(opmextra.size() == 1);
                 extra.suggested_step = opmextra[0];
             } else {

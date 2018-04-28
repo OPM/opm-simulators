@@ -248,7 +248,7 @@ namespace Opm
                            const data::Solution& cellData,
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
                            const std::map<std::string, double>& miscSummaryData,
-                           const std::map<std::string, std::vector<double>>& extraRestartData,
+                           const RestartValue::ExtraVector& extraRestartData,
                            bool substep = false);
 
         /*!
@@ -261,7 +261,7 @@ namespace Opm
                            const SimulationDataContainer& reservoirState,
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
                            const std::map<std::string, double>& miscSummaryData,
-                           const std::map<std::string, std::vector<double>>& extraRestartData,
+                           const RestartValue::ExtraVector& extraRestartData,
                            bool substep = false);
 
         /*!
@@ -274,7 +274,7 @@ namespace Opm
                                  const Opm::WellStateFullyImplicitBlackoil& wellState,
                                  const data::Solution& simProps,
                                  const std::map<std::string, double>& miscSummaryData,
-                                 const std::map<std::string, std::vector<double>>& extraRestartData,
+                                 const RestartValue::ExtraVector& extraRestartData,
                                  bool substep );
 
         /** \brief return output directory */
@@ -412,26 +412,26 @@ namespace Opm
                          WellState& wellstate,
                          ExtraData& extra )
     {
-        std::map<std::string, RestartKey> solution_keys {{"PRESSURE" , RestartKey(UnitSystem::measure::pressure)},
-                                                         {"SWAT" , RestartKey(UnitSystem::measure::identity)},
-                                                         {"SGAS" , RestartKey(UnitSystem::measure::identity)},
-                                                         {"TEMP" , RestartKey(UnitSystem::measure::temperature)},
-                                                         {"RS" , RestartKey(UnitSystem::measure::gas_oil_ratio)},
-                                                         {"RV" , RestartKey(UnitSystem::measure::oil_gas_ratio)},
-                                                         {"SOMAX", {UnitSystem::measure::identity, false}},
-                                                         {"PCSWM_OW", {UnitSystem::measure::identity, false}},
-                                                         {"KRNSW_OW", {UnitSystem::measure::identity, false}},
-                                                         {"PCSWM_GO", {UnitSystem::measure::identity, false}},
-                                                         {"KRNSW_GO", {UnitSystem::measure::identity, false}}};
+        std::vector<RestartKey> solution_keys = {{"PRESSURE" , UnitSystem::measure::pressure},
+                                                 {"SWAT" , UnitSystem::measure::identity},
+                                                 {"SGAS" , UnitSystem::measure::identity},
+                                                 {"TEMP" , UnitSystem::measure::temperature},
+                                                 {"RS" , UnitSystem::measure::gas_oil_ratio},
+                                                 {"RV" , UnitSystem::measure::oil_gas_ratio},
+                                                 {"SOMAX", UnitSystem::measure::identity, false},
+                                                 {"PCSWM_OW", UnitSystem::measure::identity, false},
+                                                 {"KRNSW_OW", UnitSystem::measure::identity, false},
+                                                 {"PCSWM_GO", UnitSystem::measure::identity, false},
+                                                 {"KRNSW_GO", UnitSystem::measure::identity, false}};
 
-        std::map<std::string, bool> extra_keys {
-            {"OPMEXTRA" , false}
+        std::vector<RestartKey> extra_keys {
+          {"OPMEXTRA" , UnitSystem::measure::identity, false}
         };
 
         if (restart_double_si_) {
             // Avoid any unit conversions, treat restart input as SI units.
             for (auto& elem : solution_keys) {
-                elem.second = RestartKey(UnitSystem::measure::identity);
+                elem.dim = UnitSystem::measure::identity;
             }
         }
 
@@ -462,12 +462,11 @@ namespace Opm
         wellstate.resize(wells, simulatorstate, phaseUsage ); //Resize for restart step
         auto restart_values = eclIO_->loadRestart(solution_keys, extra_keys);
 
-        solutionToSim( restart_values.solution, restart_values.extra, phaseUsage, simulatorstate );
+        solutionToSim( restart_values, phaseUsage, simulatorstate );
         wellsToState( restart_values.wells, phaseUsage, wellstate );
 
-        const auto opmextra_iter = restart_values.extra.find("OPMEXTRA");
-        if (opmextra_iter != restart_values.extra.end()) {
-            std::vector<double> opmextra = opmextra_iter->second;
+        if (restart_values.hasExtra("OPMEXTRA")) {
+            const std::vector<double>& opmextra = restart_values.getExtra("OPMEXTRA");
             assert(opmextra.size() == 1);
             extra.suggested_step = opmextra[0];
         } else {
@@ -1003,7 +1002,7 @@ namespace Opm
         const RestartConfig& restartConfig = eclipseState_.getRestartConfig();
         const int reportStepNum = timer.reportStepNum();
         bool logMessages = output_ && parallelOutput_->isIORank();
-        std::map<std::string, std::vector<double>> extraRestartData;
+        RestartValue::ExtraVector extraRestartData;
         std::map<std::string, double> miscSummaryData;
 
         if( output_ )
@@ -1026,7 +1025,7 @@ namespace Opm
             assert(!localCellData.empty());
 
             // Add suggested next timestep to extra data.
-            extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextstep);
+            extraRestartData.push_back({{"OPMEXTRA", UnitSystem::measure::identity}, std::vector<double>(1, nextstep)});
 
             // Add TCPU if simulatorReport is not defaulted.
             const double totalSolverTime = simulatorReport.solver_time;
