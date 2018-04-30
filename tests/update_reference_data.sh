@@ -89,6 +89,15 @@ for test_name in ${tests}; do
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
 
+  if grep -q "spe1thermal" <<< $test_name
+  then
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow+spe1_thermal/ \
+      $OPM_TESTS_ROOT/spe1/opm-simulation-reference/flow \
+      SPE1CASE2_THERMAL \
+      EGRID INIT SMSPEC UNRST UNSMRY
+  fi
+
   if grep -q "msw_2d_h" <<< $test_name
   then
     copyToReferenceDir \
