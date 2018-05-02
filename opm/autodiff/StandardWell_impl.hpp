@@ -1495,8 +1495,8 @@ namespace Opm
     getWellConvergence(const std::vector<double>& B_avg) const
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
-        // For the polymer case, there is one more mass balance equations of reservoir than wells
-        assert((int(B_avg.size()) == num_components_) || has_polymer);
+        // For the polymer case and the energy case, there is one more mass balance equations of reservoir than wells
+        assert((int(B_avg.size()) == num_components_) || has_polymer || GET_PROP_VALUE(TypeTag, EnableEnergy));
 
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;
