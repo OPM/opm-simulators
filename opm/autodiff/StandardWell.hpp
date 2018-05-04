@@ -323,6 +323,11 @@ namespace Opm
         void updateWaterMobilityWithPolymer(const Simulator& ebos_simulator,
                                             const int perf,
                                             std::vector<EvalWell>& mob_water) const;
+
+        void updatePrimaryVariablesNewton(const BVectorWell& dwells,
+                                          const WellState& well_state) const;
+
+        void updateWellStateFromPrimaryVariables(WellState& well_state) const;
     };
 
 }
