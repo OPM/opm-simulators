@@ -25,6 +25,7 @@
 #include <opm/simulators/flow_ebos_oilwater.hpp>
 #include <opm/simulators/flow_ebos_solvent.hpp>
 #include <opm/simulators/flow_ebos_polymer.hpp>
+#include <opm/simulators/flow_ebos_energy.hpp>
 #include <opm/simulators/flow_ebos_oilwater_polymer.hpp>
 
 #include <opm/autodiff/MissingFeatures.hpp>
@@ -188,6 +189,11 @@ int main(int argc, char** argv)
             Opm::flowEbosSolventSetDeck(*deck, *eclipseState, *schedule, *summary_config);
             return Opm::flowEbosSolventMain(argc, argv);
         }
+        // Energy case
+        else if ( phases.active( Opm::Phase::ENERGY ) ) {
+            Opm::flowEbosEnergySetDeck(*deck, *eclipseState, *schedule, *summary_config);
+            return Opm::flowEbosEnergyMain(argc, argv);
+        }
         // Blackoil case
         else if( phases.size() == 3 ) {
             Opm::flowEbosBlackoilSetDeck(*deck, *eclipseState, *schedule, *summary_config);
@@ -196,7 +202,7 @@ int main(int argc, char** argv)
         else
         {
             if (outputCout)
-                std::cerr << "No suitable configuration found, valid are Twophase, polymer, solvent, or blackoil" << std::endl;
+                std::cerr << "No suitable configuration found, valid are Twophase, polymer, solvent, energy, or blackoil" << std::endl;
             return EXIT_FAILURE;
         }
     }

@@ -92,6 +92,7 @@ namespace Opm
 
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
+        static const bool has_energy = GET_PROP_VALUE(TypeTag, EnableEnergy);
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
 
