@@ -464,7 +464,9 @@ protected:
         }
 
         // Check whether there was a problem on some process
-        if ( comm_ && comm_->communicator().min(ilu_setup_successful) == 0 )
+        const bool parallel_failure = comm_ && comm_->communicator().min(ilu_setup_successful) == 0;
+        const bool local_failure = ilu_setup_successful == 0;
+        if ( local_failure || parallel_failure )
         {
             throw Dune::MatrixBlockError();
         }
