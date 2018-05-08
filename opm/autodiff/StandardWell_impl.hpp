@@ -746,33 +746,33 @@ namespace Opm
     updatePrimaryVariablesNewton(const BVectorWell& dwells,
                                  const WellState& well_state) const
     {
-        const double dBHPLimit = param_.dbhp_max_rel_;
         const double dFLimit = param_.dwell_fraction_max_;
-        const auto pu = phaseUsage();
 
-        const std::vector<double> xvar_well_old = primary_variables_;
+        const std::vector<double> old_primary_variables = primary_variables_;
 
         // update the second and third well variable (The flux fractions)
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
             const double dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac]),dFLimit);
-            primary_variables_[WFrac] = xvar_well_old[WFrac] - dx2_limited;
+            primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const int sign3 = dwells[0][GFrac] > 0 ? 1: -1;
             const double dx3_limited = sign3 * std::min(std::abs(dwells[0][GFrac]),dFLimit);
-            primary_variables_[GFrac] = xvar_well_old[GFrac] - dx3_limited;
+            primary_variables_[GFrac] = old_primary_variables[GFrac] - dx3_limited;
         }
 
         if (has_solvent) {
             const int sign4 = dwells[0][SFrac] > 0 ? 1: -1;
             const double dx4_limited = sign4 * std::min(std::abs(dwells[0][SFrac]),dFLimit);
-            primary_variables_[SFrac] = xvar_well_old[SFrac] - dx4_limited;
+            primary_variables_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
         }
 
         assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
 
+        // TODO: the following processing of the fractions should go to a different function
+        const auto pu = phaseUsage();
         std::vector<double> F(number_of_phases_, 0.0);
         F[pu.phase_pos[Oil]] = 1.0;
 
@@ -841,25 +841,17 @@ namespace Opm
             primary_variables_[SFrac] = F_solvent;
         }
 
-        // The interpretation of the first well primary variable depends on the well control
-        const WellControls* wc = well_controls_;
+        // updating the total rates G_t
+        primary_variables_[GTotal] = old_primary_variables[GTotal] - dwells[0][GTotal];
 
-        //  current control index
-        const int current = well_state.currentControls()[index_of_well_];
 
-        switch (well_controls_iget_type(wc, current)) {
-            case THP: // The BHP and THP both uses the total rate as first well variable.
-            case BHP:
-                primary_variables_[XvarWell] = xvar_well_old[XvarWell] - dwells[0][XvarWell];
-                break;
-            case SURFACE_RATE: // Both rate controls use bhp as first well variable
-            case RESERVOIR_RATE: {
-                const int sign1 = dwells[0][XvarWell] > 0 ? 1: -1;
-                const double dx1_limited = sign1 * std::min(std::abs(dwells[0][XvarWell]),std::abs(xvar_well_old[XvarWell])*dBHPLimit);
-                // 1e5 to make sure bhp will not be below 1bar
-                primary_variables_[XvarWell] = std::max(xvar_well_old[XvarWell] - dx1_limited, 1e5);
-                break;
-             }
+        // updating the bottom hole pressure
+        {
+            const double dBHPLimit = param_.dbhp_max_rel_;
+            const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;
+            const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]), std::abs(old_primary_variables[Bhp]) * dBHPLimit);
+            // 1e5 to make sure bhp will not be below 1bar
+            primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
         }
     }
 
@@ -916,116 +908,37 @@ namespace Opm
             F[pu.phase_pos[Gas]] += F_solvent;
         }
 
-        // The interpretation of the first well variable depends on the well control
-        const WellControls* wc = well_controls_;
+        well_state.bhp()[index_of_well_] = primary_variables_[Bhp];
 
+        // calculate the phase rates based on the primary variables
+        // for producers, this is not a problem, while not sure for injectors here
+        if (well_type_ == PRODUCER) {
+            const double g_total = primary_variables_[GTotal];
+            for (int p = 0; p < number_of_phases_; ++p) {
+                well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = g_total * F[p];
+            }
+            // injectors
+        } else {
+            // TODO: using comp_frac_ here is very dangerous, since we do not update it based on the injection phase
+            // Either we use distr (might conflict with RESV related) or we update comp_frac_ based on the injection phase
+            for (int p = 0; p < number_of_phases_; ++p) {
+                const double comp_frac = comp_frac_[p];
+                well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = comp_frac * primary_variables_[GTotal];
+            }
+        }
+
+        // for the wells having a THP constaint, we should update their thp value
+        // If it is under THP control, it will be set to be the target value.
+        // TODO: a better standard is probably whether we have the table to calculate the THP value
+        // TODO: it is something we need to check the output to decide.
+        const WellControls* wc = well_controls_;
         // TODO: we should only maintain one current control either from the well_state or from well_controls struct.
         // Either one can be more favored depending on the final strategy for the initilzation of the well control
         const int current = well_state.currentControls()[index_of_well_];
         const double target_rate = well_controls_iget_target(wc, current);
-
-        switch (well_controls_iget_type(wc, current)) {
-            case THP: // The BHP and THP both uses the total rate as first well variable.
-            case BHP:
-            {
-                switch (well_type_) {
-                case INJECTOR:
-                    for (int p = 0; p < number_of_phases_; ++p) {
-                        const double comp_frac = comp_frac_[p];
-                        well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = comp_frac * primary_variables_[XvarWell];
-                    }
-                    break;
-                case PRODUCER:
-                    for (int p = 0; p < number_of_phases_; ++p) {
-                        well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = primary_variables_[XvarWell] * F[p];
-                    }
-                    break;
-                }
-
-                if (well_controls_iget_type(wc, current) == THP) {
-
-                    // Calculate bhp from thp control and well rates
-                    std::vector<double> rates(3, 0.0); // the vfp related only supports three phases for the moment
-
-                    const Opm::PhaseUsage& pu = phaseUsage();
-                    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                        rates[ Water ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Water ] ];
-                    }
-                    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                        rates[ Oil ]= well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Oil ] ];
-                    }
-                    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                        rates[ Gas ]= well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Gas ] ];
-                    }
-
-                    well_state.bhp()[index_of_well_] = calculateBhpFromThp(rates, current);
-                }
-            }
-                break;
-            case SURFACE_RATE: // Both rate controls use bhp as first well variable
-            case RESERVOIR_RATE:
-            {
-                well_state.bhp()[index_of_well_] = primary_variables_[XvarWell];
-
-                if (well_controls_iget_type(wc, current) == SURFACE_RATE) {
-                    if (well_type_ == PRODUCER) {
-
-                        double F_target = 0.0;
-                        const double* distr = well_controls_iget_distr(wc, current);
-                        for (int p = 0; p < number_of_phases_; ++p) {
-                            F_target += distr[p] * F[p];
-                        }
-
-                        if (F_target > 0.) {
-                            for (int p = 0; p < number_of_phases_; ++p) {
-                                well_state.wellRates()[number_of_phases_ * index_of_well_ + p] = F[p] * target_rate / F_target;
-                            }
-                        } else {
-                            // F_target == 0., which creates some difficulties in term of handling things perfectly.
-                            // The following are some temporary solution by putting all rates to be zero, while some better
-                            // solution is required to analyze all the rate/bhp limits situation and give a more reasonable
-                            // solution. However, it is still possible the situation is not solvable, which requires some
-                            // test cases to find out good solution for these situation.
-
-                            if (target_rate == 0.) { // zero target rate for producer
-                                const std::string msg = " Setting all rates to be zero for well " + name()
-                                                      + " due to zero target rate for the phase that does not exist in the wellbore."
-                                                      + " however, there is no unique solution for the situation";
-                                OpmLog::warning("NOT_UNIQUE_WELL_SOLUTION", msg);
-                            } else {
-                                const std::string msg = " Setting all rates to be zero for well " + name()
-                                                      + " due to un-solvable situation. There is non-zero target for the phase "
-                                                      + " that does not exist in the wellbore for the situation";
-                                OpmLog::warning("NON_SOLVABLE_WELL_SOLUTION", msg);
-                            }
-
-                            for (int p = 0; p < number_of_phases_; ++p) {
-                                well_state.wellRates()[number_of_phases_ * index_of_well_ + p] = 0.;
-                            }
-                        }
-
-                    } else {
-
-                        for (int p = 0; p < number_of_phases_; ++p) {
-                            well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = comp_frac_[p] * target_rate;
-                        }
-                    }
-                } else { // RESERVOIR_RATE
-                    for (int p = 0; p < number_of_phases_; ++p) {
-                        well_state.wellRates()[number_of_phases_ * index_of_well_ + p] = F[p] * target_rate;
-                    }
-                }
-            }
-            break;
-        } // end of switch (well_controls_iget_type(wc, current))
-
-        // for the wells having a THP constaint, we should update their thp value
-        // If it is under THP control, it will be set to be the target value. Otherwise,
-        // the thp value will be calculated based on the bhp value, assuming the bhp value is correctly calculated.
         const int nwc = well_controls_get_num(wc);
         // Looping over all controls until we find a THP constraint
-        int ctrl_index = 0;
-        for ( ; ctrl_index < nwc; ++ctrl_index) {
+        for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
             if (well_controls_iget_type(wc, ctrl_index) == THP) {
                 // the current control
                 const int current = well_state.currentControls()[index_of_well_];
@@ -1052,6 +965,7 @@ namespace Opm
                     well_state.thp()[index_of_well_] = calculateThpFromBhp(rates, ctrl_index, bhp);
                 }
             }
+            break;
         }
     }
 
