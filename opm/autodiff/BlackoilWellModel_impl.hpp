@@ -280,6 +280,12 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     setRestartWellState(const WellState& well_state) { previous_well_state_ = well_state; }
 
+    //only used for adjoint
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    setWellState(const WellState& well_state) { well_state_ = well_state; }
+
     // called at the end of a report step
     template<typename TypeTag>
     void

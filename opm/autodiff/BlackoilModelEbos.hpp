@@ -72,6 +72,7 @@
 //writing matrix
 #include <dune/istl/matrixmarket.hh>
 #include <opm/autodiff/MatrixAdapterUtilities.hpp>
+#include <opm/autodiff/transpose.hh>
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -257,6 +258,8 @@ namespace Opm {
             this->deserialize_reservoir( timer.simulationTimeElapsed() );
             // seralizing may owerwrite prevois step since it was intended for restart ??
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
+            WellState well_state0;
+            deserialize_well(well_state0);//
 //            std::cout << "******* Start adjoint calculation ****** " << std::endl;
 //            std::cout << "******* solution 1 ****** " << std::endl;
 //            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
@@ -287,7 +290,7 @@ namespace Opm {
             }
 
 
-            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            //auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             /*
             std::cout << "Printing jacobian residual 0" << std::endl;
             std::cout << std::endl;
@@ -304,14 +307,16 @@ namespace Opm {
 //                boost::archive::text_iarchive oa(ifs);
 //                oa >> well_state;
 //            }
-            wellModel().setRestartWellState(well_state);          
+            wellModel().setRestartWellState(well_state0);
+            wellModel().setWellState(well_state);
+            //wellModel().beginTimeStep();
             double dt = timer.stepLengthTaken();
             //int
             //iterationIdx = 0;//for wells we need this to make update correctyin flow is make shift the state???
             assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
-            wellModel().assemble(/*iterationIdx*/ 0, true, ebosSimulator_.timeStepSize());
+            wellModel().assemble(/*iterationIdx*/0, false, ebosSimulator_.timeStepSize());
 
-            wellModel().apply(ebosResid);
+            //wellModel().apply(ebosResid);
             //wellModel().printMatrixes();
 
             //wellModel().recoverWellSolutionAndUpdateWellState(x);
@@ -336,20 +341,69 @@ namespace Opm {
             // then all well tings has tto be done
             // set initial guess
             BVector x(nc);
-            // Solve system.
-            const Mat& actual_mat_for_prec = adj_matrix_for_preconditioner ? *adj_matrix_for_preconditioner.get() : ebosJac;
-            if( isParallel() )
-            {
-                typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, true > Operator;
-                Operator opAt(ebosJac,  actual_mat_for_prec, well_model_, istlSolver().parallelInformation() );
-                assert( opAt.comm() );
-                istlSolver().solve( opAt, x, adjRhs, *(opAt.comm()) );
-            }
-            else
-            {
-                typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, false > Operator;
-                Operator opAt(ebosJac,  actual_mat_for_prec, well_model_);
-                istlSolver().solve( opAt, x, adjRhs );
+            if (param_.use_amgcl_ || param_.use_umfpack_) {
+                if (!param_.matrix_add_well_contributions_) {
+                    // This should be handled by combining interacting options into a single one eventually.
+                    OPM_THROW(std::runtime_error, "Cannot run with amgcl or UMFPACK without also using 'matrix_add_well_contributions=true'.");
+                }
+
+                // Create matrix for external linear solvers.
+                bool do_transpose=true;
+                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(do_transpose);
+
+                // Copy right-hand side (blocked structure -> unblocked).
+                const int n = adjRhs.size();
+                const int np = numPhases();
+                const int sz = n * np;
+                std::vector<double> rhs(sz, 0.0);
+                for (int cell = 0; cell < n; ++cell) {
+                    for (int phase = 0; phase < np; ++phase) {
+                        rhs[np*cell + phase] = adjRhs[cell][phase];
+                    }
+                }
+
+                std::vector<double> sol(sz, 0.0);
+                if (param_.use_amgcl_) {
+                    // Call amgcl to solve system
+                    const double tol = 1e-2;
+                    const int maxiter = 150;
+                    int    iters;
+                    double error;
+                    LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
+                    const_cast<int&>(linear_iters_last_solve_) = iters;
+                } else if (param_.use_umfpack_) {
+                    // Call UMFPACK to solve system
+                    const int nnz = matrix.ptr[sz];
+                    LinearSolverUmfpack solver;
+                    solver.solve(sz, nnz, matrix.ptr.data(), matrix.col.data(), matrix.val.data(), rhs.data(), sol.data());
+                    const_cast<int&>(linear_iters_last_solve_) = 0;
+                }
+
+                // Extract solution (unblocked structure -> blocked).
+                assert(sol.size() == x.size() * numPhases());
+                for (int cell = 0; cell < n; ++cell) {
+                    for (int phase = 0; phase < np; ++phase) {
+                        x[cell][phase] = sol[np*cell + phase];
+                    }
+                }
+
+            }else{
+
+                // Solve system.
+                const Mat& actual_mat_for_prec = adj_matrix_for_preconditioner ? *adj_matrix_for_preconditioner.get() : ebosJac;
+                if( isParallel() )
+                {
+                    typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, true > Operator;
+                    Operator opAt(ebosJac,  actual_mat_for_prec, well_model_, istlSolver().parallelInformation() );
+                    assert( opAt.comm() );
+                    istlSolver().solve( opAt, x, adjRhs, *(opAt.comm()) );
+                }
+                else
+                {
+                    typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, false > Operator;
+                    Operator opAt(ebosJac,  actual_mat_for_prec, well_model_);
+                    istlSolver().solve( opAt, x, adjRhs );
+                }
             }
             //std::cout << "******* lamda_r *****" << std::endl;
             //std::cout << x << std::endl;
@@ -721,10 +775,13 @@ namespace Opm {
 
         /// Build a CRS matrix (not block-structured) from
         /// the block structured system matrix.
-        CRSMatrixHelper buildCRSMatrixNoBlocks() const
+        CRSMatrixHelper buildCRSMatrixNoBlocks(const bool do_transpose) const
         {
-            const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
-
+            const auto& ebosJac_org = ebosSimulator_.model().linearizer().matrix();
+            auto ebosJac = ebosJac_org;
+            if(do_transpose){
+                Dune::MatrixVector::transpose(ebosJac_org, ebosJac);
+            }
 #if 1
             const int n = ebosJac.N();
             const int np = numPhases();
@@ -830,7 +887,8 @@ namespace Opm {
                 }
 
                 // Create matrix for external linear solvers.
-                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks();
+                const bool do_transpose=false;
+                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(do_transpose);
 
                 // Copy right-hand side (blocked structure -> unblocked).
                 const int n = ebosResid.size();

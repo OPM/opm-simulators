@@ -187,6 +187,9 @@ namespace Opm {
             // only use this for restart.
             void setRestartWellState(const WellState& well_state);
 
+            // only use this for restart.
+            void setWellState(const WellState& well_state);
+
             // called at the beginning of a time step
             void beginTimeStep(const int timeStepIdx,const double simulationTime);
             // called at the end of a time step

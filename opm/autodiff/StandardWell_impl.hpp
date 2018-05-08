@@ -48,6 +48,8 @@ namespace Opm
         duneDA_.setBuildMode( DiagMatWellCtrl::row_wise );
         duneD_.setBuildMode( DiagMatWell::row_wise );
         invDuneD_.setBuildMode( DiagMatWell::row_wise );
+        //duneCA_.setBuildMode( DiagMatWell::row_wise );
+        //duneDA_.setBuildMode( DiagMatWell::row_wise );
     }
 
 
@@ -601,7 +603,7 @@ namespace Opm
                     objder_adjwell_[0][pvIdx] += resWell_loc.derivative(pvIdx+numEq)*dt;
                 }
                 objder_adjctrl_[0][0] += resWell_loc.derivative(control_index)*dt;
-                objval_= resWell_loc.value()*dt;
+                objval_+= resWell_loc.value()*dt;
             }
             /*
             // calculating the perforation solution gas rate and solution oil rates
@@ -1552,7 +1554,7 @@ namespace Opm
                     const double oilrate = std::abs(well_state.wellRates()[oilpos_well]); //in order to handle negative rates in producers
                     rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     if (oilrate > 0) {
-                        const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - well_state.solventWellRate(w);
+                        const double gasrate = std::abs(well_state.wellRates()[gaspos_well])/* - well_state.solventWellRate(w)*/;
                         double rv = 0.0;
                         if (gasrate > 0) {
                             rv = oilrate / gasrate;
@@ -1577,7 +1579,7 @@ namespace Opm
                 if (gasPresent) {
                     rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     const int gaspos_well = pu.phase_pos[Gas] + w * pu.num_phases;
-                    const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - well_state.solventWellRate(w);
+                    const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) /*- well_state.solventWellRate(w)*/;
                     if (gasrate > 0) {
                         const double oilrate = std::abs(well_state.wellRates()[oilpos_well]);
                         double rs = 0.0;
