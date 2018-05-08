@@ -58,14 +58,24 @@ namespace Opm
         using Base::has_energy;
 
         // the positions of the primary variables for StandardWell
-        // there are three primary variables, the second and the third ones are F_w and F_g
-        // the first one can be total rate (G_t) or bhp, based on the control
+        // there are four primary variables, the second and the third ones are F_w and F_g
+        // the first one is the weighted total rate (G_t), the second and the third ones are F_w and F_g
+        // the last one is the BHP.
+        // the fraction of the solvent, as an extension of the blackoil model, is behind the BHP
+        // correspondingly, we have four well equations for blackoil model, the first three are mass
+        // converstation equations, and the last one is the well control equation.
+        // TODO: in the current implementation, we use the well rate as the first primary variables for injectors
+        // TODO: not sure we should change it.
 
         static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
-        static const int XvarWell = 0;
+        static const int GTotal = 0;
         static const int WFrac = gasoil? -1000: 1;
         static const int GFrac = gasoil? 1: 2;
-        static const int SFrac = !has_solvent ? -1000 : 3;
+        // TODO: it is possible the order of Bhp and SFrac need to switched, due to scalingFactor function
+        // TODO: we will do that when we see the problem.
+        static const int Bhp = gasoil? 2 : 3;
+        static const int SFrac = !has_solvent ? -1000 : Bhp + 1;
+
 
         using typename Base::Scalar;
         using typename Base::ConvergenceReport;
