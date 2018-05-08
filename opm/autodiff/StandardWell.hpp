@@ -75,7 +75,6 @@ namespace Opm
         using Base::Water;
         using Base::Oil;
         using Base::Gas;
-        using Base::Energy;
 
         // polymer concentration and temperature are already known by the well, so
         // polymer and energy conservation do not need to be considered explicitly
@@ -108,8 +107,6 @@ namespace Opm
         using Base::contiSolventEqIdx;
         using Base::contiPolymerEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
-        static const int temperatureIdx = Indices::temperatureIdx;
-
 
         StandardWell(const Well* well, const int time_step, const Wells* wells,
                      const ModelParameters& param,

@@ -16,7 +16,7 @@
 */
 #include "config.h"
 
-#include <opm/simulators/flow_ebos_polymer.hpp>
+#include <opm/simulators/flow_ebos_energy.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/grid/CpGrid.hpp>

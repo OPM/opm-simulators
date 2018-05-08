@@ -71,7 +71,6 @@ namespace Opm
         static const int Water = BlackoilPhases::Aqua;
         static const int Oil = BlackoilPhases::Liquid;
         static const int Gas = BlackoilPhases::Vapour;
-        static const int Energy = BlackoilPhases::Energy;
 
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;

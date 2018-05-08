@@ -634,10 +634,10 @@ namespace Opm
                     well_state.perfPhaseRates()[(first_perf_ + perf) * np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
                 }
             }
-            if (GET_PROP_VALUE(TypeTag, EnableEnergy)) {
+            if (has_energy) {
 
                 auto fs = intQuants.fluidState();
-                int reportStepIdx = ebosSimulator.episodeIndex();
+                const int reportStepIdx = ebosSimulator.episodeIndex();
 
                 for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
                     if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -658,7 +658,7 @@ namespace Opm
                         // q_os = q_or * b_o + rv * q_gr * b_g
                         // q_gs = q_gr * g_g + rs * q_or * b_o
                         // d = 1.0 - rs * rv
-                        EvalWell d = extendEval(1.0 - fs.Rv() * fs.Rs());
+                        const EvalWell d = extendEval(1.0 - fs.Rv() * fs.Rs());
                         // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
                         if(FluidSystem::gasPhaseIdx == phaseIdx)
                             cq_r_thermal = (cq_s[gasCompIdx] - extendEval(fs.Rs()) * cq_s[oilCompIdx]) / (d * extendEval(fs.invB(phaseIdx)) );
@@ -676,7 +676,7 @@ namespace Opm
                         fs.setTemperature(injProps.temperature);
                         typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
                         typename FluidSystem::template ParameterCache<FsScalar> paramCache;
-                        unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
+                        const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
                         paramCache.setRegionIndex(pvtRegionIdx);
                         paramCache.setMaxOilSat(ebosSimulator.problem().maxOilSaturation(cell_idx));
                         paramCache.updatePhase(fs, phaseIdx);
@@ -1496,7 +1496,7 @@ namespace Opm
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
         // For the polymer case and the energy case, there is one more mass balance equations of reservoir than wells
-        assert((int(B_avg.size()) == num_components_) || has_polymer || GET_PROP_VALUE(TypeTag, EnableEnergy));
+        assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy);
 
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;
