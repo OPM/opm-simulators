@@ -23,7 +23,7 @@ tests=${@:2}
 test -z "$tests" && tests="spe11 spe12 spe12p spe1oilgas spe1nowells spe3 spe5 spe9 norne_init msw_2d_h msw_3d_hfa polymer2d spe9group polymer_oilwater"
 if grep -q -i "norne " <<< $ghprbCommentBody
 then
-  if test -d $WORKSPACE/deps/opm-data/norne/flow
+  if test -d $WORKSPACE/deps/opm-tests/norne/flow
   then
     tests="$tests norne_full"
   fi
@@ -189,13 +189,13 @@ for test_name in ${tests}; do
   if grep -q "norne_full" <<< $test_name
   then
     copyToReferenceDir \
-      deps/opm-data/norne/flow/ \
+      deps/opm-tests/norne/flow/ \
       $OPM_TESTS_ROOT/norne/opm-simulation-reference/flow \
       NORNE_ATW2013 \
       UNSMRY
 
     copyToReferenceDir \
-      deps/opm-data/norne/flow_legacy/ \
+      deps/opm-tests/norne/flow_legacy/ \
       $OPM_TESTS_ROOT/norne/opm-simulation-reference/flow_legacy \
       NORNE_ATW2013 \
       UNSMRY
