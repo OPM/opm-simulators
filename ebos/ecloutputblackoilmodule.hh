@@ -773,7 +773,7 @@ public:
             sol.insert ("SOMAX", Opm::UnitSystem::measure::identity, std::move(soMax_), Opm::data::TargetType::RESTART_SOLUTION);
 
         if (sSol_.size() > 0)
-            sol.insert ("SSOL", Opm::UnitSystem::measure::identity, std::move(sSol_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("SSOLVENT", Opm::UnitSystem::measure::identity, std::move(sSol_), Opm::data::TargetType::RESTART_SOLUTION);
 
         if (cPolymer_.size() > 0)
             sol.insert ("POLYMER", Opm::UnitSystem::measure::identity, std::move(cPolymer_), Opm::data::TargetType::RESTART_SOLUTION);
@@ -914,8 +914,14 @@ public:
             rs_[elemIdx] = sol.data("RS")[globalDofIndex];
         if (rv_.size() > 0 && sol.has("RV"))
             rv_[elemIdx] = sol.data("RV")[globalDofIndex];
-        if (sSol_.size() > 0 && sol.has("SSOL"))
-            sSol_[elemIdx] = sol.data("SSOL")[globalDofIndex];
+        if (sSol_.size() > 0) {
+            // keep the SSOL option for backward compatibility
+            // should be removed after 10.2018 release
+            if (sol.has("SSOL"))
+                sSol_[elemIdx] = sol.data("SSOL")[globalDofIndex];
+            else if (sol.has("SSOLVENT"))
+                sSol_[elemIdx] = sol.data("SSOLVENT")[globalDofIndex];
+        }
         if (cPolymer_.size() > 0 && sol.has("POLYMER"))
             cPolymer_[elemIdx] = sol.data("POLYMER")[globalDofIndex];
         if (soMax_.size() > 0 && sol.has("SOMAX"))
