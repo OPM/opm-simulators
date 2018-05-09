@@ -105,10 +105,7 @@ namespace Opm
     void StandardWell<TypeTag>::
     initPrimaryVariablesEvaluation() const
     {
-        // TODO: using num_components_ here is only to make the 2p + dummy phase work
-        // TODO: in theory, we should use numWellEq here.
-        // for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
-        for (int eqIdx = 0; eqIdx < num_components_; ++eqIdx) {
+        for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
             assert( (size_t)eqIdx < primary_variables_.size() );
 
             primary_variables_evaluation_[eqIdx] = 0.0;
@@ -122,7 +119,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    typename StandardWell<TypeTag>::EvalWell
+    const typename StandardWell<TypeTag>::EvalWell&
     StandardWell<TypeTag>::
     getBhp() const
     {
@@ -148,10 +145,10 @@ namespace Opm
     template<typename TypeTag>
     typename StandardWell<TypeTag>::EvalWell
     StandardWell<TypeTag>::
-    getQs(const int comp_idx) const // TODO: phase or component?
+    getQs(const int comp_idx) const
     {
         // TODO: not sure the best way to handle solvent injection
-        // TODO: we need to come back to hanlde the solvent case here, the following implementation does not
+        // TODO: we need to come back to handle the solvent case here, the following implementation does not
         // TODO: consider solvent injection yet.
 
         // TODO: currently, the GTotal definition is still depends on Injector/Producer.
@@ -161,7 +158,6 @@ namespace Opm
             // TODO: using comp_frac here is dangerous, it should be changed later
             // Most likely, it should be changed to use distr, or at least, we need to update comp_frac_ based on distr
             // while solvent might complicate the situation
-            EvalWell qs = 0.0;
             const auto pu = phaseUsage();
             const int legacyCompIdx = ebosCompIdxToFlowCompIdx(comp_idx);
             double comp_frac = 0.0;
@@ -746,7 +742,7 @@ namespace Opm
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
             const EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
-            const EvalWell bhp = getBhp();
+            const EvalWell& bhp = getBhp();
 
             // Pressure drawdown (also used to determine direction of flow)
             const EvalWell well_pressure = bhp + perf_pressure_diffs_[perf];
@@ -1045,7 +1041,6 @@ namespace Opm
         // TODO: we should only maintain one current control either from the well_state or from well_controls struct.
         // Either one can be more favored depending on the final strategy for the initilzation of the well control
         const int current = well_state.currentControls()[index_of_well_];
-        const double target_rate = well_controls_iget_target(wc, current);
         const int nwc = well_controls_get_num(wc);
         // Looping over all controls until we find a THP constraint
         for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {

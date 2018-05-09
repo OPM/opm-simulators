@@ -57,6 +57,12 @@ namespace Opm
         using Base::has_polymer;
         using Base::has_energy;
 
+        // polymer concentration and temperature are already known by the well, so
+        // polymer and energy conservation do not need to be considered explicitly
+        static const int numPolymerEq = has_polymer ? 1 : 0;
+        static const int numEnergyEq = has_energy ? 1 : 0;
+        static const int numWellEq = numEq + 1 - numPolymerEq - numEnergyEq;
+
         // the positions of the primary variables for StandardWell
         // there are four primary variables, the second and the third ones are F_w and F_g
         // the first one is the weighted total rate (G_t), the second and the third ones are F_w and F_g
@@ -64,17 +70,19 @@ namespace Opm
         // the fraction of the solvent, as an extension of the blackoil model, is behind the BHP
         // correspondingly, we have four well equations for blackoil model, the first three are mass
         // converstation equations, and the last one is the well control equation.
+        // primary variables related to other components, will be before the Bhp and after F_g.
+        // well control equation is always the last well equation, other equations will be before the
+        // well control equation and are conservation equations for components involved.
         // TODO: in the current implementation, we use the well rate as the first primary variables for injectors
         // TODO: not sure we should change it.
-
         static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
         static const int GTotal = 0;
         static const int WFrac = gasoil? -1000: 1;
         static const int GFrac = gasoil? 1: 2;
-        // TODO: it is possible the order of Bhp and SFrac need to switched, due to scalingFactor function
-        // TODO: we will do that when we see the problem.
-        static const int Bhp = gasoil? 2 : 3;
-        static const int SFrac = !has_solvent ? -1000 : Bhp + 1;
+        static const int SFrac = !has_solvent ? -1000 : 3;
+        // the index for Bhp in primary variables and also the index of well control equation
+        // they both will be the last one in their system.
+        static const int Bhp = numWellEq - 1;
 
         using typename Base::Scalar;
         using typename Base::ConvergenceReport;
@@ -85,11 +93,6 @@ namespace Opm
         using Base::Oil;
         using Base::Gas;
 
-        // polymer concentration and temperature are already known by the well, so
-        // polymer and energy conservation do not need to be considered explicitly
-        static const int numPolymerEq = has_polymer ? 1 : 0;
-        static const int numEnergyEq = has_energy ? 1 : 0;
-        static const int numWellEq =numEq - numPolymerEq - numEnergyEq;
         using typename Base::Mat;
         using typename Base::BVector;
         using typename Base::Eval;
@@ -239,7 +242,7 @@ namespace Opm
         // TODO: this function should be moved to the base class.
         // while it faces chanllenges for MSWell later, since the calculation of bhp
         // based on THP is never implemented for MSWell yet.
-        EvalWell getBhp() const;
+        const EvalWell& getBhp() const;
 
         // TODO: it is also possible to be moved to the base class.
         EvalWell getQs(const int comp_idx) const;
