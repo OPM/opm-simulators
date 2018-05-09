@@ -277,17 +277,9 @@ namespace Opm {
             ebosSimulator_.problem().beginIteration();
             ebosSimulator_.model().linearizer().linearize(0);
             ebosSimulator_.problem().endIteration();
-            //NB we get the linerized version from the reservoir part to be modified
-            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
-            std::unique_ptr<Mat> adj_matrix_for_preconditioner;
-            if (param_.matrix_add_well_contributions_) {
-                wellModel().addWellContributions(ebosJac);
-            }
-            if ( param_.preconditioner_add_well_contributions_ &&
-                 ! param_.matrix_add_well_contributions_ ) {
-                adj_matrix_for_preconditioner.reset(new Mat(ebosJac));
-                wellModel().addWellContributions(*adj_matrix_for_preconditioner);
-            }
+
+
+
 
 
             //auto& ebosResid = ebosSimulator_.model().linearizer().residual();
@@ -337,6 +329,18 @@ namespace Opm {
             wellModel().rhsAdjointRes(adjRhs);
             // add rhs from the schur complement of well equations
             wellModel().applyt(adjRhs);
+            //
+            //NB we get the linerized version from the reservoir part to be modified
+            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            std::unique_ptr<Mat> adj_matrix_for_preconditioner;
+            if (param_.matrix_add_well_contributions_) {
+                wellModel().addWellContributions(ebosJac);
+            }
+            if ( param_.preconditioner_add_well_contributions_ &&
+                 ! param_.matrix_add_well_contributions_ ) {
+                adj_matrix_for_preconditioner.reset(new Mat(ebosJac));
+                wellModel().addWellContributions(*adj_matrix_for_preconditioner);
+            }
 
             // then all well tings has tto be done
             // set initial guess
