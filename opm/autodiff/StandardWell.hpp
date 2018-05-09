@@ -76,7 +76,6 @@ namespace Opm
         static const int Bhp = gasoil? 2 : 3;
         static const int SFrac = !has_solvent ? -1000 : Bhp + 1;
 
-
         using typename Base::Scalar;
         using typename Base::ConvergenceReport;
 
@@ -245,6 +244,8 @@ namespace Opm
         // TODO: it is also possible to be moved to the base class.
         EvalWell getQs(const int comp_idx) const;
 
+        const EvalWell& getGTotal() const;
+
         EvalWell wellVolumeFractionScaled(const int phase) const;
 
         EvalWell wellVolumeFraction(const unsigned compIdx) const;
@@ -328,6 +329,8 @@ namespace Opm
                                           const WellState& well_state) const;
 
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;
+
+        void assembleControlEq();
     };
 
 }

@@ -35,7 +35,7 @@ namespace Opm
     , perf_pressure_diffs_(number_of_perforations_)
     , primary_variables_(numWellEq, 0.0)
     , primary_variables_evaluation_(numWellEq) // the number of the primary variables
-    , F0_(numWellEq)
+    , F0_(num_components_)
     {
         duneB_.setBuildMode( OffDiagMatWell::row_wise );
         duneC_.setBuildMode( OffDiagMatWell::row_wise );
@@ -134,6 +134,18 @@ namespace Opm
 
 
     template<typename TypeTag>
+    const typename StandardWell<TypeTag>::EvalWell&
+    StandardWell<TypeTag>::
+    getGTotal() const
+    {
+        return primary_variables_evaluation_[GTotal];
+    }
+
+
+
+
+
+    template<typename TypeTag>
     typename StandardWell<TypeTag>::EvalWell
     StandardWell<TypeTag>::
     getQs(const int comp_idx) const // TODO: phase or component?
@@ -146,23 +158,24 @@ namespace Opm
         assert(comp_idx < num_components_);
 
         if (well_type_ == INJECTOR) { // only single phase injection
+            // TODO: using comp_frac here is dangerous, it should be changed later
+            // Most likely, it should be changed to use distr, or at least, we need to update comp_frac_ based on distr
+            // while solvent might complicate the situation
             EvalWell qs = 0.0;
             const auto pu = phaseUsage();
             const int legacyCompIdx = ebosCompIdxToFlowCompIdx(comp_idx);
-            if (has_solvent) {
-                // TODO: investigate whether the use of the comp_frac is justified.
-                // The usage of the comp_frac is not correct, which should be changed later.
-                double comp_frac = 0.0;
-                if (has_solvent && comp_idx == contiSolventEqIdx) { // solvent
-                    comp_frac = comp_frac_[pu.phase_pos[ Gas ]] * wsolvent();
-                } else if (legacyCompIdx == pu.phase_pos[ Gas ]) {
-                    comp_frac = comp_frac_[legacyCompIdx] * (1.0 - wsolvent());
-                } else {
-                    comp_frac = comp_frac_[legacyCompIdx];
+            double comp_frac = 0.0;
+            if (has_solvent && comp_idx == contiSolventEqIdx) { // solvent
+                comp_frac = comp_frac_[pu.phase_pos[ Gas ]] * wsolvent();
+            } else if (legacyCompIdx == pu.phase_pos[ Gas ]) {
+                comp_frac = comp_frac_[legacyCompIdx];
+                if (has_solvent) {
+                    comp_frac *= (1.0 - wsolvent());
                 }
-                return comp_frac * primary_variables_evaluation_[GTotal];
+            } else {
+                comp_frac = comp_frac_[legacyCompIdx];
             }
-            return primary_variables_evaluation_[GTotal];
+            return comp_frac * primary_variables_evaluation_[GTotal];
         } else {
             return primary_variables_evaluation_[GTotal] * wellVolumeFractionScaled(comp_idx);
         }
@@ -605,6 +618,8 @@ namespace Opm
             resWell_[0][componentIdx] += resWell_loc.value();
         }
 
+        assembleControlEq();
+
         // do the local inversion of D.
         // we do this manually with invertMatrix to always get our
         // specializations in for 3x3 and 4x4 matrices.
@@ -612,6 +627,101 @@ namespace Opm
         // Dune::FMatrixHelp::invertMatrix(original, invDuneD_[0][0]);
         Dune::ISTLUtility::invertMatrix(invDuneD_[0][0]);
         // invDuneD_[0][0].invert();
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    assembleControlEq()
+    {
+        EvalWell control_eq(0.0);
+        switch (well_controls_get_current_type(well_controls_)) {
+            case THP:
+            {
+                OPM_THROW(std::runtime_error, "Not handling THP control for Multisegment wells for now");
+                // TODO: it will be a function based on BHP <-> THP relation
+                break;
+            }
+            case BHP:
+            {
+                const double target_bhp = well_controls_get_current_target(well_controls_);
+                control_eq = getBhp() - target_bhp;
+                break;
+            }
+            case SURFACE_RATE:
+            {
+                int number_phases_under_control = 0;
+                const double* distr = well_controls_get_current_distr(well_controls_);
+                for (int phase = 0; phase < number_of_phases_; ++phase) {
+                    if (distr[phase] > 0.0) {
+                        ++number_phases_under_control;
+                    }
+                }
+                assert(number_phases_under_control > 0);
+
+                const double target_rate = well_controls_get_current_target(well_controls_);
+
+                if (well_type_ == INJECTOR) {
+                    assert(number_phases_under_control == 1); // only handles single phase injection now
+                    // TODO: considering the solvent part here
+                    control_eq = getGTotal() - target_rate;
+                } else if (well_type_ == PRODUCER) {
+                    EvalWell rate_for_control(0.);
+                    const EvalWell& g_total = getGTotal();
+                    for (int phase = 0; phase < number_of_phases_; ++phase) {
+                        if (distr[phase] > 0.) {
+                            rate_for_control += g_total * wellVolumeFractionScaled(flowPhaseToEbosCompIdx(phase));
+                        }
+                    }
+                    control_eq = rate_for_control - target_rate;
+                }
+                break;
+            }
+            case RESERVOIR_RATE:
+            {
+                // TODO: repeated code here
+                int number_phases_under_control = 0;
+                const double* distr = well_controls_get_current_distr(well_controls_);
+                for (int phase = 0; phase < number_of_phases_; ++phase) {
+                    if (distr[phase] > 0.0) {
+                        ++number_phases_under_control;
+                    }
+                }
+                assert(number_phases_under_control > 0);
+
+                const double target_rate = well_controls_get_current_target(well_controls_); // reservoir rate target
+                if (well_type_ == INJECTOR) {
+                    assert(number_phases_under_control == 1);
+                    for (int phase = 0; phase < number_of_phases_; ++phase) {
+                        if (distr[phase] > 0.0) {
+                            control_eq = getGTotal() * scalingFactor(phase) - target_rate;
+                            break;
+                        }
+                    }
+                } else {
+                    const EvalWell& g_total = getGTotal();
+                    EvalWell rate_for_control(0.0); // reservoir rate
+                    for (int phase = 0; phase < number_of_phases_; ++phase) {
+                        rate_for_control += g_total * wellVolumeFraction( flowPhaseToEbosCompIdx(phase) );
+                    }
+                    control_eq = rate_for_control - target_rate;
+                }
+                break;
+            }
+            default:
+                OPM_THROW(std::runtime_error, "Unknown well control control types for well " << name());
+        }
+
+        // using control_eq to update the matrix and residuals
+        // TODO: we should use a different index system for the well equations
+        resWell_[0][Bhp] = control_eq.value();
+        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+            invDuneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + numEq);
+        }
     }
 
 
@@ -992,9 +1102,13 @@ namespace Opm
             well_state.bhp()[well_index] = target;
             // TODO: similar to the way below to handle THP
             // we should not something related to thp here when there is thp constraint
+            // or when can calculate the THP (table avaiable or requested for output?)
             break;
 
         case THP: {
+            // TODO: this will be the big task here.
+            // p_bhp = BHP(THP, rates(p_bhp))
+            // more sophiscated techniques is required to obtain the bhp and rates here
             well_state.thp()[well_index] = target;
 
             const Opm::PhaseUsage& pu = phaseUsage();
@@ -1499,9 +1613,7 @@ namespace Opm
     StandardWell<TypeTag>::
     computeAccumWell()
     {
-        // TODO: it should be num_comp, while it also bring problem for
-        // the polymer case.
-        for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+        for (int eq_idx = 0; eq_idx < num_components_; ++eq_idx) {
             F0_[eq_idx] = wellSurfaceVolumeFraction(eq_idx).value();
         }
     }
