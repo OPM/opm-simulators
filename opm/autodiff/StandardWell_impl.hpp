@@ -881,9 +881,31 @@ namespace Opm
             primary_variables_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
         }
 
-        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        processFractions();
 
-        // TODO: the following processing of the fractions should go to a different function
+        // updating the total rates G_t
+        primary_variables_[GTotal] = old_primary_variables[GTotal] - dwells[0][GTotal];
+
+        // updating the bottom hole pressure
+        {
+            const double dBHPLimit = param_.dbhp_max_rel_;
+            const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;
+            const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]), std::abs(old_primary_variables[Bhp]) * dBHPLimit);
+            // 1e5 to make sure bhp will not be below 1bar
+            primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    processFractions() const
+    {
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
         const auto pu = phaseUsage();
         std::vector<double> F(number_of_phases_, 0.0);
         F[pu.phase_pos[Oil]] = 1.0;
@@ -951,19 +973,6 @@ namespace Opm
         }
         if(has_solvent) {
             primary_variables_[SFrac] = F_solvent;
-        }
-
-        // updating the total rates G_t
-        primary_variables_[GTotal] = old_primary_variables[GTotal] - dwells[0][GTotal];
-
-
-        // updating the bottom hole pressure
-        {
-            const double dBHPLimit = param_.dbhp_max_rel_;
-            const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;
-            const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]), std::abs(old_primary_variables[Bhp]) * dBHPLimit);
-            // 1e5 to make sure bhp will not be below 1bar
-            primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
         }
     }
 
