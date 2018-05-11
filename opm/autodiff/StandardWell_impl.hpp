@@ -1466,10 +1466,8 @@ namespace Opm
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;
 
-        // TODO: it should be the number of numWellEq
-        // using num_components_ here for flow_ebos running 2p case.
-        std::vector<double> res(num_components_);
-        for (int comp = 0; comp < num_components_; ++comp) {
+        std::vector<double> res(numWellEq);
+        for (int comp = 0; comp < numWellEq; ++comp) {
             // magnitude of the residual matters
             res[comp] = std::abs(resWell_[0][comp]);
         }
@@ -1506,11 +1504,43 @@ namespace Opm
             }
         }
 
+
+        // processing the residual of the well control equation
+        const double well_control_residual = res[numWellEq - 1];
+        // TODO: we should have better way to specify the control equation tolerance
+        double control_tolerance = 0.;
+        switch(well_controls_get_current_type(well_controls_)) {
+            case THP:
+            case BHP:  // pressure type of control
+                control_tolerance = 1.e4; // 0.1 bar
+                break;
+            case RESERVOIR_RATE:
+            case SURFACE_RATE:
+                control_tolerance = 1.e-4; // smaller tolerance for rate control
+                break;
+            default:
+                OPM_THROW(std::runtime_error, "Unknown well control control types for well " << name());
+        }
+
+        const bool control_eq_converged = well_control_residual < control_tolerance;
+
+        if (std::isnan(well_control_residual)) {
+            report.nan_residual_found = true;
+            const typename ConvergenceReport::ProblemWell problem_well = {name(), "control"};
+            report.nan_residual_wells.push_back(problem_well);
+        } else {
+            if (well_control_residual > maxResidualAllowed) {
+                report.too_large_residual_found = true;
+                const typename ConvergenceReport::ProblemWell problem_well = {name(), "control"};
+                report.too_large_residual_wells.push_back(problem_well);
+            }
+        }
+
         if ( !(report.nan_residual_found || report.too_large_residual_found) ) { // no abnormal residual value found
             // check convergence
             for ( int compIdx = 0; compIdx < num_components_; ++compIdx )
             {
-                report.converged = report.converged && (well_flux_residual[compIdx] < tol_wells);
+                report.converged = report.converged && (well_flux_residual[compIdx] < tol_wells) && control_eq_converged;
             }
         } else { // abnormal values found and no need to check the convergence
             report.converged = false;
