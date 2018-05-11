@@ -147,17 +147,15 @@ namespace Opm
     StandardWell<TypeTag>::
     getQs(const int comp_idx) const
     {
-        // TODO: not sure the best way to handle solvent injection
-        // TODO: we need to come back to handle the solvent case here, the following implementation does not
-        // TODO: consider solvent injection yet.
-
-        // TODO: currently, the GTotal definition is still depends on Injector/Producer.
+        // Note: currently, the GTotal definition is still depends on Injector/Producer.
         assert(comp_idx < num_components_);
 
         if (well_type_ == INJECTOR) { // only single phase injection
             // TODO: using comp_frac here is dangerous, it should be changed later
             // Most likely, it should be changed to use distr, or at least, we need to update comp_frac_ based on distr
             // while solvent might complicate the situation
+            //
+            // TODO: it is possible that the RESV for the injector is not well handled here.
             const auto pu = phaseUsage();
             const int legacyCompIdx = ebosCompIdxToFlowCompIdx(comp_idx);
             double comp_frac = 0.0;
@@ -171,8 +169,14 @@ namespace Opm
             } else {
                 comp_frac = comp_frac_[legacyCompIdx];
             }
+
+            // testing code
+            if (comp_frac > 0.) {
+            const double target_rate = well_controls_get_current_target(well_controls_);
+            }
+            // testing code end
             return comp_frac * primary_variables_evaluation_[GTotal];
-        } else {
+        } else { // producers
             return primary_variables_evaluation_[GTotal] * wellVolumeFractionScaled(comp_idx);
         }
     }
@@ -664,6 +668,8 @@ namespace Opm
                 if (well_type_ == INJECTOR) {
                     assert(number_phases_under_control == 1); // only handles single phase injection now
                     // TODO: considering the solvent part here
+                    // Better way to cover solvent part will be getQs() - target_rate, while it turned out not correct
+                    // for the solvent case.
                     control_eq = getGTotal() - target_rate;
                 } else if (well_type_ == PRODUCER) {
                     EvalWell rate_for_control(0.);
@@ -1023,8 +1029,7 @@ namespace Opm
             for (int p = 0; p < number_of_phases_; ++p) {
                 well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = g_total * F[p];
             }
-            // injectors
-        } else {
+        } else { // injectors
             // TODO: using comp_frac_ here is very dangerous, since we do not update it based on the injection phase
             // Either we use distr (might conflict with RESV related) or we update comp_frac_ based on the injection phase
             for (int p = 0; p < number_of_phases_; ++p) {
@@ -1158,12 +1163,12 @@ namespace Opm
                 }
 
                 if (original_rates_under_phase_control != 0.0 ) {
-                    double scaling_factor = target / original_rates_under_phase_control;
+                    const double scaling_factor = target / original_rates_under_phase_control;
 
                     for (int phase = 0; phase < np; ++phase) {
                         well_state.wellRates()[np * well_index + phase] *= scaling_factor;
                     }
-                } else { // scaling factor is not well defied when original_rates_under_phase_control is zero
+                } else { // scaling factor is not well defined when original_rates_under_phase_control is zero
                     // separating targets equally between phases under control
                     const double target_rate_divided = target / numPhasesWithTargetsUnderThisControl;
                     for (int phase = 0; phase < np; ++phase) {
@@ -1897,10 +1902,13 @@ namespace Opm
             total_well_rate += scalingFactor(p) * well_state.wellRates()[np * well_index + p];
         }
 
-        // TODO: not sure whether we should distinguish the firs primary variable based on Producer/Injector
-        // it will be determined based on testing as a separate issue.
+        // Not: for the moment, the first primary variable for the injectors is not G_total. The injection rate
+        // under surface condition is used here
         if (well_type_ == INJECTOR) {
+            primary_variables_[GTotal] = 0.;
             for (int p = 0; p < np; ++p) {
+                // TODO: the use of comp_frac_ here is dangerous, since the injection phase can be different from
+                // prefered phasse in WELSPECS, while comp_frac_ only reflect the one specified in WELSPECS
                 primary_variables_[GTotal] += well_state.wellRates()[np * well_index + p] * comp_frac_[p];
             }
         } else {

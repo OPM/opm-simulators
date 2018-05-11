@@ -64,24 +64,22 @@ namespace Opm
         static const int numWellEq = numEq + 1 - numPolymerEq - numEnergyEq;
 
         // the positions of the primary variables for StandardWell
-        // there are four primary variables, the second and the third ones are F_w and F_g
-        // the first one is the weighted total rate (G_t), the second and the third ones are F_w and F_g
-        // the last one is the BHP.
-        // the fraction of the solvent, as an extension of the blackoil model, is behind the BHP
+        // the first one is the weighted total rate (G_t), the second and the third ones are F_w and F_g,
+        // which represent the fraction of Water and Gas based on the weighted total rate, the last one is BHP.
         // correspondingly, we have four well equations for blackoil model, the first three are mass
         // converstation equations, and the last one is the well control equation.
         // primary variables related to other components, will be before the Bhp and after F_g.
-        // well control equation is always the last well equation, other equations will be before the
-        // well control equation and are conservation equations for components involved.
-        // TODO: in the current implementation, we use the well rate as the first primary variables for injectors
-        // TODO: not sure we should change it.
+        // well control equation is always the last well equation.
+        // TODO: in the current implementation, we use the well rate as the first primary variables for injectors,
+        // instead of G_t.
         static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
         static const int GTotal = 0;
         static const int WFrac = gasoil? -1000: 1;
         static const int GFrac = gasoil? 1: 2;
         static const int SFrac = !has_solvent ? -1000 : 3;
         // the index for Bhp in primary variables and also the index of well control equation
-        // they both will be the last one in their system.
+        // they both will be the last one in their respective system.
+        // TODO: we should have indices for the well equations and well primary variables separately
         static const int Bhp = numWellEq - 1;
 
         using typename Base::Scalar;
@@ -239,12 +237,8 @@ namespace Opm
         // the saturations in the well bore under surface conditions at the beginning of the time step
         std::vector<double> F0_;
 
-        // TODO: this function should be moved to the base class.
-        // while it faces chanllenges for MSWell later, since the calculation of bhp
-        // based on THP is never implemented for MSWell yet.
         const EvalWell& getBhp() const;
 
-        // TODO: it is also possible to be moved to the base class.
         EvalWell getQs(const int comp_idx) const;
 
         const EvalWell& getGTotal() const;
@@ -291,7 +285,7 @@ namespace Opm
                                                     const std::vector<double>& rvmax_perf,
                                                     const std::vector<double>& surf_dens_perf);
 
-        // computing the accumulation term for later use in well mass equations
+
         void computeAccumWell();
 
         void computeWellConnectionPressures(const Simulator& ebosSimulator,
