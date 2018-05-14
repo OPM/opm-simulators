@@ -210,6 +210,11 @@ namespace Opm {
                         well->addWellContributions(mat);
                 }
             }
+            // moved due to adjoint
+            void prepareTimeStep();
+            /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
+            /// at the beginning of the time step and no derivatives are included in these quantities
+            void calculateExplicitQuantities() const;
 
             void printMatrixes() const;
 
@@ -324,9 +329,6 @@ namespace Opm {
             // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
             // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
             // twice at the beginning of the time step
-            /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
-            /// at the beginning of the time step and no derivatives are included in these quantities
-            void calculateExplicitQuantities() const;
 
             SimulatorReport solveWellEq(const double dt);
 
@@ -346,7 +348,7 @@ namespace Opm {
 
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
-            void prepareTimeStep();
+
 
             void prepareGroupControl();
 

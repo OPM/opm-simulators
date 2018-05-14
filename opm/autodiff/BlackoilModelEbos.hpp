@@ -240,6 +240,8 @@ namespace Opm {
             }
             //SimulatorReport report;
             --timer;
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             //std::cout << "Start Adjoint iteration" << std::endl;
             //timer.report(std::cout);
             WellState dummy_well_state;//only for the interface due to flow_legacy
@@ -250,23 +252,32 @@ namespace Opm {
             SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             // Store the initial previous.
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
+            WellState well_state0;
+            deserialize_well(well_state0);//
+            wellModel().beginTimeStep();
+            wellModel().setRestartWellState(well_state0);
             //std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
             ++timer;// get back to current step
+            // only to update inensive quantity cache
+            ebosSimulator_.model().newtonMethod().setIterationIndex(1);
+            ebosSimulator_.problem().beginIteration();
+            ebosSimulator_.model().linearizer().linearize(/*focustimeindex=*/ 0);
+            ebosSimulator_.problem().endIteration();
+            wellModel().prepareTimeStep();
+            wellModel().calculateExplicitQuantities();
+            //wellModel().assemble(/*iterationIdx*/0, false, ebosSimulator_.timeStepSize());
             //timer.report(std::cout);
             this->prepareStep(timer, dummy_res_state, dummy_well_state);
             // std::cout << "Current time end " <<  timer.simulationTimeElapsed()  << std::endl;
             this->deserialize_reservoir( timer.simulationTimeElapsed() );
             // seralizing may owerwrite prevois step since it was intended for restart ??
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
-            WellState well_state0;
-            deserialize_well(well_state0);//
+
 //            std::cout << "******* Start adjoint calculation ****** " << std::endl;
 //            std::cout << "******* solution 1 ****** " << std::endl;
 //            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
 //            std::cout << "******* solution 0 ****** " << std::endl;
 //            std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
-
-
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
            // ebosSimulator_.model().update();
@@ -290,7 +301,7 @@ namespace Opm {
             std::cout << ebosResid << std::endl;
             */
             //auto& well_state = wellModel().wellState();
-            wellModel().beginTimeStep();
+
             WellState well_state;
             deserialize_well(well_state);// =  this->wellModel().wellState();
 //            {
@@ -299,14 +310,16 @@ namespace Opm {
 //                boost::archive::text_iarchive oa(ifs);
 //                oa >> well_state;
 //            }
-            wellModel().setRestartWellState(well_state0);
+
             wellModel().setWellState(well_state);
             //wellModel().beginTimeStep();
             double dt = timer.stepLengthTaken();
             //int
             //iterationIdx = 0;//for wells we need this to make update correctyin flow is make shift the state???
             assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
-            wellModel().assemble(/*iterationIdx*/0, false, ebosSimulator_.timeStepSize());
+            wellModel().prepareTimeStep();
+            //wellModel().calculateExplicitQuantities();
+            wellModel().assemble(/*iterationIdx*/1, false, ebosSimulator_.timeStepSize());
 
             //wellModel().apply(ebosResid);
             //wellModel().printMatrixes();
