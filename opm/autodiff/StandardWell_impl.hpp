@@ -533,65 +533,27 @@ namespace Opm
     StandardWell<TypeTag>::
     computeObj(Simulator& ebosSimulator,
                    const double dt)
-    {
-        const int np = number_of_phases_;
-
-       // auto& ebosJac = ebosSimulator.model().linearizer().matrix();
-        //auto& ebosResid = ebosSimulator.model().linearizer().residual();
-
-        // TODO: it probably can be static member for StandardWell
-        const double volume = 0.002831684659200; // 0.1 cu ft;
-        //EvalWell objval=0;
-        //const bool allow_cf = crossFlowAllowed(ebosSimulator);
-
+    {        
         const EvalWell& bhp = getBhp();
-
-//        for (int perf = 0; perf < number_of_perforations_; ++perf) {
-//            const int cell_idx = well_cells_[perf];
-//            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
-//            std::vector<EvalWell> cq_s(num_components_,0.0);
-//            std::vector<EvalWell> mob(num_components_, 0.0);
-//            getMobility(ebosSimulator, perf, mob);
-//            computePerfRate(intQuants, mob, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf, cq_s);
-
-//            for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
-//                // the cq_s entering mass balance equations need to consider the efficiency factors.
-//                // for now only oil
-//                if(componentIdx==0){
-//                    const EvalWell cq_s_effective = cq_s[componentIdx] * well_efficiency_factor_;
-//                    // balue of objective fuction
-//                    objval_ += cq_s_effective.value();
-//                    for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
-//                    // derivative with respect to reservoir state
-//                        //objder_adjres_[0][cell_idx][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
-//                        objder_adjres_[cell_idx][pvIdx] += cq_s_effective.derivative(pvIdx);
-//                        // derivative with respect to well primary variables
-//                        objder_adjwell_[0][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
-//                    }
-//                    // derivative with respect to controls
-//                    objder_adjctrl_[0][0] += cq_s_effective.derivative(control_index);
-//                }
-//            }
-
-//  drop plymer for now
-//            if (has_polymer) {
-//                // TODO: the application of well efficiency factor has not been tested with an example yet
-//                const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-//                EvalWell cq_s_poly = cq_s[waterCompIdx] * well_efficiency_factor_;
-//                if (well_type_ == INJECTOR) {
-//                    cq_s_poly *= wpolymer();
-//                } else {
-//                    cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
-//                }
-//                for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
-//                    objderadjr_[cell_idx][cell_idx][pvIdx] = cq_s_poly.derivative(pvIdx);
-//                }
-//                objval_ -= cq_s_poly.value();
-//              }
- //       }
-
         // add vol * dF/dt + Q to the well equations;
+        std::vector<EvalWell> q;
+        for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
+            q.push_back(getQs(componentIdx) * well_efficiency_factor_);
+        }
+        EvalWell obj = 0.0;
+        for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
+            if( (componentIdx==1)  ){
+                obj += q[componentIdx];
+            }
+        }
+        // pick out the well value and derivative
         objval_=0.0;
+        for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+            objder_adjwell_[0][pvIdx] += obj.derivative(pvIdx+numEq)*dt;
+        }
+        objder_adjctrl_[0][0] += obj.derivative(control_index)*dt;
+        objval_+= obj.value()*dt;
+        /*
         for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
             //EvalWell resWell_loc = 0.0;
             if( (componentIdx==1)  ){
@@ -605,35 +567,7 @@ namespace Opm
                 objder_adjctrl_[0][0] += resWell_loc.derivative(control_index)*dt;
                 objval_+= resWell_loc.value()*dt;
             }
-            /*
-            // calculating the perforation solution gas rate and solution oil rates
-            const auto& fs = intQuants.fluidState();
-            const EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
-            const EvalWell rs = extendEval(fs.Rs());
-            const EvalWell rv = extendEval(fs.Rv());
-            if (well_type_ == PRODUCER) {
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-                    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                    // TODO: the formulations here remain to be tested with cases with strong crossflow through production wells
-                    // s means standard condition, r means reservoir condition
-                    // q_os = q_or * b_o + rv * q_gr * b_g
-                    // q_gs = q_gr * g_g + rs * q_or * b_o
-                    // d = 1.0 - rs * rv
-                    // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
-                    // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
-
-                    const double d = 1.0 - rv.value() * rs.value();
-                    // vaporized oil into gas
-                    // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
-                    perf_vap_oil_rate = rv.value() * (cq_s[gasCompIdx].value() - rs.value() * cq_s[oilCompIdx].value()) / d;
-                    // dissolved of gas in oil
-                    // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
-                    perf_dis_gas_rate = rs.value() * (cq_s[oilCompIdx].value() - rv.value() * cq_s[gasCompIdx].value()) / d;
-                }
-            }
-            */
-        }
+        }*/
     }
 
     // NB functionallyto for adding contribution from previous step is not taken
