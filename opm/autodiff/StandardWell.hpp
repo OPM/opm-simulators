@@ -262,7 +262,7 @@ namespace Opm
             std::cout << "adjont_variables " << std::endl;
             Dune::writeMatrixMarket(adjoint_variables_, std::cout);
         }
-
+        BVectorWell getResWell() const {return resWell_;}
         virtual void  addWellContributions(Mat& mat) const;
 
         /// \brief Wether the Jacobian will also have well contributions in it.

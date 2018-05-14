@@ -372,8 +372,10 @@ namespace Opm {
                     well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
                                                 param_, *rateConverter_, pvtreg, numComponents() ) );
                 } else {
+                    /*
                     well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(),
-                                                param_, *rateConverter_, pvtreg, numComponents() ) );                    
+                                                param_, *rateConverter_, pvtreg, numComponents() ) );
+                                                */
                 }
             }
         }

@@ -217,6 +217,7 @@ namespace Opm
 
         virtual void solveEqAndUpdateWellState(WellState& well_state) = 0;
 
+        virtual BVector getResWell() const = 0;
         virtual void assembleWellEq(Simulator& ebosSimulator,
                                     const double dt,
                                     WellState& well_state,

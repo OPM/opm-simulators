@@ -220,6 +220,9 @@ namespace Opm {
 
             AdjointResults adjointResults() const;
 
+            using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
+            const std::vector<WellInterfacePtr >& getWellContainer() const{return well_container_;}
+
         protected:
             void extractLegacyPressure_(std::vector<double>& cellPressure) const
             {
@@ -254,7 +257,7 @@ namespace Opm {
 
             bool wells_active_;
 
-            using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
+            //using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
             // a vector of all the wells.
             std::vector<WellInterfacePtr > well_container_;
 
