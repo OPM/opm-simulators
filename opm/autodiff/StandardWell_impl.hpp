@@ -22,7 +22,7 @@
 #define OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
 
 #include "StandardWell.hpp"
-
+#include <opm/objective/ObjectiveFunctions.hpp>
 namespace Opm
 {
 
@@ -541,11 +541,15 @@ namespace Opm
             q.push_back(getQs(componentIdx) * well_efficiency_factor_);
         }
         EvalWell obj = 0.0;
+        double t = ebosSimulator.time();
+       obj =  Opm::Objectives::TotalWaterRate::objective(q, t, dt);
+        /*
         for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
             if( (componentIdx==1)  ){
                 obj += q[componentIdx]*dt;
             }
         }
+        */
         // pick out the well value and derivative
         objval_=0.0;
         for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
