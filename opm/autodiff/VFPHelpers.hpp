@@ -49,8 +49,8 @@ inline double zeroIfNan(const double& value) {
  * Returns zero if input value is NaN
  */
 template <class EvalWell>
-inline double zeroIfNan(const EvalWell& value) {
-    return (std::isnan(value.value())) ? 0.0 : value.value();
+inline EvalWell zeroIfNan(const EvalWell& value) {
+    return (std::isnan(value.value())) ? 0.0 : value;
 }
 
 
