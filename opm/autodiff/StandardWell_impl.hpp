@@ -154,8 +154,6 @@ namespace Opm
             // TODO: using comp_frac here is dangerous, it should be changed later
             // Most likely, it should be changed to use distr, or at least, we need to update comp_frac_ based on distr
             // while solvent might complicate the situation
-            //
-            // TODO: it is possible that the RESV for the injector is not well handled here.
             const auto pu = phaseUsage();
             const int legacyCompIdx = ebosCompIdxToFlowCompIdx(comp_idx);
             double comp_frac = 0.0;
@@ -170,7 +168,6 @@ namespace Opm
                 comp_frac = comp_frac_[legacyCompIdx];
             }
 
-            // testing code end
             return comp_frac * primary_variables_evaluation_[GTotal];
         } else { // producers
             return primary_variables_evaluation_[GTotal] * wellVolumeFractionScaled(comp_idx);
@@ -666,13 +663,9 @@ namespace Opm
                 }
                 assert(number_phases_under_control > 0);
 
-                const double target_rate = well_controls_get_current_target(well_controls_);
-
+                const double target_rate = well_controls_get_current_target(well_controls_); // surface rate target
                 if (well_type_ == INJECTOR) {
                     assert(number_phases_under_control == 1); // only handles single phase injection now
-                    // TODO: considering the solvent part here
-                    // Better way to cover solvent part will be getQs() - target_rate, while it turned out not correct
-                    // for the solvent case.
                     control_eq = getGTotal() - target_rate;
                 } else if (well_type_ == PRODUCER) {
                     EvalWell rate_for_control(0.);
@@ -688,7 +681,7 @@ namespace Opm
             }
             case RESERVOIR_RATE:
             {
-                // TODO: repeated code here
+                // TODO: repeated code here, while hopefully it gives better readability
                 int number_phases_under_control = 0;
                 const double* distr = well_controls_get_current_distr(well_controls_);
                 for (int phase = 0; phase < number_of_phases_; ++phase) {

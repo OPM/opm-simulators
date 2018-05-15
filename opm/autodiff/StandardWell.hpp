@@ -285,7 +285,7 @@ namespace Opm
                                                     const std::vector<double>& rvmax_perf,
                                                     const std::vector<double>& surf_dens_perf);
 
-
+        // computing the accumulation term for later use in well mass equations
         void computeAccumWell();
 
         void computeWellConnectionPressures(const Simulator& ebosSimulator,

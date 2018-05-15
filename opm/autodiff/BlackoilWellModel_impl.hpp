@@ -272,10 +272,6 @@ namespace Opm {
         // Set the well primary variables based on the value of well solutions
         initPrimaryVariablesEvaluation();
 
-        if (iterationIdx == 0) {
-            //calculateExplicitQuantities();
-        }
-
         if (param_.solve_welleq_initially_ && iterationIdx == 0) {
             // solve the well equations as a pre-processing step
             last_report_ = solveWellEq(dt);
@@ -286,6 +282,9 @@ namespace Opm {
                 last_report_ = solveWellEq(dt);
                 initial_step_ = false;
             }
+            // TODO: should we update the explicit related here again, or even prepareTimeStep().
+            // basically, this is a more updated state from the solveWellEq based on fixed
+            // reservoir state, will tihs be a better place to inialize the explict information?
         }
         assembleWellEq(dt, false);
 
