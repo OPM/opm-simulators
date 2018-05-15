@@ -197,7 +197,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
         BOOST_CHECK_EQUAL(well->name(), "PROD1");
         BOOST_CHECK(well->wellType() == PRODUCER);
         BOOST_CHECK(well->numEq == 3);
-        BOOST_CHECK(well->numWellEq == 3);
+        BOOST_CHECK(well->numWellEq == 4);
         const auto& wc = well->wellControls();
         const int ctrl_num = well_controls_get_num(wc);
         BOOST_CHECK(ctrl_num > 0);
@@ -216,7 +216,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
         BOOST_CHECK_EQUAL(well->name(), "INJE1");
         BOOST_CHECK(well->wellType() == INJECTOR);
         BOOST_CHECK(well->numEq == 3);
-        BOOST_CHECK(well->numWellEq == 3);
+        BOOST_CHECK(well->numWellEq == 4);
         const auto& wc = well->wellControls();
         const int ctrl_num = well_controls_get_num(wc);
         BOOST_CHECK(ctrl_num > 0);

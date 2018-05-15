@@ -170,10 +170,6 @@ namespace Opm
                 comp_frac = comp_frac_[legacyCompIdx];
             }
 
-            // testing code
-            if (comp_frac > 0.) {
-            const double target_rate = well_controls_get_current_target(well_controls_);
-            }
             // testing code end
             return comp_frac * primary_variables_evaluation_[GTotal];
         } else { // producers
@@ -623,10 +619,7 @@ namespace Opm
         // do the local inversion of D.
         // we do this manually with invertMatrix to always get our
         // specializations in for 3x3 and 4x4 matrices.
-        // auto original = invDuneD_[0][0];
-        // Dune::FMatrixHelp::invertMatrix(original, invDuneD_[0][0]);
         Dune::ISTLUtility::invertMatrix(invDuneD_[0][0]);
-        // invDuneD_[0][0].invert();
     }
 
 
@@ -642,8 +635,18 @@ namespace Opm
         switch (well_controls_get_current_type(well_controls_)) {
             case THP:
             {
-                OPM_THROW(std::runtime_error, "Not handling THP control for Multisegment wells for now");
-                // TODO: it will be a function based on BHP <-> THP relation
+                std::vector<EvalWell> rates(3, 0.);
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    rates[ Water ] = getQs(flowPhaseToEbosCompIdx(Water));
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    rates[ Oil ] = getQs(flowPhaseToEbosCompIdx(Oil));
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    rates[ Gas ] = getQs(flowPhaseToEbosCompIdx(Gas));
+                }
+                const int current = well_controls_get_current(well_controls_);
+                control_eq = getBhp() - calculateBhpFromThp(rates, current);
                 break;
             }
             case BHP:
@@ -1054,14 +1057,13 @@ namespace Opm
         const WellControls* wc = well_controls_;
         // TODO: we should only maintain one current control either from the well_state or from well_controls struct.
         // Either one can be more favored depending on the final strategy for the initilzation of the well control
-        const int current = well_state.currentControls()[index_of_well_];
         const int nwc = well_controls_get_num(wc);
         // Looping over all controls until we find a THP constraint
         for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
             if (well_controls_iget_type(wc, ctrl_index) == THP) {
                 // the current control
                 const int current = well_state.currentControls()[index_of_well_];
-                // If under THP control at the moment
+                // if well under THP control at the moment
                 if (current == ctrl_index) {
                     const double thp_target = well_controls_iget_target(wc, current);
                     well_state.thp()[index_of_well_] = thp_target;
@@ -1083,8 +1085,8 @@ namespace Opm
 
                     well_state.thp()[index_of_well_] = calculateThpFromBhp(rates, ctrl_index, bhp);
                 }
+                break;
             }
-            break;
         }
     }
 
@@ -1476,9 +1478,9 @@ namespace Opm
         const double maxResidualAllowed = param_.max_residual_allowed_;
 
         std::vector<double> res(numWellEq);
-        for (int comp = 0; comp < numWellEq; ++comp) {
+        for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             // magnitude of the residual matters
-            res[comp] = std::abs(resWell_[0][comp]);
+            res[eq_idx] = std::abs(resWell_[0][eq_idx]);
         }
 
         std::vector<double> well_flux_residual(num_components_);
@@ -1521,7 +1523,7 @@ namespace Opm
         switch(well_controls_get_current_type(well_controls_)) {
             case THP:
             case BHP:  // pressure type of control
-                control_tolerance = 1.e4; // 0.1 bar
+                control_tolerance = 1.e3; // 0.01 bar
                 break;
             case RESERVOIR_RATE:
             case SURFACE_RATE:
@@ -1538,7 +1540,8 @@ namespace Opm
             const typename ConvergenceReport::ProblemWell problem_well = {name(), "control"};
             report.nan_residual_wells.push_back(problem_well);
         } else {
-            if (well_control_residual > maxResidualAllowed) {
+            // TODO: for pressure control equations, it can be pretty big during Newton iteration
+            if (well_control_residual > maxResidualAllowed * 10.) {
                 report.too_large_residual_found = true;
                 const typename ConvergenceReport::ProblemWell problem_well = {name(), "control"};
                 report.too_large_residual_wells.push_back(problem_well);
@@ -2042,6 +2045,7 @@ namespace Opm
         const double& alq    = well_controls_iget_alq(well_controls_, control_index);
 
         // pick the density in the top layer
+        // TODO: it is possible it should be a Evaluation
         const double rho = perf_densities_[0];
 
         ValueType bhp = 0.;

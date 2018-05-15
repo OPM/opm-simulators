@@ -91,6 +91,17 @@ namespace Opm
             well_dissolved_gas_rates_.resize(nw, 0.0);
             well_vaporized_oil_rates_.resize(nw, 0.0);
 
+            is_new_well_.resize(nw, true);
+            if ( !prevState.wellMap().empty() ) {
+                const auto& end = prevState.wellMap().end();
+                for (int w = 0; w < nw; ++w) {
+                    const auto& it = prevState.wellMap().find( wells->name[w]);
+                    if (it != end) {
+                        is_new_well_[w] = false;
+                    }
+                }
+            }
+
             // Ensure that we start out with zero rates by default.
             perfphaserates_.clear();
             perfphaserates_.resize(nperf * np, 0.0);
@@ -101,6 +112,14 @@ namespace Opm
                 if (well_controls_well_is_stopped(ctrl)) {
                     // Shut well: perfphaserates_ are all zero.
                 } else {
+                    // increasing the gas rates so that there is a better guess of the gas rate, when the well is
+                    // a new well
+                    // TODO: a better way to make good use of the events in the Schedule from parser.
+                    if (pu.phase_used[Gas] && is_new_well_[w]) {
+                        const int gaspos = pu.phase_pos[Gas];
+                        wellRates()[np * w + gaspos] *= 100.;
+                     }
+
                     const int num_perf_this_well = wells->well_connpos[w + 1] - wells->well_connpos[w];
                     // Open well: Initialize perfphaserates_ to well
                     // rates divided by the number of perforations.
@@ -121,8 +140,6 @@ namespace Opm
                 current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
             }
 
-            is_new_well_.resize(nw, true);
-
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
 
@@ -137,9 +154,6 @@ namespace Opm
                     const_iterator it = prevState.wellMap().find( name );
                     if( it != end )
                     {
-                        // this is not a new added well
-                        is_new_well_[w] = false;
-
                         const int oldIndex = (*it).second[ 0 ];
                         const int newIndex = w;
 
@@ -402,18 +416,6 @@ namespace Opm
                         const int start_perf = wells->well_connpos[w];
                         const int start_perf_next_well = wells->well_connpos[w + 1];
                         assert(nperf == (start_perf_next_well - start_perf)); // make sure the information from wells_ecl consistent with wells
-                        if (pu.phase_used[Gas]) {
-                            const int gaspos = pu.phase_pos[Gas];
-                            // scale the phase rates for Gas to avoid too bad initial guess for gas fraction
-                            // it will probably benefit the standard well too, while it needs to be justified
-                            // TODO: to see if this strategy can benefit StandardWell too
-                            // TODO: it might cause big problem for gas rate control or if there is a gas rate limit
-                            // maybe the best way is to initialize the fractions first then get the rates
-                            for (int perf = 0; perf < nperf; perf++) {
-                                const int perf_pos = start_perf + perf;
-                                perfPhaseRates()[np * perf_pos + gaspos] *= 100.;
-                            }
-                        }
 
                         const std::vector<double> perforation_rates(perfPhaseRates().begin() + np * start_perf,
                                                                     perfPhaseRates().begin() + np * start_perf_next_well); // the perforation rates for this well
