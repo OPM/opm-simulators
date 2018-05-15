@@ -543,31 +543,17 @@ namespace Opm
         EvalWell obj = 0.0;
         for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
             if( (componentIdx==1)  ){
-                obj += q[componentIdx];
+                obj += q[componentIdx]*dt;
             }
         }
         // pick out the well value and derivative
         objval_=0.0;
         for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
-            objder_adjwell_[0][pvIdx] += obj.derivative(pvIdx+numEq)*dt;
+            objder_adjwell_[0][pvIdx] = obj.derivative(pvIdx+numEq);
         }
-        objder_adjctrl_[0][0] += obj.derivative(control_index)*dt;
-        objval_+= obj.value()*dt;
-        /*
-        for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
-            //EvalWell resWell_loc = 0.0;
-            if( (componentIdx==1)  ){
-                EvalWell resWell_loc = getQs(componentIdx) * well_efficiency_factor_;
-                if (resWell_loc < 0){
-                    // resWell_loc *= -1.0;
-                }
-                for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
-                    objder_adjwell_[0][pvIdx] += resWell_loc.derivative(pvIdx+numEq)*dt;
-                }
-                objder_adjctrl_[0][0] += resWell_loc.derivative(control_index)*dt;
-                objval_+= resWell_loc.value()*dt;
-            }
-        }*/
+        objder_adjctrl_[0][0] = obj.derivative(control_index);
+        objval_= obj.value();
+        objder_adjres_ = 0.0;
     }
 
     // NB functionallyto for adding contribution from previous step is not taken
@@ -576,8 +562,10 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     rhsAdjointWell(){ //const BVectorWell& lambda_w){
+        // rhs_w = dobj/dwell + C^T*lam_r
         adjWell_=0.0;
-        //duneD_.mtv(lambda_w, adjWell_);// for prevois step
+        // NB! this shoould only have the explict terms in the well equations
+        //duneC_.mtv(lam_r, adjWell_);// for prevois step duneC_ is assumed to be zero for linarization for prevois step
         adjWell_-= objder_adjwell_;
     }
 
@@ -587,10 +575,13 @@ namespace Opm
     StandardWell<TypeTag>::
     //rhsAdjointRes(const BVector& lambda_r, BVector& adjRes) const{
     rhsAdjointRes(BVector& adjRes) const{
-        //adjRes += Ct_(n+1)*lambda_r_(n+1);
-        // this dould only have the explict terms in the well equations
-        //duneC_.mtv(lambda_r, adjRes); // for prevois step
+        // rhs_r +=  dobj/dres + D^T*lam_w
+        // NB! this shoould only have the explict terms in the well equations
+        //duneD_.mtv(lam_w, adjRes); // for prevois step
+        // contribution to rhs from derivative of objective function with respect to
+        // the reservoir  at present zero
         adjRes -= objder_adjres_;
+
     }
 
     template<typename TypeTag>
@@ -598,7 +589,6 @@ namespace Opm
     StandardWell<TypeTag>::objectDerivative(const BVector& lam_r, const BVectorWell & lam_w)
     {
         // obj/dctrl = obj/ctrl + CA^T*lamda_r+DA^t*lamda_w
-
         objder_ = objder_adjctrl_;
         duneCA_.umv(lam_r, objder_);
         //objder_ += objder_adjctrl_;

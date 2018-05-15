@@ -805,6 +805,9 @@ namespace Opm
             ar & perfphaserates_;
             ar & current_controls_;
             ar & perfRateSolvent_;
+            ar & well_reservoir_rates_;
+            ar & well_dissolved_gas_rates_;
+            ar & well_vaporized_oil_rates_;
             ar & is_new_well_;
             ar & segrates_;
             ar & segpress_;

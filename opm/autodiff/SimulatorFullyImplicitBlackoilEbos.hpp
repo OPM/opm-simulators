@@ -383,7 +383,8 @@ for adjoint is well changes and control changes
         std::cout << "Start Adjoint iteration" << std::endl;
         std::list<AdjointResults> adjoint_res;
         // we are after ebd step
-
+        rhs = 0.0;
+        rhs_next = 0.0;
         while (!timer.initialStep()) {
             // hopefulle the -1 is ok we ar pressent at end of the timestep we nned
             // the prevois eclipse state
