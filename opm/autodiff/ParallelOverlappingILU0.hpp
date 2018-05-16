@@ -81,6 +81,79 @@ namespace Opm
 {
     namespace detail
     {
+
+    template<class M>
+    void milu0_decomposition(M& A,
+                             std::vector<typename M::block_type>* diagonal = nullptr)
+    {
+        using block = typename M::block_type;
+
+        if( diagonal )
+        {
+            diagonal->reserve(A.N());
+        }
+
+        for ( auto irow = A.begin(), iend = A.end(); irow != iend; ++irow)
+        {
+            auto a_i_end = irow->end();
+            auto a_ik    = irow->begin();
+
+            block sum_dropped;
+            sum_dropped = 0.0;
+
+            // Eliminate entries in lower triangular matrix
+            // and store factors for L
+            for ( ; a_ik.index() < irow.index(); ++a_ik )
+            {
+                auto k = a_ik.index();
+                auto a_kk = A[k].find(k);
+                // L_ik = A_kk^-1 * A_ik
+                a_ik->rightmultiply(*a_kk);
+
+                // modify the rest of the row, everything right of a_ik
+                // a_i* -=a_ik * a_k*
+                auto a_k_end = A[k].end();
+                auto a_kj = a_kk, a_ij = a_ik;
+                ++a_kj; ++a_ij;
+
+                while ( a_kj != a_k_end)
+                {
+                    auto modifier = *a_kj;
+                    modifier.leftmultiply(*a_ik);
+
+                    while( a_ij != a_i_end && a_ij.index() < a_kj.index())
+                    {
+                        ++a_ij;
+                    }
+
+                    if ( a_ij != a_i_end && a_ij.index() == a_kj.index() )
+                    {
+                        // Value is not dropped
+                        *a_ij -= modifier;
+                        ++a_ij; ++a_kj;
+                    }
+                    else
+                    {
+                        sum_dropped += modifier;
+                        ++a_kj;
+                    }
+                }
+            }
+
+            if ( a_ik.index() != irow.index() )
+                OPM_THROW(std::logic_error, "Matrix is missing diagonal for row " << irow.index());
+
+            *a_ik -= sum_dropped;
+
+            if ( diagonal )
+            {
+                diagonal->push_back(*a_ik);
+            }
+            a_ik->invert();   // compute inverse of diagonal block
+        }
+    }
+
+
       //! compute ILU decomposition of A. A is overwritten by its decomposition
       template<class M, class CRS, class InvVector>
       void convertToCRS(const M& A, CRS& lower, CRS& upper, InvVector& inv )
