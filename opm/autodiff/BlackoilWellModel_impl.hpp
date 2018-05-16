@@ -264,6 +264,7 @@ namespace Opm {
         updatePerforationIntensiveQuantities();
 
         if (iterationIdx == 0) {
+            calculateExplicitQuantities();
             prepareTimeStep();
         }
 
@@ -272,7 +273,7 @@ namespace Opm {
         initPrimaryVariablesEvaluation();
 
         if (iterationIdx == 0) {
-            calculateExplicitQuantities();
+            //calculateExplicitQuantities();
         }
 
         if (param_.solve_welleq_initially_ && iterationIdx == 0) {
@@ -281,6 +282,7 @@ namespace Opm {
             if (initial_step_) {
                 // update the explicit quantities to get the initial fluid distribution in the well correct.
                 calculateExplicitQuantities();
+                prepareTimeStep();
                 last_report_ = solveWellEq(dt);
                 initial_step_ = false;
             }

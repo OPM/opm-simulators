@@ -124,7 +124,7 @@ namespace Opm
                                 wellrates_[np*w + p] = rate_target * distr[p];
                             }
                         } else {
-                            const double small_rate = 1e-14;
+                            const double small_rate = 0.0; //1e-14;
                             const double sign = (wells->type[w] == INJECTOR) ? 1.0 : -1.0;
                             for (int p = 0; p < np; ++p) {
                                 wellrates_[np*w + p] = small_rate * sign;
