@@ -348,4 +348,30 @@ inline std::string className<__float128>()
 { return "quad"; }
 } // namespace Dune
 
+#if HAVE_DUNE_FEM
+#include <dune/fem/io/streams/streams_inline.hh>
+
+namespace Dune {
+namespace Fem {
+template <class Traits>
+inline OutStreamInterface<Traits>&
+operator<<(OutStreamInterface<Traits>& out, quad value)
+{
+    out.writeDouble(static_cast<double>(value));
+    return out;
+}
+
+template <class Traits>
+inline InStreamInterface<Traits>&
+operator>>(InStreamInterface<Traits>& in, quad& value)
+{
+    double tmp;
+    in.readDouble(tmp);
+    value = tmp;
+    return in;
+}
+
+}} // namespace Dune, Fem
+#endif // HAVE_DUNE_FEM
+
 #endif // OPM_COMMON_QUAD_HPP
