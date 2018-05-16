@@ -23,6 +23,17 @@ void test_milu0(M& A)
     diagonal.reset(new std::vector<typename M::block_type>());
 
     Opm::detail::milu0_decomposition(ILU, diagonal.get());
+#ifdef DEBUG
+    if ( A.N() < 11)
+    {
+        Dune::printmatrix(std::cout, ILU, "ILU", "row");
+        std::cout << "Diagonal: ";
+
+        for (const auto& d : *diagonal)
+            std::cout << d << " ";
+        std::cout<<std::endl;
+    }
+#endif
     Dune::BlockVector<Dune::FieldVector<typename M::field_type, M::block_type::rows>> e(A.N()), x1(A.N()), x2(A.N()), t(A.N());
     e = 1;
     A.mv(e, x1);
@@ -143,7 +154,9 @@ void test()
     Dune::BCRSMatrix<Dune::FieldMatrix<double, bsize, bsize> > A;
     setupLaplacian(A, N);
     test_milu0(A);
+#ifdef DEBUG
     std::cout<< "Tested block size "<< bsize<<std::endl;
+#endif
 }
 
 BOOST_AUTO_TEST_CASE(MILULaplace1)
