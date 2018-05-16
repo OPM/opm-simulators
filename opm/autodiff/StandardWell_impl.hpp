@@ -668,14 +668,22 @@ namespace Opm
                     assert(number_phases_under_control == 1); // only handles single phase injection now
                     control_eq = getGTotal() - target_rate;
                 } else if (well_type_ == PRODUCER) {
-                    EvalWell rate_for_control(0.);
-                    const EvalWell& g_total = getGTotal();
-                    for (int phase = 0; phase < number_of_phases_; ++phase) {
-                        if (distr[phase] > 0.) {
-                            rate_for_control += g_total * wellVolumeFractionScaled(flowPhaseToEbosCompIdx(phase));
-                        }
+                    if (target_rate != 0.) {
+                        EvalWell rate_for_control(0.);
+                        const EvalWell& g_total = getGTotal();
+                        for (int phase = 0; phase < number_of_phases_; ++phase) {
+                            if (distr[phase] > 0.) {
+                                 rate_for_control += g_total * wellVolumeFractionScaled(flowPhaseToEbosCompIdx(phase));
+                            }
+                         }
+                         control_eq = rate_for_control - target_rate;
+                    } else {
+                        // there is some special treatment for the zero rate control well
+                        // 1. if the well can produce the specified phase, it means the well should not produce any fluid
+                        // 2. if the well can not produce the specified phase, it cause a under-determined problem, we
+                        //    basically assume the well not producing any fluid as a solution
+                        control_eq = getGTotal() - target_rate;
                     }
-                    control_eq = rate_for_control - target_rate;
                 }
                 break;
             }
