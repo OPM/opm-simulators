@@ -327,6 +327,8 @@ namespace Opm
 
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;
 
+        void updateThp(WellState& well_state) const;
+
         void assembleControlEq();
 
         // handle the non reasonable fractions due to numerical overshoot

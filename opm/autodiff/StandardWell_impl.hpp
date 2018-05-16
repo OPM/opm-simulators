@@ -1043,10 +1043,23 @@ namespace Opm
             }
         }
 
+        updateThp(well_state);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateThp(WellState& well_state) const
+    {
         // for the wells having a THP constaint, we should update their thp value
         // If it is under THP control, it will be set to be the target value.
         // TODO: a better standard is probably whether we have the table to calculate the THP value
         // TODO: it is something we need to check the output to decide.
+        const PhaseUsage& pu = phaseUsage();
         const WellControls* wc = well_controls_;
         // TODO: we should only maintain one current control either from the well_state or from well_controls struct.
         // Either one can be more favored depending on the final strategy for the initilzation of the well control
