@@ -37,6 +37,34 @@ namespace Opm
 template<class Matrix, class Domain, class Range, class ParallelInfo = Dune::Amg::SequentialInformation>
 class ParallelOverlappingILU0;
 
+template<class F>
+class ParallelOverlappingILU0Args
+    : public Dune::Amg::DefaultSmootherArgs<F>
+{
+ public:
+    ParallelOverlappingILU0Args(bool milu = false)
+        : milu_(milu)
+    {}
+    void setMilu(bool milu)
+    {
+        milu_ = milu;
+    }
+    bool getMilu() const
+    {
+        return milu_;
+    }
+    void setN(int n)
+    {
+        n_ = n;
+    }
+    int getN() const
+    {
+        return n_;
+    }
+ private:
+    bool milu_;
+    int n_;
+};
 } // end namespace Opm
 
 namespace Dune
@@ -44,6 +72,13 @@ namespace Dune
 
 namespace Amg
 {
+
+
+template<class M, class X, class Y, class C>
+struct SmootherTraits<Opm::ParallelOverlappingILU0<M,X,Y,C> >
+{
+    using Arguments = Opm::ParallelOverlappingILU0Args<typename M::field_type>;
+};
 
 /// \brief Tells AMG how to construct the Opm::ParallelOverlappingILU0 smoother
 /// \tparam Matrix The type of the Matrix.
@@ -54,17 +89,18 @@ namespace Amg
 template<class Matrix, class Domain, class Range, class ParallelInfo>
 struct ConstructionTraits<Opm::ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfo> >
 {
-    typedef Dune::SeqILU0<Matrix,Domain,Range> T;
+    typedef Opm::ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfo> T;
     typedef DefaultParallelConstructionArgs<T,ParallelInfo> Arguments;
-    typedef ConstructionTraits<T> SeqConstructionTraits;
     static inline Opm::ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfo>* construct(Arguments& args)
     {
-        return new Opm::ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfo>(args.getMatrix(),
-                                                         args.getComm(),
-                                                         args.getArgs().relaxationFactor);
+        return new T(args.getMatrix(),
+                     args.getComm(),
+                     args.getArgs().getN(),
+                     args.getArgs().relaxationFactor,
+                     args.getArgs().getMilu());
     }
 
-    static inline void deconstruct(Opm::ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfo>* bp)
+    static inline void deconstruct(T* bp)
     {
         delete bp;
     }
@@ -330,10 +366,14 @@ public:
       \param A The matrix to operate on.
       \param n ILU fill in level (for testing). This does not work in parallel.
       \param w The relaxation factor.
+      \param milu If true, the modified ilu approach is used. Dropped elements
+                  will get added to the diagonal of U to preserve the row sum
+                  for constant vectors (Ae = LUe).
     */
     template<class BlockType, class Alloc>
     ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
-                             const int n, const field_type w )
+                             const int n, const field_type w,
+                             bool milu)
         : lower_(),
           upper_(),
           inv_(),
@@ -342,7 +382,7 @@ public:
     {
         // BlockMatrix is a Subclass of FieldMatrix that just adds
         // methods. Therefore this cast should be safe.
-        init( reinterpret_cast<const Matrix&>(A), n );
+        init( reinterpret_cast<const Matrix&>(A), n, milu );
     }
 
     /*! \brief Constructor gets all parameters to operate the prec.
@@ -350,10 +390,14 @@ public:
       \param comm   communication object, e.g. Dune::OwnerOverlapCopyCommunication
       \param n ILU fill in level (for testing). This does not work in parallel.
       \param w The relaxation factor.
+      \param milu If true, the modified ilu approach is used. Dropped elements
+                  will get added to the diagonal of U to preserve the row sum
+                  for constant vectors (Ae = LUe).
     */
     template<class BlockType, class Alloc>
     ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
-                             const ParallelInfo& comm, const int n, const field_type w )
+                             const ParallelInfo& comm, const int n, const field_type w,
+                             bool milu)
         : lower_(),
           upper_(),
           inv_(),
@@ -362,7 +406,7 @@ public:
     {
         // BlockMatrix is a Subclass of FieldMatrix that just adds
         // methods. Therefore this cast should be safe.
-        init( reinterpret_cast<const Matrix&>(A), n );
+        init( reinterpret_cast<const Matrix&>(A), n, milu );
     }
 
     /*! \brief Constructor.
@@ -370,11 +414,14 @@ public:
       Constructor gets all parameters to operate the prec.
       \param A The matrix to operate on.
       \param w The relaxation factor.
+      \param milu If true, the modified ilu approach is used. Dropped elements
+                  will get added to the diagonal of U to preserve the row sum
+                  for constant vectors (Ae = LUe).
     */
     template<class BlockType, class Alloc>
     ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
-                             const field_type w)
-        : ParallelOverlappingILU0( A, 0, w )
+                             const field_type w, bool milu)
+        : ParallelOverlappingILU0( A, 0, w, milu )
     {
     }
 
@@ -384,10 +431,14 @@ public:
       \param A      The matrix to operate on.
       \param comm   communication object, e.g. Dune::OwnerOverlapCopyCommunication
       \param w      The relaxation factor.
+      \param milu If true, the modified ilu approach is used. Dropped elements
+                  will get added to the diagonal of U to preserve the row sum
+                  for constant vectors (Ae = LUe).
     */
     template<class BlockType, class Alloc>
     ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
-                             const ParallelInfo& comm, const field_type w)
+                             const ParallelInfo& comm, const field_type w,
+                             bool milu)
         : lower_(),
           upper_(),
           inv_(),
@@ -396,7 +447,7 @@ public:
     {
         // BlockMatrix is a Subclass of FieldMatrix that just adds
         // methods. Therefore this cast should be safe.
-        init( reinterpret_cast<const Matrix&>(A), 0 );
+        init( reinterpret_cast<const Matrix&>(A), 0, milu );
     }
 
     /*!
@@ -490,7 +541,7 @@ public:
     }
 
 protected:
-    void init( const Matrix& A, const int iluIteration )
+    void init( const Matrix& A, const int iluIteration, bool milu )
     {
         // (For older DUNE versions the communicator might be
         // invalid if redistribution in AMG happened on the coarset level.
@@ -519,11 +570,21 @@ protected:
             if( iluIteration == 0 ) {
                 // create ILU-0 decomposition
                 ILU.reset( new Matrix( A ) );
-                bilu0_decomposition( *ILU );
+                if ( milu )
+                {
+                    detail::milu0_decomposition ( *ILU );
+                }else
+                {
+                    bilu0_decomposition( *ILU );
+                }
             }
             else {
                 // create ILU-n decomposition
                 ILU.reset( new Matrix( A.N(), A.M(), Matrix::row_wise) );
+                if ( milu )
+                {
+                    OpmLog::warning("MILU_N_NOT_SUPPORTED", "MILU variant only supported for zero fill-in");
+                }
                 bilu_decomposition( A, iluIteration, *ILU );
             }
         }

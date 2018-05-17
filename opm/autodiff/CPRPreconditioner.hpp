@@ -64,6 +64,7 @@ struct CPRParameter
     double cpr_relax_;
     double cpr_solver_tol_;
     int cpr_ilu_n_;
+    bool cpr_ilu_milu_;
     int cpr_max_ell_iter_;
     bool cpr_use_amg_;
     bool cpr_use_bicgstab_;
@@ -80,6 +81,7 @@ struct CPRParameter
         cpr_relax_          = param.getDefault("cpr_relax", cpr_relax_);
         cpr_solver_tol_     = param.getDefault("cpr_solver_tol", cpr_solver_tol_);
         cpr_ilu_n_          = param.getDefault("cpr_ilu_n", cpr_ilu_n_);
+        cpr_ilu_milu_       = param.getDefault("ilu_milu", cpr_ilu_milu_);
         cpr_max_ell_iter_   = param.getDefault("cpr_max_elliptic_iter",cpr_max_ell_iter_);
         cpr_use_amg_        = param.getDefault("cpr_use_amg", cpr_use_amg_);
         cpr_use_bicgstab_   = param.getDefault("cpr_use_bicgstab", cpr_use_bicgstab_);
@@ -92,6 +94,7 @@ struct CPRParameter
         cpr_relax_          = 1.0;
         cpr_solver_tol_     = 1e-2;
         cpr_ilu_n_          = 0;
+        cpr_ilu_milu_       = false;
         cpr_max_ell_iter_   = 25;
         cpr_use_amg_        = true;
         cpr_use_bicgstab_   = true;
@@ -103,6 +106,31 @@ struct CPRParameter
 
 namespace ISTLUtility
 {
+
+template<class T>
+void setILUParameters(Opm::ParallelOverlappingILU0Args<T>& args,
+                      const CPRParameter& params)
+{
+    args.setN(params.cpr_ilu_n_);
+    args.setMilu(params.cpr_ilu_milu_);
+}
+
+template<class T>
+void setILUParameters(Opm::ParallelOverlappingILU0Args<T>& args,
+                      bool milu, int n=0)
+{
+    args.setN(n);
+    args.setMilu(milu);
+}
+
+template<class S, class P>
+void setILUParameters(S&, const P&)
+{}
+
+template<class S, class P>
+void setILUParameters(S&, bool, int)
+{}
+
 ///
 /// \brief A traits class for selecting the types of the preconditioner.
 ///
@@ -167,9 +195,9 @@ struct CPRSelector<M,X,Y,Dune::Amg::SequentialInformation>
 //! \param relax The relaxation factor to use.
 template<class M, class X, class C>
 std::shared_ptr<ParallelOverlappingILU0<M,X,X,C> >
-createILU0Ptr(const M& A, const C& comm, double relax)
+createILU0Ptr(const M& A, const C& comm, double relax, bool milu)
 {
-    return std::make_shared<ParallelOverlappingILU0<M,X,X,C> >(A, comm, relax);
+    return std::make_shared<ParallelOverlappingILU0<M,X,X,C> >(A, comm, relax, milu);
 }
 //! \brief Creates and initializes a shared pointer to an ILUn preconditioner.
 //! \param A     The matrix of the linear system to solve.
@@ -177,25 +205,28 @@ createILU0Ptr(const M& A, const C& comm, double relax)
 //! \param relax The relaxation factor to use.
 template<class M, class X, class C>
 std::shared_ptr<ParallelOverlappingILU0<M,X,X,C> >
-createILUnPtr(const M& A, const C& comm, int ilu_n, double relax)
+createILUnPtr(const M& A, const C& comm, int ilu_n, double relax, bool milu)
 {
-    return std::make_shared<ParallelOverlappingILU0<M,X,X,C> >( A, comm, ilu_n, relax);
+    return std::make_shared<ParallelOverlappingILU0<M,X,X,C> >( A, comm, ilu_n, relax, milu );
 }
 /// \brief Creates the elliptic preconditioner (ILU0)
 /// \param Ae    The matrix of the elliptic system.
 /// \param relax The relaxation parameter for ILU0.
+/// \param milu  If true, the modified ilu approach is used. Dropped elements
+///              will get added to the diagonal of U to preserve the row sum
+///              for constant vectors (Ae = LUe).
 /// \param comm  The object describing the parallelization information and communication.
 template<class M, class X=typename M::range_type, class P>
 typename CPRSelector<M,X,X,P>::EllipticPreconditionerPointer
 createEllipticPreconditionerPointer(const M& Ae, double relax,
-                                    const P& comm)
+                                    bool milu, const P& comm)
 {
     typedef typename CPRSelector<M,X,X,P >
         ::EllipticPreconditioner ParallelPreconditioner;
 
     typedef typename CPRSelector<M,X,X,P>
         ::EllipticPreconditionerPointer EllipticPreconditionerPointer;
-    return EllipticPreconditionerPointer(new ParallelPreconditioner(Ae, comm, relax));
+    return EllipticPreconditionerPointer(new ParallelPreconditioner(Ae, comm, relax, milu));
 }
 
 template < class C, class Op, class P, class S, std::size_t index >
@@ -220,13 +251,14 @@ createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
     SmootherArgs  smootherArgs;
     smootherArgs.iterations = 1;
     smootherArgs.relaxationFactor = relax;
+    setILUParameters(smootherArgs, params);
 
     amgPtr.reset( new AMG( params, opA, criterion, smootherArgs, comm ) );
 }
 
 template < class C, class Op, class P, class AMG >
 inline void
-createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm, std::unique_ptr< AMG >& amgPtr)
+createAMGPreconditionerPointer(Op& opA, const double relax, const bool milu, const P& comm, std::unique_ptr< AMG >& amgPtr)
 {
     // TODO: revise choice of parameters
     int coarsenTarget=1200;
@@ -243,6 +275,7 @@ createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm, std::
     SmootherArgs  smootherArgs;
     smootherArgs.iterations = 1;
     smootherArgs.relaxationFactor = relax;
+    setILUParameters(smootherArgs, milu);
 
     amgPtr.reset( new AMG(opA, criterion, smootherArgs, comm ) );
 }
@@ -254,7 +287,7 @@ createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm, std::
 //  \param amgPtr  The unique_ptr to be filled (return)
 template < int pressureIndex=0, class Op, class P, class AMG >
 inline void
-createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std::unique_ptr< AMG >& amgPtr )
+createAMGPreconditionerPointer( Op& opA, const double relax, const bool milu, const P& comm, std::unique_ptr< AMG >& amgPtr )
 {
     // type of matrix
     typedef typename Op::matrix_type  M;
@@ -268,7 +301,7 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
     // The coarsening criterion used in the AMG
     typedef Dune::Amg::CoarsenCriterion<CritBase> Criterion;
 
-    createAMGPreconditionerPointer<Criterion>(opA, relax, comm, amgPtr);
+    createAMGPreconditionerPointer<Criterion>(opA, relax, milu, comm, amgPtr);
 }
 
 } // end namespace ISTLUtility
@@ -370,10 +403,10 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
 
             // create the preconditioner for the whole system.
             if( param_.cpr_ilu_n_ == 0 ) {
-                pre_ = ISTLUtility::createILU0Ptr<M,X>( A_, comm, param_.cpr_relax_ );
+                pre_ = ISTLUtility::createILU0Ptr<M,X>( A_, comm, param_.cpr_relax_, param_.cpr_ilu_milu_ );
             }
             else {
-                pre_ = ISTLUtility::createILUnPtr<M,X>( A_, comm, param_.cpr_ilu_n_, param_.cpr_relax_);
+                pre_ = ISTLUtility::createILUnPtr<M,X>( A_, comm, param_.cpr_ilu_n_, param_.cpr_relax_, param_.cpr_ilu_milu_);
             }
         }
 
@@ -531,11 +564,11 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
         {
             if( amg )
             {
-                ISTLUtility::createAMGPreconditionerPointer( *opAe_ , param_.cpr_relax_, comm, amg_ );
+                ISTLUtility::createAMGPreconditionerPointer( *opAe_ , param_.cpr_relax_, param_.cpr_ilu_milu_, comm, amg_ );
             }
             else
             {
-                precond_ = ISTLUtility::createEllipticPreconditionerPointer<M,X>( Ae_, param_.cpr_relax_, comm);
+                precond_ = ISTLUtility::createEllipticPreconditionerPointer<M,X>( Ae_, param_.cpr_relax_, param_.cpr_ilu_milu_, comm);
             }
        }
     };

@@ -44,6 +44,7 @@ namespace Opm
         int    linear_solver_restart_;
         int    linear_solver_verbosity_;
         int    ilu_fillin_level_;
+        bool   ilu_milu_;
         bool   newton_use_gmres_;
         bool   require_full_sparsity_pattern_;
         bool   ignoreConvergenceFailure_;
@@ -69,6 +70,7 @@ namespace Opm
             linear_solver_use_amg_    = param.getDefault("linear_solver_use_amg", linear_solver_use_amg_ );
             ilu_relaxation_           = param.getDefault("ilu_relaxation", ilu_relaxation_ );
             ilu_fillin_level_         = param.getDefault("ilu_fillin_level",  ilu_fillin_level_ );
+            ilu_milu_             = param.getDefault("ilu_milu", ilu_milu_);
 
             // Check whether to use cpr approach
             const std::string cprSolver = "cpr";
@@ -89,6 +91,7 @@ namespace Opm
             linear_solver_use_amg_    = false;
             ilu_fillin_level_         = 0;
             ilu_relaxation_           = 0.9;
+            ilu_milu_                 = false;
         }
     };
 
