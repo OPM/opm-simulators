@@ -77,6 +77,21 @@ void test_milu0(M& A)
 #endif
         BOOST_ASSERT(point_difference < 1e-12);
     }
+
+    // Test that (LU)^-1Ae=e
+    A.mv(e, x1);
+    bilu_backsolve(ILU, x2, x1);
+    diff = x2;
+    diff -= e;
+
+    for ( std::size_t i = 0, end = A.N(); i < end; ++i)
+    {
+        auto point_difference = diff[i].two_norm();
+#ifdef DEBUG
+        std::cout<<"index "<<i<<" size "<<diff.size()<<" point_difference "<<point_difference<<std::endl;
+#endif
+        BOOST_CHECK_CLOSE(x2[i].two_norm(), e[i].two_norm(), 1e-12);
+    }
 }
 
 template<class B, class Alloc>
