@@ -157,6 +157,11 @@ public:
         return thpres_[equilRegion1Idx*numEquilRegions_ + equilRegion2Idx];
     }
 
+    const std::vector<Scalar>& data() const {
+        return thpres_;
+    }
+
+
 private:
     // compute the defaults of the threshold pressures using the initial condition
     void computeDefaultThresholdPressures_()
