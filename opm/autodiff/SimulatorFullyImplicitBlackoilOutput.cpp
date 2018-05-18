@@ -24,7 +24,9 @@
 #include <opm/common/data/SimulationDataContainer.hpp>
 
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+#include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/data/Cells.hpp>
+#include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/autodiff/Compat.hpp>
@@ -181,7 +183,7 @@ namespace Opm
             const WellStateFullyImplicitBlackoil wellState_;
             data::Solution simProps_;
             std::map<std::string, double> miscSummaryData_;
-            std::map<std::string, std::vector<double>> extraRestartData_;
+            RestartValue::ExtraVector extraRestartData_;
             const bool substep_;
 
             explicit WriterCall( BlackoilOutputWriter& writer,
@@ -190,7 +192,7 @@ namespace Opm
                                  const WellStateFullyImplicitBlackoil& wellState,
                                  const data::Solution& simProps,
                                  const std::map<std::string, double>& miscSummaryData,
-                                 const std::map<std::string, std::vector<double>>& extraRestartData,
+                                 const RestartValue::ExtraVector& extraRestartData,
                                  bool substep)
                 : writer_( writer ),
                   timer_( timer.clone() ),
@@ -222,7 +224,7 @@ namespace Opm
                   const SimulationDataContainer& localState,
                   const WellStateFullyImplicitBlackoil& localWellState,
                   const std::map<std::string, double>& miscSummaryData,
-                  const std::map<std::string, std::vector<double>>& extraRestartData,
+                  const RestartValue::ExtraVector& extraRestartData,
                   bool substep)
     {
         data::Solution localCellData{};
@@ -246,7 +248,7 @@ namespace Opm
                   const data::Solution& localCellData,
                   const WellStateFullyImplicitBlackoil& localWellState,
                   const std::map<std::string, double>& miscSummaryData,
-                  const std::map<std::string, std::vector<double>>& extraRestartData,
+                  const RestartValue::ExtraVector& extraRestartData,
                   bool substep)
     {
         // VTK output (is parallel if grid is parallel)
@@ -318,7 +320,7 @@ namespace Opm
                         const WellStateFullyImplicitBlackoil& wellState,
                         const data::Solution& simProps,
                         const std::map<std::string, double>& miscSummaryData,
-                        const std::map<std::string, std::vector<double>>& extraRestartData,
+                        const RestartValue::ExtraVector& extraRestartData,
                         bool substep)
     {
         // Matlab output
@@ -335,15 +337,21 @@ namespace Opm
             } else {
                 // ... insert "extra" data (KR, VISC, ...)
                 const int reportStepForOutput = substep ? timer.reportStepNum() + 1 : timer.reportStepNum();
+                RestartValue restart_value(simProps, wellState.report(phaseUsage_, globalCellIdxMap_));
+                for (const auto& extra_pair : extraRestartData) {
+                    const RestartKey& restart_key = extra_pair.first;
+                    const std::vector<double>& data = extra_pair.second;
+                    restart_value.addExtra(restart_key.key, restart_key.dim, data);
+                }
+                // Here we should check if the THPRES option is active, and in that case
+                // add the THPRES values to the extra values object.
                 eclIO_->writeTimeStep(reportStepForOutput,
                                       substep,
                                       timer.simulationTimeElapsed(),
-                                      simProps,
-                                      wellState.report(phaseUsage_, globalCellIdxMap_),
+                                      restart_value,
                                       miscSummaryData,
                                       {}, //regionData
                                       {}, //blockData
-                                      extraRestartData,
                                       restart_double_si_);
             }
         }

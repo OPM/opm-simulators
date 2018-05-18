@@ -22,7 +22,7 @@
 #include <unordered_set>
 
 #include <opm/common/data/SimulationDataContainer.hpp>
-
+#include <opm/output/eclipse/RestartValue.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/simulator/WellState.hpp>
@@ -30,6 +30,7 @@
 
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/autodiff/Compat.hpp>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 
@@ -645,8 +646,8 @@ namespace Opm
             if( isIORank() )
             {
                 // copy values from globalCellData to globalReservoirState
-                const std::map<std::string, std::vector<double> > no_extra_data;
-                solutionToSim(*globalCellData_, no_extra_data, phaseUsage_, *globalReservoirState_);
+                RestartValue restart_value(*globalCellData_, {});
+                solutionToSim(restart_value,  phaseUsage_, *globalReservoirState_);
             }
             return isIORank();
         }

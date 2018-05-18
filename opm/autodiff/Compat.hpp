@@ -21,6 +21,7 @@
 #ifndef OPM_SIMULATORS_COMPAT_HPP
 #define OPM_SIMULATORS_COMPAT_HPP
 
+#include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
@@ -59,8 +60,7 @@ namespace Opm {
     /// Copies the following fields from sol into state (all conditionally):
     ///   PRESSURE, TEMP, SWAT, SGAS, RS, RV, SSOL
     /// Also handles extra data such as hysteresis parameters, SOMAX, etc.
-    void solutionToSim( const data::Solution& sol,
-                        const std::map<std::string,std::vector<double> >& extra,
+    void solutionToSim( const RestartValue& restart_value,
                         PhaseUsage phases,
                         SimulationDataContainer& state );
 
