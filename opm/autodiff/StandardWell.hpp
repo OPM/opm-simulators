@@ -61,7 +61,11 @@ namespace Opm
         // polymer and energy conservation do not need to be considered explicitly
         static const int numPolymerEq = has_polymer ? 1 : 0;
         static const int numEnergyEq = has_energy ? 1 : 0;
-        static const int numWellEq = numEq + 1 - numPolymerEq - numEnergyEq;
+        // number of the conservation equations
+        static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq;
+        // number of the well control equations
+        static const int numWellControlEq = 1;
+        static const int numWellEq = numWellConservationEq + numWellControlEq;
 
         // the positions of the primary variables for StandardWell
         // the first one is the weighted total rate (G_t), the second and the third ones are F_w and F_g,
@@ -80,7 +84,7 @@ namespace Opm
         // the index for Bhp in primary variables and also the index of well control equation
         // they both will be the last one in their respective system.
         // TODO: we should have indices for the well equations and well primary variables separately
-        static const int Bhp = numWellEq - 1;
+        static const int Bhp = numWellEq - numWellControlEq;
 
         using typename Base::Scalar;
         using typename Base::ConvergenceReport;
@@ -187,6 +191,8 @@ namespace Opm
         using Base::scalingFactor;
 
         // protected member variables from the Base class
+        using Base::current_step_;
+        using Base::well_ecl_;
         using Base::vfp_properties_;
         using Base::gravity_;
         using Base::param_;

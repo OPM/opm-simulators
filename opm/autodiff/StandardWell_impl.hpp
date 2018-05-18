@@ -35,8 +35,10 @@ namespace Opm
     , perf_pressure_diffs_(number_of_perforations_)
     , primary_variables_(numWellEq, 0.0)
     , primary_variables_evaluation_(numWellEq) // the number of the primary variables
-    , F0_(num_components_)
+    , F0_(numWellConservationEq)
     {
+        assert(num_components_ == numWellConservationEq);
+
         duneB_.setBuildMode( OffDiagMatWell::row_wise );
         duneC_.setBuildMode( OffDiagMatWell::row_wise );
         invDuneD_.setBuildMode( DiagMatWell::row_wise );
@@ -602,7 +604,7 @@ namespace Opm
         }
 
         // add vol * dF/dt + Q to the well equations;
-        for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
+        for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {
             EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
             resWell_loc += getQs(componentIdx) * well_efficiency_factor_;
             for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
@@ -654,34 +656,45 @@ namespace Opm
             }
             case SURFACE_RATE:
             {
-                int number_phases_under_control = 0;
-                const double* distr = well_controls_get_current_distr(well_controls_);
-                for (int phase = 0; phase < number_of_phases_; ++phase) {
-                    if (distr[phase] > 0.0) {
-                        ++number_phases_under_control;
-                    }
-                }
-                assert(number_phases_under_control > 0);
-
                 const double target_rate = well_controls_get_current_target(well_controls_); // surface rate target
                 if (well_type_ == INJECTOR) {
-                    assert(number_phases_under_control == 1); // only handles single phase injection now
+                    const WellInjectionProperties& injection = well_ecl_->getInjectionProperties(current_step_);
+                    // only handles single phase injection now
+                    assert(injection.injectorType != WellInjector::MULTI);
                     control_eq = getGTotal() - target_rate;
                 } else if (well_type_ == PRODUCER) {
                     if (target_rate != 0.) {
                         EvalWell rate_for_control(0.);
                         const EvalWell& g_total = getGTotal();
+                        // a variable to check if we are producing any targeting fluids
+                        double sum_fraction = 0.;
+                        const double* distr = well_controls_get_current_distr(well_controls_);
                         for (int phase = 0; phase < number_of_phases_; ++phase) {
                             if (distr[phase] > 0.) {
-                                 rate_for_control += g_total * wellVolumeFractionScaled(flowPhaseToEbosCompIdx(phase));
+                                const EvalWell fraction_scaled = wellVolumeFractionScaled(flowPhaseToEbosCompIdx(phase));
+                                rate_for_control += g_total * fraction_scaled;
+                                sum_fraction += fraction_scaled.value();
                             }
-                         }
-                         control_eq = rate_for_control - target_rate;
+                        }
+                        if (sum_fraction > 0.) {
+                            control_eq = rate_for_control - target_rate;
+                        } else {
+                            // we are not producing any fluids that specfied for a non-zero target
+                            // which makes it a mission impossible, we will set all the rates to be zero for this case
+                            const std::string msg = " Setting all rates to be zero for well " + name()
+                                                  + " due to un-solvable situation. There is non-zero target for the phase "
+                                                  + " that does not exist in the wellbore for the situation";
+                            OpmLog::warning("NON_SOLVABLE_WELL_SOLUTION", msg);
+
+                            control_eq = getGTotal() - target_rate;
+                        }
                     } else {
                         // there is some special treatment for the zero rate control well
-                        // 1. if the well can produce the specified phase, it means the well should not produce any fluid
+                        // 1. if the well can produce the specified phase, it means the well should not produce any fluid, this
+                        //    is a fine situation.
                         // 2. if the well can not produce the specified phase, it cause a under-determined problem, we
                         //    basically assume the well not producing any fluid as a solution
+                        // With both the situation, we can use the following well equation
                         control_eq = getGTotal() - target_rate;
                     }
                 }
@@ -689,19 +702,12 @@ namespace Opm
             }
             case RESERVOIR_RATE:
             {
-                // TODO: repeated code here, while hopefully it gives better readability
-                int number_phases_under_control = 0;
-                const double* distr = well_controls_get_current_distr(well_controls_);
-                for (int phase = 0; phase < number_of_phases_; ++phase) {
-                    if (distr[phase] > 0.0) {
-                        ++number_phases_under_control;
-                    }
-                }
-                assert(number_phases_under_control > 0);
-
                 const double target_rate = well_controls_get_current_target(well_controls_); // reservoir rate target
                 if (well_type_ == INJECTOR) {
-                    assert(number_phases_under_control == 1);
+                    const WellInjectionProperties& injection = well_ecl_->getInjectionProperties(current_step_);
+                    // only handles single phase injection now
+                    assert(injection.injectorType != WellInjector::MULTI);
+                    const double* distr = well_controls_get_current_distr(well_controls_);
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
                         if (distr[phase] > 0.0) {
                             control_eq = getGTotal() * scalingFactor(phase) - target_rate;
@@ -1669,7 +1675,7 @@ namespace Opm
     StandardWell<TypeTag>::
     computeAccumWell()
     {
-        for (int eq_idx = 0; eq_idx < num_components_; ++eq_idx) {
+        for (int eq_idx = 0; eq_idx < numWellConservationEq; ++eq_idx) {
             F0_[eq_idx] = wellSurfaceVolumeFraction(eq_idx).value();
         }
     }
