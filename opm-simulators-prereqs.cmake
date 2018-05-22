@@ -34,7 +34,7 @@ set (opm-simulators_DEPS
   # PETSc numerical backend
   "PETSc"
   # Tim Davis' SuiteSparse archive
-  "SuiteSparse COMPONENTS umfpack"
+  "SuiteSparse COMPONENTS umfpack REQUIRED"
   # SuperLU direct solver
   "SuperLU"
   # OPM dependency
