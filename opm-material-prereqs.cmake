@@ -20,6 +20,7 @@ set (opm-material_DEPS
   "dune-common REQUIRED"
   # valgrind client requests
   "Valgrind"
+  "Boost COMPONENTS filesystem"
   )
 
 find_package_deps(opm-material)
