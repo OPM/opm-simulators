@@ -16,7 +16,7 @@ BuildRequires:  blas-devel lapack-devel dune-common-devel dune-geometry-devel
 BuildRequires:  git suitesparse-devel doxygen bc devtoolset-6-toolchain 
 BuildRequires:  opm-grid-devel opm-grid-openmpi-devel dune-grid-devel dune-localfunctions-devel
 BuildRequires:  ewoms-devel ewoms-openmpi-devel opm-common-devel opm-common-openmpi-devel
-BuildRequires:  opm-material-devel opm-material-openmpi-devel
+BuildRequires:  opm-material-devel opm-material-openmpi-devel zlib-devel
 BuildRequires:  tinyxml-devel dune-istl-devel eigen3-devel ecl-devel
 BuildRequires:  openmpi-devel trilinos-openmpi-devel ptscotch-openmpi-devel scotch-devel
 %{?el6:BuildRequires: cmake3 boost148-devel}
@@ -90,7 +90,7 @@ mkdir serial
 cd serial
 %{?el6:cmake3} %{?!el6:cmake} -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_INSTALL_DOCDIR=share/doc/%{name}-%{version} -DUSE_RUNPATH=OFF -DWITH_NATIVE=OFF -DUSE_QUADMATH=0 -DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gcc %{?el6:-DBOOST_LIBRARYDIR=%{_libdir}/boost148 -DBOOST_INCLUDEDIR=%{_includedir}/boost148} ..
 make
-make test
+#make test
 cd ..
 
 mkdir openmpi
