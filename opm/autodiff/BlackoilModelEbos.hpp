@@ -360,8 +360,16 @@ namespace Opm {
                 // Create matrix for external linear solvers.
                 const auto& ebosJac_org = ebosSimulator_.model().linearizer().matrix();
                 auto ebosJac_trans = ebosJac_org;
+                auto adjRhs_cp = adjRhs;
                 Dune::MatrixVector::transpose(ebosJac_org, ebosJac_trans);
-                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJac);
+                const auto left_trans = getBlockTransform(2);
+                auto  right_trans = left_trans;
+                Dune::MatrixVector::transpose(left_trans, right_trans);
+                if(param_.use_amgcl_){
+                    multBlocksInMatrix(ebosJac_trans, right_trans, false);
+                    //multBlocksVector(adjRhs_cp, left_trans);
+                }
+                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJac_trans);
                 //CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(true);
 
                 // Copy right-hand side (blocked structure -> unblocked).
@@ -382,7 +390,9 @@ namespace Opm {
                     const int maxiter = 150;
                     int    iters;
                     double error;
-                    LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
+                    LinearSolverAmgcl solver;
+                    //LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
+                    solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
                     const_cast<int&>(linear_iters_last_solve_) = iters;
                 } else if (param_.use_umfpack_) {
                     // Call UMFPACK to solve system
@@ -399,7 +409,9 @@ namespace Opm {
                         x[cell][phase] = sol[np*cell + phase];
                     }
                 }
-
+                if(param_.use_amgcl_){
+                    multBlocksVector(x, right_trans);
+                }
             }else{
 
                 // Solve system.
@@ -788,7 +800,7 @@ namespace Opm {
             std::vector<double> val;
         };
 
-        void multBlocks(Mat& ebosJac,const MatrixBlockType& trans,bool left=true) const {
+        void multBlocksInMatrix(Mat& ebosJac,const MatrixBlockType& trans,bool left=true) const {
             const int n = ebosJac.N();
             const int np = numPhases();
             for (int row_index = 0; row_index < n; ++row_index) {
@@ -803,6 +815,13 @@ namespace Opm {
                         block = block.rightmultiply(trans);
                     }
                 }
+            }
+        }
+        void multBlocksVector(BVector& ebosResid_cp,const MatrixBlockType& left_trans) const{
+            for( auto& bvec: ebosResid_cp){
+                auto bvec_new=bvec;
+                left_trans.mv(bvec, bvec_new);
+                bvec=bvec_new;
             }
         }
         /// Build a CRS matrix (not block-structured) from
@@ -932,43 +951,13 @@ namespace Opm {
                 // Create matrix for external linear solvers.
                 //const bool do_transpose=false;
                 const int np = numPhases();
-                MatrixBlockType left_trans = 0.0;
-                int meth_trans = 2;
-                switch(meth_trans) {
-                case 1:{
-                    //cpr
-                    for (int row = 0; row < np; ++row) {
-                        for (int col = 0; col < np; ++col) {
-                            if(row==0){
-                                left_trans[row][col]=1.0;
-                            }else{
-                                if(row==col){
-                                    left_trans[row][col]=1.0;
-                                }
-                            }
-                        }
-                    }
-                }
-                    //permute equations
-                case 2: {
-                    for (int row = 0; row < np; ++row) {
-                        for (int col = 0; col < np; ++col) {
-                            if(row!=col){
-                                left_trans[row][col]=1.0;
-                            }
-                        }
-                    }
-                }
-                }
+                MatrixBlockType left_trans = getBlockTransform(2);
                 bool print_matrix_system=false;
                 auto ebosJac_cp = ebosSimulator_.model().linearizer().matrix();
                 auto ebosResid_cp = ebosResid;
-                multBlocks(ebosJac_cp, left_trans,true);
-                for( auto& bvec: ebosResid_cp){
-                    auto bvec_new=bvec;
-                    left_trans.mv(bvec, bvec_new);
-                    bvec=bvec_new;
-                }
+                multBlocksInMatrix(ebosJac_cp, left_trans,true);
+                multBlocksVector(ebosResid_cp, left_trans);
+
                 if(print_matrix_system){
                     std::ofstream filem("matrix.txt");
                     Dune::writeMatrixMarket(ebosJac_cp, filem);
@@ -1004,7 +993,9 @@ namespace Opm {
                     const int maxiter = istlSolver().getParameters().linear_solver_maxiter_;
                     int    iters;
                     double error;
-                    LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
+                    LinearSolverAmgcl solver;
+                    //LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
+                    solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
                     const_cast<int&>(linear_iters_last_solve_) = iters;
                 } else if (param_.use_umfpack_) {
                     // Call UMFPACK to solve system
@@ -1528,7 +1519,37 @@ namespace Opm {
             assert( istlSolver_ );
             return *istlSolver_;
         }
-
+        MatrixBlockType getBlockTransform(int meth_trans) const{
+            int np = numPhases();
+            MatrixBlockType left_trans=0.0;
+            switch(meth_trans) {
+            case 1:{
+                //cpr
+                for (int row = 0; row < np; ++row) {
+                    for (int col = 0; col < np; ++col) {
+                        if(row==0){
+                            left_trans[row][col]=1.0;
+                        }else{
+                            if(row==col){
+                                left_trans[row][col]=1.0;
+                            }
+                        }
+                    }
+                }
+            }
+                //permute equations
+            case 2: {
+                for (int row = 0; row < np; ++row) {
+                    for (int col = 0; col < np; ++col) {
+                        if(row!=col){
+                            left_trans[row][col]=1.0;
+                        }
+                    }
+                }
+            }
+            }
+            return left_trans;
+        }
         // ---------  Data members  ---------
 
         Simulator& ebosSimulator_;

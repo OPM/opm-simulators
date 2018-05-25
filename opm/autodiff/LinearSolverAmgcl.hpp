@@ -29,7 +29,12 @@ namespace Opm
     class LinearSolverAmgcl
     {
     public:
-        static void solve(const int sz,
+        LinearSolverAmgcl(int block_size = 2):
+            block_size_(block_size)
+        {
+
+        }
+        void solve(const int sz,
                           const std::vector<int>& ptr,
                           const std::vector<int>& col,
                           const std::vector<double>& val,
@@ -39,6 +44,22 @@ namespace Opm
                           std::vector<double>& sol,
                           int& iters,
                           double& error);
+    private:
+        void solveCPR(const int sz,
+                      const std::vector<int>& ptr,
+                      const std::vector<int>& col,
+                      const std::vector<double>& val,
+                      const std::vector<double>& rhs,
+                      const double tolerance,
+                      const int maxiter,
+                      std::vector<double>& sol,
+                      int& iters,
+                      double& error);
+        void hackScalingFactors(const int sz,
+                                const std::vector<int>& ptr,
+                                std::vector<double>& val,
+                                std::vector<double>& rhs);
+        int block_size_;
     };
 
 } // namespace Opm
