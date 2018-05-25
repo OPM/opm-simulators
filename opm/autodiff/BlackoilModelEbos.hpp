@@ -131,6 +131,7 @@ namespace Opm {
         static const int solventSaturationIdx = Indices::solventSaturationIdx;
         static const int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
         static const int temperatureIdx = Indices::temperatureIdx;
+        static const int pressureSwitchIdx = Indices::pressureSwitchIdx;
 
         typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
         typedef Dune::FieldMatrix<Scalar, numEq, numEq >        MatrixBlockType;
@@ -357,8 +358,11 @@ namespace Opm {
                 }
 
                 // Create matrix for external linear solvers.
-                bool do_transpose=true;
-                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(do_transpose);
+                //const auto& ebosJac_org = ebosSimulator_.model().linearizer().matrix();
+                //auto ebosJac_trans = ebosJac_org;
+                //Dune::MatrixVector::transpose(ebosJac_org, ebosJac_trans);
+                //CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJac);
+                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(true);
 
                 // Copy right-hand side (blocked structure -> unblocked).
                 const int n = adjRhs.size();
@@ -759,22 +763,65 @@ namespace Opm {
                 , val(nnz, 0.0)
             {
             }
-
+            void print(){
+                {
+                    std::ofstream file("ptr.txt");
+                    for(auto x: ptr){
+                        file << x << std::endl;
+                    }
+                }
+                {
+                    std::ofstream file("col.txt");
+                    for(auto x: col){
+                        file << x << std::endl;
+                    }
+                }
+                {
+                    std::ofstream file("val.txt");
+                    for(auto x: val){
+                        file << x << std::endl;
+                    }
+                }
+            }
             std::vector<int>    ptr;
             std::vector<int>    col;
             std::vector<double> val;
         };
 
+        void multBlocks(Mat& ebosJac,const MatrixBlockType& trans,bool left=true) const {
+            const int n = ebosJac.N();
+            const int np = numPhases();
+            for (int row_index = 0; row_index < n; ++row_index) {
+                auto& row = ebosJac[row_index];
+                auto* dataptr = row.getptr();
+                //auto* indexptr = row.getindexptr();
+                for (int brow = 0; brow < np; ++brow) {
+                    for (int elem = 0; elem < row.N(); ++elem) {
+                        auto& block = dataptr[elem];
+                        if(left){
+                            block = block.leftmultiply(trans);
+                        }else{
+                            block = block.rightmultiply(trans);
+                        }
 
+                    }
+                }
+            }
+        }
         /// Build a CRS matrix (not block-structured) from
         /// the block structured system matrix.
-        CRSMatrixHelper buildCRSMatrixNoBlocks(const bool do_transpose) const
+        //CRSMatrixHelper buildCRSMatrixNoBlocks(const Mat& ebosJac)  const
+        CRSMatrixHelper buildCRSMatrixNoBlocks(bool do_transpose)  const
         {
+
             const auto& ebosJac_org = ebosSimulator_.model().linearizer().matrix();
             auto ebosJac = ebosJac_org;
             if(do_transpose){
                 Dune::MatrixVector::transpose(ebosJac_org, ebosJac);
             }
+
+            //std::ofstream file("matrix.txt");
+            //Dune::writeMatrixMarket(ebosJac, file)
 #if 1
             const int n = ebosJac.N();
             const int np = numPhases();
@@ -787,13 +834,15 @@ namespace Opm {
                 const auto& row = ebosJac[row_index];
                 const auto* dataptr = row.getptr();
                 const auto* indexptr = row.getindexptr();
+                //for (int brow = np-1; brow > -1; --brow) {
                 for (int brow = 0; brow < np; ++brow) {
                     A.ptr[row_index*np + brow + 1] = A.ptr[row_index*np + brow] + row.N() * np;
                     for (int elem = 0; elem < row.N(); ++elem) {
                         const int istlcol = indexptr[elem];
                         const auto& block = dataptr[elem];
-                        for (int bcol = 0; bcol < np; ++bcol) {
-                            A.val[index] = block[brow][bcol];
+                        for (int bcol = 0; bcol < np; ++bcol) {                            
+                            //A.val[index] = block[brow][bcol];
+                            A.val[index] = block[np - brow - 1][bcol];
                             A.col[index] = np*istlcol + bcol;
                             ++index;
                         }
@@ -828,7 +877,11 @@ namespace Opm {
                         const int istlcol = indexptr[elem];
                         const auto& block = dataptr[elem];
                         for (int bcol = 0; bcol < np; ++bcol) {
-                            const double val = block[brow][bcol];
+                             if(form_pressure){
+                                const double val = block[brow][bcol];
+                             }else{
+                                const double val = block[np - brow - 1][bcol];
+                             }
                             if (val != 0.0) {
                                 A.val.push_back(val);
                                 A.col.push_back(np*istlcol + bcol);
@@ -880,25 +933,64 @@ namespace Opm {
                 }
 
                 // Create matrix for external linear solvers.
-                const bool do_transpose=false;
-                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(do_transpose);
+                //const bool do_transpose=false;
+                const int np = numPhases();
+                MatrixBlockType cpr_trans = 0.0;
+                int trans = 2;
+                switch(trans) {
+                case 1:{
+                    //cpr
+                    for (int row = 0; row < np; ++row) {
+                        for (int col = 0; col < np; ++col) {
+                            if(row==0){
+                                cpr_trans[row][col]=1.0;
+                            }else{
+                                if(row==col){
+                                    cpr_trans[row][col]=1.0;
+                                }
+                            }
+                        }
+                    }
+                }
+                    //permute equations
+                case 2: {
+                    for (int row = 0; row < np; ++row) {
+                        for (int col = 0; col < np; ++col) {
+                            if(row!=col){
+                                cpr_trans[row][col]=1.0;
+                            }
+                        }
+                    }
+                }
+                }
 
+                //auto ebosJac_cp = ebosSimulator_.model().linearizer().matrix();
+                //multBlocks(ebosJac_cp, cpr_trans,true);
+                //CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJac_cp);
+                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(false);
+                //matrix.print();
                 // Copy right-hand side (blocked structure -> unblocked).
                 const int n = ebosResid.size();
-                const int np = numPhases();
+                //const int np = numPhases();
                 const int sz = n * np;
                 std::vector<double> rhs(sz, 0.0);
+                std::ofstream file("rhs.txt");
+                Dune::writeMatrixMarket(ebosResid, file);
                 for (int cell = 0; cell < n; ++cell) {
+                    //const auto& rhs = ebosResid[cell];
+                    //auto rhs_b = rhs;
+                    //trans.mv(rhs, rhs_b);
                     for (int phase = 0; phase < np; ++phase) {
-                        rhs[np*cell + phase] = ebosResid[cell][phase];
+                    //for (int phase = np-1; phase > -1; --phase) {
+                        rhs[np*cell + phase] = ebosResid[cell][np - phase - 1];
                     }
                 }
 
                 std::vector<double> sol(sz, 0.0);
                 if (param_.use_amgcl_) {
                     // Call amgcl to solve system
-                    const double tol = 1e-2;
-                    const int maxiter = 150;
+                    const double tol = 1e-5;
+                    const int maxiter = 1000;
                     int    iters;
                     double error;
                     LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
@@ -934,18 +1026,11 @@ namespace Opm {
             }
             else
             {
-<<<<<<< HEAD
-=======
-
                 //std::cout.precision(16);
                 //std::cout << x << std::endl;
                 //Dune::writeMatrixMarket(ebosJac, std::cout);
                 //wellModel().printMatrixes();
                 //std::cout << ebosResid << std::endl;
-  //              typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, false > Operator;
-  //              Operator opA(ebosJac, wellModel());
-
->>>>>>> after merge
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
                 Operator opA(ebosJac, actual_mat_for_prec, wellModel());
                 istlSolver().solve( opA, x, ebosResid );

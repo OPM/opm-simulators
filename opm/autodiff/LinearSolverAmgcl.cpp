@@ -24,6 +24,9 @@
 #include <opm/autodiff/DebugTimeReport.hpp>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/optional.hpp>
+#include <iostream>
 
 #include <amgcl/make_solver.hpp>
 #include <amgcl/solver/bicgstab.hpp>
@@ -52,7 +55,7 @@ namespace Opm
 
 
 
-
+        /*
         struct AmgOptions
         {
             int coarsen_id = 1;
@@ -64,8 +67,18 @@ namespace Opm
             int npost = -1;
             int pre_cycles = -1;
         };
-
-
+        */
+        struct AmgOptions
+        {
+            int coarsen_id = 3;
+            int coarse_enough = -1;
+            bool direct_coarse = false;
+            int max_levels = -1;
+            int ncycle = 1;
+            int npre = 1;// should be one according to stein
+            int npost =1;
+            int pre_cycles = 1;
+        };
 
 
         void setCoarseningAMGCL(const std::string& prefix, const AmgOptions& options, boost::property_tree::ptree& prm)
@@ -162,6 +175,7 @@ namespace Opm
             opts.coarsen_id = 3; // aggregation
             setCoarseningAMGCL("precond.", opts, prm);
             setRelaxationAMGCL("precond.relax.", 1, prm);
+            setRelaxationAMGCL("precond.relax.", 3, prm);
 
             // using Precond = amgcl::runtime::relaxation::as_preconditioner<Backend>;
             // relaxParam = "precond.";
@@ -199,14 +213,14 @@ namespace Opm
             boost::property_tree::ptree prm;
 
             // setupPreconditioner(prm);
-            const int block_size = 3;
-            const double dd = 0.2;
-            const double ps = 0.02;
+            const int block_size = 2;
+            const double dd = 0.3;
+            const double ps = 0.03;
             prm.put("precond.block_size", block_size);
             prm.put("precond.active_rows", sz);
             AmgOptions opts;
             setCoarseningAMGCL("precond.pprecond.", opts, prm);
-            setRelaxationAMGCL("precond.pprecond.relax.", 1, prm);
+            setRelaxationAMGCL("precond.pprecond.relax.", 3, prm);
             setRelaxationAMGCL("precond.sprecond.", 3, prm);
             prm.put("precond.eps_dd", dd);
             prm.put("precond.eps_ps", ps);
@@ -221,9 +235,12 @@ namespace Opm
             using Solver = amgcl::make_solver<Precond, IterativeSolver>;
             auto x = new DebugTimeReport("setup");
             Solver solve(boost::tie(sz, ptr, col, val), prm);
+            std::ofstream file("amg_setup.json");
+            boost::property_tree::json_parser::write_json(file, prm);
             delete x;
             auto y = new DebugTimeReport("solution");
             boost::tie(iters, error) = solve(rhs, sol);
+            std::cout << solve << std::endl;
             delete y;
         }
 
@@ -263,7 +280,7 @@ namespace Opm
                                 std::vector<double>& val,
                                 std::vector<double>& rhs)
         {
-            const int block_size = 3;
+            const int block_size = 2;
             const double b_gas = 100.0;
             const int n = sz / block_size;
             assert(n*block_size == sz);
@@ -293,7 +310,10 @@ namespace Opm
                                   int& iters,
                                   double& error)
     {
-        hackScalingFactors(sz, ptr, const_cast<std::vector<double>&>(val), const_cast<std::vector<double>&>(rhs));
+        int block_size = 2;
+        if(block_size>2){
+            hackScalingFactors(sz, ptr, const_cast<std::vector<double>&>(val), const_cast<std::vector<double>&>(rhs));
+        }
         DebugTimeReport rep("amgcl-timer");
         // solveRegular(sz, ptr, col, val, rhs, tolerance, maxiter, sol, iters, error);
         solveCPR(sz, ptr, col, val, rhs, tolerance, maxiter, sol, iters, error);
