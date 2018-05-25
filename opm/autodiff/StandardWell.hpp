@@ -27,7 +27,6 @@
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolver.hpp>
 #include <opm/autodiff/RateConverter.hpp>
-#include <opm/autodiff/ISTLSolver.hpp>
 
 namespace Opm
 {
@@ -211,7 +210,7 @@ namespace Opm
         OffDiagMatWell duneB_;
         OffDiagMatWell duneC_;
         // diagonal matrix for the well
-        DiagMatWell invDuneD_;
+        DiagMatWell duneD_;
 
         // several vector used in the matrix calculation
         mutable BVectorWell Bx_;
