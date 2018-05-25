@@ -358,11 +358,11 @@ namespace Opm {
                 }
 
                 // Create matrix for external linear solvers.
-                //const auto& ebosJac_org = ebosSimulator_.model().linearizer().matrix();
-                //auto ebosJac_trans = ebosJac_org;
-                //Dune::MatrixVector::transpose(ebosJac_org, ebosJac_trans);
-                //CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJac);
-                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(true);
+                const auto& ebosJac_org = ebosSimulator_.model().linearizer().matrix();
+                auto ebosJac_trans = ebosJac_org;
+                Dune::MatrixVector::transpose(ebosJac_org, ebosJac_trans);
+                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJac);
+                //CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(true);
 
                 // Copy right-hand side (blocked structure -> unblocked).
                 const int n = adjRhs.size();
@@ -795,31 +795,28 @@ namespace Opm {
                 auto& row = ebosJac[row_index];
                 auto* dataptr = row.getptr();
                 //auto* indexptr = row.getindexptr();
-                for (int brow = 0; brow < np; ++brow) {
-                    for (int elem = 0; elem < row.N(); ++elem) {
-                        auto& block = dataptr[elem];
-                        if(left){
-                            block = block.leftmultiply(trans);
-                        }else{
-                            block = block.rightmultiply(trans);
-                        }
-
+                for (int elem = 0; elem < row.N(); ++elem) {
+                    auto& block = dataptr[elem];
+                    if(left){
+                        block = block.leftmultiply(trans);
+                    }else{
+                        block = block.rightmultiply(trans);
                     }
                 }
             }
         }
         /// Build a CRS matrix (not block-structured) from
         /// the block structured system matrix.
-        //CRSMatrixHelper buildCRSMatrixNoBlocks(const Mat& ebosJac)  const
-        CRSMatrixHelper buildCRSMatrixNoBlocks(bool do_transpose)  const
+        CRSMatrixHelper buildCRSMatrixNoBlocks(const Mat& ebosJac)  const
+        //CRSMatrixHelper buildCRSMatrixNoBlocks(bool do_transpose)  const
         {
-
+        /*
             const auto& ebosJac_org = ebosSimulator_.model().linearizer().matrix();
             auto ebosJac = ebosJac_org;
             if(do_transpose){
                 Dune::MatrixVector::transpose(ebosJac_org, ebosJac);
             }
-
+        */
             //std::ofstream file("matrix.txt");
             //Dune::writeMatrixMarket(ebosJac, file)
 #if 1
@@ -841,8 +838,8 @@ namespace Opm {
                         const int istlcol = indexptr[elem];
                         const auto& block = dataptr[elem];
                         for (int bcol = 0; bcol < np; ++bcol) {                            
-                            //A.val[index] = block[brow][bcol];
-                            A.val[index] = block[np - brow - 1][bcol];
+                            A.val[index] = block[brow][bcol];
+                            //A.val[index] = block[np - brow - 1][bcol];
                             A.col[index] = np*istlcol + bcol;
                             ++index;
                         }
@@ -935,18 +932,18 @@ namespace Opm {
                 // Create matrix for external linear solvers.
                 //const bool do_transpose=false;
                 const int np = numPhases();
-                MatrixBlockType cpr_trans = 0.0;
-                int trans = 2;
-                switch(trans) {
+                MatrixBlockType left_trans = 0.0;
+                int meth_trans = 2;
+                switch(meth_trans) {
                 case 1:{
                     //cpr
                     for (int row = 0; row < np; ++row) {
                         for (int col = 0; col < np; ++col) {
                             if(row==0){
-                                cpr_trans[row][col]=1.0;
+                                left_trans[row][col]=1.0;
                             }else{
                                 if(row==col){
-                                    cpr_trans[row][col]=1.0;
+                                    left_trans[row][col]=1.0;
                                 }
                             }
                         }
@@ -957,40 +954,54 @@ namespace Opm {
                     for (int row = 0; row < np; ++row) {
                         for (int col = 0; col < np; ++col) {
                             if(row!=col){
-                                cpr_trans[row][col]=1.0;
+                                left_trans[row][col]=1.0;
                             }
                         }
                     }
                 }
                 }
-
-                //auto ebosJac_cp = ebosSimulator_.model().linearizer().matrix();
-                //multBlocks(ebosJac_cp, cpr_trans,true);
-                //CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJac_cp);
-                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(false);
+                bool print_matrix_system=false;
+                auto ebosJac_cp = ebosSimulator_.model().linearizer().matrix();
+                auto ebosResid_cp = ebosResid;
+                multBlocks(ebosJac_cp, left_trans,true);
+                for( auto& bvec: ebosResid_cp){
+                    auto bvec_new=bvec;
+                    left_trans.mv(bvec, bvec_new);
+                    bvec=bvec_new;
+                }
+                if(print_matrix_system){
+                    std::ofstream filem("matrix.txt");
+                    Dune::writeMatrixMarket(ebosJac_cp, filem);
+                    std::ofstream fileb("rhs.txt");
+                    Dune::writeMatrixMarket(ebosResid_cp, fileb);
+                }
+                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJac_cp);
+                //CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(false);
                 //matrix.print();
                 // Copy right-hand side (blocked structure -> unblocked).
                 const int n = ebosResid.size();
                 //const int np = numPhases();
                 const int sz = n * np;
                 std::vector<double> rhs(sz, 0.0);
-                std::ofstream file("rhs.txt");
-                Dune::writeMatrixMarket(ebosResid, file);
+                //std::ofstream file("rhs.txt");
+                //Dune::writeMatrixMarket(ebosResid, file);
+
                 for (int cell = 0; cell < n; ++cell) {
                     //const auto& rhs = ebosResid[cell];
                     //auto rhs_b = rhs;
                     //trans.mv(rhs, rhs_b);
                     for (int phase = 0; phase < np; ++phase) {
                     //for (int phase = np-1; phase > -1; --phase) {
-                        rhs[np*cell + phase] = ebosResid[cell][np - phase - 1];
+                        rhs[np*cell + phase] = ebosResid_cp[cell][phase];
+                        //rhs[np*cell + phase] = ebosResid[cell][np - phase - 1];
                     }
                 }
 
                 std::vector<double> sol(sz, 0.0);
                 if (param_.use_amgcl_) {
                     // Call amgcl to solve system
-                    const double tol = 1e-5;
-                    const int maxiter = 1000;
+                    const double tol = istlSolver().getParameters().linear_solver_reduction_;
+                    const int maxiter = istlSolver().getParameters().linear_solver_maxiter_;
                     int    iters;
                     double error;
                     LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);

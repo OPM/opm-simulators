@@ -109,7 +109,7 @@ namespace Opm
 
         /// \copydoc NewtonIterationBlackoilInterface::parallelInformation
         const boost::any& parallelInformation() const { return parallelInformation_; }
-
+       const NewtonIterationBlackoilInterleavedParameters& getParameters() const{return parameters_;}
     public:
         /// \brief construct the CPR preconditioner and the solver.
         /// \tparam P The type of the parallel information.
