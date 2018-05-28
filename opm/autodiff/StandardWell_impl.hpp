@@ -39,7 +39,7 @@ namespace Opm
     {
         duneB_.setBuildMode( OffDiagMatWell::row_wise );
         duneC_.setBuildMode( OffDiagMatWell::row_wise );
-        invDuneD_.setBuildMode( DiagMatWell::row_wise );
+        duneD_.setBuildMode( DiagMatWell::row_wise );
     }
 
 
@@ -66,11 +66,11 @@ namespace Opm
         //[A C^T    [x    =  [ res
         // B D] x_well]      res_well]
         // set the size of the matrices
-        invDuneD_.setSize(1, 1, 1);
+        duneD_.setSize(1, 1, 1);
         duneB_.setSize(1, num_cells, number_of_perforations_);
         duneC_.setSize(1, num_cells, number_of_perforations_);
 
-        for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
+        for (auto row=duneD_.createbegin(), end = duneD_.createend(); row!=end; ++row) {
             // Add nonzeros for diagonal
             row.insert(row.index());
         }
@@ -94,7 +94,7 @@ namespace Opm
 
         // resize temporary class variables
         Bx_.resize( duneB_.N() );
-        invDrw_.resize( invDuneD_.N() );
+        invDrw_.resize( duneD_.N() );
     }
 
 
@@ -562,7 +562,7 @@ namespace Opm
             duneB_ = 0.0;
             duneC_ = 0.0;
         }
-        invDuneD_ = 0.0;
+        duneD_ = 0.0;
         resWell_ = 0.0;
 
         auto& ebosJac = ebosSimulator.model().linearizer().matrix();
@@ -616,7 +616,7 @@ namespace Opm
                         // also need to consider the efficiency factor when manipulating the jacobians.
                         duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
                     }
-                    invDuneD_[0][0][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx+numEq);
+                    duneD_[0][0][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx+numEq);
                 }
 
                 for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
@@ -726,16 +726,10 @@ namespace Opm
             EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
             resWell_loc += getQs(componentIdx) * well_efficiency_factor_;
             for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
-                invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
+                duneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
             resWell_[0][componentIdx] += resWell_loc.value();
         }
-
-        // do the local inversion of D.
-        // we do this manually with invertMatrix to always get our
-        // specializations in for 3x3 and 4x4 matrices.
-        auto original = invDuneD_[0][0];
-        Dune::FMatrixHelp::invertMatrix(original, invDuneD_[0][0]);
     }
 
 
@@ -1620,7 +1614,7 @@ namespace Opm
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         BVectorWell dx_well(1);
-        invDuneD_.mv(resWell_, dx_well);
+        duneD_[0][0].solve(dx_well[0], resWell_[0]);
 
         updateWellState(dx_well, well_state);
     }
@@ -1670,18 +1664,17 @@ namespace Opm
             return;
         }
         assert( Bx_.size() == duneB_.N() );
-        assert( invDrw_.size() == invDuneD_.N() );
+        assert( invDrw_.size() == duneD_.N() );
 
         // Bx_ = duneB_ * x
         duneB_.mv(x, Bx_);
-        // invDBx = invDuneD_ * Bx_
-        // TODO: with this, we modified the content of the invDrw_.
-        // Is it necessary to do this to save some memory?
-        BVectorWell& invDBx = invDrw_;
-        invDuneD_.mv(Bx_, invDBx);
+
+        // invDBx = duneD_^-1 * Bx_
+        BVectorWell invDBx(Bx_.size());
+        duneD_[0][0].solve(invDBx[0], Bx_[0]);
 
         // Ax = Ax - duneC_^T * invDBx
-        duneC_.mmtv(invDBx,Ax);
+        duneC_.mmtv(invDBx, Ax);
     }
 
 
@@ -1692,10 +1685,11 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(BVector& r) const
     {
-        assert( invDrw_.size() == invDuneD_.N() );
+        assert( invDrw_.size() == duneD_.N() );
 
-        // invDrw_ = invDuneD_ * resWell_
-        invDuneD_.mv(resWell_, invDrw_);
+        // invDrw_ = duneD_^-1 * resWell_
+        duneD_[0][0].solve(invDrw_[0], resWell_[0]);
+
         // r = r - duneC_^T * invDrw_
         duneC_.mmtv(invDrw_, r);
     }
@@ -1709,11 +1703,13 @@ namespace Opm
     StandardWell<TypeTag>::
     recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     {
-        BVectorWell resWell = resWell_;
+
         // resWell = resWell - B * x
+        BVectorWell resWell = resWell_;
         duneB_.mmv(x, resWell);
+
         // xw = D^-1 * resWell
-        invDuneD_.mv(resWell, xw);
+        duneD_[0][0].solve(xw[0], resWell[0]);
     }
 
 
@@ -2197,8 +2193,9 @@ namespace Opm
                 assert(col != row.end() && col.index() == col_index);
 
                 Dune::FieldMatrix<Scalar, numWellEq, numEq> tmp;
-                typename Mat::block_type tmp1;
-                Dune::FMatrixHelp::multMatrix(invDuneD_[0][0],  (*colB), tmp);
+                Mat::block_type tmp1;
+                // TODO: we do not have invDuneD_ anymore, the following code needs to be fixed.
+                Dune::FMatrixHelp::multMatrix(duneD_[0][0],  (*colB), tmp);
                 Detail::multMatrixTransposed((*colC), tmp, tmp1);
                 (*col) -= tmp1;
             }
