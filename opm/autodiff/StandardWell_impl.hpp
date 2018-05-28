@@ -732,10 +732,10 @@ namespace Opm
         }
 
         // do the local inversion of D.
-        // we do this manually with invertMatrix to always get our
-        // specializations in for 3x3 and 4x4 matrices.
-        auto original = invDuneD_[0][0];
-        Dune::FMatrixHelp::invertMatrix(original, invDuneD_[0][0]);
+        if ( !wellhelpers::invertMatrixLapack(invDuneD_[0][0]) ) {
+            // if not inverted successfully
+            OPM_THROW(Opm::NumericalIssue, "Failed in inverting the matrix D for well " << name());
+        }
     }
 
 

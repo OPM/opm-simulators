@@ -369,16 +369,9 @@ namespace Opm {
             // -------- Well equations ----------
             double dt = timer.currentStepLength();
 
-            try
-            {
-                // assembles the well equations and applies the wells to
-                // the reservoir equations as a source term.
-                wellModel().assemble(iterationIdx, dt);
-            }
-            catch ( const Dune::FMatrixError& )
-            {
-                OPM_THROW(Opm::NumericalIssue,"Error encounted when solving well equations");
-            }
+            // assembles the well equations and applies the wells to
+            // the reservoir equations as a source term.
+            wellModel().assemble(iterationIdx, dt);
 
             auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             if (param_.matrix_add_well_contributions_) {
