@@ -102,7 +102,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+ctaquifer_2d_oilwater/ \
-      $OPM_TESTS_ROOT/spe1/opm-simulation-reference/flow \
+      $OPM_TESTS_ROOT/aquifer-oilwater/opm-simulation-reference/flow \
       2D_OW_CTAQUIFER \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
