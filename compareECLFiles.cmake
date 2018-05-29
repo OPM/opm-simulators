@@ -195,6 +195,13 @@ add_test_compareECLFiles(CASENAME spe1_thermal
                          REL_TOL ${rel_tol}
                          DIR spe1)
 
+add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
+                         FILENAME 2D_OW_CTAQUIFER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe1)
+
 foreach(SIM flow flow_legacy)
   add_test_compareECLFiles(CASENAME spe3
                            FILENAME SPE3CASE1
