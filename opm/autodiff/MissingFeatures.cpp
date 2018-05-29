@@ -100,6 +100,7 @@ namespace MissingFeatures {
             "GDORIENT",
             "GECON",
             "GLIFTOPT",
+            "GNETINJE",
             "GRIDUNIT",
             "GRUPNET",
             "GSATPROD",
