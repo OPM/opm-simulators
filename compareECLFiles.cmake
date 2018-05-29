@@ -200,7 +200,7 @@ add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR spe1)
+                         DIR aquifer-oilwater)
 
 foreach(SIM flow flow_legacy)
   add_test_compareECLFiles(CASENAME spe3
