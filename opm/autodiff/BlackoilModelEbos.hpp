@@ -426,13 +426,13 @@ namespace Opm {
                 if (elem.partitionType() != Dune::InteriorEntity)
                     continue;
 
-        unsigned globalElemIdx = elemMapper.index(elem);
+                unsigned globalElemIdx = elemMapper.index(elem);
                 const auto& priVarsNew = ebosSimulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
 
                 Scalar pressureNew;
-        pressureNew = priVarsNew[Indices::pressureSwitchIdx];
+                pressureNew = priVarsNew[Indices::pressureSwitchIdx];
 
-        Scalar saturationsNew[FluidSystem::numPhases] = { 0.0 };
+                Scalar saturationsNew[FluidSystem::numPhases] = { 0.0 };
                 Scalar oilSaturationNew = 1.0;
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSaturationIdx];
@@ -475,7 +475,7 @@ namespace Opm {
 
                 for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
                     Scalar tmp = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
-            resultDelta += tmp*tmp;
+                    resultDelta += tmp*tmp;
                     resultDenom += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
                 }
             }
@@ -483,9 +483,9 @@ namespace Opm {
             resultDelta = gridView.comm().sum(resultDelta);
             resultDenom = gridView.comm().sum(resultDenom);
 
-        if (resultDenom > 0.0)
-          return resultDelta/resultDenom;
-        return 0.0;
+            if (resultDenom > 0.0)
+              return resultDelta/resultDenom;
+            return 0.0;
         }
 
 
