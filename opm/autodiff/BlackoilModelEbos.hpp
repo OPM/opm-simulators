@@ -369,9 +369,6 @@ namespace Opm {
             ebosSimulator_.problem().beginIteration();
             ebosSimulator_.model().linearizer().linearize();
             ebosSimulator_.problem().endIteration();
-
-            // -------- Current time step length ----------
-            const double dt = timer.currentStepLength();
             
             // -------- Aquifer models ----------
             try
@@ -383,6 +380,9 @@ namespace Opm {
             {
                 OPM_THROW(Opm::NumericalIssue,"Error when assembling aquifer models");
             }
+
+            // -------- Current time step length ----------
+            const double dt = timer.currentStepLength();
 
             // -------- Well equations ----------
 
@@ -596,6 +596,7 @@ namespace Opm {
           virtual void apply( const X& x, Y& y ) const
           {
             A_.mv( x, y );
+
             // add well model modification to y
             wellMod_.apply(x, y );
 
@@ -609,6 +610,7 @@ namespace Opm {
           virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
           {
             A_.usmv(alpha,x,y);
+
             // add scaled well model modification to y
             wellMod_.applyScaleAdd( alpha, x, y );
 
@@ -1120,9 +1122,6 @@ namespace Opm {
 
         BlackoilAquiferModel<TypeTag>&
         aquiferModel() { return aquifer_model_; }
-
-        const BlackoilAquiferModel<TypeTag>&
-        aquiferModel() const { return aquifer_model_; }
 
         void beginReportStep()
         {
