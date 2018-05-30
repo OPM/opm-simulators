@@ -135,9 +135,9 @@ namespace Opm
     template<typename TypeTag>
     const typename StandardWell<TypeTag>::EvalWell&
     StandardWell<TypeTag>::
-    getGTotal() const
+    getWQTotal() const
     {
-        return primary_variables_evaluation_[GTotal];
+        return primary_variables_evaluation_[WQTotal];
     }
 
 
@@ -149,7 +149,7 @@ namespace Opm
     StandardWell<TypeTag>::
     getQs(const int comp_idx) const
     {
-        // Note: currently, the GTotal definition is still depends on Injector/Producer.
+        // Note: currently, the WQTotal definition is still depends on Injector/Producer.
         assert(comp_idx < num_components_);
 
         if (well_type_ == INJECTOR) { // only single phase injection
@@ -170,9 +170,9 @@ namespace Opm
                 comp_frac = comp_frac_[legacyCompIdx];
             }
 
-            return comp_frac * primary_variables_evaluation_[GTotal];
+            return comp_frac * primary_variables_evaluation_[WQTotal];
         } else { // producers
-            return primary_variables_evaluation_[GTotal] * wellVolumeFractionScaled(comp_idx);
+            return primary_variables_evaluation_[WQTotal] * wellVolumeFractionScaled(comp_idx);
         }
     }
 
@@ -661,11 +661,11 @@ namespace Opm
                     const WellInjectionProperties& injection = well_ecl_->getInjectionProperties(current_step_);
                     // only handles single phase injection now
                     assert(injection.injectorType != WellInjector::MULTI);
-                    control_eq = getGTotal() - target_rate;
+                    control_eq = getWQTotal() - target_rate;
                 } else if (well_type_ == PRODUCER) {
                     if (target_rate != 0.) {
                         EvalWell rate_for_control(0.);
-                        const EvalWell& g_total = getGTotal();
+                        const EvalWell& g_total = getWQTotal();
                         // a variable to check if we are producing any targeting fluids
                         double sum_fraction = 0.;
                         const double* distr = well_controls_get_current_distr(well_controls_);
@@ -686,7 +686,7 @@ namespace Opm
                                                   + " that does not exist in the wellbore for the situation";
                             OpmLog::warning("NON_SOLVABLE_WELL_SOLUTION", msg);
 
-                            control_eq = getGTotal() - target_rate;
+                            control_eq = getWQTotal() - target_rate;
                         }
                     } else {
                         // there is some special treatment for the zero rate control well
@@ -695,7 +695,7 @@ namespace Opm
                         // 2. if the well can not produce the specified phase, it cause a under-determined problem, we
                         //    basically assume the well not producing any fluid as a solution
                         // With both the situation, we can use the following well equation
-                        control_eq = getGTotal() - target_rate;
+                        control_eq = getWQTotal() - target_rate;
                     }
                 }
                 break;
@@ -710,12 +710,12 @@ namespace Opm
                     const double* distr = well_controls_get_current_distr(well_controls_);
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
                         if (distr[phase] > 0.0) {
-                            control_eq = getGTotal() * scalingFactor(phase) - target_rate;
+                            control_eq = getWQTotal() * scalingFactor(phase) - target_rate;
                             break;
                         }
                     }
                 } else {
-                    const EvalWell& g_total = getGTotal();
+                    const EvalWell& g_total = getWQTotal();
                     EvalWell rate_for_control(0.0); // reservoir rate
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
                         rate_for_control += g_total * wellVolumeFraction( flowPhaseToEbosCompIdx(phase) );
@@ -894,7 +894,7 @@ namespace Opm
         processFractions();
 
         // updating the total rates G_t
-        primary_variables_[GTotal] = old_primary_variables[GTotal] - dwells[0][GTotal];
+        primary_variables_[WQTotal] = old_primary_variables[WQTotal] - dwells[0][WQTotal];
 
         // updating the bottom hole pressure
         {
@@ -1044,7 +1044,7 @@ namespace Opm
         // calculate the phase rates based on the primary variables
         // for producers, this is not a problem, while not sure for injectors here
         if (well_type_ == PRODUCER) {
-            const double g_total = primary_variables_[GTotal];
+            const double g_total = primary_variables_[WQTotal];
             for (int p = 0; p < number_of_phases_; ++p) {
                 well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = g_total * F[p];
             }
@@ -1053,7 +1053,7 @@ namespace Opm
             // Either we use distr (might conflict with RESV related) or we update comp_frac_ based on the injection phase
             for (int p = 0; p < number_of_phases_; ++p) {
                 const double comp_frac = comp_frac_[p];
-                well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = comp_frac * primary_variables_[GTotal];
+                well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = comp_frac * primary_variables_[WQTotal];
             }
         }
 
@@ -1966,15 +1966,15 @@ namespace Opm
         // Not: for the moment, the first primary variable for the injectors is not G_total. The injection rate
         // under surface condition is used here
         if (well_type_ == INJECTOR) {
-            primary_variables_[GTotal] = 0.;
+            primary_variables_[WQTotal] = 0.;
             for (int p = 0; p < np; ++p) {
                 // TODO: the use of comp_frac_ here is dangerous, since the injection phase can be different from
                 // prefered phasse in WELSPECS, while comp_frac_ only reflect the one specified in WELSPECS
-                primary_variables_[GTotal] += well_state.wellRates()[np * well_index + p] * comp_frac_[p];
+                primary_variables_[WQTotal] += well_state.wellRates()[np * well_index + p] * comp_frac_[p];
             }
         } else {
             for (int p = 0; p < np; ++p) {
-                primary_variables_[GTotal] = total_well_rate;
+                primary_variables_[WQTotal] = total_well_rate;
             }
         }
 

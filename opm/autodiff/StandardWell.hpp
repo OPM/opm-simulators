@@ -67,7 +67,7 @@ namespace Opm
         static const int numWellEq = numWellConservationEq + numWellControlEq;
 
         // the positions of the primary variables for StandardWell
-        // the first one is the weighted total rate (G_t), the second and the third ones are F_w and F_g,
+        // the first one is the weighted total rate (WQ_t), the second and the third ones are F_w and F_g,
         // which represent the fraction of Water and Gas based on the weighted total rate, the last one is BHP.
         // correspondingly, we have four well equations for blackoil model, the first three are mass
         // converstation equations, and the last one is the well control equation.
@@ -76,7 +76,7 @@ namespace Opm
         // TODO: in the current implementation, we use the well rate as the first primary variables for injectors,
         // instead of G_t.
         static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
-        static const int GTotal = 0;
+        static const int WQTotal = 0;
         static const int WFrac = gasoil? -1000: 1;
         static const int GFrac = gasoil? 1: 2;
         static const int SFrac = !has_solvent ? -1000 : 3;
@@ -246,7 +246,7 @@ namespace Opm
 
         EvalWell getQs(const int comp_idx) const;
 
-        const EvalWell& getGTotal() const;
+        const EvalWell& getWQTotal() const;
 
         EvalWell wellVolumeFractionScaled(const int phase) const;
 
