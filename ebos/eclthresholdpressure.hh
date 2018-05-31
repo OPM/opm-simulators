@@ -86,6 +86,10 @@ public:
         enableThresholdPressure_ = false;
     }
 
+
+    void setFromRestart(const std::vector<Scalar>& values)
+    { thpres_ = values; }
+
     /*!
      * \brief Actually compute the threshold pressures over a face as a pre-compute step.
      */
@@ -105,9 +109,18 @@ public:
         const auto& eclState = vanguard.eclState();
         const auto& simConfig = eclState.getSimulationConfig();
 
-        enableThresholdPressure_ = simConfig.hasThresholdPressure();
+        enableThresholdPressure_ = simConfig.useThresholdPressure();
         if (!enableThresholdPressure_)
             return;
+
+        /*
+          If this is a restart run the ThresholdPressure object will be active,
+          but it will *not* be properly initialized with numerical values. The
+          values must instead come from the THPRES vector in the restart file.
+        */
+        if (simConfig.getThresholdPressure().restart())
+            return;
+
 
         numEquilRegions_ = eclState.getTableManager().getEqldims().getNumEquilRegions();
         if (numEquilRegions_ > 0xff) {

@@ -210,7 +210,7 @@ public:
             if (!isSubStep)
                 restartValue.addExtra("OPMEXTRA", std::vector<double>(1, nextStepSize));
 
-            if (simConfig.hasThresholdPressure())
+            if (simConfig.useThresholdPressure())
                 restartValue.addExtra("THPRES", Opm::UnitSystem::measure::pressure, simulator_.problem().thresholdPressure().data());
 
             // first, create a tasklet to write the data for the current time step to disk
@@ -255,10 +255,17 @@ public:
         unsigned numElements = gridView.size(/*codim=*/0);
         eclOutputModule_.allocBuffers(numElements, episodeIdx, /*isSubStep=*/false, /*log=*/false);
 
-        auto restart_values = eclIO_->loadRestart(solution_keys, extra_keys);
+        auto restartValues = eclIO_->loadRestart(solution_keys, extra_keys);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
             unsigned globalIdx = collectToIORank_.localIdxToGlobalIdx(elemIdx);
-            eclOutputModule_.setRestart(restart_values.solution, elemIdx, globalIdx);
+            eclOutputModule_.setRestart(restartValues.solution, elemIdx, globalIdx);
+        }
+        const auto& inputThpres = eclState().getSimulationConfig().getThresholdPressure();
+        if (inputThpres.active()) {
+            Simulator& mutableSimulator = const_cast<Simulator&>(simulator_);
+            auto& thpres = mutableSimulator.problem().thresholdPressure();
+            const auto& thpresValues = restartValues.getExtra("THPRES");
+            thpres.setFromRestart(thpresValues);
         }
     }
 

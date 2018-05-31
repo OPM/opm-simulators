@@ -399,7 +399,8 @@ public:
             // create the ECL writer
             eclWriter_.reset(new EclWriterType(simulator));
 
-        // Hack to compute the initial thpressure values for restarts
+        // Loading the solution from a restart file is done recursively, we need this
+        // bool variable to signal the stop condition.
         restartApplied = false;
     }
 
@@ -847,9 +848,11 @@ public:
     { return thresholdPressures_.thresholdPressure(elem1Idx, elem2Idx); }
 
 
-    const EclThresholdPressure<TypeTag>& thresholdPressure() const {
-        return thresholdPressures_;
-    }
+    const EclThresholdPressure<TypeTag>& thresholdPressure() const
+    { return thresholdPressures_; }
+
+    EclThresholdPressure<TypeTag>& thresholdPressure()
+    { return thresholdPressures_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
@@ -1178,8 +1181,7 @@ public:
             wellManager_.init(this->simulator().vanguard().eclState(), this->simulator().vanguard().schedule());
         }
 
-        // the initialSolutionApplied is called recursively by readEclRestartSolution_()
-        // in order to setup the inital threshold pressures correctly
+        // The initialSolutionApplied is called recursively by readEclRestartSolution_().
         if (restartApplied)
             return;
 
