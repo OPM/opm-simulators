@@ -495,7 +495,7 @@ namespace Opm
         duneB_.mv(x, Bx);
 
         // invDBx = duneD^-1 * Bx_
-        const BVectorWell invDBx = mswellhelpers::invDXDirect(duneD_, Bx);
+        const BVectorWell invDBx = wellhelpers::invDXDirect(duneD_, Bx);
 
         // Ax = Ax - duneC_^T * invDBx
         duneC_.mmtv(invDBx,Ax);
@@ -511,7 +511,7 @@ namespace Opm
     apply(BVector& r) const
     {
         // invDrw_ = duneD^-1 * resWell_
-        const BVectorWell invDrw = mswellhelpers::invDXDirect(duneD_, resWell_);
+        const BVectorWell invDrw = wellhelpers::invDXDirect(duneD_, resWell_);
         // r = r - duneC_^T * invDrw
         duneC_.mmtv(invDrw, r);
     }
@@ -629,7 +629,7 @@ namespace Opm
         // resWell = resWell - B * x
         duneB_.mmv(x, resWell);
         // xw = D^-1 * resWell
-        xw = mswellhelpers::invDXDirect(duneD_, resWell);
+        xw = wellhelpers::invDXDirect(duneD_, resWell);
     }
 
 
@@ -643,7 +643,7 @@ namespace Opm
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
-        const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
+        const BVectorWell dx_well = wellhelpers::invDXDirect(duneD_, resWell_);
 
         updateWellState(dx_well, false, well_state);
     }
@@ -1718,7 +1718,7 @@ namespace Opm
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, true);
 
-            const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
+            const BVectorWell dx_well = wellhelpers::invDXDirect(duneD_, resWell_);
 
             // TODO: use these small values for now, not intend to reach the convergence
             // in this stage, but, should we?
