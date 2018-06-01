@@ -22,8 +22,8 @@
 #ifndef OPM_WELLHELPERS_HEADER_INCLUDED
 #define OPM_WELLHELPERS_HEADER_INCLUDED
 
+#include <opm/common/utility/numeric/blas_lapack.h>
 #include <opm/core/wells.h>
-// #include <opm/autodiff/AutoDiffHelpers.hpp>
 
 #include <vector>
 
@@ -189,6 +189,63 @@ namespace Opm {
             }
 
             return retval;
+        }
+
+        template <class MatrixType>
+        bool invertMatrixLapack(MatrixType& matrix) {
+
+            const int m = matrix.M();
+            const int n = matrix.N();
+            assert(m == n); // it needs to be a square matrix
+
+            // the matrix
+            double* A = new double[m * n];
+
+            // copying the data in matrix to A
+            int i_count = 0;
+            for (int irow = 0; irow < m; ++irow) {
+                for (int icol = 0; icol < n; ++icol) {
+                    A[i_count] = matrix[irow][icol];
+                    ++i_count;
+                }
+            }
+
+            int* ipiv = new int[n + 1];
+            int lwork = m * n;
+            double* work = new double[lwork];
+            int info;
+
+            dgetrf_(&m, &n, A, &n, ipiv, &info);
+
+            if (info != 0) {
+                delete [] ipiv;
+                delete [] work;
+                delete [] A;
+                return false;
+            }
+
+            dgetri_(&m, A, &n, ipiv, work, &lwork, &info);
+
+            if (info != 0) {
+                delete [] ipiv;
+                delete [] work;
+                delete [] A;
+                return false;
+            }
+
+            // copying inverted A back to matrix
+            i_count = 0;
+            for (int irow = 0; irow < m; ++irow) {
+                for (int icol = 0; icol < n; ++icol) {
+                    matrix[irow][icol] = A[i_count];
+                    ++i_count;
+                }
+            }
+
+            delete [] ipiv;
+            delete [] work;
+            delete [] A;
+            return true;
         }
 
     } // namespace wellhelpers
