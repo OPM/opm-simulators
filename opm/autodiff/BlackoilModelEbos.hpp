@@ -525,7 +525,8 @@ namespace Opm {
                         const int istlcol = indexptr[elem];
                         const auto& block = dataptr[elem];
                         for (int bcol = 0; bcol < np; ++bcol) {
-                            A.val[index] = block[brow][bcol];
+                            static int bcolmap[] = { 1, 0, 2};
+                            A.val[index] = block[brow][bcolmap[bcol]];
                             A.col[index] = np*istlcol + bcol;
                             ++index;
                         }
