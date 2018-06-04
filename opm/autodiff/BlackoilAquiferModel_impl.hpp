@@ -15,6 +15,10 @@ namespace Opm {
     void
     BlackoilAquiferModel<TypeTag>:: timeStepSucceeded(const SimulatorTimerInterface& timer)
     {
+        if ( !aquiferActive() ) {
+            return;
+        }
+
         for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
         {
             aquifer->afterTimeStep(timer);
@@ -27,6 +31,10 @@ namespace Opm {
     assemble( const SimulatorTimerInterface& timer,
               const int iterationIdx                )
     {
+        if ( !aquiferActive() ) {
+            return;
+        }
+
         // We need to update the reservoir pressures connected to the aquifer
         updateConnectionIntensiveQuantities();
 
@@ -85,8 +93,13 @@ namespace Opm {
     void
     BlackoilAquiferModel<TypeTag>:: init()
     {
-        updateConnectionIntensiveQuantities();
         const auto& deck = ebosSimulator_.vanguard().deck();
+
+        if ( !deck.hasKeyword("AQUCT") ) {
+            return ;
+        }
+
+        updateConnectionIntensiveQuantities();
         const auto& eclState = ebosSimulator_.vanguard().eclState();
         
         // Get all the carter tracy aquifer properties data and put it in aquifers vector
@@ -105,6 +118,13 @@ namespace Opm {
                                   AquiferCarterTracy<TypeTag> (aquifersData.at(i), aquifer_connection.at(i), ebosSimulator_)
                                );
         }
+    }
+
+    template<typename TypeTag>
+    bool
+    BlackoilAquiferModel<TypeTag>:: aquiferActive() const
+    {
+        return !aquifers_.empty();
     }
 
 } // namespace Opm
