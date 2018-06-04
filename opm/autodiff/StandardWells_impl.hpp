@@ -295,7 +295,6 @@ namespace Opm
             rho += superset(fluid_->surfaceDensity(phase , well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
         }
         surf_dens_perf.assign(rho.data(), rho.data() + nperf * pu.num_phases);
-
     }
 
 

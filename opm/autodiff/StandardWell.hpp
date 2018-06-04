@@ -27,7 +27,6 @@
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolver.hpp>
 #include <opm/autodiff/RateConverter.hpp>
-#include <opm/autodiff/ISTLSolver.hpp>
 
 namespace Opm
 {
@@ -57,15 +56,34 @@ namespace Opm
         using Base::has_polymer;
         using Base::has_energy;
 
-        // the positions of the primary variables for StandardWell
-        // there are three primary variables, the second and the third ones are F_w and F_g
-        // the first one can be total rate (G_t) or bhp, based on the control
+        // polymer concentration and temperature are already known by the well, so
+        // polymer and energy conservation do not need to be considered explicitly
+        static const int numPolymerEq = has_polymer ? 1 : 0;
+        static const int numEnergyEq = has_energy ? 1 : 0;
+        // number of the conservation equations
+        static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq;
+        // number of the well control equations
+        static const int numWellControlEq = 1;
+        static const int numWellEq = numWellConservationEq + numWellControlEq;
 
+        // the positions of the primary variables for StandardWell
+        // the first one is the weighted total rate (WQ_t), the second and the third ones are F_w and F_g,
+        // which represent the fraction of Water and Gas based on the weighted total rate, the last one is BHP.
+        // correspondingly, we have four well equations for blackoil model, the first three are mass
+        // converstation equations, and the last one is the well control equation.
+        // primary variables related to other components, will be before the Bhp and after F_g.
+        // well control equation is always the last well equation.
+        // TODO: in the current implementation, we use the well rate as the first primary variables for injectors,
+        // instead of G_t.
         static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
-        static const int XvarWell = 0;
+        static const int WQTotal = 0;
         static const int WFrac = gasoil? -1000: 1;
         static const int GFrac = gasoil? 1: 2;
         static const int SFrac = !has_solvent ? -1000 : 3;
+        // the index for Bhp in primary variables and also the index of well control equation
+        // they both will be the last one in their respective system.
+        // TODO: we should have indices for the well equations and well primary variables separately
+        static const int Bhp = numWellEq - numWellControlEq;
 
         using typename Base::Scalar;
         using typename Base::ConvergenceReport;
@@ -76,11 +94,6 @@ namespace Opm
         using Base::Oil;
         using Base::Gas;
 
-        // polymer concentration and temperature are already known by the well, so
-        // polymer and energy conservation do not need to be considered explicitly
-        static const int numPolymerEq = has_polymer ? 1 : 0;
-        static const int numEnergyEq = has_energy ? 1 : 0;
-        static const int numWellEq =numEq - numPolymerEq - numEnergyEq;
         using typename Base::Mat;
         using typename Base::BVector;
         using typename Base::Eval;
@@ -177,6 +190,8 @@ namespace Opm
         using Base::scalingFactor;
 
         // protected member variables from the Base class
+        using Base::current_step_;
+        using Base::well_ecl_;
         using Base::vfp_properties_;
         using Base::gravity_;
         using Base::param_;
@@ -227,13 +242,11 @@ namespace Opm
         // the saturations in the well bore under surface conditions at the beginning of the time step
         std::vector<double> F0_;
 
-        // TODO: this function should be moved to the base class.
-        // while it faces chanllenges for MSWell later, since the calculation of bhp
-        // based on THP is never implemented for MSWell yet.
-        EvalWell getBhp() const;
+        const EvalWell& getBhp() const;
 
-        // TODO: it is also possible to be moved to the base class.
         EvalWell getQs(const int comp_idx) const;
+
+        const EvalWell& getWQTotal() const;
 
         EvalWell wellVolumeFractionScaled(const int phase) const;
 
@@ -313,6 +326,18 @@ namespace Opm
         void updateWaterMobilityWithPolymer(const Simulator& ebos_simulator,
                                             const int perf,
                                             std::vector<EvalWell>& mob_water) const;
+
+        void updatePrimaryVariablesNewton(const BVectorWell& dwells,
+                                          const WellState& well_state) const;
+
+        void updateWellStateFromPrimaryVariables(WellState& well_state) const;
+
+        void updateThp(WellState& well_state) const;
+
+        void assembleControlEq();
+
+        // handle the non reasonable fractions due to numerical overshoot
+        void processFractions() const;
     };
 
 }

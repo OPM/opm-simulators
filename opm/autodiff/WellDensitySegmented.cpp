@@ -25,8 +25,6 @@
 #include <numeric>
 #include <cmath>
 
-
-
 std::vector<double>
 Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
                                                       const PhaseUsage& phase_usage,

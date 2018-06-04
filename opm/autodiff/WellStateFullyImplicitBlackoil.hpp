@@ -91,6 +91,17 @@ namespace Opm
             well_dissolved_gas_rates_.resize(nw, 0.0);
             well_vaporized_oil_rates_.resize(nw, 0.0);
 
+            is_new_well_.resize(nw, true);
+            if ( !prevState.wellMap().empty() ) {
+                const auto& end = prevState.wellMap().end();
+                for (int w = 0; w < nw; ++w) {
+                    const auto& it = prevState.wellMap().find( wells->name[w]);
+                    if (it != end) {
+                        is_new_well_[w] = false;
+                    }
+                }
+            }
+
             // Ensure that we start out with zero rates by default.
             perfphaserates_.clear();
             perfphaserates_.resize(nperf * np, 0.0);
@@ -121,8 +132,6 @@ namespace Opm
                 current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
             }
 
-            is_new_well_.resize(nw, true);
-
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
 
@@ -137,9 +146,6 @@ namespace Opm
                     const_iterator it = prevState.wellMap().find( name );
                     if( it != end )
                     {
-                        // this is not a new added well
-                        is_new_well_[w] = false;
-
                         const int oldIndex = (*it).second[ 0 ];
                         const int newIndex = w;
 
