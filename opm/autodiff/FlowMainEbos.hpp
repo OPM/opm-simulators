@@ -417,7 +417,7 @@ namespace Opm
             }
 
             std::string numThreadsParam("--threads-per-process=");
-            int numThreads = 1; // TODO
+            int numThreads  = param_.template getDefault<int>("threads_per_process", 1);
             numThreadsParam += std::to_string(numThreads);
             argv.push_back(numThreadsParam.c_str());
 
