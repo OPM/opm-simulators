@@ -71,6 +71,8 @@ namespace Opm {
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(const SimulatorTimerInterface& timer);
 
+            bool aquiferActive() const;
+
         };
 
 
