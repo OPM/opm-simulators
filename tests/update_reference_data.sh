@@ -20,7 +20,7 @@ copyToReferenceDir () {
 }
 
 tests=${@:2}
-test -z "$tests" && tests="spe11 spe12 spe12p spe1oilgas spe1nowells spe1thermal spe3 spe5 spe9 norne_init msw_2d_h msw_3d_hfa polymer2d spe9group polymer_oilwater"
+test -z "$tests" && tests="spe11 spe12 spe12p spe1oilgas spe1nowells spe1thermal ctaquifer_2d_oilwater spe3 spe5 spe9 norne_init msw_2d_h msw_3d_hfa polymer2d spe9group polymer_oilwater"
 if grep -q -i "norne " <<< $ghprbCommentBody
 then
   if test -d $WORKSPACE/deps/opm-tests/norne/flow
@@ -95,6 +95,15 @@ for test_name in ${tests}; do
       $configuration/build-opm-simulators/tests/results/flow+spe1_thermal/ \
       $OPM_TESTS_ROOT/spe1/opm-simulation-reference/flow \
       SPE1CASE2_THERMAL \
+      EGRID INIT SMSPEC UNRST UNSMRY
+  fi
+
+  if grep -q "ctaquifer_2d_oilwater" <<< $test_name
+  then
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow+ctaquifer_2d_oilwater/ \
+      $OPM_TESTS_ROOT/aquifer-oilwater/opm-simulation-reference/flow \
+      2D_OW_CTAQUIFER \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
 

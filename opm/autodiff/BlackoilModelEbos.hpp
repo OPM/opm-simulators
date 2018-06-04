@@ -29,6 +29,7 @@
 
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/BlackoilWellModel.hpp>
+#include <opm/autodiff/BlackoilAquiferModel.hpp>
 #include <opm/autodiff/WellConnectionAuxiliaryModule.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
@@ -143,6 +144,7 @@ namespace Opm {
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters& param,
                           BlackoilWellModel<TypeTag>& well_model,
+                          BlackoilAquiferModel<TypeTag>& aquifer_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output
                           )
@@ -157,6 +159,7 @@ namespace Opm {
         , has_energy_(GET_PROP_VALUE(TypeTag, EnableEnergy))
         , param_( param )
         , well_model_ (well_model)
+        , aquifer_model_(aquifer_model)
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
         , dx_old_(UgGridHelpers::numCells(grid_))
@@ -349,6 +352,7 @@ namespace Opm {
             DUNE_UNUSED_PARAMETER(well_state);
 
             wellModel().timeStepSucceeded();
+            aquiferModel().timeStepSucceeded(timer);
             ebosSimulator_.problem().endTimeStep();
 
         }
@@ -365,9 +369,22 @@ namespace Opm {
             ebosSimulator_.problem().beginIteration();
             ebosSimulator_.model().linearizer().linearize();
             ebosSimulator_.problem().endIteration();
+            
+            // -------- Aquifer models ----------
+            try
+            {
+                // Modify the Jacobian and residuals according to the aquifer models
+                aquiferModel().assemble(timer, iterationIdx);
+            }
+            catch( ... )
+            {
+                OPM_THROW(Opm::NumericalIssue,"Error when assembling aquifer models");
+            }
+
+            // -------- Current time step length ----------
+            const double dt = timer.currentStepLength();
 
             // -------- Well equations ----------
-            double dt = timer.currentStepLength();
 
             try
             {
@@ -409,13 +426,13 @@ namespace Opm {
                 if (elem.partitionType() != Dune::InteriorEntity)
                     continue;
 
-		unsigned globalElemIdx = elemMapper.index(elem);
+                unsigned globalElemIdx = elemMapper.index(elem);
                 const auto& priVarsNew = ebosSimulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
 
                 Scalar pressureNew;
-		pressureNew = priVarsNew[Indices::pressureSwitchIdx];
+                pressureNew = priVarsNew[Indices::pressureSwitchIdx];
 
-		Scalar saturationsNew[FluidSystem::numPhases] = { 0.0 };
+                Scalar saturationsNew[FluidSystem::numPhases] = { 0.0 };
                 Scalar oilSaturationNew = 1.0;
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSaturationIdx];
@@ -458,7 +475,7 @@ namespace Opm {
 
                 for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
                     Scalar tmp = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
-		    resultDelta += tmp*tmp;
+                    resultDelta += tmp*tmp;
                     resultDenom += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
                 }
             }
@@ -466,9 +483,9 @@ namespace Opm {
             resultDelta = gridView.comm().sum(resultDelta);
             resultDenom = gridView.comm().sum(resultDenom);
 
-	    if (resultDenom > 0.0)
-	      return resultDelta/resultDenom;
-	    return 0.0;
+            if (resultDenom > 0.0)
+              return resultDelta/resultDenom;
+            return 0.0;
         }
 
 
@@ -1081,6 +1098,9 @@ namespace Opm {
         // Well Model
         BlackoilWellModel<TypeTag>& well_model_;
 
+        // Aquifer Model
+        BlackoilAquiferModel<TypeTag>& aquifer_model_;
+
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
         /// \brief The number of cells of the global grid.
@@ -1100,6 +1120,9 @@ namespace Opm {
         const BlackoilWellModel<TypeTag>&
         wellModel() const { return well_model_; }
 
+        BlackoilAquiferModel<TypeTag>&
+        aquiferModel() { return aquifer_model_; }
+
         void beginReportStep()
         {
             ebosSimulator_.problem().beginEpisode();
@@ -1111,7 +1134,6 @@ namespace Opm {
         }
 
     private:
-
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
