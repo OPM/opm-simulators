@@ -35,7 +35,7 @@ namespace Opm {
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
         class BlackoilAquiferModel {
-        
+
         public:
 
             // ---------      Types      ---------
