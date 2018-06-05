@@ -70,6 +70,7 @@ namespace Opm
         preconditioner_add_well_contributions_ = param.getDefault("preconditioner_add_well_contributions", preconditioner_add_well_contributions_);
         do_adjoint_ = param.getDefault("do_adjoint",false);
         use_amgcl_ = param.getDefault("use_amgcl", use_amgcl_);
+        use_amgcl_drs_ = param.getDefault("use_amgcl_drs", use_amgcl_drs_);
         use_umfpack_ = param.getDefault("use_umfpack", use_umfpack_);
     }
 
@@ -104,6 +105,7 @@ namespace Opm
         preconditioner_add_well_contributions_ = false;
         do_adjoint_=false;
         use_amgcl_ = false;
+        use_amgcl_drs_ = true;//only used if amgcl is true
         use_umfpack_ = false;
     }
 
