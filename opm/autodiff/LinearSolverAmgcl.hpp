@@ -29,8 +29,9 @@ namespace Opm
     class LinearSolverAmgcl
     {
     public:
-        LinearSolverAmgcl(int block_size = 2):
-            block_size_(block_size)
+        LinearSolverAmgcl(int block_size, bool use_cpr_drs=true):
+            block_size_(block_size),
+            use_cpr_drs_(use_cpr_drs)
         {
 
         }
@@ -60,8 +61,8 @@ namespace Opm
                                 std::vector<double>& val,
                                 std::vector<double>& rhs);
         int block_size_;
+        bool use_cpr_drs_;
     };
-
 } // namespace Opm
 
 #endif // OPM_LINEARSOLVERAMGCL_HEADER_INCLUDED

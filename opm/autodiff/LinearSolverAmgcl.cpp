@@ -35,6 +35,7 @@
 #include <amgcl/relaxation/spai0.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
 #include <amgcl/runtime.hpp>
+//#include <amgcl/solver/runtime.hpp>
 #include <amgcl/relaxation/runtime.hpp>
 #include <amgcl/preconditioner/dummy.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
@@ -224,6 +225,7 @@ namespace Opm
             using Backend = amgcl::backend::builtin<double>;
             using Precond = amgcl::runtime::preconditioner<Backend>;
             using IterativeSolver = amgcl::runtime::iterative_solver<Backend>;
+            //using IterativeSolver = amgcl::runtime::solver::wrapper<Backend>;
             using Solver = amgcl::make_solver<Precond, IterativeSolver>;
             Solver solve(boost::tie(sz, ptr, col, val), prm);
             boost::tie(iters, error) = solve(rhs, sol);
@@ -244,8 +246,8 @@ namespace Opm
     {
         //const int block_size = 2;
         const double b_gas = 100.0;
-        const int n = sz / block_size;
-        assert(n*block_size == sz);
+        const int n = sz / block_size_;
+        assert(n*block_size_ == sz);
         for (int blockrow = 0; blockrow < n; ++blockrow) {
             const int gasrow = block_size_*blockrow + 2;
             for (int jj = ptr[gasrow]; jj < ptr[gasrow + 1]; ++jj) {
@@ -278,26 +280,46 @@ namespace Opm
         setCoarseningAMGCL("precond.pprecond.", opts, prm);
         setRelaxationAMGCL("precond.pprecond.relax.", 3, prm);
         setRelaxationAMGCL("precond.sprecond.", 3, prm);
-        prm.put("precond.eps_dd", dd);
-        prm.put("precond.eps_ps", ps);
 
-        setupSolver(tolerance, maxiter, prm);
-
-        using Backend = amgcl::backend::builtin<double>;
-        using PPrecond = amgcl::runtime::amg<Backend>;
-        using SPrecond = amgcl::runtime::relaxation::as_preconditioner<Backend>;
-        using Precond = amgcl::preconditioner::cpr_drs<PPrecond, SPrecond>;
-        using IterativeSolver = amgcl::runtime::iterative_solver<Backend>;
-        using Solver = amgcl::make_solver<Precond, IterativeSolver>;
-        auto x = new DebugTimeReport("setup");
-        Solver solve(boost::tie(sz, ptr, col, val), prm);
-        std::ofstream file("amg_setup.json");
-        boost::property_tree::json_parser::write_json(file, prm);
-        delete x;
-        auto y = new DebugTimeReport("solution");
-        boost::tie(iters, error) = solve(rhs, sol);
-        std::cout << solve << std::endl;
-        delete y;
+        prm.put("solver.type", amgcl::runtime::solver::bicgstab);
+        prm.put("solver.tol", tolerance);
+        prm.put("solver.maxiter", maxiter);
+        //setupSolver(tolerance, maxiter, prm);
+        if(use_cpr_drs_){
+            prm.put("precond.eps_dd", dd);
+            prm.put("precond.eps_ps", ps);
+            using Backend = amgcl::backend::builtin<double>;
+            using PPrecond = amgcl::runtime::amg<Backend>;
+            using SPrecond = amgcl::runtime::relaxation::as_preconditioner<Backend>;
+            using Precond = amgcl::preconditioner::cpr_drs<PPrecond, SPrecond>;
+            using IterativeSolver = amgcl::runtime::iterative_solver<Backend>;
+            using Solver = amgcl::make_solver<Precond, IterativeSolver>;
+            auto x = new DebugTimeReport("setup");
+            Solver solve(boost::tie(sz, ptr, col, val), prm);
+            std::ofstream file("amg_setup_cpr_drs.json");
+            boost::property_tree::json_parser::write_json(file, prm);
+            delete x;
+            auto y = new DebugTimeReport("solution");
+            boost::tie(iters, error) = solve(rhs, sol);
+            std::cout << solve << std::endl;
+            delete y;
+        }else{
+            using Backend = amgcl::backend::builtin<double>;
+            using PPrecond = amgcl::runtime::amg<Backend>;
+            using SPrecond = amgcl::runtime::relaxation::as_preconditioner<Backend>;
+            using Precond = amgcl::preconditioner::cpr<PPrecond, SPrecond>;
+            using IterativeSolver = amgcl::runtime::iterative_solver<Backend>;
+            using Solver = amgcl::make_solver<Precond, IterativeSolver>;
+            auto x = new DebugTimeReport("setup");
+            Solver solve(boost::tie(sz, ptr, col, val), prm);
+            std::ofstream file("amg_setup_cpr.json");
+            boost::property_tree::json_parser::write_json(file, prm);
+            delete x;
+            auto y = new DebugTimeReport("solution");
+            boost::tie(iters, error) = solve(rhs, sol);
+            std::cout << solve << std::endl;
+            delete y;
+        }
     }
 
 
