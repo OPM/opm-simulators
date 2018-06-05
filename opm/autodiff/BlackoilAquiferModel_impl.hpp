@@ -101,7 +101,7 @@ namespace Opm {
 
         updateConnectionIntensiveQuantities();
         const auto& eclState = ebosSimulator_.vanguard().eclState();
-        
+
         // Get all the carter tracy aquifer properties data and put it in aquifers vector
         const AquiferCT aquiferct = AquiferCT(eclState,deck);
         const Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
@@ -114,7 +114,7 @@ namespace Opm {
 
         for (size_t i = 0; i < aquifersData.size(); ++i)
         {
-            aquifers_.push_back( 
+            aquifers_.push_back(
                                   AquiferCarterTracy<TypeTag> (aquifersData.at(i), aquifer_connection.at(i), ebosSimulator_)
                                );
         }
