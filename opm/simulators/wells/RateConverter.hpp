@@ -657,21 +657,14 @@ namespace Opm {
                 }
 
                 // Use average Rs and Rv:
-                auto a = ra.rs;
-                auto b = a;
-                if (io >= 0 && ig >= 0) {
-                    b = surface_rates[ig]/(surface_rates[io]+1.0e-15);
+                double Rs = ra.rs;
+                double Rv = ra.rv;
+                if (Details::PhaseUsed::oil(pu) && Details::PhaseUsed::gas(pu)) {
+                    const auto& qs = surface_rates;
+
+                    Rs = std::min(Rs, qs[ig] / (qs[io] + 1.0e-15));
+                    Rv = std::min(Rv, qs[io] / (qs[ig] + 1.0e-15));
                 }
-
-                double Rs = std::min(a, b);
-
-                a = ra.rv;
-                b = a;
-                if (io >= 0 && ig >= 0) {
-                    b = surface_rates[io]/(surface_rates[ig]+1.0e-15);
-                }
-
-                double Rv = std::min(a, b);
 
                 // Determinant of 'R' matrix
                 const double detR = 1.0 - (Rs * Rv);
