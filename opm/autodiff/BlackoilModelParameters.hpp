@@ -104,7 +104,7 @@ namespace Opm
 
         // Use amgcl instead of dune-istl
         bool use_amgcl_;
-
+        bool use_amgcl_drs_;
         // Use UMFPACK instead of dune-istl
         bool use_umfpack_;
 
