@@ -362,7 +362,14 @@ namespace Opm {
                 auto ebosJac_trans = ebosJac_org;
                 auto adjRhs_cp = adjRhs;
                 Dune::MatrixVector::transpose(ebosJac_org, ebosJac_trans);
-                const auto left_trans = getBlockTransform(2);
+                MatrixBlockType left_trans = 0.0;
+                if(param_.use_amgcl_drs_){
+                    left_trans=getBlockTransform(2);
+                }else{
+                    auto eq_change=getBlockTransform(2);
+                    auto cpr_trans = getBlockTransform(1);
+                    left_trans= cpr_trans.rightmultiply(eq_change);
+                }
                 auto  right_trans = left_trans;
                 Dune::MatrixVector::transpose(left_trans, right_trans);
                 if(param_.use_amgcl_){
@@ -379,21 +386,22 @@ namespace Opm {
                 std::vector<double> rhs(sz, 0.0);
                 for (int cell = 0; cell < n; ++cell) {
                     for (int phase = 0; phase < np; ++phase) {
-                        rhs[np*cell + phase] = adjRhs[cell][phase];
+                        rhs[np*cell + phase] = adjRhs_cp[cell][phase];
                     }
                 }
 
                 std::vector<double> sol(sz, 0.0);
                 if (param_.use_amgcl_) {
                     // Call amgcl to solve system
-                    const double tol = 1e-2;
-                    const int maxiter = 150;
+                    const double tol = istlSolver().getParameters().linear_solver_reduction_;
+                    const int maxiter = istlSolver().getParameters().linear_solver_maxiter_;
                     int    iters;
                     double error;
-                    LinearSolverAmgcl solver;
+                    LinearSolverAmgcl solver(np, param_.use_amgcl_drs_);
                     //LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
                     solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
                     const_cast<int&>(linear_iters_last_solve_) = iters;
+                    std::cout << "Linear iterations in adjoint solve " << iters << std::endl;
                 } else if (param_.use_umfpack_) {
                     // Call UMFPACK to solve system
                     const int nnz = matrix.ptr[sz];
@@ -467,7 +475,7 @@ namespace Opm {
             std::cout << std::endl;
             //std::cout << ebosJac << std::endl;
             */
-
+            std::cout << "Linear iterations in adjoint solve " << linear_iters_last_solve_ << std::endl;
             return adjres;
 
          }
@@ -951,7 +959,14 @@ namespace Opm {
                 // Create matrix for external linear solvers.
                 //const bool do_transpose=false;
                 const int np = numPhases();
-                MatrixBlockType left_trans = getBlockTransform(2);
+                MatrixBlockType left_trans = 0.0;
+                if(param_.use_amgcl_drs_){
+                    left_trans=getBlockTransform(2);
+                }else{
+                    auto eq_change=getBlockTransform(2);
+                    auto cpr_trans = getBlockTransform(1);
+                    left_trans= cpr_trans.rightmultiply(eq_change);
+                }
                 bool print_matrix_system=false;
                 auto ebosJac_cp = ebosSimulator_.model().linearizer().matrix();
                 auto ebosResid_cp = ebosResid;
@@ -993,7 +1008,7 @@ namespace Opm {
                     const int maxiter = istlSolver().getParameters().linear_solver_maxiter_;
                     int    iters;
                     double error;
-                    LinearSolverAmgcl solver;
+                    LinearSolverAmgcl solver(np,param_.use_amgcl_drs_);
                     //LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
                     solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
                     const_cast<int&>(linear_iters_last_solve_) = iters;
@@ -1522,8 +1537,9 @@ namespace Opm {
         MatrixBlockType getBlockTransform(int meth_trans) const{
             int np = numPhases();
             MatrixBlockType left_trans=0.0;
-            switch(meth_trans) {
-            case 1:{
+            switch(meth_trans)
+            {
+            case 1 :
                 //cpr
                 for (int row = 0; row < np; ++row) {
                     for (int col = 0; col < np; ++col) {
@@ -1536,17 +1552,22 @@ namespace Opm {
                         }
                     }
                 }
-            }
+                break;
                 //permute equations
-            case 2: {
-                for (int row = 0; row < np; ++row) {
-                    for (int col = 0; col < np; ++col) {
+            case 2 :
+                for (int row = 0; row < 2; ++row) {
+                    for (int col = 0; col < 2; ++col) {
                         if(row!=col){
                             left_trans[row][col]=1.0;
                         }
                     }
                 }
-            }
+                if(np==3){
+                    left_trans[2][2]=1.0;
+                }
+               break;
+            default:
+                OPM_THROW(std::logic_error,"return zero tranformation matrix");
             }
             return left_trans;
         }
