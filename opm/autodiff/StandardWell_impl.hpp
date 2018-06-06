@@ -1570,6 +1570,7 @@ namespace Opm
             for ( int compIdx = 0; compIdx < num_components_; ++compIdx )
             {
                 report.converged = report.converged && (well_flux_residual[compIdx] < tol_wells) && control_eq_converged;
+                //std::cout << name() << " " << well_flux_residual[compIdx] << std::endl;
             }
         } else { // abnormal values found and no need to check the convergence
             report.converged = false;
@@ -2228,5 +2229,58 @@ namespace Opm
                 (*col) -= tmp1;
             }
         }
+    }
+
+    template<typename TypeTag>
+    SimulatorReport
+    StandardWell<TypeTag>::solveWellEq(Simulator& ebosSimulator, WellState& well_state, const double dt, const std::vector<double>& B_avg, bool terminal_output)
+    {
+        const int max_iter = param_.max_welleq_iter_;
+        int it  = 0;
+        bool converged;
+        WellState well_state0 = well_state;
+        do {
+            assembleWellEq(ebosSimulator, dt, well_state, true);
+
+            ConvergenceReport report;
+            report = getWellConvergence(B_avg);
+            converged = report.converged;
+
+            if (converged) {
+                break;
+            }
+
+            ++it;
+            solveEqAndUpdateWellState(well_state);
+
+            wellhelpers::WellSwitchingLogger logger;
+            updateWellControl(well_state, logger);
+            initPrimaryVariablesEvaluation();
+            } while (it < max_iter);
+
+        if (converged) {
+            if ( terminal_output ) {
+                OpmLog::debug("Well equation solution gets converged with " + std::to_string(it) + " iterations");
+            }
+        } else {
+            if ( terminal_output ) {
+                OpmLog::debug("Well equation solution failed in getting converged with " + std::to_string(it) + " iterations");
+                well_state = well_state0;
+                updatePrimaryVariables(well_state);
+                // also recover the old well controls
+                //WellControls* wc = wellControls();
+                //well_controls_set_current(wc, well_state.currentControls()[indexOfWell()]);
+            }
+
+//#warning need the unconverged solution in the wtest. Either add a flag or always use the unconverged solution?
+
+
+        }
+
+        SimulatorReport report;
+        report.converged = converged;
+        report.total_well_iterations = it;
+        return report;
+
     }
 }

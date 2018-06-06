@@ -206,7 +206,7 @@ namespace Opm {
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
-            wellModel().beginTimeStep();
+            wellModel().beginTimeStep(timer.reportStepNum(), timer.simulationTimeElapsed());
 
             if (param_.update_equations_scaling_) {
                 std::cout << "equation scaling not suported yet" << std::endl;
@@ -340,7 +340,7 @@ namespace Opm {
         /// \param[in] timer                  simulation timer
         void afterStep(const SimulatorTimerInterface& OPM_UNUSED timer)
         {
-            wellModel().timeStepSucceeded();
+            wellModel().timeStepSucceeded(timer.simulationTimeElapsed());
             aquiferModel().timeStepSucceeded(timer);
             ebosSimulator_.problem().endTimeStep();
 

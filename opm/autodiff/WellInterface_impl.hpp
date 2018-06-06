@@ -1,6 +1,7 @@
 /*
   Copyright 2017 SINTEF Digital, Mathematics and Cybernetics.
   Copyright 2017 Statoil ASA.
+  Copyright 2018 IRIS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -101,8 +102,8 @@ namespace Opm
                       wells->sat_table_id + perf_index_end,
                       saturation_table_number_.begin() );
         }
-
         well_efficiency_factor_ = 1.0;
+
     }
 
 
@@ -168,6 +169,15 @@ namespace Opm
     {
         return well_controls_;
     }
+
+    template<typename TypeTag>
+    const int
+    WellInterface<TypeTag>::
+    indexOfWell() const
+    {
+        return index_of_well_;
+    }
+
 
 
 
@@ -618,7 +628,8 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     updateListEconLimited(const WellState& well_state,
-                          DynamicListEconLimited& list_econ_limited) const
+                          const double& simulationTime,
+                          WellTestState& wellTestState) const
     {
         // economic limits only apply for production wells.
         if (wellType() != PRODUCER) {
@@ -660,12 +671,11 @@ namespace Opm
                 OpmLog::warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
             }
 
+            wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, simulationTime);
             if (well_ecl_->getAutomaticShutIn()) {
-                list_econ_limited.addShutWell(well_name);
-                const std::string msg = std::string("well ") + well_name + std::string(" will be shut in due to rate economic limit");
-                    OpmLog::info(msg);
+                const std::string msg = std::string("well ") + well_name + std::string(" will be shut due to rate economic limit");
+                OpmLog::info(msg);
             } else {
-                list_econ_limited.addStoppedWell(well_name);
                 const std::string msg = std::string("well ") + well_name + std::string(" will be stopped due to rate economic limit");
                 OpmLog::info(msg);
             }
@@ -687,33 +697,43 @@ namespace Opm
             switch (workover) {
                 case WellEcon::CON:
                 {
-                    const bool last_connection = std::get<1>(ratio_check_return);
                     const int worst_offending_connection = std::get<2>(ratio_check_return);
 
                     assert((worst_offending_connection >= 0) && (worst_offending_connection < number_of_perforations_));
-
-                    const int cell_worst_offending_connection = well_cells_[worst_offending_connection];
-                    list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
+#warning map to completions
+                    wellTestState.addClosedCompletion(well_name, worst_offending_connection, simulationTime);
                     const std::string msg = std::string("Connection ") + std::to_string(worst_offending_connection) + std::string(" for well ")
                                             + well_name + std::string(" will be closed due to economic limit");
                     OpmLog::info(msg);
 
-                    if (last_connection) {
-                        // TODO: there is more things to check here
-                        list_econ_limited.addShutWell(well_name);
-                        const std::string msg2 = well_name + std::string(" will be shut due to the last connection closed");
-                        OpmLog::info(msg2);
+
+                    bool allCompletionsClosed = true;
+                    for (int perf = 0; perf < number_of_perforations_ ; ++perf) {
+                        if (!wellTestState.hasCompletion(name(), perf)) {
+                            allCompletionsClosed = false;
+                        }
+                    }
+
+                    if (allCompletionsClosed) {
+                        wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, simulationTime);
+                        if (well_ecl_->getAutomaticShutIn()) {
+                            const std::string msg = well_name + std::string(" will be shut due to last compleation closed");
+                            OpmLog::info(msg);
+                        } else {
+                            const std::string msg = well_name + std::string(" will be stopped due to last compleation closed");
+                            OpmLog::info(msg);
+                        }
                     }
                     break;
                 }
                 case WellEcon::WELL:
                 {
+                    wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, 0);
                     if (well_ecl_->getAutomaticShutIn()) {
-                        list_econ_limited.addShutWell(well_name);
+                        // tell the controll that the well is closed
                         const std::string msg = well_name + std::string(" will be shut due to ratio economic limit");
                         OpmLog::info(msg);
                     } else {
-                        list_econ_limited.addStoppedWell(well_name);
                         const std::string msg = well_name + std::string(" will be stopped due to ratio economic limit");
                         OpmLog::info(msg);
                     }
@@ -863,6 +883,22 @@ namespace Opm
 
         for (int p = 0; p < np; ++p) {
             well_state.wellReservoirRates()[well_rate_index + p] = voidage_rates[p];
+        }    
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::closeWellsAndCompletions(WellTestState& wellTestState)
+    {
+        if (wellTestState.hasWell(name(), WellTestConfig::Reason::ECONOMIC)) {
+            assert(!well_ecl_->getAutomaticShutIn());
+            well_controls_stop_well(wellControls());
+        }
+
+        for (int perf = 0; perf < number_of_perforations_ ; ++perf) {
+            if (wellTestState.hasCompletion(name(), perf)) {
+                well_index_[perf] = 0.0;
+            }
         }
     }
 

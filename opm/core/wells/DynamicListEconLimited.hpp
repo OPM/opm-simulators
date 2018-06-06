@@ -80,6 +80,22 @@ namespace Opm
             }
         }
 
+        void removeShutWell(const std::string& well_name) {
+            auto itr = std::find(m_shut_wells.begin(), m_shut_wells.end(), well_name);
+            if (itr != m_shut_wells.end())
+                m_shut_wells.erase(itr);
+        }
+
+        void removeStoppedWell(const std::string& well_name) {
+            auto itr = std::find(m_stopped_wells.begin(), m_stopped_wells.end(), well_name);
+            if (itr != m_stopped_wells.end())
+                m_stopped_wells.erase(itr);
+        }
+
+        void removeClosedConnectionsForWell(const std::string& well_name) {
+             m_cells_closed_connections.erase(well_name);
+        }
+
     private:
         std::vector <std::string> m_shut_wells;
         std::vector <std::string> m_stopped_wells;

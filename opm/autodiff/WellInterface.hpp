@@ -28,10 +28,13 @@
 #include <opm/common/Exceptions.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/WellTestState.hpp>
+
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/wells/WellsManager.hpp>
+#include <opm/core/simulator/SimulatorReport.hpp>
 
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>
@@ -113,6 +116,9 @@ namespace Opm
         /// Well name.
         const std::string& name() const;
 
+        /// Index of well in the wells struct and wellState
+        const int indexOfWell() const;
+
         /// Well cells.
         const std::vector<int>& cells() {return well_cells_; }
 
@@ -172,7 +178,8 @@ namespace Opm
                                     bool only_wells) = 0;
 
         void updateListEconLimited(const WellState& well_state,
-                                   DynamicListEconLimited& list_econ_limited) const;
+                                   const double& simulationTime,
+                                   WellTestState& wellTestState) const;
 
         void setWellEfficiencyFactor(const double efficiency_factor);
 
@@ -216,6 +223,20 @@ namespace Opm
         // Add well contributions to matrix
         virtual void addWellContributions(Mat&) const
         {}
+
+        virtual SimulatorReport solveWellEq(Simulator& ebosSimulator, WellState& well_state, const double dt, const std::vector<double>& B_avg, bool terminal_output)
+        {
+#warning need to add this to multisegment wells
+            SimulatorReport report;
+            return report;
+        }
+
+        void closeWellsAndCompletions(WellTestState& wellTestState);
+
+#warning currently just return number of connections
+        int numberOfCompletions(){ return number_of_perforations_;}
+
+
     protected:
 
         // to indicate a invalid connection
@@ -331,6 +352,8 @@ namespace Opm
                                              const WellState& well_state) const;
 
         double scalingFactor(const int comp_idx) const;
+
+
 
     };
 

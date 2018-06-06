@@ -259,6 +259,12 @@ add_test_compareECLFiles(CASENAME spe5
                          REL_TOL ${coarse_rel_tol}
                          TEST_ARGS max_iter=20)
 
+add_test_compareECLFiles(CASENAME wecon
+                         FILENAME 3D_WECON
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol})
+
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 

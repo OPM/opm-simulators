@@ -188,6 +188,7 @@ namespace Opm
         using Base::wellHasTHPConstraints;
         using Base::mostStrictBhpFromBhpLimits;
         using Base::scalingFactor;
+        using Base::updateWellControl;
 
         // protected member variables from the Base class
         using Base::current_step_;
@@ -338,6 +339,9 @@ namespace Opm
 
         // handle the non reasonable fractions due to numerical overshoot
         void processFractions() const;
+
+        SimulatorReport solveWellEq(Simulator& ebosSimulator, WellState& well_state, const double dt, const std::vector<double>& B_avg, bool terminal_output);
+
     };
 
 }
