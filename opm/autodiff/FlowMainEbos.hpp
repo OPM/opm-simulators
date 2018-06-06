@@ -551,9 +551,7 @@ namespace Opm
             // Create the simulator instance.
             simulator_.reset(new Simulator(*ebosSimulator_,
                                            param_,
-                                           *fis_solver_,
-                                           FluidSystem::enableDissolvedGas(),
-                                           FluidSystem::enableVaporizedOil()));
+                                           *fis_solver_));
         }
 
     private:

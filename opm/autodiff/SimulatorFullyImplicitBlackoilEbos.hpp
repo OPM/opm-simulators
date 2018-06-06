@@ -92,17 +92,13 @@ public:
     /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
     SimulatorFullyImplicitBlackoilEbos(Simulator& ebosSimulator,
                                        const ParameterGroup& param,
-                                       NewtonIterationBlackoilInterface& linsolver,
-                                       const bool hasDisgas,
-                                       const bool hasVapoil)
+                                       NewtonIterationBlackoilInterface& linsolver)
         : ebosSimulator_(ebosSimulator)
         , param_(param)
         , modelParam_(param)
         , solverParam_(param)
         , solver_(linsolver)
         , phaseUsage_(phaseUsageFromDeck(eclState()))
-        , hasDisgas_(hasDisgas)
-        , hasVapoil_(hasVapoil)
         , terminalOutput_(param.getDefault("output_terminal", true))
     {
 #if HAVE_MPI
@@ -384,8 +380,6 @@ protected:
     NewtonIterationBlackoilInterface& solver_;
     PhaseUsage phaseUsage_;
     // Misc. data
-    const bool hasDisgas_;
-    const bool hasVapoil_;
     bool       terminalOutput_;
 };
 

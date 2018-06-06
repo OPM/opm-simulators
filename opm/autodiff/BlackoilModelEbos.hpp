@@ -146,8 +146,7 @@ namespace Opm {
                           BlackoilWellModel<TypeTag>& well_model,
                           BlackoilAquiferModel<TypeTag>& aquifer_model,
                           const NewtonIterationBlackoilInterface& linsolver,
-                          const bool terminal_output
-                          )
+                          const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
         , grid_(ebosSimulator_.vanguard().grid())
         , istlSolver_( dynamic_cast< const ISTLSolverType* > (&linsolver) )
