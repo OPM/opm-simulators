@@ -200,7 +200,7 @@ public:
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            well_model.beginReportStep(timer.currentStepNum());
+            well_model.beginReportStep(timer.currentStepNum(), timer.simulationTimeElapsed());
 
             auto solver = createSolver(well_model);
 

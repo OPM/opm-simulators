@@ -37,12 +37,29 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    beginReportStep(const int timeStepIdx)
+    beginReportStep(const int timeStepIdx,const double simulationTime, bool enableWellTests)
     {
         const Grid& grid = ebosSimulator_.vanguard().grid();
         const auto& defunct_well_names = ebosSimulator_.vanguard().defunctWellNames();
         const auto& eclState = ebosSimulator_.vanguard().eclState();
         wells_ecl_ = schedule().getWells(timeStepIdx);
+        const auto& wtest_config = schedule().wtestConfig(timeStepIdx);
+
+        // Check if the well is scheduled for a test
+        if (wtest_config.size() > 0 && enableWellTests) {
+            for (auto& well : wtest_config.getWells()) {
+                wellTestState_.addClosedWell(well.name, WellTestConfig::Reason::ECONOMIC, 0);
+            }
+            const auto& wellsForTesting = wellTestState_.update(wtest_config, simulationTime);
+            if (wellsForTesting.empty()) {
+                enableWellTests = false;
+            }
+            for (auto& testWell : wellsForTesting) {
+                dynamic_list_econ_limited_.removeShutWell(testWell.first);
+                dynamic_list_econ_limited_.removeStoppedWell(testWell.first);
+                dynamic_list_econ_limited_.removeClosedConnectionsForWell(testWell.first);
+            }
+        }
 
         // Create wells and well state.
         wells_manager_.reset( new WellsManager (eclState,
@@ -140,7 +157,17 @@ namespace Opm {
         // update the previous well state. This is used to restart failed steps.
         previous_well_state_ = well_state_;
 
-
+        // Do the well testing if enabled
+        if (!initial_step_ && wtest_config.size() > 0 && enableWellTests) {
+            // solve the well equation isolated from the reservoir.
+            assemble(/*iterationIdx=*/ 0, /*dt (not relevant for well test) =*/ 1.0, enableWellTests);
+            // This is where WECON is checked
+#warning WECON should be tested after every time step not after every report step
+            endReportStep();
+            // start the report step over again, but now including wells that passed
+            // the well test
+            beginReportStep(timeStepIdx, simulationTime, /*enableWellTests=*/ false);
+        }
     }
 
 
@@ -251,7 +278,8 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     assemble(const int iterationIdx,
-             const double dt)
+             const double dt,
+             bool onlyDoTheWellTest)
     {
 
 
@@ -275,6 +303,9 @@ namespace Opm {
         if (param_.solve_welleq_initially_ && iterationIdx == 0) {
             // solve the well equations as a pre-processing step
             last_report_ = solveWellEq(dt);
+            if (onlyDoTheWellTest)
+                return;
+
             if (initial_step_) {
                 // update the explicit quantities to get the initial fluid distribution in the well correct.
                 calculateExplicitQuantities();
@@ -512,13 +543,14 @@ namespace Opm {
                 OpmLog::debug("Well equation solution failed in getting converged with " + std::to_string(it) + " iterations");
             }
 
-            well_state_ = well_state0;
-            updatePrimaryVariables();
-            // also recover the old well controls
-            for (int w = 0; w < nw; ++w) {
-                WellControls* wc = well_container_[w]->wellControls();
-                well_controls_set_current(wc, well_state_.currentControls()[w]);
-            }
+#warning need the unconverged solution in the wtest. Either add a flag or always use the unconverged solution?
+//            well_state_ = well_state0;
+//            updatePrimaryVariables();
+//            // also recover the old well controls
+//            for (int w = 0; w < nw; ++w) {
+//                WellControls* wc = well_container_[w]->wellControls();
+//                well_controls_set_current(wc, well_state_.currentControls()[w]);
+//            }
         }
 
         SimulatorReport report;
