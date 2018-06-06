@@ -33,6 +33,7 @@
 #include <tuple>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/WellTestState.hpp>
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
@@ -106,7 +107,8 @@ namespace Opm {
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
             void assemble(const int iterationIdx,
-                                     const double dt);
+                          const double dt,
+                          bool wtest = false);
 
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;
@@ -145,7 +147,7 @@ namespace Opm {
             void timeStepSucceeded();
 
             // called at the beginning of a report step
-            void beginReportStep(const int time_step);
+            void beginReportStep(const int time_step, const double simulation_time, bool wtest = true);
 
             // called at the end of a report step
             void endReportStep();
@@ -198,6 +200,8 @@ namespace Opm {
             std::unique_ptr<VFPProperties> vfp_properties_;
 
             SimulatorReport last_report_;
+
+            WellTestState wellTestState_;
 
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_;
