@@ -180,11 +180,7 @@ namespace Opm {
 
         /// Called once before each time step.
         /// \param[in] timer                  simulation timer
-        /// \param[in, out] reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        void prepareStep(const SimulatorTimerInterface& timer,
-                         const ReservoirState& /*reservoir_state*/,
-                         const WellState& /* well_state */)
+        void prepareStep(const SimulatorTimerInterface& timer)
         {
 
             // update the solution variables in ebos
@@ -228,9 +224,7 @@ namespace Opm {
         template <class NonlinearSolverType>
         SimulatorReport nonlinearIteration(const int iteration,
                                            const SimulatorTimerInterface& timer,
-                                           NonlinearSolverType& nonlinear_solver,
-                                           ReservoirState& /*reservoir_state*/,
-                                           WellState& /*well_state*/)
+                                           NonlinearSolverType& nonlinear_solver)
         {
             SimulatorReport report;
             failureReport_ = SimulatorReport();
@@ -341,16 +335,8 @@ namespace Opm {
         /// Called once after each time step.
         /// In this class, this function does nothing.
         /// \param[in] timer                  simulation timer
-        /// \param[in, out] reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        void afterStep(const SimulatorTimerInterface& timer,
-                       const ReservoirState& reservoir_state,
-                       WellState& well_state)
+        void afterStep(const SimulatorTimerInterface& OPM_UNUSED timer)
         {
-            DUNE_UNUSED_PARAMETER(timer);
-            DUNE_UNUSED_PARAMETER(reservoir_state);
-            DUNE_UNUSED_PARAMETER(well_state);
-
             wellModel().timeStepSucceeded();
             aquiferModel().timeStepSucceeded(timer);
             ebosSimulator_.problem().endTimeStep();
@@ -411,8 +397,7 @@ namespace Opm {
         }
 
         // compute the "relative" change of the solution between time steps
-        template <class Dummy>
-        double relativeChange(const Dummy&, const Dummy&) const
+        double relativeChange() const
         {
             Scalar resultDelta = 0.0;
             Scalar resultDenom = 0.0;
@@ -484,7 +469,7 @@ namespace Opm {
             resultDenom = gridView.comm().sum(resultDenom);
 
             if (resultDenom > 0.0)
-              return resultDelta/resultDenom;
+                return resultDelta/resultDenom;
             return 0.0;
         }
 

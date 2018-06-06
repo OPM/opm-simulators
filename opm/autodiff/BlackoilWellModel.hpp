@@ -103,6 +103,40 @@ namespace Opm {
                               const ModelParameters& param,
                               const bool terminal_output);
 
+            void initFromRestartFile(const RestartValue& restartValues)
+            {
+                // gives a dummy dynamic_list_econ_limited
+                DynamicListEconLimited dummyListEconLimited;
+                const auto& defunctWellNames = ebosSimulator_.vanguard().defunctWellNames();
+                WellsManager wellsmanager(eclState(),
+                                          schedule(),
+                                          // The restart step value is used to identify wells present at the given
+                                          // time step. Wells that are added at the same time step as RESTART is initiated
+                                          // will not be present in a restart file. Use the previous time step to retrieve
+                                          // wells that have information written to the restart file.
+                                          std::max(eclState().getInitConfig().getRestartStep() - 1, 0),
+                                          Opm::UgGridHelpers::numCells(grid()),
+                                          Opm::UgGridHelpers::globalCell(grid()),
+                                          Opm::UgGridHelpers::cartDims(grid()),
+                                          Opm::UgGridHelpers::dimensions(grid()),
+                                          Opm::UgGridHelpers::cell2Faces(grid()),
+                                          Opm::UgGridHelpers::beginFaceCentroids(grid()),
+                                          dummyListEconLimited,
+                                          grid().comm().size() > 1,
+                                          defunctWellNames);
+
+                const Wells* wells = wellsmanager.c_wells();
+
+                const int nw = wells->number_of_wells;
+                if (nw > 0) {
+                    auto phaseUsage = phaseUsageFromDeck(eclState());
+                    size_t numCells = Opm::UgGridHelpers::numCells(grid());
+                    well_state_.resize(wells, numCells, phaseUsage); //Resize for restart step
+                    wellsToState(restartValues.wells, phaseUsage, well_state_);
+                    previous_well_state_ = well_state_;
+                }
+            }
+
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
             void assemble(const int iterationIdx,
@@ -161,6 +195,32 @@ namespace Opm {
             }
 
         protected:
+            void extractLegacyPressure_(std::vector<double>& cellPressure) const
+            {
+                size_t nc = number_of_cells_;
+                std::vector<double> cellPressures(nc, 0.0);
+                ElementContext elemCtx(ebosSimulator_);
+                const auto& gridView = ebosSimulator_.vanguard().gridView();
+                const auto& elemEndIt = gridView.template end</*codim=*/0>();
+                for (auto elemIt = gridView.template begin</*codim=*/0>();
+                     elemIt != elemEndIt;
+                     ++elemIt)
+                {
+                    const auto& elem = *elemIt;
+                    if (elem.partitionType() != Dune::InteriorEntity) {
+                        continue;
+                    }
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                    const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                    const auto& fs = intQuants.fluidState();
+
+                    const double p = fs.pressure(FluidSystem::oilPhaseIdx).value();
+                    cellPressures[cellIdx] = p;
+                }
+            }
 
             Simulator& ebosSimulator_;
             std::unique_ptr<WellsManager> wells_manager_;
@@ -203,6 +263,12 @@ namespace Opm {
             mutable BVector scaleAddRes_;
 
             const Wells* wells() const { return wells_manager_->c_wells(); }
+
+            const Grid& grid() const
+            { return ebosSimulator_.vanguard().grid(); }
+
+            const EclipseState& eclState() const
+            { return ebosSimulator_.vanguard().eclState(); }
 
             const Schedule& schedule() const
             { return ebosSimulator_.vanguard().schedule(); }

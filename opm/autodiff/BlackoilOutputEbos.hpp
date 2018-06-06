@@ -96,13 +96,11 @@ namespace Opm
          *        requested output cell properties specified by the RPTRST keyword
          *        and write these to file.
          */
-        template<class SimulationDataContainer, class Model>
+        template<class Model>
         void writeTimeStep(const SimulatorTimerInterface& timer,
-                           const SimulationDataContainer& /*reservoirStateDummy*/,
-                           const Opm::WellStateFullyImplicitBlackoil& /*wellStateDummy*/,
                            const Model& physicalModel,
-                           const bool substep = false,
-                           const double nextstep = -1.0,
+                           const bool isSubstep = false,
+                           const double nextStepSize = -1.0,
                            const SimulatorReport& simulatorReport = SimulatorReport())
         {
             if( output_ )
@@ -114,59 +112,7 @@ namespace Opm
 
                 // The writeOutput expects a local data::solution vector and a local data::well vector.
                 auto localWellData = localWellState.report(phaseUsage_, Opm::UgGridHelpers::globalCell(grid()) );
-                ebosSimulator_.problem().writeOutput(localWellData, timer.simulationTimeElapsed(), substep, totalSolverTime, nextstep);
-            }
-        }
-
-        template <class SimulationDataContainer, class WellState>
-        void initFromRestartFile(const PhaseUsage& /*phaseUsage*/,
-                                 const Grid& /*grid */,
-                                 SimulationDataContainer& simulatorstate,
-                                 WellState& wellstate,
-                                 ExtraData& extra)   {
-
-            std::vector<RestartKey> extra_keys = {
-              {"OPMEXTRA" , Opm::UnitSystem::measure::identity, false}
-            };
-
-            // gives a dummy dynamic_list_econ_limited
-            DynamicListEconLimited dummy_list_econ_limited;
-            const auto& defunct_well_names = ebosSimulator_.vanguard().defunctWellNames();
-            WellsManager wellsmanager(eclState(),
-                                      schedule(),
-                                      // The restart step value is used to identify wells present at the given
-                                      // time step. Wells that are added at the same time step as RESTART is initiated
-                                      // will not be present in a restart file. Use the previous time step to retrieve
-                                      // wells that have information written to the restart file.
-                                      std::max(eclState().getInitConfig().getRestartStep() - 1, 0),
-                                      Opm::UgGridHelpers::numCells(grid()),
-                                      Opm::UgGridHelpers::globalCell(grid()),
-                                      Opm::UgGridHelpers::cartDims(grid()),
-                                      Opm::UgGridHelpers::dimensions(grid()),
-                                      Opm::UgGridHelpers::cell2Faces(grid()),
-                                      Opm::UgGridHelpers::beginFaceCentroids(grid()),
-                                      dummy_list_econ_limited,
-                                      grid().comm().size() > 1,
-                                      defunct_well_names);
-
-            const Wells* wells = wellsmanager.c_wells();
-
-            std::vector<RestartKey> solution_keys = {};
-            auto restart_values = ebosSimulator_.problem().eclIO().loadRestart(solution_keys, extra_keys);
-
-            const int nw = wells->number_of_wells;
-            if (nw > 0) {
-                wellstate.resize(wells, simulatorstate, phaseUsage_ ); //Resize for restart step
-                wellsToState( restart_values.wells, phaseUsage_, wellstate );
-            }
-
-            if (restart_values.hasExtra("OPMEXTRA")) {
-                std::vector<double> opmextra = restart_values.getExtra("OPMEXTRA");
-                assert(opmextra.size() == 1);
-                extra.suggested_step = opmextra[0];
-            } else {
-                OpmLog::warning("Restart data is missing OPMEXTRA field, restart run may deviate from original run.");
-                extra.suggested_step = -1.0;
+                ebosSimulator_.problem().writeOutput(localWellData, timer.simulationTimeElapsed(), isSubstep, totalSolverTime, nextStepSize);
             }
         }
 

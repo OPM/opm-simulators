@@ -459,7 +459,8 @@ namespace Opm
                                   std::unordered_set<std::string>());
 
         const Wells* wells = wellsmanager.c_wells();
-        wellstate.resize(wells, simulatorstate, phaseUsage ); //Resize for restart step
+        size_t numCells = Opm::UgGridHelpers::numCells(grid);
+        wellstate.resize(wells, numCells, phaseUsage ); //Resize for restart step
         auto restart_values = eclIO_->loadRestart(solution_keys, extra_keys);
 
         solutionToSim( restart_values, phaseUsage, simulatorstate );
