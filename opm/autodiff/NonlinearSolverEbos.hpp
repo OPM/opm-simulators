@@ -23,6 +23,8 @@
 
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>

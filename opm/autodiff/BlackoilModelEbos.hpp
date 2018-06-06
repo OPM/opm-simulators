@@ -1054,6 +1054,9 @@ namespace Opm {
         const Simulator& ebosSimulator() const
         { return ebosSimulator_; }
 
+        Simulator& ebosSimulator()
+        { return ebosSimulator_; }
+
         /// return the statistics if the nonlinearIteration() method failed
         const SimulatorReport& failureReport() const
         { return failureReport_; }

@@ -22,7 +22,6 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 
-#include <opm/autodiff/BlackoilOutputEbos.hpp>
 #include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/NonlinearSolverEbos.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
@@ -61,7 +60,6 @@ public:
 
     typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilState ReservoirState;
-    typedef BlackoilOutputEbos<TypeTag> OutputWriter;
     typedef BlackoilModelEbos<TypeTag> Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolverEbos<Model> Solver;
@@ -96,8 +94,7 @@ public:
                                        const ParameterGroup& param,
                                        NewtonIterationBlackoilInterface& linsolver,
                                        const bool hasDisgas,
-                                       const bool hasVapoil,
-                                       OutputWriter& outputWriter)
+                                       const bool hasVapoil)
         : ebosSimulator_(ebosSimulator)
         , param_(param)
         , modelParam_(param)
@@ -107,7 +104,6 @@ public:
         , hasDisgas_(hasDisgas)
         , hasVapoil_(hasVapoil)
         , terminalOutput_(param.getDefault("output_terminal", true))
-        , outputWriter_(outputWriter)
     {
 #if HAVE_MPI
         if (solver_.parallelInformation().type() == typeid(ParallelISTLInformation)) {
@@ -131,7 +127,7 @@ public:
 
         // handle restarts
         std::unique_ptr<RestartValue> restartValues;
-        if (outputWriter_.isRestart()) {
+        if (isRestart()) {
             std::vector<RestartKey> extraKeys = {
                 {"OPMEXTRA" , Opm::UnitSystem::measure::identity, false}
             };
@@ -158,7 +154,7 @@ public:
             }
 
             double suggestedStepSize = -1.0;
-            if (outputWriter_.isRestart()) {
+            if (isRestart()) {
                 // This is a restart, determine the time step size from the restart data
                 if (restartValues->hasExtra("OPMEXTRA")) {
                     std::vector<double> opmextra = restartValues->getExtra("OPMEXTRA");
@@ -180,7 +176,7 @@ public:
         SimulatorReport stepReport;
 
         WellModel wellModel(ebosSimulator_, modelParam_, terminalOutput_);
-        if (outputWriter_.isRestart()) {
+        if (isRestart()) {
             wellModel.initFromRestartFile(*restartValues);
         }
 
@@ -217,7 +213,12 @@ public:
 
                 // No per cell data is written for initial step, but will be
                 // for subsequent steps, when we have started simulating
-                outputWriter_.writeTimeStep(timer, solver->model());
+                auto localWellData = wellModel.wellState().report(phaseUsage_, Opm::UgGridHelpers::globalCell(grid()));
+                ebosSimulator_.problem().writeOutput(localWellData,
+                                                     timer.simulationTimeElapsed(),
+                                                     /*isSubstep=*/false,
+                                                     totalTimer.secsSinceStart(),
+                                                     /*nextStepSize=*/-1.0);
 
                 report.output_write_time += perfTimer.stop();
             }
@@ -252,7 +253,7 @@ public:
                         events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE, timer.currentStepNum());
-                stepReport = adaptiveTimeStepping->step(timer, *solver, event, outputWriter_, nullptr);
+                stepReport = adaptiveTimeStepping->step(timer, *solver, event, nullptr);
                 report += stepReport;
                 failureReport_ += adaptiveTimeStepping->failureReport();
             }
@@ -294,7 +295,12 @@ public:
             perfTimer.start();
             const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
 
-            outputWriter_.writeTimeStep(timer, solver->model(), false, nextstep, report);
+            auto localWellData = wellModel.wellState().report(phaseUsage_, Opm::UgGridHelpers::globalCell(grid()));
+            ebosSimulator_.problem().writeOutput(localWellData,
+                                                 timer.simulationTimeElapsed(),
+                                                 /*isSubstep=*/false,
+                                                 totalTimer.secsSinceStart(),
+                                                 nextstep);
             report.output_write_time += perfTimer.stop();
 
             if (terminalOutput_) {
@@ -357,6 +363,11 @@ protected:
     const Schedule& schedule() const
     { return ebosSimulator_.vanguard().schedule(); }
 
+    bool isRestart() const
+    {
+        const auto& initconfig = eclState().getInitConfig();
+        return initconfig.restartRequested();
+    }
 
     // Data.
     Simulator& ebosSimulator_;
@@ -376,8 +387,6 @@ protected:
     const bool hasDisgas_;
     const bool hasVapoil_;
     bool       terminalOutput_;
-    // outputWriter
-    OutputWriter& outputWriter_;
 };
 
 } // namespace Opm

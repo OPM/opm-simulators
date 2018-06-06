@@ -97,11 +97,10 @@ namespace Opm {
         /** \brief  step method that acts like the solver::step method
                     in a sub cycle of time steps
         */
-        template <class Solver, class Output>
+        template <class Solver>
         SimulatorReport step(const SimulatorTimer& simulatorTimer,
                              Solver& solver,
                              const bool isEvent,
-                             Output& outputWriter,
                              const std::vector<int>* fipnum = nullptr)
         {
             SimulatorReport report;
@@ -120,6 +119,10 @@ namespace Opm {
             if (isEvent && timestepAfterEvent_ > 0) {
                 suggestedNextTimestep_ = timestepAfterEvent_;
             }
+
+            auto& ebosSimulator = solver.model().ebosSimulator();
+            auto& ebosProblem = ebosSimulator.problem();
+            auto phaseUsage = Opm::phaseUsageFromDeck(ebosSimulator.vanguard().eclState());
 
             // create adaptive step timer with previously used sub step size
             AdaptiveSimulatorTimer substepTimer(simulatorTimer, suggestedNextTimestep_, maxTimeStep_);
@@ -231,9 +234,15 @@ namespace Opm {
                         }
                         Opm::time::StopWatch perfTimer;
                         perfTimer.start();
-                        bool substep = true;
-                        const auto& physicalModel = solver.model();
-                        outputWriter.writeTimeStep(substepTimer, physicalModel, substep, -1.0, substepReport);
+
+                        // The writeOutput expects a local data::solution vector and a local data::well vector.
+                        auto localWellData = solver.model().wellModel().wellState().report(phaseUsage, Opm::UgGridHelpers::globalCell(ebosSimulator.vanguard().grid()));
+                        ebosProblem.writeOutput(localWellData,
+                                                substepTimer.simulationTimeElapsed(),
+                                                /*isSubstep=*/true,
+                                                substepReport.total_time,
+                                                /*nextStepSize=*/-1.0);
+
                         report.output_write_time += perfTimer.secsSinceStart();
                     }
 

@@ -85,7 +85,6 @@ namespace Opm
 
         typedef Opm::SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
         typedef typename Simulator::ReservoirState ReservoirState;
-        typedef typename Simulator::OutputWriter OutputWriter;
 
         /// This is the main function of Flow.
         /// It runs a complete simulation, with the given grid and
@@ -107,7 +106,6 @@ namespace Opm
                 setupLogging();
                 printPRTHeader();
                 runDiagnostics();
-                setupOutputWriter();
                 setupLinearSolver();
                 createSimulator();
 
@@ -480,20 +478,6 @@ namespace Opm
             diagnostic.diagnosis(eclState(), deck(), this->grid());
         }
 
-        // Setup output writer.
-        // Writes to:
-        //   output_writer_
-        void setupOutputWriter()
-        {
-            // create output writer after grid is distributed, otherwise the parallel output
-            // won't work correctly since we need to create a mapping from the distributed to
-            // the global view
-
-            output_writer_.reset(new OutputWriter(*ebosSimulator_,
-                                                   param_));
-
-        }
-
         // Run the simulator.
         // Returns EXIT_SUCCESS if it does not throw.
         int runSimulator()
@@ -569,8 +553,7 @@ namespace Opm
                                            param_,
                                            *fis_solver_,
                                            FluidSystem::enableDissolvedGas(),
-                                           FluidSystem::enableVaporizedOil(),
-                                           *output_writer_));
+                                           FluidSystem::enableVaporizedOil()));
         }
 
     private:
@@ -619,7 +602,6 @@ namespace Opm
         bool must_distribute_ = false;
         ParameterGroup param_;
         bool output_to_files_ = false;
-        std::unique_ptr<OutputWriter> output_writer_;
         boost::any parallel_information_;
         std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver_;
         std::unique_ptr<Simulator> simulator_;
