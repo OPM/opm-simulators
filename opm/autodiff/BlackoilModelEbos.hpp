@@ -37,6 +37,7 @@
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/LinearSolverAmgcl.hpp>
+#include <opm/autodiff/LinearSolverAmgclNew.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
@@ -397,9 +398,15 @@ namespace Opm {
                     const int maxiter = istlSolver().getParameters().linear_solver_maxiter_;
                     int    iters;
                     double error;
+                    /*
                     LinearSolverAmgcl solver(np, param_.use_amgcl_drs_);
                     //LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
                     solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
+                    */
+                    solver_ =std::make_shared<LinearSolverAmgclNew>(np, param_.use_amgcl_drs_);
+                    solver_->init(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter);
+                    solver_->updatePre(sz, matrix.ptr, matrix.col, matrix.val, tol, maxiter);
+                    solver_->solve(rhs,  sol, iters, error);
                     const_cast<int&>(linear_iters_last_solve_) = iters;
                     std::cout << "Linear iterations in adjoint solve " << iters << std::endl;
                 } else if (param_.use_umfpack_) {
@@ -546,7 +553,7 @@ namespace Opm {
                 //std::cout << "print all matrixes" << std::endl;
 
                 try {
-                    solveJacobianSystem(x);
+                    solveJacobianSystem(x,iteration,timer);
                     report.linear_solve_time += perfTimer.stop();
                     report.total_linear_iterations += linearIterationsLastSolve();
                 }
@@ -923,7 +930,7 @@ namespace Opm {
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
-        void solveJacobianSystem(BVector& x) const
+        void solveJacobianSystem(BVector& x,const int iteration,const SimulatorTimerInterface& timer) const
         {
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
@@ -1008,9 +1015,27 @@ namespace Opm {
                     const int maxiter = istlSolver().getParameters().linear_solver_maxiter_;
                     int    iters;
                     double error;
+                    auto rep  =  new DebugTimeReport("amgcl-timer");
+
+                    if( (iteration < 1) || (timer.currentStepLength()  < (10.0*24.0*60.0*60.0)) ){
+                        solver_.reset();
+                        solver_ = std::make_shared<LinearSolverAmgclNew>(np, param_.use_amgcl_drs_);
+                        if(np>2){
+                            solver_->hackScalingFactors(sz, matrix.ptr, matrix.val,rhs);// scale equations
+                        }
+                        solver_->init(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter);
+                    }else{
+                        if(np>2){
+                            solver_->hackScalingFactors(sz, matrix.ptr, matrix.val,rhs);// scale equations
+                        }
+                        solver_->updatePre(sz, matrix.ptr, matrix.col, matrix.val, tol, maxiter);
+                    }
+                    solver_->solve(rhs,  sol, iters, error);
+                    delete rep;
+                    /*
                     LinearSolverAmgcl solver(np,param_.use_amgcl_drs_);
                     //LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
-                    solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
+                    solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);*/
                     const_cast<int&>(linear_iters_last_solve_) = iters;
                 } else if (param_.use_umfpack_) {
                     // Call UMFPACK to solve system
@@ -1064,6 +1089,7 @@ namespace Opm {
 
            Adapts a matrix to the assembled linear operator interface
          */
+
         template<class M, class X, class Y, class WellModel, bool overlapping >
         class WellModelMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
         {
@@ -1633,6 +1659,9 @@ namespace Opm {
 
     public:
         std::vector<bool> wasSwitched_;
+        mutable std::shared_ptr<LinearSolverAmgclNew> solver_;
+
+
 
     };
 } // namespace Opm

@@ -22,7 +22,7 @@
 #define OPM_LINEARSOLVERAMGCLNEW_HEADER_INCLUDED
 
 #include <vector>
-#include <shared_ptr>
+#include <memory>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/autodiff/DebugTimeReport.hpp>
 
@@ -66,7 +66,9 @@ struct AmgOptions
     public:
         LinearSolverAmgclNew(int block_size, bool use_cpr_drs=true):
             block_size_(block_size),
-            use_cpr_drs_(use_cpr_drs)
+            use_cpr_drs_(use_cpr_drs),
+            solve_time_(1e99),
+            setup_time_(0.0)
         {
 
         }
@@ -76,41 +78,59 @@ struct AmgOptions
                           const std::vector<double>& val,
                           const std::vector<double>& rhs,
                           const double tolerance,
-                          const int maxiter,
-                          std::vector<double>& sol,
-                          int& iters,
-                   double& error){
-            if(block_size_>2){
+                          const int maxiter){
+            /*if(block_size_>2){
                 hackScalingFactors(sz, ptr, const_cast<std::vector<double>&>(val), const_cast<std::vector<double>&>(rhs));
-            }
-            DebugTimeReport rep("amgcl-timer");
-            boost::property_tree::ptree prm;
+            }*/
 
+
+            auto x = new DebugTimeReport("setup all");
+            time::StopWatch clock;
+            clock.start();
             // setupPreconditioner(prm);
             //const int block_size = 2;
             const double dd = 0.3;
             const double ps = 0.03;
-            prm.put("precond.block_size", block_size_);
-            prm.put("precond.active_rows", sz);
+            prm_.put("precond.block_size", block_size_);
+            prm_.put("precond.active_rows", sz);
             AmgOptions opts;
-            setCoarseningAMGCL("precond.pprecond.", opts, prm);
-            setRelaxationAMGCL("precond.pprecond.relax.", 3, prm);
-            setRelaxationAMGCL("precond.sprecond.", 3, prm);
+            setCoarseningAMGCL("precond.pprecond.", opts, prm_);
+            setRelaxationAMGCL("precond.pprecond.relax.", 3, prm_);
+            setRelaxationAMGCL("precond.sprecond.", 3, prm_);
 
-            prm.put("solver.type", amgcl::runtime::solver::bicgstab);
-            prm.put("solver.tol", tolerance);
-            prm.put("solver.maxiter", maxiter);
+            prm_.put("solver.type", amgcl::runtime::solver::bicgstab);
+            prm_.put("solver.tol", tolerance);
+            prm_.put("solver.maxiter", maxiter);
             //setupSolver(tolerance, maxiter, prm);
             //if(use_cpr_drs_){
-            prm.put("precond.eps_dd", dd);
-            prm.put("precond.eps_ps", ps);
-            auto x = new DebugTimeReport("setup");
-            solver_ = std::make_shared<solver_t>(boost::tie(sz, ptr, col, val), prm);
+            prm_.put("precond.eps_dd", dd);
+            prm_.put("precond.eps_ps", ps);
+
+            solver_ = std::make_shared<solver_t>(boost::tie(sz, ptr, col, val), prm_);
             std::ofstream file("amg_setup_cpr_drs.json");
             // solveRegular(sz, ptr, col, val, rhs, tolerance, maxiter, sol, iters, error);
             //solveCPR(sz, ptr, col, val, rhs, tolerance, maxiter, sol, iters, error);
+            setup_time_ = clock.secsSinceStart();
             delete x;
-            boost::property_tree::json_parser::write_json(file, prm);
+            boost::property_tree::json_parser::write_json(file, prm_);
+        }
+
+        void updatePre(const int sz,
+                        const std::vector<int>& ptr,
+                        const std::vector<int>& col,
+                        const std::vector<double>& val,
+                        const double tolerance,
+                        const int maxiter){
+            auto x = new DebugTimeReport("update smoother");
+            //if(block_size_>2){
+            //    hackScalingFactors(sz, ptr, const_cast<std::vector<double>&>(val), const_cast<std::vector<double>&>(rhs));
+            //}
+            //solver_.reset();
+            //solver_ = std::make_shared<solver_t>(boost::tie(sz, ptr, col, val), prm_);
+            //solver_->precond().initUpdate(boost::tie(sz, ptr, col, val));
+            solver_->precond().updateSmoother(boost::tie(sz, ptr, col, val));
+            //solver_->precond()
+            delete x;
         }
 
         void solve( const std::vector<double>& rhs,
@@ -119,8 +139,13 @@ struct AmgOptions
                     double& error)
         {
                 auto y = new DebugTimeReport("solution");
+                time::StopWatch clock;
+                clock.start();
                 boost::tie(iters, error) = (*solver_)(rhs, sol);
                 std::cout << (*solver_) << std::endl;
+                std::cout << "Iterations" << iters << std::endl;
+                std::cout << "Errors " << error << std::endl;
+                solve_time_ = clock.secsSinceStart();
                 delete y;
             /*}else{
                 using Backend = amgcl::backend::builtin<double>;
@@ -139,6 +164,22 @@ struct AmgOptions
                 std::cout << solve << std::endl;
                 delete y;
             }*/
+        }
+        void hackScalingFactors(const int sz,
+                                const std::vector<int>& ptr,
+                                std::vector<double>& val,
+                                std::vector<double>& rhs){
+            //const int block_size = 2;
+            const double b_gas = 100.0;
+            const int n = sz / block_size_;
+            assert(n*block_size_ == sz);
+            for (int blockrow = 0; blockrow < n; ++blockrow) {
+                const int gasrow = block_size_*blockrow + 2;
+                for (int jj = ptr[gasrow]; jj < ptr[gasrow + 1]; ++jj) {
+                    val[jj] /= b_gas;
+                }
+                rhs[gasrow] /= b_gas;
+            }
         }
     private:
         void setCoarseningAMGCL(const std::string& prefix, const AmgOptions& options, boost::property_tree::ptree& prm)
@@ -247,22 +288,7 @@ struct AmgOptions
             prm.put("solver.maxiter", maxiter);
         }
 
-        void hackScalingFactors(const int sz,
-                                const std::vector<int>& ptr,
-                                std::vector<double>& val,
-                                std::vector<double>& rhs){
-            //const int block_size = 2;
-            const double b_gas = 100.0;
-            const int n = sz / block_size_;
-            assert(n*block_size_ == sz);
-            for (int blockrow = 0; blockrow < n; ++blockrow) {
-                const int gasrow = block_size_*blockrow + 2;
-                for (int jj = ptr[gasrow]; jj < ptr[gasrow + 1]; ++jj) {
-                    val[jj] /= b_gas;
-                }
-                rhs[gasrow] /= b_gas;
-            }
-        }
+
         int block_size_;
         bool use_cpr_drs_;
         using Backend = amgcl::backend::builtin<double>;
@@ -271,8 +297,11 @@ struct AmgOptions
         using Precond = amgcl::preconditioner::cpr_drs<PPrecond, SPrecond>;
         using IterativeSolver = amgcl::runtime::iterative_solver<Backend>;
         using solver_t = amgcl::make_solver<Precond, IterativeSolver>;
+        //using solver_t = amgcl:<Precond, IterativeSolver>;
         std::shared_ptr<solver_t> solver_;
-
+        boost::property_tree::ptree prm_;
+        double solve_time_;
+        double setup_time_;
     };
 
 } // namespace Opm
