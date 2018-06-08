@@ -69,7 +69,7 @@ public:
         if( cc_.size() > 1 )
         {
             using Pair = typename SwitchMap::value_type;
-            switchMap_.insert(Pair(name, {char(from), char(to)}));
+            switchMap_.insert(Pair(name, {{char(from), char(to)}}));
         }
         else
         {

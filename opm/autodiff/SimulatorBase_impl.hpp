@@ -174,7 +174,7 @@ namespace Opm
                                        defunct_well_names_);
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
-            well_state.init(wells, state, prev_well_state, props_.phaseUsage());
+            well_state.initLegacy(wells, state, prev_well_state, props_.phaseUsage());
 
             // give the polymer and surfactant simulators the chance to do their stuff
             asImpl().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);

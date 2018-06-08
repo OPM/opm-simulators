@@ -658,9 +658,8 @@ namespace Opm
             {
                 const double target_rate = well_controls_get_current_target(well_controls_); // surface rate target
                 if (well_type_ == INJECTOR) {
-                    const WellInjectionProperties& injection = well_ecl_->getInjectionProperties(current_step_);
                     // only handles single phase injection now
-                    assert(injection.injectorType != WellInjector::MULTI);
+                    assert(well_ecl_->getInjectionProperties(current_step_).injectorType != WellInjector::MULTI);
                     control_eq = getWQTotal() - target_rate;
                 } else if (well_type_ == PRODUCER) {
                     if (target_rate != 0.) {
@@ -704,9 +703,8 @@ namespace Opm
             {
                 const double target_rate = well_controls_get_current_target(well_controls_); // reservoir rate target
                 if (well_type_ == INJECTOR) {
-                    const WellInjectionProperties& injection = well_ecl_->getInjectionProperties(current_step_);
                     // only handles single phase injection now
-                    assert(injection.injectorType != WellInjector::MULTI);
+                    assert(well_ecl_->getInjectionProperties(current_step_).injectorType != WellInjector::MULTI);
                     const double* distr = well_controls_get_current_distr(well_controls_);
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
                         if (distr[phase] > 0.0) {

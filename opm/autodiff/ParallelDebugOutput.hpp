@@ -596,8 +596,9 @@ namespace Opm
         };
 
         // gather solution to rank 0 for EclipseWriter
+        template <class WellState>
         bool collectToIORank( const SimulationDataContainer& /*localReservoirState*/,
-                              const WellStateFullyImplicitBlackoil& localWellState,
+                              const WellState& localWellState,
                               const data::Solution& localCellData,
                               const int wellStateStepNumber )
         {
@@ -627,7 +628,7 @@ namespace Opm
                                            std::unordered_set<std::string>());
 
                 const Wells* wells = wells_manager.c_wells();
-                globalWellState_.init(wells, *globalReservoirState_, globalWellState_, phaseUsage_ );
+                globalWellState_.initLegacy(wells, *globalReservoirState_, globalWellState_, phaseUsage_ );
                 globalCellData_->clear();
             }
 
