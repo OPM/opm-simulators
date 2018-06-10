@@ -210,14 +210,14 @@ void test_readWriteWells() {
      *  the completion keys (active indices) and well names correspond to the
      *  input deck. All other entries in the well structures are arbitrary.
      */
-    w1.completions.push_back( { 88, rc1, 30.45, 123.45 } );
-    w1.completions.push_back( { 288, rc2, 33.19, 67.89 } );
+    w1.connections.push_back( { 88, rc1, 30.45, 123.45 } );
+    w1.connections.push_back( { 288, rc2, 33.19, 67.89 } );
 
     w2.rates = r2;
     w2.bhp = 2.34;
     w2.temperature = 4.56;
     w2.control = 2;
-    w2.completions.push_back( { 188, rc3, 36.22, 19.28 } );
+    w2.connections.push_back( { 188, rc3, 36.22, 19.28 } );
 
     Opm::data::Wells wellRates;
 
