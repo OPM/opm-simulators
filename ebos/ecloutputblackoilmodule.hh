@@ -192,7 +192,7 @@ public:
                        || well->getPLTActive(reportStepNum)))
                     continue;
 
-                for (const auto& completion: well->getCompletions(reportStepNum)) {
+                for (const auto& completion: well->getConnections(reportStepNum)) {
                     const size_t i = size_t(completion.getI());
                     const size_t j = size_t(completion.getJ());
                     const size_t k = size_t(completion.getK());
@@ -649,15 +649,15 @@ public:
                 if (!(well->getRFTActive(reportStepNum)
                        || well->getPLTActive(reportStepNum)))
                     continue;
-                wellData.completions.resize(well->getCompletions(reportStepNum).size());
+                wellData.connections.resize(well->getConnections(reportStepNum).size());
                 size_t count = 0;
-                for (const auto& completion: well->getCompletions(reportStepNum)) {
+                for (const auto& completion: well->getConnections(reportStepNum)) {
                     const size_t i = size_t(completion.getI());
                     const size_t j = size_t(completion.getJ());
                     const size_t k = size_t(completion.getK());
 
                     const size_t index = simulator_.vanguard().eclState().getInputGrid().getGlobalIndex(i, j, k);
-                    auto& completionData = wellData.completions[count];
+                    auto& completionData = wellData.connections[count];
                     completionData.index = index;
                     count++;
                 }
@@ -665,7 +665,7 @@ public:
             }
 
             Opm::data::Well& wellData = wellDatas.at(well->name());
-            for (auto& completionData: wellData.completions) {
+            for (auto& completionData: wellData.connections) {
                 const auto index = completionData.index;
                 if (oilCompletionPressures_.count(index) > 0)
                     completionData.cell_pressure = oilCompletionPressures_.at(index);

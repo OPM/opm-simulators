@@ -266,7 +266,7 @@ protected:
         Grid grid = *grid_;
         grid.switchToGlobalView();
         const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(grid, this->eclState().getInputGrid());
-        this->schedule().filterCompletions(eclipseGrid);
+        this->schedule().filterConnections(eclipseGrid);
     }
 
     Grid* grid_;
