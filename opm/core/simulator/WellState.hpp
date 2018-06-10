@@ -253,18 +253,18 @@ namespace Opm
 
                 const int num_perf_well = this->wells_->well_connpos[ well_index + 1 ]
                                         - this->wells_->well_connpos[ well_index ];
-                well.completions.resize(num_perf_well);
+                well.connections.resize(num_perf_well);
 
                 for( int i = 0; i < num_perf_well; ++i ) {
                     const auto wi = this->wells_->well_connpos[ well_index ] + i;
                     const auto active_index = this->wells_->well_cells[ wi ];
 
-                    auto& completion = well.completions[ i ];
-                    completion.index = globalCellIdxMap[active_index];
-                    completion.pressure = this->perfPress()[ itr.second[1] + i ];
-                    completion.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
+                    auto& connection = well.connections[ i ];
+                    connection.index = globalCellIdxMap[active_index];
+                    connection.pressure = this->perfPress()[ itr.second[1] + i ];
+                    connection.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
                 }
-                assert(num_perf_well == int(well.completions.size()));
+                assert(num_perf_well == int(well.connections.size()));
             }
 
             return dw;
