@@ -150,6 +150,30 @@ namespace Opm
 {
     namespace detail
     {
+    struct Reorderer
+    {
+        virtual std::size_t operator[](std::size_t i) const = 0;
+    };
+
+    struct NoReorderer : public Reorderer
+    {
+        virtual std::size_t operator[](std::size_t i) const
+        {
+            return i;
+        }
+    };
+
+    struct RealReorderer : public Reorderer
+    {
+        RealReorderer(std::vector<std::size_t> ordering)
+            : ordering_(ordering)
+        {}
+        virtual std::size_t operator[](std::size_t i) const
+        {
+            return ordering_[i];
+        }
+        std::vector<std::size_t> ordering_;
+    };
 
     struct IdentityFunctor
     {
@@ -299,6 +323,103 @@ namespace Opm
     {
         milu0_decomposition(A, detail::IdentityFunctor(), detail::OneFunctor(),
                             diagonal);
+    }
+
+    template<class M>
+    void milun_decomposition(const M& A, int n, MILU_VARIANT milu, M& ILU,
+                             Reorderer& ordering, Reorderer& inverseOrdering)
+    {
+        using Map = std::map<std::size_t, int>;
+
+        auto iluRow = ILU.createbegin();
+
+        for(std::size_t i = 0, iend = A.N(); i < iend; ++i)
+        {
+            auto& orow = A[inverseOrdering[i]];
+
+            Map rowPattern;
+            for ( auto col = orow.begin(), cend = orow.end(); col != cend; ++col)
+            {
+                rowPattern[ordering[col.index()]] = 0;
+            }
+
+            for(auto ik = rowPattern.begin(); ik->first < i; ++ik)
+            {
+                if ( ik->second < n )
+                {
+                    auto& rowk = ILU[ik->first];
+
+                    for ( auto kj = rowk.find(ik->first), endk = rowk.end();
+                          kj != endk; ++kj)
+                    {
+                        // Assume double and block_type FieldMatrix
+                        // first element is misused to store generation number
+                        int generation = (*kj)[0][0];
+                        if(generation < n)
+                        {
+                            auto ij = rowPattern.find(kj.index());
+                            if ( ij == rowPattern.end() )
+                            {
+                                rowPattern[ordering[kj.index()]] = generation + 1;
+                            }
+                        }
+                    }
+                }
+            }
+            // create the row
+            for(const auto entry: rowPattern)
+            {
+                iluRow.insert(entry.first);
+            }
+            ++iluRow;
+
+            // write generation to newly created row.
+            auto generationPair = rowPattern.begin();
+            for ( auto col = ILU[i].begin(), cend = ILU[i].end(); col != cend;
+                  ++col, ++generationPair)
+            {
+                assert(col.index() == generationPair->first);
+                (*col)[0][0] = generationPair->second;
+            }
+        }
+
+        // copy Entries from A
+        for(auto iter=A.begin(), iend = A.end(); iter != iend; ++iter)
+        {
+            auto& newRow = ILU[ordering[iter.index()]];
+            // reset stored generation
+            for ( auto& col: newRow)
+            {
+                col = 0;
+            }
+            // copy row.
+            for(auto col = iter->begin(), cend = iter->end(); col != cend; ++col)
+            {
+                newRow[ordering[col.index()]] = *col;
+            }
+        }
+        // call decomposition on pattern        
+        switch ( milu )
+        {
+        case MILU_VARIANT::MILU_1:
+            detail::milu0_decomposition ( ILU);
+            break;
+        case MILU_VARIANT::MILU_2:
+            detail::milu0_decomposition ( ILU, detail::IdentityFunctor(),
+                                          detail::SignFunctor() );
+            break;
+        case MILU_VARIANT::MILU_3:
+            detail::milu0_decomposition ( ILU, detail::AbsFunctor(),
+                                          detail::SignFunctor() );
+            break;
+        case MILU_VARIANT::MILU_4:
+            detail::milu0_decomposition ( ILU, detail::IdentityFunctor(),
+                                          detail::IsPositiveFunctor() );
+            break;
+        default:
+            bilu0_decomposition( ILU );
+            break;
+        }
     }
 
       //! compute ILU decomposition of A. A is overwritten by its decomposition
@@ -698,7 +819,7 @@ protected:
 
         std::unique_ptr< Matrix > ILU;
 
-        if ( redBlack && iluIteration==0 )
+        if ( redBlack )
         {
             using Graph = Dune::Amg::MatrixGraph<const Matrix>;
             Graph graph(A);
@@ -782,11 +903,19 @@ protected:
             else {
                 // create ILU-n decomposition
                 ILU.reset( new Matrix( A.N(), A.M(), Matrix::row_wise) );
-                if ( milu > MILU_VARIANT::ILU )
+                std::unique_ptr<detail::Reorderer> reorderer, inverseReorderer;
+                if ( ordering_.empty() )
                 {
-                    OpmLog::warning("MILU_N_NOT_SUPPORTED", "MILU variant only supported for zero fill-in");
+                    reorderer.reset(new detail::NoReorderer());
+                    inverseReorderer.reset(new detail::NoReorderer());
                 }
-                bilu_decomposition( A, iluIteration, *ILU );
+                else
+                {
+                    reorderer.reset(new detail::RealReorderer(ordering_));
+                    inverseReorderer.reset(new detail::RealReorderer(inverseOrdering));
+                }
+
+                milun_decomposition( A, iluIteration, milu, *ILU, *reorderer, *inverseReorderer );
             }
         }
         catch ( Dune::MatrixBlockError error )
