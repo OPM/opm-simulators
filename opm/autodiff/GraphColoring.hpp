@@ -23,6 +23,8 @@
 #include <deque>
 #include <tuple>
 #include <algorithm>
+#include <numeric>
+#include <queue>
 
 namespace Opm
 {
@@ -69,6 +71,36 @@ std::size_t colorGraphWelshPowell(const Graph& graph,
                                  });
     orderedVertices.resize(newEnd-orderedVertices.begin());
     return noColored;
+}
+template<class Graph, class Functor>
+std::size_t breadthFirstSearch(const Graph& graph, typename Graph::VertexDescriptor root,
+                        Functor functor)
+{
+    std::vector<int> visited(graph.maxVertex() + 1, false);
+    using Vertex = typename Graph::VertexDescriptor;
+    std::queue<Vertex> nextVertices;
+    std::size_t noVisited = 0;
+    nextVertices.push(root);
+    visited[root] = true; // We do not visit root.
+
+    while( !nextVertices.empty() )
+    {
+        auto current = nextVertices.front();
+        for(auto edge = graph.beginEdges(current),
+                endEdge = graph.endEdges(current);
+            edge != endEdge; ++edge)
+        {
+            if ( ! visited[edge.target()] )
+            {
+                visited[edge.target()] = true;
+                nextVertices.push(edge.target());
+                functor(edge.target());
+                ++noVisited;
+            }
+        }
+        nextVertices.pop();
+    }
+    return noVisited;
 }
 } // end namespace Detail
 
@@ -145,6 +177,68 @@ colorVerticesWelshPowell(const Graph& graph)
     }
     return std::make_tuple(colors, color, verticesPerColor);
 }
+
+/// \! Reorder colored graph preserving order of vertices with the same color.
+template<class Graph>
+std::vector<std::size_t>
+reorderVerticesPreserving(const std::vector<int>& colors, int noColors,
+                          const std::vector<std::size_t> verticesPerColor,
+                          const Graph& graph)
+{
+    std::vector<std::size_t> colorIndex(noColors, 0);
+    std::vector<std::size_t> indices(graph.maxVertex() + 1);
+    std::partial_sum(verticesPerColor.begin(),
+                     verticesPerColor.begin()+verticesPerColor.size() - 1,
+                     colorIndex.begin() + 1);
+
+    for(const auto& vertex: graph)
+    {
+        indices[vertex] = colorIndex[colors[vertex]]++;
+    }
+    return indices;
 }
-// end namespace Opm
+
+/// \! Reorder Vetrices in spheres
+template<class Graph>
+std::vector<std::size_t>
+reorderVerticesSpheres(const std::vector<int>& colors, int noColors,
+                       const std::vector<std::size_t> verticesPerColor,
+                       const Graph& graph,
+                       typename Graph::VertexDescriptor root)
+{
+    std::vector<std::size_t> colorIndex(noColors, 0);
+    const auto notVisitedTag = std::numeric_limits<std::size_t>::max();
+    std::vector<std::size_t> indices(graph.maxVertex() + 1, notVisitedTag);
+    using Vertex = typename Graph::VertexDescriptor;
+    std::partial_sum(verticesPerColor.begin(),
+                     verticesPerColor.begin()+verticesPerColor.size() - 1,
+                     colorIndex.begin() + 1);
+    std::size_t noVisited = 0;
+    auto numberer = [&colorIndex, &colors, &indices](Vertex vertex)
+        {
+            indices[vertex] = colorIndex[colors[vertex]]++;
+        };
+
+    while ( noVisited < graph.maxVertex() + 1 )
+    {
+        numberer(root);
+        ++noVisited; //root node already visited and not visited in BFS
+        noVisited += Detail::breadthFirstSearch(graph, root, numberer);
+        if ( noVisited < graph.maxVertex() + 1 )
+        {
+            // Graph is disconnected search for not yet visited node
+            for(auto vertex: graph)
+            {
+                if ( indices[vertex] ==  notVisitedTag )
+                {
+                    // \todo make sure that this is a peripheral node!
+                    root = vertex;
+                    break;
+                }
+            }
+        }
+    }
+    return indices;
+}
+} // end namespace Opm
 #endif
