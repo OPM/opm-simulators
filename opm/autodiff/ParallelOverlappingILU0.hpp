@@ -20,11 +20,13 @@
 #ifndef OPM_PARALLELOVERLAPPINGILU0_HEADER_INCLUDED
 #define OPM_PARALLELOVERLAPPINGILU0_HEADER_INCLUDED
 
+#include <opm/autodiff/GraphColoring.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/version.hh>
 #include <dune/istl/preconditioner.hh>
 #include <dune/istl/paamg/smoother.hh>
+#include <dune/istl/paamg/graph.hh>
 #include <dune/istl/paamg/pinfo.hh>
 
 #include <type_traits>
@@ -396,8 +398,6 @@ class ParallelOverlappingILU0
 
 
 public:
-    enum{
-        };
     //! \brief The matrix type the preconditioner is for.
     typedef typename std::remove_const<Matrix>::type matrix_type;
     //! \brief The domain type of the preconditioner.
@@ -479,11 +479,17 @@ public:
       \param n ILU fill in level (for testing). This does not work in parallel.
       \param w The relaxation factor.
       \param milu The modified ILU variant to use. 0 means traditional ILU. \see MILU_VARIANT.
+      \param redblack Whether to use a red-black ordering.
+      \param reorder_sphere If true, we start the reordering at a root node.
+                            The vertices on each layer aound it (same distance) are
+                            ordered consecutivly. If false, we preserver the order of
+                            the vertices with the same color.
     */
     template<class BlockType, class Alloc>
     ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
                              const int n, const field_type w,
-                             MILU_VARIANT milu)
+                             MILU_VARIANT milu, bool redblack=false,
+                             bool reorder_sphere=true)
         : lower_(),
           upper_(),
           inv_(),
@@ -492,7 +498,8 @@ public:
     {
         // BlockMatrix is a Subclass of FieldMatrix that just adds
         // methods. Therefore this cast should be safe.
-        init( reinterpret_cast<const Matrix&>(A), n, milu );
+        init( reinterpret_cast<const Matrix&>(A), n, milu, redblack,
+              reorder_sphere  );
     }
 
     /*! \brief Constructor gets all parameters to operate the prec.
@@ -501,11 +508,17 @@ public:
       \param n ILU fill in level (for testing). This does not work in parallel.
       \param w The relaxation factor.
       \param milu The modified ILU variant to use. 0 means traditional ILU. \see MILU_VARIANT.
+      \param redblack Whether to use a red-black ordering.
+      \param reorder_sphere If true, we start the reordering at a root node.
+                            The vertices on each layer aound it (same distance) are
+                            ordered consecutivly. If false, we preserver the order of
+                            the vertices with the same color.
     */
     template<class BlockType, class Alloc>
     ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
                              const ParallelInfo& comm, const int n, const field_type w,
-                             MILU_VARIANT milu)
+                             MILU_VARIANT milu, bool redblack=false,
+                             bool reorder_sphere=true)
         : lower_(),
           upper_(),
           inv_(),
@@ -514,7 +527,8 @@ public:
     {
         // BlockMatrix is a Subclass of FieldMatrix that just adds
         // methods. Therefore this cast should be safe.
-        init( reinterpret_cast<const Matrix&>(A), n, milu );
+        init( reinterpret_cast<const Matrix&>(A), n, milu, redblack,
+              reorder_sphere );
     }
 
     /*! \brief Constructor.
@@ -523,11 +537,17 @@ public:
       \param A The matrix to operate on.
       \param w The relaxation factor.
       \param milu The modified ILU variant to use. 0 means traditional ILU. \see MILU_VARIANT.
+      \param redblack Whether to use a red-black ordering.
+      \param reorder_sphere If true, we start the reordering at a root node.
+                  The vertices on each layer aound it (same distance) are
+                  ordered consecutivly. If false, we preserver the order of
+                  the vertices with the same color.
     */
     template<class BlockType, class Alloc>
     ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
-                             const field_type w, MILU_VARIANT milu)
-        : ParallelOverlappingILU0( A, 0, w, milu )
+                             const field_type w, MILU_VARIANT milu, bool redblack=false,
+                             bool reorder_sphere=true)
+        : ParallelOverlappingILU0( A, 0, w, milu, redblack, reorder_sphere )
     {
     }
 
@@ -538,11 +558,17 @@ public:
       \param comm   communication object, e.g. Dune::OwnerOverlapCopyCommunication
       \param w      The relaxation factor.
       \param milu   The modified ILU variant to use. 0 means traditional ILU. \see MILU_VARIANT.
+      \param redblack Whether to use a red-black ordering.
+      \param reorder_sphere If true, we start the reordering at a root node.
+                            The vertices on each layer aound it (same distance) are
+                            ordered consecutivly. If false, we preserver the order of
+                            the vertices with the same color.
     */
     template<class BlockType, class Alloc>
     ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
                              const ParallelInfo& comm, const field_type w,
-                             MILU_VARIANT milu)
+                             MILU_VARIANT milu, bool redblack=false,
+                             bool reorder_sphere=true)
         : lower_(),
           upper_(),
           inv_(),
@@ -551,7 +577,8 @@ public:
     {
         // BlockMatrix is a Subclass of FieldMatrix that just adds
         // methods. Therefore this cast should be safe.
-        init( reinterpret_cast<const Matrix&>(A), 0, milu );
+        init( reinterpret_cast<const Matrix&>(A), 0, milu, redblack,
+              reorder_sphere );
     }
 
     /*!
@@ -572,7 +599,8 @@ public:
     */
     virtual void apply (Domain& v, const Range& d)
     {
-        Range& md = const_cast<Range&>(d);
+        Range& md = reorderD(d);
+        Domain& mv = reorderV(v);
         copyOwnerToAll( md );
 
         // iterator types
@@ -589,41 +617,42 @@ public:
         // lower triangular solve
         for( size_type i=0; i<iEnd; ++ i )
         {
-          dblock rhs( d[ i ] );
+          dblock rhs( md[ i ] );
           const size_type rowI     = lower_.rows_[ i ];
           const size_type rowINext = lower_.rows_[ i+1 ];
 
           for( size_type col = rowI; col < rowINext; ++ col )
           {
-            lower_.values_[ col ].mmv( v[ lower_.cols_[ col ] ], rhs );
+            lower_.values_[ col ].mmv( mv[ lower_.cols_[ col ] ], rhs );
           }
 
-          v[ i ] = rhs;  // Lii = I
+          mv[ i ] = rhs;  // Lii = I
         }
 
-        copyOwnerToAll( v );
+        copyOwnerToAll( mv );
 
         for( size_type i=0; i<iEnd; ++ i )
         {
-            vblock& vBlock = v[ lastRow - i ];
+            vblock& vBlock = mv[ lastRow - i ];
             vblock rhs ( vBlock );
             const size_type rowI     = upper_.rows_[ i ];
             const size_type rowINext = upper_.rows_[ i+1 ];
 
             for( size_type col = rowI; col < rowINext; ++ col )
             {
-                upper_.values_[ col ].mmv( v[ upper_.cols_[ col ] ], rhs );
+                upper_.values_[ col ].mmv( mv[ upper_.cols_[ col ] ], rhs );
             }
 
             // apply inverse and store result
             inv_[ i ].mv( rhs, vBlock);
         }
 
-        copyOwnerToAll( v );
+        copyOwnerToAll( mv );
 
         if( relaxation_ ) {
-            v *= w_;
+            mv *= w_;
         }
+        reorderBack(mv, v);
     }
 
     template <class V>
@@ -645,7 +674,7 @@ public:
     }
 
 protected:
-    void init( const Matrix& A, const int iluIteration, MILU_VARIANT milu )
+    void init( const Matrix& A, const int iluIteration, MILU_VARIANT milu, bool redBlack, bool reorderSpheres )
     {
         // (For older DUNE versions the communicator might be
         // invalid if redistribution in AMG happened on the coarset level.
@@ -669,11 +698,65 @@ protected:
 
         std::unique_ptr< Matrix > ILU;
 
+        if ( redBlack && iluIteration==0 )
+        {
+            using Graph = Dune::Amg::MatrixGraph<const Matrix>;
+            Graph graph(A);
+            auto colorsTuple = colorVerticesWelshPowell(graph);
+            const auto& colors = std::get<0>(colorsTuple);
+            const auto& verticesPerColor = std::get<2>(colorsTuple);
+            auto noColors = std::get<1>(colorsTuple);
+            if ( reorderSpheres )
+            {
+                ordering_ = reorderVerticesSpheres(colors, noColors, verticesPerColor,
+                                                   graph, 0);
+            }
+            else
+            {
+                ordering_ = reorderVerticesPreserving(colors, noColors, verticesPerColor,
+                                                      graph);
+            }
+        }
+
+        std::vector<std::size_t> inverseOrdering(ordering_.size());
+        std::size_t index = 0;
+        for( auto newIndex: ordering_)
+        {
+            inverseOrdering[newIndex] = index++;
+        }
+
         try
         {
             if( iluIteration == 0 ) {
                 // create ILU-0 decomposition
-                ILU.reset( new Matrix( A ) );
+                if ( ordering_.empty() )
+                {
+                    ILU.reset( new Matrix( A ) );
+                }
+                else
+                {
+                    ILU.reset( new Matrix(A.N(), A.M(), A.nonzeroes(), Matrix::row_wise));
+                    auto& newA = *ILU;
+                    // Create sparsity pattern
+                    for(auto iter=newA.createbegin(), iend = newA.createend(); iter != iend; ++iter)
+                    {
+                        const auto& row = A[inverseOrdering[iter.index()]];
+                        for(auto col = row.begin(), cend = row.end(); col != cend; ++col)
+                        {
+                            iter.insert(ordering_[col.index()]);
+                        }
+                    }
+                    // Copy values
+                    for(auto iter = A.begin(), iend = A.end(); iter != iend; ++iter)
+                    {
+                        auto& newRow = newA[ordering_[iter.index()]];
+                        for(auto col = iter->begin(), cend = iter->end(); col != cend; ++col)
+                        {
+                            newRow[ordering_[col.index()]] = *col;
+                        }
+                    }
+                }
+
                 switch ( milu )
                 {
                 case MILU_VARIANT::MILU_1:
@@ -727,11 +810,66 @@ protected:
         detail::convertToCRS( *ILU, lower_, upper_, inv_ );
     }
 
+    /// \brief Reorder D if needed and return a reference to it.
+    Range& reorderD(const Range& d)
+    {
+        if ( ordering_.empty())
+        {
+            return const_cast<Range&>(d);
+        }
+        else
+        {
+            reorderedD_.resize(d.size());
+            std::size_t i = 0;
+            for(auto index: ordering_)
+            {
+                reorderedD_[index]=d[i++];
+            }
+            return reorderedD_;
+        }
+    }
+
+    /// \brief Reorder V if needed and return a reference to it.
+    Domain& reorderV(Domain& v)
+    {
+        if ( ordering_.empty())
+        {
+            return v;
+        }
+        else
+        {
+            reorderedV_.resize(v.size());
+            std::size_t i = 0;
+            for(auto index: ordering_)
+            {
+                reorderedV_[index]=v[i++];
+            }
+            return reorderedV_;
+        }
+    }
+
+    void reorderBack(const Range& reorderedV, Range& v)
+    {
+        if ( !ordering_.empty() )
+        {
+            std::size_t i = 0;
+            for(auto index: ordering_)
+            {
+                v[i++] = reorderedV[index];
+            }
+        }
+    }
 protected:
     //! \brief The ILU0 decomposition of the matrix.
     CRS lower_;
     CRS upper_;
     std::vector< block_type > inv_;
+    //! \brief the reordering of the unknowns
+    std::vector< std::size_t > ordering_;
+    //! \brief The reordered right hand side
+    Range reorderedD_;
+    //! \brief The reordered left hand side.
+    Domain reorderedV_;
 
     const ParallelInfo* comm_;
     //! \brief The relaxation factor to use.

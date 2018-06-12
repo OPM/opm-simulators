@@ -497,7 +497,9 @@ namespace Detail
             const double relax   = parameters_.ilu_relaxation_;
             const int ilu_fillin = parameters_.ilu_fillin_level_;
             const MILU_VARIANT ilu_milu  = parameters_.ilu_milu_;
-                std::unique_ptr<SeqPreconditioner> precond(new SeqPreconditioner(opA.getmat(), ilu_fillin, relax, ilu_milu));
+            const bool ilu_redblack = parameters_.ilu_redblack_;
+            const bool ilu_reorder_spheres = parameters_.ilu_reorder_sphere_;
+            std::unique_ptr<SeqPreconditioner> precond(new SeqPreconditioner(opA.getmat(), ilu_fillin, relax, ilu_milu, ilu_redblack, ilu_reorder_spheres));
             return precond;
         }
 
@@ -520,7 +522,9 @@ namespace Detail
             typedef std::unique_ptr<ParPreconditioner> Pointer;
             const double relax  = parameters_.ilu_relaxation_;
             const MILU_VARIANT ilu_milu  = parameters_.ilu_milu_;
-            return Pointer(new ParPreconditioner(opA.getmat(), comm, relax, ilu_milu));
+            const bool ilu_redblack = parameters_.ilu_redblack_;
+            const bool ilu_reorder_spheres = parameters_.ilu_reorder_sphere_;
+            return Pointer(new ParPreconditioner(opA.getmat(), comm, relax, ilu_milu, ilu_redblack, ilu_reorder_spheres));
         }
 #endif
 
