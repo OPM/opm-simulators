@@ -30,12 +30,13 @@ namespace Opm
 namespace Detail
 {
 template<class Graph>
-void colorGraphWelshPowell(const Graph& graph,
+std::size_t colorGraphWelshPowell(const Graph& graph,
                            std::deque<typename Graph::VertexDescriptor>& orderedVertices,
                            std::vector<int>& colors,
                            int color, int noVertices)
 {
     std::vector<int> forbidden(noVertices, false);
+    std::size_t noColored = 0;
 
     for(auto vertex = orderedVertices.begin(),
             vertexEnd = orderedVertices.end();
@@ -51,6 +52,7 @@ void colorGraphWelshPowell(const Graph& graph,
 
         // Color Vertex
         colors[*vertex] = color;
+        ++noColored;
         // Forbid neighors
         for(auto edge = graph.beginEdges(*vertex), endEdge = graph.endEdges(*vertex);
             edge != endEdge; ++edge)
@@ -66,18 +68,20 @@ void colorGraphWelshPowell(const Graph& graph,
                                      return !forbidden[vertex];
                                  });
     orderedVertices.resize(newEnd-orderedVertices.begin());
+    return noColored;
 }
 } // end namespace Detail
 
 
-/// \brief Color the vertices of graph-
+/// \brief Color the vertices of graph.
 ///
 /// It uses the algorithm of Welsh and Powell for this.
 /// \param graph The graph to color. Must adhere to the graph interface of dune-istl.
 /// \return A pair of a vector with the colors of the vertices and the number of colors
 ///         assigned
 template<class Graph>
-std::tuple<std::vector<int>, int> colorVerticesWelshPowell(const Graph& graph)
+std::tuple<std::vector<int>, int, std::vector<std::size_t> >
+colorVerticesWelshPowell(const Graph& graph)
 {
     using Vertex = typename Graph::VertexDescriptor;
     std::deque<Vertex> orderedVertices;
@@ -130,13 +134,16 @@ std::tuple<std::vector<int>, int> colorVerticesWelshPowell(const Graph& graph)
     std::fill(colors.begin(), colors.end(), -1);
 
     int color = 0;
+    std::vector<std::size_t> verticesPerColor;
+    verticesPerColor.reserve(10);
 
     while(!orderedVertices.empty())
     {
-        Detail::colorGraphWelshPowell(graph, orderedVertices, colors, color++,
-                                      noVertices);
+        verticesPerColor
+            .push_back(Detail::colorGraphWelshPowell(graph, orderedVertices, colors,
+                                                     color++, noVertices));
     }
-    return std::make_tuple(colors, color);
+    return std::make_tuple(colors, color, verticesPerColor);
 }
 }
 // end namespace Opm
