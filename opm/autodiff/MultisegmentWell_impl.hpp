@@ -56,9 +56,9 @@ namespace Opm
         // for other facilities needed but not available from parser, we need to process them here
 
         // initialize the segment_perforations_
-        const CompletionSet& completion_set = well_ecl_->getCompletions(current_step_);
+        const ConnectionSet& completion_set = well_ecl_->getConnections(current_step_);
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
-            const Completion& completion = completion_set.get(perf);
+            const Connection& completion = completion_set.get(perf);
             const int segment_number = completion.getSegmentNumber();
             const int segment_index = segmentNumberToIndex(segment_number);
             segment_perforations_[segment_index].push_back(perf);

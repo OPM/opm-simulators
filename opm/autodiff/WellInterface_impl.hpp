@@ -754,7 +754,7 @@ namespace Opm
         bore_diameters_.reserve(nperf);
 
         // COMPDAT handling
-        const auto& completionSet = well_ecl_->getCompletions(current_step_);
+        const auto& completionSet = well_ecl_->getConnections(current_step_);
         for (size_t c=0; c<completionSet.size(); c++) {
             const auto& completion = completionSet.get(c);
             if (completion.getState() == WellCompletion::OPEN) {

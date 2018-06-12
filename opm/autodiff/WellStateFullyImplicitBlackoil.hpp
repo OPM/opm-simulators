@@ -484,7 +484,7 @@ namespace Opm
                 well.rates.set( rt::vaporized_oil, this->well_vaporized_oil_rates_[w] );
 
                 int local_comp_index = 0;
-                for( auto& comp : well.completions ) {
+                for( auto& comp : well.connections) {
                     const auto rates = this->perfPhaseRates().begin()
                                      + (np * wt.second[ 1 ])
                                      + (np * local_comp_index);
@@ -549,7 +549,7 @@ namespace Opm
                 } else { // it is a multi-segment well
                     const SegmentSet& segment_set = well_ecl->getSegmentSet(time_step);
                     // assuming the order of the perforations in well_ecl is the same with Wells
-                    const CompletionSet& completion_set = well_ecl->getCompletions(time_step);
+                    const ConnectionSet& completion_set = well_ecl->getConnections(time_step);
                     // number of segment for this single well
                     const int well_nseg = segment_set.numberSegment();
                     const int nperf = completion_set.size();
@@ -558,7 +558,7 @@ namespace Opm
                     // that is why I think we should use a well model to initialize the WellState here
                     std::vector<std::vector<int>> segment_perforations(well_nseg);
                     for (int perf = 0; perf < nperf; ++perf) {
-                        const Completion& completion = completion_set.get(perf);
+                        const Connection& completion = completion_set.get(perf);
                         const int segment_number = completion.getSegmentNumber();
                         const int segment_index = segment_set.segmentNumberToIndex(segment_number);
                         segment_perforations[segment_index].push_back(perf);

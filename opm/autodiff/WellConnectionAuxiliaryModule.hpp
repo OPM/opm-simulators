@@ -69,7 +69,7 @@ public:
         {
             std::vector<int> compressed_well_perforations;
             // All possible completions of the well
-            const auto& completionSet = well->getCompletions(last_time_step);
+            const auto& completionSet = well->getConnections(last_time_step);
             compressed_well_perforations.reserve(completionSet.size());
 
             for ( size_t c=0; c < completionSet.size(); c++ )

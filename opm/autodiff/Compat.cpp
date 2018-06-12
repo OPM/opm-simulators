@@ -253,26 +253,26 @@ void wellsToState( const data::Wells& wells,
             state.wellRates()[ wellrate_index + i ] = well.rates.get( phs[ i ] );
         }
 
-        const auto perforation_pressure = []( const data::Completion& comp ) {
+        const auto perforation_pressure = []( const data::Connection& comp ) {
             return comp.pressure;
         };
 
-        const auto perforation_reservoir_rate = []( const data::Completion& comp ) {
+        const auto perforation_reservoir_rate = []( const data::Connection& comp ) {
             return comp.reservoir_rate;
         };
 
-        std::transform( well.completions.begin(),
-                        well.completions.end(),
+        std::transform( well.connections.begin(),
+                        well.connections.end(),
                         state.perfPress().begin() + wm.second[ 1 ],
                         perforation_pressure );
 
-        std::transform( well.completions.begin(),
-                        well.completions.end(),
+        std::transform( well.connections.begin(),
+                        well.connections.end(),
                         state.perfRates().begin() + wm.second[ 1 ],
                         perforation_reservoir_rate );
 
         int local_comp_index = 0;
-        for (const data::Completion& comp : well.completions) {
+        for (const data::Connection& comp : well.connections) {
             const int global_comp_index = wm.second[1] + local_comp_index;
             for (int phase_index = 0; phase_index < np; ++phase_index) {
                 state.perfPhaseRates()[global_comp_index*np + phase_index] = comp.rates.get(phs[phase_index]);

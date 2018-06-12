@@ -6,7 +6,7 @@
 #include <opm/grid/utility/compressedToCartesian.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/CompletionSet.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/ConnectionSet.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 #include <algorithm>
@@ -164,7 +164,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
         {   // COMPDAT handling
             // shut completions and open ones stored in this process will have 1 others 0.
 
-            for(const auto& completion : well->getCompletions(timeStep)) {
+            for(const auto& completion : well->getConnections(timeStep)) {
                 if (completion.getState() == WellCompletion::OPEN) {
                     int i = completion.getI();
                     int j = completion.getJ();
