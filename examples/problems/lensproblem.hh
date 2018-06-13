@@ -303,6 +303,35 @@ public:
     }
 
     /*!
+     * \copydoc FvBaseProblem::briefDescription
+     */
+    static std::string briefDescription()
+    {
+        std::string thermal = "isothermal";
+        bool enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy);
+        if (enableEnergy)
+            thermal = "non-isothermal";
+
+        std::string deriv = "finite difference";
+        typedef typename GET_PROP_TYPE(TypeTag, LocalLinearizerSplice) LLS;
+        bool useAutoDiff = std::is_same<LLS, TTAG(AutoDiffLocalLinearizer)>::value;
+        if (useAutoDiff)
+            deriv = "automatic differentiation";
+
+        std::string disc = "vertex centered finite volume";
+        typedef typename GET_PROP_TYPE(TypeTag, Discretization) D;
+        bool useEcfv = std::is_same<D, Ewoms::EcfvDiscretization<TypeTag>>::value;
+        if (useEcfv)
+            disc = "element centered finite volume";
+
+        return std::string("")+
+            "Ground remediation problem where a dense oil infiltrates\n"+
+            "an aquifer with an embedded low-permability lens.\n" +
+            "This is the binary for the "+thermal+" variant using "+deriv+"\n"+
+            "and the "+disc+" discretization";
+    }
+
+    /*!
      * \name Soil parameters
      */
     //! \{
