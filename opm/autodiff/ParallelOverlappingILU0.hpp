@@ -179,7 +179,15 @@ namespace Opm
             if ( a_ik.index() != irow.index() )
                 OPM_THROW(std::logic_error, "Matrix is missing diagonal for row " << irow.index());
 
-            *a_ik -= sum_dropped;
+            int index = 0;
+            for(const auto& row: sum_dropped)
+            {
+                for(const auto& val: row)
+                {
+                    (*a_ik)[index][index]-=val;
+                }
+                ++index;
+            }
 
             if ( diagonal )
             {
