@@ -99,8 +99,10 @@
 namespace Ewoms {
 template <class TypeTag>
 class EclProblem;
+}
 
-namespace Properties {
+BEGIN_PROPERTIES
+
 #if EBOS_USE_ALUGRID
 NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclAluGridVanguard, EclOutputBlackOil));
 #else
@@ -283,7 +285,10 @@ SET_BOOL_PROP(EclBaseProblem, EnableEnergy, false);
 
 // disable thermal flux boundaries by default
 SET_BOOL_PROP(EclBaseProblem, EnableThermalFluxBoundaries, false);
-} // namespace Properties
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 /*!
  * \ingroup EclBlackOilSimulator

@@ -49,14 +49,17 @@
 #include <vector>
 #include <unordered_map>
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_PROP_TAG(Simulator);
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(Evaluation);
 NEW_PROP_TAG(ElementContext);
 NEW_PROP_TAG(FluidSystem);
-}
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 /*!
  * \ingroup EclBlackOilSimulator

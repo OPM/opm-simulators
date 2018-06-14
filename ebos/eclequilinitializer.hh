@@ -37,8 +37,8 @@
 
 #include <vector>
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_PROP_TAG(Simulator);
 NEW_PROP_TAG(FluidSystem);
 NEW_PROP_TAG(GridView);
@@ -46,7 +46,10 @@ NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(MaterialLaw);
 NEW_PROP_TAG(EnableTemperature);
 NEW_PROP_TAG(EnableEnergy);
-}
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 /*!
  * \ingroup EclBlackOilSimulator

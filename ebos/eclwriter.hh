@@ -51,12 +51,15 @@
 #include <utility>
 #include <string>
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_PROP_TAG(EnableEclOutput);
 NEW_PROP_TAG(EnableAsyncEclOutput);
 NEW_PROP_TAG(EclOutputDoublePrecision);
-}
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 template <class TypeTag>
 class EclWriter;

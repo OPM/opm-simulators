@@ -32,10 +32,11 @@
 
 #include "eclproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(EclProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

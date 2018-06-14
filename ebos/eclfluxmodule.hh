@@ -41,10 +41,13 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_PROP_TAG(MaterialLaw);
-}
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 template <class TypeTag>
 class EclTransIntensiveQuantities;

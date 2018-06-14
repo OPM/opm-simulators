@@ -50,15 +50,18 @@
 #include <vector>
 #include <unordered_map>
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(Vanguard);
 NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(GridView);
 NEW_PROP_TAG(ElementMapper);
 NEW_PROP_TAG(EnableEnergy);
-}
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 /*!
  * \ingroup EclBlackOilSimulator

@@ -52,12 +52,15 @@
 
 #include <type_traits>
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 // create new type tag for the Ecl-output
 NEW_TYPE_TAG(EclOutputBlackOil);
 
-} // namespace Properties
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 // forward declaration
 template <class TypeTag>

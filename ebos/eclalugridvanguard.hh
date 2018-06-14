@@ -38,14 +38,20 @@ namespace Ewoms {
 template <class TypeTag>
 class EclAluGridVanguard;
 
-namespace Properties {
+} // namespace Ewoms
+
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(EclAluGridVanguard, INHERITS_FROM(EclBaseVanguard));
 
 // declare the properties
 SET_TYPE_PROP(EclAluGridVanguard, Vanguard, Ewoms::EclAluGridVanguard<TypeTag>);
 SET_TYPE_PROP(EclAluGridVanguard, Grid,  Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>);
 SET_TYPE_PROP(EclAluGridVanguard, EquilGrid, Dune::CpGrid);
-} // namespace Properties
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 /*!
  * \ingroup EclBlackOilSimulator

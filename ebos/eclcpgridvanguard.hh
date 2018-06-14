@@ -41,8 +41,10 @@
 namespace Ewoms {
 template <class TypeTag>
 class EclCpGridVanguard;
+}
 
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(EclCpGridVanguard, INHERITS_FROM(EclBaseVanguard));
 
 NEW_PROP_TAG(ExportGlobalTransmissibility);
@@ -52,7 +54,10 @@ SET_TYPE_PROP(EclCpGridVanguard, Vanguard, Ewoms::EclCpGridVanguard<TypeTag>);
 SET_TYPE_PROP(EclCpGridVanguard, Grid, Dune::CpGrid);
 SET_TYPE_PROP(EclCpGridVanguard, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
 SET_BOOL_PROP(EclCpGridVanguard, ExportGlobalTransmissibility, false);
-} // namespace Properties
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 /*!
  * \ingroup EclBlackOilSimulator

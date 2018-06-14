@@ -59,12 +59,15 @@
 #include <utility>
 #include <vector>
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_PROP_TAG(Simulator);
 NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(FluidSystem);
-} // namespace Properties
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 /**
  * Types and routines that collectively implement a basic

@@ -51,8 +51,10 @@
 namespace Ewoms {
 template <class TypeTag>
 class EclBaseVanguard;
+}
 
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(EclBaseVanguard);
 
 // declare the properties required by the for the ecl simulator vanguard
@@ -64,7 +66,10 @@ NEW_PROP_TAG(EclOutputDir);
 
 SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "ECLDECK.DATA");
 SET_STRING_PROP(EclBaseVanguard, EclOutputDir, ".");
-} // namespace Properties
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 /*!
  * \ingroup EclBlackOilSimulator
