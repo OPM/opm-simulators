@@ -32,8 +32,8 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include "problems/lensproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(LensProblemVcfvFd, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
 
 // use the finite difference methodfor this simulator
@@ -43,7 +43,8 @@ SET_TAG_PROP(LensProblemVcfvFd, LocalLinearizerSplice, FiniteDifferenceLocalLine
 #if HAVE_DUNE_LOCALFUNCTIONS
 SET_BOOL_PROP(LensProblemVcfvFd, UseP1FiniteElementGradients, true);
 #endif
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

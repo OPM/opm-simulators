@@ -33,8 +33,8 @@
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(Co2InjectionImmiscibleNiEcfvProblem, INHERITS_FROM(ImmiscibleModel,
                                                                 Co2InjectionBaseProblem));
 SET_TAG_PROP(Co2InjectionImmiscibleNiEcfvProblem, SpatialDiscretizationSplice,
@@ -44,7 +44,8 @@ SET_BOOL_PROP(Co2InjectionImmiscibleNiEcfvProblem, EnableEnergy, true);
 
 //! Use automatic differentiation to linearize the system of PDEs
 SET_TAG_PROP(Co2InjectionImmiscibleNiEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
-}}
+
+END_PROPERTIES
 
 ////////////////////////
 // the main function

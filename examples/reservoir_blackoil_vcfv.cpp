@@ -32,13 +32,14 @@
 #include <ewoms/disc/vcfv/vcfvdiscretization.hh>
 #include "problems/reservoirproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(ReservoirBlackOilVcfvProblem, INHERITS_FROM(BlackOilModel, ReservoirBaseProblem));
 
 // Select the vertex centered finite volume method as spatial discretization
 SET_TAG_PROP(ReservoirBlackOilVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

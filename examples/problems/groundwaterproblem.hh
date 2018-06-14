@@ -51,8 +51,8 @@ template <class TypeTag>
 class GroundWaterProblem;
 }
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(GroundWaterBaseProblem);
 
 NEW_PROP_TAG(LensLowerLeftX);
@@ -106,7 +106,8 @@ SET_STRING_PROP(GroundWaterBaseProblem, GridFile, "./data/groundwater_2d.dgf");
 SET_TAG_PROP(GroundWaterBaseProblem, LinearSolverSplice, ParallelIstlLinearSolver);
 SET_TYPE_PROP(GroundWaterBaseProblem, LinearSolverWrapper,
               Ewoms::Linear::SolverWrapperConjugatedGradients<TypeTag>);
-}} // namespace Properties, Ewoms
+
+END_PROPERTIES
 
 namespace Ewoms {
 /*!

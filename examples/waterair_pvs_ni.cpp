@@ -31,12 +31,13 @@
 #include <ewoms/models/pvs/pvsmodel.hh>
 #include "problems/waterairproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(WaterAirProblem, INHERITS_FROM(PvsModel, WaterAirBaseProblem));
 
 SET_BOOL_PROP(WaterAirProblem, EnableEnergy, true);
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

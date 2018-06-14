@@ -32,14 +32,15 @@
 
 #include "problems/richardslensproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(RichardsLensEcfvProblem, INHERITS_FROM(RichardsLensProblem));
 SET_TAG_PROP(RichardsLensEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
 
 //! Use automatic differentiation to linearize the system of PDEs
 SET_TAG_PROP(RichardsLensEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

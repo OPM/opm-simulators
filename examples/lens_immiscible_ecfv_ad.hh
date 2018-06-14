@@ -33,8 +33,8 @@
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include "problems/lensproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(LensProblemEcfvAd, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
 
 // use the element centered finite volume spatial discretization
@@ -45,6 +45,7 @@ SET_TAG_PROP(LensProblemEcfvAd, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 
 // this problem works fine if the linear solver uses single precision scalars
 SET_TYPE_PROP(LensProblemEcfvAd, LinearSolverScalar, float);
-}}
+
+END_PROPERTIES
 
 #endif // EWOMS_LENS_IMMISCIBLE_ECFV_AD_HH

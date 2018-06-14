@@ -31,15 +31,16 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include "problems/powerinjectionproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(PowerInjectionDarcyFdProblem,
              INHERITS_FROM(ImmiscibleTwoPhaseModel,
                            PowerInjectionBaseProblem));
 
 SET_TYPE_PROP(PowerInjectionDarcyFdProblem, FluxModule, Ewoms::DarcyFluxModule<TypeTag>);
 SET_TAG_PROP(PowerInjectionDarcyFdProblem, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

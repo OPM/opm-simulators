@@ -35,8 +35,7 @@
 
 #include <iostream>
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
 
 ///////////////////
 // Define some hierarchy of type tags:
@@ -125,8 +124,7 @@ SET_INT_PROP(HummerH1, TopSpeed, GET_PROP_VALUE(TTAG(Pickup), TopSpeed));
 // Unmount the canon from the Hummer
 UNSET_PROP(HummerH1, CanonCaliber);
 
-} // namespace Properties
-} // namespace Ewoms
+END_PROPERTIES
 
 
 int main()
