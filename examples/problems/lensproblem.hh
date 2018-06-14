@@ -53,8 +53,10 @@
 namespace Ewoms {
 template <class TypeTag>
 class LensProblem;
+}
 
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(LensBaseProblem, INHERITS_FROM(StructuredGridVanguard));
 
 // declare the properties specific for the lens problem
@@ -152,7 +154,10 @@ SET_BOOL_PROP(LensBaseProblem, EnableStorageCache, true);
 
 // enable the cache for intensive quantities by default for this problem
 SET_BOOL_PROP(LensBaseProblem, EnableIntensiveQuantityCache, true);
-} // namespace Properties
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 /*!
  * \ingroup TestProblems

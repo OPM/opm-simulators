@@ -52,8 +52,8 @@ template <class TypeTag>
 class InfiltrationProblem;
 }
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(InfiltrationBaseProblem);
 
 // Set the grid type
@@ -103,8 +103,8 @@ SET_SCALAR_PROP(InfiltrationBaseProblem, InitialTimeStepSize, 60);
 // The default DGF file to load
 SET_STRING_PROP(InfiltrationBaseProblem, GridFile,
                 "./data/infiltration_50x3.dgf");
-} // namespace Properties
-} // namespace Ewoms
+
+END_PROPERTIES
 
 namespace Ewoms {
 /*!

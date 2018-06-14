@@ -31,10 +31,11 @@
 #include <ewoms/models/flash/flashmodel.hh>
 #include "problems/diffusionproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(DiffusionProblem, INHERITS_FROM(FlashModel, DiffusionBaseProblem));
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

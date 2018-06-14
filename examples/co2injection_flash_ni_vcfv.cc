@@ -35,8 +35,8 @@
 #include "problems/co2injectionflash.hh"
 #include "problems/co2injectionproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(Co2InjectionFlashNiVcfvProblem, INHERITS_FROM(FlashModel, Co2InjectionBaseProblem));
 SET_TAG_PROP(Co2InjectionFlashNiVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
 
@@ -60,8 +60,8 @@ SET_TAG_PROP(Co2InjectionFlashNiVcfvProblem, LinearSolverSplice, ParallelBiCGSta
 #else
 SET_SCALAR_PROP(Co2InjectionFlashNiVcfvProblem, NewtonRawTolerance, 1e-5);
 #endif
-}
-}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

@@ -31,10 +31,11 @@
 #include <ewoms/models/pvs/pvsmodel.hh>
 #include "problems/cuvetteproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(CuvetteProblem, INHERITS_FROM(PvsModel, CuvetteBaseProblem));
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

@@ -66,8 +66,10 @@ namespace Co2Injection {
 #include <opm/material/components/co2tables.inc>
 }
 //! \endcond
+}
 
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(Co2InjectionBaseProblem);
 
 // declare the CO2 injection problem specific property tags
@@ -168,8 +170,8 @@ SET_SCALAR_PROP(Co2InjectionBaseProblem, InitialTimeStepSize, 250);
 
 // The default DGF file to load
 SET_STRING_PROP(Co2InjectionBaseProblem, GridFile, "data/co2injection.dgf");
-} // namespace Properties
-} // namespace Ewoms
+
+END_PROPERTIES
 
 namespace Ewoms {
 /*!

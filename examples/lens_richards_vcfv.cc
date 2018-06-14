@@ -32,11 +32,12 @@
 
 #include "problems/richardslensproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(RichardsLensVcfvProblem, INHERITS_FROM(RichardsLensProblem));
 SET_TAG_PROP(RichardsLensVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

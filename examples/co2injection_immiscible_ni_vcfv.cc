@@ -33,14 +33,15 @@
 #include <ewoms/disc/vcfv/vcfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(Co2InjectionImmiscibleNiVcfvProblem, INHERITS_FROM(ImmiscibleModel,
                                                                 Co2InjectionBaseProblem));
 SET_TAG_PROP(Co2InjectionImmiscibleNiVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
 
 SET_BOOL_PROP(Co2InjectionImmiscibleNiVcfvProblem, EnableEnergy, true);
-}}
+
+END_PROPERTIES
 
 ////////////////////////
 // the main function
