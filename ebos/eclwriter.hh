@@ -236,26 +236,28 @@ public:
     void restartBegin()
     {
         bool enableHysteresis = simulator_.problem().materialLawManager()->enableHysteresis();
-        std::vector<Opm::RestartKey> solution_keys {{"PRESSURE" , Opm::UnitSystem::measure::pressure},
-                                                    {"SWAT" ,     Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
-                                                    {"SGAS" ,     Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
-                                                    {"TEMP" ,     Opm::UnitSystem::measure::temperature}, // always required for now
-                                                    {"RS" ,       Opm::UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
-                                                    {"RV" ,       Opm::UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
-                                                    {"SOMAX",     Opm::UnitSystem::measure::identity, simulator_.problem().vapparsActive()},
-                                                    {"PCSWM_OW",  Opm::UnitSystem::measure::identity, enableHysteresis},
-                                                    {"KRNSW_OW",  Opm::UnitSystem::measure::identity, enableHysteresis},
-                                                    {"PCSWM_GO",  Opm::UnitSystem::measure::identity, enableHysteresis},
-                                                    {"KRNSW_GO",  Opm::UnitSystem::measure::identity, enableHysteresis}};
+        std::vector<Opm::RestartKey> solutionKeys{
+            {"PRESSURE" , Opm::UnitSystem::measure::pressure},
+            {"SWAT" ,     Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
+            {"SGAS" ,     Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
+            {"TEMP" ,     Opm::UnitSystem::measure::temperature}, // always required for now
+            {"RS" ,       Opm::UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
+            {"RV" ,       Opm::UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
+            {"SOMAX",     Opm::UnitSystem::measure::identity, simulator_.problem().vapparsActive()},
+            {"PCSWM_OW",  Opm::UnitSystem::measure::identity, enableHysteresis},
+            {"KRNSW_OW",  Opm::UnitSystem::measure::identity, enableHysteresis},
+            {"PCSWM_GO",  Opm::UnitSystem::measure::identity, enableHysteresis},
+            {"KRNSW_GO",  Opm::UnitSystem::measure::identity, enableHysteresis}
+        };
 
-        std::vector<Opm::RestartKey> extra_keys = {{"OPMEXTRA", Opm::UnitSystem::measure::identity, false}};
+        std::vector<Opm::RestartKey> extraKeys = {{"OPMEXTRA", Opm::UnitSystem::measure::identity, false}};
 
         unsigned episodeIdx = simulator_.episodeIndex();
         const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
         eclOutputModule_.allocBuffers(numElements, episodeIdx, /*isSubStep=*/false, /*log=*/false);
 
-        auto restartValues = eclIO_->loadRestart(solution_keys, extra_keys);
+        auto restartValues = eclIO_->loadRestart(solutionKeys, extraKeys);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
             unsigned globalIdx = collectToIORank_.localIdxToGlobalIdx(elemIdx);
             eclOutputModule_.setRestart(restartValues.solution, elemIdx, globalIdx);
