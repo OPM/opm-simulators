@@ -75,7 +75,7 @@ void test_milu0(M& A)
 #ifdef DEBUG
         std::cout<<"index "<<i<<" size "<<diff.size()<<" difference"<<point_difference<<std::endl;
 #endif
-        BOOST_ASSERT(point_difference < 1e-12);
+        BOOST_CHECK(point_difference < 1e-12);
     }
 
     // Test that (LU)^-1Ae=e
@@ -86,8 +86,8 @@ void test_milu0(M& A)
 
     for ( std::size_t i = 0, end = A.N(); i < end; ++i)
     {
-        auto point_difference = diff[i].two_norm();
 #ifdef DEBUG
+        auto point_difference = diff[i].two_norm();
         std::cout<<"index "<<i<<" size "<<diff.size()<<" point_difference "<<point_difference<<std::endl;
 #endif
         BOOST_CHECK_CLOSE(x2[i].two_norm(), e[i].two_norm(), 1e-12);
