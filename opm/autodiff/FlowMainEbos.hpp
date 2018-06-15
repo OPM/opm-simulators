@@ -535,7 +535,21 @@ namespace Opm
             {
                 if ( eclState().getSimulationConfig().useCPR() )
                 {
+                /* Deactivate selection of CPR via eclipse keyword
+                   as this preconditioner is still considered experimental
+                   and fails miserably for some models.
                     param_.insertParameter("solver_approach", cprSolver);
+                */
+                    if ( output_cout_ )
+                    {
+                        std::ostringstream message;
+                        message << "Ignoring request for CPRPreconditioner "
+                             << "via Eclipse keyword as it is considered "
+                             <<" experimental. To activate use "
+                             <<"\"solver_approach=cprSolver\" command "
+                             <<"line parameter.";
+                        OpmLog::info(message.str());
+                    }
                 }
             }
             extractParallelGridInformationToISTL(grid(), parallel_information_);
