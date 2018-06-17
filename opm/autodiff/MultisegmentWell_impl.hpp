@@ -52,11 +52,11 @@ namespace Opm
         if (has_polymer) {
             OPM_THROW(std::runtime_error, "polymer is not supported by multisegment well yet");
         }
-        // since we decide to use the SegmentSet from the well parser. we can reuse a lot from it.
+        // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.
         // for other facilities needed but not available from parser, we need to process them here
 
         // initialize the segment_perforations_
-        const ConnectionSet& completion_set = well_ecl_->getConnections(current_step_);
+        const WellConnections& completion_set = well_ecl_->getConnections(current_step_);
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const Connection& completion = completion_set.get(perf);
             const int segment_number = completion.getSegmentNumber();
@@ -792,11 +792,11 @@ namespace Opm
 
 
     template <typename TypeTag>
-    const SegmentSet&
+    const WellSegments&
     MultisegmentWell<TypeTag>::
     segmentSet() const
     {
-        return well_ecl_->getSegmentSet(current_step_);
+        return well_ecl_->getWellSegments(current_step_);
     }
 
 
@@ -808,7 +808,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     numberOfSegments() const
     {
-        return segmentSet().numberSegment();
+        return segmentSet().size();
     }
 
 

@@ -547,11 +547,11 @@ namespace Opm
                         segrates_.push_back(wellRates()[np * w + p]);
                     }
                 } else { // it is a multi-segment well
-                    const SegmentSet& segment_set = well_ecl->getSegmentSet(time_step);
+                    const WellSegments& segment_set = well_ecl->getWellSegments(time_step);
                     // assuming the order of the perforations in well_ecl is the same with Wells
-                    const ConnectionSet& completion_set = well_ecl->getConnections(time_step);
+                    const WellConnections& completion_set = well_ecl->getConnections(time_step);
                     // number of segment for this single well
-                    const int well_nseg = segment_set.numberSegment();
+                    const int well_nseg = segment_set.size();
                     const int nperf = completion_set.size();
                     nseg_ += well_nseg;
                     // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment

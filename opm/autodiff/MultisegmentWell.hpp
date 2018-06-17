@@ -161,8 +161,8 @@ namespace Opm
         // multi-phase flow model
         WellSegment::MultiPhaseModelEnum multiphaseModel() const;
 
-        // get the SegmentSet from the well_ecl_
-        const SegmentSet& segmentSet() const;
+        // get the WellSegments from the well_ecl_
+        const WellSegments& segmentSet() const;
 
         // protected member variables from the Base class
         using Base::well_ecl_;
