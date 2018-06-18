@@ -90,7 +90,10 @@ public:
      * \brief Set the type of the hysteresis model which is used for relative permeability.
      *
      * -1: relperm hysteresis is disabled
-     * 0: use the Carlson model for relative permeability hysteresis
+     * 0: use the Carlson model for relative permeability hysteresis of the non-wetting
+     *    phase and the drainage curve for the relperm of the wetting phase
+     * 1: use the Carlson model for relative permeability hysteresis of the non-wetting
+     *    phase and the imbibition curve for the relperm of the wetting phase
      */
     void setKrHysteresisModel(int value)
     { krHysteresisModel_ = value; }
@@ -144,18 +147,27 @@ public:
         if (deck.hasKeyword("NOHYKR"))
             krHysteresisModel_ = -1;
         else {
-            krHysteresisModel_ = ehystrKeyword.getRecord(0).getItem("relative_perm_hyst").get< int >(0);
-            if (krHysteresisModel_ != 0)
-                throw std::runtime_error("Only the Carlson kr hystersis model (indicated by a 0 on the second item"
-                                         " of the 'EHYSTR' keyword) is supported");
+            krHysteresisModel_ = ehystrKeyword.getRecord(0).getItem("relative_perm_hyst").get<int>(0);
+
+            if (krHysteresisModel_ != 0 && krHysteresisModel_ != 1)
+                throw std::runtime_error(
+                    "Only the Carlson relative permeability hystersis models (indicated by '0' or "
+                    "'1' for the second item of the 'EHYSTR' keyword) are supported");
         }
 
-        if (deck.hasKeyword("NOHYPC"))
+        // this is slightly screwed: it is possible to specify contradicting hysteresis
+        // models with HYPC/NOHYPC and the fifth item of EHYSTR. Let's ignore that for
+        // now.
+        std::string whereFlag =
+            ehystrKeyword.getRecord(0).getItem("limiting_hyst_flag").getTrimmedString(0);
+        if (deck.hasKeyword("NOHYPC") || whereFlag == "KR")
             pcHysteresisModel_ = -1;
         else {
             // if capillary pressure hysteresis is enabled, Eclipse always uses the
             // Killough model
             pcHysteresisModel_ = 0;
+
+            throw std::runtime_error("Capillary pressure hysteresis is not supported yet");
         }
     }
 #endif

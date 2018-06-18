@@ -346,9 +346,9 @@ public:
                                   Scalar& krnSwMdc,
                                   unsigned elemIdx) const
     {
-        if (!enableHysteresis()) {
+        if (!enableHysteresis())
             throw std::runtime_error("Cannot get hysteresis parameters if hysteresis not enabled.");
-        }
+
         const auto& params = materialLawParams(elemIdx);
         MaterialLaw::oilWaterHysteresisParams(pcSwMdc, krnSwMdc, params);
     }
@@ -357,9 +357,9 @@ public:
                                      const Scalar& krnSwMdc,
                                      unsigned elemIdx)
     {
-        if (!enableHysteresis()) {
+        if (!enableHysteresis())
             throw std::runtime_error("Cannot set hysteresis parameters if hysteresis not enabled.");
-        }
+
         auto& params = materialLawParams(elemIdx);
         MaterialLaw::setOilWaterHysteresisParams(pcSwMdc, krnSwMdc, params);
     }
@@ -368,9 +368,9 @@ public:
                                 Scalar& krnSwMdc,
                                 unsigned elemIdx) const
     {
-        if (!enableHysteresis()) {
+        if (!enableHysteresis())
             throw std::runtime_error("Cannot get hysteresis parameters if hysteresis not enabled.");
-        }
+
         const auto& params = materialLawParams(elemIdx);
         MaterialLaw::gasOilHysteresisParams(pcSwMdc, krnSwMdc, params);
     }
@@ -379,9 +379,9 @@ public:
                                    const Scalar& krnSwMdc,
                                    unsigned elemIdx)
     {
-        if (!enableHysteresis()) {
+        if (!enableHysteresis())
             throw std::runtime_error("Cannot set hysteresis parameters if hysteresis not enabled.");
-        }
+
         auto& params = materialLawParams(elemIdx);
         MaterialLaw::setGasOilHysteresisParams(pcSwMdc, krnSwMdc, params);
     }
@@ -415,14 +415,11 @@ public:
     }
 
     const Opm::EclEpsScalingPointsInfo<Scalar>& oilWaterScaledEpsInfoDrainage(size_t elemIdx) const
-    {
-        return *oilWaterScaledEpsInfoDrainage_[elemIdx];
-    }
+    { return *oilWaterScaledEpsInfoDrainage_[elemIdx]; }
 
     std::shared_ptr<EclEpsScalingPointsInfo<Scalar> >& oilWaterScaledEpsInfoDrainagePointerReferenceHack(unsigned elemIdx)
-    {
-        return oilWaterScaledEpsInfoDrainage_[elemIdx];
-    }
+    { return oilWaterScaledEpsInfoDrainage_[elemIdx]; }
+
 private:
     void readGlobalEpsOptions_(const Opm::Deck& deck, const Opm::EclipseState& eclState)
     {
@@ -579,6 +576,7 @@ private:
         bool hasOil = deck.hasKeyword("OIL");
         bool hasWater = deck.hasKeyword("WATER");
 
+        const auto& imbnumData = eclState.get3DProperties().getIntGridProperty("IMBNUM").getData();
         assert(numCompressedElems == satnumRegionArray.size());
         assert(!enableHysteresis() || numCompressedElems == imbnumRegionArray.size());
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
@@ -617,7 +615,7 @@ private:
             }
 
             if (enableHysteresis()) {
-                unsigned imbRegionIdx = static_cast<unsigned>(imbnumRegionArray[elemIdx]);
+                unsigned imbRegionIdx = static_cast<unsigned>(imbnumData[elemIdx]) - 1;
 
                 if (hasGas && hasOil) {
                     auto gasOilImbParamsHyst = std::make_shared<GasOilEpsTwoPhaseParams>();
@@ -719,16 +717,14 @@ private:
             family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
         }
 
-        if (family1 && family2) {
+        if (family1 && family2)
             throw std::invalid_argument("Saturation families should not be mixed \n"
                                         "Use either SGOF and SWOF or SGFN, SWFN and SOF3");
-        }
 
-        if (!family1 && !family2) {
+        if (!family1 && !family2)
             throw std::invalid_argument("Saturations function must be specified using either "
                                         "family 1 or family 2 keywords \n"
                                         "Use either SGOF and SWOF or SGFN, SWFN and SOF3" );
-        }
 
         if (family1 && !family2)
             return SaturationFunctionFamily::FamilyI;
@@ -799,7 +795,6 @@ private:
         //default:
         case noFamily:
             throw std::domain_error("No valid saturation keyword family specified");
-
         }
     }
 
@@ -928,7 +923,6 @@ private:
 
         }
     }
-
 
     template <class Container>
     void readGasOilUnscaledPoints_(Container& dest,

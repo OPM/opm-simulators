@@ -227,18 +227,17 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrw(const Params& params, const Evaluation& Sw)
     {
-
         // if no relperm hysteresis is enabled, use the drainage curve
         if (!params.config().enableHysteresis() || params.config().krHysteresisModel() < 0)
             return EffectiveLaw::twoPhaseSatKrw(params.drainageParams(), Sw);
 
-        // if it is enabled, use either the drainage or the imbibition curve. if the
-        // imbibition curve is used, the saturation must be shifted.
-        if (Sw <= params.krwSwMdc())
+        if (params.config().krHysteresisModel() == 0)
+            // use drainage curve for wetting phase
             return EffectiveLaw::twoPhaseSatKrw(params.drainageParams(), Sw);
 
-        return EffectiveLaw::twoPhaseSatKrw(params.imbibitionParams(),
-                                            Sw + params.deltaSwImbKrw());
+        // use imbibition curve for wetting phase
+        assert(params.config().krHysteresisModel() == 1);
+        return EffectiveLaw::twoPhaseSatKrw(params.imbibitionParams(), Sw);
     }
 
     /*!
