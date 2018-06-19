@@ -137,6 +137,17 @@ public:
         else
             std::fill(satnumRegionArray_.begin(), satnumRegionArray_.end(), 0);
 
+        // create the information for the imbibition region (IMBNUM). By default this is
+        // the same as the saturation region (SATNUM)
+        imbnumRegionArray_ = satnumRegionArray_;
+        if (eclState.get3DProperties().hasDeckIntGridProperty("IMBNUM")) {
+            const auto& imbnumRawData = eclState.get3DProperties().getIntGridProperty("IMBNUM").getData();
+            for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+                int cartesianElemIdx = compressedToCartesianElemIdx[elemIdx];
+                imbnumRegionArray_[elemIdx] = imbnumRawData[cartesianElemIdx] - 1;
+            }
+        }
+
         readGlobalEpsOptions_(deck, eclState);
         readGlobalHysteresisOptions_(deck);
         readGlobalThreePhaseOptions_(deck);
@@ -145,7 +156,7 @@ public:
         for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx)
             unscaledEpsInfo_[satRegionIdx].extractUnscaled(deck, eclState, satRegionIdx);
 
-        initParamsForElements_(deck, eclState, compressedToCartesianElemIdx, satnumRegionArray_);
+        initParamsForElements_(deck, eclState, compressedToCartesianElemIdx, satnumRegionArray_, imbnumRegionArray_);
     }
 
     /*!
@@ -309,9 +320,11 @@ public:
         return mlp;
     }
 
-    int satnumRegionIdx(unsigned elemIdx) const {
-        return satnumRegionArray_[elemIdx];
-    }
+    int satnumRegionIdx(unsigned elemIdx) const
+    { return satnumRegionArray_[elemIdx]; }
+
+    int imbnumRegionIdx(unsigned elemIdx) const
+    { return imbnumRegionArray_[elemIdx]; }
 
     std::shared_ptr<MaterialLawParams>& materialLawParamsPointerReferenceHack(unsigned elemIdx)
     {
@@ -461,7 +474,8 @@ private:
 
     void initParamsForElements_(const Deck& deck, const EclipseState& eclState,
                                 const std::vector<int>& compressedToCartesianElemIdx,
-                                const std::vector<int>& satnumRegionArray)
+                                const std::vector<int>& satnumRegionArray,
+                                const std::vector<int>& imbnumRegionArray)
     {
         const size_t numSatRegions = eclState.runspec().tabdims().getNumSatTables();
         unsigned numCompressedElems = static_cast<unsigned>(compressedToCartesianElemIdx.size());
@@ -565,8 +579,8 @@ private:
         bool hasOil = deck.hasKeyword("OIL");
         bool hasWater = deck.hasKeyword("WATER");
 
-        const auto& imbnumData = eclState.get3DProperties().getIntGridProperty("IMBNUM").getData();
         assert(numCompressedElems == satnumRegionArray.size());
+        assert(!enableHysteresis() || numCompressedElems == imbnumRegionArray.size());
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
             unsigned satRegionIdx = static_cast<unsigned>(satnumRegionArray[elemIdx]);
 
@@ -603,7 +617,7 @@ private:
             }
 
             if (enableHysteresis()) {
-                unsigned imbRegionIdx = static_cast<unsigned>(imbnumData[elemIdx]) - 1;
+                unsigned imbRegionIdx = static_cast<unsigned>(imbnumRegionArray[elemIdx]);
 
                 if (hasGas && hasOil) {
                     auto gasOilImbParamsHyst = std::make_shared<GasOilEpsTwoPhaseParams>();
@@ -1064,6 +1078,7 @@ private:
     std::vector<std::shared_ptr<MaterialLawParams> > materialLawParams_;
 
     std::vector<int> satnumRegionArray_;
+    std::vector<int> imbnumRegionArray_;
 };
 } // namespace Opm
 
