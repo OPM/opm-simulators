@@ -33,8 +33,8 @@
 #include <ewoms/disc/vcfv/vcfvdiscretization.hh>
 #include "problems/reservoirproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(ReservoirNcpVcfvProblem, INHERITS_FROM(NcpModel, ReservoirBaseProblem));
 
 // Select the vertex centered finite volume method as spatial discretization
@@ -48,7 +48,8 @@ SET_BOOL_PROP(ReservoirNcpVcfvProblem, EnableStorageCache, true);
 // the simulator converges better with this. (TODO: use automatic differentiation?)
 SET_SCALAR_PROP(ReservoirNcpVcfvProblem, BaseEpsilon, 1e-11);
 
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

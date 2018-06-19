@@ -33,11 +33,12 @@
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(Co2InjectionPvsEcfvProblem, INHERITS_FROM(PvsModel, Co2InjectionBaseProblem));
 SET_TAG_PROP(Co2InjectionPvsEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

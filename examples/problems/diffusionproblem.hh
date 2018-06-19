@@ -52,8 +52,7 @@ template <class TypeTag>
 class DiffusionProblem;
 }
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(DiffusionBaseProblem);
 
@@ -116,8 +115,8 @@ SET_SCALAR_PROP(DiffusionBaseProblem, EndTime, 1e6);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(DiffusionBaseProblem, InitialTimeStepSize, 1000);
-}
-} // namespace Ewoms, Properties
+
+END_PROPERTIES
 
 namespace Ewoms {
 /*!

@@ -31,10 +31,11 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include "problems/groundwaterproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(GroundWaterProblem, INHERITS_FROM(ImmiscibleSinglePhaseModel, GroundWaterBaseProblem));
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

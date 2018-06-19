@@ -57,8 +57,8 @@ template <class TypeTag>
 class PowerInjectionProblem;
 }
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(PowerInjectionBaseProblem);
 
 // Set the grid implementation to be used
@@ -135,8 +135,8 @@ SET_SCALAR_PROP(PowerInjectionBaseProblem, EndTime, 100);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(PowerInjectionBaseProblem, InitialTimeStepSize, 1e-3);
-} // namespace Properties
-} // namespace Ewoms
+
+END_PROPERTIES
 
 namespace Ewoms {
 /*!

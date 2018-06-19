@@ -32,11 +32,12 @@
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include "problems/fingerproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(FingerProblemEcfv, INHERITS_FROM(ImmiscibleTwoPhaseModel, FingerBaseProblem));
 SET_TAG_PROP(FingerProblemEcfv, SpatialDiscretizationSplice, EcfvDiscretization);
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

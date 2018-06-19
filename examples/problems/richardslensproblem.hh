@@ -49,7 +49,10 @@ namespace Ewoms {
 template <class TypeTag>
 class RichardsLensProblem;
 
-namespace Properties {
+} // namespace Ewoms
+
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(RichardsLensProblem, INHERITS_FROM(Richards));
 
 // Use 2d YaspGrid
@@ -114,7 +117,10 @@ SET_SCALAR_PROP(RichardsLensProblem, InitialTimeStepSize, 100);
 
 // The default DGF file to load
 SET_STRING_PROP(RichardsLensProblem, GridFile, "./data/richardslens_24x16.dgf");
-} // namespace Properties
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 /*!
  * \ingroup TestProblems

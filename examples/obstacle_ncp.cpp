@@ -32,11 +32,11 @@
 
 #include "problems/obstacleproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(ObstacleProblem, INHERITS_FROM(NcpModel, ObstacleBaseProblem));
-}
-}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {
