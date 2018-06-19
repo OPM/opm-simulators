@@ -108,6 +108,37 @@ public:
     }
 
     /*!
+     * \brief Returns the canonical path to a deck file.
+     *
+     * The input can either be the canonical deck file name or the name of the case
+     * (i.e., without the .DATA extension)
+     */
+    static boost::filesystem::path canonicalDeckPath(const std::string& caseName)
+    {
+        const auto fileExists = [](const boost::filesystem::path& f) -> bool
+            {
+                if (!boost::filesystem::exists(f))
+                    return false;
+
+                if (boost::filesystem::is_regular_file(f))
+                    return true;
+
+                return boost::filesystem::is_symlink(f) && boost::filesystem::is_regular_file(boost::filesystem::read_symlink(f));
+            };
+
+        auto simcase = boost::filesystem::path(caseName);
+        if (fileExists(simcase))
+            return simcase;
+
+        for (const auto& ext : { std::string("data"), std::string("DATA") }) {
+            if (fileExists(simcase.replace_extension(ext)))
+                return simcase;
+        }
+
+        throw std::invalid_argument("Cannot find input case "+caseName);
+    }
+
+    /*!
      * \brief Set the Opm::EclipseState and the Opm::Deck object which ought to be used
      *        when the simulator vanguard is instantiated.
      *
@@ -140,6 +171,7 @@ public:
 #endif
 
         std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
+        fileName = canonicalDeckPath(fileName).string();
 
         // compute the base name of the input file name
         const char directorySeparator = '/';
