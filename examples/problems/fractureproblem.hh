@@ -65,8 +65,8 @@ template <class TypeTag>
 class FractureProblem;
 }
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 // Create a type tag for the problem
 NEW_TYPE_TAG(FractureProblem, INHERITS_FROM(DiscreteFractureModel));
 
@@ -157,8 +157,8 @@ SET_SCALAR_PROP(FractureProblem, EndTime, 3e3);
 
 // Set the default value for the initial time step size
 SET_SCALAR_PROP(FractureProblem, InitialTimeStepSize, 100);
-} // namespace Properties
-} // namespace Ewoms
+
+END_PROPERTIES
 
 namespace Ewoms {
 /*!

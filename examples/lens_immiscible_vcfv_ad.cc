@@ -32,8 +32,8 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include "problems/lensproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(LensProblemVcfvAd, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
 
 // use automatic differentiation for this simulator
@@ -43,7 +43,8 @@ SET_TAG_PROP(LensProblemVcfvAd, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 #if HAVE_DUNE_LOCALFUNCTIONS
 SET_BOOL_PROP(LensProblemVcfvAd, UseP1FiniteElementGradients, true);
 #endif
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

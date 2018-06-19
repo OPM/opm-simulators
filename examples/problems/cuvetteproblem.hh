@@ -56,8 +56,8 @@ template <class TypeTag>
 class CuvetteProblem;
 }
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 
 // create a new type tag for the cuvette steam injection problem
 NEW_TYPE_TAG(CuvetteBaseProblem);
@@ -120,8 +120,8 @@ SET_SCALAR_PROP(CuvetteBaseProblem, InitialTimeStepSize, 1);
 
 // The default DGF file to load
 SET_STRING_PROP(CuvetteBaseProblem, GridFile, "./data/cuvette_11x4.dgf");
-} // namespace Properties
-} // namespace Ewoms
+
+END_PROPERTIES
 
 namespace Ewoms {
 /*!

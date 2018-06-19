@@ -66,10 +66,11 @@
             std::abort();                  \
     }
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(TestEquilTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem));
-}}
+
+END_PROPERTIES
 
 template <class TypeTag>
 std::unique_ptr<typename GET_PROP_TYPE(TypeTag, Simulator)>

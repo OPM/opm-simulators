@@ -32,11 +32,11 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include "problems/obstacleproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(ObstacleProblem, INHERITS_FROM(ImmiscibleModel, ObstacleBaseProblem));
-}
-}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

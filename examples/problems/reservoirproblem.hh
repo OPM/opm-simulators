@@ -54,7 +54,10 @@ namespace Ewoms {
 template <class TypeTag>
 class ReservoirProblem;
 
-namespace Properties {
+} // namespace Ewoms
+
+BEGIN_PROPERTIES
+
 
 NEW_TYPE_TAG(ReservoirBaseProblem);
 
@@ -135,7 +138,10 @@ SET_STRING_PROP(ReservoirBaseProblem, GridFile, "data/reservoir.dgf");
 
 // increase the tolerance for this problem to get larger time steps
 SET_SCALAR_PROP(ReservoirBaseProblem, NewtonRawTolerance, 1e-6);
-} // namespace Properties
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 /*!
  * \ingroup TestProblems

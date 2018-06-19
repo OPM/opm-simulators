@@ -60,7 +60,10 @@ namespace Ewoms {
 template <class TypeTag>
 class FingerProblem;
 
-namespace Properties {
+} // namespace Ewoms
+
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(FingerBaseProblem, INHERITS_FROM(StructuredGridVanguard));
 
 #if HAVE_DUNE_ALUGRID
@@ -141,7 +144,10 @@ SET_SCALAR_PROP(FingerBaseProblem, EndTime, 215);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(FingerBaseProblem, InitialTimeStepSize, 10);
-} // namespace Properties
+
+END_PROPERTIES
+
+namespace Ewoms {
 
 /*!
  * \ingroup TestProblems

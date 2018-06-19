@@ -32,8 +32,8 @@
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include "problems/reservoirproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(ReservoirNcpEcfvProblem, INHERITS_FROM(NcpModel, ReservoirBaseProblem));
 
 // Select the element centered finite volume method as spatial discretization
@@ -41,7 +41,8 @@ SET_TAG_PROP(ReservoirNcpEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretiz
 
 //! use automatic differentiation to linearize the system of PDEs
 SET_TAG_PROP(ReservoirNcpEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
-}}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

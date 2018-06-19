@@ -31,14 +31,14 @@
 #include <ewoms/models/pvs/pvsmodel.hh>
 #include "problems/outflowproblem.hh"
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(OutflowProblem, INHERITS_FROM(PvsModel, OutflowBaseProblem));
 
 // Verbosity of the PVS model (0=silent, 1=medium, 2=chatty)
 SET_INT_PROP(OutflowProblem, PvsVerbosity, 1);
-}
-}
+
+END_PROPERTIES
 
 int main(int argc, char **argv)
 {

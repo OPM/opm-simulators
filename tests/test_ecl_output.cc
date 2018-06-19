@@ -75,12 +75,13 @@
             std::abort();                  \
     }
 
-namespace Ewoms {
-namespace Properties {
+BEGIN_PROPERTIES
+
 NEW_TYPE_TAG(TestEclOutputTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem));
 SET_BOOL_PROP(TestEclOutputTypeTag, EnableGravity, false);
 SET_BOOL_PROP(TestEclOutputTypeTag, EnableAsyncEclOutput, false);
-}}
+
+END_PROPERTIES
 
 static const int day = 24 * 60 * 60;
 
