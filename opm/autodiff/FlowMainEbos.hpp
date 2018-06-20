@@ -403,10 +403,19 @@ namespace Opm
                 argv.push_back(outputDirParam.c_str());
             }
 
-            const bool restart_double_si  = param_.getDefault("restart_double_si", false);
+            std::string asyncOutputParam("--enable-async-ecl-output=");
+            if (param_.has("async_output")) {
+                const std::string& value = param_.get<std::string>("async_output");
+                asyncOutputParam += value;
+                argv.push_back(asyncOutputParam.c_str());
+            }
+
             std::string outputDoublePrecisionParam("--ecl-output-double-precision=");
-            outputDoublePrecisionParam += restart_double_si ? "true" : "false";
-            argv.push_back(outputDoublePrecisionParam.c_str());
+            if (param_.has("restart_double_si")) {
+                const std::string& value  = param_.get<std::string>("restart_double_si");
+                outputDoublePrecisionParam += value;
+                argv.push_back(outputDoublePrecisionParam.c_str());
+            }
 
 #if defined(_OPENMP)
             std::string numThreadsParam("--threads-per-process=");
