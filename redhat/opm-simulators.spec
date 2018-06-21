@@ -12,7 +12,7 @@ License:        GPL-3.0
 Group:          Development/Libraries/C and C++
 Url:            http://www.opm-project.org/
 Source0:        https://github.com/OPM/%{name}/archive/release/%{version}/%{tag}.tar.gz#/%{name}-%{version}.tar.gz
-BuildRequires:  blas-devel lapack-devel dune-common-devel
+BuildRequires:  blas-devel lapack-devel dune-common-devel dune-geometry-devel dune-grid-devel
 BuildRequires:  git suitesparse-devel doxygen bc devtoolset-6-toolchain
 BuildRequires:  opm-grid-devel opm-grid-openmpi-devel opm-grid-mpich-devel
 BuildRequires:  ewoms-devel ewoms-openmpi-devel ewoms-mpich-devel
