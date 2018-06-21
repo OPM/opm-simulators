@@ -29,11 +29,21 @@ then
 else
   CMD_PREFIX=""
 fi
-${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA timestep.adaptive=false output_dir=${RESULT_PATH}
+if test "${EXE_NAME}" = "flow"; then
+    ${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --flow-enable-adaptive-time-stepping=false --ecl-output-dir=${RESULT_PATH}
+else
+    ${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA timestep.adaptive=false output_dir=${RESULT_PATH}
+fi
+
 test $? -eq 0 || exit 1
 
 ${OPM_PACK_COMMAND} -o ${BASE_NAME} ${TEST_ARGS}_RESTART.DATA
-${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${BASE_NAME} timestep.adaptive=false output_dir=${RESULT_PATH}
+
+if test "${EXE_NAME}" = "flow"; then
+    ${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --flow-enable-adaptive-time-stepping=false --ecl-output-dir=${RESULT_PATH}
+else
+    ${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${BASE_NAME} timestep.adaptive=false output_dir=${RESULT_PATH}
+fi
 test $? -eq 0 || exit 1
 
 ecode=0

@@ -234,8 +234,8 @@ namespace Opm
                         events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE, timer.currentStepNum());
-                report += adaptiveTimeStepping->step( timer, *solver, state, well_state, event, output_writer_,
-                                                     output_writer_.requireFIPNUM() ? &fipnum : nullptr );
+                report += adaptiveTimeStepping->step(timer, *solver, state, well_state, event, output_writer_,
+                                                      output_writer_.requireFIPNUM() ? &fipnum : nullptr );
             }
             else {
                 // solve for complete report step

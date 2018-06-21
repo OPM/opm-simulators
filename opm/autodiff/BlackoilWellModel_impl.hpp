@@ -2,8 +2,6 @@
 
 
 namespace Opm {
-
-
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
     BlackoilWellModel(Simulator& ebosSimulator,
@@ -31,7 +29,6 @@ namespace Opm {
         extractLegacyDepth_();
         initial_step_ = true;
     }
-
 
 
     template<typename TypeTag>

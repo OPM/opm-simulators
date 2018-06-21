@@ -69,7 +69,7 @@ namespace Opm {
         public:
             // ---------      Types      ---------
             typedef WellStateFullyImplicitBlackoil WellState;
-            typedef BlackoilModelParameters ModelParameters;
+            typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 
             typedef typename GET_PROP_TYPE(TypeTag, Grid)                Grid;
             typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)         FluidSystem;

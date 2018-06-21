@@ -6,6 +6,7 @@
 #include <iostream>
 #include <utility>
 
+#include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/grid/utility/StopWatch.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
@@ -14,11 +15,57 @@
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
+#include <opm/core/props/phaseUsageFromDeck.hpp>
+
+BEGIN_PROPERTIES
+
+NEW_TYPE_TAG(FlowTimeSteppingParameters);
+
+NEW_PROP_TAG(Scalar);
+
+NEW_PROP_TAG(FlowSolverRestartFactor);
+NEW_PROP_TAG(FlowSolverGrowthFactor);
+NEW_PROP_TAG(FlowSolverMaxGrowth);
+NEW_PROP_TAG(FlowSolverMaxTimeStepInDays);
+NEW_PROP_TAG(FlowSolverMaxRestarts);
+NEW_PROP_TAG(FlowSolverVerbosity);
+NEW_PROP_TAG(FlowTimeStepVerbosity);
+NEW_PROP_TAG(FlowInitialTimeStepInDays);
+NEW_PROP_TAG(FlowFullTimeStepInitially);
+NEW_PROP_TAG(FlowTimeStepAfterEventInDays);
+NEW_PROP_TAG(FlowTimeStepControl);
+NEW_PROP_TAG(FlowTimeStepControlTolerance);
+NEW_PROP_TAG(FlowTimeStepControlTargetIterations);
+NEW_PROP_TAG(FlowTimeStepControlTargetNewtonIterations);
+NEW_PROP_TAG(FlowTimeStepControlDecayRate);
+NEW_PROP_TAG(FlowTimeStepControlGrowthRate);
+NEW_PROP_TAG(FlowTimeStepControlFileName);
+
+SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowSolverRestartFactor, 0.33);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowSolverGrowthFactor, 2.0);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowSolverMaxGrowth, 3.0);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowSolverMaxTimeStepInDays, 365.0);
+SET_INT_PROP(FlowTimeSteppingParameters, FlowSolverMaxRestarts, 10);
+SET_INT_PROP(FlowTimeSteppingParameters, FlowSolverVerbosity, 1);
+SET_INT_PROP(FlowTimeSteppingParameters, FlowTimeStepVerbosity, 1);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowInitialTimeStepInDays, 1.0);
+SET_BOOL_PROP(FlowTimeSteppingParameters, FlowFullTimeStepInitially, false);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowTimeStepAfterEventInDays, -1.0);
+SET_STRING_PROP(FlowTimeSteppingParameters, FlowTimeStepControl, "pid");
+SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowTimeStepControlTolerance, 1e-1);
+SET_INT_PROP(FlowTimeSteppingParameters, FlowTimeStepControlTargetIterations, 30);
+SET_INT_PROP(FlowTimeSteppingParameters, FlowTimeStepControlTargetNewtonIterations, 8);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowTimeStepControlDecayRate, 0.75);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowTimeStepControlGrowthRate, 1.25);
+SET_STRING_PROP(FlowTimeSteppingParameters, FlowTimeStepControlFileName, "timesteps");
+
+END_PROPERTIES
 
 namespace Opm {
     // AdaptiveTimeStepping
     //---------------------
 
+    template<class TypeTag>
     class AdaptiveTimeSteppingEbos
     {
         template <class Solver>
@@ -48,23 +95,21 @@ namespace Opm {
 
     public:
         //! \brief contructor taking parameter object
-        AdaptiveTimeSteppingEbos(const ParameterGroup& param,
-                                 const bool terminalOutput = true)
+        AdaptiveTimeSteppingEbos(const bool terminalOutput = true)
             : timeStepControl_()
-            , restartFactor_( param.getDefault("solver.restartfactor", double(0.33)))
-            , growthFactor_( param.getDefault("solver.growthfactor", double(2)))
-            , maxGrowth_( param.getDefault("timestep.control.maxgrowth", double(3.0)))
-              // default is 1 year, convert to seconds
-            , maxTimeStep_( unit::convert::from(param.getDefault("timestep.max_timestep_in_days", 365.0), unit::day))
-            , solverRestartMax_( param.getDefault("solver.restart", int(10)))
-            , solverVerbose_( param.getDefault("solver.verbose", bool(true)) && terminalOutput)
-            , timestepVerbose_( param.getDefault("timestep.verbose", bool(true)) && terminalOutput)
-            , suggestedNextTimestep_( unit::convert::from(param.getDefault("timestep.initial_timestep_in_days", 1.0), unit::day))
-            , fullTimestepInitially_( param.getDefault("full_timestep_initially", bool(false)))
-            , timestepAfterEvent_( unit::convert::from(param.getDefault("timestep.timestep_in_days_after_event", -1.0), unit::day))
+            , restartFactor_(EWOMS_GET_PARAM(TypeTag, double, FlowSolverRestartFactor)) // 0.33
+            , growthFactor_(EWOMS_GET_PARAM(TypeTag, double, FlowSolverGrowthFactor)) // 2.0
+            , maxGrowth_(EWOMS_GET_PARAM(TypeTag, double, FlowSolverMaxGrowth)) // 3.0
+            , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, FlowSolverMaxTimeStepInDays)*24*60*60) // 365.25
+            , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, FlowSolverMaxRestarts)) // 10
+            , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, FlowSolverVerbosity) > 0 && terminalOutput) // 2
+            , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, FlowTimeStepVerbosity) > 0 && terminalOutput) // 2
+            , suggestedNextTimestep_(EWOMS_GET_PARAM(TypeTag, double, FlowInitialTimeStepInDays)*24*60*60) // 1.0
+            , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FlowFullTimeStepInitially)) // false
+            , timestepAfterEvent_(EWOMS_GET_PARAM(TypeTag, double, FlowTimeStepAfterEventInDays)*24*60*60) // 1e30
             , useNewtonIteration_(false)
         {
-            init_(param);
+            init_();
         }
 
 
@@ -72,26 +117,62 @@ namespace Opm {
         //! \brief contructor taking parameter object
         //! \param tuning Pointer to ecl TUNING keyword
         //! \param timeStep current report step
-        //! \param param The parameter object
         AdaptiveTimeSteppingEbos(const Tuning& tuning,
                                  size_t timeStep,
-                                 const ParameterGroup& param,
                                  const bool terminalOutput = true)
             : timeStepControl_()
             , restartFactor_(tuning.getTSFCNV(timeStep))
             , growthFactor_(tuning.getTFDIFF(timeStep))
             , maxGrowth_(tuning.getTSFMAX(timeStep))
-              // default is 1 year, convert to seconds
-            , maxTimeStep_(tuning.getTSMAXZ(timeStep))
-            , solverRestartMax_(param.getDefault("solver.restart", int(10)))
-            , solverVerbose_(param.getDefault("solver.verbose", bool(true)) && terminalOutput)
-            , timestepVerbose_(param.getDefault("timestep.verbose", bool(true)) && terminalOutput)
-            , suggestedNextTimestep_(tuning.getTSINIT(timeStep))
-            , fullTimestepInitially_(param.getDefault("full_timestep_initially", bool(false)))
-            , timestepAfterEvent_(tuning.getTMAXWC(timeStep))
+            , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, FlowSolverMaxTimeStepInDays)*24*60*60) // 365.25
+            , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, FlowSolverMaxRestarts)) // 10
+            , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, FlowSolverVerbosity) > 0 && terminalOutput) // 2
+            , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, FlowTimeStepVerbosity) > 0 && terminalOutput) // 2
+            , suggestedNextTimestep_(EWOMS_GET_PARAM(TypeTag, double, FlowInitialTimeStepInDays)*24*60*60) // 1.0
+            , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FlowFullTimeStepInitially)) // false
+            , timestepAfterEvent_(EWOMS_GET_PARAM(TypeTag, double, FlowTimeStepAfterEventInDays)*24*60*60) // 1e30
             , useNewtonIteration_(false)
         {
-            init_(param);
+            init_();
+        }
+
+        static void registerParameters()
+        {
+            // TODO: make sure the help messages are correct (and useful)
+            EWOMS_REGISTER_PARAM(TypeTag, double, FlowSolverRestartFactor,
+                                 "The factor time steps are elongated after restarts");
+            EWOMS_REGISTER_PARAM(TypeTag, double, FlowSolverGrowthFactor,
+                                 "The factor time steps are elongated after a successful substep");
+            EWOMS_REGISTER_PARAM(TypeTag, double, FlowSolverMaxGrowth,
+                                 "The maximum factor time steps are elongated after a report step");
+            EWOMS_REGISTER_PARAM(TypeTag, double, FlowSolverMaxTimeStepInDays,
+                                 "The maximum size of a time step in days");
+            EWOMS_REGISTER_PARAM(TypeTag, int, FlowSolverMaxRestarts,
+                                 "The maximum number of breakdowns before a substep is given up and the simulator is terminated");
+            EWOMS_REGISTER_PARAM(TypeTag, int, FlowSolverVerbosity,
+                                 "Specify the \"chattiness\" of the non-linear solver itself");
+            EWOMS_REGISTER_PARAM(TypeTag, int, FlowTimeStepVerbosity,
+                                 "Specify the \"chattiness\" during the time integration");
+            EWOMS_REGISTER_PARAM(TypeTag, double, FlowInitialTimeStepInDays,
+                                 "The size of the initial time step in days");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowFullTimeStepInitially,
+                                 "Always attempt to finish a report step using a single substep");
+            EWOMS_REGISTER_PARAM(TypeTag, double, FlowTimeStepAfterEventInDays,
+                                 "Time step size of the first time step after an event occurs during the simulation in days");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, FlowTimeStepControl,
+                                 "The algorithm used to determine time-step sizes. valid options are: 'pid' (default), 'pid+iteration', 'pid+newtoniteration', 'iterationcount' and 'hardcoded'");
+            EWOMS_REGISTER_PARAM(TypeTag, double, FlowTimeStepControlTolerance,
+                                 "The tolerance used by the time step size control algorithm");
+            EWOMS_REGISTER_PARAM(TypeTag, int, FlowTimeStepControlTargetIterations,
+                                 "The number of linear iterations which the time step control scheme should aim for (if applicable)");
+            EWOMS_REGISTER_PARAM(TypeTag, int, FlowTimeStepControlTargetNewtonIterations,
+                                 "The number of Newton iterations which the time step control scheme should aim for (if applicable)");
+            EWOMS_REGISTER_PARAM(TypeTag, double, FlowTimeStepControlDecayRate,
+                                 "The decay rate of the time step size of the number of target iterations is exceeded");
+            EWOMS_REGISTER_PARAM(TypeTag, double, FlowTimeStepControlGrowthRate,
+                                 "The growth rate of the time step size of the number of target iterations is undercut");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, FlowTimeStepControlFileName,
+                                 "The name of the file which contains the hardcoded time steps sizes");
         }
 
         /** \brief  step method that acts like the solver::step method
@@ -322,35 +403,32 @@ namespace Opm {
 
 
     protected:
-        void init_(const ParameterGroup& param)
+        void init_()
         {
             // valid are "pid" and "pid+iteration"
-            std::string control = param.getDefault("timestep.control", std::string("pid"));
-            // iterations is the accumulation of all linear iterations over all newton steops per time step
-            const int defaultTargetIterations = 30;
-            const int defaultTargetNewtonIterations = 8;
+            std::string control = EWOMS_GET_PARAM(TypeTag, std::string, FlowTimeStepControl); // "pid"
 
-            const double tol = param.getDefault("timestep.control.tol", double(1e-1));
+            const double tol =  EWOMS_GET_PARAM(TypeTag, double, FlowTimeStepControlTolerance); // 1e-1
             if (control == "pid") {
                 timeStepControl_ = TimeStepControlType(new PIDTimeStepControl(tol));
             }
             else if (control == "pid+iteration") {
-                const int iterations = param.getDefault("timestep.control.targetiteration", defaultTargetIterations);
+                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, FlowTimeStepControlTargetIterations); // 30
                 timeStepControl_ = TimeStepControlType(new PIDAndIterationCountTimeStepControl(iterations, tol));
             }
             else if (control == "pid+newtoniteration") {
-                const int iterations = param.getDefault("timestep.control.targetiteration", defaultTargetNewtonIterations);
+                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, FlowTimeStepControlTargetNewtonIterations); // 8
                 timeStepControl_ = TimeStepControlType(new PIDAndIterationCountTimeStepControl(iterations, tol));
                 useNewtonIteration_ = true;
             }
             else if (control == "iterationcount") {
-                const int iterations = param.getDefault("timestep.control.targetiteration", defaultTargetIterations);
-                const double decayrate = param.getDefault("timestep.control.decayrate",  double(0.75));
-                const double growthrate = param.getDefault("timestep.control.growthrate", double(1.25));
+                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, FlowTimeStepControlTargetIterations); // 30
+                const double decayrate = EWOMS_GET_PARAM(TypeTag, double, FlowTimeStepControlDecayRate); // 0.75
+                const double growthrate = EWOMS_GET_PARAM(TypeTag, double, FlowTimeStepControlGrowthRate); // 1.25
                 timeStepControl_ = TimeStepControlType(new SimpleIterationCountTimeStepControl(iterations, decayrate, growthrate));
             }
             else if (control == "hardcoded") {
-                const std::string filename = param.getDefault("timestep.control.filename", std::string("timesteps"));
+                const std::string filename = EWOMS_GET_PARAM(TypeTag, std::string, FlowTimeStepControlFileName); // "timesteps"
                 timeStepControl_ = TimeStepControlType(new HardcodedTimeStepControl(filename));
 
             }
@@ -361,7 +439,6 @@ namespace Opm {
             assert(growthFactor_ >= 1.0);
         }
 
-
         typedef std::unique_ptr<TimeStepControlInterface> TimeStepControlType;
 
         SimulatorReport failureReport_;       //!< statistics for the failed substeps of the last timestep
@@ -370,9 +447,9 @@ namespace Opm {
         double growthFactor_;                //!< factor to multiply time step when solver recovered from failed convergence
         double maxGrowth_;                   //!< factor that limits the maximum growth of a time step
         double maxTimeStep_;                //!< maximal allowed time step size
-        const int solverRestartMax_;        //!< how many restart of solver are allowed
-        const bool solverVerbose_;           //!< solver verbosity
-        const bool timestepVerbose_;         //!< timestep verbosity
+        int solverRestartMax_;        //!< how many restart of solver are allowed
+        bool solverVerbose_;           //!< solver verbosity
+        bool timestepVerbose_;         //!< timestep verbosity
         double suggestedNextTimestep_;      //!< suggested size of next timestep
         bool fullTimestepInitially_;        //!< beginning with the size of the time step from data file
         double timestepAfterEvent_;         //!< suggested size of timestep after an event

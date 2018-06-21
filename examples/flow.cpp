@@ -28,6 +28,10 @@
 #include <opm/simulators/flow_ebos_energy.hpp>
 #include <opm/simulators/flow_ebos_oilwater_polymer.hpp>
 
+#include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
+#include <opm/autodiff/FlowMainEbos.hpp>
+#include <ewoms/common/propertysystem.hh>
+#include <ewoms/common/parametersystem.hh>
 #include <opm/autodiff/MissingFeatures.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/material/common/ResetLocale.hpp>
@@ -42,6 +46,14 @@
 #else
 #include <dune/common/parallel/mpihelper.hh>
 #endif
+
+BEGIN_PROPERTIES
+
+// this is a dummy type tag that is used to setup the parameters before the actual
+// simulator.
+NEW_TYPE_TAG(FlowEarlyBird, INHERITS_FROM(EclFlowProblem));
+
+END_PROPERTIES
 
 namespace detail
 {
@@ -96,32 +108,20 @@ int main(int argc, char** argv)
     // with incorrect locale settings.
     Opm::resetLocale();
 
-    Opm::ParameterGroup param(argc, argv, false, outputCout);
+    // this is a work-around for a catch 22: we do not know what code path to use without
+    // parsing the deck, but we don't know the deck without having access to the
+    // parameters and this requires to know the type tag to be used. To solve this, we
+    // use a type tag just for parsing the parameters before we instantiate the actual
+    // simulator object. (Which parses the parameters again, but since this is done in an
+    // identical manner it does not matter.)
+    typedef TTAG(FlowEarlyBird) PreTypeTag;
+    int status = Opm::FlowMainEbos<PreTypeTag>::setupParameters_(argc, argv);
+    if (status != 0)
+        return status;
 
-    // See if a deck was specified on the command line.
-    if (!param.unhandledArguments().empty()) {
-        if (param.unhandledArguments().size() != 1) {
-            if (outputCout)
-                std::cerr << "You can only specify a single input deck on the command line.\n";
-            return EXIT_FAILURE;
-        } else {
-            const auto casename = detail::simulationCaseName( param.unhandledArguments()[ 0 ] );
-            param.insertParameter("deck_filename", casename.string() );
-        }
-    }
-
-    // We must have an input deck. Grid and props will be read from that.
-    if (!param.has("deck_filename")) {
-        if (outputCout)
-            std::cerr << "This program must be run with an input deck.\n"
-                "Specify the deck filename either\n"
-                "    a) as a command line argument by itself\n"
-                "    b) as a command line parameter with the syntax deck_filename=<path to your deck>, or\n"
-                "    c) as a parameter in a parameter file (.param or .xml) passed to the program.\n";
-        return EXIT_FAILURE;
-    }
-
-    std::string deckFilename = param.get<std::string>("deck_filename");
+    std::string deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
+    typedef typename GET_PROP_TYPE(PreTypeTag, Vanguard) PreVanguard;
+    deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
 
     // Create Deck and EclipseState.
     try {

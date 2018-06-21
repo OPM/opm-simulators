@@ -275,6 +275,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilModelBase_impl.hpp
   opm/autodiff/BlackoilModelEnums.hpp
   opm/autodiff/BlackoilModelParameters.hpp
+  opm/autodiff/BlackoilModelParametersEbos.hpp
   opm/autodiff/BlackoilPressureModel.hpp
   opm/autodiff/BlackoilPropsAdFromDeck.hpp
   opm/autodiff/Compat.hpp

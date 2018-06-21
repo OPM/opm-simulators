@@ -44,7 +44,8 @@
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
-#include <opm/autodiff/BlackoilModelParameters.hpp>
+#include <opm/autodiff/FlowMainEbos.hpp>
+#include <opm/autodiff/BlackoilModelEbos.hpp>
 #include <opm/autodiff/createGlobalCellArray.hpp>
 #include <opm/autodiff/GridInit.hpp>
 
@@ -56,12 +57,11 @@
 #include <opm/autodiff/StandardWell.hpp>
 #include <opm/autodiff/BlackoilWellModel.hpp>
 
-// maybe should just include BlackoilModelEbos.hpp
-namespace Ewoms {
-    namespace Properties {
-        NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
-    }
-}
+#if HAVE_DUNE_FEM
+#include <dune/fem/misc/mpimanager.hh>
+#else
+#include <dune/common/parallel/mpihelper.hh>
+#endif
 
 using StandardWell = Opm::StandardWell<TTAG(EclFlowProblem)>;
 
@@ -120,6 +120,25 @@ struct SetupTest {
     int current_timestep;
 };
 
+struct GlobalFixture {
+    GlobalFixture()
+    {
+        int argcDummy = 1;
+        const char *tmp[] = {"test_wellmodel"};
+        char **argvDummy = const_cast<char**>(tmp);
+
+        // MPI setup.
+#if HAVE_DUNE_FEM
+        Dune::Fem::MPIManager::initialize(argcDummy, argvDummy);
+#else
+        Dune::MPIHelper::instance(argcDummy, argvDummy);
+#endif
+
+        Opm::FlowMainEbos<TTAG(EclFlowProblem)>::setupParameters_(argcDummy, argvDummy);
+    }
+};
+
+BOOST_GLOBAL_FIXTURE(GlobalFixture);
 
 BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     const SetupTest setup_test;
@@ -127,7 +146,7 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
     BOOST_CHECK_EQUAL( wells_ecl.size(), 2);
     const Opm::Well* well = wells_ecl[1];
-    const Opm::BlackoilModelParameters param;
+    const Opm::BlackoilModelParametersEbos<TTAG(EclFlowProblem) > param;
 
     // For the conversion between the surface volume rate and resrevoir voidage rate
     typedef Opm::BlackOilFluidSystem<double> FluidSystem;
@@ -144,8 +163,8 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     const int num_comp = wells->number_of_phases;
 
     BOOST_CHECK_THROW( StandardWell( well, -1, wells, param, *rateConverter, pvtIdx, num_comp), std::invalid_argument);
-    BOOST_CHECK_THROW( StandardWell( nullptr, 4, wells, param , *rateConverter, pvtIdx, num_comp), std::invalid_argument);
-    BOOST_CHECK_THROW( StandardWell( well, 4, nullptr, param , *rateConverter, pvtIdx, num_comp), std::invalid_argument);
+    BOOST_CHECK_THROW( StandardWell( nullptr, 4, wells , param, *rateConverter, pvtIdx, num_comp), std::invalid_argument);
+    BOOST_CHECK_THROW( StandardWell( well, 4, nullptr , param, *rateConverter, pvtIdx, num_comp), std::invalid_argument);
 }
 
 
@@ -158,7 +177,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
 
     {
         const int nw = wells_struct ? (wells_struct->number_of_wells) : 0;
-        const Opm::BlackoilModelParameters param;
+        const Opm::BlackoilModelParametersEbos<TTAG(EclFlowProblem)> param;
 
         for (int w = 0; w < nw; ++w) {
             const std::string well_name(wells_struct->name[w]);

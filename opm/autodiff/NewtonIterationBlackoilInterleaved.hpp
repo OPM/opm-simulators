@@ -30,8 +30,41 @@
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
 
+#include <ewoms/common/parametersystem.hh>
+
 #include <array>
 #include <memory>
+
+BEGIN_PROPERTIES
+
+NEW_TYPE_TAG(FlowIstlSolverParams);
+
+NEW_PROP_TAG(Scalar);
+NEW_PROP_TAG(FlowLinearSolverReduction);
+NEW_PROP_TAG(FlowIluRelaxation);
+NEW_PROP_TAG(FlowLinearSolverMaxIter);
+NEW_PROP_TAG(FlowLinearSolverRestart);
+NEW_PROP_TAG(FlowLinearSolverVerbosity);
+NEW_PROP_TAG(FlowIluFillinLevel);
+NEW_PROP_TAG(FlowUseGmres);
+NEW_PROP_TAG(FlowLinearSolverRequireFullSparsityPattern);
+NEW_PROP_TAG(FlowLinearSolverIgnoreConvergenceFailure);
+NEW_PROP_TAG(FlowUseAmg);
+NEW_PROP_TAG(FlowUseCpr);
+
+SET_SCALAR_PROP(FlowIstlSolverParams, FlowLinearSolverReduction, 1e-2);
+SET_SCALAR_PROP(FlowIstlSolverParams, FlowIluRelaxation, 0.9);
+SET_INT_PROP(FlowIstlSolverParams, FlowLinearSolverMaxIter, 150);
+SET_INT_PROP(FlowIstlSolverParams, FlowLinearSolverRestart, 40);
+SET_INT_PROP(FlowIstlSolverParams, FlowLinearSolverVerbosity, 0);
+SET_INT_PROP(FlowIstlSolverParams, FlowIluFillinLevel, 0);
+SET_BOOL_PROP(FlowIstlSolverParams, FlowUseGmres, false);
+SET_BOOL_PROP(FlowIstlSolverParams, FlowLinearSolverRequireFullSparsityPattern, false);
+SET_BOOL_PROP(FlowIstlSolverParams, FlowLinearSolverIgnoreConvergenceFailure, false);
+SET_BOOL_PROP(FlowIstlSolverParams, FlowUseAmg, false);
+SET_BOOL_PROP(FlowIstlSolverParams, FlowUseCpr, false);
+
+END_PROPERTIES
 
 namespace Opm
 {
@@ -53,6 +86,39 @@ namespace Opm
         bool   ignoreConvergenceFailure_;
         bool   linear_solver_use_amg_;
         bool   use_cpr_;
+
+        template <class TypeTag>
+        void init()
+        {
+            // TODO: these parameters have undocumented non-trivial dependencies
+            linear_solver_reduction_ = EWOMS_GET_PARAM(TypeTag, double, FlowLinearSolverReduction);
+            ilu_relaxation_ = EWOMS_GET_PARAM(TypeTag, double, FlowIluRelaxation);
+            linear_solver_maxiter_ = EWOMS_GET_PARAM(TypeTag, int, FlowLinearSolverMaxIter);
+            linear_solver_restart_ = EWOMS_GET_PARAM(TypeTag, int, FlowLinearSolverRestart);
+            linear_solver_verbosity_ = EWOMS_GET_PARAM(TypeTag, int, FlowLinearSolverVerbosity);
+            ilu_fillin_level_ = EWOMS_GET_PARAM(TypeTag, int, FlowIluFillinLevel);
+            newton_use_gmres_ = EWOMS_GET_PARAM(TypeTag, bool, FlowUseGmres);
+            require_full_sparsity_pattern_ = EWOMS_GET_PARAM(TypeTag, bool, FlowLinearSolverRequireFullSparsityPattern);
+            ignoreConvergenceFailure_ = EWOMS_GET_PARAM(TypeTag, bool, FlowLinearSolverIgnoreConvergenceFailure);
+            linear_solver_use_amg_ = EWOMS_GET_PARAM(TypeTag, bool, FlowUseAmg);
+            use_cpr_ = EWOMS_GET_PARAM(TypeTag, bool, FlowUseCpr);
+        }
+
+        template <class TypeTag>
+        static void registerParameters()
+        {
+            EWOMS_REGISTER_PARAM(TypeTag, double, FlowLinearSolverReduction, "The minimum reduction of the residual which the linear solver must achieve");
+            EWOMS_REGISTER_PARAM(TypeTag, double, FlowIluRelaxation, "The relaxation factor of the linear solver's ILU preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, int, FlowLinearSolverMaxIter, "The maximum number of iterations of the linear solver");
+            EWOMS_REGISTER_PARAM(TypeTag, int, FlowLinearSolverRestart, "The number of iterations after which GMRES is restarted");
+            EWOMS_REGISTER_PARAM(TypeTag, int, FlowLinearSolverVerbosity, "The verbosity level of the linear solver (0: off, 2: all)");
+            EWOMS_REGISTER_PARAM(TypeTag, int, FlowIluFillinLevel, "The fill-in level of the linear solver's ILU preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowUseGmres, "Use GMRES as the linear solver");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowLinearSolverRequireFullSparsityPattern, "Produce the full sparsity pattern for the linear solver");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowLinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowUseAmg, "Use AMG as the linear solver's preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowUseCpr, "Use CPR as the linear solver's preconditioner");
+        }
 
         NewtonIterationBlackoilInterleavedParameters() { reset(); }
         // read values from parameter class

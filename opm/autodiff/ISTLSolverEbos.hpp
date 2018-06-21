@@ -32,6 +32,7 @@
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 
+#include <ewoms/common/parametersystem.hh>
 #include <ewoms/common/propertysystem.hh>
 
 #include <dune/istl/scalarproducts.hh>
@@ -44,6 +45,8 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 BEGIN_PROPERTIES
+
+NEW_TYPE_TAG(FlowIstlSolver, INHERITS_FROM(FlowIstlSolverParams));
 
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(GlobalEqVector);
@@ -366,30 +369,21 @@ namespace Detail
         typedef Dune::AssembledLinearOperator< Matrix, Vector, Vector > AssembledLinearOperatorType;
 
         typedef NewtonIterationBlackoilInterface :: SolutionVector  SolutionVector;
-        /// Construct a system solver.
-        /// \param[in] param   parameters controlling the behaviour of the linear solvers
-        /// \param[in] parallelInformation In the case of a parallel run
-        ///                                with dune-istl the information about the parallelization.
-        ISTLSolverEbos(const NewtonIterationBlackoilInterleavedParameters& param,
-                       const boost::any& parallelInformation_arg=boost::any())
-        : iterations_( 0 ),
-          parallelInformation_(parallelInformation_arg),
-          isIORank_(isIORank(parallelInformation_arg)),
-          parameters_( param )
+
+        static void registerParameters()
         {
+            NewtonIterationBlackoilInterleavedParameters::registerParameters<TypeTag>();
         }
 
         /// Construct a system solver.
-        /// \param[in] param   ParameterGroup controlling the behaviour of the linear solvers
         /// \param[in] parallelInformation In the case of a parallel run
         ///                                with dune-istl the information about the parallelization.
-        ISTLSolverEbos(const ParameterGroup& param,
-                       const boost::any& parallelInformation_arg=boost::any())
-        : iterations_( 0 ),
-          parallelInformation_(parallelInformation_arg),
-          isIORank_(isIORank(parallelInformation_arg)),
-          parameters_( param )
+        ISTLSolverEbos(const boost::any& parallelInformation_arg=boost::any())
+            : iterations_( 0 )
+            , parallelInformation_(parallelInformation_arg)
+            , isIORank_(isIORank(parallelInformation_arg))
         {
+            parameters_.template init<TypeTag>();
         }
 
         // dummy method that is not implemented for this class
@@ -439,7 +433,7 @@ namespace Detail
             parallelInformation_arg.copyOwnerToAll(istlb, istlb);
 
 #if FLOW_SUPPORT_AMG // activate AMG if either flow_ebos is used or UMFPack is not available
-            if( parameters_.linear_solver_use_amg_ || parameters_.use_cpr_)
+            if (parameters_.linear_solver_use_amg_ || parameters_.use_cpr_)
             {
                 typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
                 typedef typename CPRSelectorType::Operator MatrixOperator;
@@ -506,9 +500,9 @@ namespace Detail
         template <class Operator>
         std::unique_ptr<SeqPreconditioner> constructPrecond(Operator& opA, const Dune::Amg::SequentialInformation&) const
         {
-            const double relax   = parameters_.ilu_relaxation_;
-            const int ilu_fillin = parameters_.ilu_fillin_level_;
-            std::unique_ptr<SeqPreconditioner> precond(new SeqPreconditioner(opA.getmat(), ilu_fillin, relax));
+            const double relax = parameters_.ilu_relaxation_;
+            const int iluFillin = parameters_.ilu_fillin_level_;
+            std::unique_ptr<SeqPreconditioner> precond(new SeqPreconditioner(opA.getmat(), iluFillin, relax));
             return precond;
         }
 
@@ -529,7 +523,7 @@ namespace Detail
         constructPrecond(Operator& opA, const Comm& comm) const
         {
             typedef std::unique_ptr<ParPreconditioner> Pointer;
-            const double relax  = parameters_.ilu_relaxation_;
+            const double relax   = parameters_.ilu_relaxation_;
             return Pointer(new ParPreconditioner(opA.getmat(), comm, relax));
         }
 #endif

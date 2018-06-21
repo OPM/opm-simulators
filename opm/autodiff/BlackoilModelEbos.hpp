@@ -27,7 +27,10 @@
 #include <ebos/eclproblem.hh>
 #include <ewoms/common/start.hh>
 
-#include <opm/autodiff/BlackoilModelParameters.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+
+#include <opm/autodiff/NonlinearSolverEbos.hpp>
+#include <opm/autodiff/BlackoilModelParametersEbos.hpp>
 #include <opm/autodiff/BlackoilWellModel.hpp>
 #include <opm/autodiff/BlackoilAquiferModel.hpp>
 #include <opm/autodiff/WellConnectionAuxiliaryModule.hpp>
@@ -65,10 +68,9 @@
 //#include <fstream>
 
 
+BEGIN_PROPERTIES
 
-namespace Ewoms {
-namespace Properties {
-NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
+NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowNonLinearSolver, FlowIstlSolver, FlowModelParameters, FlowTimeSteppingParameters));
 SET_STRING_PROP(EclFlowProblem, OutputDir, "");
 SET_BOOL_PROP(EclFlowProblem, DisableWells, true);
 SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
@@ -82,7 +84,8 @@ SET_BOOL_PROP(EclFlowProblem, EnablePolymer, false);
 SET_BOOL_PROP(EclFlowProblem, EnableSolvent, false);
 SET_BOOL_PROP(EclFlowProblem, EnableTemperature, true);
 SET_BOOL_PROP(EclFlowProblem, EnableEnergy, false);
-}}
+
+END_PROPERTIES
 
 namespace Opm {
     /// A model implementation for three-phase black oil.
@@ -98,7 +101,7 @@ namespace Opm {
         // ---------  Types and enums  ---------
         typedef BlackoilState ReservoirState;
         typedef WellStateFullyImplicitBlackoil WellState;
-        typedef BlackoilModelParameters ModelParameters;
+        typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 
         typedef typename GET_PROP_TYPE(TypeTag, Simulator)         Simulator;
         typedef typename GET_PROP_TYPE(TypeTag, Grid)              Grid;
