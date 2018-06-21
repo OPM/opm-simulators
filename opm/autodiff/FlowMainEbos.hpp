@@ -136,9 +136,9 @@ namespace Opm
                     return status;
 
                 setupParallelism_();
+                setupOutput_();
                 printStartupMessage_();
                 setupEbosSimulator_();
-                setupOutput_();
                 setupLogging_();
                 printPRTHeader_();
                 runDiagnostics_();
@@ -185,8 +185,6 @@ namespace Opm
             mpiRank_ = 0;
             mpiSize_ = 1;
 #endif
-
-            outputCout_ = (mpiRank_ == 0);
         }
 
         // Print startup message if on output rank.
@@ -236,7 +234,11 @@ namespace Opm
                           << std::endl;
             }
 
-            outputToFiles_ = outputCout_ && (outputMode_ != OutputModeNone);
+            outputCout_ = false;
+            if (mpiRank_ == 0) {
+                outputCout_ = EWOMS_GET_PARAM(TypeTag, bool, FlowEnableTerminalOutput);
+                outputToFiles_ = (outputMode_ != OutputModeNone);
+            }
         }
 
         // Setup the OpmLog backends

@@ -102,8 +102,6 @@ int main(int argc, char** argv)
     int mpiRank = mpiHelper.rank();
 #endif
 
-    const bool outputCout = (mpiRank == 0);
-
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     Opm::resetLocale();
@@ -118,6 +116,10 @@ int main(int argc, char** argv)
     int status = Opm::FlowMainEbos<PreTypeTag>::setupParameters_(argc, argv);
     if (status != 0)
         return status;
+
+    bool outputCout = false;
+    if (mpiRank == 0)
+        outputCout = EWOMS_GET_PARAM(PreTypeTag, bool, FlowEnableTerminalOutput);
 
     std::string deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
     typedef typename GET_PROP_TYPE(PreTypeTag, Vanguard) PreVanguard;
