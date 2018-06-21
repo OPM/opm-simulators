@@ -47,7 +47,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
-#include <opm/autodiff/ISTLSolver.hpp>
+#include <opm/autodiff/ISTLSolverEbos.hpp>
 #include <opm/common/data/SimulationDataContainer.hpp>
 
 #include <dune/istl/owneroverlapcopy.hh>
@@ -124,7 +124,7 @@ namespace Opm {
         typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
         typedef Dune::BlockVector<VectorBlockType>      BVector;
 
-        typedef ISTLSolver< MatrixBlockType, VectorBlockType, Indices::pressureSwitchIdx >  ISTLSolverType;
+        typedef ISTLSolverEbos<TypeTag> ISTLSolverType;
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
         // ---------  Public methods  ---------
