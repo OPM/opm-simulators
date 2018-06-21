@@ -62,6 +62,15 @@ private:
     int mseconds_;
 };
 
+void sleepAndPrintFunction()
+{
+    int ms = 100;
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+    outputMutex.lock();
+    std::cout << "Sleep completed by worker thread " << runner->workerThreadIndex() << std::endl;
+    outputMutex.unlock();
+}
+
 int SleepTasklet::numInstantiated_ = 0;
 
 int main()
@@ -83,10 +92,8 @@ int main()
     runner->barrier();
     std::cout << "after barrier" << std::endl;
 
-    for (int i = 0; i < 7; ++ i) {
-        auto st = std::make_shared<SleepTasklet>(500);
-        runner->dispatch(st);
-    }
+    runner->dispatchFunction(sleepAndPrintFunction);
+    runner->dispatchFunction(sleepAndPrintFunction, /*numInvokations=*/6);
 
     delete runner;
 
