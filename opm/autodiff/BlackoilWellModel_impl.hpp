@@ -244,6 +244,8 @@ namespace Opm {
                 const double well_efficiency_factor = well_node.getAccumulativeEfficiencyFactor();
                 well->setWellEfficiencyFactor(well_efficiency_factor);
                 well->setVFPProperties(vfp_properties_.get());
+                well->updatePrimaryVariables(well_state_);
+                well->initPrimaryVariablesEvaluation();
                 well->solveWellEq(ebosSimulator_, well_state_, /*dt (not relevant for well test) =*/ 1.0, B_avg, terminal_output_);
                 well->updateListEconLimited(well_state_, simulationTime, wellTestStateForTheWellTest);
                 // update wellTestState if the well test succeeds

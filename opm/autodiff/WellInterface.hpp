@@ -224,12 +224,7 @@ namespace Opm
         virtual void addWellContributions(Mat&) const
         {}
 
-        virtual SimulatorReport solveWellEq(Simulator& ebosSimulator, WellState& well_state, const double dt, const std::vector<double>& B_avg, bool terminal_output)
-        {
-#warning need to add this to multisegment wells
-            SimulatorReport report;
-            return report;
-        }
+        SimulatorReport solveWellEq(Simulator& ebosSimulator, WellState& well_state, const double dt, const std::vector<double>& B_avg, bool terminal_output);
 
         void closeWellsAndCompletions(WellTestState& wellTestState);
 

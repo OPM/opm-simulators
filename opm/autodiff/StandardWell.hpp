@@ -340,8 +340,6 @@ namespace Opm
         // handle the non reasonable fractions due to numerical overshoot
         void processFractions() const;
 
-        SimulatorReport solveWellEq(Simulator& ebosSimulator, WellState& well_state, const double dt, const std::vector<double>& B_avg, bool terminal_output);
-
     };
 
 }
