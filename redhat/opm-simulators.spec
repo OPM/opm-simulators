@@ -17,9 +17,10 @@ BuildRequires:  git suitesparse-devel doxygen bc devtoolset-6-toolchain
 BuildRequires:  opm-grid-devel opm-grid-openmpi-devel opm-grid-mpich-devel
 BuildRequires:  ewoms-devel ewoms-openmpi-devel ewoms-mpich-devel
 BuildRequires:  opm-material-devel opm-material-openmpi-devel opm-material-mpich-devel
-BuildRequires:  tinyxml-devel dune-istl-devel eigen3-devel ecl-devel
+BuildRequires:  tinyxml-devel dune-istl-devel eigen3-devel ecl-devel zlib-devel
 BuildRequires:  openmpi-devel trilinos-openmpi-devel ptscotch-openmpi-devel scotch-devel
 BuildRequires:  mpich-devel trilinos-mpich-devel ptscotch-mpich-devel
+BuildRequires:  opm-common-devel opm-common-openmpi-devel opm-common-mpich-devel
 %{?el6:BuildRequires: cmake3 boost148-devel}
 %{!?el6:BuildRequires: cmake boost-devel}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
