@@ -155,10 +155,10 @@ namespace Opm
 #ifdef _OPENMP
             // OpenMP setup.
             if (!getenv("OMP_NUM_THREADS")) {
-                // Default to at most 4 threads, regardless of
+                // Default to at most 2 threads, regardless of
                 // number of cores (unless ENV(OMP_NUM_THREADS) is defined)
                 int num_cores = omp_get_num_procs();
-                int num_threads = std::min(4, num_cores);
+                int num_threads = std::min(2, num_cores);
                 omp_set_num_threads(num_threads);
             }
             // omp_get_num_threads() only works as expected within a parallel region.
