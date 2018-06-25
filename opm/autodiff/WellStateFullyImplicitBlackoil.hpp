@@ -558,9 +558,8 @@ namespace Opm
                     // that is why I think we should use a well model to initialize the WellState here
                     std::vector<std::vector<int>> segment_perforations(well_nseg);
                     for (int perf = 0; perf < nperf; ++perf) {
-                        const Connection& completion = completion_set.get(perf);
-                        const int segment_number = completion.getSegmentNumber();
-                        const int segment_index = segment_set.segmentNumberToIndex(segment_number);
+                        const Connection& connection = completion_set.get(perf);
+                        const int segment_index = segment_set.segmentNumberToIndex(connection.segment_number);
                         segment_perforations[segment_index].push_back(perf);
                     }
 
