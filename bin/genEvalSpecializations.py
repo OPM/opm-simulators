@@ -21,7 +21,7 @@ maxDerivs = 12
 if len(sys.argv) == 2:
     maxDerivs = int(sys.argv[1])
 
-fileNames = []
+specializationFileNames = []
 
 specializationTemplate = \
 """// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
@@ -50,6 +50,9 @@ specializationTemplate = \
  * \\file
  *
 {% if numDerivs < 0 %}\
+ * \\brief This file file provides a dense-AD Evaluation class where the 
+ *        number of derivatives is specified at runtime.
+{% elif numDerivs == 0 %}\
  * \\brief Representation of an evaluation of a function and its derivatives w.r.t. a set
  *        of variables in the localized OPM automatic differentiation (AD) framework.
 {% else %}\
@@ -60,6 +63,9 @@ specializationTemplate = \
  *            SCRIPT. DO NOT EDIT IT MANUALLY!
  */
 {% if numDerivs < 0 %}\
+#ifndef OPM_DENSEAD_EVALUATION_DYNAMIC_HPP
+#define OPM_DENSEAD_EVALUATION_DYNAMIC_HPP
+{% elif numDerivs == 0 %}\
 #ifndef OPM_DENSEAD_EVALUATION_HPP
 #define OPM_DENSEAD_EVALUATION_HPP
 {% else %}\
@@ -70,11 +76,13 @@ specializationTemplate = \
 #include "Evaluation.hpp"
 #include "Math.hpp"
 
-#include <opm/common/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
-#include <dune/common/version.hh>
-
+{% if numDerivs < 0 %}\
+#include <vector>
+{% else %}\
 #include <array>
+{% endif %}\
 #include <cmath>
 #include <cassert>
 #include <cstring>
@@ -83,8 +91,20 @@ specializationTemplate = \
 
 namespace Opm {
 namespace DenseAd {
+{% if numDerivs == 0 %}\
+//! Indicates that the number of derivatives considered by an Evaluation object
+//! is run-time determined
+static constexpr int DynamicSize = -1;
+{% endif %}\
 
 {% if numDerivs < 0 %}\
+/*!
+ * \\brief Represents a function evaluation and its derivatives w.r.t. a 
+ *        run-time specified set of variables.
+ */
+template <class ValueT>
+class Evaluation<ValueT, DynamicSize>
+{% elif numDerivs == 0 %}\
 /*!
  * \\brief Represents a function evaluation and its derivatives w.r.t. a fixed set of
  *        variables.
@@ -97,26 +117,73 @@ class Evaluation<ValueT, {{ numDerivs }}>
 {% endif %}\
 {
 public:
+    //! the template argument which specifies the number of
+    //! derivatives (-1 == "DynamicSize" means runtime determined)
+{% if numDerivs < 0 %}\
+    static const int numVars = DynamicSize;
+{% elif numDerivs > 0 %}\
+    static const int numVars = {{ numDerivs }};
+{% else %}\
+    static const int numVars = numDerivs;
+{% endif %}\
+
     //! field type
     typedef ValueT ValueType;
 
     //! number of derivatives
 {% if numDerivs < 0 %}\
-    static constexpr int size = numDerivs;
+    int size() const
+    { return data_.size() - 1; }
+{% elif numDerivs == 0 %}\
+    constexpr int size() const
+    { return numDerivs; }
 {% else %}\
-    static constexpr int size = {{ numDerivs }};
+    constexpr int size() const
+    { return {{ numDerivs }}; };
 {% endif %}\
 
 protected:
     //! length of internal data vector
-    static constexpr int length_ = size + 1;
+{% if numDerivs < 0 %}\
+    int length_() const
+    { return data_.size(); }
+{% else %}\
+    constexpr int length_() const
+    { return size() + 1; }
+{% endif %}\
 
+
+{% if numDerivs < 0 %}\
     //! position index for value
-    static constexpr int valuepos_ = 0;
+    constexpr int valuepos_() const
+    { return 0; }
     //! start index for derivatives
-    static constexpr int dstart_ = 1;
+    constexpr int dstart_() const
+    { return 1; }
     //! end+1 index for derivatives
-    static constexpr int dend_ = length_;
+    int dend_() const
+    { return length_(); }
+{% else %}\
+    //! position index for value
+    constexpr int valuepos_() const
+    { return 0; }
+    //! start index for derivatives
+    constexpr int dstart_() const
+    { return 1; }
+    //! end+1 index for derivatives
+    constexpr int dend_() const
+    { return length_(); }
+{% endif %}\
+
+    //! instruct valgrind to check that the value and all derivatives of the
+    //! Evaluation object are well-defined.
+    void checkDefined_() const
+    {
+#ifndef NDEBUG
+       for (const auto& v: data_)
+           Valgrind::CheckDefined(v);
+#endif
+    }
 
 public:
     //! default constructor
@@ -126,6 +193,41 @@ public:
     //! copy other function evaluation
     Evaluation(const Evaluation& other) = default;
 
+{% if numDerivs < 0 %}\
+    //! move other function evaluation (this only makes sense for dynamically
+    //! allocated Evaluations)
+    Evaluation(Evaluation&& other)
+        : data_(std::move(other.data_))
+    { }
+
+    //! move assignment
+    Evaluation& operator=(Evaluation&& other)
+    {
+        data_ = std::move(other.data_);
+        return *this;
+    }
+{% endif %}\
+
+{% if numDerivs < 0 %}\
+    // create a "blank" dynamic evaluation
+    explicit Evaluation(int numDerivatives)
+        : data_(1 + numDerivatives)
+    {}
+
+    // create a dynamic evaluation which represents a constant function
+    //
+    // i.e., f(x) = c. this implies an evaluation with the given value and all
+    // derivatives being zero.
+    template <class RhsValueType>
+    Evaluation(int numDerivatives, const RhsValueType& c)
+        : data_(1 + numDerivatives, 0.0)
+    {
+        //clearDerivatives();
+        setValue(c);
+
+        checkDefined_();
+    }
+{% else %}\
     // create an evaluation which represents a constant function
     //
     // i.e., f(x) = c. this implies an evaluation with the given value and all
@@ -133,35 +235,53 @@ public:
     template <class RhsValueType>
     Evaluation(const RhsValueType& c)
     {
-        setValue( c );
+        setValue(c);
         clearDerivatives();
-        Valgrind::CheckDefined( data_ );
+
+        checkDefined_();
     }
+{% endif %}\
 
     // create an evaluation which represents a constant function
     //
     // i.e., f(x) = c. this implies an evaluation with the given value and all
     // derivatives being zero.
+{% if numDerivs < 0 %}\
+    template <class RhsValueType>
+    Evaluation(int numVars, const RhsValueType& c, int varPos)
+     : data_(1 + numVars, 0.0)
+    {
+        // The variable position must be in represented by the given variable descriptor
+        assert(0 <= varPos && varPos < size());
+
+        setValue(c);
+
+        data_[varPos + dstart_()] = 1.0;
+
+        checkDefined_();
+    }
+{% else %}\
     template <class RhsValueType>
     Evaluation(const RhsValueType& c, int varPos)
     {
         // The variable position must be in represented by the given variable descriptor
-        assert(0 <= varPos && varPos < size);
+        assert(0 <= varPos && varPos < size());
 
         setValue( c );
         clearDerivatives();
 
-        data_[varPos + dstart_] = 1.0;
-        Valgrind::CheckDefined(data_);
+        data_[varPos + dstart_()] = 1.0;
+
+        checkDefined_();
     }
+{% endif %}\
 
     // set all derivatives to zero
     void clearDerivatives()
     {
-{% if numDerivs < 0 %}\
-        for (int i = dstart_; i < dend_; ++i) {
+{% if numDerivs <= 0 %}\
+        for (int i = dstart_(); i < dend_(); ++i)
             data_[i] = 0.0;
-        }
 {% else %}\
 {%   for i in range(1, numDerivs+1) %}\
         data_[{{i}}] = 0.0;
@@ -170,21 +290,42 @@ public:
     }
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
+{% if numDerivs < 0 %}\
+    template <class RhsValueType>
+    static Evaluation createVariable(int numVars, const RhsValueType& value, int varPos)
+    {
+        // copy function value and set all derivatives to 0, except for the variable
+        // which is represented by the value (which is set to 1.0)
+        return Evaluation(numVars, value, varPos);
+    }
+{% else %}\
     template <class RhsValueType>
     static Evaluation createVariable(const RhsValueType& value, int varPos)
     {
         // copy function value and set all derivatives to 0, except for the variable
         // which is represented by the value (which is set to 1.0)
-        return Evaluation( value, varPos );
+        return Evaluation(value, varPos);
     }
+{% endif %}\
 
+
+{% if numDerivs < 0 %}\
+    // "evaluate" a constant function (i.e. a function that does not depend on the set of
+    // relevant variables, f(x) = c).
+    template <class RhsValueType>
+    static Evaluation createConstant(int numVars, const RhsValueType& value)
+    {
+        return Evaluation(numVars, value);
+    }
+{% else %}\
     // "evaluate" a constant function (i.e. a function that does not depend on the set of
     // relevant variables, f(x) = c).
     template <class RhsValueType>
     static Evaluation createConstant(const RhsValueType& value)
     {
-        return Evaluation( value );
+        return Evaluation(value);
     }
+{% endif %}\
 
     // print the value and the derivatives of the function evaluation
     void print(std::ostream& os = std::cout) const
@@ -193,7 +334,7 @@ public:
         os << "v: " << value() << " / d:";
 
         // print derivatives
-        for (int varIdx = 0; varIdx < size; ++varIdx) {
+        for (int varIdx = 0; varIdx < size(); ++varIdx) {
             os << " " << derivative(varIdx);
         }
     }
@@ -201,10 +342,11 @@ public:
     // copy all derivatives from other
     void copyDerivatives(const Evaluation& other)
     {
-{% if numDerivs < 0 %}\
-        for (int i = dstart_; i < dend_; ++i) {
+        assert(size() == other.size());
+
+{% if numDerivs <= 0 %}\
+        for (int i = dstart_(); i < dend_(); ++i)
             data_[i] = other.data_[i];
-        }
 {% else %}\
 {%   for i in range(1, numDerivs+1) %}\
         data_[{{i}}] = other.data_[{{i}}];
@@ -216,10 +358,11 @@ public:
     // add value and derivatives from other to this values and derivatives
     Evaluation& operator+=(const Evaluation& other)
     {
-{% if numDerivs < 0 %}\
-        for (int i = 0; i < length_; ++i) {
+        assert(size() == other.size());
+
+{% if numDerivs <= 0 %}\
+        for (int i = 0; i < length_(); ++i)
             data_[i] += other.data_[i];
-        }
 {% else %}\
 {%   for i in range(0, numDerivs+1) %}\
         data_[{{i}}] += other.data_[{{i}}];
@@ -234,7 +377,7 @@ public:
     Evaluation& operator+=(const RhsValueType& other)
     {
         // value is added, derivatives stay the same
-        data_[valuepos_] += other;
+        data_[valuepos_()] += other;
 
         return *this;
     }
@@ -242,10 +385,11 @@ public:
     // subtract other's value and derivatives from this values
     Evaluation& operator-=(const Evaluation& other)
     {
-{% if numDerivs < 0 %}\
-        for (int i = 0; i < length_; ++i) {
+        assert(size() == other.size());
+
+{% if numDerivs <= 0 %}\
+        for (int i = 0; i < length_(); ++i)
             data_[i] -= other.data_[i];
-        }
 {% else %}\
 {%   for i in range(0, numDerivs+1) %}\
         data_[{{i}}] -= other.data_[{{i}}];
@@ -260,7 +404,7 @@ public:
     Evaluation& operator-=(const RhsValueType& other)
     {
         // for constants, values are subtracted, derivatives stay the same
-        data_[ valuepos_ ] -= other;
+        data_[valuepos_()] -= other;
 
         return *this;
     }
@@ -268,19 +412,20 @@ public:
     // multiply values and apply chain rule to derivatives: (u*v)' = (v'u + u'v)
     Evaluation& operator*=(const Evaluation& other)
     {
+        assert(size() == other.size());
+
         // while the values are multiplied, the derivatives follow the product rule,
         // i.e., (u*v)' = (v'u + u'v).
         const ValueType u = this->value();
         const ValueType v = other.value();
 
         // value
-        data_[valuepos_] *= v ;
+        data_[valuepos_()] *= v ;
 
         //  derivatives
-{% if numDerivs < 0 %}\
-        for (int i = dstart_; i < dend_; ++i) {
+{% if numDerivs <= 0 %}\
+        for (int i = dstart_(); i < dend_(); ++i)
             data_[i] = data_[i] * v + other.data_[i] * u;
-        }
 {% else %}\
 {%   for i in range(1, numDerivs+1) %}\
         data_[{{i}}] = data_[{{i}}] * v + other.data_[{{i}}] * u;
@@ -294,10 +439,9 @@ public:
     template <class RhsValueType>
     Evaluation& operator*=(const RhsValueType& other)
     {
-{% if numDerivs < 0 %}\
-        for (int i = 0; i < length_; ++i) {
+{% if numDerivs <= 0 %}\
+        for (int i = 0; i < length_(); ++i)
             data_[i] *= other;
-        }
 {% else %}\
 {%   for i in range(0, numDerivs+1) %}\
         data_[{{i}}] *= other;
@@ -310,12 +454,14 @@ public:
     // m(u*v)' = (vu' - uv')/v^2
     Evaluation& operator/=(const Evaluation& other)
     {
+        assert(size() == other.size());
+
         // values are divided, derivatives follow the rule for division, i.e., (u/v)' = (v'u -
         // u'v)/v^2.
-        ValueType& u = data_[ valuepos_ ];
+        ValueType& u = data_[valuepos_()];
         const ValueType& v = other.value();
-{% if numDerivs < 0 %}\
-        for (unsigned idx = dstart_; idx < dend_; ++idx) {
+{% if numDerivs <= 0 %}\
+        for (int idx = dstart_(); idx < dend_(); ++idx) {
             const ValueType& uPrime = data_[idx];
             const ValueType& vPrime = other.data_[idx];
 
@@ -337,10 +483,9 @@ public:
     {
         const ValueType tmp = 1.0/other;
 
-{% if numDerivs < 0 %}\
-        for (int i = 0; i < length_; ++i) {
+{% if numDerivs <= 0 %}\
+        for (int i = 0; i < length_(); ++i)
             data_[i] *= tmp;
-        }
 {% else %}\
 {%   for i in range(0, numDerivs+1) %}\
         data_[{{i}}] *= tmp;
@@ -353,6 +498,8 @@ public:
     // add two evaluation objects
     Evaluation operator+(const Evaluation& other) const
     {
+        assert(size() == other.size());
+
         Evaluation result(*this);
 
         result += other;
@@ -374,6 +521,8 @@ public:
     // subtract two evaluation objects
     Evaluation operator-(const Evaluation& other) const
     {
+        assert(size() == other.size());
+
         Evaluation result(*this);
 
         result -= other;
@@ -398,10 +547,9 @@ public:
         Evaluation result;
 
         // set value and derivatives to negative
-{% if numDerivs < 0 %}\
-        for (int i = 0; i < length_; ++i) {
+{% if numDerivs <= 0 %}\
+        for (int i = 0; i < length_(); ++i)
             result.data_[i] = - data_[i];
-        }
 {% else %}\
 {%   for i in range(0, numDerivs+1) %}\
         result.data_[{{i}}] = - data_[{{i}}];
@@ -413,6 +561,8 @@ public:
 
     Evaluation operator*(const Evaluation& other) const
     {
+        assert(size() == other.size());
+
         Evaluation result(*this);
 
         result *= other;
@@ -432,6 +582,8 @@ public:
 
     Evaluation operator/(const Evaluation& other) const
     {
+        assert(size() == other.size());
+
         Evaluation result(*this);
 
         result /= other;
@@ -467,7 +619,9 @@ public:
 
     bool operator==(const Evaluation& other) const
     {
-        for (int idx = 0; idx < length_; ++idx) {
+        assert(size() == other.size());
+
+        for (int idx = 0; idx < length_(); ++idx) {
             if (data_[idx] != other.data_[idx]) {
                 return false;
             }
@@ -479,63 +633,90 @@ public:
     { return !operator==(other); }
 
     template <class RhsValueType>
+    bool operator!=(const RhsValueType& other) const
+    { return !operator==(other); }
+
+    template <class RhsValueType>
     bool operator>(RhsValueType other) const
     { return value() > other; }
 
     bool operator>(const Evaluation& other) const
-    { return value() > other.value(); }
+    {
+        assert(size() == other.size());
+
+        return value() > other.value();
+    }
 
     template <class RhsValueType>
     bool operator<(RhsValueType other) const
     { return value() < other; }
 
     bool operator<(const Evaluation& other) const
-    { return value() < other.value(); }
+    {
+        assert(size() == other.size());
+
+        return value() < other.value();
+    }
 
     template <class RhsValueType>
     bool operator>=(RhsValueType other) const
     { return value() >= other; }
 
     bool operator>=(const Evaluation& other) const
-    { return value() >= other.value(); }
+    {
+        assert(size() == other.size());
+
+        return value() >= other.value();
+    }
 
     template <class RhsValueType>
     bool operator<=(RhsValueType other) const
     { return value() <= other; }
 
     bool operator<=(const Evaluation& other) const
-    { return value() <= other.value(); }
+    {
+        assert(size() == other.size());
+
+        return value() <= other.value();
+    }
 
     // return value of variable
     const ValueType& value() const
-    { return data_[valuepos_]; }
+    { return data_[valuepos_()]; }
 
     // set value of variable
     template <class RhsValueType>
     void setValue(const RhsValueType& val)
-    { data_[valuepos_] = val; }
+    { data_[valuepos_()] = val; }
 
     // return varIdx'th derivative
     const ValueType& derivative(int varIdx) const
     {
-        assert(0 <= varIdx && varIdx < size);
+        assert(0 <= varIdx && varIdx < size());
 
-        return data_[dstart_ + varIdx];
+        return data_[dstart_() + varIdx];
     }
 
     // set derivative at position varIdx
     void setDerivative(int varIdx, const ValueType& derVal)
     {
-        assert(0 <= varIdx && varIdx < size);
+        assert(0 <= varIdx && varIdx < size());
 
-        data_[dstart_ + varIdx] = derVal;
+        data_[dstart_() + varIdx] = derVal;
     }
 
 private:
-    std::array<ValueT, length_> data_;
-};
 
 {% if numDerivs < 0 %}\
+    std::vector<ValueT> data_;
+{% elif numDerivs == 0 %}\
+    std::array<ValueT, numDerivs + 1> data_;
+{% else %}\
+    std::array<ValueT, {{numDerivs + 1}}> data_;
+{% endif %}\
+};
+
+{% if numDerivs == 0 %}\
 // the generic operators are only required for the unspecialized case
 template <class RhsValueType, class ValueType, int numVars>
 bool operator<(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
@@ -595,56 +776,28 @@ std::ostream& operator<<(std::ostream& os, const Evaluation<ValueType, numVars>&
     os << eval.value();
     return os;
 }
+
 {% endif %}\
-} } // namespace DenseAd, Opm
-
 {% if numDerivs < 0 %}\
-// In Dune 2.3, the Evaluation.hpp header must be included before the fmatrix.hh
-// header. Dune 2.4+ does not suffer from this because of some c++-foo.
-//
-// for those who are wondering: in C++ function templates cannot be partially
-// specialized, and function argument overloads must be known _before_ they are used. The
-// latter is what we do for the 'Dune::fvmeta::absreal()' function.
-//
-// consider the following test program:
-//
-// double foo(double i)
-// { return i; }
-//
-// void bar()
-// { std::cout << foo(0) << "\\n"; }
-//
-// int foo(int i)
-// { return i + 1; }
-//
-// void foobar()
-// { std::cout << foo(0) << "\\n"; }
-//
-// this will print '0' for bar() and '1' for foobar()...
-#if !(DUNE_VERSION_NEWER(DUNE_COMMON, 2,4))
+template <class Scalar>
+using DynamicEvaluation = Evaluation<Scalar, DynamicSize>;
 
-namespace Opm {
-namespace DenseAd {
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> abs(const Evaluation<ValueType, numVars>&);
-}}
+{% endif %}\
+} // namespace DenseAd
+{% if numDerivs < 0 %}\
 
-namespace std {
-template <class ValueType, int numVars>
-const Opm::DenseAd::Evaluation<ValueType, numVars> abs(const Opm::DenseAd::Evaluation<ValueType, numVars>& x)
-{ return Opm::DenseAd::abs(x); }
+template <class Scalar>
+Opm::DenseAd::Evaluation<Scalar, -1> constant(int numDerivatives, const Scalar& value)
+{ return Opm::DenseAd::Evaluation<Scalar, -1>::createConstant(numDerivatives, value); }
 
-} // namespace std
+template <class Scalar>
+Opm::DenseAd::Evaluation<Scalar, -1> variable(int numDerivatives, const Scalar& value, unsigned idx)
+{ return Opm::DenseAd::Evaluation<Scalar, -1>::createVariable(numDerivatives, value, idx); }
 
-#if defined DUNE_DENSEMATRIX_HH
-#warning \\
- "Due to some C++ peculiarity regarding function overloads, the 'Evaluation.hpp'" \\
- "header file must be included before Dune's 'densematrix.hh' for Dune < 2.4. " \\
- "(If Evaluations are to be used in conjunction with a dense matrix.)"
-#endif
+{% endif %}\
+} // namespace Opm
 
-#endif
-
+{% if numDerivs == 0 %}\
 // this makes the Dune matrix/vector classes happy...
 #include <dune/common/ftraits.hh>
 
@@ -703,16 +856,24 @@ includeSpecializationsTemplate = \
 #ifndef OPM_DENSEAD_EVALUATION_SPECIALIZATIONS_HPP
 #define OPM_DENSEAD_EVALUATION_SPECIALIZATIONS_HPP
 
-{% for fileName in fileNames %}\
+{% for fileName in specializationFileNames %}\
 #include <{{ fileName }}>
 {% endfor %}\
 
 #endif // OPM_DENSEAD_EVALUATION_SPECIALIZATIONS_HPP
 """
 
-print ("Generating generic template class")
+print ("Generating generic template classes")
 fileName = "opm/material/densead/Evaluation.hpp"
 template = jinja2.Template(specializationTemplate)
+fileContents = template.render(numDerivs=0, scriptName=os.path.basename(sys.argv[0]))
+
+f = open(fileName, "w")
+f.write(fileContents)
+f.close()
+
+fileName = "opm/material/densead/DynamicEvaluation.hpp"
+specializationFileNames.append(fileName)
 fileContents = template.render(numDerivs=-1, scriptName=os.path.basename(sys.argv[0]))
 
 f = open(fileName, "w")
@@ -723,7 +884,7 @@ for numDerivs in range(1, maxDerivs + 1):
     print ("Generating specialization for %d derivatives"%numDerivs)
 
     fileName = "opm/material/densead/Evaluation%d.hpp"%numDerivs
-    fileNames.append(fileName)
+    specializationFileNames.append(fileName)
 
     template = jinja2.Template(specializationTemplate)
     fileContents = template.render(numDerivs=numDerivs, scriptName=os.path.basename(sys.argv[0]))
@@ -733,7 +894,7 @@ for numDerivs in range(1, maxDerivs + 1):
     f.close()
 
 template = jinja2.Template(includeSpecializationsTemplate)
-fileContents = template.render(fileNames=fileNames, scriptName=os.path.basename(sys.argv[0]))
+fileContents = template.render(specializationFileNames=specializationFileNames, scriptName=os.path.basename(sys.argv[0]))
 
 f = open("opm/material/densead/EvaluationSpecializations.hpp", "w")
 f.write(fileContents)
