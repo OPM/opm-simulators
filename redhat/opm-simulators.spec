@@ -95,8 +95,8 @@ This package contains the applications for opm-simulators
 Summary:        Applications in opm-simulators
 Group:          Scientific
 Requires:       libopm-simulators1-openmpi = %{version}
-Requires:       libopm-grid1-openmpi = %{version}
-Requires:       libopm-common1-openmpi = %{version}
+Requires:       libopm-grid1-openmpi
+Requires:       libopm-common1-openmpi
 Requires:       trilinos-openmpi
 Requires:       ptscotch-openmpi
 
@@ -107,8 +107,8 @@ This package contains the applications for opm-simulators
 Summary:        Applications in opm-simulators
 Group:          Scientific
 Requires:       libopm-simulators1-mpich = %{version}
-Requires:       libopm-grid1-mpich = %{version}
-Requires:       libopm-common1-mpich = %{version}
+Requires:       libopm-grid1-mpich
+Requires:       libopm-common1-mpich
 Requires:       trilinos-mpich
 Requires:       ptscotch-mpich
 
