@@ -273,7 +273,7 @@ namespace Opm
 
             const std::string& output_dir = eclState().getIOConfig().getOutputDir();
             logFileStream << output_dir << "/" << baseName;
-            debugFileStream << output_dir << "/" << "." << baseName;
+            debugFileStream << output_dir << "/" << baseName;
 
             if ( must_distribute_ && mpi_rank_ != 0 )
             {
@@ -284,7 +284,7 @@ namespace Opm
                 logFileStream << "." << mpi_rank_;
             }
             logFileStream << ".PRT";
-            debugFileStream << ".DEBUG";
+            debugFileStream << ".DBG";
 
             logFile_ = logFileStream.str();
 
