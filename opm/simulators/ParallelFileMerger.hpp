@@ -49,11 +49,11 @@ public:
     /// \param deckanme The name of the deck.
     ParallelFileMerger(const fs::path& output_dir,
                        const std::string& deckname)
-        : debugFileRegex_("\\."+deckname+"\\.\\d+\\.DEBUG"),
+        : debugFileRegex_(deckname+"\\.\\d+\\.DBG"),
           logFileRegex_(deckname+"\\.\\d+\\.PRT")
     {
         auto debugPath = output_dir;
-        debugPath /= (std::string(".") + deckname + ".DEBUG");
+        debugPath /= (deckname + ".DBG");
         debugStream_.reset(new fs::ofstream(debugPath,
                                             std::ofstream::app));
         auto logPath = output_dir;
@@ -119,11 +119,11 @@ private:
         fs::remove(file);
     }
 
-    /// \brief Regex to capture .*.DEBUG
+    /// \brief Regex to capture *.DBG
     boost::regex debugFileRegex_;
     /// \brief Regex to capture  *.PRT
     boost::regex logFileRegex_;
-    /// \brief Stream to *.DEBUG file
+    /// \brief Stream to *.DBG file
     std::unique_ptr<fs::ofstream> debugStream_;
     /// \brief Stream to *.PRT file
     std::unique_ptr<fs::ofstream> logStream_;
