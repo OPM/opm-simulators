@@ -19,8 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_EBOS_HPP
-#define OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_EBOS_HPP
+#ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
+#define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 
 #include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/NonlinearSolverEbos.hpp>
