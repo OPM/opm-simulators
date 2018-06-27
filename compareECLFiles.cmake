@@ -259,7 +259,7 @@ add_test_compareECLFiles(CASENAME spe5
                          REL_TOL ${coarse_rel_tol}
                          TEST_ARGS max_iter=20)
 
-add_test_compareECLFiles(CASENAME wecon
+add_test_compareECLFiles(CASENAME wecon_wtest
                          FILENAME 3D_WECON
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
