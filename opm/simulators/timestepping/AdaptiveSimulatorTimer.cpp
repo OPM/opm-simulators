@@ -77,7 +77,7 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
             // set new time step (depending on remaining time)
             if( 1.05 * dt_ > remaining ) {
                 dt_ = remaining;
-                // check max time step again and use half remaining if to large
+                // check max time step again and use half remaining if too large
                 if( dt_ > max_time_step_ ) {
                     dt_ = 0.5 * remaining;
                 }

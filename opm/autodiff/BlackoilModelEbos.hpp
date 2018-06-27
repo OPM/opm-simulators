@@ -189,12 +189,16 @@ namespace Opm {
                 ebosSimulator_.model().advanceTimeLevel();
             }
 
-            // set the timestep size and index in ebos explicitly
-            // we use our own time stepper.
-            ebosSimulator_.startNextEpisode( timer.currentStepLength() );
-            ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
-            ebosSimulator_.setTimeStepSize( timer.currentStepLength() );
-            ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+            // set the timestep size and episode index for ebos explicitly. ebos needs to
+            // know the report step/episode index because of timing dependend data
+            // despide the fact that flow uses its own time stepper. (The length of the
+            // episode does not matter, though.)
+            Scalar t = timer.simulationTimeElapsed();
+            ebosSimulator_.startNextEpisode(/*episodeStartTime=*/t, /*episodeLength=*/1e30);
+            ebosSimulator_.setEpisodeIndex(timer.reportStepNum());
+            ebosSimulator_.setTime(t);
+            ebosSimulator_.setTimeStepSize(timer.currentStepLength());
+            ebosSimulator_.setTimeStepIndex(ebosSimulator_.timeStepIndex() + 1);
 
             ebosSimulator_.problem().beginTimeStep();
 
@@ -354,7 +358,7 @@ namespace Opm {
             ebosSimulator_.problem().beginIteration();
             ebosSimulator_.model().linearizer().linearize();
             ebosSimulator_.problem().endIteration();
-            
+
             // -------- Aquifer models ----------
             try
             {
