@@ -177,10 +177,10 @@ namespace Opm
                                     WellState& well_state,
                                     bool only_wells) = 0;
 
-        void updateListEconLimited(const WellState& well_state,
-                                   const double& simulationTime,
-                                   WellTestState& wellTestState,
-                                   const bool& writeMessageToOPMLog) const;
+        void updateWellTestState(const WellState& well_state,
+                                 const double& simulationTime,
+                                 WellTestState& wellTestState,
+                                 const bool& writeMessageToOPMLog) const;
 
         void setWellEfficiencyFactor(const double efficiency_factor);
 
@@ -234,8 +234,8 @@ namespace Opm
 
     protected:
 
-        // to indicate a invalid connection
-        static const int INVALIDCONNECTION = -100000;
+        // to indicate a invalid completion
+        static const int INVALIDCOMPLETION = 0;
 
         const Well* well_ecl_;
 
@@ -332,13 +332,12 @@ namespace Opm
         double mostStrictBhpFromBhpLimits() const;
 
         // a tuple type for ratio limit check.
-        // first value indicates whether ratio limit is violated, when the ratio limit is not violated, the following three
+        // first value indicates whether ratio limit is violated, when the ratio limit is not violated, the following two
         // values should not be used.
-        // second value indicates whehter there is only one connection left.
-        // third value indicates the indx of the worst-offending connection.
-        // the last value indicates the extent of the violation for the worst-offending connection, which is defined by
+        // second value indicates the index of the worst-offending completion.
+        // the last value indicates the extent of the violation for the worst-offending completion, which is defined by
         // the ratio of the actual value to the value of the violated limit.
-        using RatioCheckTuple = std::tuple<bool, bool, int, double>;
+        using RatioCheckTuple = std::tuple<bool, int, double>;
 
         RatioCheckTuple checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                                               const WellState& well_state) const;

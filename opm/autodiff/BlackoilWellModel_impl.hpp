@@ -167,7 +167,7 @@ namespace Opm {
             well->setVFPProperties(vfp_properties_.get());
         }
 
-        // Close wells and connections due to economical reasons
+        // Close wells and completions due to economical reasons
         for (auto& well : well_container_) {
             well->closeWellsAndCompletions(wellTestState_);
         }
@@ -250,7 +250,7 @@ namespace Opm {
                 while (testWell) {
                     size_t numberOfClosedCompletions = wellTestStateForTheWellTest.sizeCompletions();
                     well->solveWellEq(ebosSimulator_, wellStateCopy, /*dt (not relevant for well test) =*/ 1.0, B_avg, terminal_output_);
-                    well->updateListEconLimited(wellStateCopy, simulationTime, wellTestStateForTheWellTest, /*writeMessageToOPMLog=*/ false);
+                    well->updateWellTestState(wellStateCopy, simulationTime, wellTestStateForTheWellTest, /*writeMessageToOPMLog=*/ false);
                     well->closeWellsAndCompletions(wellTestStateForTheWellTest);
 
                     // test completions individually.
@@ -302,7 +302,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             well->calculateReservoirRates(well_state_);
         }
-        updateListEconLimited(simulationTime, wellTestState_);
+        updateWellTestState(simulationTime, wellTestState_);
         previous_well_state_ = well_state_;
     }
 
@@ -755,10 +755,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateListEconLimited(const double& simulationTime, WellTestState& wellTestState) const
+    updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const
     {
         for (const auto& well : well_container_) {
-            well->updateListEconLimited(well_state_, simulationTime, wellTestState, /*writeMessageToOPMLog=*/ true);
+            well->updateWellTestState(well_state_, simulationTime, wellTestState, /*writeMessageToOPMLog=*/ true);
         }
     }
 

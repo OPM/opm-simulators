@@ -346,8 +346,8 @@ namespace Opm {
             /// return true if wells are available on this process
             bool localWellsActive() const;
 
-            /// upate the dynamic lists related to economic limits
-            void updateListEconLimited(const double& simulationTime, WellTestState& wellTestState) const;
+            /// upate the wellTestState related to economic limits
+            void updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const;
 
             void updatePerforationIntensiveQuantities();
 
