@@ -165,7 +165,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
             // shut completions and open ones stored in this process will have 1 others 0.
 
             for(const auto& completion : well->getConnections(timeStep)) {
-                if (completion.getState() == WellCompletion::OPEN) {
+                if (completion.state == WellCompletion::OPEN) {
                     int i = completion.getI();
                     int j = completion.getJ();
                     int k = completion.getK();
@@ -195,7 +195,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                         pd.cell = cell;
                         {
                             const Value<double>& transmissibilityFactor = completion.getConnectionTransmissibilityFactorAsValueObject();
-                            const double wellPi = completion.getWellPi();
+                            const double wellPi = completion.wellPi;
                             if (transmissibilityFactor.hasValue()) {
                                 pd.well_index = transmissibilityFactor.getValue();
                             } else {
@@ -217,17 +217,17 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                                 pd.well_index =
                                     WellsManagerDetail::computeWellIndex(radius, cubical, cell_perm,
                                                                          completion.getSkinFactor(),
-                                                                         completion.getDirection(),
+                                                                         completion.dir,
                                                                          ntg[cell]);
                             }
-                            pd.satnumid = completion.getSatTableId();
+                            pd.satnumid = completion.sat_tableId;
                             pd.well_index *= wellPi;
                         }
                         wellperf_data[active_well_index].push_back(pd);
                     }
                 } else {
-                    if (completion.getState() != WellCompletion::SHUT) {
-                        OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion.getState() ) << " not handled");
+                    if (completion.state != WellCompletion::SHUT) {
+                        OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion.state ) << " not handled");
                     }
                 }
             }

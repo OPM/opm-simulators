@@ -757,7 +757,7 @@ namespace Opm
         const auto& completionSet = well_ecl_->getConnections(current_step_);
         for (size_t c=0; c<completionSet.size(); c++) {
             const auto& completion = completionSet.get(c);
-            if (completion.getState() == WellCompletion::OPEN) {
+            if (completion.state == WellCompletion::OPEN) {
                 const int i = completion.getI();
                 const int j = completion.getJ();
                 const int k = completion.getK();
@@ -781,12 +781,10 @@ namespace Opm
                     const std::array<double, 3> cubical =
                     WellsManagerDetail::getCubeDim<3>(cell_to_faces, begin_face_centroids, cell);
 
-                    WellCompletion::DirectionEnum direction = completion.getDirection();
-
                     double re; // area equivalent radius of the grid block
                     double perf_length; // the length of the well perforation
 
-                    switch (direction) {
+                    switch (completion.dir) {
                         case Opm::WellCompletion::DirectionEnum::X:
                             re = std::sqrt(cubical[1] * cubical[2] / M_PI);
                             perf_length = cubical[0];
