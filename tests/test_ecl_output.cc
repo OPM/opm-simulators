@@ -208,7 +208,7 @@ void test_readWriteWells() {
     w1.control = 1;
 
     /*
-     *  the completion keys (active indices) and well names correspond to the
+     *  the connection keys (active indices) and well names correspond to the
      *  input deck. All other entries in the well structures are arbitrary.
      */
     w1.connections.push_back( { 88, rc1, 30.45, 123.45 } );
