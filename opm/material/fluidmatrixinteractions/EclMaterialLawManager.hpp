@@ -137,6 +137,17 @@ public:
         else
             std::fill(satnumRegionArray_.begin(), satnumRegionArray_.end(), 0);
 
+        // create the information for the imbibition region (IMBNUM). By default this is
+        // the same as the saturation region (SATNUM)
+        imbnumRegionArray_ = satnumRegionArray_;
+        if (eclState.get3DProperties().hasDeckIntGridProperty("IMBNUM")) {
+            const auto& imbnumRawData = eclState.get3DProperties().getIntGridProperty("IMBNUM").getData();
+            for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+                int cartesianElemIdx = compressedToCartesianElemIdx[elemIdx];
+                imbnumRegionArray_[elemIdx] = imbnumRawData[cartesianElemIdx] - 1;
+            }
+        }
+
         readGlobalEpsOptions_(deck, eclState);
         readGlobalHysteresisOptions_(deck);
         readGlobalThreePhaseOptions_(deck);
@@ -145,7 +156,7 @@ public:
         for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx)
             unscaledEpsInfo_[satRegionIdx].extractUnscaled(deck, eclState, satRegionIdx);
 
-        initParamsForElements_(deck, eclState, compressedToCartesianElemIdx, satnumRegionArray_);
+        initParamsForElements_(deck, eclState, compressedToCartesianElemIdx, satnumRegionArray_, imbnumRegionArray_);
     }
 
     /*!
@@ -309,9 +320,11 @@ public:
         return mlp;
     }
 
-    int satnumRegionIdx(unsigned elemIdx) const {
-        return satnumRegionArray_[elemIdx];
-    }
+    int satnumRegionIdx(unsigned elemIdx) const
+    { return satnumRegionArray_[elemIdx]; }
+
+    int imbnumRegionIdx(unsigned elemIdx) const
+    { return imbnumRegionArray_[elemIdx]; }
 
     std::shared_ptr<MaterialLawParams>& materialLawParamsPointerReferenceHack(unsigned elemIdx)
     {
@@ -333,9 +346,9 @@ public:
                                   Scalar& krnSwMdc,
                                   unsigned elemIdx) const
     {
-        if (!enableHysteresis()) {
+        if (!enableHysteresis())
             throw std::runtime_error("Cannot get hysteresis parameters if hysteresis not enabled.");
-        }
+
         const auto& params = materialLawParams(elemIdx);
         MaterialLaw::oilWaterHysteresisParams(pcSwMdc, krnSwMdc, params);
     }
@@ -344,9 +357,9 @@ public:
                                      const Scalar& krnSwMdc,
                                      unsigned elemIdx)
     {
-        if (!enableHysteresis()) {
+        if (!enableHysteresis())
             throw std::runtime_error("Cannot set hysteresis parameters if hysteresis not enabled.");
-        }
+
         auto& params = materialLawParams(elemIdx);
         MaterialLaw::setOilWaterHysteresisParams(pcSwMdc, krnSwMdc, params);
     }
@@ -355,9 +368,9 @@ public:
                                 Scalar& krnSwMdc,
                                 unsigned elemIdx) const
     {
-        if (!enableHysteresis()) {
+        if (!enableHysteresis())
             throw std::runtime_error("Cannot get hysteresis parameters if hysteresis not enabled.");
-        }
+
         const auto& params = materialLawParams(elemIdx);
         MaterialLaw::gasOilHysteresisParams(pcSwMdc, krnSwMdc, params);
     }
@@ -366,9 +379,9 @@ public:
                                    const Scalar& krnSwMdc,
                                    unsigned elemIdx)
     {
-        if (!enableHysteresis()) {
+        if (!enableHysteresis())
             throw std::runtime_error("Cannot set hysteresis parameters if hysteresis not enabled.");
-        }
+
         auto& params = materialLawParams(elemIdx);
         MaterialLaw::setGasOilHysteresisParams(pcSwMdc, krnSwMdc, params);
     }
@@ -402,14 +415,11 @@ public:
     }
 
     const Opm::EclEpsScalingPointsInfo<Scalar>& oilWaterScaledEpsInfoDrainage(size_t elemIdx) const
-    {
-        return *oilWaterScaledEpsInfoDrainage_[elemIdx];
-    }
+    { return *oilWaterScaledEpsInfoDrainage_[elemIdx]; }
 
     std::shared_ptr<EclEpsScalingPointsInfo<Scalar> >& oilWaterScaledEpsInfoDrainagePointerReferenceHack(unsigned elemIdx)
-    {
-        return oilWaterScaledEpsInfoDrainage_[elemIdx];
-    }
+    { return oilWaterScaledEpsInfoDrainage_[elemIdx]; }
+
 private:
     void readGlobalEpsOptions_(const Opm::Deck& deck, const Opm::EclipseState& eclState)
     {
@@ -461,7 +471,8 @@ private:
 
     void initParamsForElements_(const Deck& deck, const EclipseState& eclState,
                                 const std::vector<int>& compressedToCartesianElemIdx,
-                                const std::vector<int>& satnumRegionArray)
+                                const std::vector<int>& satnumRegionArray,
+                                const std::vector<int>& imbnumRegionArray)
     {
         const size_t numSatRegions = eclState.runspec().tabdims().getNumSatTables();
         unsigned numCompressedElems = static_cast<unsigned>(compressedToCartesianElemIdx.size());
@@ -567,6 +578,7 @@ private:
 
         const auto& imbnumData = eclState.get3DProperties().getIntGridProperty("IMBNUM").getData();
         assert(numCompressedElems == satnumRegionArray.size());
+        assert(!enableHysteresis() || numCompressedElems == imbnumRegionArray.size());
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
             unsigned satRegionIdx = static_cast<unsigned>(satnumRegionArray[elemIdx]);
 
@@ -705,16 +717,14 @@ private:
             family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
         }
 
-        if (family1 && family2) {
+        if (family1 && family2)
             throw std::invalid_argument("Saturation families should not be mixed \n"
                                         "Use either SGOF and SWOF or SGFN, SWFN and SOF3");
-        }
 
-        if (!family1 && !family2) {
+        if (!family1 && !family2)
             throw std::invalid_argument("Saturations function must be specified using either "
                                         "family 1 or family 2 keywords \n"
                                         "Use either SGOF and SWOF or SGFN, SWFN and SOF3" );
-        }
 
         if (family1 && !family2)
             return SaturationFunctionFamily::FamilyI;
@@ -785,7 +795,6 @@ private:
         //default:
         case noFamily:
             throw std::domain_error("No valid saturation keyword family specified");
-
         }
     }
 
@@ -914,7 +923,6 @@ private:
 
         }
     }
-
 
     template <class Container>
     void readGasOilUnscaledPoints_(Container& dest,
@@ -1064,6 +1072,7 @@ private:
     std::vector<std::shared_ptr<MaterialLawParams> > materialLawParams_;
 
     std::vector<int> satnumRegionArray_;
+    std::vector<int> imbnumRegionArray_;
 };
 } // namespace Opm
 
