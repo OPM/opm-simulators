@@ -31,6 +31,7 @@
 #ifndef OPM_DENSEAD_EVALUATION_SPECIALIZATIONS_HPP
 #define OPM_DENSEAD_EVALUATION_SPECIALIZATIONS_HPP
 
+#include <opm/material/densead/DynamicEvaluation.hpp>
 #include <opm/material/densead/Evaluation1.hpp>
 #include <opm/material/densead/Evaluation2.hpp>
 #include <opm/material/densead/Evaluation3.hpp>
