@@ -114,9 +114,11 @@ namespace Opm
 
     boost::posix_time::ptime SimulatorTimer::currentDateTime() const
     {
-        // boost uses only 32 bit long for seconds. But 64 bit for milliseconds
-        // as a work around for very large timess we just use milliseconds
-        return startDateTime() + boost::posix_time::milliseconds( simulationTimeElapsed() / Opm::prefix::milli);
+        // Boost uses only 32 bit long for seconds, but 64 bit for milliseconds.
+        // As a workaround for very large times we just use milliseconds.
+        // The cast is necessary because boost::posix_time::milliseconds requires
+        // an integer argument.
+        return startDateTime() + boost::posix_time::milliseconds(static_cast<long long>(simulationTimeElapsed() / Opm::prefix::milli));
     }
 
     /// Total time.
