@@ -1570,7 +1570,6 @@ namespace Opm
             for ( int compIdx = 0; compIdx < num_components_; ++compIdx )
             {
                 report.converged = report.converged && (well_flux_residual[compIdx] < tol_wells) && control_eq_converged;
-                //std::cout << name() << " " << well_flux_residual[compIdx] << std::endl;
             }
         } else { // abnormal values found and no need to check the convergence
             report.converged = false;

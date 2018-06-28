@@ -103,7 +103,6 @@ namespace Opm
                       saturation_table_number_.begin() );
         }
         well_efficiency_factor_ = 1.0;
-
     }
 
 
@@ -538,24 +537,34 @@ namespace Opm
                     water_cut_perf[perf] = 0.;
                 }
             }
+            const auto& completions = well_ecl_->getCompletions(current_step_);
+            const auto& connections = well_ecl_->getConnections(current_step_);
 
-            last_connection = (perf_number == 1);
-            if (last_connection) {
-                worst_offending_connection = 0;
-                violation_extent = water_cut_perf[0] / max_water_cut_limit;
-                return std::make_tuple(water_cut_limit_violated, last_connection, worst_offending_connection, violation_extent);
+            int complnumIdx = 0;
+            std::vector<double> water_cut_in_completions(numberOfCompletions(), 0.0);
+            for (const auto& completion : completions) {
+                int complnum = completion.first;
+                for (int perf = 0; perf < perf_number; ++perf) {
+                    if (complnum == connections.get ( perf ).complnum) {
+                        water_cut_in_completions[complnumIdx] +=  water_cut_perf[perf];
+                    }
+                }
+                complnumIdx++;
             }
+
+            last_connection = false;
 
             double max_water_cut_perf = 0.;
-            for (int perf = 0; perf < perf_number; ++perf) {
-                if (water_cut_perf[perf] > max_water_cut_perf) {
-                    worst_offending_connection = perf;
-                    max_water_cut_perf = water_cut_perf[perf];
+            complnumIdx = 0;
+            for (const auto& completion : completions) {
+                if (water_cut_in_completions[complnumIdx] > max_water_cut_perf) {
+                    worst_offending_connection = completion.first;
+                    max_water_cut_perf = water_cut_in_completions[complnumIdx];
                 }
+                complnumIdx++;
             }
 
-            assert(max_water_cut_perf != 0.);
-            assert((worst_offending_connection >= 0) && (worst_offending_connection < perf_number));
+            assert(max_water_cut_limit != 0.);
 
             violation_extent = max_water_cut_perf / max_water_cut_limit;
         }
@@ -629,7 +638,8 @@ namespace Opm
     WellInterface<TypeTag>::
     updateListEconLimited(const WellState& well_state,
                           const double& simulationTime,
-                          WellTestState& wellTestState) const
+                          WellTestState& wellTestState,
+                          const bool& writeMessageToOPMLog) const
     {
         // economic limits only apply for production wells.
         if (wellType() != PRODUCER) {
@@ -672,12 +682,14 @@ namespace Opm
             }
 
             wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, simulationTime);
-            if (well_ecl_->getAutomaticShutIn()) {
-                const std::string msg = std::string("well ") + well_name + std::string(" will be shut due to rate economic limit");
-                OpmLog::info(msg);
-            } else {
-                const std::string msg = std::string("well ") + well_name + std::string(" will be stopped due to rate economic limit");
-                OpmLog::info(msg);
+            if (writeMessageToOPMLog) {
+                if (well_ecl_->getAutomaticShutIn()) {
+                    const std::string msg = std::string("well ") + well_name + std::string(" will be shut due to rate economic limit");
+                    OpmLog::info(msg);
+                } else {
+                    const std::string msg = std::string("well ") + well_name + std::string(" will be stopped due to rate economic limit");
+                    OpmLog::info(msg);
+                }
             }
             // the well is closed, not need to check other limits
             return;
@@ -699,23 +711,30 @@ namespace Opm
                 {
                     const int worst_offending_connection = std::get<2>(ratio_check_return);
 
-                    assert((worst_offending_connection >= 0) && (worst_offending_connection < number_of_perforations_));
-#warning map to completions
                     wellTestState.addClosedCompletion(well_name, worst_offending_connection, simulationTime);
-                    const std::string msg = std::string("Connection ") + std::to_string(worst_offending_connection) + std::string(" for well ")
-                                            + well_name + std::string(" will be closed due to economic limit");
-                    OpmLog::info(msg);
-
+                    if (writeMessageToOPMLog) {
+                        if (worst_offending_connection < 0) {
+                            const std::string msg = std::string("Connection ") + std::to_string(- worst_offending_connection) + std::string(" for well ")
+                                    + well_name + std::string(" will be closed due to economic limit");
+                            OpmLog::info(msg);
+                        } else {
+                            const std::string msg = std::string("Completion ") + std::to_string(worst_offending_connection) + std::string(" for well ")
+                                    + well_name + std::string(" will be closed due to economic limit");
+                            OpmLog::info(msg);
+                        }
+                    }
 
                     bool allCompletionsClosed = true;
-                    for (int perf = 0; perf < number_of_perforations_ ; ++perf) {
-                        if (!wellTestState.hasCompletion(name(), perf)) {
+                    const auto& connections = well_ecl_->getConnections(current_step_);
+                    for (const auto& connection : connections) {
+                        if (!wellTestState.hasCompletion(name(), connection.complnum)) {
                             allCompletionsClosed = false;
                         }
                     }
 
                     if (allCompletionsClosed) {
                         wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, simulationTime);
+                        if (writeMessageToOPMLog) {
                         if (well_ecl_->getAutomaticShutIn()) {
                             const std::string msg = well_name + std::string(" will be shut due to last compleation closed");
                             OpmLog::info(msg);
@@ -723,12 +742,14 @@ namespace Opm
                             const std::string msg = well_name + std::string(" will be stopped due to last compleation closed");
                             OpmLog::info(msg);
                         }
+                        }
                     }
                     break;
                 }
                 case WellEcon::WELL:
                 {
-                    wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, 0);
+                wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, 0);
+                if (writeMessageToOPMLog) {
                     if (well_ecl_->getAutomaticShutIn()) {
                         // tell the controll that the well is closed
                         const std::string msg = well_name + std::string(" will be shut due to ratio economic limit");
@@ -737,6 +758,7 @@ namespace Opm
                         const std::string msg = well_name + std::string(" will be stopped due to ratio economic limit");
                         OpmLog::info(msg);
                     }
+                }
                     break;
                 }
                 case WellEcon::NONE:
@@ -895,10 +917,13 @@ namespace Opm
             well_controls_stop_well(wellControls());
         }
 
-        for (int perf = 0; perf < number_of_perforations_ ; ++perf) {
-            if (wellTestState.hasCompletion(name(), perf)) {
-                well_index_[perf] = 0.0;
+        const auto& connections = well_ecl_->getConnections(current_step_);
+        int perfIdx = 0;
+        for (const auto& connection : connections) {
+            if (wellTestState.hasCompletion(name(), connection.complnum)) {
+                well_index_[perfIdx] = 0.0;
             }
+            perfIdx++;
         }
     }
 

@@ -179,7 +179,8 @@ namespace Opm
 
         void updateListEconLimited(const WellState& well_state,
                                    const double& simulationTime,
-                                   WellTestState& wellTestState) const;
+                                   WellTestState& wellTestState,
+                                   const bool& writeMessageToOPMLog) const;
 
         void setWellEfficiencyFactor(const double efficiency_factor);
 
@@ -228,8 +229,7 @@ namespace Opm
 
         void closeWellsAndCompletions(WellTestState& wellTestState);
 
-#warning currently just return number of connections
-        int numberOfCompletions(){ return number_of_perforations_;}
+        const Well* wellEcl() const { return well_ecl_;}
 
 
     protected:
@@ -348,6 +348,7 @@ namespace Opm
 
         double scalingFactor(const int comp_idx) const;
 
+        int numberOfCompletions() const { return well_ecl_->getCompletions(current_step_).size();}
 
 
     };

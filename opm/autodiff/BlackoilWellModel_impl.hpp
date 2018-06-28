@@ -191,7 +191,7 @@ namespace Opm {
 
             well_container.reserve(wellsForTesting.size());
             for (auto& testWell : wellsForTesting) {
-                const std::string msg = std::string("well ") + testWell.first + std::string(" will be tested");
+                const std::string msg = std::string("well ") + testWell.first + std::string(" is tested");
                 OpmLog::info(msg);
 
                 // finding the location of the well in wells_ecl
@@ -225,8 +225,6 @@ namespace Opm {
                 const int well_cell_top = wells()->well_cells[wells()->well_connpos[wellidx]];
                 const int pvtreg = pvt_region_idx_[well_cell_top];
 
-                //WellInterface<TypeTag> well(well_ecl, timeStepIdx, wells(), param_, *rateConverter_, pvtreg, numComponents() );
-
                 if ( !well_ecl->isMultiSegment(timeStepIdx) || !param_.use_multisegment_well_) {
                     well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, timeStepIdx, wells(),
                                                                           param_, *rateConverter_, pvtreg, numComponents() ) );
@@ -238,25 +236,37 @@ namespace Opm {
 
             for (auto& well : well_container) {
                 WellTestState wellTestStateForTheWellTest;
+                WellState wellStateCopy = well_state_;
                 well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
                 const std::string well_name = well->name();
                 const WellNode& well_node = wellCollection().findWellNode(well_name);
                 const double well_efficiency_factor = well_node.getAccumulativeEfficiencyFactor();
                 well->setWellEfficiencyFactor(well_efficiency_factor);
                 well->setVFPProperties(vfp_properties_.get());
-                well->updatePrimaryVariables(well_state_);
+                well->updatePrimaryVariables(wellStateCopy);
                 well->initPrimaryVariablesEvaluation();
-                well->solveWellEq(ebosSimulator_, well_state_, /*dt (not relevant for well test) =*/ 1.0, B_avg, terminal_output_);
-                well->updateListEconLimited(well_state_, simulationTime, wellTestStateForTheWellTest);
+
+                bool testWell = true;
+                while (testWell) {
+                    size_t numberOfClosedCompletions = wellTestStateForTheWellTest.sizeCompletions();
+                    well->solveWellEq(ebosSimulator_, wellStateCopy, /*dt (not relevant for well test) =*/ 1.0, B_avg, terminal_output_);
+                    well->updateListEconLimited(wellStateCopy, simulationTime, wellTestStateForTheWellTest, /*writeMessageToOPMLog=*/ false);
+                    well->closeWellsAndCompletions(wellTestStateForTheWellTest);
+
+                    // test completions individually.
+                    if (numberOfClosedCompletions == wellTestStateForTheWellTest.sizeCompletions())
+                        testWell = false;
+                }
+
                 // update wellTestState if the well test succeeds
                 if (!wellTestStateForTheWellTest.hasWell(well->name(), WellTestConfig::Reason::ECONOMIC)) {
                     wellTestState_.openWell(well->name());
                     const std::string msg = std::string("well ") + well->name() + std::string(" is re-opened");
                     OpmLog::info(msg);
                     // also reopen completions
-                    for (int completionIdx = 0;  completionIdx <well->numberOfCompletions(); ++completionIdx) {
-                        if (!wellTestStateForTheWellTest.hasCompletion(well->name(), completionIdx))
-                            wellTestState_.dropCompletion(well->name(), completionIdx);
+                    for (auto& completion : well->wellEcl()->getCompletions(timeStepIdx)) {
+                        if (!wellTestStateForTheWellTest.hasCompletion(well->name(), completion.first))
+                            wellTestState_.dropCompletion(well->name(), completion.first);
                     }
                 }
             }
@@ -748,7 +758,7 @@ namespace Opm {
     updateListEconLimited(const double& simulationTime, WellTestState& wellTestState) const
     {
         for (const auto& well : well_container_) {
-            well->updateListEconLimited(well_state_, simulationTime, wellTestState);
+            well->updateListEconLimited(well_state_, simulationTime, wellTestState, /*writeMessageToOPMLog=*/ true);
         }
     }
 
