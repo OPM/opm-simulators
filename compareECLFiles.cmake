@@ -278,6 +278,16 @@ foreach(sim flow flow_legacy)
                                         REL_TOL ${rel_tol_restart})
 endforeach()
 
+# PORV test
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
+add_test_compareECLFiles(CASENAME norne
+                         FILENAME NORNE_ATW2013
+                         SIMULATOR flow
+                         ABS_TOL 1e-5
+                         REL_TOL 1e-8
+                         PREFIX comparePORV
+                         DIR_PREFIX /porv)
+
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
 
