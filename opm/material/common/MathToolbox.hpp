@@ -92,6 +92,15 @@ public:
     { return value; }
 
     /*!
+     * \brief Given a scalar value, return a "compatible" object
+     *
+     * This basically boils down to creating an uninitialized object of sufficient size.
+     * This is method only non-trivial for dynamically-sized Evaluation objects.
+     */
+    static Scalar createBlank(Scalar value)
+    { return Scalar(); }
+
+    /*!
      * \brief Given a scalar value, return an evaluation of a constant function.
      *
      * For this toolbox, an evaluation is the value, so this method is the identity
@@ -226,6 +235,10 @@ struct ReturnEval_
 };
 
 // these are convenience functions for not having to type MathToolbox<Scalar>::foo()
+template <class Evaluation>
+Evaluation blank(const Evaluation& x)
+{ return Opm::MathToolbox<Evaluation>::createBlank(x); }
+
 template <class Evaluation, class Scalar>
 Evaluation constant(const Scalar& value)
 { return Opm::MathToolbox<Evaluation>::createConstant(value); }

@@ -419,6 +419,9 @@ public:
     static decltype(InnerToolbox::scalarValue(0.0)) scalarValue(const Evaluation& eval)
     { return InnerToolbox::scalarValue(eval.value()); }
 
+    static Evaluation createBlank(const Evaluation& x)
+    { return Evaluation::createBlank(x); }
+
     static Evaluation createConstant(ValueType value)
     { return Evaluation::createConstant(value); }
 

@@ -136,6 +136,17 @@ public:
         data_[4] = 0.0;
     }
 
+    // create an uninitialized Evaluation object that is compatible with the
+    // argument, but not initialized
+    //
+    // This basically boils down to the copy constructor without copying
+    // anything. If the number of derivatives is known at compile time, this
+    // is equivalent to creating an uninitialized object using the default
+    // constructor, while for dynamic evaluations, it creates an Evaluation
+    // object which exhibits the same number of derivatives as the argument.
+    static Evaluation createBlank(const Evaluation& x)
+    { return Evaluation(); }
+
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
     template <class RhsValueType>
     static Evaluation createVariable(const RhsValueType& value, int varPos)

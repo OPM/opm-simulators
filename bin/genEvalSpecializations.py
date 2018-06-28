@@ -50,7 +50,7 @@ specializationTemplate = \
  * \\file
  *
 {% if numDerivs < 0 %}\
- * \\brief This file file provides a dense-AD Evaluation class where the 
+ * \\brief This file file provides a dense-AD Evaluation class where the
  *        number of derivatives is specified at runtime.
 {% elif numDerivs == 0 %}\
  * \\brief Representation of an evaluation of a function and its derivatives w.r.t. a set
@@ -99,7 +99,7 @@ static constexpr int DynamicSize = -1;
 
 {% if numDerivs < 0 %}\
 /*!
- * \\brief Represents a function evaluation and its derivatives w.r.t. a 
+ * \\brief Represents a function evaluation and its derivatives w.r.t. a
  *        run-time specified set of variables.
  */
 template <class ValueT>
@@ -288,6 +288,22 @@ public:
 {%   endfor %}\
 {% endif %}\
     }
+
+    // create an uninitialized Evaluation object that is compatible with the
+    // argument, but not initialized
+    //
+    // This basically boils down to the copy constructor without copying
+    // anything. If the number of derivatives is known at compile time, this
+    // is equivalent to creating an uninitialized object using the default
+    // constructor, while for dynamic evaluations, it creates an Evaluation
+    // object which exhibits the same number of derivatives as the argument.
+{% if numDerivs < 0 %}\
+    static Evaluation createBlank(const Evaluation& x)
+    { return Evaluation(x.size()); }
+{% else %}\
+    static Evaluation createBlank(const Evaluation& x)
+    { return Evaluation(); }
+{% endif %}\
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
 {% if numDerivs < 0 %}\

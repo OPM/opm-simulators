@@ -60,10 +60,12 @@ struct TestEnvBase
         const Scalar c = 1.234;
         const Scalar x = 4.567;
         const Scalar y = 8.910;
+        Scalar z OPM_UNUSED = Opm::blank(tolerance);
         const Eval cEval = asImp_().createConstant(c);
         const Eval c2Eval OPM_UNUSED = asImp_().createConstant(c);
         const Eval xEval = asImp_().createVariable(x, 0);
         const Eval yEval = asImp_().createVariable(y, 1);
+        const Eval zEval OPM_UNUSED = Opm::blank(xEval);
 
         Eval xyEval = xEval;
         Eval yxEval = yEval;
