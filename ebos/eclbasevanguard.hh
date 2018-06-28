@@ -270,7 +270,7 @@ public:
             eclState_->getRestartConfig().overrideRestartWriteInterval(outputInterval);
 
         asImp_().createGrids_();
-        asImp_().filterCompletions_();
+        asImp_().filterConnections_();
         asImp_().finalizeInit_();
     }
 

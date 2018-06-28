@@ -202,7 +202,7 @@ protected:
             new CartesianIndexMapper(*grid_, cartesianDimension_, cartesianCellId_);
     }
 
-    void filterCompletions_()
+    void filterConnections_()
     {
         // not handling the removal of completions for this type of grid yet.
     }

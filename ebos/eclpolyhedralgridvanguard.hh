@@ -156,7 +156,7 @@ protected:
         cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
     }
 
-    void filterCompletions_()
+    void filterConnections_()
     {
         // not handling the removal of completions for this type of grid yet.
     }

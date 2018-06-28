@@ -264,8 +264,8 @@ protected:
         globalTrans_ = nullptr;
     }
 
-    // removing some completions located in inactive grid cells
-    void filterCompletions_()
+    // removing some connection located in inactive grid cells
+    void filterConnections_()
     {
         assert(grid_);
         Grid grid = *grid_;
