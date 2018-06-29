@@ -229,7 +229,7 @@ namespace Opm
 
         void closeWellsAndCompletions(WellTestState& wellTestState);
 
-        const Well* wellEcl() const { return well_ecl_;}
+        const Well* wellEcl() const;
 
 
     protected:
@@ -346,8 +346,6 @@ namespace Opm
                                              const WellState& well_state) const;
 
         double scalingFactor(const int comp_idx) const;
-
-        int numberOfCompletions() const { return well_ecl_->getCompletions(current_step_).size();}
 
 
     };

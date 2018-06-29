@@ -110,14 +110,9 @@ namespace Opm {
         // update the previous well state. This is used to restart failed steps.
         previous_well_state_ = well_state_;
 
-
-        if (wellCollection().havingVREPGroups() ) {
-            rateConverter_->template defineState<ElementContext>(ebosSimulator_);
-        }
-
         // Compute reservoir volumes for RESV controls.
         rateConverter_.reset(new RateConverterType (phase_usage_,
-                                         std::vector<int>(number_of_cells_, 0)));
+                                                    std::vector<int>(number_of_cells_, 0)));
         computeRESV(timeStepIdx);
 
         // update VFP properties
@@ -154,10 +149,9 @@ namespace Opm {
         // calculate the efficiency factors for each well
         calculateEfficiencyFactors();
 
-        const Grid& grid = ebosSimulator_.vanguard().grid();
-
         if (has_polymer_)
         {
+            const Grid& grid = ebosSimulator_.vanguard().grid();
             if (PolymerModule::hasPlyshlog()) {
                 computeRepRadiusPerfLength(grid);
             }
@@ -194,7 +188,7 @@ namespace Opm {
                 const std::string msg = std::string("well ") + testWell.first + std::string(" is tested");
                 OpmLog::info(msg);
 
-                // finding the location of the well in wells_ecl
+                // Finding the location of the well in wells_ecl
                 const int nw_wells_ecl = wells_ecl_.size();
                 int index_well = 0;
                 for (; index_well < nw_wells_ecl; ++index_well) {
@@ -202,15 +196,13 @@ namespace Opm {
                         break;
                     }
                 }
-
                 // It should be able to find in wells_ecl.
                 if (index_well == nw_wells_ecl) {
                     OPM_THROW(std::logic_error, "Could not find well " << testWell.first << " in wells_ecl ");
                 }
                 const Well* well_ecl = wells_ecl_[index_well];
 
-
-                // Find the index in the wells() struct
+                // Finding the location of the well in wells struct.
                 const int nw = numWells();
                 int wellidx = -999;
                 for (int w = 0; w < nw; ++w) {
@@ -218,8 +210,10 @@ namespace Opm {
                         wellidx = w;
                         break;
                     }
+                }                
+                if (wellidx < 0) {
+                    OPM_THROW(std::logic_error, "Could not find the well  " << testWell.first << " in the well struct ");
                 }
-
 
                 // Use the pvtRegionIdx from the top cell
                 const int well_cell_top = wells()->well_cells[wells()->well_connpos[wellidx]];
@@ -373,8 +367,7 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     assemble(const int iterationIdx,
-             const double dt,
-             bool onlyDoTheWellTest)
+             const double dt)
     {
 
 
@@ -398,8 +391,6 @@ namespace Opm {
         if (param_.solve_welleq_initially_ && iterationIdx == 0) {
             // solve the well equations as a pre-processing step
             last_report_ = solveWellEq(dt);
-            if (onlyDoTheWellTest)
-                return;
 
             if (initial_step_) {
                 // update the explicit quantities to get the initial fluid distribution in the well correct.
@@ -930,7 +921,7 @@ namespace Opm {
         }
 
         for (auto& well : well_container_) {
-            const std::string well_name = well->name();
+            const std::string& well_name = well->name();
             const WellNode& well_node = wellCollection().findWellNode(well_name);
 
             const double well_efficiency_factor = well_node.getAccumulativeEfficiencyFactor();

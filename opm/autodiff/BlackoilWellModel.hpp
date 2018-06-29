@@ -142,8 +142,7 @@ namespace Opm {
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
             void assemble(const int iterationIdx,
-                          const double dt,
-                          bool wtest = false);
+                          const double dt);
 
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;

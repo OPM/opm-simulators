@@ -203,6 +203,14 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
+    const Well*
+    WellInterface<TypeTag>::
+    wellEcl() const
+    {
+        return well_ecl_;
+    }
+
 
 
     template<typename TypeTag>
@@ -540,7 +548,7 @@ namespace Opm
             const auto& connections = well_ecl_->getConnections(current_step_);
 
             int complnumIdx = 0;
-            std::vector<double> water_cut_in_completions(numberOfCompletions(), 0.0);
+            std::vector<double> water_cut_in_completions(completions.size(), 0.0);
             for (const auto& completion : completions) {
                 int complnum = completion.first;
                 for (int perf = 0; perf < perf_number; ++perf) {
@@ -731,10 +739,10 @@ namespace Opm
                         wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, simulationTime);
                         if (writeMessageToOPMLog) {
                         if (well_ecl_->getAutomaticShutIn()) {
-                            const std::string msg = well_name + std::string(" will be shut due to last compleation closed");
+                            const std::string msg = well_name + std::string(" will be shut due to last completion closed");
                             OpmLog::info(msg);
                         } else {
-                            const std::string msg = well_name + std::string(" will be stopped due to last compleation closed");
+                            const std::string msg = well_name + std::string(" will be stopped due to last completion closed");
                             OpmLog::info(msg);
                         }
                         }
@@ -908,7 +916,6 @@ namespace Opm
     WellInterface<TypeTag>::closeWellsAndCompletions(WellTestState& wellTestState)
     {
         if (wellTestState.hasWell(name(), WellTestConfig::Reason::ECONOMIC)) {
-            assert(!well_ecl_->getAutomaticShutIn());
             well_controls_stop_well(wellControls());
         }
 
@@ -951,11 +958,11 @@ namespace Opm
 
         if (converged) {
             if ( terminal_output ) {
-                OpmLog::debug("Well equation solution gets converged with " + std::to_string(it) + " iterations");
+                OpmLog::debug("Well equation for well " + name() +  " solution gets converged with " + std::to_string(it) + " iterations");
             }
         } else {
             if ( terminal_output ) {
-                OpmLog::debug("Well equation solution failed in getting converged with " + std::to_string(it) + " iterations");
+                OpmLog::debug("Well equation for well" +name() + " solution failed in getting converged with " + std::to_string(it) + " iterations");
                 well_state = well_state0;
                 updatePrimaryVariables(well_state);
                 // also recover the old well controls
