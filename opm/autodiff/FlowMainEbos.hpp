@@ -117,10 +117,81 @@ namespace Opm
             ISTLSolverType::registerParameters();
 
             // register the parameters inherited from ebos
-            Ewoms::registerAllParameters_<TypeTag>();
+            Ewoms::registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
+
+            // hide the parameters unused by flow. TODO: this is a pain to maintain
+            EWOMS_HIDE_PARAM(TypeTag, EnableGravity);
+            EWOMS_HIDE_PARAM(TypeTag, EnableGridAdaptation);
+
+            // this parameter is actually used in eWoms, but the flow well model
+            // hard-codes the assumption that the intensive quantities cache is enabled,
+            // so flow crashes. Let's hide the parameter for that reason.
+            EWOMS_HIDE_PARAM(TypeTag, EnableIntensiveQuantityCache);
+
+            // thermodynamic hints are not implemented/required by the eWoms blackoil
+            // model
+            EWOMS_HIDE_PARAM(TypeTag, EnableThermodynamicHints);
+
+            // in flow only the deck file determines the end time of the simulation
+            EWOMS_HIDE_PARAM(TypeTag, EndTime);
+
+            // time stepping is not (yet) done by the eWoms code in flow
+            EWOMS_HIDE_PARAM(TypeTag, InitialTimeStepSize);
+            EWOMS_HIDE_PARAM(TypeTag, MaxTimeStepDivisions);
+            EWOMS_HIDE_PARAM(TypeTag, MaxTimeStepSize);
+            EWOMS_HIDE_PARAM(TypeTag, MinTimeStepSize);
+            EWOMS_HIDE_PARAM(TypeTag, PredeterminedTimeStepsFile);
+
+            // flow currently uses its own linear solver
+            EWOMS_HIDE_PARAM(TypeTag, LinearSolverMaxError);
+            EWOMS_HIDE_PARAM(TypeTag, LinearSolverMaxIterations);
+            EWOMS_HIDE_PARAM(TypeTag, LinearSolverOverlapSize);
+            EWOMS_HIDE_PARAM(TypeTag, LinearSolverTolerance);
+            EWOMS_HIDE_PARAM(TypeTag, LinearSolverVerbosity);
+            EWOMS_HIDE_PARAM(TypeTag, PreconditionerRelaxation);
+
+            // flow also does not use the eWoms Newton method
+            EWOMS_HIDE_PARAM(TypeTag, NewtonMaxError);
+            EWOMS_HIDE_PARAM(TypeTag, NewtonMaxIterations);
+            EWOMS_HIDE_PARAM(TypeTag, NewtonRawTolerance);
+            EWOMS_HIDE_PARAM(TypeTag, NewtonTargetIterations);
+            EWOMS_HIDE_PARAM(TypeTag, NewtonVerbose);
+            EWOMS_HIDE_PARAM(TypeTag, NewtonWriteConvergence);
+
+            // the default eWoms checkpoint/restart mechanism does not work with flow
+            EWOMS_HIDE_PARAM(TypeTag, RestartTime);
+            EWOMS_HIDE_PARAM(TypeTag, RestartWritingInterval);
+
+            EWOMS_END_PARAM_REGISTRATION(TypeTag);
 
             // read in the command line parameters
-            return Ewoms::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false);
+            int status = Ewoms::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false);
+            if (status == 0) {
+                // deal with --print-properties and --print-parameters
+
+                bool doExit = false;
+
+                int mpiRank = 0;
+#if HAVE_MPI
+                MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+#endif
+                if (EWOMS_GET_PARAM(TypeTag, int, PrintProperties) == 1) {
+                    doExit = true;
+                    if (mpiRank == 0)
+                        Ewoms::Properties::printValues<TypeTag>();
+                }
+
+                if (EWOMS_GET_PARAM(TypeTag, int, PrintParameters) == 1) {
+                    doExit = true;
+                    if (mpiRank == 0)
+                        Ewoms::Parameters::printValues<TypeTag>();
+                }
+
+                if (doExit)
+                    return -1;
+            }
+
+            return status;
         }
 
         /// This is the main function of Flow.  It runs a complete simulation with the

@@ -115,7 +115,10 @@ int main(int argc, char** argv)
     typedef TTAG(FlowEarlyBird) PreTypeTag;
     int status = Opm::FlowMainEbos<PreTypeTag>::setupParameters_(argc, argv);
     if (status != 0)
-        return status;
+        // if setupParameters_ returns a value smaller than 0, there was no error, but
+        // the program should abort. This is the case e.g. for the --help and the
+        // --print-properties parameters.
+        return (status >= 0)?status:0;
 
     bool outputCout = false;
     if (mpiRank == 0)
