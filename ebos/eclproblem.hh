@@ -446,9 +446,6 @@ public:
             // create the ECL writer
             eclWriter_.reset(new EclWriterType(simulator));
 
-        // Loading the solution from a restart file is done recursively, we need this
-        // bool variable to signal the stop condition.
-        restartApplied = false;
     }
 
     /*!
@@ -519,19 +516,31 @@ public:
         readMaterialParameters_();
         readThermalParameters_();
         transmissibilities_.finishInit();
-        readInitialCondition_();
 
-        // Set the start time of the simulation
+        const auto& eclState = simulator.vanguard().eclState();
+        const auto& initconfig = eclState.getInitConfig();
         const auto& timeMap = simulator.vanguard().schedule().getTimeMap();
-        simulator.setStartTime( timeMap.getStartTime(/*timeStepIdx=*/0) );
+        if(initconfig.restartRequested()) {
+            // Set the start time of the simulation
+            simulator.setStartTime( timeMap.getStartTime(/*timeStepIdx=*/initconfig.getRestartStep()) );
+            simulator.setEpisodeIndex(initconfig.getRestartStep());
+            simulator.setEpisodeLength(0.0);
+            simulator.setTimeStepSize(0.0);
 
-        // We want the episode index to be the same as the report step index to make
-        // things simpler, so we have to set the episode index to -1 because it is
-        // incremented inside beginEpisode(). The size of the initial time step and
-        // length of the initial episode is set to zero for the same reason.
-        simulator.setEpisodeIndex(-1);
-        simulator.setEpisodeLength(0.0);
-        simulator.setTimeStepSize(0.0);
+            readEclRestartSolution_();
+        } else {
+            readInitialCondition_();
+            // Set the start time of the simulation
+            simulator.setStartTime( timeMap.getStartTime(/*timeStepIdx=*/0) );
+
+            // We want the episode index to be the same as the report step index to make
+            // things simpler, so we have to set the episode index to -1 because it is
+            // incremented inside beginEpisode(). The size of the initial time step and
+            // length of the initial episode is set to zero for the same reason.
+            simulator.setEpisodeIndex(-1);
+            simulator.setEpisodeLength(0.0);
+            simulator.setTimeStepSize(0.0);
+        }
 
         updatePffDofData_();
 
@@ -1228,22 +1237,10 @@ public:
             wellManager_.init(this->simulator().vanguard().eclState(), this->simulator().vanguard().schedule());
         }
 
-        // The initialSolutionApplied is called recursively by readEclRestartSolution_().
-        if (restartApplied)
-            return;
-
         // let the object for threshold pressures initialize itself. this is done only at
         // this point, because determining the threshold pressures may require to access
         // the initial solution.
         thresholdPressures_.finishInit();
-
-        const auto& eclState = this->simulator().vanguard().eclState();
-        const auto& initconfig = eclState.getInitConfig();
-        if(initconfig.restartRequested()) {
-            restartApplied = true;
-            this->simulator().setEpisodeIndex(initconfig.getRestartStep());
-            readEclRestartSolution_();
-        }
 
         // release the memory of the EQUIL grid since it's no longer needed after this point
         this->simulator().vanguard().releaseEquilGrid();
@@ -1707,6 +1704,7 @@ private:
 
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
+            elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
             eclWriter_->eclOutputModule().initHysteresisParams(this->simulator(), elemIdx);
             eclWriter_->eclOutputModule().assignToFluidState(elemFluidState, elemIdx);
             if (enableSolvent)
@@ -1714,7 +1712,6 @@ private:
             if (enablePolymer)
                  polymerConcentration_[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
         }
-        this->model().applyInitialSolution();
     }
 
     void readExplicitInitialCondition_()
@@ -2071,8 +2068,6 @@ private:
     std::unique_ptr<EclWriterType> eclWriter_;
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
-
-    bool restartApplied;
 
 };
 } // namespace Ewoms

@@ -116,25 +116,12 @@ public:
         if (!enableThresholdPressure_)
             return;
 
-        /*
-          If this is a restart run the ThresholdPressure object will be active,
-          but it will *not* be properly initialized with numerical values. The
-          values must instead come from the THPRES vector in the restart file.
-        */
-        if (simConfig.getThresholdPressure().restart())
-            return;
-
-
         numEquilRegions_ = eclState.getTableManager().getEqldims().getNumEquilRegions();
         if (numEquilRegions_ > 0xff) {
             // make sure that the index of an equilibration region can be stored in a
             // single byte
             throw std::runtime_error("The maximum number of supported equilibration regions is 255!");
         }
-
-        // allocate the array which specifies the threshold pressures
-        thpres_.resize(numEquilRegions_*numEquilRegions_, 0.0);
-        thpresDefault_.resize(numEquilRegions_*numEquilRegions_, 0.0);
 
         // internalize the data specified using the EQLNUM keyword
         const std::vector<int>& equilRegionData =
@@ -146,6 +133,18 @@ public:
             // ECL uses Fortran-style indices but we want C-style ones!
             elemEquilRegion_[elemIdx] = equilRegionData[cartElemIdx] - 1;
         }
+
+        /*
+          If this is a restart run the ThresholdPressure object will be active,
+          but it will *not* be properly initialized with numerical values. The
+          values must instead come from the THPRES vector in the restart file.
+        */
+        if (simConfig.getThresholdPressure().restart())
+            return;
+
+        // allocate the array which specifies the threshold pressures
+        thpres_.resize(numEquilRegions_*numEquilRegions_, 0.0);
+        thpresDefault_.resize(numEquilRegions_*numEquilRegions_, 0.0);
 
         computeDefaultThresholdPressures_();
         applyExplicitThresholdPressures_();
