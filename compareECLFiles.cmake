@@ -259,17 +259,6 @@ add_test_compareECLFiles(CASENAME spe5
                          REL_TOL ${coarse_rel_tol}
                          TEST_ARGS max_iter=20)
 
-add_test_compareECLFiles(CASENAME spe5_ehystr2_0
-                         FILENAME SPE5CASE_GAS_EHYSTR2_0
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
-
-add_test_compareECLFiles(CASENAME spe5_ehystr2_1
-                         FILENAME SPE5CASE_SOLVENT_EHYSTR2_1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
