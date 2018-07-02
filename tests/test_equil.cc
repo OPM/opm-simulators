@@ -214,6 +214,7 @@ static Opm::EquilRecord mkEquilRecord( double datd, double datp,
     return EquilRecord( rec );
 }
 
+void test_PhasePressure();
 void test_PhasePressure()
 {
     typedef std::vector<double> PVal;
@@ -246,6 +247,7 @@ void test_PhasePressure()
     CHECK_CLOSE(ppress[1][last ] , 166.5e3 , reltol);
 }
 
+void test_CellSubset();
 void test_CellSubset()
 {
     typedef std::vector<double> PVal;
@@ -335,6 +337,7 @@ void test_CellSubset()
     CHECK_CLOSE(ppress[1][last ] , 166.5e3 , reltol);
 }
 
+void test_RegMapping();
 void test_RegMapping()
 {
     typedef std::vector<double> PVal;
@@ -422,6 +425,7 @@ void test_RegMapping()
     CHECK_CLOSE(ppress[1][last ] , 166.5e3 , reltol);
 }
 
+void test_DeckAllDead();
 void test_DeckAllDead()
 {
     typedef TTAG(TestEquilTypeTag) TypeTag;
@@ -446,6 +450,7 @@ void test_DeckAllDead()
     CHECK_CLOSE(pressures[1][last] , 1.504526940e7   , reltol);
 }
 
+void test_CapillaryInversion();
 void test_CapillaryInversion()
 {
     // Test setup.
@@ -497,6 +502,7 @@ void test_CapillaryInversion()
     }
 }
 
+void test_DeckWithCapillary();
 void test_DeckWithCapillary()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -535,6 +541,7 @@ void test_DeckWithCapillary()
     }
 }
 
+void test_DeckWithCapillaryOverlap();
 void test_DeckWithCapillaryOverlap()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -594,6 +601,7 @@ void test_DeckWithCapillaryOverlap()
     }
 }
 
+void test_DeckWithLiveOil();
 void test_DeckWithLiveOil()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -671,6 +679,7 @@ void test_DeckWithLiveOil()
     }
 }
 
+void test_DeckWithLiveGas();
 void test_DeckWithLiveGas()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -751,6 +760,7 @@ void test_DeckWithLiveGas()
     }
 }
 
+void test_DeckWithRSVDAndRVVD();
 void test_DeckWithRSVDAndRVVD()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -851,6 +861,7 @@ void test_DeckWithRSVDAndRVVD()
 }
 
 
+void test_DeckWithPBVDAndPDVD();
 void test_DeckWithPBVDAndPDVD()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -941,6 +952,7 @@ void test_DeckWithPBVDAndPDVD()
     }
 }
 
+void test_DeckWithSwatinit();
 void test_DeckWithSwatinit()
 {
 #if 0

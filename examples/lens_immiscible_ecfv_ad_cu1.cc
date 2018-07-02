@@ -38,6 +38,7 @@
 
 #include <ewoms/common/start.hh>
 
+int mainCU1(int argc, char **argv);
 int mainCU1(int argc, char **argv)
 {
     typedef TTAG(LensProblemEcfvAd) ProblemTypeTag;

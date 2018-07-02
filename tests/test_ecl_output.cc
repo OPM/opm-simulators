@@ -104,12 +104,14 @@ initSimulator(const char *filename)
     return std::unique_ptr<Simulator>(new Simulator);
 }
 
-ERT::ert_unique_ptr< ecl_sum_type, ecl_sum_free > readsum( const std::string& base ) {
-    return ERT::ert_unique_ptr< ecl_sum_type, ecl_sum_free >(
-            ecl_sum_fread_alloc_case( base.c_str(), ":" )
-           );
+ERT::ert_unique_ptr<ecl_sum_type, ecl_sum_free> readsum(const std::string& base);
+ERT::ert_unique_ptr<ecl_sum_type, ecl_sum_free> readsum(const std::string& base)
+{
+    return ERT::ert_unique_ptr<ecl_sum_type, ecl_sum_free>(
+            ecl_sum_fread_alloc_case(base.c_str(), ":"));
 }
 
+void test_summary();
 void test_summary()
 {
     typedef typename TTAG(TestEclOutputTypeTag) TypeTag;
@@ -176,8 +178,9 @@ void test_summary()
     CHECK_CLOSE(roip2, ecl_sum_get_general_var( resp, 1, "ROIP:2" ), 1e-3 );
 }
 
-void test_readWriteWells() {
-
+void test_readWriteWells();
+void test_readWriteWells()
+{
     using opt = Opm::data::Rates::opt;
 
     Opm::data::Rates r1, r2, rc1, rc2, rc3;
@@ -211,14 +214,14 @@ void test_readWriteWells() {
      *  the connection keys (active indices) and well names correspond to the
      *  input deck. All other entries in the well structures are arbitrary.
      */
-    w1.connections.push_back( { 88, rc1, 30.45, 123.45 } );
-    w1.connections.push_back( { 288, rc2, 33.19, 67.89 } );
+    w1.connections.push_back( { 88, rc1, 30.45, 123.45, 0.0, 0.0, 0.0 } );
+    w1.connections.push_back( { 288, rc2, 33.19, 67.89, 0.0, 0.0, 0.0 } );
 
     w2.rates = r2;
     w2.bhp = 2.34;
     w2.temperature = 4.56;
     w2.control = 2;
-    w2.connections.push_back( { 188, rc3, 36.22, 19.28 } );
+    w2.connections.push_back( { 188, rc3, 36.22, 19.28, 0.0, 0.0, 0.0 } );
 
     Opm::data::Wells wellRates;
 
