@@ -440,7 +440,7 @@ namespace Detail
                 }
 
                 const double relax = parameters_.ilu_relaxation_;
-                const bool ilu_milu  = parameters_.ilu_milu_;
+                const MILU_VARIANT ilu_milu  = parameters_.ilu_milu_;
                 if (  parameters_.use_cpr_ )
                 {
                     using Matrix         = typename MatrixOperator::matrix_type;
@@ -496,7 +496,7 @@ namespace Detail
         {
             const double relax   = parameters_.ilu_relaxation_;
             const int ilu_fillin = parameters_.ilu_fillin_level_;
-            const bool ilu_milu  = parameters_.ilu_milu_;
+            const MILU_VARIANT ilu_milu  = parameters_.ilu_milu_;
                 std::unique_ptr<SeqPreconditioner> precond(new SeqPreconditioner(opA.getmat(), ilu_fillin, relax, ilu_milu));
             return precond;
         }
@@ -519,14 +519,14 @@ namespace Detail
         {
             typedef std::unique_ptr<ParPreconditioner> Pointer;
             const double relax  = parameters_.ilu_relaxation_;
-            const bool ilu_milu  = parameters_.ilu_milu_;
+            const MILU_VARIANT ilu_milu  = parameters_.ilu_milu_;
             return Pointer(new ParPreconditioner(opA.getmat(), comm, relax, ilu_milu));
         }
 #endif
 
         template <class LinearOperator, class MatrixOperator, class POrComm, class AMG >
         void
-        constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax, const bool milu) const
+        constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax, const MILU_VARIANT milu) const
         {
             ISTLUtility::template createAMGPreconditionerPointer<pressureIndex>( *opA, relax, milu, comm, amg );
         }
@@ -535,7 +535,7 @@ namespace Detail
         template <class MatrixOperator, class POrComm, class AMG >
         void
         constructAMGPrecond(MatrixOperator& opA, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >&, const double relax,
-                            const bool milu) const
+                            const MILU_VARIANT milu) const
         {
             ISTLUtility::template createAMGPreconditionerPointer<pressureIndex>( opA, relax,
                                                                                  milu, comm, amg );
@@ -544,7 +544,7 @@ namespace Detail
         template <class C, class LinearOperator, class MatrixOperator, class POrComm, class AMG >
         void
         constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax,
-                            const bool milu ) const
+                            const MILU_VARIANT milu ) const
         {
             ISTLUtility::template createAMGPreconditionerPointer<C>( *opA, relax,
                                                                      comm, amg, parameters_ );
@@ -553,7 +553,7 @@ namespace Detail
 
         template <class C, class MatrixOperator, class POrComm, class AMG >
         void
-        constructAMGPrecond(MatrixOperator& opA, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >&, const double relax, const bool milu ) const
+        constructAMGPrecond(MatrixOperator& opA, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >&, const double relax, const MILU_VARIANT milu ) const
         {
             ISTLUtility::template createAMGPreconditionerPointer<C>( opA, relax, milu,
                                                                      comm, amg, parameters_ );

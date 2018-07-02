@@ -29,6 +29,7 @@
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
+#include <opm/autodiff/ParallelOverlappingILU0.hpp>
 
 #include <dune/istl/bvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -64,7 +65,7 @@ struct CPRParameter
     double cpr_relax_;
     double cpr_solver_tol_;
     int cpr_ilu_n_;
-    bool cpr_ilu_milu_;
+    MILU_VARIANT cpr_ilu_milu_;
     int cpr_max_ell_iter_;
     bool cpr_use_amg_;
     bool cpr_use_bicgstab_;
@@ -81,12 +82,14 @@ struct CPRParameter
         cpr_relax_          = param.getDefault("cpr_relax", cpr_relax_);
         cpr_solver_tol_     = param.getDefault("cpr_solver_tol", cpr_solver_tol_);
         cpr_ilu_n_          = param.getDefault("cpr_ilu_n", cpr_ilu_n_);
-        cpr_ilu_milu_       = param.getDefault("ilu_milu", cpr_ilu_milu_);
         cpr_max_ell_iter_   = param.getDefault("cpr_max_elliptic_iter",cpr_max_ell_iter_);
         cpr_use_amg_        = param.getDefault("cpr_use_amg", cpr_use_amg_);
         cpr_use_bicgstab_   = param.getDefault("cpr_use_bicgstab", cpr_use_bicgstab_);
         cpr_solver_verbose_ = param.getDefault("cpr_solver_verbose", cpr_solver_verbose_);
         cpr_pressure_aggregation_ = param.getDefault("cpr_pressure_aggregation", cpr_pressure_aggregation_);
+
+        std::string milu("ILU");
+        cpr_ilu_milu_ = convertString2Milu(param.getDefault("ilu_milu", milu));
     }
 
     void reset()
@@ -94,7 +97,7 @@ struct CPRParameter
         cpr_relax_          = 1.0;
         cpr_solver_tol_     = 1e-2;
         cpr_ilu_n_          = 0;
-        cpr_ilu_milu_       = false;
+        cpr_ilu_milu_       = MILU_VARIANT::ILU;
         cpr_max_ell_iter_   = 25;
         cpr_use_amg_        = true;
         cpr_use_bicgstab_   = true;
@@ -117,7 +120,7 @@ void setILUParameters(Opm::ParallelOverlappingILU0Args<T>& args,
 
 template<class T>
 void setILUParameters(Opm::ParallelOverlappingILU0Args<T>& args,
-                      bool milu, int n=0)
+                      MILU_VARIANT milu, int n=0)
 {
     args.setN(n);
     args.setMilu(milu);
@@ -195,7 +198,7 @@ struct CPRSelector<M,X,Y,Dune::Amg::SequentialInformation>
 //! \param relax The relaxation factor to use.
 template<class M, class X, class C>
 std::shared_ptr<ParallelOverlappingILU0<M,X,X,C> >
-createILU0Ptr(const M& A, const C& comm, double relax, bool milu)
+createILU0Ptr(const M& A, const C& comm, double relax, MILU_VARIANT milu)
 {
     return std::make_shared<ParallelOverlappingILU0<M,X,X,C> >(A, comm, relax, milu);
 }
@@ -205,7 +208,7 @@ createILU0Ptr(const M& A, const C& comm, double relax, bool milu)
 //! \param relax The relaxation factor to use.
 template<class M, class X, class C>
 std::shared_ptr<ParallelOverlappingILU0<M,X,X,C> >
-createILUnPtr(const M& A, const C& comm, int ilu_n, double relax, bool milu)
+createILUnPtr(const M& A, const C& comm, int ilu_n, double relax, MILU_VARIANT milu)
 {
     return std::make_shared<ParallelOverlappingILU0<M,X,X,C> >( A, comm, ilu_n, relax, milu );
 }
@@ -219,7 +222,7 @@ createILUnPtr(const M& A, const C& comm, int ilu_n, double relax, bool milu)
 template<class M, class X=typename M::range_type, class P>
 typename CPRSelector<M,X,X,P>::EllipticPreconditionerPointer
 createEllipticPreconditionerPointer(const M& Ae, double relax,
-                                    bool milu, const P& comm)
+                                    MILU_VARIANT milu, const P& comm)
 {
     typedef typename CPRSelector<M,X,X,P >
         ::EllipticPreconditioner ParallelPreconditioner;
@@ -258,7 +261,7 @@ createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
 
 template < class C, class Op, class P, class AMG >
 inline void
-createAMGPreconditionerPointer(Op& opA, const double relax, const bool milu, const P& comm, std::unique_ptr< AMG >& amgPtr)
+createAMGPreconditionerPointer(Op& opA, const double relax, const MILU_VARIANT milu, const P& comm, std::unique_ptr< AMG >& amgPtr)
 {
     // TODO: revise choice of parameters
     int coarsenTarget=1200;
@@ -287,7 +290,7 @@ createAMGPreconditionerPointer(Op& opA, const double relax, const bool milu, con
 //  \param amgPtr  The unique_ptr to be filled (return)
 template < int pressureIndex=0, class Op, class P, class AMG >
 inline void
-createAMGPreconditionerPointer( Op& opA, const double relax, const bool milu, const P& comm, std::unique_ptr< AMG >& amgPtr )
+createAMGPreconditionerPointer( Op& opA, const double relax, const MILU_VARIANT milu, const P& comm, std::unique_ptr< AMG >& amgPtr )
 {
     // type of matrix
     typedef typename Op::matrix_type  M;

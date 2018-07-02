@@ -28,6 +28,7 @@
 #include <dune/istl/paamg/pinfo.hh>
 
 #include <type_traits>
+#include <numeric>
 
 namespace Opm
 {
@@ -37,19 +38,49 @@ namespace Opm
 template<class Matrix, class Domain, class Range, class ParallelInfo = Dune::Amg::SequentialInformation>
 class ParallelOverlappingILU0;
 
+enum class MILU_VARIANT{
+    /// \brief Do not perform modified ILU
+    ILU = 0,
+    /// \brief \f$U_{ii} = U_{ii} +\f$  sum(dropped entries)
+    MILU_1 = 1,
+    /// \brief \f$U_{ii} = U_{ii} + sign(U_{ii}) * \f$ sum(dropped entries)
+    MILU_2 = 2,
+    /// \brief \f$U_{ii} = U_{ii} sign(U_{ii}) * \f$ sum(|dropped entries|)
+    MILU_3 = 3,
+    /// \brief \f$U_{ii} = U_{ii} + (U_{ii}>0?1:0) * \f$ sum(dropped entries)
+    MILU_4 = 4
+};
+
+inline MILU_VARIANT convertString2Milu(std::string milu)
+{
+    if( 0 == milu.compare("MILU_1") )
+    {
+        return MILU_VARIANT::MILU_1;
+    }
+    if ( 0 == milu.compare("MILU_2") )
+    {
+        return MILU_VARIANT::MILU_2;
+    }
+    if ( 0 == milu.compare("MILU_3") )
+    {
+        return MILU_VARIANT::MILU_3;
+    }
+    return MILU_VARIANT::ILU;
+}
+
 template<class F>
 class ParallelOverlappingILU0Args
     : public Dune::Amg::DefaultSmootherArgs<F>
 {
  public:
-    ParallelOverlappingILU0Args(bool milu = false)
+    ParallelOverlappingILU0Args(MILU_VARIANT milu = MILU_VARIANT::ILU )
         : milu_(milu)
     {}
-    void setMilu(bool milu)
+    void setMilu(MILU_VARIANT milu)
     {
         milu_ = milu;
     }
-    bool getMilu() const
+    MILU_VARIANT getMilu() const
     {
         return milu_;
     }
@@ -62,7 +93,7 @@ class ParallelOverlappingILU0Args
         return n_;
     }
  private:
-    bool milu_;
+    MILU_VARIANT milu_;
     int n_;
 };
 } // end namespace Opm
@@ -118,12 +149,68 @@ namespace Opm
     namespace detail
     {
 
-    template<class M>
-    void milu0_decomposition(M& A,
+    struct IdentityFunctor
+    {
+        template<class T>
+        T operator()(const T& t)
+        {
+            return t;
+        }
+    };
+
+    struct OneFunctor
+    {
+        template<class T>
+        T operator()(const T&)
+        {
+            return 1.0;
+        }
+    };
+    struct SignFunctor
+    {
+        template<class T>
+        double operator()(const T& t)
+        {
+            if ( t < 0.0 )
+            {
+                return -1;
+            }
+            else
+            {
+                return 1.0;
+            }
+        }
+    };
+
+    struct IsPositiveFunctor
+    {
+        template<class T>
+        double operator()(const T& t)
+        {
+            if ( t < 0.0 )
+            {
+                return 0;
+            }
+            else
+            {
+                return 1;
+            }
+        }
+    };
+    struct AbsFunctor
+    {
+        template<class T>
+        T operator()(const T& t)
+        {
+            using std::abs;
+            return abs(t);
+        }
+    };
+
+    template<class M, class F1=detail::IdentityFunctor, class F2=detail::OneFunctor >
+    void milu0_decomposition(M& A, F1 absFunctor = F1(), F2 signFunctor = F2(),
                              std::vector<typename M::block_type>* diagonal = nullptr)
     {
-        using block = typename M::block_type;
-
         if( diagonal )
         {
             diagonal->reserve(A.N());
@@ -134,8 +221,7 @@ namespace Opm
             auto a_i_end = irow->end();
             auto a_ik    = irow->begin();
 
-            block sum_dropped;
-            sum_dropped = 0.0;
+            std::array<typename M::field_type, M::block_type::rows> sum_dropped{};
 
             // Eliminate entries in lower triangular matrix
             // and store factors for L
@@ -170,7 +256,15 @@ namespace Opm
                     }
                     else
                     {
-                        sum_dropped += modifier;
+                        auto entry = sum_dropped.begin();
+                        for( const auto& row: modifier )
+                        {
+                            for( const auto& colEntry: row )
+                            {
+                                *entry += absFunctor(-colEntry);
+                            }
+                            ++entry;
+                        }
                         ++a_kj;
                     }
                 }
@@ -180,12 +274,12 @@ namespace Opm
                 OPM_THROW(std::logic_error, "Matrix is missing diagonal for row " << irow.index());
 
             int index = 0;
-            for(const auto& row: sum_dropped)
+            for(const auto& entry: sum_dropped)
             {
-                for(const auto& val: row)
-                {
-                    (*a_ik)[index][index]-=val;
-                }
+                auto& bdiag = (*a_ik)[index][index];
+                if(entry<0)
+                    std::cout << entry << std::endl;
+                bdiag += signFunctor(bdiag) * entry;
                 ++index;
             }
 
@@ -197,6 +291,13 @@ namespace Opm
         }
     }
 
+    template<class M>
+    void milu0_decomposition(M& A,
+                             std::vector<typename M::block_type>* diagonal)
+    {
+        milu0_decomposition(A, detail::IdentityFunctor(), detail::OneFunctor(),
+                            diagonal);
+    }
 
       //! compute ILU decomposition of A. A is overwritten by its decomposition
       template<class M, class CRS, class InvVector>
@@ -270,6 +371,7 @@ namespace Opm
         }
       }
     } // end namespace detail
+
 
 /// \brief A two-step version of an overlapping Schwarz preconditioner using one step ILU0 as
 ///
@@ -374,14 +476,12 @@ public:
       \param A The matrix to operate on.
       \param n ILU fill in level (for testing). This does not work in parallel.
       \param w The relaxation factor.
-      \param milu If true, the modified ilu approach is used. Dropped elements
-                  will get added to the diagonal of U to preserve the row sum
-                  for constant vectors (Ae = LUe).
+      \param milu The modified ILU variant to use. 0 means traditional ILU. \see MILU_VARIANT.
     */
     template<class BlockType, class Alloc>
     ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
                              const int n, const field_type w,
-                             bool milu)
+                             MILU_VARIANT milu)
         : lower_(),
           upper_(),
           inv_(),
@@ -398,14 +498,12 @@ public:
       \param comm   communication object, e.g. Dune::OwnerOverlapCopyCommunication
       \param n ILU fill in level (for testing). This does not work in parallel.
       \param w The relaxation factor.
-      \param milu If true, the modified ilu approach is used. Dropped elements
-                  will get added to the diagonal of U to preserve the row sum
-                  for constant vectors (Ae = LUe).
+      \param milu The modified ILU variant to use. 0 means traditional ILU. \see MILU_VARIANT.
     */
     template<class BlockType, class Alloc>
     ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
                              const ParallelInfo& comm, const int n, const field_type w,
-                             bool milu)
+                             MILU_VARIANT milu)
         : lower_(),
           upper_(),
           inv_(),
@@ -422,13 +520,11 @@ public:
       Constructor gets all parameters to operate the prec.
       \param A The matrix to operate on.
       \param w The relaxation factor.
-      \param milu If true, the modified ilu approach is used. Dropped elements
-                  will get added to the diagonal of U to preserve the row sum
-                  for constant vectors (Ae = LUe).
+      \param milu The modified ILU variant to use. 0 means traditional ILU. \see MILU_VARIANT.
     */
     template<class BlockType, class Alloc>
     ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
-                             const field_type w, bool milu)
+                             const field_type w, MILU_VARIANT milu)
         : ParallelOverlappingILU0( A, 0, w, milu )
     {
     }
@@ -439,14 +535,12 @@ public:
       \param A      The matrix to operate on.
       \param comm   communication object, e.g. Dune::OwnerOverlapCopyCommunication
       \param w      The relaxation factor.
-      \param milu If true, the modified ilu approach is used. Dropped elements
-                  will get added to the diagonal of U to preserve the row sum
-                  for constant vectors (Ae = LUe).
+      \param milu   The modified ILU variant to use. 0 means traditional ILU. \see MILU_VARIANT.
     */
     template<class BlockType, class Alloc>
     ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
                              const ParallelInfo& comm, const field_type w,
-                             bool milu)
+                             MILU_VARIANT milu)
         : lower_(),
           upper_(),
           inv_(),
@@ -549,7 +643,7 @@ public:
     }
 
 protected:
-    void init( const Matrix& A, const int iluIteration, bool milu )
+    void init( const Matrix& A, const int iluIteration, MILU_VARIANT milu )
     {
         // (For older DUNE versions the communicator might be
         // invalid if redistribution in AMG happened on the coarset level.
@@ -578,18 +672,32 @@ protected:
             if( iluIteration == 0 ) {
                 // create ILU-0 decomposition
                 ILU.reset( new Matrix( A ) );
-                if ( milu )
+                switch ( milu )
                 {
-                    detail::milu0_decomposition ( *ILU );
-                }else
-                {
+                case MILU_VARIANT::MILU_1:
+                    detail::milu0_decomposition ( *ILU);
+                    break;
+                case MILU_VARIANT::MILU_2:
+                    detail::milu0_decomposition ( *ILU, detail::IdentityFunctor(),
+                                                  detail::SignFunctor() );
+                    break;
+                case MILU_VARIANT::MILU_3:
+                    detail::milu0_decomposition ( *ILU, detail::AbsFunctor(),
+                                                  detail::SignFunctor() );
+                    break;
+                case MILU_VARIANT::MILU_4:
+                    detail::milu0_decomposition ( *ILU, detail::IdentityFunctor(),
+                                                  detail::IsPositiveFunctor() );
+                    break;
+                default:
                     bilu0_decomposition( *ILU );
+                    break;
                 }
             }
             else {
                 // create ILU-n decomposition
                 ILU.reset( new Matrix( A.N(), A.M(), Matrix::row_wise) );
-                if ( milu )
+                if ( milu > MILU_VARIANT::ILU )
                 {
                     OpmLog::warning("MILU_N_NOT_SUPPORTED", "MILU variant only supported for zero fill-in");
                 }
