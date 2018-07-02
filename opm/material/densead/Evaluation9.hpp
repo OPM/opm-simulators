@@ -149,7 +149,7 @@ public:
     // is equivalent to creating an uninitialized object using the default
     // constructor, while for dynamic evaluations, it creates an Evaluation
     // object which exhibits the same number of derivatives as the argument.
-    static Evaluation createBlank(const Evaluation& x)
+    static Evaluation createBlank(const Evaluation& x OPM_UNUSED)
     { return Evaluation(); }
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
