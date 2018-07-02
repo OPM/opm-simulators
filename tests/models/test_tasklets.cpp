@@ -62,6 +62,7 @@ private:
     int mseconds_;
 };
 
+void sleepAndPrintFunction();
 void sleepAndPrintFunction()
 {
     int ms = 100;

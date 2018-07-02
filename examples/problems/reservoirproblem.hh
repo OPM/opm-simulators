@@ -551,20 +551,22 @@ public:
      * saturated with a lower pressure than the remaining reservoir.
      */
     template <class Context>
-    void constraints(Constraints& constraints, const Context& context,
-                     unsigned spaceIdx, unsigned timeIdx) const
+    void constraints(Constraints& constraintValues,
+                     const Context& context,
+                     unsigned spaceIdx,
+                     unsigned timeIdx) const
     {
         if (this->simulator().episodeIndex() == 1)
             return; // no constraints during the "settle down" episode
 
         const auto& pos = context.pos(spaceIdx, timeIdx);
         if (isInjector_(pos)) {
-            constraints.setActive(true);
-            constraints.assignNaive(injectorFluidState_);
+            constraintValues.setActive(true);
+            constraintValues.assignNaive(injectorFluidState_);
         }
         else if (isProducer_(pos)) {
-            constraints.setActive(true);
-            constraints.assignNaive(producerFluidState_);
+            constraintValues.setActive(true);
+            constraintValues.assignNaive(producerFluidState_);
         }
     }
 

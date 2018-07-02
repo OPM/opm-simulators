@@ -269,11 +269,11 @@ public:
     //! position of the domain [kg/(m^3 * s)]. Positive values mean that
     //! mass is created.
     template <class Context>
-    void source(RateVector& source, const Context& /*context*/,
+    void source(RateVector& sourceRate, const Context& /*context*/,
                 unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const
     {
-        source[contiWettingEqIdx] = 0.0;
-        source[contiNonWettingEqIdx] = 0.0;
+        sourceRate[contiWettingEqIdx] = 0.0;
+        sourceRate[contiNonWettingEqIdx] = 0.0;
     }
 
     //! Evaluates the initial value at a given position in the domain.
