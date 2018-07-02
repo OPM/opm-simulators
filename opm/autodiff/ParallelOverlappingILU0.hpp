@@ -396,6 +396,8 @@ class ParallelOverlappingILU0
 
 
 public:
+    enum{
+        };
     //! \brief The matrix type the preconditioner is for.
     typedef typename std::remove_const<Matrix>::type matrix_type;
     //! \brief The domain type of the preconditioner.
