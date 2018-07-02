@@ -32,6 +32,8 @@
 #ifndef OPM_MATERIAL_MATH_TOOLBOX_HPP
 #define OPM_MATERIAL_MATH_TOOLBOX_HPP
 
+#include <opm/material/common/Unused.hpp>
+
 #include <cmath>
 #include <algorithm>
 #include <type_traits>
@@ -97,7 +99,7 @@ public:
      * This basically boils down to creating an uninitialized object of sufficient size.
      * This is method only non-trivial for dynamically-sized Evaluation objects.
      */
-    static Scalar createBlank(Scalar value)
+    static Scalar createBlank(Scalar value OPM_UNUSED)
     { return Scalar(); }
 
     /*!
