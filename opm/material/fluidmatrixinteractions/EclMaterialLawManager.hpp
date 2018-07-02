@@ -576,7 +576,6 @@ private:
         bool hasOil = deck.hasKeyword("OIL");
         bool hasWater = deck.hasKeyword("WATER");
 
-        const auto& imbnumData = eclState.get3DProperties().getIntGridProperty("IMBNUM").getData();
         assert(numCompressedElems == satnumRegionArray.size());
         assert(!enableHysteresis() || numCompressedElems == imbnumRegionArray.size());
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
@@ -615,7 +614,7 @@ private:
             }
 
             if (enableHysteresis()) {
-                unsigned imbRegionIdx = static_cast<unsigned>(imbnumData[elemIdx]) - 1;
+                unsigned imbRegionIdx = imbnumRegionArray[elemIdx];
 
                 if (hasGas && hasOil) {
                     auto gasOilImbParamsHyst = std::make_shared<GasOilEpsTwoPhaseParams>();
