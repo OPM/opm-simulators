@@ -350,7 +350,7 @@ namespace Opm {
 
             void updatePerforationIntensiveQuantities();
 
-            void wellTesting(const int timeStepIdx,const double simulationTime);
+            void wellTesting(const int timeStepIdx, const double simulationTime);
 
         };
 

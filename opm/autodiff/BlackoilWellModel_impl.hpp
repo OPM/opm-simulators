@@ -176,7 +176,7 @@ namespace Opm {
         const auto& wellsForTesting = wellTestState_.updateWell(wtest_config, simulationTime);
 
         // Do the well testing if enabled
-        if (!initial_step_ && wtest_config.size() > 0 && wellsForTesting.size() > 0) {
+        if (wtest_config.size() > 0 && wellsForTesting.size() > 0) {
             // solve the well equation isolated from the reservoir.
             const int numComp = numComponents();
             std::vector< Scalar > B_avg( numComp, Scalar() );
@@ -232,7 +232,7 @@ namespace Opm {
                 WellTestState wellTestStateForTheWellTest;
                 WellState wellStateCopy = well_state_;
                 well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
-                const std::string well_name = well->name();
+                const std::string& well_name = well->name();
                 const WellNode& well_node = wellCollection().findWellNode(well_name);
                 const double well_efficiency_factor = well_node.getAccumulativeEfficiencyFactor();
                 well->setWellEfficiencyFactor(well_efficiency_factor);
@@ -241,14 +241,19 @@ namespace Opm {
                 well->initPrimaryVariablesEvaluation();
 
                 bool testWell = true;
+		// if a well is closed because all completions are closed, we need to check each completion
+		// individually. We first open all completions, then we close one by one by calling updateWellTestState
+		// untill the number of closed completions do not increase anymore. 
                 while (testWell) {
-                    size_t numberOfClosedCompletions = wellTestStateForTheWellTest.sizeCompletions();
-                    well->solveWellEq(ebosSimulator_, wellStateCopy, /*dt (not relevant for well test) =*/ 1.0, B_avg, terminal_output_);
+                    const size_t numberOfClosedCompletions = wellTestStateForTheWellTest.sizeCompletions();
+                    well->solveWellForTesting(ebosSimulator_, wellStateCopy, B_avg, terminal_output_);
                     well->updateWellTestState(wellStateCopy, simulationTime, wellTestStateForTheWellTest, /*writeMessageToOPMLog=*/ false);
                     well->closeWellsAndCompletions(wellTestStateForTheWellTest);
 
-                    // test completions individually.
-                    if (numberOfClosedCompletions == wellTestStateForTheWellTest.sizeCompletions())
+                    // Stop testing if the well is closed or shut due to all completions shut
+                    // Also check if number of completions has increased. If the number of closed completions do not increased
+                    // we stop the testing.  
+                    if (wellTestStateForTheWellTest.sizeWells() > 0 && numberOfClosedCompletions == wellTestStateForTheWellTest.sizeCompletions())
                         testWell = false;
                 }
 

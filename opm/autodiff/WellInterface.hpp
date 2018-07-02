@@ -225,7 +225,7 @@ namespace Opm
         virtual void addWellContributions(Mat&) const
         {}
 
-        SimulatorReport solveWellEq(Simulator& ebosSimulator, WellState& well_state, const double dt, const std::vector<double>& B_avg, bool terminal_output);
+        void solveWellForTesting(Simulator& ebosSimulator, WellState& well_state, const std::vector<double>& B_avg, bool terminal_output);
 
         void closeWellsAndCompletions(WellTestState& wellTestState);
 
@@ -235,7 +235,7 @@ namespace Opm
     protected:
 
         // to indicate a invalid completion
-        static const int INVALIDCOMPLETION = 0;
+        static const int INVALIDCOMPLETION = INT_MAX;
 
         const Well* well_ecl_;
 
