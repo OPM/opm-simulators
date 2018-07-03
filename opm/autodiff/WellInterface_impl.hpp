@@ -913,12 +913,8 @@ namespace Opm
 
     template<typename TypeTag>
     void
-    WellInterface<TypeTag>::closeWellsAndCompletions(WellTestState& wellTestState)
+    WellInterface<TypeTag>::closeCompletions(WellTestState& wellTestState)
     {
-        if (wellTestState.hasWell(name(), WellTestConfig::Reason::ECONOMIC)) {
-            well_controls_stop_well(wellControls());
-        }
-
         const auto& connections = well_ecl_->getConnections(current_step_);
         int perfIdx = 0;
         for (const auto& connection : connections) {

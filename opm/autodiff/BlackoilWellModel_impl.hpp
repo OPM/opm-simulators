@@ -163,7 +163,7 @@ namespace Opm {
 
         // Close wells and completions due to economical reasons
         for (auto& well : well_container_) {
-            well->closeWellsAndCompletions(wellTestState_);
+            well->closeCompletions(wellTestState_);
         }
 
     }
@@ -248,12 +248,12 @@ namespace Opm {
                     const size_t numberOfClosedCompletions = wellTestStateForTheWellTest.sizeCompletions();
                     well->solveWellForTesting(ebosSimulator_, wellStateCopy, B_avg, terminal_output_);
                     well->updateWellTestState(wellStateCopy, simulationTime, wellTestStateForTheWellTest, /*writeMessageToOPMLog=*/ false);
-                    well->closeWellsAndCompletions(wellTestStateForTheWellTest);
+                    well->closeCompletions(wellTestStateForTheWellTest);
 
                     // Stop testing if the well is closed or shut due to all completions shut
                     // Also check if number of completions has increased. If the number of closed completions do not increased
                     // we stop the testing.  
-                    if (wellTestStateForTheWellTest.sizeWells() > 0 && numberOfClosedCompletions == wellTestStateForTheWellTest.sizeCompletions())
+                    if (wellTestStateForTheWellTest.sizeWells() > 0 || numberOfClosedCompletions == wellTestStateForTheWellTest.sizeCompletions())
                         testWell = false;
                 }
 
@@ -338,14 +338,22 @@ namespace Opm {
 
                 const Well* well_ecl = wells_ecl_[index_well];
 
-                // well is shut due to economical reasons
-                if (wellTestState_.hasWell(well_name, WellTestConfig::Reason::ECONOMIC) && well_ecl->getAutomaticShutIn() ) {
-                    well_state_.bhp()[w] = 0;
-                    const int np = numPhases();
-                    for (int p = 0; p < np; ++p) {
-                        well_state_.wellRates()[np * w + p] = 0;
+                // well is closed due to economical reasons
+                if (wellTestState_.hasWell(well_name, WellTestConfig::Reason::ECONOMIC)) { 
+		    if( well_ecl->getAutomaticShutIn() ) {
+                        // shut wells are not added to the well container 
+                        well_state_.bhp()[w] = 0;
+                        const int np = numPhases();
+                        for (int p = 0; p < np; ++p) {
+                            well_state_.wellRates()[np * w + p] = 0;
+			}
+			continue;
                     }
-                    continue;
+		    else {
+		        // close wells are added to the container but marked as closed
+		        struct WellControls* well_controls = wells()->ctrls[w];
+		        well_controls_stop_well(well_controls);
+                    }
                 }
 
                 // Use the pvtRegionIdx from the top cell

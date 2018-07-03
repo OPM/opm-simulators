@@ -227,7 +227,7 @@ namespace Opm
 
         void solveWellForTesting(Simulator& ebosSimulator, WellState& well_state, const std::vector<double>& B_avg, bool terminal_output);
 
-        void closeWellsAndCompletions(WellTestState& wellTestState);
+        void closeCompletions(WellTestState& wellTestState);
 
         const Well* wellEcl() const;
 
