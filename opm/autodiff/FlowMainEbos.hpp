@@ -548,12 +548,16 @@ namespace Opm
             typedef typename BlackoilModelEbos<TypeTag>::ISTLSolverType ISTLSolverType;
 
             extractParallelGridInformationToISTL(grid(), parallel_information_);
-            linearSolver_.reset(new ISTLSolverType(parallel_information_));
+            auto *tmp = new ISTLSolverType(parallel_information_);
+            linearSolver_.reset(tmp);
 
             // Deactivate selection of CPR via eclipse keyword
             // as this preconditioner is still considered experimental
             // and fails miserably for some models.
-            if (output_cout_) {
+            if (output_cout_
+                && eclState().getSimulationConfig().useCPR()
+                && !tmp->parameters().use_cpr_)
+            {
                 std::ostringstream message;
                 message << "Ignoring request for CPRPreconditioner "
                         << "via Eclipse keyword as it is considered "
@@ -562,6 +566,7 @@ namespace Opm
                         <<"line parameter.";
                 OpmLog::info(message.str());
             }
+
         }
 
         /// This is the main function of Flow.

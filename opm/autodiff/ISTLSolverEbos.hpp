@@ -386,6 +386,9 @@ namespace Detail
             parameters_.template init<TypeTag>();
         }
 
+        const NewtonIterationBlackoilInterleavedParameters& parameters() const
+        { return parameters_; }
+
         // dummy method that is not implemented for this class
         SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual&) const
         {
