@@ -20,7 +20,7 @@ copyToReferenceDir () {
 }
 
 tests=${@:2}
-test -z "$tests" && tests="spe11 spe12 spe12p spe1oilgas spe1nowells spe1thermal ctaquifer_2d_oilwater spe3 spe5 spe9 norne_init msw_2d_h msw_3d_hfa polymer2d spe9group polymer_oilwater"
+test -z "$tests" && tests="spe11 spe12 spe12p spe1oilgas spe1nowells spe1thermal ctaquifer_2d_oilwater spe3 spe5 spe9 norne_init msw_2d_h msw_3d_hfa polymer2d spe9group polymer_oilwater wecon_wtest"
 if grep -q -i "norne " <<< $ghprbCommentBody
 then
   if test -d $WORKSPACE/deps/opm-tests/norne/flow
@@ -217,6 +217,15 @@ for test_name in ${tests}; do
       $OPM_TESTS_ROOT/norne/opm-simulation-reference/flow_legacy \
       NORNE_ATW2013 \
       UNSMRY
+  fi
+
+  if grep -q "wecon_wtest" <<< $test_name
+  then
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow+wecon_wtest/ \
+      $OPM_TESTS_ROOT/wecon_wtest/opm-simulation-reference/flow \
+      3D_WECON \
+      EGRID INIT SMSPEC UNRST UNSMRY
   fi
 done
 

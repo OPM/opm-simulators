@@ -1,6 +1,7 @@
 /*
   Copyright 2017 SINTEF Digital, Mathematics and Cybernetics.
   Copyright 2017 Statoil ASA.
+  Copyright 2018 IRIS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -101,7 +102,6 @@ namespace Opm
                       wells->sat_table_id + perf_index_end,
                       saturation_table_number_.begin() );
         }
-
         well_efficiency_factor_ = 1.0;
     }
 
@@ -169,6 +169,15 @@ namespace Opm
         return well_controls_;
     }
 
+    template<typename TypeTag>
+    const int
+    WellInterface<TypeTag>::
+    indexOfWell() const
+    {
+        return index_of_well_;
+    }
+
+
 
 
 
@@ -193,6 +202,14 @@ namespace Opm
     }
 
 
+
+    template<typename TypeTag>
+    const Well*
+    WellInterface<TypeTag>::
+    wellEcl() const
+    {
+        return well_ecl_;
+    }
 
 
 
@@ -485,8 +502,7 @@ namespace Opm
                           const WellState& well_state) const
     {
         bool water_cut_limit_violated = false;
-        int worst_offending_connection = INVALIDCONNECTION;
-        bool last_connection = false;
+        int worst_offending_completion = INVALIDCOMPLETION;
         double violation_extent = -1.0;
 
         const int np = number_of_phases_;
@@ -528,29 +544,37 @@ namespace Opm
                     water_cut_perf[perf] = 0.;
                 }
             }
+            const auto& completions = well_ecl_->getCompletions(current_step_);
+            const auto& connections = well_ecl_->getConnections(current_step_);
 
-            last_connection = (perf_number == 1);
-            if (last_connection) {
-                worst_offending_connection = 0;
-                violation_extent = water_cut_perf[0] / max_water_cut_limit;
-                return std::make_tuple(water_cut_limit_violated, last_connection, worst_offending_connection, violation_extent);
+            int complnumIdx = 0;
+            std::vector<double> water_cut_in_completions(completions.size(), 0.0);
+            for (const auto& completion : completions) {
+                int complnum = completion.first;
+                for (int perf = 0; perf < perf_number; ++perf) {
+                    if (complnum == connections.get ( perf ).complnum) {
+                        water_cut_in_completions[complnumIdx] +=  water_cut_perf[perf];
+                    }
+                }
+                complnumIdx++;
             }
 
             double max_water_cut_perf = 0.;
-            for (int perf = 0; perf < perf_number; ++perf) {
-                if (water_cut_perf[perf] > max_water_cut_perf) {
-                    worst_offending_connection = perf;
-                    max_water_cut_perf = water_cut_perf[perf];
+            complnumIdx = 0;
+            for (const auto& completion : completions) {
+                if (water_cut_in_completions[complnumIdx] > max_water_cut_perf) {
+                    worst_offending_completion = completion.first;
+                    max_water_cut_perf = water_cut_in_completions[complnumIdx];
                 }
+                complnumIdx++;
             }
 
-            assert(max_water_cut_perf != 0.);
-            assert((worst_offending_connection >= 0) && (worst_offending_connection < perf_number));
-
+            assert(max_water_cut_limit != 0.);
+            assert(worst_offending_completion != INVALIDCOMPLETION);
             violation_extent = max_water_cut_perf / max_water_cut_limit;
         }
 
-        return std::make_tuple(water_cut_limit_violated, last_connection, worst_offending_connection, violation_extent);
+        return std::make_tuple(water_cut_limit_violated, worst_offending_completion, violation_extent);
     }
 
 
@@ -563,17 +587,16 @@ namespace Opm
     checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                          const WellState& well_state) const
     {
-        // TODO: not sure how to define the worst-offending connection when more than one
+        // TODO: not sure how to define the worst-offending completion when more than one
         //       ratio related limit is violated.
         //       The defintion used here is that we define the violation extent based on the
         //       ratio between the value and the corresponding limit.
-        //       For each violated limit, we decide the worst-offending connection separately.
-        //       Among the worst-offending connections, we use the one has the biggest violation
+        //       For each violated limit, we decide the worst-offending completion separately.
+        //       Among the worst-offending completions, we use the one has the biggest violation
         //       extent.
 
         bool any_limit_violated = false;
-        bool last_connection = false;
-        int worst_offending_connection = INVALIDCONNECTION;
+        int worst_offending_completion = INVALIDCOMPLETION;
         double violation_extent = -1.0;
 
         if (econ_production_limits.onMaxWaterCut()) {
@@ -581,11 +604,10 @@ namespace Opm
             bool water_cut_violated = std::get<0>(water_cut_return);
             if (water_cut_violated) {
                 any_limit_violated = true;
-                const double violation_extent_water_cut = std::get<3>(water_cut_return);
+                const double violation_extent_water_cut = std::get<2>(water_cut_return);
                 if (violation_extent_water_cut > violation_extent) {
                     violation_extent = violation_extent_water_cut;
-                    worst_offending_connection = std::get<2>(water_cut_return);
-                    last_connection = std::get<1>(water_cut_return);
+                    worst_offending_completion = std::get<1>(water_cut_return);
                 }
             }
         }
@@ -603,11 +625,11 @@ namespace Opm
         }
 
         if (any_limit_violated) {
-            assert(worst_offending_connection >=0);
+            assert(worst_offending_completion != INVALIDCOMPLETION);
             assert(violation_extent > 1.);
         }
 
-        return std::make_tuple(any_limit_violated, last_connection, worst_offending_connection, violation_extent);
+        return std::make_tuple(any_limit_violated, worst_offending_completion, violation_extent);
     }
 
 
@@ -617,8 +639,10 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateListEconLimited(const WellState& well_state,
-                          DynamicListEconLimited& list_econ_limited) const
+    updateWellTestState(const WellState& well_state,
+                        const double& simulationTime,
+                        WellTestState& wellTestState,
+                        const bool& writeMessageToOPMLog) const
     {
         // economic limits only apply for production wells.
         if (wellType() != PRODUCER) {
@@ -660,14 +684,15 @@ namespace Opm
                 OpmLog::warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
             }
 
-            if (well_ecl_->getAutomaticShutIn()) {
-                list_econ_limited.addShutWell(well_name);
-                const std::string msg = std::string("well ") + well_name + std::string(" will be shut in due to rate economic limit");
+            wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, simulationTime);
+            if (writeMessageToOPMLog) {
+                if (well_ecl_->getAutomaticShutIn()) {
+                    const std::string msg = std::string("well ") + well_name + std::string(" will be shut due to rate economic limit");
                     OpmLog::info(msg);
-            } else {
-                list_econ_limited.addStoppedWell(well_name);
-                const std::string msg = std::string("well ") + well_name + std::string(" will be stopped due to rate economic limit");
-                OpmLog::info(msg);
+                } else {
+                    const std::string msg = std::string("well ") + well_name + std::string(" will be stopped due to rate economic limit");
+                    OpmLog::info(msg);
+                }
             }
             // the well is closed, not need to check other limits
             return;
@@ -687,36 +712,56 @@ namespace Opm
             switch (workover) {
                 case WellEcon::CON:
                 {
-                    const bool last_connection = std::get<1>(ratio_check_return);
-                    const int worst_offending_connection = std::get<2>(ratio_check_return);
+                    const int worst_offending_completion = std::get<1>(ratio_check_return);
 
-                    assert((worst_offending_connection >= 0) && (worst_offending_connection < number_of_perforations_));
+                    wellTestState.addClosedCompletion(well_name, worst_offending_completion, simulationTime);
+                    if (writeMessageToOPMLog) {
+                        if (worst_offending_completion < 0) {
+                            const std::string msg = std::string("Connection ") + std::to_string(- worst_offending_completion) + std::string(" for well ")
+                                    + well_name + std::string(" will be closed due to economic limit");
+                            OpmLog::info(msg);
+                        } else {
+                            const std::string msg = std::string("Completion ") + std::to_string(worst_offending_completion) + std::string(" for well ")
+                                    + well_name + std::string(" will be closed due to economic limit");
+                            OpmLog::info(msg);
+                        }
+                    }
 
-                    const int cell_worst_offending_connection = well_cells_[worst_offending_connection];
-                    list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
-                    const std::string msg = std::string("Connection ") + std::to_string(worst_offending_connection) + std::string(" for well ")
-                                            + well_name + std::string(" will be closed due to economic limit");
-                    OpmLog::info(msg);
+                    bool allCompletionsClosed = true;
+                    const auto& connections = well_ecl_->getConnections(current_step_);
+                    for (const auto& connection : connections) {
+                        if (!wellTestState.hasCompletion(name(), connection.complnum)) {
+                            allCompletionsClosed = false;
+                        }
+                    }
 
-                    if (last_connection) {
-                        // TODO: there is more things to check here
-                        list_econ_limited.addShutWell(well_name);
-                        const std::string msg2 = well_name + std::string(" will be shut due to the last connection closed");
-                        OpmLog::info(msg2);
+                    if (allCompletionsClosed) {
+                        wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, simulationTime);
+                        if (writeMessageToOPMLog) {
+                            if (well_ecl_->getAutomaticShutIn()) {
+                            	const std::string msg = well_name + std::string(" will be shut due to last completion closed");
+                            	OpmLog::info(msg);
+                            } else {
+                            	const std::string msg = well_name + std::string(" will be stopped due to last completion closed");
+                                OpmLog::info(msg);
+                            }
+                        }
                     }
                     break;
                 }
                 case WellEcon::WELL:
                 {
+                wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, 0);
+                if (writeMessageToOPMLog) {
                     if (well_ecl_->getAutomaticShutIn()) {
-                        list_econ_limited.addShutWell(well_name);
+                        // tell the controll that the well is closed
                         const std::string msg = well_name + std::string(" will be shut due to ratio economic limit");
                         OpmLog::info(msg);
                     } else {
-                        list_econ_limited.addStoppedWell(well_name);
                         const std::string msg = well_name + std::string(" will be stopped due to ratio economic limit");
                         OpmLog::info(msg);
                     }
+                }
                     break;
                 }
                 case WellEcon::NONE:
@@ -754,13 +799,13 @@ namespace Opm
         bore_diameters_.reserve(nperf);
 
         // COMPDAT handling
-        const auto& completionSet = well_ecl_->getConnections(current_step_);
-        for (size_t c=0; c<completionSet.size(); c++) {
-            const auto& completion = completionSet.get(c);
-            if (completion.state == WellCompletion::OPEN) {
-                const int i = completion.getI();
-                const int j = completion.getJ();
-                const int k = completion.getK();
+        const auto& connectionSet = well_ecl_->getConnections(current_step_);
+        for (size_t c=0; c<connectionSet.size(); c++) {
+            const auto& connection = connectionSet.get(c);
+            if (connection.state == WellCompletion::OPEN) {
+                const int i = connection.getI();
+                const int j = connection.getJ();
+                const int k = connection.getK();
 
                 const int* cpgdim = cart_dims;
                 const int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
@@ -772,7 +817,7 @@ namespace Opm
                 const int cell = cgit->second;
 
                 {
-                    double radius = 0.5*completion.getDiameter();
+                    double radius = 0.5*connection.getDiameter();
                     if (radius <= 0.0) {
                         radius = 0.5*unit::feet;
                         OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
@@ -784,7 +829,7 @@ namespace Opm
                     double re; // area equivalent radius of the grid block
                     double perf_length; // the length of the well perforation
 
-                    switch (completion.dir) {
+                    switch (connection.dir) {
                         case Opm::WellCompletion::DirectionEnum::X:
                             re = std::sqrt(cubical[1] * cubical[2] / M_PI);
                             perf_length = cubical[0];
@@ -863,7 +908,59 @@ namespace Opm
 
         for (int p = 0; p < np; ++p) {
             well_state.wellReservoirRates()[well_rate_index + p] = voidage_rates[p];
+        }    
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::closeCompletions(WellTestState& wellTestState)
+    {
+        const auto& connections = well_ecl_->getConnections(current_step_);
+        int perfIdx = 0;
+        for (const auto& connection : connections) {
+            if (wellTestState.hasCompletion(name(), connection.complnum)) {
+                well_index_[perfIdx] = 0.0;
+            }
+            perfIdx++;
         }
     }
 
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::solveWellForTesting(Simulator& ebosSimulator, WellState& well_state, const std::vector<double>& B_avg, bool terminal_output)
+    {
+        const int max_iter = param_.max_welleq_iter_;
+        int it = 0;
+        const double dt = 1.0; //not used for the well tests
+        bool converged;
+        WellState well_state0 = well_state;
+        do {
+            assembleWellEq(ebosSimulator, dt, well_state, true);
+
+            ConvergenceReport report;
+            report = getWellConvergence(B_avg);
+            converged = report.converged;
+
+            if (converged) {
+                break;
+            }
+
+            ++it;
+            solveEqAndUpdateWellState(well_state);
+
+            wellhelpers::WellSwitchingLogger logger;
+            updateWellControl(well_state, logger);
+            initPrimaryVariablesEvaluation();
+        } while (it < max_iter);
+
+        if (converged) {
+            if ( terminal_output ) {
+                OpmLog::debug("WellTest: Well equation for well " + name() +  " solution gets converged with " + std::to_string(it) + " iterations");
+            }
+        } else {
+            if ( terminal_output ) {
+                OpmLog::debug("WellTest: Well equation for well" +name() + " solution failed in getting converged with " + std::to_string(it) + " iterations");
+            }
+        }
+    }
 }

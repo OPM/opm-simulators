@@ -2,7 +2,7 @@
   Copyright 2016 SINTEF ICT, Applied Mathematics.
   Copyright 2016 - 2017 Statoil ASA.
   Copyright 2017 Dr. Blatt - HPC-Simulation-Software & Services
-  Copyright 2016 - 2017 IRIS AS
+  Copyright 2016 - 2018 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -33,6 +33,7 @@
 #include <tuple>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/WellTestState.hpp>
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
@@ -141,7 +142,7 @@ namespace Opm {
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
             void assemble(const int iterationIdx,
-                                     const double dt);
+                          const double dt);
 
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;
@@ -175,9 +176,9 @@ namespace Opm {
             void setRestartWellState(const WellState& well_state);
 
             // called at the beginning of a time step
-            void beginTimeStep();
+            void beginTimeStep(const int timeStepIdx,const double simulationTime);
             // called at the end of a time step
-            void timeStepSucceeded();
+            void timeStepSucceeded(const double& simulationTime);
 
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
@@ -236,7 +237,7 @@ namespace Opm {
             using ConvergenceReport = typename WellInterface<TypeTag>::ConvergenceReport;
 
             // create the well container
-            std::vector<WellInterfacePtr > createWellContainer(const int time_step) const;
+            std::vector<WellInterfacePtr > createWellContainer(const int time_step);
 
             WellState well_state_;
             WellState previous_well_state_;
@@ -254,11 +255,12 @@ namespace Opm {
             std::vector<double> depth_;
             bool initial_step_;
 
-            DynamicListEconLimited dynamic_list_econ_limited_;
             std::unique_ptr<RateConverterType> rateConverter_;
             std::unique_ptr<VFPProperties> vfp_properties_;
 
             SimulatorReport last_report_;
+
+            WellTestState wellTestState_;
 
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_;
@@ -343,10 +345,12 @@ namespace Opm {
             /// return true if wells are available on this process
             bool localWellsActive() const;
 
-            /// upate the dynamic lists related to economic limits
-            void updateListEconLimited(DynamicListEconLimited& list_econ_limited) const;
+            /// upate the wellTestState related to economic limits
+            void updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const;
 
             void updatePerforationIntensiveQuantities();
+
+            void wellTesting(const int timeStepIdx, const double simulationTime);
 
         };
 

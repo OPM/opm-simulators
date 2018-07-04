@@ -28,10 +28,13 @@
 #include <opm/common/Exceptions.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/WellTestState.hpp>
+
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/wells/WellsManager.hpp>
+#include <opm/core/simulator/SimulatorReport.hpp>
 
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>
@@ -113,6 +116,9 @@ namespace Opm
         /// Well name.
         const std::string& name() const;
 
+        /// Index of well in the wells struct and wellState
+        const int indexOfWell() const;
+
         /// Well cells.
         const std::vector<int>& cells() {return well_cells_; }
 
@@ -171,8 +177,10 @@ namespace Opm
                                     WellState& well_state,
                                     bool only_wells) = 0;
 
-        void updateListEconLimited(const WellState& well_state,
-                                   DynamicListEconLimited& list_econ_limited) const;
+        void updateWellTestState(const WellState& well_state,
+                                 const double& simulationTime,
+                                 WellTestState& wellTestState,
+                                 const bool& writeMessageToOPMLog) const;
 
         void setWellEfficiencyFactor(const double efficiency_factor);
 
@@ -216,10 +224,18 @@ namespace Opm
         // Add well contributions to matrix
         virtual void addWellContributions(Mat&) const
         {}
+
+        void solveWellForTesting(Simulator& ebosSimulator, WellState& well_state, const std::vector<double>& B_avg, bool terminal_output);
+
+        void closeCompletions(WellTestState& wellTestState);
+
+        const Well* wellEcl() const;
+
+
     protected:
 
-        // to indicate a invalid connection
-        static const int INVALIDCONNECTION = -100000;
+        // to indicate a invalid completion
+        static const int INVALIDCOMPLETION = INT_MAX;
 
         const Well* well_ecl_;
 
@@ -316,13 +332,12 @@ namespace Opm
         double mostStrictBhpFromBhpLimits() const;
 
         // a tuple type for ratio limit check.
-        // first value indicates whether ratio limit is violated, when the ratio limit is not violated, the following three
+        // first value indicates whether ratio limit is violated, when the ratio limit is not violated, the following two
         // values should not be used.
-        // second value indicates whehter there is only one connection left.
-        // third value indicates the indx of the worst-offending connection.
-        // the last value indicates the extent of the violation for the worst-offending connection, which is defined by
+        // second value indicates the index of the worst-offending completion.
+        // the last value indicates the extent of the violation for the worst-offending completion, which is defined by
         // the ratio of the actual value to the value of the violated limit.
-        using RatioCheckTuple = std::tuple<bool, bool, int, double>;
+        using RatioCheckTuple = std::tuple<bool, int, double>;
 
         RatioCheckTuple checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                                               const WellState& well_state) const;
@@ -331,6 +346,7 @@ namespace Opm
                                              const WellState& well_state) const;
 
         double scalingFactor(const int comp_idx) const;
+
 
     };
 
