@@ -339,8 +339,12 @@ namespace Opm
                     }
                 }
 
-                if (original_rates_under_phase_control != 0.0 ) {
-                    double scaling_factor = target / original_rates_under_phase_control;
+                // sometimes the previous report step is zero-rate control,it causes original_rates_under_phase_control
+                // to be some extremely small value if not zero. Scaling with either zero or extremely small value will
+                // cause problematic rates for later.
+                constexpr double rate_threshold = 1.e-10;
+                if (std::abs(original_rates_under_phase_control) > rate_threshold ) {
+                    const double scaling_factor = target / original_rates_under_phase_control;
 
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
                         well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] *= scaling_factor;
@@ -351,7 +355,7 @@ namespace Opm
                              well_state.segRates()[number_of_phases_ * (seg + top_segment_index) + phase] *= scaling_factor;
                         }
                     }
-                } else { // scaling factor is not well defined when original_rates_under_phase_control is zero
+                } else { // original_rates_under_phase_control is not close to zero
                     // separating targets equally between phases under control
                     const double target_rate_divided = target / numPhasesWithTargetsUnderThisControl;
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
