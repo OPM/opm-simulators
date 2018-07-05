@@ -248,8 +248,8 @@ public:
     // derivatives being zero.
 {% if numDerivs < 0 %}\
     template <class RhsValueType>
-    Evaluation(int numVars, const RhsValueType& c, int varPos)
-     : data_(1 + numVars, 0.0)
+    Evaluation(int nVars, const RhsValueType& c, int varPos)
+     : data_(1 + nVars, 0.0)
     {
         // The variable position must be in represented by the given variable descriptor
         assert(0 <= varPos && varPos < size());
@@ -301,18 +301,18 @@ public:
     static Evaluation createBlank(const Evaluation& x)
     { return Evaluation(x.size()); }
 {% else %}\
-    static Evaluation createBlank(const Evaluation& x)
+    static Evaluation createBlank(const Evaluation& x OPM_UNUSED)
     { return Evaluation(); }
 {% endif %}\
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
 {% if numDerivs < 0 %}\
     template <class RhsValueType>
-    static Evaluation createVariable(int numVars, const RhsValueType& value, int varPos)
+    static Evaluation createVariable(int nVars, const RhsValueType& value, int varPos)
     {
         // copy function value and set all derivatives to 0, except for the variable
         // which is represented by the value (which is set to 1.0)
-        return Evaluation(numVars, value, varPos);
+        return Evaluation(nVars, value, varPos);
     }
 {% else %}\
     template <class RhsValueType>
@@ -329,9 +329,9 @@ public:
     // "evaluate" a constant function (i.e. a function that does not depend on the set of
     // relevant variables, f(x) = c).
     template <class RhsValueType>
-    static Evaluation createConstant(int numVars, const RhsValueType& value)
+    static Evaluation createConstant(int nVars, const RhsValueType& value)
     {
-        return Evaluation(numVars, value);
+        return Evaluation(nVars, value);
     }
 {% else %}\
     // "evaluate" a constant function (i.e. a function that does not depend on the set of
