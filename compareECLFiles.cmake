@@ -265,6 +265,12 @@ add_test_compareECLFiles(CASENAME wecon_wtest
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol})
 
+add_test_compareECLFiles(CASENAME vfpprod_spe1
+                         FILENAME SPE1CASE1_METRIC_VFP1
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol})
+
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
