@@ -253,7 +253,9 @@ public:
             {"KRNSW_GO",  Opm::UnitSystem::measure::identity, enableHysteresis}
         };
 
-        std::vector<Opm::RestartKey> extraKeys = {{"OPMEXTRA", Opm::UnitSystem::measure::identity, false}};
+        const auto& inputThpres = eclState().getSimulationConfig().getThresholdPressure();
+        std::vector<Opm::RestartKey> extraKeys = {{"OPMEXTRA", Opm::UnitSystem::measure::identity, false},
+                                                  {"THPRES", Opm::UnitSystem::measure::pressure, inputThpres.active()}};
 
         unsigned episodeIdx = simulator_.episodeIndex();
         const auto& gridView = simulator_.vanguard().gridView();
@@ -265,7 +267,6 @@ public:
             unsigned globalIdx = collectToIORank_.localIdxToGlobalIdx(elemIdx);
             eclOutputModule_.setRestart(restartValues.solution, elemIdx, globalIdx);
         }
-        const auto& inputThpres = eclState().getSimulationConfig().getThresholdPressure();
         if (inputThpres.active()) {
             Simulator& mutableSimulator = const_cast<Simulator&>(simulator_);
             auto& thpres = mutableSimulator.problem().thresholdPressure();
