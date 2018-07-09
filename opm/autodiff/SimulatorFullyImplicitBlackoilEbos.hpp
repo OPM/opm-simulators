@@ -180,8 +180,8 @@ public:
              modelParam_.preconditioner_add_well_contributions_)
         {
             ebosSimulator_.model().clearAuxiliaryModules();
-            auto auxMod = std::make_shared<WellConnectionAuxiliaryModule<TypeTag> >(schedule(), grid());
-            ebosSimulator_.model().addAuxiliaryModule(auxMod);
+            wellAuxMod_.reset(new WellConnectionAuxiliaryModule<TypeTag>(schedule(), grid()));
+            ebosSimulator_.model().addAuxiliaryModule(wellAuxMod_.get());
         }
 
         AquiferModel aquifer_model(ebosSimulator_);
@@ -368,6 +368,7 @@ protected:
     // Data.
     Simulator& ebosSimulator_;
 
+    std::unique_ptr<WellConnectionAuxiliaryModule<TypeTag>> wellAuxMod_;
     typedef typename Solver::SolverParametersEbos SolverParametersEbos;
 
     SimulatorReport failureReport_;
