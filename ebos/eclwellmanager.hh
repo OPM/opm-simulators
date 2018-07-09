@@ -104,7 +104,6 @@ public:
     void init(const Opm::EclipseState& eclState,
               const Opm::Schedule& deckSchedule)
     {
-
         // create the wells which intersect with the current process' grid
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule.numWells(); ++deckWellIdx)
         {
