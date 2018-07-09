@@ -686,7 +686,7 @@ protected:
         wellIt = wells_.begin();
         for (; wellIt != wellEndIt; ++wellIt) {
             (*wellIt)->endSpec();
-            model.addAuxiliaryModule(*wellIt);
+            model.addAuxiliaryModule(wellIt->get());
         }
     }
 
