@@ -110,6 +110,9 @@ NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclCpGridVanguard, EclOutputBlackOil)
 //NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclPolyhedralGridVanguard, EclOutputBlackOil));
 #endif
 
+// The class which deals with ECL wells
+NEW_PROP_TAG(EclWellModel);
+
 // Write all solutions for visualization, not just the ones for the
 // report steps...
 NEW_PROP_TAG(EnableWriteAllSolutions);
@@ -196,6 +199,9 @@ public:
                                /*needIntegrationPos=*/false,
                                /*needNormal=*/false> type;
 };
+
+// use the built-in proof of concept well model by default
+SET_TYPE_PROP(EclBaseProblem, EclWellModel, EclWellManager<TypeTag>);
 
 // Enable gravity
 SET_BOOL_PROP(EclBaseProblem, EnableGravity, true);
@@ -342,6 +348,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
     typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    typedef typename GET_PROP_TYPE(TypeTag, EclWellModel) EclWellModel;
 
     typedef BlackOilSolventModule<TypeTag> SolventModule;
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
@@ -433,7 +440,7 @@ public:
         : ParentType(simulator)
         , transmissibilities_(simulator.vanguard())
         , thresholdPressures_(simulator)
-        , wellManager_(simulator)
+        , wellModel_(simulator)
         , eclWriter_(EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput)
                      ? new EclWriterType(simulator) : nullptr)
         , pffDofData_(simulator.gridView(), this->elementMapper())
@@ -575,7 +582,7 @@ public:
         beginEpisode(/*isOnRestart=*/true);
 
         // deserialize the wells
-        wellManager_.deserialize(res);
+        wellModel_.deserialize(res);
     }
 
     /*!
@@ -584,7 +591,7 @@ public:
      */
     template <class Restarter>
     void serialize(Restarter& res)
-    { wellManager_.serialize(res); }
+    { wellModel_.serialize(res); }
 
     /*!
      * \brief Called by the simulator before an episode begins.
@@ -653,8 +660,9 @@ public:
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells))
             // set up the wells
-            wellManager_.beginEpisode(this->simulator().vanguard().eclState(),
-                                      this->simulator().vanguard().schedule(), isOnRestart);
+            wellModel_.beginEpisode(this->simulator().vanguard().eclState(),
+                                    this->simulator().vanguard().schedule(),
+                                    isOnRestart);
 
         if (doInvalidate)
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
@@ -674,7 +682,7 @@ public:
             maxDRv_ = maxDRvDt_*this->simulator().timeStepSize();
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
-            wellManager_.beginTimeStep();
+            wellModel_.beginTimeStep();
         }
     }
 
@@ -684,7 +692,7 @@ public:
     void beginIteration()
     {
         if (!GET_PROP_VALUE(TypeTag, DisableWells))
-            wellManager_.beginIteration();
+            wellModel_.beginIteration();
     }
 
     /*!
@@ -693,7 +701,7 @@ public:
     void endIteration()
     {
         if (!GET_PROP_VALUE(TypeTag, DisableWells))
-            wellManager_.endIteration();
+            wellModel_.endIteration();
     }
 
     /*!
@@ -712,7 +720,7 @@ public:
 #endif // NDEBUG
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
-            wellManager_.endTimeStep();
+            wellModel_.endTimeStep();
         }
 
         // we no longer need the initial soluiton
@@ -795,8 +803,8 @@ public:
         Opm::data::Wells dw;
         if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
             using rt = Opm::data::Rates::opt;
-            for (unsigned wellIdx = 0; wellIdx < wellManager_.numWells(); ++wellIdx) {
-                const auto& well = wellManager_.well(wellIdx);
+            for (unsigned wellIdx = 0; wellIdx < wellModel_.numWells(); ++wellIdx) {
+                const auto& well = wellModel_.well(wellIdx);
                 auto& wellOut = dw[ well->name() ];
 
                 wellOut.bhp = well->bottomHolePressure();
@@ -1234,7 +1242,7 @@ public:
             // initialize the wells. Note that this needs to be done after initializing the
             // intrinsic permeabilities and the after applying the initial solution because
             // the well model uses these...
-            wellManager_.init(this->simulator().vanguard().eclState(), this->simulator().vanguard().schedule());
+            wellModel_.init(this->simulator().vanguard().eclState(), this->simulator().vanguard().schedule());
         }
 
         // let the object for threshold pressures initialize itself. this is done only at
@@ -1262,7 +1270,7 @@ public:
         rate = 0.0;
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
-            wellManager_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
+            wellModel_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
 
             // convert the source term from the total mass rate of the
             // cell to the one per unit of volume as used by the model.
@@ -1337,8 +1345,11 @@ public:
      *
      * This can be used for inspecting wells outside of the problem.
      */
-    const EclWellManager<TypeTag>& wellManager() const
-    { return wellManager_; }
+    const EclWellModel& wellModel() const
+    { return wellModel_; }
+
+    EclWellModel& wellModel()
+    { return wellModel_; }
 
     // temporary solution to facilitate output of initial state from flow
     const InitialFluidState& initialFluidState(unsigned globalDofIdx ) const
@@ -2063,7 +2074,7 @@ private:
     bool vapparsActive_; // if no, DRSDT and/or DRVDT *might* be active
     std::vector<Scalar> maxOilSaturation_;
 
-    EclWellManager<TypeTag> wellManager_;
+    EclWellModel wellModel_;
 
     std::unique_ptr<EclWriterType> eclWriter_;
 
