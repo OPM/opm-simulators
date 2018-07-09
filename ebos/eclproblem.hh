@@ -801,20 +801,9 @@ public:
         Scalar t = this->simulator().time() + this->simulator().timeStepSize();
 
         Opm::data::Wells dw;
-        if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
-            using rt = Opm::data::Rates::opt;
-            for (unsigned wellIdx = 0; wellIdx < wellModel_.numWells(); ++wellIdx) {
-                const auto& well = wellModel_.well(wellIdx);
-                auto& wellOut = dw[ well->name() ];
+        if (!GET_PROP_VALUE(TypeTag, DisableWells))
+            dw = wellModel_.wellData();
 
-                wellOut.bhp = well->bottomHolePressure();
-                wellOut.thp = well->tubingHeadPressure();
-                wellOut.temperature = 0;
-                wellOut.rates.set( rt::wat, well->surfaceRate(waterPhaseIdx) );
-                wellOut.rates.set( rt::oil, well->surfaceRate(oilPhaseIdx) );
-                wellOut.rates.set( rt::gas, well->surfaceRate(gasPhaseIdx) );
-            }
-        }
         Scalar totalSolverTime = 0.0;
         Scalar nextstep = this->simulator().timeStepSize();
         writeOutput(dw, t, false, totalSolverTime, nextstep, verbose);
