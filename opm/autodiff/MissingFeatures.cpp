@@ -69,6 +69,7 @@ namespace MissingFeatures {
         // The list is used to output messages only.
         std::unordered_set<std::string> unsupported_keywords = {
             "ACTION",
+            "ACTIONX",
             "ADSALNOD",
             "API",
             "APIGROUP",
