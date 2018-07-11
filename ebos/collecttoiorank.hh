@@ -298,9 +298,9 @@ public:
                 // add missing data to global cell data
                 for (const auto& pair : localCellData_) {
                     const std::string& key = pair.first;
-                    std::size_t container_size = globalSize;
+                    std::size_t containerSize = globalSize;
                     auto OPM_OPTIM_UNUSED ret = globalCellData_.insert(key, pair.second.dim,
-                                                                       std::vector<double>(container_size),
+                                                                       std::vector<double>(containerSize),
                                                                        pair.second.target);
                     assert(ret.second);
                 }
@@ -437,9 +437,9 @@ public:
                 MessageBufferType buffer;
                 pack(0, buffer);
 
-                // pass a dummy_link to satisfy virtual class
-                const int dummy_link = -1;
-                unpack( dummy_link, buffer );
+                // pass a dummyLink to satisfy virtual class
+                int dummyLink = -1;
+                unpack(dummyLink, buffer);
             }
         }
 
