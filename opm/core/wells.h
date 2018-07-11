@@ -92,6 +92,11 @@ struct Wells
     double *WI;
 
     /**
+     *  Connection effective Kh, same size and structure as well_cells.
+     */
+    double *conn_Kh;
+
+    /**
      *  Saturation table number , same size and structure as well_cells.
      */
     int *sat_table_id;
@@ -116,7 +121,6 @@ struct Wells
      * Internal management structure.
      */
     void *data;
-
 };
 
 
@@ -191,10 +195,15 @@ create_wells(int nphases, int nwells, int nperf);
  * \param[in] type       Type of well.
  * \param[in] depth_ref  Reference depth for well's BHP.
  * \param[in] nperf      Number of perforations.
- * \param[in] comp_frac  Injection fraction array (size equal to W->number_of_phases) or NULL.
+ *
+ * \param[in] comp_frac  Injection fraction array (size equal to
+ *                       W->number_of_phases) or NULL.
+ *
  * \param[in] cells      Grid cells in which well is perforated.  Should
  *                       ideally be track ordered.
  * \param[in] WI         Well production index per perforation, or NULL.
+ * \param[in] conn_Kh    Effective Kh product per perforation, or NULL.
+ * \param[in] sat_table_id Saturation table index per perforation, or NULL.
  * \param[in] name       Name of new well. NULL if no name.
  * \param[in] allow_cf   Flag to determine whether crossflow is allowed or not.
  * \param[in,out] W      Existing set of wells to which new well will
@@ -203,16 +212,17 @@ create_wells(int nphases, int nwells, int nperf);
  * \return Non-zero (true) if successful and zero otherwise.
  */
 int
-add_well(enum WellType  type     ,
-         double         depth_ref,
-         int            nperf    ,
-         const double  *comp_frac,
-         const int     *cells    ,
-         const double  *WI       ,
+add_well(enum WellType  type        ,
+         double         depth_ref   ,
+         int            nperf       ,
+         const double  *comp_frac   ,
+         const int     *cells       ,
+         const double  *WI          ,
+         const double  *conn_Kh     ,
          const int     *sat_table_id,
-         const char    *name     ,
-         int            allow_cf ,
-         struct Wells  *W        );
+         const char    *name        ,
+         int            allow_cf    ,
+         struct Wells  *W           );
 
 
 /**
@@ -233,8 +243,6 @@ add_well(enum WellType  type     ,
  * \param[in,out] W  Existing set of well controls.
  * \return Non-zero (true) if successful and zero (false) otherwise.
  */
-
-
 int
 append_well_controls(enum WellControlType type  ,
                      double               target,
