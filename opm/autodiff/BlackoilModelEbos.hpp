@@ -73,7 +73,6 @@ NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
 SET_STRING_PROP(EclFlowProblem, EclOutputDir, "");
 SET_BOOL_PROP(EclFlowProblem, DisableWells, true);
 SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
-SET_BOOL_PROP(EclFlowProblem, ExportGlobalTransmissibility, true);
 // default in flow is to formulate the equations in surface volumes
 SET_BOOL_PROP(EclFlowProblem, BlackoilConserveSurfaceVolume, true);
 SET_BOOL_PROP(EclFlowProblem, UseVolumetricResidual, false);
