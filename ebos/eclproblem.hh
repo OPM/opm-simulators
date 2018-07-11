@@ -558,8 +558,10 @@ public:
             maxPolymerAdsorption_.resize(numElements, 0.0);
         }
 
-        if (eclWriter_)
+        if (eclWriter_) {
             eclWriter_->writeInit();
+            this->simulator().vanguard().releaseGlobalTransmissibilities();
+        }
     }
 
     void prefetch(const Element& elem) const

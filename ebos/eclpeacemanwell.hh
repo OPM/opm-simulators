@@ -360,8 +360,15 @@ public:
             for (; wellDofIt != wellDofEndIt; ++ wellDofIt) {
                 matrix[wellGlobalDofIdx][wellDofIt->first] = 0.0;
                 matrix[wellDofIt->first][wellGlobalDofIdx] = 0.0;
-                residual[wellGlobalDofIdx] = 0.0;
             }
+            matrix[wellGlobalDofIdx][wellGlobalDofIdx] = diagBlock;
+            residual[wellGlobalDofIdx] = 0.0;
+            return;
+        }
+        else if (dofVariables_.empty()) {
+            // the well does not feature any perforations on the local process
+            matrix[wellGlobalDofIdx][wellGlobalDofIdx] = diagBlock;
+            residual[wellGlobalDofIdx] = 0.0;
             return;
         }
 
@@ -701,11 +708,14 @@ public:
     {
         const auto& comm = simulator_.gridView().comm();
 
-        if (dofVariables_.size() == 0) {
+        int nTotal = dofVariables_.size();
+        nTotal = comm.sum(nTotal);
+        if (nTotal == 0) {
+            // well does not penetrate any active cell on any process. notify the
+            // user about this.
             std::cout << "Well " << name() << " does not penetrate any active cell."
                       << " Assuming it to be shut!\n";
             setWellStatus(WellStatus::Shut);
-            return;
         }
 
         // determine the maximum depth of the well over all processes
@@ -1038,9 +1048,14 @@ public:
         auto& sol = const_cast<SolutionVector&>(simulator_.model().solution(/*timeIdx=*/0));
         int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
 
-        // retrieve the bottom hole pressure from the global system of equations
-        actualBottomHolePressure_ = Toolbox::value(dofVariables_.begin()->second->pressure[0]);
-        actualBottomHolePressure_ = computeRateEquivalentBhp_();
+        if (!dofVariables_.empty()) {
+            // retrieve the bottom hole pressure from the global system of equations
+            actualBottomHolePressure_ = Toolbox::value(dofVariables_.begin()->second->pressure[0]);
+            actualBottomHolePressure_ = computeRateEquivalentBhp_();
+        }
+        else
+            // start with 300 bars if we don't have anything better
+            actualBottomHolePressure_ = 300 * 1e5;
 
         sol[wellGlobalDof][0] = actualBottomHolePressure_;
 

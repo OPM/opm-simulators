@@ -47,13 +47,10 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(EclCpGridVanguard, INHERITS_FROM(EclBaseVanguard));
 
-NEW_PROP_TAG(ExportGlobalTransmissibility);
-
 // declare the properties
 SET_TYPE_PROP(EclCpGridVanguard, Vanguard, Ewoms::EclCpGridVanguard<TypeTag>);
 SET_TYPE_PROP(EclCpGridVanguard, Grid, Dune::CpGrid);
 SET_TYPE_PROP(EclCpGridVanguard, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
-SET_BOOL_PROP(EclCpGridVanguard, ExportGlobalTransmissibility, false);
 
 END_PROPERTIES
 
@@ -201,17 +198,23 @@ public:
 
             delete cartesianIndexMapper_;
             cartesianIndexMapper_ = nullptr;
-
-            if (!GET_PROP_VALUE(TypeTag, ExportGlobalTransmissibility)) {
-                delete globalTrans_;
-                globalTrans_ = nullptr;
-            }
         }
 #endif
 
         cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
 
         this->updateGridView_();
+    }
+
+    /*!
+     * \brief Free the memory occupied by the global transmissibility object.
+     *
+     * After writing the initial solution, this array should not be necessary anymore.
+     */
+    void releaseGlobalTransmissibilities()
+    {
+        delete globalTrans_;
+        globalTrans_ = nullptr;
     }
 
     /*!
