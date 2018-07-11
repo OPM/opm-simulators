@@ -1501,7 +1501,8 @@ protected:
         BhpEval bhpEval(bhpScalar);
         bhpEval.setDerivative(0, 1.0);
         const Scalar tolerance = 1e3*std::numeric_limits<Scalar>::epsilon();
-        for (int iterNum = 0; iterNum < 20; ++iterNum) {
+        const int maxIter = 20;
+        for (int iterNum = 0; iterNum < maxIter; ++iterNum) {
             const auto& f = wellResidual_<BhpEval>(bhpEval);
 
             if (std::abs(f.derivative(0)) < 1e-20)
@@ -1525,7 +1526,7 @@ protected:
         }
 
         throw Opm::NumericalIssue("Could not determine the bottom hole pressure of well '"+name()
-                                    +"' within 20 iterations.");
+                                  +"' within " + std::to_string(maxIter) + " iterations.");
     }
 
     template <class BhpEval>
