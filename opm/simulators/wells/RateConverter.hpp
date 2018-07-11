@@ -73,7 +73,7 @@ namespace Opm {
              * In a parallel run only cells owned contribute to the cell average.
              * \tparam is_parallel Whether this is a parallel run.
              */
-             template<bool is_parallel>
+            template <bool is_parallel>
             struct AverageIncrementCalculator
             {
                 /**
@@ -93,22 +93,20 @@ namespace Opm {
                            const std::vector<double>& rs,
                            const std::vector<double>& rv,
                            const std::vector<double>& ownership,
-                           std::size_t cell){
-                    if ( ownership[cell] )
-                    {
-                        return std::make_tuple(pressure[cell],
+                           const std::size_t          cell) const
+                {
+                    if (ownership[cell]) {
+                        return std::make_tuple(pressure   [cell],
                                                temperature[cell],
-                                               rs[cell],
-                                               rv[cell],
-                                               1);
+                                               rs[cell], rv[cell], 1);
                     }
-                    else
-                    {
+                    else {
                         return std::make_tuple(0, 0, 0, 0, 0);
                     }
                 }
             };
-            template<>
+
+            template <>
             struct AverageIncrementCalculator<false>
             {
                 std::tuple<double, double, double, double, int>
@@ -117,14 +115,14 @@ namespace Opm {
                            const std::vector<double>& rs,
                            const std::vector<double>& rv,
                            const std::vector<double>&,
-                           std::size_t cell){
+                           const std::size_t          cell) const
+                {
                     return std::make_tuple(pressure[cell],
                                            temperature[cell],
-                                           rs[cell],
-                                           rv[cell],
-                                           1);
+                                           rs[cell], rv[cell], 1);
                 }
             };
+
             /**
              * Provide mapping from Region IDs to user-specified collection
              * of per-region attributes.
@@ -413,111 +411,55 @@ namespace Opm {
              * deck.
              */
             SurfaceToReservoirVoidage(const PhaseUsage& phaseUsage,
-                                      const Region&   region)
+                                      const Region&     region)
                 : phaseUsage_(phaseUsage)
-                , rmap_ (region)
-                , attr_ (rmap_, Attributes())
+                , rmap_      (region)
+                , attr_      (rmap_, Attributes())
             {
             }
 
 
             /**
-             * Compute pore volume averaged hydrocarbon state pressure, rs and rv.
+             * Compute pore volume averaged hydrocarbon state pressure, rs
+             * and rv.
              *
-             * Fluid properties are evaluated at average hydrocarbon
-             * state for purpose of conversion from surface rate to
-             * reservoir voidage rate.
-             *
+             * Fluid properties are evaluated at average hydrocarbon state
+             * for purpose of conversion from surface rate to reservoir
+             * voidage rate.
              */
             template <typename ElementContext, class EbosSimulator>
             void defineState(const EbosSimulator& simulator)
             {
+                for (const auto& reg : this->rmap_.activeRegions()) {
+                    auto& ra = this->attr_.attributes(reg);
 
-                // create map from cell to region
-                // and set all attributes to zero
-                const auto& grid = simulator.vanguard().grid();
-                const unsigned numCells = grid.size(/*codim=*/0);
-                std::vector<int> cell2region(numCells, -1);
-                for (const auto& reg : rmap_.activeRegions()) {
-                    for (const auto& cell : rmap_.cells(reg)) {
-                        cell2region[cell] = reg;
-                    }
-                    auto& ra = attr_.attributes(reg);
-                    ra.pressure = 0.0;
+                    ra.pressure    = 0.0;
                     ra.temperature = 0.0;
-                    ra.rs = 0.0;
-                    ra.rv = 0.0;
-                    ra.pv = 0.0;
-
+                    ra.rs          = 0.0;
+                    ra.rv          = 0.0;
+                    ra.pv          = 0.0;
                 }
 
-                ElementContext elemCtx( simulator );
-                const auto& gridView = simulator.gridView();
-                const auto& comm = gridView.comm();
+                this->template accumulateRegionQuantities<
+                    ElementContext>(simulator);
 
-                const auto& elemEndIt = gridView.template end</*codim=*/0>();
-                for (auto elemIt = gridView.template begin</*codim=*/0>();
-                     elemIt != elemEndIt;
-                     ++elemIt)
-                {
+                const auto& comm = simulator.gridView().comm();
 
-                    const auto& elem = *elemIt;
-                    if (elem.partitionType() != Dune::InteriorEntity)
-                        continue;
+                for (const auto& reg : this->rmap_.activeRegions()) {
+                    auto& ra = this->attr_.attributes(reg);
 
-                    elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                    const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                    const auto& fs = intQuants.fluidState();
-                    // use pore volume weighted averages.
-                    const double pv_cell =
-                            simulator.model().dofTotalVolume(cellIdx)
-                            * intQuants.porosity().value();
-
-                    // only count oil and gas filled parts of the domain
-                    double hydrocarbon = 1.0;
-                    const auto& pu = phaseUsage_;
-                    if (Details::PhaseUsed::water(pu)) {
-                        hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
-                    }
-
-                    int reg = cell2region[cellIdx];
-                    assert(reg >= 0);
-                    auto& ra = attr_.attributes(reg);
                     auto& p  = ra.pressure;
                     auto& T  = ra.temperature;
-                    auto& rs  = ra.rs;
-                    auto& rv  = ra.rv;
-                    auto& pv  = ra.pv;
+                    auto& rs = ra.rs;
+                    auto& rv = ra.rv;
+                    auto& pv = ra.pv;
 
-                    // sum p, rs, rv, and T.
-                    double hydrocarbonPV = pv_cell*hydrocarbon;
-                    pv += hydrocarbonPV;
-                    p += fs.pressure(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
-                    rs += fs.Rs().value()*hydrocarbonPV;
-                    rv += fs.Rv().value()*hydrocarbonPV;
-                    T += fs.temperature(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
-                }
+                    pv = comm.sum(pv);
 
-                for (const auto& reg : rmap_.activeRegions()) {
-                      auto& ra = attr_.attributes(reg);
-                      auto& p  = ra.pressure;
-                      auto& T  = ra.temperature;
-                      auto& rs  = ra.rs;
-                      auto& rv  = ra.rv;
-                      auto& pv  = ra.pv;
-                      // communicate sums
-                      p = comm.sum(p);
-                      T = comm.sum(T);
-                      rs = comm.sum(rs);
-                      rv = comm.sum(rv);
-                      pv = comm.sum(pv);
-                      // compute average
-                      p /= pv;
-                      T /= pv;
-                      rs /= pv;
-                      rv /= pv;
+                    p  = comm.sum(p)  / pv;
+                    T  = comm.sum(T)  / pv;
+                    rs = comm.sum(rs) / pv;
+                    rv = comm.sum(rv) / pv;
                 }
             }
 
@@ -526,7 +468,7 @@ namespace Opm {
              *
              * Integral type.
              */
-            typedef typename RegionMapping<Region>::RegionId RegionId;
+            using RegionId = typename RegionMapping<Region>::RegionId;
 
             /**
              * Compute coefficients for surface-to-reservoir voidage
@@ -573,7 +515,8 @@ namespace Opm {
                 if (Details::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
-                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+                    const double bw = FluidSystem::waterPvt()
+                        .inverseFormationVolumeFactor(pvtRegionIdx, T, p);
 
                     coeff[iw] = 1.0 / bw;
                 }
@@ -588,7 +531,8 @@ namespace Opm {
                 if (Details::PhaseUsed::oil(pu)) {
                     // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
 
-                    const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
+                    const double bo = FluidSystem::oilPvt()
+                        .inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
                     const double den = bo * detR;
 
                     coeff[io] += 1.0 / den;
@@ -601,7 +545,8 @@ namespace Opm {
                 if (Details::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
-                    const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
+                    const double bg  = FluidSystem::gasPvt()
+                        .inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
                     const double den = bg * detR;
 
                     coeff[ig] += 1.0 / den;
@@ -611,7 +556,6 @@ namespace Opm {
                     }
                 }
             }
-
 
             /**
              * Converting surface volume rates to reservoir voidage rates
@@ -630,10 +574,11 @@ namespace Opm {
              * \param[out] voidage_rates reservoir volume rates for
              * all active phases
              */
-            template <class Rates >
-            void
-            calcReservoirVoidageRates(const RegionId r, const int pvtRegionIdx, const Rates& surface_rates,
-                                      Rates& voidage_rates) const
+            template <class Rates>
+            void calcReservoirVoidageRates(const RegionId r,
+                                           const int      pvtRegionIdx,
+                                           const Rates&   surface_rates,
+                                           Rates&         voidage_rates) const
             {
                 assert(voidage_rates.size() == surface_rates.size());
 
@@ -651,19 +596,21 @@ namespace Opm {
                 if (Details::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
-                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+                    const double bw = FluidSystem::waterPvt()
+                        .inverseFormationVolumeFactor(pvtRegionIdx, T, p);
 
                     voidage_rates[iw] = surface_rates[iw] / bw;
                 }
 
                 // Use average Rs and Rv:
-                double Rs = ra.rs;
-                double Rv = ra.rv;
+                double Rs = 0.0;
+                double Rv = 0.0;
                 if (Details::PhaseUsed::oil(pu) && Details::PhaseUsed::gas(pu)) {
-                    const auto& qs = surface_rates;
+                    const auto& qs  = surface_rates;
+                    const auto  eps = 1.0e-15;
 
-                    Rs = std::min(Rs, qs[ig] / (qs[io] + 1.0e-15));
-                    Rv = std::min(Rv, qs[io] / (qs[ig] + 1.0e-15));
+                    Rs = std::min(ra.rs, qs[ig] / (qs[io] + eps));
+                    Rv = std::min(ra.rv, qs[io] / (qs[ig] + eps));
                 }
 
                 // Determinant of 'R' matrix
@@ -672,7 +619,9 @@ namespace Opm {
                 if (Details::PhaseUsed::oil(pu)) {
                     // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
 
-                    const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
+                    const double bo = FluidSystem::oilPvt()
+                        .inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
+
                     const double den = bo * detR;
 
                     voidage_rates[io] = surface_rates[io];
@@ -687,7 +636,9 @@ namespace Opm {
                 if (Details::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
-                    const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
+                    const double bg = FluidSystem::gasPvt()
+                        .inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
+
                     const double den = bg * detR;
 
                     voidage_rates[ig] = surface_rates[ig];
@@ -699,7 +650,6 @@ namespace Opm {
                     voidage_rates[ig] /= den;
                 }
             }
-
 
             /**
              * Compute coefficients for surface-to-reservoir voidage
@@ -714,14 +664,18 @@ namespace Opm {
              * coefficients for solvent.
              */
             template <class SolventModule>
-            void
-            calcCoeffSolvent(const RegionId r, const int pvtRegionIdx, double& coeff) const
+            void calcCoeffSolvent(const RegionId r,
+                                  const int      pvtRegionIdx,
+                                  double&        coeff) const
             {
                 const auto& ra = attr_.attributes(r);
                 const double p = ra.pressure;
                 const double T = ra.temperature;
+
                 const auto& solventPvt = SolventModule::solventPvt();
-                const double bs = solventPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+                const double bs = solventPvt
+                    .inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+
                 coeff = 1.0 / bs;
             }
 
@@ -757,6 +711,73 @@ namespace Opm {
 
             Details::RegionAttributes<RegionId, Attributes> attr_;
 
+            template <class ElementContext, class EBOSSimulator>
+            void accumulateRegionQuantities(const EBOSSimulator& simulator)
+            {
+                ElementContext elemCtx(simulator);
+
+                const auto& gridView = simulator.gridView();
+
+                const auto& elemEndIt = gridView.template end</*codim=*/0>();
+                for (auto elemIt = gridView.template begin</*codim=*/0>();
+                     elemIt != elemEndIt;
+                     ++elemIt)
+                {
+                    const auto& elem = *elemIt;
+                    if (elem.partitionType() != Dune::InteriorEntity) {
+                        continue;
+                    }
+
+                    this->accumulateElementQuantities(simulator, elem, elemCtx);
+                }
+            }
+
+            template <class EBOSSimulator, class Element, class ElementContext>
+            void accumulateElementQuantities(const EBOSSimulator& simulator,
+                                             const Element&       elem,
+                                             ElementContext&      elemCtx)
+            {
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                const unsigned cellIdx =
+                    elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+
+                const auto& intQuants =
+                    elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+
+                const auto& fs = intQuants.fluidState();
+
+                // use pore volume weighted averages.
+                const double pv_cell =
+                    simulator.model().dofTotalVolume(cellIdx)
+                    * intQuants.porosity().value();
+
+                // only count oil and gas filled parts of the domain
+                double hydrocarbon = 1.0;
+
+                if (Details::PhaseUsed::water(this->phaseUsage_)) {
+                    hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
+                }
+
+                // sum p, rs, rv, and T.
+                const double hydrocarbonPV = pv_cell * hydrocarbon;
+
+                auto& ra = this->attr_.attributes(this->rmap_.region(cellIdx));
+
+                ra.pv += hydrocarbonPV;
+
+                ra.pressure +=
+                    fs.pressure(FluidSystem::oilPhaseIdx).value()
+                    * hydrocarbonPV;
+
+                ra.rs += fs.Rs().value() * hydrocarbonPV;
+                ra.rv += fs.Rv().value() * hydrocarbonPV;
+
+                ra.temperature +=
+                    fs.temperature(FluidSystem::oilPhaseIdx).value()
+                    * hydrocarbonPV;
+            }
         };
     } // namespace RateConverter
 } // namespace Opm

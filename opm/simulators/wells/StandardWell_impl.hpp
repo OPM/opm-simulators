@@ -788,6 +788,19 @@ namespace Opm
                 }
                 break;
             }
+
+            case GROUP:
+                OPM_THROW(std::runtime_error,
+                          "Don't know how to assemble single well control "
+                          "equation for wells on GROUP control in well "
+                          << this->name());
+                break;
+
+            case INVALID:
+                OPM_THROW(std::runtime_error, "Well " << this->name()
+                          << " can't have INVALID control mode");
+                break;
+
             default:
                 OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
         }
@@ -1222,6 +1235,7 @@ namespace Opm
         case SURFACE_RATE:
             // TODO: something needs to be done with BHP and THP here
             // TODO: they should go to a separate function
+        {
             // checking the number of the phases under control
             int numPhasesWithTargetsUnderThisControl = 0;
             for (int phase = 0; phase < np; ++phase) {
@@ -1261,8 +1275,10 @@ namespace Opm
                     for (int phase = 0; phase < np; ++phase) {
                         well_state.wellRates()[np * well_index + phase] *= scaling_factor;
                     }
-                } else { // scaling factor is not well defined when original_rates_under_phase_control is zero
-                    // separating targets equally between phases under control
+                } else {
+                    // scaling factor is not well defined when
+                    // original_rates_under_phase_control is zero separating
+                    // targets equally between phases under control
                     const double target_rate_divided = target / numPhasesWithTargetsUnderThisControl;
                     for (int phase = 0; phase < np; ++phase) {
                         if (distr[phase] > 0.0) {
@@ -1276,8 +1292,14 @@ namespace Opm
             } else {
                 OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well", deferred_logger);
             }
+        }
+        break;
 
+        case GROUP:             // Fall-through.
+        case INVALID:
+            // Nothing to do.
             break;
+
         } // end of switch
     }
 

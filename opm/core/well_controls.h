@@ -32,10 +32,12 @@ extern "C" {
 #endif
 
 enum WellControlType  {
-    BHP,              /**< Well constrained by BHP target */
+    BHP = 0,          /**< Well constrained by BHP target */
     THP,              /**< Well constrained by THP target */
     RESERVOIR_RATE,   /**< Well constrained by reservoir volume flow rate */
-    SURFACE_RATE      /**< Well constrained by surface volume flow rate */
+    SURFACE_RATE,     /**< Well constrained by surface volume flow rate */
+    GROUP,            /**< Well subject to group control */
+    INVALID           /**< Well has invalid control */
 };
 
 struct WellControls; 

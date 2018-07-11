@@ -153,9 +153,9 @@ well_controls_create(void)
         ctrl->alq               = NULL;
         ctrl->vfp               = NULL;
         ctrl->distr             = NULL;
-        ctrl->current           = -1;
-        ctrl->cpty              = 0;         
-        ctrl->well_is_open      = true;  
+        ctrl->current           = -10;
+        ctrl->cpty              = 0;
+        ctrl->well_is_open      = true;
     }
 
     return ctrl;
@@ -184,11 +184,15 @@ well_controls_reserve(int nctrl, struct WellControls *ctrl)
 
     if (ok == 5) {
         for (int c = ctrl->cpty; c < nctrl; c++) {
-            ctrl->type  [c] =  BHP;
+            ctrl->type  [c] =  INVALID;
             ctrl->target[c] = -1.0;
+            ctrl->alq   [c] =  0.0;
+            ctrl->vfp   [c] = -1;
         }
 
-        for (int p = ctrl->cpty * ctrl->number_of_phases; p < nctrl * ctrl->number_of_phases; ++p) {
+        for (int p = ctrl->cpty * ctrl->number_of_phases;
+                 p < nctrl * ctrl->number_of_phases; ++p)
+       	{
             ctrl->distr[ p ] = 0.0;
         }
 
@@ -289,6 +293,12 @@ void well_controls_stop_well( struct WellControls * ctrl) {
 
 enum WellControlType 
 well_controls_iget_type(const struct WellControls * ctrl, int control_index) {
+    if ((control_index < -1) || (control_index >= ctrl->num)) {
+        return INVALID;
+    }
+
+    if (control_index == -1) { return GROUP; }
+
     return ctrl->type[control_index];
 }
 

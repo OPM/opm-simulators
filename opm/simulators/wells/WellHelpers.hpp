@@ -84,6 +84,11 @@ namespace Opm {
                     broken = rateToCompare(well_phase_flow_rate,
                                            well, num_phases, distr) > target;
                     break;
+
+                case GROUP:  // Fall-through.
+                case INVALID:
+                    // Nothing to do.
+                    break;
                 }
             }
             break;
@@ -106,6 +111,11 @@ namespace Opm {
                     // (as for injection).
                     broken = rateToCompare(well_phase_flow_rate,
                                            well, num_phases, distr) < target;
+                    break;
+
+                case GROUP:  // Fall-through.
+                case INVALID:
+                    // Nothing to do.
                     break;
                 }
             }

@@ -113,8 +113,8 @@ BOOST_AUTO_TEST_CASE(Controls)
             if (ok1 && ok2) {
                 WellControls* ctrls = W->ctrls[0];
 
-                BOOST_CHECK_EQUAL(well_controls_get_num(ctrls)    ,  2);
-                BOOST_CHECK_EQUAL(well_controls_get_current(ctrls), -1);
+                BOOST_CHECK_EQUAL(well_controls_get_num(ctrls)    ,   2);
+                BOOST_CHECK_EQUAL(well_controls_get_current(ctrls), -10);
 
                 set_current_control(0, 0, W.get());
                 BOOST_CHECK_EQUAL(well_controls_get_current(ctrls), 0);

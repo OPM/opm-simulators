@@ -308,6 +308,7 @@ namespace Opm
 
         case RESERVOIR_RATE: // intentional fall-through
         case SURFACE_RATE:
+        {
             // for the update of the rates, after we update the well rates, we can try to scale
             // the segment rates and perforation rates with the same factor
             // or the other way, we can use the same approach like the initialization of the well state,
@@ -379,7 +380,14 @@ namespace Opm
                 }
             }
 
+        }
             break;
+
+        case GROUP:             // Fall-through
+        case INVALID:
+            // Nothing to do.
+            break;
+
         } // end of switch
     }
 

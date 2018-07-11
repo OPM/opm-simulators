@@ -534,18 +534,18 @@ clone_wells(const struct Wells *W)
     return newWells;
 }
 
+
 /* ---------------------------------------------------------------------- */
 bool
 wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose)
 /* ---------------------------------------------------------------------- */
 {
-    // Cater the case where W1 and W2 are the same (null) pointers.
-    if( W1 == W2 )
-    {
+    /* Cater the case where W1 and W2 are the same (null) pointers. */
+    if (W1 == W2) {
         return true;
     }
-    if( W1 == NULL || W2 == NULL)
-    {
+
+    if ((W1 == NULL) || (W2 == NULL)) {
         return false;
     }
     
@@ -555,8 +555,7 @@ wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose)
         return are_equal;
     }
 
-    int i;
-    for (i=0; i<W1->number_of_wells; i++) {
+    for (i = 0; i < W1->number_of_wells; i++) {
         if (are_equal) {
             /*
               The name attribute can be NULL. The comparison is as
@@ -573,24 +572,32 @@ wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose)
             else 
                 are_equal = are_equal && (W1->name[i] == W2->name[i]);  
 
-            if (verbose && !are_equal) 
-                printf("Well name[%d] %s and %s are different \n",  i , W1->name[i] ,  W2->name[i]);
+            if (verbose && !are_equal) {
+                const char *wn1 = W1->name[i] == NULL ? "NULL" : W1->name[i];
+                const char *wn2 = W2->name[i] == NULL ? "NULL" : W2->name[i];
+
+                printf("Well name[%d] %s and %s are different\n", i, wn1, wn2);
+            }
         }
+
         if (W1->type[i] != W2->type[i]) {
             are_equal = false;
             if (verbose)
                 printf("Well->type[%d] different %d %d \n",i , W1->type[i] , W2->type[i] );
         }
+
         if (W1->depth_ref[i] != W2->depth_ref[i]) {
             are_equal = false;
             if (verbose)
                 printf("Well->depth_ref[%d] different %g %g \n",i , W1->depth_ref[i] , W2->depth_ref[i] );
         }
-        if (!well_controls_equal(W1->ctrls[i], W2->ctrls[i],verbose)) {
+
+        if (!well_controls_equal(W1->ctrls[i], W2->ctrls[i], verbose)) {
             are_equal = false;
             if (verbose)
                 printf("Well controls are different for well[%d]:%s \n",i,W1->name[i]);
         }
+
         if (W1->allow_cf[i] != W2->allow_cf[i]) {
             are_equal = false;
             if (verbose)
@@ -628,5 +635,3 @@ wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose)
 
     return are_equal;
 }
-
-/* ---------------------------------------------------------------------- */

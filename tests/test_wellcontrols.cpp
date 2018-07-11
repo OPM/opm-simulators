@@ -36,6 +36,10 @@ BOOST_AUTO_TEST_CASE(Construction)
 {
     struct WellControls * ctrls = well_controls_create();
 
+    BOOST_CHECK_EQUAL(well_controls_get_current(ctrls), -10);
+    BOOST_CHECK_EQUAL(well_controls_get_current_type(ctrls),
+                      WellControlType::INVALID);
+
     well_controls_set_current( ctrls , 1 );
     BOOST_CHECK_EQUAL( 1 , well_controls_get_current( ctrls ));
     well_controls_set_current( ctrls , 2 );
