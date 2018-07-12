@@ -35,11 +35,8 @@
 #include <ewoms/io/baseoutputwriter.hh>
 #include <ewoms/parallel/tasklets.hh>
 
-#if HAVE_ECL_OUTPUT
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
-#endif
-
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/grid/GridHelpers.hpp>
@@ -135,16 +132,12 @@ public:
 
     void writeInit()
     {
-#if !HAVE_ECL_OUTPUT
-        throw std::runtime_error("Eclipse output support not available in opm-common, unable to write ECL output!");
-#else
         if (collectToIORank_.isIORank()) {
             std::map<std::string, std::vector<int> > integerVectors;
             if (collectToIORank_.isParallel())
                 integerVectors.emplace("MPI_RANK", collectToIORank_.globalRanks());
             eclIO_->writeInitial(computeTrans_(), integerVectors, exportNncStructure_());
         }
-#endif
     }
 
     /*!
@@ -152,10 +145,6 @@ public:
      */
     void writeOutput(bool isSubStep)
     {
-
-#if !HAVE_ECL_INPUT
-        throw std::runtime_error("Unit support not available in opm-common.");
-#endif
         Scalar curTime = simulator_.time() + simulator_.timeStepSize();
         Scalar totalSolverTime = simulator_.executionTimer().realTimeElapsed();
         Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
