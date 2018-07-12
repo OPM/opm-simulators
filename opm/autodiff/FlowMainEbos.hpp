@@ -76,7 +76,6 @@ namespace Opm
     public:
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
-        typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) EbosThreadManager;
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
         typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
@@ -417,17 +416,13 @@ namespace Opm
                 argv.push_back(outputDoublePrecisionParam.c_str());
             }
 
-#if defined(_OPENMP)
             std::string numThreadsParam("--threads-per-process=");
-            int numThreads = omp_get_max_threads();
-
+            int numThreads  = param_.template getDefault<int>("threads_per_process", 1);
             numThreadsParam += std::to_string(numThreads);
             argv.push_back(numThreadsParam.c_str());
-#endif // defined(_OPENMP)
 
             EbosSimulator::registerParameters();
             Ewoms::setupParameters_<TypeTag>(argv.size(), &argv[0]);
-            EbosThreadManager::init();
             ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
             ebosSimulator_->model().applyInitialSolution();
 
