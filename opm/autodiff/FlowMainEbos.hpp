@@ -29,8 +29,6 @@
 #include <opm/simulators/ParallelFileMerger.hpp>
 
 #include <opm/autodiff/BlackoilModelEbos.hpp>
-#include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
-#include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/MissingFeatures.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
