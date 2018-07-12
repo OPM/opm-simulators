@@ -798,19 +798,19 @@ public:
      * \brief Write the requested quantities of the current solution into the output
      *        files.
      */
-    void writeOutput(bool verbose = true)
+    void writeOutput(bool isSubStep, bool verbose = true)
     {
-        Scalar t = this->simulator().time() + this->simulator().timeStepSize();
+        // use the generic code to prepare the output fields and to
+        // write the desired VTK files.
+        ParentType::writeOutput(isSubStep, verbose);
 
-        Opm::data::Wells dw;
-        if (!GET_PROP_VALUE(TypeTag, DisableWells))
-            dw = wellModel_.wellData();
+        if (!eclWriter_)
+            return;
 
-        Scalar totalSolverTime = 0.0;
-        Scalar nextstep = this->simulator().timeStepSize();
-        writeOutput(dw, t, false, totalSolverTime, nextstep, verbose);
+        eclWriter_->writeOutput(isSubStep);
     }
 
+    // this method is DEPRECATED!!!
     void writeOutput(Opm::data::Wells& dw, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep, bool verbose = true)
     {
         // use the generic code to prepare the output fields and to

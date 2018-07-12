@@ -150,12 +150,18 @@ public:
     /*!
      * \brief collect and pass data and pass it to eclIO writer
      */
-    void writeOutput(Opm::data::Wells& localWellData, Scalar curTime, bool isSubStep, Scalar totalSolverTime, Scalar nextStepSize)
+    void writeOutput(bool isSubStep)
     {
 
 #if !HAVE_ECL_INPUT
         throw std::runtime_error("Unit support not available in opm-common.");
 #endif
+        Scalar curTime = simulator_.time() + simulator_.timeStepSize();
+        Scalar totalSolverTime = simulator_.executionTimer().realTimeElapsed();
+        Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
+
+        // output using eclWriter if enabled
+        Opm::data::Wells localWellData = simulator_.problem().wellModel().wellData();
 
         int episodeIdx = simulator_.episodeIndex() + 1;
         const auto& gridView = simulator_.vanguard().gridView();
@@ -186,6 +192,89 @@ public:
         if (collectToIORank_.isParallel())
             collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(), localWellData);
 
+        std::map<std::string, double> miscSummaryData;
+        std::map<std::string, std::vector<double>> regionData;
+        eclOutputModule_.outputFipLog(miscSummaryData, regionData, isSubStep);
+
+        // write output on I/O rank
+        if (collectToIORank_.isIORank()) {
+            const auto& eclState = simulator_.vanguard().eclState();
+            const auto& simConfig = eclState.getSimulationConfig();
+
+            // Add TCPU
+            if (totalSolverTime != 0.0)
+                miscSummaryData["TCPU"] = totalSolverTime;
+
+            bool enableDoublePrecisionOutput = EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
+            const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
+            const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
+            Opm::RestartValue restartValue(cellData, wellData);
+
+            const std::map<std::pair<std::string, int>, double>& blockData
+                = collectToIORank_.isParallel()
+                ? collectToIORank_.globalBlockData()
+                : eclOutputModule_.getBlockData();
+
+            // Add suggested next timestep to extra data.
+            if (!isSubStep)
+                restartValue.addExtra("OPMEXTRA", std::vector<double>(1, nextStepSize));
+
+            if (simConfig.useThresholdPressure())
+                restartValue.addExtra("THPRES", Opm::UnitSystem::measure::pressure, simulator_.problem().thresholdPressure().data());
+
+            // first, create a tasklet to write the data for the current time step to disk
+            auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(*eclIO_,
+                                                                     episodeIdx,
+                                                                     isSubStep,
+                                                                     curTime,
+                                                                     restartValue,
+                                                                     miscSummaryData,
+                                                                     regionData,
+                                                                     blockData,
+                                                                     enableDoublePrecisionOutput);
+
+            // then, make sure that the previous I/O request has been completed and the
+            // number of incomplete tasklets does not increase between time steps
+            taskletRunner_->barrier();
+
+            // finally, start a new output writing job
+            taskletRunner_->dispatch(eclWriteTasklet);
+        }
+    }
+
+    // this method is equivalent to the one above but it does not require to extract the
+    // data which ought to be written from the proper eWoms objects. this method is thus
+    // DEPRECATED!
+    void writeOutput(Opm::data::Wells& localWellData, Scalar curTime, bool isSubStep, Scalar totalSolverTime, Scalar nextStepSize)
+    {
+        int episodeIdx = simulator_.episodeIndex() + 1;
+        const auto& gridView = simulator_.vanguard().gridView();
+        int numElements = gridView.size(/*codim=*/0);
+        bool log = collectToIORank_.isIORank();
+        eclOutputModule_.allocBuffers(numElements, episodeIdx, isSubStep, log);
+
+        ElementContext elemCtx(simulator_);
+        ElementIterator elemIt = gridView.template begin</*codim=*/0>();
+        const ElementIterator& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            eclOutputModule_.processElement(elemCtx);
+        }
+        eclOutputModule_.outputErrorLog();
+
+        // collect all data to I/O rank and assign to sol
+        Opm::data::Solution localCellData = {};
+        if (!isSubStep)
+            eclOutputModule_.assignToSolution(localCellData);
+
+        // add cell data to perforations for Rft output
+        if (!isSubStep)
+            eclOutputModule_.addRftDataToWells(localWellData, episodeIdx);
+
+        if (collectToIORank_.isParallel())
+            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(), localWellData);
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
         eclOutputModule_.outputFipLog(miscSummaryData, regionData, isSubStep);
