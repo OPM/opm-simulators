@@ -20,20 +20,16 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef EWOMS_PARALLELSERIALOUTPUT_HH
-#define EWOMS_PARALLELSERIALOUTPUT_HH
+#ifndef EWOMS_COLLECT_TO_IO_RANK_HH
+#define EWOMS_COLLECT_TO_IO_RANK_HH
 
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
 
-//#if HAVE_OPM_GRID
 #include <opm/grid/common/p2pcommunicator.hh>
 #include <dune/grid/utility/persistentcontainer.hh>
 #include <dune/grid/common/gridenums.hh>
-//#else
-//#error "This header needs the opm-grid module."
-//#endif
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
@@ -617,5 +613,6 @@ protected:
     Opm::data::Wells globalWellData_;
 };
 
-} // end namespace Opm
+} // end namespace Ewoms
+
 #endif
