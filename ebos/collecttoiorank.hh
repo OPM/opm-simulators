@@ -41,7 +41,7 @@
 
 #include <stdexcept>
 
-namespace Ewoms{
+namespace Ewoms {
 
 template <class Vanguard>
 class CollectDataToIORank
@@ -81,7 +81,7 @@ public:
 
     typedef typename Dune::PersistentContainer<Grid, GlobalCellIndex> GlobalIndexContainer;
 
-    static const int dimension = Grid::dimension ;
+    static const int dimension = Grid::dimension;
 
     typedef typename Grid::LeafGridView GridView;
     typedef GridView AllGridView;
@@ -127,10 +127,10 @@ public:
                 IndexMapType& indexMap = indexMaps_.back();
                 size_t localSize = localIndexMap_.size();
                 indexMap.resize(localSize);
-                for(size_t i=0; i<localSize; ++i)
+                for (size_t i=0; i<localSize; ++i)
                 {
                     int id = distributedGlobalIndex_[localIndexMap_[i]];
-                    indexMap[i] = globalPosition_[id] ;
+                    indexMap[i] = globalPosition_[id];
                     ranks_[indexMap[i]] = ioRank;
                 }
             }
@@ -146,7 +146,7 @@ public:
             int size = localIndexMap_.size();
             buffer.write(size);
 
-            for(int index = 0; index < size; ++index) {
+            for (int index = 0; index < size; ++index) {
                 int globalIdx = distributedGlobalIndex_[localIndexMap_[index]];
                 buffer.write(globalIdx);
             }
@@ -162,7 +162,7 @@ public:
             int numCells = 0;
             buffer.read(numCells);
             indexMap.resize(numCells);
-            for(int index = 0; index < numCells; ++index) {
+            for (int index = 0; index < numCells; ++index) {
                 int globalId = -1;
                 buffer.read(globalId);
                 assert(globalPosition_.find(globalId) != globalPosition_.end());
@@ -174,24 +174,22 @@ public:
 
     enum { ioRank = 0 };
 
-    static const bool needsReordering = ! std::is_same<
-        typename Vanguard::Grid, typename Vanguard::EquilGrid > :: value ;
+    static const bool needsReordering =
+        !std::is_same<typename Vanguard::Grid, typename Vanguard::EquilGrid>::value;
 
     CollectDataToIORank(const Vanguard& vanguard)
         : toIORankComm_()
     {
         // index maps only have to be build when reordering is needed
-        if( ! needsReordering && ! isParallel() )
-        {
-            return ;
-        }
+        if (!needsReordering && !isParallel())
+            return;
 
         const CollectiveCommunication& comm = vanguard.grid().comm();
 
         {
-            std::set< int > send, recv;
+            std::set<int> send, recv;
             typedef typename Vanguard::EquilGrid::LeafGridView EquilGridView;
-            const EquilGridView equilGridView = vanguard.equilGrid().leafGridView() ;
+            const EquilGridView equilGridView = vanguard.equilGrid().leafGridView();
 
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
             typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView> EquilElementMapper;
@@ -203,7 +201,7 @@ public:
 
             // We need a mapping from local to global grid, here we
             // use equilGrid which represents a view on the global grid
-            const size_t globalSize = vanguard.equilGrid().leafGridView().size( 0 );
+            const size_t globalSize = vanguard.equilGrid().leafGridView().size(0);
             // reserve memory
             globalCartesianIndex_.resize(globalSize, -1);
 
@@ -211,37 +209,31 @@ public:
             auto elemIt = vanguard.equilGrid().leafGridView().template begin<0>();
             const auto& elemEndIt = vanguard.equilGrid().leafGridView().template end<0>();
             for (; elemIt != elemEndIt; ++elemIt) {
-                int elemIdx = equilElemMapper.index(*elemIt );
+                int elemIdx = equilElemMapper.index(*elemIt);
                 int cartElemIdx = vanguard.equilCartesianIndexMapper().cartesianIndex(elemIdx);
                 globalCartesianIndex_[elemIdx] = cartElemIdx;
             }
 
             // the I/O rank receives from all other ranks
-            if( isIORank() )
-            {
-                for(int i=0; i<comm.size(); ++i)
-                {
-                    if( i != ioRank )
-                    {
-                        recv.insert( i );
-                    }
+            if (isIORank()) {
+                for (int i = 0; i < comm.size(); ++i) {
+                    if (i != ioRank)
+                        recv.insert(i);
                 }
             }
             else // all other simply send to the I/O rank
-            {
-                send.insert( ioRank );
-            }
+                send.insert(ioRank);
 
             localIndexMap_.clear();
-            const size_t gridSize = vanguard.grid().size( 0 );
-            localIndexMap_.reserve( gridSize );
+            const size_t gridSize = vanguard.grid().size(0);
+            localIndexMap_.reserve(gridSize);
 
             // store the local Cartesian index
             IndexMapType distributedCartesianIndex;
             distributedCartesianIndex.resize(gridSize, -1);
 
             typedef typename Vanguard::GridView LocalGridView;
-            const LocalGridView localGridView = vanguard.gridView() ;
+            const LocalGridView localGridView = vanguard.gridView();
 
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
             typedef Dune::MultipleCodimMultipleGeomTypeMapper<LocalGridView> ElementMapper;
@@ -252,29 +244,33 @@ public:
 #endif
 
             // A mapping for the whole grid (including the ghosts) is needed for restarts
-            for( auto it = localGridView.template begin< 0 >(),
-                     end = localGridView.template end< 0 >(); it != end; ++it )
-            {
-                const auto element = *it ;
-                int elemIdx = elemMapper.index( element );
-                distributedCartesianIndex[elemIdx] = vanguard.cartesianIndex( elemIdx );
+            auto eIt = localGridView.template begin<0>();
+            const auto& eEndIt = localGridView.template end<0>();
+            for (; eIt != eEndIt; ++eIt) {
+                const auto element = *eIt;
+                int elemIdx = elemMapper.index(element);
+                distributedCartesianIndex[elemIdx] = vanguard.cartesianIndex(elemIdx);
 
                 // only store interior element for collection
-                //assert( element.partitionType() == Dune :: InteriorEntity );
+                //assert(element.partitionType() == Dune::InteriorEntity);
 
-                localIndexMap_.push_back( elemIdx );
+                localIndexMap_.push_back(elemIdx);
             }
 
             // insert send and recv linkage to communicator
-            toIORankComm_.insertRequest( send, recv );
+            toIORankComm_.insertRequest(send, recv);
 
             // need an index map for each rank
             indexMaps_.clear();
-            indexMaps_.resize( comm.size() );
+            indexMaps_.resize(comm.size());
 
             // distribute global id's to io rank for later association of dof's
-            DistributeIndexMapping distIndexMapping( globalCartesianIndex_, distributedCartesianIndex, localIndexMap_, indexMaps_, globalRanks_);
-            toIORankComm_.exchange( distIndexMapping );
+            DistributeIndexMapping distIndexMapping(globalCartesianIndex_,
+                                                    distributedCartesianIndex,
+                                                    localIndexMap_,
+                                                    indexMaps_,
+                                                    globalRanks_);
+            toIORankComm_.exchange(distIndexMapping);
         }
     }
 
@@ -298,8 +294,7 @@ public:
             , localIndexMap_(localIndexMap)
             , indexMaps_(indexMaps)
         {
-            if( isIORank )
-            {
+            if (isIORank) {
                 // add missing data to global cell data
                 for (const auto& pair : localCellData_) {
                     const std::string& key = pair.first;
@@ -311,10 +306,10 @@ public:
                 }
 
                 MessageBufferType buffer;
-                pack( 0, buffer );
+                pack(0, buffer);
 
                 // the last index map is the local one
-                doUnpack( indexMaps.back(), buffer );
+                doUnpack(indexMaps.back(), buffer);
             }
         }
 
@@ -322,16 +317,15 @@ public:
         void pack(int link, MessageBufferType& buffer)
         {
             // we should only get one link
-            if( link != 0 ) {
+            if (link != 0)
                 throw std::logic_error("link in method pack is not 0 as expected");
-            }
 
             // write all cell data registered in local state
             for (const auto& pair : localCellData_) {
                 const auto& data = pair.second.data;
 
                 // write all data from local data to buffer
-                write( buffer, localIndexMap_, data);
+                write(buffer, localIndexMap_, data);
             }
         }
 
@@ -344,7 +338,7 @@ public:
                 auto& data = globalCellData_.data(key);
 
                 //write all data from local cell data to buffer
-                read( buffer, indexMap, data);
+                read(buffer, indexMap, data);
             }
         }
 
@@ -361,13 +355,13 @@ public:
                    unsigned int stride = 1) const
         {
             unsigned int size = localIndexMap.size();
-            buffer.write( size );
-            assert( vector.size() >= stride * size );
-            for( unsigned int i=0; i<size; ++i )
+            buffer.write(size);
+            assert(vector.size() >= stride * size);
+            for (unsigned int i=0; i<size; ++i)
             {
-                const unsigned int index = localIndexMap[ i ] * stride + offset;
-                assert( index < vector.size() );
-                buffer.write( vector[ index ] );
+                unsigned int index = localIndexMap[i] * stride + offset;
+                assert(index < vector.size());
+                buffer.write(vector[index]);
             }
         }
 
@@ -379,13 +373,12 @@ public:
                   unsigned int stride = 1) const
         {
             unsigned int size = 0;
-            buffer.read( size );
-            assert( size == indexMap.size() );
-            for( unsigned int i=0; i<size; ++i )
-            {
-                const unsigned int index = indexMap[ i ] * stride + offset;
-                assert( index < vector.size() );
-                buffer.read( vector[ index ] );
+            buffer.read(size);
+            assert(size == indexMap.size());
+            for (unsigned int i=0; i<size; ++i) {
+                unsigned int index = indexMap[i] * stride + offset;
+                assert(index < vector.size());
+                buffer.read(vector[index]);
             }
         }
     };
@@ -440,10 +433,9 @@ public:
             : localBlockData_(localBlockData)
             , globalBlockValues_(globalBlockValues)
         {
-            if( isIORank )
-            {
+            if (isIORank) {
                 MessageBufferType buffer;
-                pack( 0, buffer );
+                pack(0, buffer);
 
                 // pass a dummy_link to satisfy virtual class
                 const int dummy_link = -1;
@@ -455,13 +447,12 @@ public:
         void pack(int link, MessageBufferType& buffer)
         {
             // we should only get one link
-            if( link != 0 ) {
+            if (link != 0)
                 throw std::logic_error("link in method pack is not 0 as expected");
-            }
 
             // write all block data
             unsigned int size = localBlockData_.size();
-            buffer.write( size );
+            buffer.write(size);
             for (const auto& map : localBlockData_) {
                 buffer.write(map.first.first);
                 buffer.write(map.first.second);
@@ -479,9 +470,9 @@ public:
                 std::string name;
                 int idx;
                 double data;
-                buffer.read( name );
-                buffer.read( idx );
-                buffer.read( data );
+                buffer.read(name);
+                buffer.read(idx);
+                buffer.read(data);
                 globalBlockValues_[std::make_pair(name, idx)] = data;
             }
         }
@@ -498,39 +489,35 @@ public:
         globalWellData_.clear();
 
         // index maps only have to be build when reordering is needed
-        if( ! needsReordering && ! isParallel() )
-        {
-            return ;
-        }
+        if(!needsReordering && !isParallel())
+            return;
 
         // this also packs and unpacks the local buffers one ioRank
         PackUnPackCellData
-            packUnpackCellData( localCellData,
+            packUnpackCellData(localCellData,
                                 globalCellData_,
                                 localIndexMap_,
                                 indexMaps_,
                                 numCells(),
-                                isIORank() );
+                                isIORank());
 
-        if ( ! isParallel() )
-        {
+        if (!isParallel())
             // no need to collect anything.
             return;
-        }
 
         PackUnPackWellData
-            packUnpackWellData( localWellData,
-                                globalWellData_,
-                                isIORank() );
+            packUnpackWellData(localWellData,
+                               globalWellData_,
+                               isIORank());
 
         PackUnPackBlockData
-            packUnpackBlockData( localBlockData,
-                                 globalBlockData_,
-                                 isIORank() );
+            packUnpackBlockData(localBlockData,
+                                globalBlockData_,
+                                isIORank());
 
-        toIORankComm_.exchange( packUnpackCellData );
-        toIORankComm_.exchange( packUnpackWellData );
-        toIORankComm_.exchange( packUnpackBlockData );
+        toIORankComm_.exchange(packUnpackCellData);
+        toIORankComm_.exchange(packUnpackWellData);
+        toIORankComm_.exchange(packUnpackBlockData);
 
 
 
@@ -557,13 +544,12 @@ public:
 
     int localIdxToGlobalIdx(unsigned localIdx) const
     {
-        if ( ! isParallel() )
-        {
+        if (!isParallel())
             return localIdx;
-        }
+
         // the last indexMap is the local one
         const IndexMapType& indexMap = indexMaps_.back();
-        if( indexMap.empty() )
+        if (indexMap.empty())
             throw std::logic_error("index map is not created on this rank");
 
         if (localIdx > indexMap.size())
