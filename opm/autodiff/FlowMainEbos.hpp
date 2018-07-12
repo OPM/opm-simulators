@@ -29,7 +29,7 @@
 #include <opm/simulators/ParallelFileMerger.hpp>
 
 #include <opm/autodiff/BlackoilModelEbos.hpp>
-#include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/MissingFeatures.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
 #include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
