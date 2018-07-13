@@ -181,6 +181,13 @@ add_test_compareECLFiles(CASENAME spe1
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
+add_test_compareECLFiles(CASENAME spe1
+                         FILENAME SPE1CASE1
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
+
+
 add_test_compareECLFiles(CASENAME spe1_nowells
                          FILENAME SPE1CASE2_NOWELLS
                          SIMULATOR flow
@@ -194,6 +201,13 @@ add_test_compareECLFiles(CASENAME spe1_thermal
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1)
+
+add_test_compareECLFiles(CASENAME spe1_metric_vfp1
+                         FILENAME SPE1CASE1_METRIC_VFP1
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR vfpprod_spe1)
 
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
@@ -244,6 +258,7 @@ add_test_compareECLFiles(CASENAME polymer_oilwater
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
+
 
 add_test_compareECLFiles(CASENAME polymer_simple2D
                          FILENAME 2D_THREEPHASE_POLY_HETER
