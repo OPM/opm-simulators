@@ -53,6 +53,7 @@ tests[spe9]="flow spe9 SPE9_CP_SHORT"
 tests[spe9_legacy]="flow_legacy spe9 SPE9_CP_SHORT"
 tests[wecon_wtest]="flow wecon_wtest 3D_WECON"
 tests[spe1_metric_vfp1]="flow vfpprod_spe1 SPE1CASE1_METRIC_VFP1 spe1_metric_vfp1"
+tests[base_model_1]="flow model1 BASE_MODEL_1 base_model_1"
 
 changed_tests=""
 for test_name in ${!tests[*]}
