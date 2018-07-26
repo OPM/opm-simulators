@@ -99,6 +99,8 @@ class EclWriter
 public:
     static void registerParameters()
     {
+        EclOutputBlackOilModule<TypeTag>::registerParameters();
+
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAsyncEclOutput,
                              "Write the ECL-formated results in a non-blocking way (i.e., using a separate thread).");
     }

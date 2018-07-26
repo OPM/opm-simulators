@@ -51,6 +51,9 @@ BEGIN_PROPERTIES
 // create new type tag for the Ecl-output
 NEW_TYPE_TAG(EclOutputBlackOil);
 
+NEW_PROP_TAG(ForceDisableFluidInPlaceOutput);
+
+SET_BOOL_PROP(EclOutputBlackOil, ForceDisableFluidInPlaceOutput, false);
 
 END_PROPERTIES
 
@@ -126,6 +129,17 @@ public:
                 }
             }
         }
+
+        forceDisableFipOutput_ = EWOMS_GET_PARAM(TypeTag, bool, ForceDisableFluidInPlaceOutput);
+    }
+
+    /*!
+     * \brief Register all run-time parameters for the Vtk output module.
+     */
+    static void registerParameters()
+    {
+        EWOMS_REGISTER_PARAM(TypeTag, bool, ForceDisableFluidInPlaceOutput,
+                             "Do not print fluid-in-place values after each report step even if requested by the deck.");
     }
 
     /*!
@@ -1213,6 +1227,9 @@ private:
 
     void outputRegionFluidInPlace_(const ScalarBuffer& oip, const ScalarBuffer& cip, const Scalar& pav, const int reg)
     {
+        if (forceDisableFipOutput_)
+            return;
+
         const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         std::ostringstream ss;
         if (!reg) {
@@ -1277,6 +1294,7 @@ private:
 
     bool outputFipRestart_;
     bool computeFip_;
+    bool forceDisableFipOutput_;
 
     ScalarBuffer saturation_[numPhases];
     ScalarBuffer oilPressure_;
