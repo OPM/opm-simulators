@@ -91,7 +91,7 @@ namespace Ewoms {
 namespace EQUIL {
 
 
-typedef Opm::FluidSystems::BlackOil<double> FluidSystemSimple;
+typedef Opm::BlackOilFluidSystem<double> FluidSystemSimple;
 
 // Adjust oil pressure according to gas saturation and cap pressure
 typedef Opm::SimpleModularFluidState<double,
