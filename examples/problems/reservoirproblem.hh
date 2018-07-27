@@ -130,7 +130,7 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
 public:
-    typedef Opm::FluidSystems::BlackOil<Scalar> type;
+    typedef Opm::BlackOilFluidSystem<Scalar> type;
 };
 
 // The default DGF file to load

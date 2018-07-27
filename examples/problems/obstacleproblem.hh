@@ -69,7 +69,7 @@ SET_TYPE_PROP(ObstacleBaseProblem, Problem, Ewoms::ObstacleProblem<TypeTag>);
 
 // Set fluid configuration
 SET_TYPE_PROP(ObstacleBaseProblem, FluidSystem,
-              Opm::FluidSystems::H2ON2<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+              Opm::H2ON2FluidSystem<typename GET_PROP_TYPE(TypeTag, Scalar)>);
 
 // Set the material Law
 SET_PROP(ObstacleBaseProblem, MaterialLaw)

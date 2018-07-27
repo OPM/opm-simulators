@@ -63,7 +63,7 @@ private:
 
 public:
     // Two-component single phase fluid system
-    typedef Opm::FluidSystems::H2ON2LiquidPhase<Scalar> type;
+    typedef Opm::H2ON2LiquidPhaseFluidSystem<Scalar> type;
 };
 
 // Disable gravity

@@ -66,7 +66,7 @@ SET_TYPE_PROP(InfiltrationBaseProblem, Problem,
 // Set the fluid system
 SET_TYPE_PROP(
     InfiltrationBaseProblem, FluidSystem,
-    Opm::FluidSystems::H2OAirMesitylene<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+    Opm::H2OAirMesityleneFluidSystem<typename GET_PROP_TYPE(TypeTag, Scalar)>);
 
 // Enable gravity?
 SET_BOOL_PROP(InfiltrationBaseProblem, EnableGravity, true);

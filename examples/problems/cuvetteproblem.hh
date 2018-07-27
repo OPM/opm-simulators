@@ -71,7 +71,7 @@ SET_TYPE_PROP(CuvetteBaseProblem, Problem, Ewoms::CuvetteProblem<TypeTag>);
 // Set the fluid system
 SET_TYPE_PROP(
     CuvetteBaseProblem, FluidSystem,
-    Opm::FluidSystems::H2OAirMesitylene<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+    Opm::H2OAirMesityleneFluidSystem<typename GET_PROP_TYPE(TypeTag, Scalar)>);
 
 // Enable gravity
 SET_BOOL_PROP(CuvetteBaseProblem, EnableGravity, true);
