@@ -129,7 +129,7 @@ try
     std::vector<int> compressedToCartesianIdx
         = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
 
-    typedef FluidSystems::BlackOil<double> FluidSystem;
+    typedef BlackOilFluidSystem<double> FluidSystem;
 
     // Forward declaring the MaterialLawManager template.
     typedef Opm::ThreePhaseMaterialTraits<double,

@@ -636,7 +636,7 @@ namespace Opm
                                                   props.numPhases()));
 
 
-                typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+                typedef Opm::BlackOilFluidSystem<double> FluidSystem;
                 FluidSystem::initFromDeck(*deck_ , *eclipse_state_);
                 typedef EQUIL::DeckDependent::InitialStateComputer<FluidSystem> ISC;
 
