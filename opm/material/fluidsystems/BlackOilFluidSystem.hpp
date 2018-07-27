@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidSystems::BlackOil
+ * \copydoc Opm::BlackOilFluidSystem
  */
 #ifndef OPM_BLACK_OIL_FLUID_SYSTEM_HPP
 #define OPM_BLACK_OIL_FLUID_SYSTEM_HPP
@@ -82,8 +82,6 @@ auto getRv_(typename std::enable_if<HasMember_Rv<FluidState>::value, const Fluid
 
 }
 
-namespace FluidSystems {
-
 /*!
  * \brief A fluid system which uses the black-oil model assumptions to calculate
  *        termodynamically meaningful quantities.
@@ -91,9 +89,9 @@ namespace FluidSystems {
  * \tparam Scalar The type used for scalar floating point values
  */
 template <class Scalar>
-class BlackOil : public BaseFluidSystem<Scalar, BlackOil<Scalar> >
+class BlackOilFluidSystem : public BaseFluidSystem<Scalar, BlackOilFluidSystem<Scalar> >
 {
-    typedef BlackOil ThisType;
+    typedef BlackOilFluidSystem ThisType;
 
 public:
     typedef Opm::GasPvtMultiplexer<Scalar> GasPvt;
@@ -1269,7 +1267,7 @@ private:
 };
 
 template <class Scalar>
-const int BlackOil<Scalar>::phaseToSolventCompIdx_[3] =
+const int BlackOilFluidSystem<Scalar>::phaseToSolventCompIdx_[3] =
 {
     waterCompIdx, // water phase
     oilCompIdx, // oil phase
@@ -1278,7 +1276,7 @@ const int BlackOil<Scalar>::phaseToSolventCompIdx_[3] =
 
 
 template <class Scalar>
-const int BlackOil<Scalar>::phaseToSoluteCompIdx_[3] =
+const int BlackOilFluidSystem<Scalar>::phaseToSoluteCompIdx_[3] =
 {
     -1, // water phase
     gasCompIdx, // oil phase
@@ -1286,52 +1284,52 @@ const int BlackOil<Scalar>::phaseToSoluteCompIdx_[3] =
 };
 
 template <class Scalar>
-unsigned char BlackOil<Scalar>::numActivePhases_;
+unsigned char BlackOilFluidSystem<Scalar>::numActivePhases_;
 
 template <class Scalar>
-bool BlackOil<Scalar>::phaseIsActive_[numPhases];
-
-template <class Scalar>
-Scalar
-BlackOil<Scalar>::surfaceTemperature; // [K]
+bool BlackOilFluidSystem<Scalar>::phaseIsActive_[numPhases];
 
 template <class Scalar>
 Scalar
-BlackOil<Scalar>::surfacePressure; // [Pa]
+BlackOilFluidSystem<Scalar>::surfaceTemperature; // [K]
 
 template <class Scalar>
 Scalar
-BlackOil<Scalar>::reservoirTemperature_;
+BlackOilFluidSystem<Scalar>::surfacePressure; // [Pa]
 
 template <class Scalar>
-bool BlackOil<Scalar>::enableDissolvedGas_;
+Scalar
+BlackOilFluidSystem<Scalar>::reservoirTemperature_;
 
 template <class Scalar>
-bool BlackOil<Scalar>::enableVaporizedOil_;
+bool BlackOilFluidSystem<Scalar>::enableDissolvedGas_;
+
+template <class Scalar>
+bool BlackOilFluidSystem<Scalar>::enableVaporizedOil_;
 
 template <class Scalar>
 std::shared_ptr<OilPvtMultiplexer<Scalar> >
-BlackOil<Scalar>::oilPvt_;
+BlackOilFluidSystem<Scalar>::oilPvt_;
 
 template <class Scalar>
 std::shared_ptr<Opm::GasPvtMultiplexer<Scalar> >
-BlackOil<Scalar>::gasPvt_;
+BlackOilFluidSystem<Scalar>::gasPvt_;
 
 template <class Scalar>
 std::shared_ptr<WaterPvtMultiplexer<Scalar> >
-BlackOil<Scalar>::waterPvt_;
+BlackOilFluidSystem<Scalar>::waterPvt_;
 
 template <class Scalar>
 std::vector<std::array<Scalar, 3> >
-BlackOil<Scalar>::referenceDensity_;
+BlackOilFluidSystem<Scalar>::referenceDensity_;
 
 template <class Scalar>
 std::vector<std::array<Scalar, 3> >
-BlackOil<Scalar>::molarMass_;
+BlackOilFluidSystem<Scalar>::molarMass_;
 
 template <class Scalar>
-bool BlackOil<Scalar>::isInitialized_ = false;
+bool BlackOilFluidSystem<Scalar>::isInitialized_ = false;
 
-}} // namespace Opm, FluidSystems
+} // namespace Opm
 
 #endif

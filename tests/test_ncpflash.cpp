@@ -167,7 +167,7 @@ void completeReferenceFluidState(FluidState& fs,
 template <class Scalar>
 inline void testAll()
 {
-    typedef Opm::FluidSystems::H2ON2<Scalar> FluidSystem;
+    typedef Opm::H2ON2FluidSystem<Scalar> FluidSystem;
     typedef Opm::CompositionalFluidState<Scalar, FluidSystem> CompositionalFluidState;
 
     enum { numPhases = FluidSystem::numPhases };

@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidSystems::H2ON2
+ * \copydoc Opm::H2ON2FluidSystem
  */
 #ifndef OPM_H2O_N2_FLUID_SYSTEM_HPP
 #define OPM_H2O_N2_FLUID_SYSTEM_HPP
@@ -44,7 +44,6 @@
 #include <cassert>
 
 namespace Opm {
-namespace FluidSystems {
 
 /*!
  * \ingroup Fluidsystems
@@ -52,10 +51,10 @@ namespace FluidSystems {
  * \brief A two-phase fluid system with water and nitrogen as components.
  */
 template <class Scalar>
-class H2ON2
-    : public BaseFluidSystem<Scalar, H2ON2<Scalar> >
+class H2ON2FluidSystem
+    : public BaseFluidSystem<Scalar, H2ON2FluidSystem<Scalar> >
 {
-    typedef H2ON2<Scalar> ThisType;
+    typedef H2ON2FluidSystem<Scalar> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
     // convenience typedefs
@@ -485,8 +484,6 @@ public:
         return XAlphaH2O*c_pH2O + XAlphaN2*c_pN2;
     }
 };
-
-} // namespace FluidSystems
 
 } // namespace Opm
 

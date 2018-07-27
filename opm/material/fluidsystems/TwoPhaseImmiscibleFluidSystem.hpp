@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidSystems::TwoPhaseImmiscible
+ * \copydoc Opm::TwoPhaseImmiscibleFluidSystem
  */
 #ifndef OPM_TWO_PHASE_IMMISCIBLE_FLUID_SYSTEM_HPP
 #define OPM_TWO_PHASE_IMMISCIBLE_FLUID_SYSTEM_HPP
@@ -38,7 +38,6 @@
 #include "NullParameterCache.hpp"
 
 namespace Opm {
-namespace FluidSystems {
 
 /*!
  * \ingroup Fluidsystems
@@ -54,14 +53,14 @@ namespace FluidSystems {
  * systems without compositional effects.
  */
 template <class Scalar, class WettingPhase, class NonwettingPhase>
-class TwoPhaseImmiscible
-    : public BaseFluidSystem<Scalar, TwoPhaseImmiscible<Scalar, WettingPhase, NonwettingPhase> >
+class TwoPhaseImmiscibleFluidSystem
+    : public BaseFluidSystem<Scalar, TwoPhaseImmiscibleFluidSystem<Scalar, WettingPhase, NonwettingPhase> >
 {
     // do not try to instanciate this class, it has only static members!
-    TwoPhaseImmiscible()
+    TwoPhaseImmiscibleFluidSystem()
     {}
 
-    typedef TwoPhaseImmiscible<Scalar, WettingPhase, NonwettingPhase> ThisType;
+    typedef TwoPhaseImmiscibleFluidSystem<Scalar, WettingPhase, NonwettingPhase> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
 public:
@@ -314,8 +313,6 @@ public:
         return NonwettingPhase::heatCapacity(temperature, pressure);
     }
 };
-
-} // namespace FluidSystems
 
 } // namespace Opm
 

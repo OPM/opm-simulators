@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidSystems::H2OAirXylene
+ * \copydoc Opm::H2OAirXyleneFluidSystem
  */
 #ifndef OPM_H2O_AIR_XYLENE_FLUID_SYSTEM_HPP
 #define OPM_H2O_AIR_XYLENE_FLUID_SYSTEM_HPP
@@ -41,7 +41,6 @@
 #include "NullParameterCache.hpp"
 
 namespace Opm {
-namespace FluidSystems {
 
 /*!
  * \ingroup Fluidsystems
@@ -49,10 +48,10 @@ namespace FluidSystems {
  *        water, air and NAPL (contaminant) as components.
  */
 template <class Scalar>
-class H2OAirXylene
-    : public BaseFluidSystem<Scalar, H2OAirXylene<Scalar> >
+class H2OAirXyleneFluidSystem
+    : public BaseFluidSystem<Scalar, H2OAirXyleneFluidSystem<Scalar> >
 {
-    typedef H2OAirXylene<Scalar> ThisType;
+    typedef H2OAirXyleneFluidSystem<Scalar> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
 public:
@@ -417,7 +416,7 @@ private:
     static LhsEval NAPLPhaseDensity_(const LhsEval& T, const LhsEval& pn)
     { return NAPL::liquidDensity(T, pn); }
 };
-} // namespace FluidSystems
+
 } // namespace Opm
 
 #endif

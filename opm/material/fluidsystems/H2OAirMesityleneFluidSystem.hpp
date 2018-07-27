@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidSystems::H2OAirMesitylene
+ * \copydoc Opm::H2OAirMesityleneFluidSystem
  */
 #ifndef OPM_H2O_AIR_MESITYLENE_FLUID_SYSTEM_HPP
 #define OPM_H2O_AIR_MESITYLENE_FLUID_SYSTEM_HPP
@@ -45,7 +45,6 @@
 #include <iostream>
 
 namespace Opm {
-namespace FluidSystems {
 
 /*!
  * \ingroup Fluidsystems
@@ -53,10 +52,10 @@ namespace FluidSystems {
  *        water, air and mesitylene (DNAPL) as components.
  */
 template <class Scalar>
-class H2OAirMesitylene
-    : public BaseFluidSystem<Scalar, H2OAirMesitylene<Scalar> >
+class H2OAirMesityleneFluidSystem
+    : public BaseFluidSystem<Scalar, H2OAirMesityleneFluidSystem<Scalar> >
 {
-    typedef H2OAirMesitylene<Scalar> ThisType;
+    typedef H2OAirMesityleneFluidSystem<Scalar> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
     typedef Opm::H2O<Scalar> IapwsH2O;
@@ -469,7 +468,6 @@ public:
         return 0.0143964;
     }
 };
-} // namespace FluidSystems
 } // namespace Opm
 
 #endif

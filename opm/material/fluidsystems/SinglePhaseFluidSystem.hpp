@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidSystems::SinglePhase
+ * \copydoc Opm::SinglePhaseFluidSystem
  */
 #ifndef OPM_SINGLE_PHASE_FLUIDSYSTEM_HPP
 #define OPM_SINGLE_PHASE_FLUIDSYSTEM_HPP
@@ -43,7 +43,6 @@
 #include <cassert>
 
 namespace Opm {
-namespace FluidSystems {
 
 /*!
  * \ingroup Fluidsystems
@@ -55,10 +54,10 @@ namespace FluidSystems {
  * Opm::GasPhase<Component> may be used.
  */
 template <class Scalar, class Fluid>
-class SinglePhase
-    : public BaseFluidSystem<Scalar, SinglePhase<Scalar, Fluid> >
+class SinglePhaseFluidSystem
+    : public BaseFluidSystem<Scalar, SinglePhaseFluidSystem<Scalar, Fluid> >
 {
-    typedef SinglePhase<Scalar, Fluid> ThisType;
+    typedef SinglePhaseFluidSystem<Scalar, Fluid> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
 public:
@@ -269,6 +268,6 @@ public:
     }
 };
 
-}} // namespace Opm, FluidSystems
+} // namespace Opm
 
 #endif
