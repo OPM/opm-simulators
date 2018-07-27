@@ -72,7 +72,7 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
 public:
-    typedef Opm::FluidSystems::H2ON2<Scalar> type;
+    typedef Opm::H2ON2FluidSystem<Scalar> type;
 };
 
 // Set the material Law
@@ -88,8 +88,7 @@ private:
 
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx>
-    Traits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
 
 public:
     typedef Opm::LinearMaterial<Traits> type;
