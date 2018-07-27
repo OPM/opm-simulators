@@ -99,8 +99,8 @@ private:
     typedef Ewoms::Co2Injection::CO2Tables CO2Tables;
 
 public:
-    typedef Opm::FluidSystems::BrineCO2<Scalar, CO2Tables> type;
-    //typedef Opm::FluidSystems::H2ON2<Scalar, /*useComplexRelations=*/false> type;
+    typedef Opm::BrineCO2FluidSystem<Scalar, CO2Tables> type;
+    //typedef Opm::H2ON2FluidSystem<Scalar, /*useComplexRelations=*/false> type;
 };
 
 // Set the material Law
