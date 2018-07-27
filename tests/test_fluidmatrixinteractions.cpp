@@ -266,8 +266,8 @@ inline void testAll()
     typedef Opm::LiquidPhase<Scalar, H2O> Liquid;
     typedef Opm::GasPhase<Scalar, N2> Gas;
 
-    typedef Opm::FluidSystems::TwoPhaseImmiscible<Scalar, Liquid, Gas> TwoPFluidSystem;
-    typedef Opm::FluidSystems::BlackOil<Scalar> ThreePFluidSystem;
+    typedef Opm::TwoPhaseImmiscibleFluidSystem<Scalar, Liquid, Gas> TwoPFluidSystem;
+    typedef Opm::BlackOilFluidSystem<Scalar> ThreePFluidSystem;
 
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         TwoPFluidSystem::wettingPhaseIdx,

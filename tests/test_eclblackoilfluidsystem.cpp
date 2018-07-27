@@ -615,7 +615,7 @@ inline void testAll()
     // for fluid systems are already tested by the generic test for all fluidsystems.
 
     typedef typename Opm::MathToolbox<Evaluation>::Scalar Scalar;
-    typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+    typedef Opm::BlackOilFluidSystem<double> FluidSystem;
 
     static constexpr int numPhases = FluidSystem::numPhases;
 

@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidSystems::Spe5
+ * \copydoc Opm::Spe5FluidSystem
  */
 #ifndef OPM_SPE5_FLUID_SYSTEM_HPP
 #define OPM_SPE5_FLUID_SYSTEM_HPP
@@ -36,7 +36,7 @@
 #include <opm/material/common/Spline.hpp>
 
 namespace Opm {
-namespace FluidSystems {
+
 /*!
  * \ingroup Fluidsystems
  * \brief The fluid system for the oil, gas and water phases of the
@@ -52,10 +52,10 @@ namespace FluidSystems {
  * Reservoir Simulation, 1987
  */
 template <class Scalar>
-class Spe5
-    : public BaseFluidSystem<Scalar, Spe5<Scalar> >
+class Spe5FluidSystem
+    : public BaseFluidSystem<Scalar, Spe5FluidSystem<Scalar> >
 {
-    typedef Opm::FluidSystems::Spe5<Scalar> ThisType;
+    typedef Opm::Spe5FluidSystem<Scalar> ThisType;
 
     typedef typename Opm::PengRobinsonMixture<Scalar, ThisType> PengRobinsonMixture;
     typedef typename Opm::PengRobinson<Scalar> PengRobinson;
@@ -438,9 +438,8 @@ protected:
 };
 
 template <class Scalar>
-const Scalar Spe5<Scalar>::R = Opm::Constants<Scalar>::R;
+const Scalar Spe5FluidSystem<Scalar>::R = Opm::Constants<Scalar>::R;
 
-} // namespace FluidSystems
 } // namespace Opm
 
 #endif

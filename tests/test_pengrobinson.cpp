@@ -292,7 +292,7 @@ void printResult(const RawTable& rawTable,
 template <class Scalar>
 inline void testAll()
 {
-    typedef Opm::FluidSystems::Spe5<Scalar> FluidSystem;
+    typedef Opm::Spe5FluidSystem<Scalar> FluidSystem;
 
     enum {
         numPhases = FluidSystem::numPhases,

@@ -44,7 +44,7 @@ namespace Opm {
  * Under reservoir conditions, CO2 is typically in supercritical
  * state. These properties can be provided in tabulated form, which is
  * necessary for this component. The template is used by the
- * fluidsystem \c FluidSystems::BrineCO2. If thermodynamic precision
+ * fluidsystem \c BrineCO2FluidSystem. If thermodynamic precision
  * is not a top priority, the much simpler component \c Opm::SimpleCO2 can be
  * used instead
  */

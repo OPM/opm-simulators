@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidSystems::H2ON2LiquidPhase
+ * \copydoc Opm::H2ON2LiquidPhaseFluidSystem
  */
 #ifndef OPM_H2O_N2_LIQUIDPHASE_FLUID_SYSTEM_HPP
 #define OPM_H2O_N2_LIQUIDPHASE_FLUID_SYSTEM_HPP
@@ -44,7 +44,6 @@
 #include <cassert>
 
 namespace Opm {
-namespace FluidSystems {
 
 /*!
  * \ingroup Fluidsystems
@@ -53,10 +52,10 @@ namespace FluidSystems {
  *        components.
  */
 template <class Scalar>
-class H2ON2LiquidPhase
-    : public BaseFluidSystem<Scalar, H2ON2LiquidPhase<Scalar> >
+class H2ON2LiquidPhaseFluidSystem
+    : public BaseFluidSystem<Scalar, H2ON2LiquidPhaseFluidSystem<Scalar> >
 {
-    typedef H2ON2LiquidPhase<Scalar> ThisType;
+    typedef H2ON2LiquidPhaseFluidSystem<Scalar> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
     // convenience typedefs
@@ -368,8 +367,6 @@ public:
         return H2O::liquidHeatCapacity(T, p);
     }
 };
-
-} // namespace FluidSystems
 
 } // namespace Opm
 

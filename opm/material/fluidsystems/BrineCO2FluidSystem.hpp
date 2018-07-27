@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Opm::FluidSystems::BrineCO2
+ * \copydoc Opm::BrineCO2FluidSystem
  */
 #ifndef OPM_BRINE_CO2_SYSTEM_HPP
 #define OPM_BRINE_CO2_SYSTEM_HPP
@@ -48,7 +48,6 @@
 #include <iostream>
 
 namespace Opm {
-namespace FluidSystems {
 
 /*!
  * \brief A two-phase fluid system with water and CO2.
@@ -58,8 +57,8 @@ namespace FluidSystems {
  * sampling to be supplied as template argument.
  */
 template <class Scalar, class CO2Tables>
-class BrineCO2
-    : public BaseFluidSystem<Scalar, BrineCO2<Scalar, CO2Tables> >
+class BrineCO2FluidSystem
+    : public BaseFluidSystem<Scalar, BrineCO2FluidSystem<Scalar, CO2Tables> >
 {
     typedef Opm::H2O<Scalar> H2O_IAPWS;
     typedef Opm::Brine<Scalar, H2O_IAPWS> Brine_IAPWS;
@@ -602,7 +601,6 @@ private:
     }
 };
 
-} // namespace FluidSystems
 } // namespace Opm
 
 #endif

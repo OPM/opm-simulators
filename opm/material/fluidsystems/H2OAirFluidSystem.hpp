@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidSystems::H2OAir
+ * \copydoc Opm::H2OAirFluidSystem
  */
 #ifndef OPM_H2O_AIR_SYSTEM_HPP
 #define OPM_H2O_AIR_SYSTEM_HPP
@@ -43,7 +43,6 @@
 #include <cassert>
 
 namespace Opm {
-namespace FluidSystems {
 
 /*!
  * \ingroup Fluidsystems
@@ -57,10 +56,10 @@ namespace FluidSystems {
 template <class Scalar,
           //class H2Otype = Opm::SimpleH2O<Scalar>,
           class H2Otype = Opm::TabulatedComponent<Scalar, Opm::H2O<Scalar> >>
-class H2OAir
-    : public BaseFluidSystem<Scalar, H2OAir<Scalar, H2Otype> >
+class H2OAirFluidSystem
+    : public BaseFluidSystem<Scalar, H2OAirFluidSystem<Scalar, H2Otype> >
 {
-    typedef H2OAir<Scalar,H2Otype> ThisType;
+    typedef H2OAirFluidSystem<Scalar,H2Otype> ThisType;
     typedef BaseFluidSystem <Scalar, ThisType> Base;
     typedef Opm::IdealGas<Scalar> IdealGas;
 
@@ -460,8 +459,6 @@ public:
         }
     }
 };
-
-} // namespace FluidSystems
 
 } // namespace Opm
 

@@ -164,7 +164,7 @@ void ensureBlackoilApi()
 template <class Scalar>
 void testAllFluidStates()
 {
-    typedef Opm::FluidSystems::H2ON2<Scalar> FluidSystem;
+    typedef Opm::H2ON2FluidSystem<Scalar> FluidSystem;
 
     // SimpleModularFluidState
     {   Opm::SimpleModularFluidState<Scalar,
@@ -233,7 +233,7 @@ void testAllFluidSystems()
 
     // black-oil
     {
-        typedef Opm::FluidSystems::BlackOil<Scalar> FluidSystem;
+        typedef Opm::BlackOilFluidSystem<Scalar> FluidSystem;
         if (false) checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>();
 
         typedef Opm::DenseAd::Evaluation<Scalar, 1> BlackoilDummyEval;
@@ -242,45 +242,45 @@ void testAllFluidSystems()
     }
 
     // Brine -- CO2
-    {   typedef Opm::FluidSystems::BrineCO2<Scalar, Opm::FluidSystemsTest::CO2Tables> FluidSystem;
+    {   typedef Opm::BrineCO2FluidSystem<Scalar, Opm::FluidSystemsTest::CO2Tables> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- N2
-    {   typedef Opm::FluidSystems::H2ON2<Scalar> FluidSystem;
+    {   typedef Opm::H2ON2FluidSystem<Scalar> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- N2 -- liquid phase
-    {   typedef Opm::FluidSystems::H2ON2LiquidPhase<Scalar> FluidSystem;
+    {   typedef Opm::H2ON2LiquidPhaseFluidSystem<Scalar> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- Air
     {   typedef Opm::SimpleH2O<Scalar> H2O;
-        typedef Opm::FluidSystems::H2OAir<Scalar, H2O> FluidSystem;
+        typedef Opm::H2OAirFluidSystem<Scalar, H2O> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- Air -- Mesitylene
-    {   typedef Opm::FluidSystems::H2OAirMesitylene<Scalar> FluidSystem;
+    {   typedef Opm::H2OAirMesityleneFluidSystem<Scalar> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- Air -- Xylene
-    {   typedef Opm::FluidSystems::H2OAirXylene<Scalar> FluidSystem;
+    {   typedef Opm::H2OAirXyleneFluidSystem<Scalar> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // 2p-immiscible
-    {   typedef Opm::FluidSystems::TwoPhaseImmiscible<Scalar, Liquid, Liquid> FluidSystem;
+    {   typedef Opm::TwoPhaseImmiscibleFluidSystem<Scalar, Liquid, Liquid> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
-    {   typedef Opm::FluidSystems::TwoPhaseImmiscible<Scalar, Liquid, Gas> FluidSystem;
+    {   typedef Opm::TwoPhaseImmiscibleFluidSystem<Scalar, Liquid, Gas> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
-    {  typedef Opm::FluidSystems::TwoPhaseImmiscible<Scalar, Gas, Liquid> FluidSystem;
+    {  typedef Opm::TwoPhaseImmiscibleFluidSystem<Scalar, Gas, Liquid> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // 1p
-    {   typedef Opm::FluidSystems::SinglePhase<Scalar, Liquid> FluidSystem;
+    {   typedef Opm::SinglePhaseFluidSystem<Scalar, Liquid> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
-    {   typedef Opm::FluidSystems::SinglePhase<Scalar, Gas> FluidSystem;
+    {   typedef Opm::SinglePhaseFluidSystem<Scalar, Gas> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 }
 

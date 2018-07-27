@@ -41,7 +41,7 @@ int main()
     {
         typedef double Scalar;
         typedef double Evaluation;
-        typedef typename Opm::FluidSystems::BlackOil<Scalar> FluidSystem;
+        typedef typename Opm::BlackOilFluidSystem<Scalar> FluidSystem;
         typedef Opm::BlackOilFluidState<Scalar, FluidSystem> FluidState;
 
         FluidState fs;
@@ -51,7 +51,7 @@ int main()
     {
         typedef float Scalar;
         typedef float Evaluation;
-        typedef typename Opm::FluidSystems::BlackOil<Scalar> FluidSystem;
+        typedef typename Opm::BlackOilFluidSystem<Scalar> FluidSystem;
         typedef Opm::BlackOilFluidState<Scalar, FluidSystem> FluidState;
 
         FluidState fs;
@@ -61,7 +61,7 @@ int main()
     {
         typedef float Scalar;
         typedef Opm::DenseAd::Evaluation<Scalar, 2> Evaluation;
-        typedef typename Opm::FluidSystems::BlackOil<Scalar> FluidSystem;
+        typedef typename Opm::BlackOilFluidSystem<Scalar> FluidSystem;
         typedef Opm::BlackOilFluidState<Evaluation, FluidSystem> FluidState;
 
         FluidState fs;
