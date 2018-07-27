@@ -45,7 +45,7 @@
 #include <vector>
 
 
-typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+typedef Opm::BlackOilFluidSystem<double> FluidSystem;
 // Forward declaring the MaterialLawManager template.
 typedef Opm::ThreePhaseMaterialTraits<double,
 /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
@@ -409,7 +409,7 @@ BOOST_AUTO_TEST_CASE (DeckAllDead)
     MaterialLawManager materialLawManager = MaterialLawManager();
     materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
-    typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+    typedef Opm::BlackOilFluidSystem<double> FluidSystem;
 
     // Initialize the fluid system
     FluidSystem::initFromDeck(deck, eclipseState);
@@ -448,7 +448,7 @@ BOOST_AUTO_TEST_CASE (CapillaryInversion)
     MaterialLawManager materialLawManager = MaterialLawManager();
     materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
-    typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+    typedef Opm::BlackOilFluidSystem<double> FluidSystem;
     typedef MaterialLawManager::MaterialLaw MaterialLaw;
 
     if (!FluidSystem::isInitialized()) {
@@ -514,7 +514,7 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillary)
     MaterialLawManager materialLawManager = MaterialLawManager();
     materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
-    typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+    typedef Opm::BlackOilFluidSystem<double> FluidSystem;
 
     // Initialize the fluid system
     FluidSystem::initFromDeck(deck, eclipseState);
@@ -565,7 +565,7 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillaryOverlap)
     MaterialLawManager materialLawManager = MaterialLawManager();
     materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
-    typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+    typedef Opm::BlackOilFluidSystem<double> FluidSystem;
 
     // Initialize the fluid system
     FluidSystem::initFromDeck(deck, eclipseState);
@@ -638,7 +638,7 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveOil)
     MaterialLawManager materialLawManager = MaterialLawManager();
     materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
-    typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+    typedef Opm::BlackOilFluidSystem<double> FluidSystem;
 
     // Initialize the fluid system
     FluidSystem::initFromDeck(deck, eclipseState);
@@ -726,7 +726,7 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveGas)
     MaterialLawManager materialLawManager = MaterialLawManager();
     materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
-    typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+    typedef Opm::BlackOilFluidSystem<double> FluidSystem;
 
     // Initialize the fluid system
     FluidSystem::initFromDeck(deck, eclipseState);
@@ -817,7 +817,7 @@ BOOST_AUTO_TEST_CASE (DeckWithRSVDAndRVVD)
     MaterialLawManager materialLawManager = MaterialLawManager();
     materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
-    typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+    typedef Opm::BlackOilFluidSystem<double> FluidSystem;
 
     // Initialize the fluid system
     FluidSystem::initFromDeck(deck, eclipseState);

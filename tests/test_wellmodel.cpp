@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     const Opm::BlackoilModelParameters param;
 
     // For the conversion between the surface volume rate and resrevoir voidage rate
-    typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+    typedef Opm::BlackOilFluidSystem<double> FluidSystem;
     using RateConverterType = Opm::RateConverter::
         SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
     // Compute reservoir volumes for RESV controls.
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
             // we should always be able to find the well in wells_ecl
             BOOST_CHECK(index_well !=  wells_ecl.size());
             // For the conversion between the surface volume rate and resrevoir voidage rate
-            typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+            typedef Opm::BlackOilFluidSystem<double> FluidSystem;
             using RateConverterType = Opm::RateConverter::
                 SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
             // Compute reservoir volumes for RESV controls.

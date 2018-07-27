@@ -62,7 +62,7 @@ namespace Opm
     {
         friend class BlackoilPropsDataHandle;
     public:
-        typedef FluidSystems::BlackOil<double> FluidSystem;
+        typedef BlackOilFluidSystem<double> FluidSystem;
         typedef Opm::GasPvtMultiplexer<double> GasPvt;
         typedef Opm::OilPvtMultiplexer<double> OilPvt;
         typedef Opm::WaterPvtMultiplexer<double> WaterPvt;
