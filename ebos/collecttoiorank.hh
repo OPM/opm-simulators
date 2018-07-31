@@ -104,8 +104,8 @@ public:
         std::vector<int>& ranks_;
 
     public:
-        DistributeIndexMapping(std::vector<int>& globalIndex,
-                               std::vector<int>& distributedGlobalIndex,
+        DistributeIndexMapping(const std::vector<int>& globalIndex,
+                               const std::vector<int>& distributedGlobalIndex,
                                IndexMapType& localIndexMap,
                                IndexMapStorageType& indexMaps,
                                std::vector<int>& ranks)
@@ -582,7 +582,7 @@ protected:
     IndexMapType globalCartesianIndex_;
     IndexMapType localIndexMap_;
     IndexMapStorageType indexMaps_;
-    std::vector<int>                globalRanks_;
+    std::vector<int> globalRanks_;
     Opm::data::Solution globalCellData_;
     std::map<std::pair<std::string, int>, double> globalBlockData_;
     Opm::data::Wells globalWellData_;
