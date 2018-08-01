@@ -947,6 +947,10 @@ protected:
     {
         if ( ordering_.empty())
         {
+            // As d is non-const in the apply method of the
+            // solver casting away constness in this particular
+            // setting is not undefined. It is ugly though but due
+            // to the preconditioner interface of dune-istl.
             return const_cast<Range&>(d);
         }
         else
