@@ -183,7 +183,7 @@ colorVerticesWelshPowell(const Graph& graph)
 template<class Graph>
 std::vector<std::size_t>
 reorderVerticesPreserving(const std::vector<int>& colors, int noColors,
-                          const std::vector<std::size_t> verticesPerColor,
+                          const std::vector<std::size_t>& verticesPerColor,
                           const Graph& graph)
 {
     std::vector<std::size_t> colorIndex(noColors, 0);
@@ -203,7 +203,7 @@ reorderVerticesPreserving(const std::vector<int>& colors, int noColors,
 template<class Graph>
 std::vector<std::size_t>
 reorderVerticesSpheres(const std::vector<int>& colors, int noColors,
-                       const std::vector<std::size_t> verticesPerColor,
+                       const std::vector<std::size_t>& verticesPerColor,
                        const Graph& graph,
                        typename Graph::VertexDescriptor root)
 {

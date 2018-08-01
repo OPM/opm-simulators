@@ -168,14 +168,14 @@ namespace Opm
 
     struct RealReorderer : public Reorderer
     {
-        RealReorderer(std::vector<std::size_t> ordering)
-            : ordering_(ordering)
+        RealReorderer(const std::vector<std::size_t>& ordering)
+            : ordering_(&ordering)
         {}
         virtual std::size_t operator[](std::size_t i) const
         {
-            return ordering_[i];
+            return (*ordering_)[i];
         }
-        std::vector<std::size_t> ordering_;
+        const std::vector<std::size_t>* ordering_;
     };
 
     struct IdentityFunctor
