@@ -95,7 +95,7 @@ try
     boost::scoped_ptr<RockCompressibility> rock_comp;
     std::unique_ptr<PolymerBlackoilState> state;
     Opm::PolymerProperties poly_props;
-    Opm::Deck deck;
+    std::unique_ptr<Opm::Deck> deck;
     std::unique_ptr< EclipseState > eclipseState;
     std::unique_ptr< Schedule> schedule;
     // bool check_well_controls = false;
@@ -105,16 +105,16 @@ try
         std::string deck_filename = param.get<std::string>("deck_filename");
         Parser parser;
         Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
-        deck = parser.parseFile(deck_filename , parseContext);
-        eclipseState.reset( new EclipseState(deck , parseContext) );
-        schedule.reset( new Schedule(deck, eclipseState->getInputGrid(), eclipseState->get3DProperties(), eclipseState->runspec().phases(), parseContext ));
+        deck.reset(new Deck(parser.parseFile(deck_filename , parseContext)));
+        eclipseState.reset( new EclipseState(*deck , parseContext) );
+        schedule.reset( new Schedule(*deck, eclipseState->getInputGrid(), eclipseState->get3DProperties(), eclipseState->runspec().phases(), parseContext ));
         // Grid init
         grid.reset(new GridManager(eclipseState->getInputGrid()));
         {
             const UnstructuredGrid& ug_grid = *(grid->c_grid());
 
             // Rock and fluid init
-            props.reset(new BlackoilPropertiesFromDeck(deck, *eclipseState, ug_grid));
+            props.reset(new BlackoilPropertiesFromDeck(*deck, *eclipseState, ug_grid));
             // check_well_controls = param.getDefault("check_well_controls", false);
             // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
 
@@ -122,16 +122,16 @@ try
             // Rock compressibility.
             rock_comp.reset(new RockCompressibility(*eclipseState));
             // Gravity.
-            gravity[2] = deck.hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+            gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
             // Init state variables (saturation and pressure).
             if (param.has("init_saturation")) {
                 initStateBasic(ug_grid, *props, param, gravity[2], *state);
             } else {
-                initStateFromDeck(ug_grid, *props, deck, gravity[2], *state);
+                initStateFromDeck(ug_grid, *props, *deck, gravity[2], *state);
             }
             initBlackoilSurfvol(ug_grid, *props, *state);
             // Init polymer properties.
-            poly_props.readFromDeck(deck, *eclipseState);
+            poly_props.readFromDeck(*deck, *eclipseState);
         }
     } else {
         // Grid init.
@@ -262,12 +262,12 @@ try
         // With a deck, we may have more epochs etc.
         WellState well_state;
         int step = 0;
-        Opm::TimeMap timeMap(deck);
+        Opm::TimeMap timeMap(*deck);
         SimulatorTimer simtimer;
         simtimer.init(timeMap);
         // Check for WPOLYMER presence in last report step to decide
         // polymer injection control type.
-        const bool use_wpolymer = deck.hasKeyword("WPOLYMER");
+        const bool use_wpolymer = deck->hasKeyword("WPOLYMER");
         if (use_wpolymer) {
             if (param.has("poly_start_days")) {
                 OPM_MESSAGE("Warning: Using WPOLYMER to control injection since it was found in deck. "
@@ -283,7 +283,7 @@ try
                       << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, polymer inflow controls.
-            eclipseState.reset( new EclipseState( deck ) );
+            eclipseState.reset( new EclipseState( *deck ) );
             WellsManager wells(*eclipseState , *schedule, reportStepIdx , *grid->c_grid());
             boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
             if (use_wpolymer) {
