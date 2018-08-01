@@ -31,6 +31,9 @@
 
 #include <type_traits>
 #include <numeric>
+#include <limits>
+#include <cstddef>
+#include <string>
 
 namespace Opm
 {
