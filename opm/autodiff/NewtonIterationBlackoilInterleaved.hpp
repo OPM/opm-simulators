@@ -28,6 +28,7 @@
 #include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
+#include <opm/autodiff/ParallelOverlappingILU0.hpp>
 
 #include <array>
 #include <memory>
@@ -44,6 +45,9 @@ namespace Opm
         int    linear_solver_restart_;
         int    linear_solver_verbosity_;
         int    ilu_fillin_level_;
+        Opm::MILU_VARIANT   ilu_milu_;
+        bool   ilu_redblack_;
+        bool   ilu_reorder_sphere_;
         bool   newton_use_gmres_;
         bool   require_full_sparsity_pattern_;
         bool   ignoreConvergenceFailure_;
@@ -69,6 +73,10 @@ namespace Opm
             linear_solver_use_amg_    = param.getDefault("linear_solver_use_amg", linear_solver_use_amg_ );
             ilu_relaxation_           = param.getDefault("ilu_relaxation", ilu_relaxation_ );
             ilu_fillin_level_         = param.getDefault("ilu_fillin_level",  ilu_fillin_level_ );
+            ilu_redblack_             = param.getDefault("ilu_redblack", cpr_ilu_redblack_);
+            ilu_reorder_sphere_       = param.getDefault("ilu_reorder_sphere", cpr_ilu_reorder_sphere_);
+            std::string milu("ILU");
+            ilu_milu_ = convertString2Milu(param.getDefault("ilu_milu", milu));
 
             // Check whether to use cpr approach
             const std::string cprSolver = "cpr";
@@ -89,6 +97,9 @@ namespace Opm
             linear_solver_use_amg_    = false;
             ilu_fillin_level_         = 0;
             ilu_relaxation_           = 0.9;
+            ilu_milu_                 = MILU_VARIANT::ILU;
+            ilu_redblack_             = false;
+            ilu_reorder_sphere_       = true;
         }
     };
 

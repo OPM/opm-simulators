@@ -142,6 +142,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_blackoil_amg.cpp
   tests/test_block.cpp
   tests/test_boprops_ad.cpp
+  tests/test_graphcoloring.cpp
   tests/test_rateconverter.cpp
   tests/test_span.cpp
   tests/test_syntax.cpp
@@ -150,6 +151,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_welldensitysegmented.cpp
   tests/test_vfpproperties.cpp
   tests/test_singlecellsolves.cpp
+  tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
   tests/test_multiphaseupwind.cpp
   tests/test_wellmodel.cpp
@@ -290,6 +292,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/FlowMainEbos.hpp
   opm/autodiff/FlowMainSequential.hpp
   opm/autodiff/GeoProps.hpp
+  opm/autodiff/GraphColoring.hpp
   opm/autodiff/GridHelpers.hpp
   opm/autodiff/GridInit.hpp
   opm/autodiff/ImpesTPFAAD.hpp
