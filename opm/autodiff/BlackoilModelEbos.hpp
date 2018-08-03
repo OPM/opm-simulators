@@ -321,7 +321,7 @@ namespace Opm {
 
                 // Apply the update, with considering model-dependent limitations and
                 // chopping of the update.
-                updateState(x);
+                updateSolution(x);
 
                 report.update_time += perfTimer.stop();
             }
@@ -623,152 +623,21 @@ namespace Opm {
           std::unique_ptr< communication_type > comm_;
         };
 
-        /// Apply an update to the primary variables, chopped if appropriate.
-        /// \param[in]      dx                updates to apply to primary variables
-        /// \param[in, out] reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        void updateState(const BVector& dx)
+        /// Apply an update to the primary variables.
+        void updateSolution(const BVector& dx)
         {
-            const auto& ebosProblem = ebosSimulator_.problem();
+            auto& ebosNewtonMethod = ebosSimulator_.model().newtonMethod();
+            SolutionVector& solution = ebosSimulator_.model().solution(/*timeIdx=*/0);
 
-            unsigned numSwitched = 0;
-            ElementContext elemCtx( ebosSimulator_ );
-            const auto& gridView = ebosSimulator_.gridView();
-            const auto& elemEndIt = gridView.template end</*codim=*/0>();
-            SolutionVector& solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
+            ebosNewtonMethod.update_(/*nextSolution=*/solution,
+                                     /*curSolution=*/solution,
+                                     /*update=*/dx,
+                                     /*resid=*/dx); // the update routines of the black
+                                                    // oil model do not care about the
+                                                    // residual
 
-            for (auto elemIt = gridView.template begin</*codim=*/0>();
-                 elemIt != elemEndIt;
-                 ++elemIt)
-            {
-                const auto& elem = *elemIt;
-
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-
-                PrimaryVariables& priVars = solution[ cell_idx ];
-
-                const double& dp = dx[cell_idx][Indices::pressureSwitchIdx];
-                double& p = priVars[Indices::pressureSwitchIdx];
-                const double& dp_rel_max = dpMaxRel();
-                const int sign_dp = dp > 0 ? 1: -1;
-                p -= sign_dp * std::min(std::abs(dp), std::abs(p)*dp_rel_max);
-                p = std::max(p, 0.0);
-
-                // Saturation updates.
-                const double dsw = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ? dx[cell_idx][Indices::waterSaturationIdx] : 0.0;
-                const double dxvar = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ? dx[cell_idx][Indices::compositionSwitchIdx] : 0.0;
-
-                double dso = 0.0;
-                double dsg = 0.0;
-                double drs = 0.0;
-                double drv = 0.0;
-
-                // determine the saturation delta values
-                if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
-                    dsg = dxvar;
-                }
-                else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs) {
-                    drs = dxvar;
-                }
-                else {
-                    assert(priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv);
-                    drv = dxvar;
-                    dsg = 0.0;
-                }
-
-                // solvent
-                const double dss = has_solvent_ ? dx[cell_idx][Indices::solventSaturationIdx] : 0.0;
-
-                // polymer
-                const double dc = has_polymer_ ? dx[cell_idx][Indices::polymerConcentrationIdx] : 0.0;
-
-                // oil
-                dso = - (dsw + dsg + dss);
-
-                // compute a scaling factor for the saturation update so that the maximum
-                // allowed change of saturations between iterations is not exceeded
-                double maxVal = 0.0;
-                maxVal = std::max(std::abs(dsw),maxVal);
-                maxVal = std::max(std::abs(dsg),maxVal);
-                maxVal = std::max(std::abs(dso),maxVal);
-                maxVal = std::max(std::abs(dss),maxVal);
-
-                double satScaleFactor = 1.0;
-                if (maxVal > dsMax()) {
-                    satScaleFactor = dsMax()/maxVal;
-                }
-
-                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    double& sw = priVars[Indices::waterSaturationIdx];
-                    sw -= satScaleFactor * dsw;
-                }
-
-                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                     if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
-                           double& sg = priVars[Indices::compositionSwitchIdx];
-                           sg -= satScaleFactor * dsg;
-                     }
-                }
-
-                if (has_solvent_) {
-                    double& ss = priVars[Indices::solventSaturationIdx];
-                    ss -= satScaleFactor * dss;
-                    ss = std::min(std::max(ss, 0.0),1.0);
-                }
-                if (has_polymer_) {
-                    double& c = priVars[Indices::polymerConcentrationIdx];
-                    c -= satScaleFactor * dc;
-                    c = std::max(c, 0.0);
-                }
-
-                if (has_energy_) {
-                    double& T = priVars[Indices::temperatureIdx];
-                    const double dT = dx[cell_idx][Indices::temperatureIdx];
-                    T -= dT;
-                }
-
-                // Update rs and rv
-                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ) {
-                    unsigned pvtRegionIdx = ebosSimulator_.problem().pvtRegionIndex(cell_idx);
-                    const double drmaxrel = drMaxRel();
-                    if (has_disgas_) {
-                        if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs) {
-                            Scalar RsSat =
-                                FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx, 300.0, p);
-
-                            double& rs = priVars[Indices::compositionSwitchIdx];
-                            rs -= ((drs<0)?-1:1)*std::min(std::abs(drs), RsSat*drmaxrel);
-                            rs = std::max(rs, 0.0);
-                        }
-
-                    }
-                    if (has_vapoil_) {
-                        if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
-                            Scalar RvSat =
-                                FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx, 300.0, p);
-
-                            double& rv = priVars[Indices::compositionSwitchIdx];
-                            rv -= ((drv<0)?-1:1)*std::min(std::abs(drv), RvSat*drmaxrel);
-                            rv = std::max(rv, 0.0);
-                        }
-                    }
-                }
-
-               // Add an epsilon to make it harder to switch back immediately after the primary variable was changed.
-                if (wasSwitched_[cell_idx])
-                    wasSwitched_[cell_idx] = priVars.adaptPrimaryVariables(ebosProblem, cell_idx, 1e-5);
-                else
-                    wasSwitched_[cell_idx] = priVars.adaptPrimaryVariables(ebosProblem, cell_idx);
-
-                if (wasSwitched_[cell_idx])
-                    ++numSwitched;
-            }
-
-            // if the solution is updated the intensive Quantities need to be recalculated
+            // if the solution is updated, the intensive quantities need to be recalculated
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-
         }
 
         /// Return true if output to cout is wanted.
