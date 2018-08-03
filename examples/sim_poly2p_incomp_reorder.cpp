@@ -90,7 +90,7 @@ try
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
-    Deck deck;
+    std::unique_ptr<Deck> deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<IncompPropertiesInterface> props;
     boost::scoped_ptr<RockCompressibility> rock_comp;
@@ -105,16 +105,16 @@ try
         std::string deck_filename = param.get<std::string>("deck_filename");
         Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
         Parser parser;
-        deck = parser.parseFile(deck_filename , parseContext);
+        deck.reset(new Deck(parser.parseFile(deck_filename , parseContext)));
 
-        eclipseState.reset(new Opm::EclipseState(deck , parseContext));
-        schedule.reset( new Opm::Schedule(deck, eclipseState->getInputGrid(), eclipseState->get3DProperties(), eclipseState->runspec().phases(), parseContext));
+        eclipseState.reset(new Opm::EclipseState(*deck , parseContext));
+        schedule.reset( new Opm::Schedule(*deck, eclipseState->getInputGrid(), eclipseState->get3DProperties(), eclipseState->runspec().phases(), parseContext));
         // Grid init
         grid.reset(new GridManager(eclipseState->getInputGrid()));
         {
             const UnstructuredGrid& ug_grid = *(grid->c_grid());
             // Rock and fluid init
-            props.reset(new IncompPropertiesFromDeck(deck, *eclipseState, ug_grid ));
+            props.reset(new IncompPropertiesFromDeck(*deck, *eclipseState, ug_grid ));
             // check_well_controls = param.getDefault("check_well_controls", false);
             // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
             state.reset( new PolymerState(  UgGridHelpers::numCells( ug_grid ) , UgGridHelpers::numFaces( ug_grid ), 2));
@@ -122,15 +122,15 @@ try
             // Rock compressibility.
             rock_comp.reset(new RockCompressibility(*eclipseState));
             // Gravity.
-            gravity[2] = deck.hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+            gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
             // Init state variables (saturation and pressure).
             if (param.has("init_saturation")) {
                 initStateBasic(ug_grid, *props, param, gravity[2], *state);
             } else {
-                initStateFromDeck(ug_grid, *props, deck, gravity[2], *state);
+                initStateFromDeck(ug_grid, *props, *deck, gravity[2], *state);
             }
             // Init polymer properties.
-            poly_props.readFromDeck(deck, *eclipseState);
+            poly_props.readFromDeck(*deck, *eclipseState);
         }
     } else {
         // Grid init.
@@ -302,7 +302,7 @@ try
         simtimer.init(timeMap);
         // Check for WPOLYMER presence in last epoch to decide
         // polymer injection control type.
-        const bool use_wpolymer = deck.hasKeyword("WPOLYMER");
+        const bool use_wpolymer = deck->hasKeyword("WPOLYMER");
         if (use_wpolymer) {
             if (param.has("poly_start_days")) {
                 OPM_MESSAGE("Warning: Using WPOLYMER to control injection since it was found in deck. "
