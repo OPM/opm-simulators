@@ -12,10 +12,13 @@ ABS_TOL="$5"
 REL_TOL="$6"
 COMPARE_SUMMARY_COMMAND="$7"
 COMPARE_ECL_COMMAND="$8"
-PARALLEL="${9}"
-EXE_NAME="${10}"
-shift 10
+OPM_PACK_COMMAND="$9"
+PARALLEL="${10}"
+EXE_NAME="${11}"
+shift 11
 TEST_ARGS="$@"
+
+BASE_NAME=`basename ${TEST_ARGS}_RESTART.DATA`
 
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
@@ -28,7 +31,9 @@ else
 fi
 ${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA timestep.adaptive=false output_dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
-${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${TEST_ARGS}_RESTART.DATA timestep.adaptive=false output_dir=${RESULT_PATH}
+
+${OPM_PACK_COMMAND} -o ${BASE_NAME} ${TEST_ARGS}_RESTART.DATA
+${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${BASE_NAME} timestep.adaptive=false output_dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
 
 ecode=0
