@@ -431,7 +431,20 @@ public:
      * \copydoc FvBaseProblem::briefDescription
      */
     static std::string briefDescription()
-    { return "ebos, the Ecl Black-Oil reservoir Simulator. A program to process ECL input files."; }
+    {
+        if (briefDescription_.empty())
+            return "ebos, the Ecl Black-Oil reservoir Simulator. A program to process ECL input files.";
+        else
+            return briefDescription_;
+    }
+
+    /*!
+     * \brief Specifies the string returned by briefDescription()
+     *
+     * This string appears in the usage message.
+     */
+    static void setBriefDescription(const std::string& msg)
+    { briefDescription_ = msg; }
 
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
@@ -2025,6 +2038,8 @@ private:
         pffDofData_.update(distFn);
     }
 
+    static std::string briefDescription_;
+
     std::vector<Scalar> porosity_;
     std::vector<Scalar> elementCenterDepth_;
     EclTransmissibility<TypeTag> transmissibilities_;
@@ -2072,6 +2087,10 @@ private:
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
 
 };
+
+template <class TypeTag>
+std::string EclProblem<TypeTag>::briefDescription_;
+
 } // namespace Ewoms
 
 #endif
