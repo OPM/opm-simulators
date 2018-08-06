@@ -433,7 +433,11 @@ public:
     static std::string briefDescription()
     {
         if (briefDescription_.empty())
-            return "ebos, the Ecl Black-Oil reservoir Simulator. A program to process ECL input files.";
+            return
+                "The Ecl-deck Black-Oil reservoir Simulator (ebos); a hydrocarbon\n"
+                "reservoir simulation program that processes ECL-formatted input\n"
+                "files which is provided by the Open Porous Media project\n"
+                "(https://opm-project.org).";
         else
             return briefDescription_;
     }
