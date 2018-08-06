@@ -406,6 +406,11 @@ namespace Opm
                  ss << "User          =  " << user << std::endl;
                  }
               ss << "Simulation started on " << tmstr << " hrs\n";
+
+              ss << "---- parameters ----\n";
+              Ewoms::Parameters::printValues<TypeTag>(ss);
+              ss << "---- /parameters ----\n";
+
               OpmLog::note(ss.str());
             }
         }
