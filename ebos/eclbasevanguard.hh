@@ -65,7 +65,7 @@ NEW_PROP_TAG(EclDeckFileName);
 NEW_PROP_TAG(EclOutputDir);
 NEW_PROP_TAG(EclOutputInterval);
 
-SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "ECLDECK.DATA");
+SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
 SET_STRING_PROP(EclBaseVanguard, EclOutputDir, ".");
 SET_INT_PROP(EclBaseVanguard, EclOutputInterval, -1); // use the deck-provided value
 
@@ -171,6 +171,11 @@ public:
 #endif
 
         std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
+
+        if (fileName == "")
+            throw std::runtime_error("No input deck file has been specified as a command line argument,"
+                                     " or via '--ecl-deck-file-name=CASE.DATA'");
+
         fileName = canonicalDeckPath(fileName).string();
 
         // compute the base name of the input file name
