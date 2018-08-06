@@ -126,7 +126,7 @@ int main(int argc, char** argv)
 
     bool outputCout = false;
     if (mpiRank == 0)
-        outputCout = EWOMS_GET_PARAM(PreTypeTag, bool, FlowEnableTerminalOutput);
+        outputCout = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
 
     std::string deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
     typedef typename GET_PROP_TYPE(PreTypeTag, Vanguard) PreVanguard;

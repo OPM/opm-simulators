@@ -223,7 +223,7 @@ add_test_compareECLFiles(CASENAME spe3
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --flow-tolerance-wells=1e-6 --flow-newton-max-iterations=20)
+                         TEST_ARGS --tolerance-wells=1e-6 --flow-newton-max-iterations=20)
 
 add_test_compareECLFiles(CASENAME spe3
                          FILENAME SPE3CASE1
@@ -251,14 +251,14 @@ add_test_compareECLFiles(CASENAME msw_2d_h
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --flow-use-multisegment-well=true)
+                         TEST_ARGS --use-multisegment-well=true)
 
 add_test_compareECLFiles(CASENAME msw_3d_hfa
                          FILENAME 3D_MSW
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --flow-use-multisegment-well=true)
+                         TEST_ARGS --use-multisegment-well=true)
 
 add_test_compareECLFiles(CASENAME polymer_oilwater
                          FILENAME 2D_OILWATER_POLYMER

@@ -20,7 +20,7 @@ rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
 if test "${EXE_NAME}" = "flow"; then
-    ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --flow-linear-solver-reduction=1e-7 --flow-tolerance-cnv=5e-6 --flow-tolerance-mb=1e-8 --ecl-output-dir=${RESULT_PATH}
+    ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-output-dir=${RESULT_PATH}
 else
     ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA linear_solver_reduction=1e-7 tolerance_cnv=5e-6 tolerance_mb=1e-8 output_dir=${RESULT_PATH}
 fi
@@ -29,7 +29,7 @@ test $? -eq 0 || exit 1
 mkdir mpi
 cd mpi
 if test "${EXE_NAME}" = "flow"; then
-    mpirun -np 4 ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --flow-linear-solver-reduction=1e-7 --flow-tolerance-cnv=5e-6 --flow-tolerance-mb=1e-8 --ecl-output-dir=${RESULT_PATH}/mpi
+    mpirun -np 4 ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-output-dir=${RESULT_PATH}/mpi
 else
     mpirun -np 4 ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA linear_solver_reduction=1e-7 tolerance_cnv=5e-6 tolerance_mb=1e-8 output_dir=${RESULT_PATH}/mpi
 fi

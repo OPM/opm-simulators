@@ -39,15 +39,15 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(FlowNonLinearSolver);
 
 NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(FlowNewtonMaxRelax);
+NEW_PROP_TAG(NewtonMaxRelax);
 NEW_PROP_TAG(FlowNewtonMaxIterations);
 NEW_PROP_TAG(FlowNewtonMinIterations);
-NEW_PROP_TAG(FlowNewtonRelaxationType);
+NEW_PROP_TAG(NewtonRelaxationType);
 
-SET_SCALAR_PROP(FlowNonLinearSolver, FlowNewtonMaxRelax, 0.5);
+SET_SCALAR_PROP(FlowNonLinearSolver, NewtonMaxRelax, 0.5);
 SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMaxIterations, 10);
 SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMinIterations, 1);
-SET_STRING_PROP(FlowNonLinearSolver, FlowNewtonRelaxationType, "dampen");
+SET_STRING_PROP(FlowNonLinearSolver, NewtonRelaxationType, "dampen");
 
 END_PROPERTIES
 
@@ -84,11 +84,11 @@ namespace Opm {
                 reset();
 
                 // overload with given parameters
-                relaxMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, FlowNewtonMaxRelax);
+                relaxMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxRelax);
                 maxIter_ = EWOMS_GET_PARAM(TypeTag, int, FlowNewtonMaxIterations);
                 minIter_ = EWOMS_GET_PARAM(TypeTag, int, FlowNewtonMinIterations);
 
-                const auto& relaxationTypeString = EWOMS_GET_PARAM(TypeTag, std::string, FlowNewtonRelaxationType);
+                const auto& relaxationTypeString = EWOMS_GET_PARAM(TypeTag, std::string, NewtonRelaxationType);
                 if (relaxationTypeString == "dampen") {
                     relaxType_ = Dampen;
                 } else if (relaxationTypeString == "sor") {
@@ -100,10 +100,10 @@ namespace Opm {
 
             static void registerParameters()
             {
-                EWOMS_REGISTER_PARAM(TypeTag, Scalar, FlowNewtonMaxRelax, "The maximum relaxation factor of a Newton iteration used by flow");
+                EWOMS_REGISTER_PARAM(TypeTag, Scalar, NewtonMaxRelax, "The maximum relaxation factor of a Newton iteration used by flow");
                 EWOMS_REGISTER_PARAM(TypeTag, int, FlowNewtonMaxIterations, "The maximum number of Newton iterations per time step used by flow");
                 EWOMS_REGISTER_PARAM(TypeTag, int, FlowNewtonMinIterations, "The minimum number of Newton iterations per time step used by flow");
-                EWOMS_REGISTER_PARAM(TypeTag, std::string, FlowNewtonRelaxationType, "The type of relaxation used by flow's Newton method");
+                EWOMS_REGISTER_PARAM(TypeTag, std::string, NewtonRelaxationType, "The type of relaxation used by flow's Newton method");
             }
 
             void reset()

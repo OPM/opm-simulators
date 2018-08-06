@@ -58,17 +58,17 @@
 
 BEGIN_PROPERTIES;
 
-NEW_PROP_TAG(FlowOutputMode);
-NEW_PROP_TAG(FlowEnableDryRun);
-NEW_PROP_TAG(FlowOutputInterval);
-NEW_PROP_TAG(FlowUseAmg);
+NEW_PROP_TAG(OutputMode);
+NEW_PROP_TAG(EnableDryRun);
+NEW_PROP_TAG(OutputInterval);
+NEW_PROP_TAG(UseAmg);
 
-SET_STRING_PROP(EclFlowProblem, FlowOutputMode, "all");
+SET_STRING_PROP(EclFlowProblem, OutputMode, "all");
 
 // TODO: enumeration parameters. we use strings for now.
-SET_STRING_PROP(EclFlowProblem, FlowEnableDryRun, "auto");
+SET_STRING_PROP(EclFlowProblem, EnableDryRun, "auto");
 
-SET_INT_PROP(EclFlowProblem, FlowOutputInterval, 1);
+SET_INT_PROP(EclFlowProblem, OutputInterval, 1);
 
 END_PROPERTIES;
 
@@ -105,11 +105,11 @@ namespace Opm
         static int setupParameters_(int argc, char** argv)
         {
             // register the flow specific parameters
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, FlowOutputMode,
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
                                  "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, FlowEnableDryRun,
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, EnableDryRun,
                                  "Specify if the simulation ought to be actually run, or just pretended to be");
-            EWOMS_REGISTER_PARAM(TypeTag, int, FlowOutputInterval,
+            EWOMS_REGISTER_PARAM(TypeTag, int, OutputInterval,
                                  "Specify the number of report steps between two consecutive writes of restart data");
             Simulator::registerParameters();
 
@@ -287,7 +287,7 @@ namespace Opm
         void setupOutput()
         {
             const std::string outputModeString =
-                EWOMS_GET_PARAM(TypeTag, std::string, FlowOutputMode);
+                EWOMS_GET_PARAM(TypeTag, std::string, OutputMode);
             static std::map<std::string, FileOutputMode> stringToOutputMode =
                 { {"none", OUTPUT_NONE },
                   {"false", OUTPUT_LOG_ONLY },
@@ -307,7 +307,7 @@ namespace Opm
 
             output_cout_ = false;
             if (mpi_rank_ == 0) {
-                output_cout_ = EWOMS_GET_PARAM(TypeTag, bool, FlowEnableTerminalOutput);
+                output_cout_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
                 output_to_files_ = (output_ != OUTPUT_NONE);
             }
         }
@@ -445,7 +445,7 @@ namespace Opm
                 }
 
                 // Possible to force initialization only behavior (NOSIM).
-                const std::string& dryRunString = EWOMS_GET_PARAM(TypeTag, std::string, FlowEnableDryRun);
+                const std::string& dryRunString = EWOMS_GET_PARAM(TypeTag, std::string, EnableDryRun);
                 if (dryRunString != "" && dryRunString != "auto") {
                     bool yesno;
                     if (dryRunString == "true"
@@ -457,7 +457,7 @@ namespace Opm
                              || dryRunString == "0")
                         yesno = false;
                     else
-                        throw std::invalid_argument("Invalid value for parameter FlowEnableDryRun: '"
+                        throw std::invalid_argument("Invalid value for parameter EnableDryRun: '"
                                                     +dryRunString+"'");
                     auto& ioConfig = eclState().getIOConfig();
                     ioConfig.overrideNOSIM(yesno);

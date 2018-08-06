@@ -38,13 +38,13 @@
 
 BEGIN_PROPERTIES;
 
-NEW_PROP_TAG(FlowEnableTerminalOutput);
-NEW_PROP_TAG(FlowEnableAdaptiveTimeStepping);
-NEW_PROP_TAG(FlowEnableTuning);
+NEW_PROP_TAG(EnableTerminalOutput);
+NEW_PROP_TAG(EnableAdaptiveTimeStepping);
+NEW_PROP_TAG(EnableTuning);
 
-SET_BOOL_PROP(EclFlowProblem, FlowEnableTerminalOutput, true);
-SET_BOOL_PROP(EclFlowProblem, FlowEnableAdaptiveTimeStepping, true);
-SET_BOOL_PROP(EclFlowProblem, FlowEnableTuning, false);
+SET_BOOL_PROP(EclFlowProblem, EnableTerminalOutput, true);
+SET_BOOL_PROP(EclFlowProblem, EnableAdaptiveTimeStepping, true);
+SET_BOOL_PROP(EclFlowProblem, EnableTuning, false);
 
 END_PROPERTIES;
 
@@ -109,7 +109,7 @@ public:
 
         // Only rank 0 does print to std::cout
         const auto& comm = grid().comm();
-        terminalOutput_ = EWOMS_GET_PARAM(TypeTag, bool, FlowEnableTerminalOutput);
+        terminalOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
         terminalOutput_ = terminalOutput_ && (comm.rank() == 0);
     }
 
@@ -119,11 +119,11 @@ public:
         SolverParameters::registerParameters();
         TimeStepper::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, bool, FlowEnableTerminalOutput,
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTerminalOutput,
                              "Print high-level information about the simulation's progress to the terminal");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, FlowEnableAdaptiveTimeStepping,
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAdaptiveTimeStepping,
                              "Use adaptive time stepping between report steps");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, FlowEnableTuning,
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTuning,
                              "Honor some aspects of the TUNING keyword.");
     }
 
@@ -156,8 +156,8 @@ public:
         // adaptive time stepping
         const auto& events = schedule().getEvents();
         std::unique_ptr<TimeStepper > adaptiveTimeStepping;
-        bool enableAdaptive = EWOMS_GET_PARAM(TypeTag, bool, FlowEnableAdaptiveTimeStepping);
-        bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, FlowEnableTuning);
+        bool enableAdaptive = EWOMS_GET_PARAM(TypeTag, bool, EnableAdaptiveTimeStepping);
+        bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
         if (enableAdaptive) {
             if (enableTUNING) {
                 adaptiveTimeStepping.reset(new TimeStepper(schedule().getTuning(), timer.currentStepNum(), terminalOutput_));

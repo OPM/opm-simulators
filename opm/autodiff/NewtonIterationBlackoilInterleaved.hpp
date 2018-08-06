@@ -40,35 +40,35 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(FlowIstlSolverParams);
 
 NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(FlowLinearSolverReduction);
-NEW_PROP_TAG(FlowIluRelaxation);
-NEW_PROP_TAG(FlowLinearSolverMaxIter);
-NEW_PROP_TAG(FlowLinearSolverRestart);
+NEW_PROP_TAG(LinearSolverReduction);
+NEW_PROP_TAG(IluRelaxation);
+NEW_PROP_TAG(LinearSolverMaxIter);
+NEW_PROP_TAG(LinearSolverRestart);
 NEW_PROP_TAG(FlowLinearSolverVerbosity);
-NEW_PROP_TAG(FlowIluFillinLevel);
-NEW_PROP_TAG(FlowMIluVariant);
-NEW_PROP_TAG(FlowIluRedblack);
-NEW_PROP_TAG(FlowIluReorderSpheres);
-NEW_PROP_TAG(FlowUseGmres);
-NEW_PROP_TAG(FlowLinearSolverRequireFullSparsityPattern);
-NEW_PROP_TAG(FlowLinearSolverIgnoreConvergenceFailure);
-NEW_PROP_TAG(FlowUseAmg);
-NEW_PROP_TAG(FlowUseCpr);
+NEW_PROP_TAG(IluFillinLevel);
+NEW_PROP_TAG(MIluVariant);
+NEW_PROP_TAG(IluRedblack);
+NEW_PROP_TAG(IluReorderSpheres);
+NEW_PROP_TAG(UseGmres);
+NEW_PROP_TAG(LinearSolverRequireFullSparsityPattern);
+NEW_PROP_TAG(LinearSolverIgnoreConvergenceFailure);
+NEW_PROP_TAG(UseAmg);
+NEW_PROP_TAG(UseCpr);
 
-SET_SCALAR_PROP(FlowIstlSolverParams, FlowLinearSolverReduction, 1e-2);
-SET_SCALAR_PROP(FlowIstlSolverParams, FlowIluRelaxation, 0.9);
-SET_INT_PROP(FlowIstlSolverParams, FlowLinearSolverMaxIter, 150);
-SET_INT_PROP(FlowIstlSolverParams, FlowLinearSolverRestart, 40);
+SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
+SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
+SET_INT_PROP(FlowIstlSolverParams, LinearSolverMaxIter, 150);
+SET_INT_PROP(FlowIstlSolverParams, LinearSolverRestart, 40);
 SET_INT_PROP(FlowIstlSolverParams, FlowLinearSolverVerbosity, 0);
-SET_INT_PROP(FlowIstlSolverParams, FlowIluFillinLevel, 0);
-SET_STRING_PROP(FlowIstlSolverParams, FlowMIluVariant, "ILU");
-SET_BOOL_PROP(FlowIstlSolverParams, FlowIluRedblack, false);
-SET_BOOL_PROP(FlowIstlSolverParams, FlowIluReorderSpheres, false);
-SET_BOOL_PROP(FlowIstlSolverParams, FlowUseGmres, false);
-SET_BOOL_PROP(FlowIstlSolverParams, FlowLinearSolverRequireFullSparsityPattern, false);
-SET_BOOL_PROP(FlowIstlSolverParams, FlowLinearSolverIgnoreConvergenceFailure, false);
-SET_BOOL_PROP(FlowIstlSolverParams, FlowUseAmg, false);
-SET_BOOL_PROP(FlowIstlSolverParams, FlowUseCpr, false);
+SET_INT_PROP(FlowIstlSolverParams, IluFillinLevel, 0);
+SET_STRING_PROP(FlowIstlSolverParams, MIluVariant, "ILU");
+SET_BOOL_PROP(FlowIstlSolverParams, IluRedblack, false);
+SET_BOOL_PROP(FlowIstlSolverParams, IluReorderSpheres, false);
+SET_BOOL_PROP(FlowIstlSolverParams, UseGmres, false);
+SET_BOOL_PROP(FlowIstlSolverParams, LinearSolverRequireFullSparsityPattern, false);
+SET_BOOL_PROP(FlowIstlSolverParams, LinearSolverIgnoreConvergenceFailure, false);
+SET_BOOL_PROP(FlowIstlSolverParams, UseAmg, false);
+SET_BOOL_PROP(FlowIstlSolverParams, UseCpr, false);
 
 END_PROPERTIES
 
@@ -97,39 +97,39 @@ namespace Opm
         void init()
         {
             // TODO: these parameters have undocumented non-trivial dependencies
-            linear_solver_reduction_ = EWOMS_GET_PARAM(TypeTag, double, FlowLinearSolverReduction);
-            ilu_relaxation_ = EWOMS_GET_PARAM(TypeTag, double, FlowIluRelaxation);
-            linear_solver_maxiter_ = EWOMS_GET_PARAM(TypeTag, int, FlowLinearSolverMaxIter);
-            linear_solver_restart_ = EWOMS_GET_PARAM(TypeTag, int, FlowLinearSolverRestart);
+            linear_solver_reduction_ = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
+            ilu_relaxation_ = EWOMS_GET_PARAM(TypeTag, double, IluRelaxation);
+            linear_solver_maxiter_ = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
+            linear_solver_restart_ = EWOMS_GET_PARAM(TypeTag, int, LinearSolverRestart);
             linear_solver_verbosity_ = EWOMS_GET_PARAM(TypeTag, int, FlowLinearSolverVerbosity);
-            ilu_fillin_level_ = EWOMS_GET_PARAM(TypeTag, int, FlowIluFillinLevel);
-            ilu_milu_ = convertString2Milu(EWOMS_GET_PARAM(TypeTag, std::string, FlowMIluVariant));
-            ilu_redblack_ = EWOMS_GET_PARAM(TypeTag, bool, FlowIluRedblack);
-            ilu_reorder_sphere_ = EWOMS_GET_PARAM(TypeTag, bool, FlowIluReorderSpheres);
-            newton_use_gmres_ = EWOMS_GET_PARAM(TypeTag, bool, FlowUseGmres);
-            require_full_sparsity_pattern_ = EWOMS_GET_PARAM(TypeTag, bool, FlowLinearSolverRequireFullSparsityPattern);
-            ignoreConvergenceFailure_ = EWOMS_GET_PARAM(TypeTag, bool, FlowLinearSolverIgnoreConvergenceFailure);
-            linear_solver_use_amg_ = EWOMS_GET_PARAM(TypeTag, bool, FlowUseAmg);
-            use_cpr_ = EWOMS_GET_PARAM(TypeTag, bool, FlowUseCpr);
+            ilu_fillin_level_ = EWOMS_GET_PARAM(TypeTag, int, IluFillinLevel);
+            ilu_milu_ = convertString2Milu(EWOMS_GET_PARAM(TypeTag, std::string, MIluVariant));
+            ilu_redblack_ = EWOMS_GET_PARAM(TypeTag, bool, IluRedblack);
+            ilu_reorder_sphere_ = EWOMS_GET_PARAM(TypeTag, bool, IluReorderSpheres);
+            newton_use_gmres_ = EWOMS_GET_PARAM(TypeTag, bool, UseGmres);
+            require_full_sparsity_pattern_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverRequireFullSparsityPattern);
+            ignoreConvergenceFailure_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure);
+            linear_solver_use_amg_ = EWOMS_GET_PARAM(TypeTag, bool, UseAmg);
+            use_cpr_ = EWOMS_GET_PARAM(TypeTag, bool, UseCpr);
         }
 
         template <class TypeTag>
         static void registerParameters()
         {
-            EWOMS_REGISTER_PARAM(TypeTag, double, FlowLinearSolverReduction, "The minimum reduction of the residual which the linear solver must achieve");
-            EWOMS_REGISTER_PARAM(TypeTag, double, FlowIluRelaxation, "The relaxation factor of the linear solver's ILU preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, int, FlowLinearSolverMaxIter, "The maximum number of iterations of the linear solver");
-            EWOMS_REGISTER_PARAM(TypeTag, int, FlowLinearSolverRestart, "The number of iterations after which GMRES is restarted");
+            EWOMS_REGISTER_PARAM(TypeTag, double, LinearSolverReduction, "The minimum reduction of the residual which the linear solver must achieve");
+            EWOMS_REGISTER_PARAM(TypeTag, double, IluRelaxation, "The relaxation factor of the linear solver's ILU preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverMaxIter, "The maximum number of iterations of the linear solver");
+            EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverRestart, "The number of iterations after which GMRES is restarted");
             EWOMS_REGISTER_PARAM(TypeTag, int, FlowLinearSolverVerbosity, "The verbosity level of the linear solver (0: off, 2: all)");
-            EWOMS_REGISTER_PARAM(TypeTag, int, FlowIluFillinLevel, "The fill-in level of the linear solver's ILU preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, FlowMIluVariant, "Specify which variant of the modified-ILU preconditioner ought to be used");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowIluRedblack, "Use red-black partioning for the ILU preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowIluReorderSpheres, "Reorder the entries of the matrix in the ILU preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowUseGmres, "Use GMRES as the linear solver");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowLinearSolverRequireFullSparsityPattern, "Produce the full sparsity pattern for the linear solver");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowLinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowUseAmg, "Use AMG as the linear solver's preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowUseCpr, "Use CPR as the linear solver's preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, int, IluFillinLevel, "The fill-in level of the linear solver's ILU preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, MIluVariant, "Specify which variant of the modified-ILU preconditioner ought to be used");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, IluRedblack, "Use red-black partioning for the ILU preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, IluReorderSpheres, "Reorder the entries of the matrix in the ILU preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, UseGmres, "Use GMRES as the linear solver");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverRequireFullSparsityPattern, "Produce the full sparsity pattern for the linear solver");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, UseAmg, "Use AMG as the linear solver's preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, UseCpr, "Use CPR as the linear solver's preconditioner");
         }
 
         NewtonIterationBlackoilInterleavedParameters() { reset(); }

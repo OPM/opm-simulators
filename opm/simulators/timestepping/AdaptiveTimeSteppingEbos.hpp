@@ -23,41 +23,41 @@ NEW_TYPE_TAG(FlowTimeSteppingParameters);
 
 NEW_PROP_TAG(Scalar);
 
-NEW_PROP_TAG(FlowSolverRestartFactor);
-NEW_PROP_TAG(FlowSolverGrowthFactor);
-NEW_PROP_TAG(FlowSolverMaxGrowth);
-NEW_PROP_TAG(FlowSolverMaxTimeStepInDays);
-NEW_PROP_TAG(FlowSolverMaxRestarts);
-NEW_PROP_TAG(FlowSolverVerbosity);
-NEW_PROP_TAG(FlowTimeStepVerbosity);
-NEW_PROP_TAG(FlowInitialTimeStepInDays);
-NEW_PROP_TAG(FlowFullTimeStepInitially);
-NEW_PROP_TAG(FlowTimeStepAfterEventInDays);
-NEW_PROP_TAG(FlowTimeStepControl);
-NEW_PROP_TAG(FlowTimeStepControlTolerance);
-NEW_PROP_TAG(FlowTimeStepControlTargetIterations);
-NEW_PROP_TAG(FlowTimeStepControlTargetNewtonIterations);
-NEW_PROP_TAG(FlowTimeStepControlDecayRate);
-NEW_PROP_TAG(FlowTimeStepControlGrowthRate);
-NEW_PROP_TAG(FlowTimeStepControlFileName);
+NEW_PROP_TAG(SolverRestartFactor);
+NEW_PROP_TAG(SolverGrowthFactor);
+NEW_PROP_TAG(SolverMaxGrowth);
+NEW_PROP_TAG(SolverMaxTimeStepInDays);
+NEW_PROP_TAG(SolverMaxRestarts);
+NEW_PROP_TAG(SolverVerbosity);
+NEW_PROP_TAG(TimeStepVerbosity);
+NEW_PROP_TAG(InitialTimeStepInDays);
+NEW_PROP_TAG(FullTimeStepInitially);
+NEW_PROP_TAG(TimeStepAfterEventInDays);
+NEW_PROP_TAG(TimeStepControl);
+NEW_PROP_TAG(TimeStepControlTolerance);
+NEW_PROP_TAG(TimeStepControlTargetIterations);
+NEW_PROP_TAG(TimeStepControlTargetNewtonIterations);
+NEW_PROP_TAG(TimeStepControlDecayRate);
+NEW_PROP_TAG(TimeStepControlGrowthRate);
+NEW_PROP_TAG(TimeStepControlFileName);
 
-SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowSolverRestartFactor, 0.33);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowSolverGrowthFactor, 2.0);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowSolverMaxGrowth, 3.0);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowSolverMaxTimeStepInDays, 365.0);
-SET_INT_PROP(FlowTimeSteppingParameters, FlowSolverMaxRestarts, 10);
-SET_INT_PROP(FlowTimeSteppingParameters, FlowSolverVerbosity, 1);
-SET_INT_PROP(FlowTimeSteppingParameters, FlowTimeStepVerbosity, 1);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowInitialTimeStepInDays, 1.0);
-SET_BOOL_PROP(FlowTimeSteppingParameters, FlowFullTimeStepInitially, false);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowTimeStepAfterEventInDays, -1.0);
-SET_STRING_PROP(FlowTimeSteppingParameters, FlowTimeStepControl, "pid");
-SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowTimeStepControlTolerance, 1e-1);
-SET_INT_PROP(FlowTimeSteppingParameters, FlowTimeStepControlTargetIterations, 30);
-SET_INT_PROP(FlowTimeSteppingParameters, FlowTimeStepControlTargetNewtonIterations, 8);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowTimeStepControlDecayRate, 0.75);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, FlowTimeStepControlGrowthRate, 1.25);
-SET_STRING_PROP(FlowTimeSteppingParameters, FlowTimeStepControlFileName, "timesteps");
+SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverRestartFactor, 0.33);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverGrowthFactor, 2.0);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverMaxGrowth, 3.0);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverMaxTimeStepInDays, 365.0);
+SET_INT_PROP(FlowTimeSteppingParameters, SolverMaxRestarts, 10);
+SET_INT_PROP(FlowTimeSteppingParameters, SolverVerbosity, 1);
+SET_INT_PROP(FlowTimeSteppingParameters, TimeStepVerbosity, 1);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, InitialTimeStepInDays, 1.0);
+SET_BOOL_PROP(FlowTimeSteppingParameters, FullTimeStepInitially, false);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepAfterEventInDays, -1.0);
+SET_STRING_PROP(FlowTimeSteppingParameters, TimeStepControl, "pid");
+SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlTolerance, 1e-1);
+SET_INT_PROP(FlowTimeSteppingParameters, TimeStepControlTargetIterations, 30);
+SET_INT_PROP(FlowTimeSteppingParameters, TimeStepControlTargetNewtonIterations, 8);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlDecayRate, 0.75);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlGrowthRate, 1.25);
+SET_STRING_PROP(FlowTimeSteppingParameters, TimeStepControlFileName, "timesteps");
 
 END_PROPERTIES
 
@@ -97,16 +97,16 @@ namespace Opm {
         //! \brief contructor taking parameter object
         AdaptiveTimeSteppingEbos(const bool terminalOutput = true)
             : timeStepControl_()
-            , restartFactor_(EWOMS_GET_PARAM(TypeTag, double, FlowSolverRestartFactor)) // 0.33
-            , growthFactor_(EWOMS_GET_PARAM(TypeTag, double, FlowSolverGrowthFactor)) // 2.0
-            , maxGrowth_(EWOMS_GET_PARAM(TypeTag, double, FlowSolverMaxGrowth)) // 3.0
-            , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, FlowSolverMaxTimeStepInDays)*24*60*60) // 365.25
-            , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, FlowSolverMaxRestarts)) // 10
-            , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, FlowSolverVerbosity) > 0 && terminalOutput) // 2
-            , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, FlowTimeStepVerbosity) > 0 && terminalOutput) // 2
-            , suggestedNextTimestep_(EWOMS_GET_PARAM(TypeTag, double, FlowInitialTimeStepInDays)*24*60*60) // 1.0
-            , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FlowFullTimeStepInitially)) // false
-            , timestepAfterEvent_(EWOMS_GET_PARAM(TypeTag, double, FlowTimeStepAfterEventInDays)*24*60*60) // 1e30
+            , restartFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverRestartFactor)) // 0.33
+            , growthFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverGrowthFactor)) // 2.0
+            , maxGrowth_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxGrowth)) // 3.0
+            , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60) // 365.25
+            , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
+            , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
+            , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
+            , suggestedNextTimestep_(EWOMS_GET_PARAM(TypeTag, double, InitialTimeStepInDays)*24*60*60) // 1.0
+            , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FullTimeStepInitially)) // false
+            , timestepAfterEvent_(EWOMS_GET_PARAM(TypeTag, double, TimeStepAfterEventInDays)*24*60*60) // 1e30
             , useNewtonIteration_(false)
         {
             init_();
@@ -124,13 +124,13 @@ namespace Opm {
             , restartFactor_(tuning.getTSFCNV(timeStep))
             , growthFactor_(tuning.getTFDIFF(timeStep))
             , maxGrowth_(tuning.getTSFMAX(timeStep))
-            , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, FlowSolverMaxTimeStepInDays)*24*60*60) // 365.25
-            , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, FlowSolverMaxRestarts)) // 10
-            , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, FlowSolverVerbosity) > 0 && terminalOutput) // 2
-            , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, FlowTimeStepVerbosity) > 0 && terminalOutput) // 2
-            , suggestedNextTimestep_(EWOMS_GET_PARAM(TypeTag, double, FlowInitialTimeStepInDays)*24*60*60) // 1.0
-            , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FlowFullTimeStepInitially)) // false
-            , timestepAfterEvent_(EWOMS_GET_PARAM(TypeTag, double, FlowTimeStepAfterEventInDays)*24*60*60) // 1e30
+            , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60) // 365.25
+            , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
+            , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
+            , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
+            , suggestedNextTimestep_(EWOMS_GET_PARAM(TypeTag, double, InitialTimeStepInDays)*24*60*60) // 1.0
+            , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FullTimeStepInitially)) // false
+            , timestepAfterEvent_(EWOMS_GET_PARAM(TypeTag, double, TimeStepAfterEventInDays)*24*60*60) // 1e30
             , useNewtonIteration_(false)
         {
             init_();
@@ -139,39 +139,39 @@ namespace Opm {
         static void registerParameters()
         {
             // TODO: make sure the help messages are correct (and useful)
-            EWOMS_REGISTER_PARAM(TypeTag, double, FlowSolverRestartFactor,
+            EWOMS_REGISTER_PARAM(TypeTag, double, SolverRestartFactor,
                                  "The factor time steps are elongated after restarts");
-            EWOMS_REGISTER_PARAM(TypeTag, double, FlowSolverGrowthFactor,
+            EWOMS_REGISTER_PARAM(TypeTag, double, SolverGrowthFactor,
                                  "The factor time steps are elongated after a successful substep");
-            EWOMS_REGISTER_PARAM(TypeTag, double, FlowSolverMaxGrowth,
+            EWOMS_REGISTER_PARAM(TypeTag, double, SolverMaxGrowth,
                                  "The maximum factor time steps are elongated after a report step");
-            EWOMS_REGISTER_PARAM(TypeTag, double, FlowSolverMaxTimeStepInDays,
+            EWOMS_REGISTER_PARAM(TypeTag, double, SolverMaxTimeStepInDays,
                                  "The maximum size of a time step in days");
-            EWOMS_REGISTER_PARAM(TypeTag, int, FlowSolverMaxRestarts,
+            EWOMS_REGISTER_PARAM(TypeTag, int, SolverMaxRestarts,
                                  "The maximum number of breakdowns before a substep is given up and the simulator is terminated");
-            EWOMS_REGISTER_PARAM(TypeTag, int, FlowSolverVerbosity,
+            EWOMS_REGISTER_PARAM(TypeTag, int, SolverVerbosity,
                                  "Specify the \"chattiness\" of the non-linear solver itself");
-            EWOMS_REGISTER_PARAM(TypeTag, int, FlowTimeStepVerbosity,
+            EWOMS_REGISTER_PARAM(TypeTag, int, TimeStepVerbosity,
                                  "Specify the \"chattiness\" during the time integration");
-            EWOMS_REGISTER_PARAM(TypeTag, double, FlowInitialTimeStepInDays,
+            EWOMS_REGISTER_PARAM(TypeTag, double, InitialTimeStepInDays,
                                  "The size of the initial time step in days");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, FlowFullTimeStepInitially,
+            EWOMS_REGISTER_PARAM(TypeTag, bool, FullTimeStepInitially,
                                  "Always attempt to finish a report step using a single substep");
-            EWOMS_REGISTER_PARAM(TypeTag, double, FlowTimeStepAfterEventInDays,
+            EWOMS_REGISTER_PARAM(TypeTag, double, TimeStepAfterEventInDays,
                                  "Time step size of the first time step after an event occurs during the simulation in days");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, FlowTimeStepControl,
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, TimeStepControl,
                                  "The algorithm used to determine time-step sizes. valid options are: 'pid' (default), 'pid+iteration', 'pid+newtoniteration', 'iterationcount' and 'hardcoded'");
-            EWOMS_REGISTER_PARAM(TypeTag, double, FlowTimeStepControlTolerance,
+            EWOMS_REGISTER_PARAM(TypeTag, double, TimeStepControlTolerance,
                                  "The tolerance used by the time step size control algorithm");
-            EWOMS_REGISTER_PARAM(TypeTag, int, FlowTimeStepControlTargetIterations,
+            EWOMS_REGISTER_PARAM(TypeTag, int, TimeStepControlTargetIterations,
                                  "The number of linear iterations which the time step control scheme should aim for (if applicable)");
-            EWOMS_REGISTER_PARAM(TypeTag, int, FlowTimeStepControlTargetNewtonIterations,
+            EWOMS_REGISTER_PARAM(TypeTag, int, TimeStepControlTargetNewtonIterations,
                                  "The number of Newton iterations which the time step control scheme should aim for (if applicable)");
-            EWOMS_REGISTER_PARAM(TypeTag, double, FlowTimeStepControlDecayRate,
+            EWOMS_REGISTER_PARAM(TypeTag, double, TimeStepControlDecayRate,
                                  "The decay rate of the time step size of the number of target iterations is exceeded");
-            EWOMS_REGISTER_PARAM(TypeTag, double, FlowTimeStepControlGrowthRate,
+            EWOMS_REGISTER_PARAM(TypeTag, double, TimeStepControlGrowthRate,
                                  "The growth rate of the time step size of the number of target iterations is undercut");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, FlowTimeStepControlFileName,
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, TimeStepControlFileName,
                                  "The name of the file which contains the hardcoded time steps sizes");
         }
 
@@ -406,29 +406,29 @@ namespace Opm {
         void init_()
         {
             // valid are "pid" and "pid+iteration"
-            std::string control = EWOMS_GET_PARAM(TypeTag, std::string, FlowTimeStepControl); // "pid"
+            std::string control = EWOMS_GET_PARAM(TypeTag, std::string, TimeStepControl); // "pid"
 
-            const double tol =  EWOMS_GET_PARAM(TypeTag, double, FlowTimeStepControlTolerance); // 1e-1
+            const double tol =  EWOMS_GET_PARAM(TypeTag, double, TimeStepControlTolerance); // 1e-1
             if (control == "pid") {
                 timeStepControl_ = TimeStepControlType(new PIDTimeStepControl(tol));
             }
             else if (control == "pid+iteration") {
-                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, FlowTimeStepControlTargetIterations); // 30
+                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetIterations); // 30
                 timeStepControl_ = TimeStepControlType(new PIDAndIterationCountTimeStepControl(iterations, tol));
             }
             else if (control == "pid+newtoniteration") {
-                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, FlowTimeStepControlTargetNewtonIterations); // 8
+                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetNewtonIterations); // 8
                 timeStepControl_ = TimeStepControlType(new PIDAndIterationCountTimeStepControl(iterations, tol));
                 useNewtonIteration_ = true;
             }
             else if (control == "iterationcount") {
-                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, FlowTimeStepControlTargetIterations); // 30
-                const double decayrate = EWOMS_GET_PARAM(TypeTag, double, FlowTimeStepControlDecayRate); // 0.75
-                const double growthrate = EWOMS_GET_PARAM(TypeTag, double, FlowTimeStepControlGrowthRate); // 1.25
+                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetIterations); // 30
+                const double decayrate = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlDecayRate); // 0.75
+                const double growthrate = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthRate); // 1.25
                 timeStepControl_ = TimeStepControlType(new SimpleIterationCountTimeStepControl(iterations, decayrate, growthrate));
             }
             else if (control == "hardcoded") {
-                const std::string filename = EWOMS_GET_PARAM(TypeTag, std::string, FlowTimeStepControlFileName); // "timesteps"
+                const std::string filename = EWOMS_GET_PARAM(TypeTag, std::string, TimeStepControlFileName); // "timesteps"
                 timeStepControl_ = TimeStepControlType(new HardcodedTimeStepControl(filename));
 
             }
