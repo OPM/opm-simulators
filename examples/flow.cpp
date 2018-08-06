@@ -113,6 +113,10 @@ int main(int argc, char** argv)
     // simulator object. (Which parses the parameters again, but since this is done in an
     // identical manner it does not matter.)
     typedef TTAG(FlowEarlyBird) PreTypeTag;
+    typedef GET_PROP_TYPE(PreTypeTag, Problem) PreProblem;
+
+    PreProblem::setBriefDescription("flow, the OPM reservoir simulator for ECL-decks.");
+
     int status = Opm::FlowMainEbos<PreTypeTag>::setupParameters_(argc, argv);
     if (status != 0)
         // if setupParameters_ returns a value smaller than 0, there was no error, but
