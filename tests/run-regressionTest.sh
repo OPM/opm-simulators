@@ -18,7 +18,7 @@ TEST_ARGS="$@"
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
 if test "${EXE_NAME}" = "flow"; then
-    ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --ecl-output-dir=${RESULT_PATH}
+    ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --output-dir=${RESULT_PATH}
 else
     ${BINPATH}/${EXE_NAME} ${TEST_ARGS} output_dir=${RESULT_PATH}
 fi
