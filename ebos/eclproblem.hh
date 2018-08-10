@@ -92,6 +92,7 @@
 
 #include <boost/date_time.hpp>
 
+#include <set>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -394,7 +395,8 @@ public:
     /*!
      * \copydoc FvBaseProblem::handlePositionalParameter
      */
-    static int handlePositionalParameter(std::string& errorMsg,
+    static int handlePositionalParameter(std::set<std::string>& seenParams,
+                                         std::string& errorMsg,
                                          int argc OPM_UNUSED,
                                          const char** argv,
                                          int paramIdx,
@@ -403,12 +405,15 @@ public:
         typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
         Dune::ParameterTree& tree = ParamsMeta::tree();
 
-        if (tree.hasKey("EclDeckFileName")) {
-            errorMsg = "File name of ECL specified multiple times";
+        if (seenParams.count("EclDeckFileName") > 0) {
+            errorMsg =
+                "Parameter 'EclDeckFileName' specified multiple times"
+                " as a command line parameter";
             return 0;
         }
 
         tree["EclDeckFileName"] = argv[paramIdx];
+        seenParams.insert("EclDeckFileName");
         return 1;
     }
 
