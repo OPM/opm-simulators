@@ -195,9 +195,13 @@ case "$TEST_TYPE" in
         fi
 
         cat > "paramfile-$RND.ini" <<EOF
-EndTime=100
-InitialTimeStepSize=100
-UndefinedParam="blubb"
+EndTime=100   
+  
+InitialTimeStepSize=100   # first in-line comment
+
+UndefinedParam  =  "blubb"; second in-line comment
+  # full line comment
+; also a full line comment
 EOF
         if ! $TEST_BINARY --parameter-file="paramfile-$RND.ini" 2>&1 > /dev/null; then
             echo "$TEST_BINARY does not correctly read a parameter file"
@@ -205,8 +209,8 @@ EOF
         elif $TEST_BINARY --parameter-file="foobar.ini" 2>&1 > /dev/null; then
             echo "$TEST_BINARY does not abort even though the specified parameter file does not exist"
             exit 1
-        elif ! $TEST_BINARY --foo --end-time=1 2>&1 > /dev/null; then
-            echo "$TEST_BINARY does not accept a flag parameters"
+        elif $TEST_BINARY --foo 2>&1 > /dev/null; then
+            echo "$TEST_BINARY accepts flag parameters besides --help"
             exit 1
         fi
 
