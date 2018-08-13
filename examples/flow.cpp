@@ -115,7 +115,7 @@ int main(int argc, char** argv)
     typedef TTAG(FlowEarlyBird) PreTypeTag;
     typedef GET_PROP_TYPE(PreTypeTag, Problem) PreProblem;
 
-    PreProblem::setBriefDescription("flow, the OPM reservoir simulator for ECL-decks.");
+    PreProblem::setBriefDescription("Flow, an advanced reservoir simulator for ECL-decks provided by the Open Porous Media project.");
 
     int status = Opm::FlowMainEbos<PreTypeTag>::setupParameters_(argc, argv);
     if (status != 0)

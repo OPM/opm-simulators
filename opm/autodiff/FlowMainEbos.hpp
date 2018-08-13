@@ -407,9 +407,8 @@ namespace Opm
                  }
               ss << "Simulation started on " << tmstr << " hrs\n";
 
-              ss << "---- parameters ----\n";
+              ss << "Parameters used by Flow:\n";
               Ewoms::Parameters::printValues<TypeTag>(ss);
-              ss << "---- /parameters ----\n";
 
               OpmLog::note(ss.str());
             }
@@ -513,11 +512,15 @@ namespace Opm
             simtimer.init(timeMap, (size_t)initConfig.getRestartStep());
 
             if (output_cout_) {
+                std::ostringstream oss;
+
                 // This allows a user to catch typos and misunderstandings in the
                 // use of simulator parameters.
-                std::cout << "-----------------   Unrecognized parameters:   -----------------\n";
-                Ewoms::Parameters::printUnused<TypeTag>();
-                std::cout << "----------------------------------------------------------------" << std::endl;
+                if (Ewoms::Parameters::printUnused<TypeTag>(oss)) {
+                    std::cout << "-----------------   Unrecognized parameters:   -----------------\n";
+                    std::cout << oss.str();
+                    std::cout << "----------------------------------------------------------------" << std::endl;
+                }
             }
 
             if (!ioConfig.initOnly()) {
