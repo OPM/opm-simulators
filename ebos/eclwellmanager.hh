@@ -788,31 +788,9 @@ protected:
                 const Opm::Connection* connection = connInfo.first;
                 std::shared_ptr<Well> eclWell = connInfo.second;
                 eclWell->addDof(elemCtx, dofIdx);
-
-                // the catch is a hack for a ideosyncrasy of opm-parser with regard to
-                // defaults handling: if the deck did not specify a radius for the
-                // completion, there seems to be no other way to detect this except for
-                // catching the exception
-                try {
-                    eclWell->setRadius(elemCtx, dofIdx, 0.5*connection->getDiameter());
-                }
-                catch (const std::logic_error&)
-                {}
-
-                // overwrite the automatically computed effective
-                // permeability by the one specified in the deck-> Note: this
-                // is not implemented by opm-parser yet...
-                /*
-                  Scalar Kh = connection->getEffectivePermeability();
-                  if (std::isfinite(Kh) && Kh > 0.0)
-                      eclWell->setEffectivePermeability(elemCtx, dofIdx, Kh);
-                */
-
-                // overwrite the automatically computed connection
-                // transmissibilty factor by the one specified in the deck->
-                const auto& ctf = connection->getConnectionTransmissibilityFactorAsValueObject();
-                if (ctf.hasValue() && ctf.getValue() > 0.0)
-                    eclWell->setConnectionTransmissibilityFactor(elemCtx, dofIdx, ctf.getValue());
+                eclWell->setConnectionTransmissibilityFactor(elemCtx, dofIdx, connection->CF());
+                eclWell->setRadius(elemCtx, dofIdx, connection->rw());
+                //eclWell->setEffectivePermeability(elemCtx, dofIdx, connection->Kh());
             }
         }
     }
