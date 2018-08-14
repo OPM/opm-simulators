@@ -255,7 +255,7 @@ SET_BOOL_PROP(EclBaseProblem, EnableAsyncEclOutput, true);
 SET_BOOL_PROP(EclBaseProblem, EclOutputDoublePrecision, false);
 
 // The default location for the ECL output files
-SET_STRING_PROP(EclBaseProblem, EclOutputDir, ".");
+SET_STRING_PROP(EclBaseProblem, OutputDir, ".");
 
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
@@ -391,6 +391,12 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, unsigned, RestartWritingInterval,
                              "The frequencies of which time steps are serialized to disk");
     }
+
+    /*!
+     * \copydoc FvBaseProblem::prepareOutputDir
+     */
+    std::string prepareOutputDir() const
+    { return this->simulator().vanguard().eclState().getIOConfig().getOutputDir(); }
 
     /*!
      * \copydoc FvBaseProblem::handlePositionalParameter
