@@ -394,7 +394,7 @@ namespace Opm
             deckFileParam += deckFileName;
             argv.push_back(deckFileParam.c_str());
 
-            std::string outputDirParam("--ecl-output-dir=");
+            std::string outputDirParam("--output-dir=");
             if (param_.has("output_dir")) {
                 const std::string& output_dir = param_.get<std::string>("output_dir");
                 outputDirParam += output_dir;
