@@ -330,9 +330,9 @@ public:
             disc = "element centered finite volume";
 
         return std::string("")+
-            "Ground remediation problem where a dense oil infiltrates\n"+
-            "an aquifer with an embedded low-permability lens.\n" +
-            "This is the binary for the "+thermal+" variant using "+deriv+"\n"+
+            "Ground remediation problem where a dense oil infiltrates "+
+            "an aquifer with an embedded low-permability lens. " +
+            "This is the binary for the "+thermal+" variant using "+deriv+
             "and the "+disc+" discretization";
     }
 
