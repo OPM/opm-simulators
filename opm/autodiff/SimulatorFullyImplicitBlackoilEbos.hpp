@@ -188,18 +188,13 @@ public:
         SimulatorReport report;
         SimulatorReport stepReport;
 
-        WellModel wellModel(ebosSimulator_, modelParam_, terminalOutput_);
         if (isRestart()) {
-            wellModel.initFromRestartFile(*restartValues);
+            wellModel_().initFromRestartFile(*restartValues);
         }
 
-        if (modelParam_.matrix_add_well_contributions_ ||
-             modelParam_.preconditioner_add_well_contributions_)
-        {
-            ebosSimulator_.model().clearAuxiliaryModules();
-            wellAuxMod_.reset(new WellConnectionAuxiliaryModule<TypeTag>(schedule(), grid()));
-            ebosSimulator_.model().addAuxiliaryModule(wellAuxMod_.get());
-        }
+        // beginReportStep(...) wants to know when we are at the
+        // beginning of a restart
+        bool firstRestartStep = isRestart();
 
         // Main simulation loop.
         while (!timer.done()) {
@@ -210,29 +205,24 @@ public:
                 OpmLog::debug(ss.str());
             }
 
-            // Run a multiple steps of the solver depending on the time step control.
-            solverTimer.start();
-            //ebosSimulator_.setEpisodeIndex(timer.reportStepNum());
-            wellModel.beginReportStep(timer.currentStepNum());
-
-            auto solver = createSolver(wellModel);
-
             // write the inital state at the report stage
             if (timer.initialStep()) {
                 Dune::Timer perfTimer;
                 perfTimer.start();
 
-                // No per cell data is written for initial step, but will be
-                // for subsequent steps, when we have started simulating
-                auto localWellData = wellModel.wellState().report(phaseUsage_, Opm::UgGridHelpers::globalCell(grid()));
-                ebosSimulator_.problem().writeOutput(localWellData,
-                                                     timer.simulationTimeElapsed(),
-                                                     /*isSubstep=*/false,
-                                                     totalTimer.secsSinceStart(),
-                                                     /*nextStepSize=*/-1.0);
+                wellModel_().beginReportStep(timer.currentStepNum());
+                ebosSimulator_.problem().writeOutput(false);
 
                 report.output_write_time += perfTimer.stop();
             }
+
+            // Run a multiple steps of the solver depending on the time step control.
+            solverTimer.start();
+
+            auto solver = createSolver(wellModel_());
+
+            solver->model().beginReportStep(firstRestartStep);
+            firstRestartStep = false;
 
             if (terminalOutput_) {
                 std::ostringstream stepMsg;
@@ -245,8 +235,6 @@ public:
                          << ", date = " << timer.currentDateTime();
                 OpmLog::info(stepMsg.str());
             }
-
-            solver->model().beginReportStep();
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge
@@ -282,7 +270,6 @@ public:
             }
 
             solver->model().endReportStep();
-            wellModel.endReportStep();
 
             // take time that was used to solve system for this reportStep
             solverTimer.stop();
@@ -305,13 +292,8 @@ public:
             Dune::Timer perfTimer;
             perfTimer.start();
             const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
-
-            auto localWellData = wellModel.wellState().report(phaseUsage_, Opm::UgGridHelpers::globalCell(grid()));
-            ebosSimulator_.problem().writeOutput(localWellData,
-                                                 timer.simulationTimeElapsed(),
-                                                 /*isSubstep=*/false,
-                                                 totalTimer.secsSinceStart(),
-                                                 nextstep);
+            ebosSimulator_.problem().setNextTimeStepSize(nextstep);
+            ebosSimulator_.problem().writeOutput(false);
             report.output_write_time += perfTimer.stop();
 
             if (terminalOutput_) {
@@ -378,6 +360,12 @@ protected:
         const auto& initconfig = eclState().getInitConfig();
         return initconfig.restartRequested();
     }
+
+    WellModel& wellModel_()
+    { return ebosSimulator_.problem().wellModel(); }
+
+    const WellModel& wellModel_() const
+    { return ebosSimulator_.problem().wellModel(); }
 
     // Data.
     Simulator& ebosSimulator_;

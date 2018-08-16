@@ -4,16 +4,26 @@
 namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
-    BlackoilWellModel(Simulator& ebosSimulator,
-                      const ModelParameters& param,
-                      const bool terminal_output)
+    BlackoilWellModel(Simulator& ebosSimulator)
         : ebosSimulator_(ebosSimulator)
-        , param_(param)
-        , terminal_output_(terminal_output)
         , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
         , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
     {
-        const auto& eclState = ebosSimulator_.vanguard().eclState();
+        terminal_output_ = false;
+        if (ebosSimulator.gridView().comm().rank() == 0)
+            terminal_output_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    init(const Opm::EclipseState& eclState, const Opm::Schedule& schedule)
+    {
+        gravity_ = ebosSimulator_.problem().gravity()[2];
+
+        extractLegacyCellPvtRegionIndex_();
+        extractLegacyDepth_();
+
         phase_usage_ = phaseUsageFromDeck(eclState);
 
         const auto& gridView = ebosSimulator_.gridView();
@@ -28,6 +38,75 @@ namespace Opm {
         extractLegacyCellPvtRegionIndex_();
         extractLegacyDepth_();
         initial_step_ = true;
+
+        const auto& grid = ebosSimulator_.vanguard().grid();
+        const auto& cartDims = Opm::UgGridHelpers::cartDims(grid);
+        setupCartesianToCompressed_(Opm::UgGridHelpers::globalCell(grid),
+                                    cartDims[0]*cartDims[1]*cartDims[2]);
+
+        // add the eWoms auxiliary module for the wells to the list
+        ebosSimulator_.model().addAuxiliaryModule(this);
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    addNeighbors(std::vector<NeighborSet>& neighbors) const
+    {
+        if (!param_.matrix_add_well_contributions_) {
+            return;
+        }
+
+        // Create cartesian to compressed mapping
+        int last_time_step = schedule().getTimeMap().size() - 1;
+        const auto& schedule_wells = schedule().getWells();
+        const auto& cartesianSize = Opm::UgGridHelpers::cartDims(grid());
+
+        // initialize the additional cell connections introduced by wells.
+        for (const auto well : schedule_wells)
+        {
+            std::vector<int> wellCells;
+            // All possible connections of the well
+            const auto& connectionSet = well->getConnections(last_time_step);
+            wellCells.reserve(connectionSet.size());
+
+            for ( size_t c=0; c < connectionSet.size(); c++ )
+            {
+                const auto& connection = connectionSet.get(c);
+                int i = connection.getI();
+                int j = connection.getJ();
+                int k = connection.getK();
+                int cart_grid_idx = i + cartesianSize[0]*(j + cartesianSize[1]*k);
+                int compressed_idx = cartesian_to_compressed_.at(cart_grid_idx);
+
+                if ( compressed_idx >= 0 ) { // Ignore connections in inactive/remote cells.
+                    wellCells.push_back(compressed_idx);
+                }
+            }
+
+            for (int cellIdx : wellCells) {
+                neighbors[cellIdx].insert(wellCells.begin(),
+                                          wellCells.end());
+            }
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    linearize(JacobianMatrix& mat , GlobalEqVector& res)
+    {
+        if (!localWellsActive())
+            return;
+
+        for (const auto& well: well_container_) {
+            if (param_.matrix_add_well_contributions_)
+                well->addWellContributions(mat);
+
+            // applying the well residual to reservoir residuals
+            // r = r - duneC_^T * invDuneD_ * resWell_
+            well->apply(res);
+        }
     }
 
 
@@ -126,15 +205,17 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    beginTimeStep(const int timeStepIdx, const double simulationTime) {
+    beginTimeStep() {
         well_state_ = previous_well_state_;
 
+        const int reportStepIdx = ebosSimulator_.episodeIndex();
+        const double simulationTime = ebosSimulator_.time();
 
         // test wells
-        wellTesting(timeStepIdx, simulationTime);
+        wellTesting(reportStepIdx, simulationTime);
 
         // create the well container
-        well_container_ = createWellContainer(timeStepIdx);
+        well_container_ = createWellContainer(reportStepIdx);
 
         // do the initialization for all the wells
         // TODO: to see whether we can postpone of the intialization of the well containers to
@@ -205,12 +286,6 @@ namespace Opm {
         }
     }
 
-    // only use this for restart.
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    setRestartWellState(const WellState& well_state) { previous_well_state_ = well_state; }
-
     // called at the end of a report step
     template<typename TypeTag>
     void
@@ -236,6 +311,60 @@ namespace Opm {
         }
         updateWellTestState(simulationTime, wellTestState_);
         previous_well_state_ = well_state_;
+    }
+
+
+    template<typename TypeTag>
+    template <class Context>
+    void
+    BlackoilWellModel<TypeTag>::
+    computeTotalRatesForDof(RateVector& rate,
+                            const Context& context,
+                            unsigned spaceIdx,
+                            unsigned timeIdx) const
+    {
+        rate = 0;
+        int elemIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        for (const auto& well : well_container_)
+            well->addCellRates(rate, elemIdx);
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    initFromRestartFile(const RestartValue& restartValues)
+    {
+        // gives a dummy dynamic_list_econ_limited
+        DynamicListEconLimited dummyListEconLimited;
+        const auto& defunctWellNames = ebosSimulator_.vanguard().defunctWellNames();
+        WellsManager wellsmanager(eclState(),
+                                  schedule(),
+                                  // The restart step value is used to identify wells present at the given
+                                  // time step. Wells that are added at the same time step as RESTART is initiated
+                                  // will not be present in a restart file. Use the previous time step to retrieve
+                                  // wells that have information written to the restart file.
+                                  std::max(eclState().getInitConfig().getRestartStep() - 1, 0),
+                                  Opm::UgGridHelpers::numCells(grid()),
+                                  Opm::UgGridHelpers::globalCell(grid()),
+                                  Opm::UgGridHelpers::cartDims(grid()),
+                                  Opm::UgGridHelpers::dimensions(grid()),
+                                  Opm::UgGridHelpers::cell2Faces(grid()),
+                                  Opm::UgGridHelpers::beginFaceCentroids(grid()),
+                                  dummyListEconLimited,
+                                  grid().comm().size() > 1,
+                                  defunctWellNames);
+
+        const Wells* wells = wellsmanager.c_wells();
+
+        const int nw = wells->number_of_wells;
+        if (nw > 0) {
+            auto phaseUsage = phaseUsageFromDeck(eclState());
+            size_t numCells = Opm::UgGridHelpers::numCells(grid());
+            well_state_.resize(wells, numCells, phaseUsage); //Resize for restart step
+            wellsToState(restartValues.wells, phaseUsage, well_state_);
+            previous_well_state_ = well_state_;
+        }
+        initial_step_ = false;
     }
 
     template<typename TypeTag>
@@ -401,7 +530,7 @@ namespace Opm {
             // basically, this is a more updated state from the solveWellEq based on fixed
             // reservoir state, will tihs be a better place to inialize the explict information?
         }
-        assembleWellEq(dt, false);
+        assembleWellEq(dt);
 
         last_report_.converged = true;
     }
@@ -413,31 +542,12 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assembleWellEq(const double dt,
-                   bool only_wells)
+    assembleWellEq(const double dt)
     {
         for (auto& well : well_container_) {
-            well->assembleWellEq(ebosSimulator_, dt, well_state_, only_wells);
+            well->assembleWellEq(ebosSimulator_, dt, well_state_);
         }
     }
-
-    // applying the well residual to reservoir residuals
-    // r = r - duneC_^T * invDuneD_ * resWell_
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    apply( BVector& r) const
-    {
-        if ( ! localWellsActive() ) {
-            return;
-        }
-
-        for (auto& well : well_container_) {
-            well->apply(r);
-        }
-    }
-
-
 
 
 
@@ -584,7 +694,7 @@ namespace Opm {
         int it  = 0;
         bool converged;
         do {
-            assembleWellEq(dt, true);
+            assembleWellEq(dt);
 
             converged = getWellConvergence(B_avg);
 
@@ -1071,16 +1181,17 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const
+    setupCartesianToCompressed_(const int* global_cell, int number_of_cartesian_cells)
     {
+        cartesian_to_compressed_.resize(number_of_cartesian_cells, -1);
         if (global_cell) {
-            for (int i = 0; i < number_of_cells; ++i) {
-                cartesian_to_compressed.insert(std::make_pair(global_cell[i], i));
+            for (unsigned i = 0; i < number_of_cells_; ++i) {
+                cartesian_to_compressed_[global_cell[i]] = i;
             }
         }
         else {
-            for (int i = 0; i < number_of_cells; ++i) {
-                cartesian_to_compressed.insert(std::make_pair(i, i));
+            for (unsigned i = 0; i < number_of_cells_; ++i) {
+                cartesian_to_compressed_[i] = i;
             }
         }
 
@@ -1091,16 +1202,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeRepRadiusPerfLength(const Grid& grid)
     {
-        // TODO, the function does not work for parallel running
-        // to be fixed later.
-        const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
-
-        std::map<int,int> cartesian_to_compressed;
-        setupCompressedToCartesian(global_cell, number_of_cells_,
-                                    cartesian_to_compressed);
-
         for (const auto& well : well_container_) {
-            well->computeRepRadiusPerfLength(grid, cartesian_to_compressed);
+            well->computeRepRadiusPerfLength(grid, cartesian_to_compressed_);
         }
     }
 

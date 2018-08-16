@@ -203,7 +203,6 @@ namespace Opm {
 
             auto& ebosSimulator = solver.model().ebosSimulator();
             auto& ebosProblem = ebosSimulator.problem();
-            auto phaseUsage = Opm::phaseUsageFromDeck(ebosSimulator.vanguard().eclState());
 
             // create adaptive step timer with previously used sub step size
             AdaptiveSimulatorTimer substepTimer(simulatorTimer, suggestedNextTimestep_, maxTimeStep_);
@@ -316,13 +315,7 @@ namespace Opm {
                         Opm::time::StopWatch perfTimer;
                         perfTimer.start();
 
-                        // The writeOutput expects a local data::solution vector and a local data::well vector.
-                        auto localWellData = solver.model().wellModel().wellState().report(phaseUsage, Opm::UgGridHelpers::globalCell(ebosSimulator.vanguard().grid()));
-                        ebosProblem.writeOutput(localWellData,
-                                                substepTimer.simulationTimeElapsed(),
-                                                /*isSubstep=*/true,
-                                                substepReport.total_time,
-                                                /*nextStepSize=*/-1.0);
+                        ebosProblem.writeOutput(/*isSubStep=*/true);
 
                         report.output_write_time += perfTimer.secsSinceStart();
                     }
@@ -361,6 +354,7 @@ namespace Opm {
 
                     ++restarts;
                 }
+                ebosProblem.setNextTimeStepSize(substepTimer.currentStepLength());
             }
 
 

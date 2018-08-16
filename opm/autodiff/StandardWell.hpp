@@ -37,6 +37,8 @@ namespace Opm
 
     public:
         typedef WellInterface<TypeTag> Base;
+        typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
+
         // TODO: some functions working with AD variables handles only with values (double) without
         // dealing with derivatives. It can be beneficial to make functions can work with either AD or scalar value.
         // And also, it can also be beneficial to make these functions hanle different types of AD variables.
@@ -129,52 +131,63 @@ namespace Opm
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
-                          const int num_cells);
+                          const int num_cells) override;
 
 
-        virtual void initPrimaryVariablesEvaluation() const;
+        virtual void initPrimaryVariablesEvaluation() const override;
 
-        virtual void assembleWellEq(Simulator& ebosSimulator,
+        virtual void assembleWellEq(const Simulator& ebosSimulator,
                                     const double dt,
-                                    WellState& well_state,
-                                    bool only_wells);
+                                    WellState& well_state) override;
 
         /// updating the well state based the control mode specified with current
         // TODO: later will check wheter we need current
-        virtual void updateWellStateWithTarget(WellState& well_state) const;
+        virtual void updateWellStateWithTarget(WellState& well_state) const override;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const;
+        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const override;
 
         /// Ax = Ax - C D^-1 B x
-        virtual void apply(const BVector& x, BVector& Ax) const;
+        virtual void apply(const BVector& x, BVector& Ax) const override;
         /// r = r - C D^-1 Rw
-        virtual void apply(BVector& r) const;
+        virtual void apply(BVector& r) const override;
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                                           WellState& well_state) const;
+                                                           WellState& well_state) const override;
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,
-                                           std::vector<double>& well_potentials) /* const */;
+                                           std::vector<double>& well_potentials) /* const */ override;
 
-        virtual void updatePrimaryVariables(const WellState& well_state) const;
+        virtual void updatePrimaryVariables(const WellState& well_state) const override;
 
-        virtual void solveEqAndUpdateWellState(WellState& well_state);
+        virtual void solveEqAndUpdateWellState(WellState& well_state) override;
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
-                                                 const WellState& well_state); // should be const?
+                                                 const WellState& well_state) override; // should be const?
 
-        virtual void  addWellContributions(Mat& mat) const;
+        virtual void  addWellContributions(Mat& mat) const override;
 
         /// \brief Wether the Jacobian will also have well contributions in it.
-        virtual bool jacobianContainsWellContributions() const
+        virtual bool jacobianContainsWellContributions() const override
         {
             return param_.matrix_add_well_contributions_;
         }
+
+        void addCellRates(RateVector& rates, int cellIdx) const override
+        {
+            for (int perfIdx = 0; perfIdx < number_of_perforations_; ++perfIdx) {
+                if (Base::cells()[perfIdx] == cellIdx) {
+                    for (int i = 0; i < RateVector::dimension; ++i) {
+                        rates[i] += connectionRates_[perfIdx][i];
+                    }
+                }
+            }
+        }
+
     protected:
 
         // protected functions from the Base class
@@ -227,6 +240,8 @@ namespace Opm
         OffDiagMatWell duneC_;
         // diagonal matrix for the well
         DiagMatWell invDuneD_;
+
+        std::vector<RateVector> connectionRates_;
 
         // several vector used in the matrix calculation
         mutable BVectorWell Bx_;
