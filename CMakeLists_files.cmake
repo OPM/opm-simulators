@@ -275,6 +275,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilModelBase_impl.hpp
   opm/autodiff/BlackoilModelEnums.hpp
   opm/autodiff/BlackoilModelParameters.hpp
+  opm/autodiff/BlackoilModelParametersEbos.hpp
   opm/autodiff/BlackoilPressureModel.hpp
   opm/autodiff/BlackoilPropsAdFromDeck.hpp
   opm/autodiff/Compat.hpp
@@ -297,6 +298,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/GridInit.hpp
   opm/autodiff/ImpesTPFAAD.hpp
   opm/autodiff/ISTLSolver.hpp
+  opm/autodiff/ISTLSolverEbos.hpp
   opm/autodiff/IterationReport.hpp
   opm/autodiff/moduleVersion.hpp
   opm/autodiff/multiPhaseUpwind.hpp

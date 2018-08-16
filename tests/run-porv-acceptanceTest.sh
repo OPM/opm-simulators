@@ -21,8 +21,13 @@ TEST_ARGS="$@"
 rm -Rf  ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${TEST_ARGS} nosim=true output_dir=${RESULT_PATH}
+if test "${EXE_NAME}" = "flow"; then
+    ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-dry-run=true --output-dir=${RESULT_PATH}
+else
+    ${BINPATH}/${EXE_NAME} ${TEST_ARGS} nosim=true output_dir=${RESULT_PATH}
+fi
 cd ..
+
 
 ecode=0
 ${COMPARE_ECL_COMMAND} -t INIT -k PORV ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-porevolume-reference/${EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}

@@ -25,7 +25,7 @@
 #include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/NonlinearSolverEbos.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
-#include <opm/autodiff/BlackoilModelParameters.hpp>
+#include <opm/autodiff/BlackoilModelParametersEbos.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilWellModel.hpp>
 #include <opm/autodiff/BlackoilAquiferModel.hpp>
@@ -36,7 +36,17 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
-#include <dune/common/unused.hh>
+BEGIN_PROPERTIES;
+
+NEW_PROP_TAG(EnableTerminalOutput);
+NEW_PROP_TAG(EnableAdaptiveTimeStepping);
+NEW_PROP_TAG(EnableTuning);
+
+SET_BOOL_PROP(EclFlowProblem, EnableTerminalOutput, true);
+SET_BOOL_PROP(EclFlowProblem, EnableAdaptiveTimeStepping, true);
+SET_BOOL_PROP(EclFlowProblem, EnableTuning, false);
+
+END_PROPERTIES;
 
 namespace Opm {
 
@@ -56,13 +66,15 @@ public:
     typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
+    typedef AdaptiveTimeSteppingEbos<TypeTag> TimeStepper;
     typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
     typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilState ReservoirState;
     typedef BlackoilModelEbos<TypeTag> Model;
-    typedef BlackoilModelParameters ModelParameters;
-    typedef NonlinearSolverEbos<Model> Solver;
+    typedef NonlinearSolverEbos<TypeTag, Model> Solver;
+    typedef typename Model::ModelParameters ModelParameters;
+    typedef typename Solver::SolverParameters SolverParameters;
     typedef BlackoilWellModel<TypeTag> WellModel;
     typedef BlackoilAquiferModel<TypeTag> AquiferModel;
 
@@ -85,30 +97,34 @@ public:
     ///
     /// \param[in] props         fluid and rock properties
     /// \param[in] linsolver     linear solver
-    /// \param[in] has_disgas    true for dissolved gas option
-    /// \param[in] has_vapoil    true for vaporized oil option
     /// \param[in] eclipse_state the object which represents an internalized ECL deck
     /// \param[in] output_writer
     /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
     SimulatorFullyImplicitBlackoilEbos(Simulator& ebosSimulator,
-                                       const ParameterGroup& param,
-                                       NewtonIterationBlackoilInterface& linsolver)
+                                       NewtonIterationBlackoilInterface& linearSolver)
         : ebosSimulator_(ebosSimulator)
-        , param_(param)
-        , modelParam_(param)
-        , solverParam_(param)
-        , solver_(linsolver)
-        , phaseUsage_(phaseUsageFromDeck(eclState()))
-        , terminalOutput_(param.getDefault("output_terminal", true))
+        , linearSolver_(linearSolver)
     {
-#if HAVE_MPI
-        if (solver_.parallelInformation().type() == typeid(ParallelISTLInformation)) {
-            const ParallelISTLInformation& info =
-                boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
-            // Only rank 0 does print to std::cout
-            terminalOutput_ = terminalOutput_ && (info.communicator().rank() == 0);
-        }
-#endif
+        phaseUsage_ = phaseUsageFromDeck(eclState());
+
+        // Only rank 0 does print to std::cout
+        const auto& comm = grid().comm();
+        terminalOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
+        terminalOutput_ = terminalOutput_ && (comm.rank() == 0);
+    }
+
+    static void registerParameters()
+    {
+        ModelParameters::registerParameters();
+        SolverParameters::registerParameters();
+        TimeStepper::registerParameters();
+
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTerminalOutput,
+                             "Print high-level information about the simulation's progress to the terminal");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAdaptiveTimeStepping,
+                             "Use adaptive time stepping between report steps");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTuning,
+                             "Honor some aspects of the TUNING keyword.");
     }
 
     /// Run the simulation.
@@ -139,14 +155,15 @@ public:
 
         // adaptive time stepping
         const auto& events = schedule().getEvents();
-        std::unique_ptr< AdaptiveTimeSteppingEbos > adaptiveTimeStepping;
-        const bool useTUNING = param_.getDefault("use_TUNING", false);
-        if (param_.getDefault("timestep.adaptive", true)) {
-            if (useTUNING) {
-                adaptiveTimeStepping.reset(new AdaptiveTimeSteppingEbos(schedule().getTuning(), timer.currentStepNum(), param_, terminalOutput_));
+        std::unique_ptr<TimeStepper > adaptiveTimeStepping;
+        bool enableAdaptive = EWOMS_GET_PARAM(TypeTag, bool, EnableAdaptiveTimeStepping);
+        bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
+        if (enableAdaptive) {
+            if (enableTUNING) {
+                adaptiveTimeStepping.reset(new TimeStepper(schedule().getTuning(), timer.currentStepNum(), terminalOutput_));
             }
             else {
-                adaptiveTimeStepping.reset(new AdaptiveTimeSteppingEbos(param_, terminalOutput_));
+                adaptiveTimeStepping.reset(new TimeStepper(terminalOutput_));
             }
 
             double suggestedStepSize = -1.0;
@@ -239,7 +256,7 @@ public:
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
             if (adaptiveTimeStepping) {
-                if (useTUNING) {
+                if (enableTUNING) {
                     if (events.hasEvent(ScheduleEvents::TUNING_CHANGE,timer.currentStepNum())) {
                         adaptiveTimeStepping->updateTUNING(schedule().getTuning(), timer.currentStepNum());
                     }
@@ -332,7 +349,7 @@ protected:
                                                       modelParam_,
                                                       wellModel,
                                                       aquifer_model,
-                                                      solver_,
+                                                      linearSolver_,
                                                       terminalOutput_));
 
         return std::unique_ptr<Solver>(new Solver(solverParam_, std::move(model)));
@@ -367,23 +384,19 @@ protected:
 
     // Data.
     Simulator& ebosSimulator_;
-
     std::unique_ptr<WellConnectionAuxiliaryModule<TypeTag>> wellAuxMod_;
-    typedef typename Solver::SolverParametersEbos SolverParametersEbos;
-
     SimulatorReport failureReport_;
 
-    const ParameterGroup param_;
     ModelParameters modelParam_;
-    SolverParametersEbos solverParam_;
+    SolverParameters solverParam_;
 
     // Observed objects.
-    NewtonIterationBlackoilInterface& solver_;
+    NewtonIterationBlackoilInterface& linearSolver_;
     PhaseUsage phaseUsage_;
     // Misc. data
-    bool       terminalOutput_;
+    bool terminalOutput_;
 };
 
 } // namespace Opm
 
-#endif // OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
+#endif // OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_EBOS_HPP

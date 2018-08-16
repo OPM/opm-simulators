@@ -41,7 +41,7 @@
 #include <opm/autodiff/VFPProdProperties.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/BlackoilModelParameters.hpp>
+#include <opm/autodiff/BlackoilModelParametersEbos.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
@@ -69,7 +69,7 @@ namespace Opm
 
         using WellState = WellStateFullyImplicitBlackoil;
 
-        typedef BlackoilModelParameters ModelParameters;
+        typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 
         static const int Water = BlackoilPhases::Aqua;
         static const int Oil = BlackoilPhases::Liquid;

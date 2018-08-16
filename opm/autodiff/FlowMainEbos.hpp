@@ -56,13 +56,30 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
+BEGIN_PROPERTIES;
+
+NEW_PROP_TAG(OutputMode);
+NEW_PROP_TAG(EnableDryRun);
+NEW_PROP_TAG(OutputInterval);
+NEW_PROP_TAG(UseAmg);
+
+SET_STRING_PROP(EclFlowProblem, OutputMode, "all");
+
+// TODO: enumeration parameters. we use strings for now.
+SET_STRING_PROP(EclFlowProblem, EnableDryRun, "auto");
+
+SET_INT_PROP(EclFlowProblem, OutputInterval, 1);
+
+END_PROPERTIES;
+
 namespace Opm
 {
     // The FlowMain class is the ebos based black-oil simulator.
     template <class TypeTag>
     class FlowMainEbos
     {
-        enum FileOutputValue{
+        enum FileOutputMode
+        {
             //! \brief No output to files.
             OUTPUT_NONE = 0,
             //! \brief Output only to log files, no eclipse output.
@@ -84,42 +101,134 @@ namespace Opm
         typedef Opm::SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
         typedef typename Simulator::ReservoirState ReservoirState;
 
-        /// This is the main function of Flow.
-        /// It runs a complete simulation, with the given grid and
-        /// simulator classes, based on user command-line input.  The
-        /// content of this function used to be in the main() function of
-        /// flow.cpp.
+        // Read the command line parameters. Throws an exception if something goes wrong.
+        static int setupParameters_(int argc, char** argv)
+        {
+            // register the flow specific parameters
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
+                                 "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, EnableDryRun,
+                                 "Specify if the simulation ought to be actually run, or just pretended to be");
+            EWOMS_REGISTER_PARAM(TypeTag, int, OutputInterval,
+                                 "Specify the number of report steps between two consecutive writes of restart data");
+            Simulator::registerParameters();
+
+            typedef typename BlackoilModelEbos<TypeTag>::ISTLSolverType ISTLSolverType;
+            ISTLSolverType::registerParameters();
+
+            // register the parameters inherited from ebos
+            Ewoms::registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
+
+            // hide the parameters unused by flow. TODO: this is a pain to maintain
+            EWOMS_HIDE_PARAM(TypeTag, EnableGravity);
+            EWOMS_HIDE_PARAM(TypeTag, EnableGridAdaptation);
+
+            // this parameter is actually used in eWoms, but the flow well model
+            // hard-codes the assumption that the intensive quantities cache is enabled,
+            // so flow crashes. Let's hide the parameter for that reason.
+            EWOMS_HIDE_PARAM(TypeTag, EnableIntensiveQuantityCache);
+
+            // thermodynamic hints are not implemented/required by the eWoms blackoil
+            // model
+            EWOMS_HIDE_PARAM(TypeTag, EnableThermodynamicHints);
+
+            // in flow only the deck file determines the end time of the simulation
+            EWOMS_HIDE_PARAM(TypeTag, EndTime);
+
+            // time stepping is not (yet) done by the eWoms code in flow
+            EWOMS_HIDE_PARAM(TypeTag, InitialTimeStepSize);
+            EWOMS_HIDE_PARAM(TypeTag, MaxTimeStepDivisions);
+            EWOMS_HIDE_PARAM(TypeTag, MaxTimeStepSize);
+            EWOMS_HIDE_PARAM(TypeTag, MinTimeStepSize);
+            EWOMS_HIDE_PARAM(TypeTag, PredeterminedTimeStepsFile);
+
+            // flow currently uses its own linear solver
+            EWOMS_HIDE_PARAM(TypeTag, LinearSolverMaxError);
+            EWOMS_HIDE_PARAM(TypeTag, LinearSolverMaxIterations);
+            EWOMS_HIDE_PARAM(TypeTag, LinearSolverOverlapSize);
+            EWOMS_HIDE_PARAM(TypeTag, LinearSolverTolerance);
+            EWOMS_HIDE_PARAM(TypeTag, LinearSolverVerbosity);
+            EWOMS_HIDE_PARAM(TypeTag, PreconditionerRelaxation);
+
+            // flow also does not use the eWoms Newton method
+            EWOMS_HIDE_PARAM(TypeTag, NewtonMaxError);
+            EWOMS_HIDE_PARAM(TypeTag, NewtonMaxIterations);
+            EWOMS_HIDE_PARAM(TypeTag, NewtonRawTolerance);
+            EWOMS_HIDE_PARAM(TypeTag, NewtonTargetIterations);
+            EWOMS_HIDE_PARAM(TypeTag, NewtonVerbose);
+            EWOMS_HIDE_PARAM(TypeTag, NewtonWriteConvergence);
+
+            // the default eWoms checkpoint/restart mechanism does not work with flow
+            EWOMS_HIDE_PARAM(TypeTag, RestartTime);
+            EWOMS_HIDE_PARAM(TypeTag, RestartWritingInterval);
+
+            EWOMS_END_PARAM_REGISTRATION(TypeTag);
+
+            // read in the command line parameters
+            int status = Ewoms::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false);
+            if (status == 0) {
+                // deal with --print-properties and --print-parameters
+
+                bool doExit = false;
+
+                int mpiRank = 0;
+#if HAVE_MPI
+                MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+#endif
+                if (EWOMS_GET_PARAM(TypeTag, int, PrintProperties) == 1) {
+                    doExit = true;
+                    if (mpiRank == 0)
+                        Ewoms::Properties::printValues<TypeTag>();
+                }
+
+                if (EWOMS_GET_PARAM(TypeTag, int, PrintParameters) == 1) {
+                    doExit = true;
+                    if (mpiRank == 0)
+                        Ewoms::Parameters::printValues<TypeTag>();
+                }
+
+                if (doExit)
+                    return -1;
+            }
+
+            return status;
+        }
+
+        /// This is the main function of Flow.  It runs a complete simulation with the
+        /// given grid and simulator classes, based on the user-specified command-line
+        /// input.
         int execute(int argc, char** argv)
         {
             try {
-                setupParallelism();
-                printStartupMessage();
-                const bool ok = setupParameters(argc, argv);
-                if (!ok) {
-                    return EXIT_FAILURE;
-                }
+                // deal with some administrative boilerplate
 
-                setupEbosSimulator();
+                int status = setupParameters_(argc, argv);
+                if (status)
+                    return status;
+
+                setupParallelism();
                 setupOutput();
+                printStartupMessage();
+                setupEbosSimulator();
                 setupLogging();
                 printPRTHeader();
                 runDiagnostics();
                 setupLinearSolver();
                 createSimulator();
 
-                // Run.
-                auto ret =  runSimulator();
+                // do the actual work
+                runSimulator();
 
+                // clean up
                 mergeParallelLogFiles();
 
-                return ret;
+                return EXIT_SUCCESS;
             }
-            catch (const std::exception &e) {
+            catch (const std::exception& e) {
                 std::ostringstream message;
                 message  << "Program threw an exception: " << e.what();
 
-                if( output_cout_ )
-                {
+                if (output_cout_) {
                     // in some cases exceptions are thrown before the logging system is set
                     // up.
                     if (OpmLog::hasBackend("STREAMLOG")) {
@@ -138,34 +247,14 @@ namespace Opm
         void setupParallelism()
         {
             // determine the rank of the current process and the number of processes
-            // involved in the simulation. MPI must have already been initialized here.
+            // involved in the simulation. MPI must have already been initialized
+            // here. (yes, the name of this method is misleading.)
 #if HAVE_MPI
             MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
-            int mpi_size;
-            MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+            MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
 #else
             mpi_rank_ = 0;
-            const int mpi_size = 1;
-#endif
-            output_cout_ = ( mpi_rank_ == 0 );
-            must_distribute_ = ( mpi_size > 1 );
-
-#ifdef _OPENMP
-            // OpenMP setup.
-            if (!getenv("OMP_NUM_THREADS")) {
-                // Default to at most 2 threads, regardless of
-                // number of cores (unless ENV(OMP_NUM_THREADS) is defined)
-                int num_cores = omp_get_num_procs();
-                int num_threads = std::min(2, num_cores);
-                omp_set_num_threads(num_threads);
-            }
-            // omp_get_num_threads() only works as expected within a parallel region.
-            const int num_omp_threads = omp_get_max_threads();
-            if (mpi_size == 1) {
-                std::cout << "OpenMP using " << num_omp_threads << " threads." << std::endl;
-            } else {
-                std::cout << "OpenMP using " << num_omp_threads << " threads on MPI rank " << mpi_rank_ << "." << std::endl;
-            }
+            mpi_size_ = 1;
 #endif
         }
 
@@ -191,71 +280,42 @@ namespace Opm
             }
         }
 
-        // Read parameters, see if a deck was specified on the command line, and if
-        // it was, insert it into parameters.
-        // Writes to:
-        //   param_
-        // Returns true if ok, false if not.
-        bool setupParameters(int argc, char** argv)
-        {
-            param_ = ParameterGroup(argc, argv, false, output_cout_);
-
-            // See if a deck was specified on the command line.
-            if (!param_.unhandledArguments().empty()) {
-                if (param_.unhandledArguments().size() != 1) {
-                    std::cerr << "You can only specify a single input deck on the command line.\n";
-                    return false;
-                } else {
-                    const auto casename = this->simulationCaseName( param_.unhandledArguments()[ 0 ] );
-                    param_.insertParameter("deck_filename", casename.string() );
-                }
-            }
-
-            // We must have an input deck. Grid and props will be read from that.
-            if (!param_.has("deck_filename")) {
-                std::cerr << "This program must be run with an input deck.\n"
-                    "Specify the deck filename either\n"
-                    "    a) as a command line argument by itself\n"
-                    "    b) as a command line parameter with the syntax deck_filename=<path to your deck>, or\n"
-                    "    c) as a parameter in a parameter file (.param or .xml) passed to the program.\n";
-                return false;
-            }
-            return true;
-        }
-
-        // Set output_to_files_ and set/create output dir. Write parameter file.
+        // Extract the minimum priority and determines if log files ought to be created.
         // Writes to:
         //   output_to_files_
-        //   output_dir_
-        // Throws std::runtime_error if failed to create (if requested) output dir.
+        //   output_
         void setupOutput()
         {
-            const std::string output = param_.getDefault("output", std::string("all"));
-            static std::map<std::string, FileOutputValue> string2OutputEnum =
+            const std::string outputModeString =
+                EWOMS_GET_PARAM(TypeTag, std::string, OutputMode);
+            static std::map<std::string, FileOutputMode> stringToOutputMode =
                 { {"none", OUTPUT_NONE },
                   {"false", OUTPUT_LOG_ONLY },
                   {"log", OUTPUT_LOG_ONLY },
                   {"all" , OUTPUT_ALL },
                   {"true" , OUTPUT_ALL }};
-            auto converted = string2OutputEnum.find(output);
-            if ( converted != string2OutputEnum.end() )
-            {
-                output_ = string2OutputEnum[output];
+            auto outputModeIt = stringToOutputMode.find(outputModeString);
+            if (outputModeIt != stringToOutputMode.end()) {
+                output_ = outputModeIt->second;
             }
-            else
-            {
-                std::cerr << "Value " << output <<
-                    " passed to option output was invalid. Using \"all\" instead."
+            else {
+                output_ = OUTPUT_ALL;
+                std::cerr << "Value " << outputModeString <<
+                    " is not a recognized output mode. Using \"all\" instead."
                           << std::endl;
             }
 
-            output_to_files_ = output_cout_ && (output_ != OUTPUT_NONE);
+            output_cout_ = false;
+            if (mpi_rank_ == 0) {
+                output_cout_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
+                output_to_files_ = (output_ != OUTPUT_NONE);
+            }
         }
 
-        // Setup OpmLog backend with output_dir.
+        // Setup the OpmLog backends
         void setupLogging()
         {
-            std::string deck_filename = param_.get<std::string>("deck_filename");
+            std::string deck_filename = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
             // create logFile
             using boost::filesystem::path;
             path fpath(deck_filename);
@@ -273,8 +333,7 @@ namespace Opm
             logFileStream << output_dir << "/" << baseName;
             debugFileStream << output_dir << "/" << baseName;
 
-            if ( must_distribute_ && mpi_rank_ != 0 )
-            {
+            if (mpi_rank_ != 0) {
                 // Added rank to log file for non-zero ranks.
                 // This prevents message loss.
                 debugFileStream << "."<< mpi_rank_;
@@ -286,19 +345,17 @@ namespace Opm
 
             logFile_ = logFileStream.str();
 
-            if( output_ > OUTPUT_NONE)
-            {
+            if (output_ > OUTPUT_NONE) {
                 std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes, false, output_cout_);
                 OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
                 prtLog->setMessageLimiter(std::make_shared<MessageLimiter>());
                 prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
             }
 
-            if( output_ >= OUTPUT_LOG_ONLY && !param_.getDefault("no_debug_log", false) )
-            {
+            if (output_ >= OUTPUT_LOG_ONLY) {
                 std::string debugFile = debugFileStream.str();
                 std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes, false, output_cout_);
-                OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
+                OpmLog::addBackend("DEBUGLOG",  debugLog);
             }
 
             std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
@@ -312,18 +369,12 @@ namespace Opm
                                                    {Log::MessageType::Bug, msgLimits.getBugPrintLimit(0)}};
             streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10, limits));
             streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
-
-            if ( output_cout_ )
-            {
-            // Read Parameters.
-                OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
-            }
         }
 
+        // Print an ASCII-art header to the PRT and DEBUG files.
         void printPRTHeader()
         {
-          // Print header for PRT file.
-          if ( output_cout_ ) {
+          if (output_cout_) {
               const std::string version = moduleVersionName();
               const double megabyte = 1024 * 1024;
               unsigned num_cpu = std::thread::hardware_concurrency();
@@ -346,7 +397,7 @@ namespace Opm
               ss << " and is part of OPM.\nFor more information visit: https://opm-project.org \n\n";
               ss << "Flow Version  =  " + version + "\n";
               if (uname(&arch) == 0) {
-                 ss << "System        =  " << arch.nodename << " (Number of cores: " << num_cpu;
+                 ss << "System        =  " << arch.nodename << " (Number of logical cores: " << num_cpu;
                  ss << ", RAM: " << std::fixed << std::setprecision (2) << mem_size << " MB) \n";
                  ss << "Architecture  =  " << arch.sysname << " " << arch.machine << " (Release: " << arch.release;
                  ss << ", Version: " << arch.version << " )\n";
@@ -355,6 +406,10 @@ namespace Opm
                  ss << "User          =  " << user << std::endl;
                  }
               ss << "Simulation started on " << tmstr << " hrs\n";
+
+              ss << "Parameters used by Flow:\n";
+              Ewoms::Parameters::printValues<TypeTag>(ss);
+
               OpmLog::note(ss.str());
             }
         }
@@ -364,20 +419,15 @@ namespace Opm
             // force closing of all log files.
             OpmLog::removeAllBackends();
 
-            if( mpi_rank_ != 0 || !must_distribute_ || !output_to_files_ )
-            {
+            if (mpi_rank_ != 0 || mpi_size_ < 2 || !output_to_files_) {
                 return;
             }
 
             namespace fs = boost::filesystem;
             fs::path output_path(".");
             const std::string& output_dir = eclState().getIOConfig().getOutputDir();
-            if ( param_.has("output_dir") )
-            {
-                output_path = fs::path(output_dir);
-            }
 
-            fs::path deck_filename(param_.get<std::string>("deck_filename"));
+            fs::path deck_filename(EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName));
             std::for_each(fs::directory_iterator(output_path),
                           fs::directory_iterator(),
                           detail::ParallelFileMerger(output_path, deck_filename.stem().string()));
@@ -385,47 +435,6 @@ namespace Opm
 
         void setupEbosSimulator()
         {
-            std::vector<const char*> argv;
-
-            argv.push_back("flow_ebos");
-
-            std::string deckFileParam("--ecl-deck-file-name=");
-            const std::string& deckFileName = param_.get<std::string>("deck_filename");
-            deckFileParam += deckFileName;
-            argv.push_back(deckFileParam.c_str());
-
-            std::string outputDirParam("--output-dir=");
-            if (param_.has("output_dir")) {
-                const std::string& output_dir = param_.get<std::string>("output_dir");
-                outputDirParam += output_dir;
-                argv.push_back(outputDirParam.c_str());
-            }
-
-            std::string asyncOutputParam("--enable-async-ecl-output=");
-            if (param_.has("async_output")) {
-                const std::string& value = param_.get<std::string>("async_output");
-                asyncOutputParam += value;
-                argv.push_back(asyncOutputParam.c_str());
-            }
-
-            std::string outputDoublePrecisionParam("--ecl-output-double-precision=");
-            if (param_.has("restart_double_si")) {
-                const std::string& value  = param_.get<std::string>("restart_double_si");
-                outputDoublePrecisionParam += value;
-                argv.push_back(outputDoublePrecisionParam.c_str());
-            }
-
-#if defined(_OPENMP)
-            std::string numThreadsParam("--threads-per-process=");
-            int numThreads = omp_get_max_threads();
-
-            numThreadsParam += std::to_string(numThreads);
-            argv.push_back(numThreadsParam.c_str());
-#endif // defined(_OPENMP)
-
-            EbosSimulator::registerParameters();
-            Ewoms::setupParameters_<TypeTag>(argv.size(), &argv[0]);
-            EbosThreadManager::init();
             ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
             ebosSimulator_->model().applyInitialSolution();
 
@@ -435,22 +444,28 @@ namespace Opm
                 }
 
                 // Possible to force initialization only behavior (NOSIM).
-                if (param_.has("nosim")) {
-                    const bool nosim = param_.get<bool>("nosim");
+                const std::string& dryRunString = EWOMS_GET_PARAM(TypeTag, std::string, EnableDryRun);
+                if (dryRunString != "" && dryRunString != "auto") {
+                    bool yesno;
+                    if (dryRunString == "true"
+                        || dryRunString == "t"
+                        || dryRunString == "1")
+                        yesno = true;
+                    else if (dryRunString == "false"
+                             || dryRunString == "f"
+                             || dryRunString == "0")
+                        yesno = false;
+                    else
+                        throw std::invalid_argument("Invalid value for parameter EnableDryRun: '"
+                                                    +dryRunString+"'");
                     auto& ioConfig = eclState().getIOConfig();
-                    ioConfig.overrideNOSIM( nosim );
+                    ioConfig.overrideNOSIM(yesno);
                 }
             }
             catch (const std::invalid_argument& e) {
                 std::cerr << "Failed to create valid EclipseState object. See logfile: " << logFile_ << std::endl;
                 std::cerr << "Exception caught: " << e.what() << std::endl;
                 throw;
-            }
-
-            // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
-            if (param_.has("output_interval")) {
-                const int output_interval = param_.get<int>("output_interval");
-                eclState().getRestartConfig().overrideRestartWriteInterval( size_t( output_interval ) );
             }
         }
 
@@ -475,8 +490,7 @@ namespace Opm
         //   OpmLog singleton.
         void runDiagnostics()
         {
-            if( ! output_cout_ )
-            {
+            if (!output_cout_) {
                 return;
             }
 
@@ -486,8 +500,7 @@ namespace Opm
         }
 
         // Run the simulator.
-        // Returns EXIT_SUCCESS if it does not throw.
-        int runSimulator()
+        void runSimulator()
         {
             const auto& schedule = this->schedule();
             const auto& timeMap = schedule.getTimeMap();
@@ -497,6 +510,18 @@ namespace Opm
             // initialize variables
             const auto& initConfig = eclState().getInitConfig();
             simtimer.init(timeMap, (size_t)initConfig.getRestartStep());
+
+            if (output_cout_) {
+                std::ostringstream oss;
+
+                // This allows a user to catch typos and misunderstandings in the
+                // use of simulator parameters.
+                if (Ewoms::Parameters::printUnused<TypeTag>(oss)) {
+                    std::cout << "-----------------   Unrecognized parameters:   -----------------\n";
+                    std::cout << oss.str();
+                    std::cout << "----------------------------------------------------------------" << std::endl;
+                }
+            }
 
             if (!ioConfig.initOnly()) {
                 if (output_cout_) {
@@ -513,13 +538,6 @@ namespace Opm
                     ss << "\n\n================    End of simulation     ===============\n\n";
                     successReport.reportFullyImplicit(ss, &failureReport);
                     OpmLog::info(ss.str());
-                    if (param_.anyUnused()) {
-                        // This allows a user to catch typos and misunderstandings in the
-                        // use of simulator parameters.
-                        std::cout << "--------------------   Unused parameters:   --------------------\n";
-                        param_.displayUsage();
-                        std::cout << "----------------------------------------------------------------" << std::endl;
-                    }
                 }
 
             } else {
@@ -528,39 +546,35 @@ namespace Opm
                 }
 
             }
-            return EXIT_SUCCESS;
         }
 
         // Setup linear solver.
         // Writes to:
-        //   fis_solver_
+        //   linearSolver_
         void setupLinearSolver()
         {
-            typedef typename BlackoilModelEbos<TypeTag> :: ISTLSolverType ISTLSolverType;
-            const std::string cprSolver = "cpr";
-            if (!param_.has("solver_approach") )
-            {
-                if ( eclState().getSimulationConfig().useCPR() )
-                {
-                /* Deactivate selection of CPR via eclipse keyword
-                   as this preconditioner is still considered experimental
-                   and fails miserably for some models.
-                    param_.insertParameter("solver_approach", cprSolver);
-                */
-                    if ( output_cout_ )
-                    {
-                        std::ostringstream message;
-                        message << "Ignoring request for CPRPreconditioner "
-                             << "via Eclipse keyword as it is considered "
-                             <<" experimental. To activate use "
-                             <<"\"solver_approach=cprSolver\" command "
-                             <<"line parameter.";
-                        OpmLog::info(message.str());
-                    }
-                }
-            }
+            typedef typename BlackoilModelEbos<TypeTag>::ISTLSolverType ISTLSolverType;
+
             extractParallelGridInformationToISTL(grid(), parallel_information_);
-            fis_solver_.reset( new ISTLSolverType( param_, parallel_information_ ) );
+            auto *tmp = new ISTLSolverType(parallel_information_);
+            linearSolver_.reset(tmp);
+
+            // Deactivate selection of CPR via eclipse keyword
+            // as this preconditioner is still considered experimental
+            // and fails miserably for some models.
+            if (output_cout_
+                && eclState().getSimulationConfig().useCPR()
+                && !tmp->parameters().use_cpr_)
+            {
+                std::ostringstream message;
+                message << "Ignoring request for CPRPreconditioner "
+                        << "via Eclipse keyword as it is considered "
+                        <<" experimental. To activate use "
+                        <<"\"--flow-use-cpr=true\" command "
+                        <<"line parameter.";
+                OpmLog::info(message.str());
+            }
+
         }
 
         /// This is the main function of Flow.
@@ -570,37 +584,7 @@ namespace Opm
         void createSimulator()
         {
             // Create the simulator instance.
-            simulator_.reset(new Simulator(*ebosSimulator_,
-                                           param_,
-                                           *fis_solver_));
-        }
-
-    private:
-        boost::filesystem::path simulationCaseName( const std::string& casename ) {
-            namespace fs = boost::filesystem;
-
-            const auto exists = []( const fs::path& f ) -> bool {
-                if( !fs::exists( f ) ) return false;
-
-                if( fs::is_regular_file( f ) ) return true;
-
-                return fs::is_symlink( f )
-                && fs::is_regular_file( fs::read_symlink( f ) );
-            };
-
-            auto simcase = fs::path( casename );
-
-            if( exists( simcase ) ) {
-                return simcase;
-            }
-
-            for( const auto& ext : { std::string("data"), std::string("DATA") } ) {
-                if( exists( simcase.replace_extension( ext ) ) ) {
-                    return simcase;
-                }
-            }
-
-            throw std::invalid_argument( "Cannot find input case " + casename );
+            simulator_.reset(new Simulator(*ebosSimulator_, *linearSolver_));
         }
 
         unsigned long long getTotalSystemMemory()
@@ -614,15 +598,15 @@ namespace Opm
         Grid& grid()
         { return ebosSimulator_->vanguard().grid(); }
 
+    private:
         std::unique_ptr<EbosSimulator> ebosSimulator_;
         int  mpi_rank_ = 0;
+        int  mpi_size_ = 1;
         bool output_cout_ = false;
-        FileOutputValue output_ = OUTPUT_ALL;
-        bool must_distribute_ = false;
-        ParameterGroup param_;
+        FileOutputMode output_ = OUTPUT_ALL;
         bool output_to_files_ = false;
         boost::any parallel_information_;
-        std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver_;
+        std::unique_ptr<NewtonIterationBlackoilInterface> linearSolver_;
         std::unique_ptr<Simulator> simulator_;
         std::string logFile_;
     };

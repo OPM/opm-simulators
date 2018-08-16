@@ -26,18 +26,41 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
+
+#include <ewoms/common/parametersystem.hh>
+#include <ewoms/common/propertysystem.hh>
+
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <memory>
+
+BEGIN_PROPERTIES
+
+NEW_TYPE_TAG(FlowNonLinearSolver);
+
+NEW_PROP_TAG(Scalar);
+NEW_PROP_TAG(NewtonMaxRelax);
+NEW_PROP_TAG(FlowNewtonMaxIterations);
+NEW_PROP_TAG(FlowNewtonMinIterations);
+NEW_PROP_TAG(NewtonRelaxationType);
+
+SET_SCALAR_PROP(FlowNonLinearSolver, NewtonMaxRelax, 0.5);
+SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMaxIterations, 10);
+SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMinIterations, 1);
+SET_STRING_PROP(FlowNonLinearSolver, NewtonRelaxationType, "dampen");
+
+END_PROPERTIES
 
 namespace Opm {
 
 
     /// A nonlinear solver class suitable for general fully-implicit models,
     /// as well as pressure, transport and sequential models.
-    template <class PhysicalModel>
+    template <class TypeTag, class PhysicalModel>
     class NonlinearSolverEbos
     {
+        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
     public:
         // Available relaxation scheme types.
         enum RelaxType {
@@ -46,7 +69,7 @@ namespace Opm {
         };
 
         // Solver parameters controlling nonlinear process.
-        struct SolverParametersEbos
+        struct SolverParameters
         {
             RelaxType relaxType_;
             double relaxMax_;
@@ -55,28 +78,33 @@ namespace Opm {
             int maxIter_; // max nonlinear iterations
             int minIter_; // min nonlinear iterations
 
-            explicit SolverParametersEbos(const ParameterGroup& param)
+            SolverParameters()
             {
                 // set default values
                 reset();
 
                 // overload with given parameters
-                relaxMax_ = param.getDefault("relax_max", relaxMax_);
-                maxIter_ = param.getDefault("max_iter", maxIter_);
-                minIter_ = param.getDefault("min_iter", minIter_);
+                relaxMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxRelax);
+                maxIter_ = EWOMS_GET_PARAM(TypeTag, int, FlowNewtonMaxIterations);
+                minIter_ = EWOMS_GET_PARAM(TypeTag, int, FlowNewtonMinIterations);
 
-                std::string relaxationType = param.getDefault("relax_type", std::string("dampen"));
-                if (relaxationType == "dampen") {
+                const auto& relaxationTypeString = EWOMS_GET_PARAM(TypeTag, std::string, NewtonRelaxationType);
+                if (relaxationTypeString == "dampen") {
                     relaxType_ = Dampen;
-                } else if (relaxationType == "sor") {
+                } else if (relaxationTypeString == "sor") {
                     relaxType_ = SOR;
                 } else {
-                    OPM_THROW(std::runtime_error, "Unknown Relaxtion Type " << relaxationType);
+                    OPM_THROW(std::runtime_error, "Unknown Relaxtion Type " << relaxationTypeString);
                 }
             }
 
-            SolverParametersEbos()
-            { reset(); }
+            static void registerParameters()
+            {
+                EWOMS_REGISTER_PARAM(TypeTag, Scalar, NewtonMaxRelax, "The maximum relaxation factor of a Newton iteration used by flow");
+                EWOMS_REGISTER_PARAM(TypeTag, int, FlowNewtonMaxIterations, "The maximum number of Newton iterations per time step used by flow");
+                EWOMS_REGISTER_PARAM(TypeTag, int, FlowNewtonMinIterations, "The minimum number of Newton iterations per time step used by flow");
+                EWOMS_REGISTER_PARAM(TypeTag, std::string, NewtonRelaxationType, "The type of relaxation used by flow's Newton method");
+            }
 
             void reset()
             {
@@ -104,7 +132,7 @@ namespace Opm {
         ///
         /// \param[in]      param   parameters controlling nonlinear process
         /// \param[in, out] model   physical simulation model.
-        NonlinearSolverEbos(const SolverParametersEbos& param,
+        NonlinearSolverEbos(const SolverParameters& param,
                             std::unique_ptr<PhysicalModel> model)
             : param_(param)
             , model_(std::move(model))
@@ -329,13 +357,13 @@ namespace Opm {
         { return param_.minIter_; }
 
         /// Set parameters to override those given at construction time.
-        void setParameters(const SolverParametersEbos& param)
+        void setParameters(const SolverParameters& param)
         { param_ = param; }
 
     private:
         // ---------  Data members  ---------
         SimulatorReport failureReport_;
-        SolverParametersEbos param_;
+        SolverParameters param_;
         std::unique_ptr<PhysicalModel> model_;
         int linearizations_;
         int nonlinearIterations_;
