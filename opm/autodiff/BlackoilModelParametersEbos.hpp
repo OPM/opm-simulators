@@ -32,9 +32,6 @@ NEW_TYPE_TAG(FlowModelParameters);
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(EclDeckFileName);
 
-NEW_PROP_TAG(DpMaxRel);
-NEW_PROP_TAG(DsMax);
-NEW_PROP_TAG(DrMaxRel);
 NEW_PROP_TAG(DbhpMaxRel);
 NEW_PROP_TAG(DwellFractionMax);
 NEW_PROP_TAG(MaxResidualAllowed);
@@ -59,9 +56,6 @@ NEW_PROP_TAG(MaxPressureChangeMsWells);
 NEW_PROP_TAG(UseInnerIterationsMsWells);
 NEW_PROP_TAG(MaxInnerIterMsWells);
 
-SET_SCALAR_PROP(FlowModelParameters, DpMaxRel, 0.3);
-SET_SCALAR_PROP(FlowModelParameters, DsMax, 0.2);
-SET_SCALAR_PROP(FlowModelParameters, DrMaxRel, 1e9);
 SET_SCALAR_PROP(FlowModelParameters, DbhpMaxRel, 1.0);
 SET_SCALAR_PROP(FlowModelParameters, DwellFractionMax, 0.2);
 SET_SCALAR_PROP(FlowModelParameters, MaxResidualAllowed, 1e7);
@@ -96,12 +90,6 @@ namespace Opm
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
     public:
-        /// Max relative change in pressure in single iteration.
-        double dp_max_rel_;
-        /// Max absolute change in saturation in single iteration.
-        double ds_max_;
-        /// Max relative change in gas-oil or oil-gas ratio in single iteration.
-        double dr_max_rel_;
         /// Max relative change in bhp in single iteration.
         double dbhp_max_rel_;
         /// Max absolute change in well volume fraction in single iteration.
@@ -168,9 +156,6 @@ namespace Opm
         /// Construct from user parameters or defaults.
         BlackoilModelParametersEbos()
         {
-            dp_max_rel_ = EWOMS_GET_PARAM(TypeTag, Scalar, DpMaxRel);
-            ds_max_ = EWOMS_GET_PARAM(TypeTag, Scalar, DsMax);
-            dr_max_rel_ = EWOMS_GET_PARAM(TypeTag, Scalar, DrMaxRel);
             dbhp_max_rel_=  EWOMS_GET_PARAM(TypeTag, Scalar, DbhpMaxRel);
             dwell_fraction_max_ = EWOMS_GET_PARAM(TypeTag, Scalar, DwellFractionMax);
             max_residual_allowed_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxResidualAllowed);
@@ -198,9 +183,6 @@ namespace Opm
 
         static void registerParameters()
         {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DpMaxRel, "Maximum relative change of pressure in a single iteration");
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DsMax, "Maximum absolute change of any saturation in a single iteration");
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DrMaxRel, "Maximum relative change of the gas-in-oil or oil-in-gas ratio in a single iteration");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, DbhpMaxRel, "Maximum relative change of the bottom-hole pressure in a single iteration");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, DwellFractionMax, "Maximum absolute change of a well's volume fraction in a single iteration");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxResidualAllowed, "Absolute maximum tolerated for residuals without cutting the time step size");
