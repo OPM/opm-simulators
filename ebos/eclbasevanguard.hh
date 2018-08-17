@@ -132,7 +132,7 @@ public:
                 return simcase;
         }
 
-        throw std::invalid_argument("Cannot find input case "+caseName);
+        throw std::invalid_argument("Cannot find input case '"+caseName+"'");
     }
 
     /*!
