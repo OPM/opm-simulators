@@ -130,7 +130,14 @@ int main(int argc, char** argv)
 
     std::string deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
     typedef typename GET_PROP_TYPE(PreTypeTag, Vanguard) PreVanguard;
-    deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
+    try {
+        deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
+    }
+    catch (const std::exception& e) {
+        Ewoms::Parameters::printUsage<PreTypeTag>(PreProblem::helpPreamble(argc, const_cast<const char**>(argv)),
+                                                  e.what());
+        return 1;
+    }
 
     // Create Deck and EclipseState.
     try {
