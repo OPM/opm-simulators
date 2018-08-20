@@ -228,7 +228,9 @@ static inline void invertMatrix (FieldMatrix<K,4,4> &matrix)
 template <typename K, int n>
 static inline void invertMatrix (FieldMatrix<K,n,n> &matrix)
 {
+#if ! DUNE_VERSION_NEWER( DUNE_COMMON, 2, 7 )
     Dune::FMatrixPrecision<K>::set_singular_limit(1.e-20);
+#endif
     matrix.invert();
 }
 
@@ -359,7 +361,7 @@ namespace Detail
     class ISTLSolverEbos : public NewtonIterationBlackoilInterface
     {
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-        typedef typename GET_PROP_TYPE(TypeTag, JacobianMatrix) Matrix;
+        typedef typename GET_PROP_TYPE(TypeTag, JacobianMatrix) :: Matrix  Matrix;
         typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
         typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
 
