@@ -91,7 +91,6 @@ namespace Opm
     public:
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
-        typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) EbosThreadManager;
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
         typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
