@@ -417,7 +417,7 @@ public:
             std::string oldParamName = param.substr(0, i);
             std::string oldParamValue = param.substr(i+1);
             std::string newParamName = "--" + oldParamName;
-            for (int j = 0; j < newParamName.size(); ++j)
+            for (size_t j = 0; j < newParamName.size(); ++j)
                 if (newParamName[j] == '_')
                     newParamName[j] = '-';
             errorMsg =
