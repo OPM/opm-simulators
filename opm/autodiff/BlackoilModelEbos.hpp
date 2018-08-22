@@ -37,7 +37,7 @@
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/LinearSolverAmgcl.hpp>
-#include <opm/autodiff/LinearSolverAmgclNew.hpp>
+//#include <opm/autodiff/LinearSolverAmgclNew.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
@@ -393,22 +393,22 @@ namespace Opm {
 
                 std::vector<double> sol(sz, 0.0);
                 if (param_.use_amgcl_) {
-                    // Call amgcl to solve system
-                    const double tol = istlSolver().getParameters().linear_solver_reduction_;
-                    const int maxiter = istlSolver().getParameters().linear_solver_maxiter_;
-                    int    iters;
-                    double error;
-                    /*
-                    LinearSolverAmgcl solver(np, param_.use_amgcl_drs_);
-                    //LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
-                    solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
-                    */
-                    solver_ =std::make_shared<LinearSolverAmgclNew>(np, param_.use_amgcl_drs_);
-                    solver_->init(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter);
-                    solver_->updatePre(sz, matrix.ptr, matrix.col, matrix.val, tol, maxiter);
-                    solver_->solve(rhs,  sol, iters, error);
-                    const_cast<int&>(linear_iters_last_solve_) = iters;
-                    std::cout << "Linear iterations in adjoint solve " << iters << std::endl;
+                    // // Call amgcl to solve system
+                    // const double tol = istlSolver().getParameters().linear_solver_reduction_;
+                    // const int maxiter = istlSolver().getParameters().linear_solver_maxiter_;
+                    // int    iters;
+                    // double error;
+                    // /*
+                    // LinearSolverAmgcl solver(np, param_.use_amgcl_drs_);
+                    // //LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
+                    // solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
+                    // */
+                    // solver_ =std::make_shared<LinearSolverAmgcl>(np, param_.use_amgcl_drs_);
+                    // solver_->init(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter);
+                    // // solver_->updatePre(sz, matrix.ptr, matrix.col, matrix.val, tol, maxiter);
+                    // solver_->solve(rhs,  sol, iters, error);
+                    // const_cast<int&>(linear_iters_last_solve_) = iters;
+                    // std::cout << "Linear iterations in adjoint solve " << iters << std::endl;
                 } else if (param_.use_umfpack_) {
                     // Call UMFPACK to solve system
                     const int nnz = matrix.ptr[sz];
@@ -1010,33 +1010,33 @@ namespace Opm {
 
                 std::vector<double> sol(sz, 0.0);
                 if (param_.use_amgcl_) {
-                    // Call amgcl to solve system
-                    const double tol = istlSolver().getParameters().linear_solver_reduction_;
-                    const int maxiter = istlSolver().getParameters().linear_solver_maxiter_;
-                    int    iters;
-                    double error;
-                    auto rep  =  new DebugTimeReport("amgcl-timer");
+                    // // Call amgcl to solve system
+                    // const double tol = istlSolver().getParameters().linear_solver_reduction_;
+                    // const int maxiter = istlSolver().getParameters().linear_solver_maxiter_;
+                    // int    iters;
+                    // double error;
+                    // auto rep  =  new DebugTimeReport("amgcl-timer");
 
-                    if( (iteration < 1) || (timer.currentStepLength()  < (10.0*24.0*60.0*60.0)) ){
-                        solver_.reset();
-                        solver_ = std::make_shared<LinearSolverAmgclNew>(np, param_.use_amgcl_drs_);
-                        if(np>2){
-                            solver_->hackScalingFactors(sz, matrix.ptr, matrix.val,rhs);// scale equations
-                        }
-                        solver_->init(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter);
-                    }else{
-                        if(np>2){
-                            solver_->hackScalingFactors(sz, matrix.ptr, matrix.val,rhs);// scale equations
-                        }
-                        solver_->updatePre(sz, matrix.ptr, matrix.col, matrix.val, tol, maxiter);
-                    }
-                    solver_->solve(rhs,  sol, iters, error);
-                    delete rep;
-                    /*
-                    LinearSolverAmgcl solver(np,param_.use_amgcl_drs_);
-                    //LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
-                    solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);*/
-                    const_cast<int&>(linear_iters_last_solve_) = iters;
+                    // if( (iteration < 1) || (timer.currentStepLength()  < (10.0*24.0*60.0*60.0)) ){
+                    //     solver_.reset();
+                    //     solver_ = std::make_shared<LinearSolverAmgclNew>(np, param_.use_amgcl_drs_);
+                    //     if(np>2){
+                    //         solver_->hackScalingFactors(sz, matrix.ptr, matrix.val,rhs);// scale equations
+                    //     }
+                    //     solver_->init(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter);
+                    // }else{
+                    //     if(np>2){
+                    //         solver_->hackScalingFactors(sz, matrix.ptr, matrix.val,rhs);// scale equations
+                    //     }
+                    //     solver_->updatePre(sz, matrix.ptr, matrix.col, matrix.val, tol, maxiter);
+                    // }
+                    // solver_->solve(rhs,  sol, iters, error);
+                    // delete rep;
+                    // /*
+                    // LinearSolverAmgcl solver(np,param_.use_amgcl_drs_);
+                    // //LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
+                    // solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);*/
+                    // const_cast<int&>(linear_iters_last_solve_) = iters;
                 } else if (param_.use_umfpack_) {
                     // Call UMFPACK to solve system
                     const int nnz = matrix.ptr[sz];
@@ -1659,7 +1659,7 @@ namespace Opm {
 
     public:
         std::vector<bool> wasSwitched_;
-        mutable std::shared_ptr<LinearSolverAmgclNew> solver_;
+        // mutable std::shared_ptr<LinearSolverAmgclNew> solver_;
 
 
 
