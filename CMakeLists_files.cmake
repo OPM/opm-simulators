@@ -155,7 +155,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_multmatrixtransposed.cpp
   tests/test_multiphaseupwind.cpp
   tests/test_wellmodel.cpp
-  tests/test_thresholdpressure.cpp
+#  tests/test_thresholdpressure.cpp
   tests/test_wellswitchlogger.cpp
   tests/test_timer.cpp
   tests/test_invert.cpp
