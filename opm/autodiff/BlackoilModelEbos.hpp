@@ -247,16 +247,14 @@ namespace Opm {
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
 
-            WellState dummy_well_state;//only for the interface due to flow_legacy
-            ReservoirState dummy_res_state(0, 0, 0);
-            this->prepareStep(timer, dummy_res_state, dummy_well_state);//, /*initial_reservoir_state*/, /*initial_well_state*/);
+            this->prepareStep(timer);
             this->deserialize_reservoir( timer.simulationTimeElapsed() );
             SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             // Store the initial previous.
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
             WellState well_state0;
             deserialize_well(well_state0);//
-            wellModel().beginTimeStep();
+            wellModel().beginTimeStep(timer.reportStepNum(), timer.simulationTimeElapsed());
             wellModel().setRestartWellState(well_state0);
 
             // move to current time step
@@ -270,7 +268,7 @@ namespace Opm {
             wellModel().calculateExplicitQuantities();
             //wellModel().assemble(/*iterationIdx*/0, false, ebosSimulator_.timeStepSize());
             //timer.report(std::cout);
-            this->prepareStep(timer, dummy_res_state, dummy_well_state);
+            this->prepareStep(timer);
             // std::cout << "Current time end " <<  timer.simulationTimeElapsed()  << std::endl;
             this->deserialize_reservoir( timer.simulationTimeElapsed() );
             // seralizing may owerwrite prevois step since it was intended for restart ??
@@ -318,14 +316,14 @@ namespace Opm {
             std::cout << "Printing matrix residual in backward mode" << std::endl;
             std::cout << "Inf norm " << ebosResid.infinity_norm() << std::endl;
             std::cout << "Norm " << ebosResid.two_norm() << std::endl;
-            std::cout << "Printing well residual in backward mode" << std::endl;
-            const auto& well_container = wellModel().getWellContainer();
-            for (const auto& well : well_container) {
-                std::cout << "********************************* " << std::endl;
-                std::cout << "Print residual for " << well->name() << std::endl;
-                auto reswell = well->getResWell();
-                std::cout << "Norm "<< reswell.two_norm() << std::endl;
-            }
+            // std::cout << "Printing well residual in backward mode" << std::endl;
+            // const auto& well_container = wellModel().getWellContainer();
+            // for (const auto& well : well_container) {
+            //     std::cout << "********************************* " << std::endl;
+            //     std::cout << "Print residual for " << well->name() << std::endl;
+            //     auto reswell = well->getResWell();
+            //     std::cout << "Norm "<< reswell.two_norm() << std::endl;
+            // }
             //wellModel().printResidual(std::cout);
 
             const int nc = UgGridHelpers::numCells(grid_);
@@ -1486,10 +1484,6 @@ namespace Opm {
 
         Simulator& ebosSimulator()
         { return ebosSimulator_; }
-
-        const FIPDataType& getFIPData() const {
-            return fip_;
-        }
 
         void ebosSerialize(){
             ebosSimulator_.serialize();

@@ -401,6 +401,22 @@ namespace Opm {
             timestepAfterEvent_ = tuning.getTMAXWC(timeStep);
         }
 
+        void addLocalTimestep(double dt, int global_step_indx)
+        {
+            localTimesteps_.push_back(dt);
+            localGlobalstepindx_.push_back(global_step_indx);
+        }
+
+        const std::vector<double>& getAllTimeStepsTaken() const
+        {
+            return localTimesteps_;
+        }
+
+        const std::vector<int>& getAllGlobalstepIndx() const
+        {
+            return localGlobalstepindx_;
+        }
+
 
     protected:
         void init_()
@@ -454,6 +470,8 @@ namespace Opm {
         bool fullTimestepInitially_;        //!< beginning with the size of the time step from data file
         double timestepAfterEvent_;         //!< suggested size of timestep after an event
         bool useNewtonIteration_;           //!< use newton iteration count for adaptive time step control
+        std::vector<double> localTimesteps_;
+        std::vector<int> localGlobalstepindx_;
     };
 }
 
