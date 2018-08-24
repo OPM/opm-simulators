@@ -99,7 +99,7 @@ namespace Opm
         // TODO: with flow_ebos，for a 2P deck, // TODO: for the 2p deck, numEq will be 3, a dummy phase is already added from the reservoir side.
         // it will cause problem here without processing the dummy phase.
         static const int numAdjoint = GET_PROP_VALUE(TypeTag, numAdjoint);
-        static const int control_index=numEq + numWellEq;
+        static const int controlIndex = numEq + numWellEq;
 
         using typename Base::Mat;
         using typename Base::BVector;
@@ -437,9 +437,9 @@ namespace Opm
                                                         const std::vector<double>& initial_potential) const;
 
         template <class ValueType>
-        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const int control_index) const;
+        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const int thp_control_index) const;
 
-        double calculateThpFromBhp(const std::vector<double>& rates, const int control_index, const double bhp) const;
+        double calculateThpFromBhp(const std::vector<double>& rates, const int thp_control_index, const double bhp) const;
 
         // get the mobility for specific perforation
         void getMobility(const Simulator& ebosSimulator,
@@ -461,6 +461,15 @@ namespace Opm
 
         // handle the non reasonable fractions due to numerical overshoot
         void processFractions() const;
+
+        // Helpers for adjoint.
+        void setControlDerivative(double&) const
+        {
+        }
+        void setControlDerivative(EvalWell& x) const
+        {
+            x.setDerivative(controlIndex, 1.0);
+        }
 
     };
 

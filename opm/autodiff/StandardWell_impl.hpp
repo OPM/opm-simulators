@@ -542,15 +542,14 @@ namespace Opm
         }
 
         // calculate objective function related to the well
-        double t = ebosSimulator.time();
-        EvalWell obj =  Opm::Objectives::TotalWaterRate::objective(q, t, dt);
+        const double t = ebosSimulator.time();
+        const EvalWell obj = Opm::Objectives::TotalWaterRate::objective(q, t, dt);
 
         // pick out the well value and derivative
-        objval_=0.0;
         for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
             objder_adjwell_[0][pvIdx] = obj.derivative(pvIdx+numEq);
         }
-        objder_adjctrl_[0][0] = obj.derivative(control_index);
+        objder_adjctrl_[0][0] = obj.derivative(controlIndex);
         objval_= obj.value();
         objder_adjres_ = 0.0;
     }
@@ -673,8 +672,8 @@ namespace Opm
                     invDuneD_[0][0][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx+numEq);
                 }
                 if(numAdjoint>0){// NB we should probably also have a runtime switch here
-                    duneDA_[0][0][componentIdx][0] -= cq_s_effective.derivative(control_index);
-                    duneCA_[0][cell_idx][0][componentIdx] -= cq_s_effective.derivative(control_index);
+                    duneDA_[0][0][componentIdx][0] -= cq_s_effective.derivative(controlIndex);
+                    duneCA_[0][cell_idx][0][componentIdx] -= cq_s_effective.derivative(controlIndex);
                 }
 
                 for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
@@ -788,7 +787,7 @@ namespace Opm
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
             if(numAdjoint>0){//
-                duneDA_[0][0][componentIdx][0] += resWell_loc.derivative(control_index);
+                duneDA_[0][0][componentIdx][0] += resWell_loc.derivative(controlIndex);
             }
             resWell_[0][componentIdx] += resWell_loc.value();
         }
@@ -833,13 +832,19 @@ namespace Opm
             }
             case BHP:
             {
-                const double target_bhp = well_controls_get_current_target(well_controls_);
+                EvalWell target_bhp = well_controls_get_current_target(well_controls_);
+                if (numAdjoint > 0) {
+                    target_bhp.setDerivative(controlIndex, 1.0);
+                }
                 control_eq = getBhp() - target_bhp;
                 break;
             }
             case SURFACE_RATE:
             {
-                const double target_rate = well_controls_get_current_target(well_controls_); // surface rate target
+                EvalWell target_rate = well_controls_get_current_target(well_controls_); // surface rate target
+                if (numAdjoint > 0) {
+                    target_rate.setDerivative(controlIndex, 1.0);
+                }
                 if (well_type_ == INJECTOR) {
                     // only handles single phase injection now
                     assert(well_ecl_->getInjectionProperties(current_step_).injectorType != WellInjector::MULTI);
@@ -884,7 +889,10 @@ namespace Opm
             }
             case RESERVOIR_RATE:
             {
-                const double target_rate = well_controls_get_current_target(well_controls_); // reservoir rate target
+                EvalWell target_rate = well_controls_get_current_target(well_controls_); // surface rate target
+                if (numAdjoint > 0) {
+                    target_rate.setDerivative(controlIndex, 1.0);
+                }
                 if (well_type_ == INJECTOR) {
                     // only handles single phase injection now
                     assert(well_ecl_->getInjectionProperties(current_step_).injectorType != WellInjector::MULTI);
@@ -2251,10 +2259,11 @@ namespace Opm
                 primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / total_well_rate;
             }
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]] - well_state.solventWellRate(well_index)) / total_well_rate ;
+                primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]]) / total_well_rate ;
             }
             if (has_solvent) {
                 primary_variables_[SFrac] = scalingFactor(pu.phase_pos[Gas]) * well_state.solventWellRate(well_index) / total_well_rate ;
+                primary_variables_[GFrac] -= primary_variables_[SFrac];
             }
         } else { // total_well_rate == 0
             if (well_type_ == INJECTOR) {
@@ -2301,14 +2310,12 @@ namespace Opm
 
 
 
-
-
     template<typename TypeTag>
     template<class ValueType>
     ValueType
     StandardWell<TypeTag>::
     calculateBhpFromThp(const std::vector<ValueType>& rates,
-                        const int control_index) const
+                        const int thp_control_index) const
     {
         // TODO: when well is under THP control, the BHP is dependent on the rates,
         // the well rates is also dependent on the BHP, so it might need to do some iteration.
@@ -2322,9 +2329,13 @@ namespace Opm
         const ValueType liquid = rates[Oil];
         const ValueType vapour = rates[Gas];
 
-        const int vfp        = well_controls_iget_vfp(well_controls_, control_index);
-        const double& thp    = well_controls_iget_target(well_controls_, control_index);
-        const double& alq    = well_controls_iget_alq(well_controls_, control_index);
+        const int vfp        = well_controls_iget_vfp(well_controls_, thp_control_index);
+        ValueType thp        = well_controls_iget_target(well_controls_, thp_control_index);
+        const double& alq    = well_controls_iget_alq(well_controls_, thp_control_index);
+
+        if (numAdjoint > 0) {
+            setControlDerivative(thp);
+        }
 
         // pick the density in the top layer
         // TODO: it is possible it should be a Evaluation
@@ -2360,7 +2371,7 @@ namespace Opm
     double
     StandardWell<TypeTag>::
     calculateThpFromBhp(const std::vector<double>& rates,
-                        const int control_index,
+                        const int thp_control_index,
                         const double bhp) const
     {
         assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
@@ -2369,8 +2380,8 @@ namespace Opm
         const double liquid = rates[Oil];
         const double vapour = rates[Gas];
 
-        const int vfp        = well_controls_iget_vfp(well_controls_, control_index);
-        const double& alq    = well_controls_iget_alq(well_controls_, control_index);
+        const int vfp        = well_controls_iget_vfp(well_controls_, thp_control_index);
+        const double& alq    = well_controls_iget_alq(well_controls_, thp_control_index);
 
         // pick the density in the top layer
         const double rho = perf_densities_[0];
