@@ -51,13 +51,6 @@ namespace Opm
         int welspecsline;
     };
 
-
-    struct PerfData
-    {
-        int cell;
-        double well_index;
-        int satnumid;
-    };
     /// This class manages a Wells struct in the sense that it
     /// encapsulates creation and destruction of the wells
     /// data structure.
@@ -154,6 +147,14 @@ namespace Opm
 
 
     private:
+        struct PerfData
+        {
+            int cell;
+            double well_index;
+            double Kh;
+            int satnumid;
+        };
+
         template<class C2F, class FC>
         void init(const Opm::EclipseState& eclipseState,
                   const Opm::Schedule& schedule,
@@ -166,9 +167,11 @@ namespace Opm
                   FC begin_face_centroids,
                   const DynamicListEconLimited& list_econ_limited,
                   const std::unordered_set<std::string>& deactivated_wells);
+
         // Disable copying and assignment.
         WellsManager(const WellsManager& other);
         WellsManager& operator=(const WellsManager& other);
+
         static void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed );
         void setupWellControls(std::vector<const Well*>& wells, size_t timeStep,
                                std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,

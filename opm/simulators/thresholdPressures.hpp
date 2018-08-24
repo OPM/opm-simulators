@@ -380,9 +380,10 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
     ///                           particular connection. An empty vector is
     ///                           returned if there is no THPRES
     ///                           feature used in the deck.
-     std::vector<double> thresholdPressuresNNC(const EclipseState& eclipseState,
-                                               const NNC& nnc,
-                                               const std::map<std::pair<int, int>, double>& maxDp)
+    inline std::vector<double>
+    thresholdPressuresNNC(const EclipseState& eclipseState,
+                          const NNC& nnc,
+                          const std::map<std::pair<int, int>, double>& maxDp)
     {
         const SimulationConfig& simulationConfig = eclipseState.getSimulationConfig();
         std::vector<double> thpres_vals;

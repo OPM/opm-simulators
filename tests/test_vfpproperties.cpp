@@ -439,7 +439,8 @@ BOOST_AUTO_TEST_CASE(GetTable)
     std::shared_ptr<Wells> wells(create_wells(nphases, nwells, nperfs),
                                 destroy_wells);
     const int cells[] = {5};
-    add_well(INJECTOR, 100, 1, NULL, cells, NULL, 0, NULL, true, wells.get());
+    add_well(INJECTOR, 100, 1, nullptr, cells,
+             nullptr, nullptr, nullptr, nullptr, true, wells.get());
 
     //Create interpolation points
     double aqua_d   = -0.15;
@@ -775,8 +776,9 @@ BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
 
         std::stringstream ss;
         ss << "WELL_" << i;
-        const bool ok = add_well(INJECTOR, 0.0, 1, NULL, &cells,
-                                 NULL, 0, ss.str().c_str(), true, wells.get());
+        const bool ok = add_well(INJECTOR, 0.0, 1, nullptr, &cells,
+                                 nullptr, nullptr, nullptr,
+                                 ss.str().c_str(), true, wells.get());
         BOOST_REQUIRE(ok);
     }
 
