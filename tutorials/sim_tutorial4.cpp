@@ -324,12 +324,14 @@ try
     for (int i = 0; i < num_wells; ++i) {
         const int well_cells = i*nx;
         const double well_index = 1;
+        const double Kh = 1.0e-5;
         const int sat_table_id = -1;
         std::stringstream well_name;
         well_name << "well" << i;
         bool allowCrossFlow = true;
-        add_well(PRODUCER, 0, 1, NULL, &well_cells, &well_index, &sat_table_id,
-                 well_name.str().c_str(), allowCrossFlow, wells);
+        add_well(PRODUCER, 0, 1, NULL, &well_cells, &well_index, &Kh,
+                 &sat_table_id, well_name.str().c_str(), allowCrossFlow,
+                 wells);
     }
     /// \internal[well cells]
     /// \endinternal

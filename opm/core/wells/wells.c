@@ -33,7 +33,9 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 #include "config.h"
+
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 
@@ -51,29 +53,30 @@ struct WellMgmt {
 };
 
 
+/* ---------------------------------------------------------------------- */
 static void
 destroy_well_mgmt(struct WellMgmt *m)
+/* ---------------------------------------------------------------------- */
 {
     free(m);
 }
 
 
+/* ---------------------------------------------------------------------- */
 static struct WellMgmt *
 create_well_mgmt(void)
+/* ---------------------------------------------------------------------- */
 {
-    struct WellMgmt *m;
+    struct WellMgmt *m, m0 = { 0 };
 
     m = malloc(1 * sizeof *m);
 
     if (m != NULL) {
-        m->well_cpty = 0;
-        m->perf_cpty = 0;
+        *m = m0;
     }
 
     return m;
 }
-
-
 
 
 /* ---------------------------------------------------------------------- */
@@ -118,18 +121,20 @@ perfs_allocate(int nperf, struct Wells *W)
 /* ---------------------------------------------------------------------- */
 {
     int   ok;
-    void *well_cells, *WI, *sat_table_id;
+    void *well_cells, *WI, *conn_Kh, *sat_table_id;
 
-    well_cells = realloc(W->well_cells, nperf * sizeof *W->well_cells);
-    WI         = realloc(W->WI        , nperf * sizeof *W->WI        );
-    sat_table_id         = realloc(W->sat_table_id        , nperf * sizeof *W->sat_table_id        );
+    well_cells   = realloc(W->well_cells  , nperf * sizeof *W->well_cells  );
+    WI           = realloc(W->WI          , nperf * sizeof *W->WI          );
+    conn_Kh      = realloc(W->conn_Kh     , nperf * sizeof *W->conn_Kh     );
+    sat_table_id = realloc(W->sat_table_id, nperf * sizeof *W->sat_table_id);
 
     ok = 0;
-    if (well_cells != NULL) { W->well_cells = well_cells; ok++; }
-    if (WI         != NULL) { W->WI         = WI        ; ok++; }
-    if (sat_table_id         != NULL) { W->sat_table_id         = sat_table_id        ; ok++; }
+    if (well_cells   != NULL) { W->well_cells   = well_cells  ; ok++; }
+    if (WI           != NULL) { W->WI           = WI          ; ok++; }
+    if (conn_Kh      != NULL) { W->conn_Kh      = conn_Kh     ; ok++; }
+    if (sat_table_id != NULL) { W->sat_table_id = sat_table_id; ok++; }
 
-    return ok == 3;
+    return ok == 4;
 }
 
 
@@ -185,8 +190,9 @@ initialise_new_perfs(int nperf, struct Wells *W)
     m = W->data;
 
     for (k = m->perf_cpty; k < nperf; k++) {
-        W->well_cells[k] = -1 ;
-        W->WI        [k] = 0.0;
+        W->well_cells  [k] = -1;
+        W->WI          [k] =  0.0;
+        W->conn_Kh     [k] = -1.0; /* Invalid */
         W->sat_table_id[k] = -1;
     }
 }
@@ -263,28 +269,16 @@ create_wells(int nphases, int nwells, int nperf)
 /* ---------------------------------------------------------------------- */
 {
     int           ok;
-    struct Wells *W;
+    struct Wells *W, W0 = { 0 };
 
     W = malloc(1 * sizeof *W);
 
     if (W != NULL) {
-        W->number_of_wells = 0;
+        *W = W0;
+
         W->number_of_phases = nphases;
-
-        W->type            = NULL;
-        W->depth_ref       = NULL;
-        W->comp_frac       = NULL;
-
-        W->well_connpos    = malloc(1 * sizeof *W->well_connpos);
-        W->well_cells      = NULL;
-        W->WI              = NULL;
-        W->sat_table_id = NULL;
-
-        W->ctrls           = NULL;
-        W->name            = NULL;
-        W->allow_cf        = NULL;
-
-        W->data            = create_well_mgmt();
+        W->well_connpos     = malloc(1 * sizeof *W->well_connpos);
+        W->data             = create_well_mgmt();
 
         ok = (W->well_connpos != NULL) && (W->data != NULL);
         if (ok) {
@@ -329,8 +323,9 @@ destroy_wells(struct Wells *W)
 
         free(W->name);
         free(W->ctrls);
-        free(W->WI);
         free(W->sat_table_id);
+        free(W->conn_Kh);
+        free(W->WI);
         free(W->well_cells);
         free(W->well_connpos);
         free(W->comp_frac);
@@ -362,16 +357,17 @@ alloc_size(int n, int a, int cpty)
 
 /* ---------------------------------------------------------------------- */
 int
-add_well(enum WellType  type     ,
-         double         depth_ref,
-         int            nperf    ,
-         const double  *comp_frac, /* Injection fraction or NULL */
-         const int     *cells    ,
-         const double  *WI       , /* Well index per perf (or NULL) */
-         const int     *sat_table_id, /*Saturation table id per perf (or NULL) */
-         const char    *name     , /* Well name (or NULL) */
-         int            allow_cf ,
-         struct Wells  *W        )
+add_well(enum WellType  type        ,
+         double         depth_ref   ,
+         int            nperf       ,
+         const double  *comp_frac   , /* Injection fraction or NULL */
+         const int     *cells       ,
+         const double  *WI          , /* Well index per perf (or NULL) */
+         const double  *conn_Kh     , /* Effective Kh per perf (or NULL) */
+         const int     *sat_table_id, /* Saturation table id per perf (or NULL) */
+         const char    *name        , /* Well name (or NULL) */
+         int            allow_cf    ,
+         struct Wells  *W           )
 /* ---------------------------------------------------------------------- */
 {
     int ok, nw, np, nperf_tot, off;
@@ -406,8 +402,14 @@ add_well(enum WellType  type     ,
         if (WI != NULL) {
             memcpy(W->WI + off, WI, nperf * sizeof *W->WI);
         }
+
+        if (conn_Kh != NULL) {
+            memcpy(W->conn_Kh + off, conn_Kh, nperf * sizeof *W->conn_Kh);
+        }
+
         if (sat_table_id != NULL) {
-            memcpy(W->sat_table_id + off, sat_table_id, nperf * sizeof *W->sat_table_id);
+            memcpy(W->sat_table_id + off, sat_table_id,
+                   nperf * sizeof *W->sat_table_id);
         }
     }
 
@@ -486,8 +488,6 @@ clear_well_controls(int well_index, struct Wells *W)
 }
 
 
-
-
 /* ---------------------------------------------------------------------- */
 struct Wells *
 clone_wells(const struct Wells *W)
@@ -495,7 +495,7 @@ clone_wells(const struct Wells *W)
 {
     int                  np, nperf, ok, pos, w;
     const int           *cells, *sat_table_id;
-    const double        *WI, *comp_frac;
+    const double        *WI, *conn_Kh, *comp_frac;
 
     struct WellControls *ctrl;
     struct Wells        *newWells;
@@ -516,12 +516,17 @@ clone_wells(const struct Wells *W)
                 nperf = W->well_connpos[w + 1] - pos;
                 cells = W->well_cells + pos;
 
-                WI        = W->WI        != NULL ? W->WI        + pos  : NULL;
-                sat_table_id = W->sat_table_id != NULL ? W->sat_table_id + pos : NULL;
-                comp_frac = W->comp_frac != NULL ? W->comp_frac + w*np : NULL;
+                WI      = (W->WI      != NULL) ? W->WI      + pos : NULL;
+                conn_Kh = (W->conn_Kh != NULL) ? W->conn_Kh + pos : NULL;
+
+                sat_table_id = (W->sat_table_id != NULL)
+                    ? W->sat_table_id + pos : NULL;
+
+                comp_frac  = W->comp_frac != NULL ? W->comp_frac + w*np : NULL;
 
                 ok = add_well(W->type[ w ], W->depth_ref[ w ], nperf,
-                              comp_frac, cells, WI, sat_table_id, W->name[ w ], W->allow_cf[ w ],  newWells);
+                              comp_frac, cells, WI, conn_Kh, sat_table_id,
+                              W->name[ w ], W->allow_cf[ w ],  newWells);
 
                 if (ok) {
                     ok = (ctrl = well_controls_clone(W->ctrls[w])) != NULL;

@@ -226,8 +226,8 @@ namespace WellsManagerDetail
     // rather than reference-to-const to support NTG manipulation.
     inline std::array<double,3>
     effectiveExtent(const Opm::WellCompletion::DirectionEnum direction,
-                    const double                                  ntg,
-                    std::array<double,3>                          extent)
+                    const double                             ntg,
+                    std::array<double,3>                     extent)
     {
         // Vertical extent affected by net-to-gross ratio.
         extent[2] *= ntg;
@@ -268,13 +268,13 @@ namespace WellsManagerDetail
     // (Note that the well model asumes that each cell is a cuboid).
     // cell_permeability is the permeability tensor of the given cell.
     // returns the well index of the cell.
-    double
-    computeWellIndex(const double                                  radius,
-                     const std::array<double, 3>&                  cubical,
-                     const double*                                 cell_permeability,
-                     const double                                  skin_factor,
+    DerivedCTFQuantities
+    computeWellIndex(const double                             radius,
+                     const std::array<double, 3>&             cubical,
+                     const double*                            cell_permeability,
+                     const double                             skin_factor,
                      const Opm::WellCompletion::DirectionEnum direction,
-                     const double                                  ntg)
+                     const double                             ntg)
     {
         const std::array<double,3>& K =
             permComponents(direction, cell_permeability);
@@ -298,9 +298,9 @@ namespace WellsManagerDetail
             rw = r0;
         }
 
-        // NOTE: The formula is originally derived and valid for
-        // Cartesian grids only.
-        return (angle * Kh) / (std::log(r0 / rw) + skin_factor);
+        // NOTE: The formula for the connection transmissibility factor is
+        // originally derived and valid for Cartesian grids only.
+        return { (angle * Kh) / (std::log(r0 / rw) + skin_factor), Kh };
     }
 
 } // anonymous namespace

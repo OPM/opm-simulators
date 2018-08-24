@@ -263,6 +263,7 @@ namespace Opm
                     connection.index = globalCellIdxMap[active_index];
                     connection.pressure = this->perfPress()[ itr.second[1] + i ];
                     connection.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
+                    connection.effective_Kh = this->wells_->conn_Kh[ wi ];
                 }
                 assert(num_perf_well == int(well.connections.size()));
             }

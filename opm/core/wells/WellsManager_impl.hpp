@@ -54,12 +54,18 @@ namespace WellsManagerDetail
 
     } // namespace InjectionControl
 
-double computeWellIndex(const double radius,
-                        const std::array<double, 3>& cubical,
-                        const double* cell_permeability,
-                        const double skin_factor,
-                        const Opm::WellCompletion::DirectionEnum direction,
-                        const double ntg);
+    struct DerivedCTFQuantities {
+        double WI;
+        double Kh;
+    };
+
+    DerivedCTFQuantities
+    computeWellIndex(const double                             radius,
+                     const std::array<double, 3>&             cubical,
+                     const double*                            cell_permeability,
+                     const double                             skin_factor,
+                     const Opm::WellCompletion::DirectionEnum direction,
+                     const double                             ntg);
 
 template <int dim, class C2F, class FC>
 std::array<double, dim>
@@ -196,6 +202,10 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                         {
                             const Value<double>& transmissibilityFactor = completion.getConnectionTransmissibilityFactorAsValueObject();
                             const double wellPi = completion.wellPi;
+                            const Value<double>& Kh = completion.getEffectiveKhAsValueObject();
+
+                            pd.Kh = Kh.hasValue() ? Kh.getValue() : 0.0;
+
                             if (transmissibilityFactor.hasValue()) {
                                 pd.well_index = transmissibilityFactor.getValue();
                             } else {
@@ -214,11 +224,14 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                                 }
 
                                 const double* cell_perm = &permeability[dimensions*dimensions*cell];
-                                pd.well_index =
+                                const WellsManagerDetail::DerivedCTFQuantities ctf_quant =
                                     WellsManagerDetail::computeWellIndex(radius, cubical, cell_perm,
                                                                          completion.getSkinFactor(),
                                                                          completion.dir,
                                                                          ntg[cell]);
+
+                                pd.Kh = ctf_quant.Kh;
+                                pd.well_index = ctf_quant.WI;
                             }
                             pd.satnumid = completion.sat_tableId;
                             pd.well_index *= wellPi;
@@ -273,13 +286,15 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
     // Add wells.
     for (int w = 0; w < num_wells; ++w) {
         const int           w_num_perf = wellperf_data[w].size();
-        std::vector<int>    perf_cells  (w_num_perf);
-        std::vector<double> perf_prodind(w_num_perf);
-        std::vector<int> perf_satnumid(w_num_perf);
+        std::vector<int>    perf_cells   (w_num_perf);
+        std::vector<double> perf_prodind (w_num_perf);
+        std::vector<double> perf_Kh      (w_num_perf);
+        std::vector<int>    perf_satnumid(w_num_perf);
 
         for (int perf = 0; perf < w_num_perf; ++perf) {
-            perf_cells  [perf] = wellperf_data[w][perf].cell;
-            perf_prodind[perf] = wellperf_data[w][perf].well_index;
+            perf_cells   [perf] = wellperf_data[w][perf].cell;
+            perf_prodind [perf] = wellperf_data[w][perf].well_index;
+            perf_Kh      [perf] = wellperf_data[w][perf].Kh;
             perf_satnumid[perf] = wellperf_data[w][perf].satnumid;
         }
 
@@ -294,10 +309,11 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                      comp_frac,
                      perf_cells.data(),
                      perf_prodind.data(),
+                     perf_Kh.data(),
                      perf_satnumid.data(),
                      well_names[w].c_str(),
                      well_data[w].allowCrossFlow,
-                     w_);
+                     this->w_);
 
         if (!ok) {
             OPM_THROW(std::runtime_error,
@@ -324,7 +340,7 @@ WellsManager(const Opm::EclipseState& eclipseState,
              const std::unordered_set<std::string>&    deactivated_wells)
     : w_(create_wells(0,0,0)), is_parallel_run_(is_parallel_run)
 {
-  init(eclipseState, schedule, timeStep, number_of_cells, global_cell,
+    init(eclipseState, schedule, timeStep, number_of_cells, global_cell,
          cart_dims, dimensions,
          cell_to_faces, begin_face_centroids, list_econ_limited, deactivated_wells);
 }

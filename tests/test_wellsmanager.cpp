@@ -35,6 +35,7 @@
 
 #include <opm/grid/GridManager.hpp>
 
+namespace {
 void wells_static_check(const Wells* wells) {
     BOOST_CHECK_EQUAL(2, wells->number_of_wells);
     BOOST_CHECK_EQUAL(3, wells->number_of_phases);
@@ -171,6 +172,7 @@ void check_controls_epoch3(struct WellControls ** ctrls) {
     // and also an ORAT control
     BOOST_CHECK_EQUAL(2, well_controls_get_num(ctrls1));
 }
+} // namespace anonymous
 
 BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
