@@ -923,6 +923,9 @@ namespace Opm
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
             invDuneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + numEq);
         }
+        if (numAdjoint > 0) {
+            duneDA_[0][0][Bhp][0] = control_eq.derivative(controlIndex);
+        }
     }
 
 
