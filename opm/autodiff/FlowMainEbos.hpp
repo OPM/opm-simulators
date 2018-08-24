@@ -255,6 +255,8 @@ namespace Opm
             mpi_rank_ = 0;
             mpi_size_ = 1;
 #endif
+            typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+            ThreadManager::init();
         }
 
         // Print startup message if on output rank.
