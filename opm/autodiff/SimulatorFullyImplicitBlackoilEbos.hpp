@@ -127,6 +127,8 @@ public:
                              "Use adaptive time stepping between report steps");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTuning,
                              "Honor some aspects of the TUNING keyword.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, AdjointResultsFile,
+                             "Output file name for storing adjoints");
     }
 
     /// Run the simulation.
