@@ -237,7 +237,7 @@ namespace Opm {
         /// \param[in, out] well_state        well state variables
         AdjointResults adjointIteration(SimulatorTimerInterface& timer,const BVector& rhs,BVector& rhs_next)// WellState& well_state)
         {
-            if(!param_.do_adjoint_){
+            if(!param_.use_adjoint_){
                 OPM_THROW(std::runtime_error,"Forward simulation was not done with adjoint output enabled");
             }
             //SimulatorReport report;
@@ -1491,7 +1491,7 @@ namespace Opm {
 
         void adjoint_serialize(){
             // may hav if here for adjoint run
-            if(param_.do_adjoint_){
+            if(param_.use_adjoint_){
                 ebosSimulator_.serialize();
                 serialize_well();
             }

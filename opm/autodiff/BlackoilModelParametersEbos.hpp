@@ -49,6 +49,10 @@ NEW_PROP_TAG(UpdateEquationsScaling);
 NEW_PROP_TAG(UseUpdateStabilization);
 NEW_PROP_TAG(MatrixAddWellContributions);
 NEW_PROP_TAG(PreconditionerAddWellContributions);
+NEW_PROP_TAG(UseAdjoint);
+NEW_PROP_TAG(UseAmgcl);
+NEW_PROP_TAG(UseAmgclDrs);
+NEW_PROP_TAG(UseUmfpack);
 
 // parameters for multisegment wells
 NEW_PROP_TAG(TolerancePressureMsWells);
@@ -77,6 +81,10 @@ SET_SCALAR_PROP(FlowModelParameters, TolerancePressureMsWells, 0.01 *1e5);
 SET_SCALAR_PROP(FlowModelParameters, MaxPressureChangeMsWells, 2.0 *1e5);
 SET_BOOL_PROP(FlowModelParameters, UseInnerIterationsMsWells, true);
 SET_INT_PROP(FlowModelParameters, MaxInnerIterMsWells, 10);
+SET_BOOL_PROP(FlowModelParameters, UseAdjoint, false);
+SET_BOOL_PROP(FlowModelParameters, UseAmgcl, false);
+SET_BOOL_PROP(FlowModelParameters, UseAmgclDrs, false);
+SET_BOOL_PROP(FlowModelParameters, UseUmfpack, false);
 
 END_PROPERTIES
 
@@ -153,6 +161,16 @@ namespace Opm
         // Whether to add influences of wells between cells to the preconditioner matrix only
         bool preconditioner_add_well_contributions_;
 
+        // Do adjoint backwards propagation.
+        bool use_adjoint_;
+
+        // Use amgcl instead of dune-istl
+        bool use_amgcl_;
+        bool use_amgcl_drs_;
+        // Use UMFPACK instead of dune-istl
+        bool use_umfpack_;
+
+
         /// Construct from user parameters or defaults.
         BlackoilModelParametersEbos()
         {
@@ -177,6 +195,10 @@ namespace Opm
             use_update_stabilization_ = EWOMS_GET_PARAM(TypeTag, bool, UseUpdateStabilization);
             matrix_add_well_contributions_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
             preconditioner_add_well_contributions_ = EWOMS_GET_PARAM(TypeTag, bool, PreconditionerAddWellContributions);
+            use_adjoint_ = EWOMS_GET_PARAM(TypeTag, bool, UseAdjoint);
+            use_amgcl_ = EWOMS_GET_PARAM(TypeTag, bool, UseAmgcl);
+            use_amgcl_drs_ = EWOMS_GET_PARAM(TypeTag, bool, UseAmgclDrs);
+            use_umfpack_ = EWOMS_GET_PARAM(TypeTag, bool, UseUmfpack);
 
             deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         }
@@ -204,6 +226,10 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseUpdateStabilization, "Try to detect and correct oscillations or stagnation during the Newton method");
             EWOMS_REGISTER_PARAM(TypeTag, bool, MatrixAddWellContributions, "Explicitly specify the influences of wells between cells in the Jacobian and preconditioner matrices");
             EWOMS_REGISTER_PARAM(TypeTag, bool, PreconditionerAddWellContributions, "Explicitly specify the influences of wells between cells for the preconditioner matrix only");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, UseAdjoint, "Compute adjoints of well controls");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, UseAmgcl, "Use amgcl as linear solver");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, UseAmgclDrs, "When using amgcl as linear solver, use the dynamic rowsum variant of cpr as preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, UseUmfpack, "Use UMFPACK as linear solver");
         }
     };
 } // namespace Opm

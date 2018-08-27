@@ -41,10 +41,12 @@ BEGIN_PROPERTIES;
 NEW_PROP_TAG(EnableTerminalOutput);
 NEW_PROP_TAG(EnableAdaptiveTimeStepping);
 NEW_PROP_TAG(EnableTuning);
+NEW_PROP_TAG(AdjointResultsFile);
 
 SET_BOOL_PROP(EclFlowProblem, EnableTerminalOutput, true);
 SET_BOOL_PROP(EclFlowProblem, EnableAdaptiveTimeStepping, true);
 SET_BOOL_PROP(EclFlowProblem, EnableTuning, false);
+SET_STRING_PROP(EclFlowProblem, AdjointResultsFile, "adjoint_results.txt");
 
 END_PROPERTIES;
 
@@ -401,7 +403,7 @@ public:
             --timer;
         }
         namespace fs = boost::filesystem;
-        fs::path filename( param_.getDefault( "adjoint_result_file",  std::string("adjoint_results.txt") ) );
+        fs::path filename(EWOMS_GET_PARAM(TypeTag, std::string, AdjointResultsFile));
         std::string output_dir_name = ebosSimulator_.vanguard().eclState().getIOConfig().getOutputDir();
         fs::path output_dir(output_dir_name);
         fs::path adjoint_output = output_dir / filename;
