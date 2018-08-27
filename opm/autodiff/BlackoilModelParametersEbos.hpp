@@ -65,7 +65,7 @@ SET_SCALAR_PROP(FlowModelParameters, DrMaxRel, 1e9);
 SET_SCALAR_PROP(FlowModelParameters, DbhpMaxRel, 1.0);
 SET_SCALAR_PROP(FlowModelParameters, DwellFractionMax, 0.2);
 SET_SCALAR_PROP(FlowModelParameters, MaxResidualAllowed, 1e7);
-SET_SCALAR_PROP(FlowModelParameters, ToleranceMb, 1e-5);
+SET_SCALAR_PROP(FlowModelParameters, ToleranceMb, 1e-6);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceCnv,1e-2);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceCnvRelaxed, 1e9);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceWells, 1e-4);
