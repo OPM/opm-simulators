@@ -122,9 +122,9 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverRestart, "The number of iterations after which GMRES is restarted");
             EWOMS_REGISTER_PARAM(TypeTag, int, FlowLinearSolverVerbosity, "The verbosity level of the linear solver (0: off, 2: all)");
             EWOMS_REGISTER_PARAM(TypeTag, int, IluFillinLevel, "The fill-in level of the linear solver's ILU preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, MiluVariant, "Specify which variant of the modified-ILU preconditioner ought to be used");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, MiluVariant, "Specify which variant of the modified-ILU preconditioner ought to be used. Possible variants are: ILU (default, plain ILU), MILU_1 (lump diagonal with dropped row entries), MILU_2 (lump diagonal with the sum of the absolute values of the dropped row  entries), MILU_3 (if diagonal is positive add sum of dropped row entrires. Otherwise substract them), MILU_4 (if diagonal is positive add sum of dropped row entrires. Otherwise do nothing");
             EWOMS_REGISTER_PARAM(TypeTag, bool, IluRedblack, "Use red-black partioning for the ILU preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, IluReorderSpheres, "Reorder the entries of the matrix in the ILU preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, IluReorderSpheres, "Whether to reorder the entries of the matrix in the red-black ILU preconditioner in spheres starting at an edge. If false the original ordering is preserved in each color. Otherwise why try to ensure D4 ordering (in a 2D structured grid, the diagonal elements are consecutive).");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseGmres, "Use GMRES as the linear solver");
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverRequireFullSparsityPattern, "Produce the full sparsity pattern for the linear solver");
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
