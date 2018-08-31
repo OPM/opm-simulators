@@ -255,6 +255,13 @@ namespace Opm
             mpi_rank_ = 0;
             mpi_size_ = 1;
 #endif
+
+#if _OPENMP
+            // if openMP is available, default to 2 threads per process.
+            if (!getenv("OMP_NUM_THREADS"))
+                omp_set_num_threads(std::min(2, omp_get_num_procs()));
+#endif
+
             typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
             ThreadManager::init();
         }
