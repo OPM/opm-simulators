@@ -552,7 +552,7 @@ namespace Opm
             for (const auto& completion : completions) {
                 int complnum = completion.first;
                 for (int perf = 0; perf < perf_number; ++perf) {
-                    if (complnum == connections.get ( perf ).complnum) {
+                    if (complnum == connections.get ( perf ).complnum()) {
                         water_cut_in_completions[complnumIdx] +=  water_cut_perf[perf];
                     }
                 }
@@ -730,7 +730,7 @@ namespace Opm
                     bool allCompletionsClosed = true;
                     const auto& connections = well_ecl_->getConnections(current_step_);
                     for (const auto& connection : connections) {
-                        if (!wellTestState.hasCompletion(name(), connection.complnum)) {
+                        if (!wellTestState.hasCompletion(name(), connection.complnum())) {
                             allCompletionsClosed = false;
                         }
                     }
@@ -802,7 +802,7 @@ namespace Opm
         const auto& connectionSet = well_ecl_->getConnections(current_step_);
         for (size_t c=0; c<connectionSet.size(); c++) {
             const auto& connection = connectionSet.get(c);
-            if (connection.state == WellCompletion::OPEN) {
+            if (connection.state() == WellCompletion::OPEN) {
                 const int i = connection.getI();
                 const int j = connection.getJ();
                 const int k = connection.getK();
@@ -817,19 +817,14 @@ namespace Opm
                 const int cell = cgit->second;
 
                 {
-                    double radius = 0.5*connection.getDiameter();
-                    if (radius <= 0.0) {
-                        radius = 0.5*unit::feet;
-                        OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
-                    }
-
+                    double radius = connection.rw();
                     const std::array<double, 3> cubical =
                     WellsManagerDetail::getCubeDim<3>(cell_to_faces, begin_face_centroids, cell);
 
                     double re; // area equivalent radius of the grid block
                     double perf_length; // the length of the well perforation
 
-                    switch (connection.dir) {
+                    switch (connection.dir()) {
                         case Opm::WellCompletion::DirectionEnum::X:
                             re = std::sqrt(cubical[1] * cubical[2] / M_PI);
                             perf_length = cubical[0];
@@ -918,7 +913,7 @@ namespace Opm
         const auto& connections = well_ecl_->getConnections(current_step_);
         int perfIdx = 0;
         for (const auto& connection : connections) {
-            if (wellTestState.hasCompletion(name(), connection.complnum)) {
+            if (wellTestState.hasCompletion(name(), connection.complnum())) {
                 well_index_[perfIdx] = 0.0;
             }
             perfIdx++;
