@@ -310,13 +310,13 @@ namespace Opm
 
                 rhow_.resize(cell_idx_.size(),0.);
 
-                if (aquct_data_.p0 < 1.0)
+                if (aquct_data_.p0)
                 {
-                   pa0_ = calculateReservoirEquilibrium();
+                   pa0_ = aquct_data_.p0[0];
                 }
                 else
                 {
-                   pa0_ = aquct_data_.p0;
+                   pa0_ = calculateReservoirEquilibrium();
                 }
 
                 // Initialize a FluidState object first
