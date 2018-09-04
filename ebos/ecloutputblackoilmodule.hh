@@ -713,6 +713,9 @@ public:
         if (FluidSystem::phaseIsActive(gasPhaseIdx) && saturation_[gasPhaseIdx].size() > 0) {
             sol.insert("SGAS", Opm::UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), Opm::data::TargetType::RESTART_SOLUTION);
         }
+        if (pcSwMdcOw_.size() > 0) {
+            sol.insert ("PPCW", Opm::UnitSystem::measure::identity, std::move(pcSwMdcOw_), Opm::data::TargetType::RESTART_SOLUTION);
+        }
 
         if (gasDissolutionFactor_.size() > 0) {
             sol.insert("RSSAT", Opm::UnitSystem::measure::gas_oil_ratio, std::move(gasDissolutionFactor_), Opm::data::TargetType::RESTART_AUXILIARY);
@@ -767,9 +770,6 @@ public:
         if (relativePermeability_[gasPhaseIdx].size() > 0) {
             sol.insert("GASKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
         }
-
-        if (pcSwMdcOw_.size() > 0)
-            sol.insert ("PCSWM_OW", Opm::UnitSystem::measure::identity, std::move(pcSwMdcOw_), Opm::data::TargetType::RESTART_AUXILIARY);
 
         if (krnSwMdcOw_.size() > 0)
             sol.insert ("KRNSW_OW", Opm::UnitSystem::measure::identity, std::move(krnSwMdcOw_), Opm::data::TargetType::RESTART_AUXILIARY);
