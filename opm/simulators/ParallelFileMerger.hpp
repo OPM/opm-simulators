@@ -65,13 +65,12 @@ public:
 
     void operator()(const fs::path& file)
     {
-        const static boost::regex regex("[^.]+\\.(\\d+)\\.[^.]+");
         boost::smatch matches;
         std::string filename = file.filename().native();
 
         if ( boost::regex_match(filename, matches, fileWarningRegex_) )
         {
-            std::string rank = boost::regex_replace(filename, regex, "\\1");
+            std::string rank = boost::regex_replace(filename, fileWarningRegex_, "\\1");
 
             if( boost::regex_match(filename, logFileRegex_) )
             {
