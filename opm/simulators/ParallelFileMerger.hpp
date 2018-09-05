@@ -64,7 +64,7 @@ public:
 
     void operator()(const fs::path& file)
     {
-        const static boost::regex regex(".+\\.(\\d+)\\..+");
+        const static boost::regex regex("[^.]+\\.(\\d+)\\.[^.]+");
         boost::smatch matches;
         std::string filename = file.filename().native();
 
