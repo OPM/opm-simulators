@@ -211,7 +211,7 @@ public:
                 restartValue.addExtra("OPMEXTRA", std::vector<double>(1, nextStepSize));
 
             if (simConfig.useThresholdPressure())
-                restartValue.addExtra("THPRESPR", Opm::UnitSystem::measure::pressure, simulator_.problem().thresholdPressure().data());
+                restartValue.addExtra("THRESHPR", Opm::UnitSystem::measure::pressure, simulator_.problem().thresholdPressure().data());
 
             // first, create a tasklet to write the data for the current time step to disk
             auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(*eclIO_,
@@ -294,7 +294,7 @@ public:
                 restartValue.addExtra("OPMEXTRA", std::vector<double>(1, nextStepSize));
 
             if (simConfig.useThresholdPressure())
-                restartValue.addExtra("THPRESPR", Opm::UnitSystem::measure::pressure, simulator_.problem().thresholdPressure().data());
+                restartValue.addExtra("THRESHPR", Opm::UnitSystem::measure::pressure, simulator_.problem().thresholdPressure().data());
 
             // first, create a tasklet to write the data for the current time step to disk
             auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(*eclIO_,
@@ -335,7 +335,7 @@ public:
 
         const auto& inputThpres = eclState().getSimulationConfig().getThresholdPressure();
         std::vector<Opm::RestartKey> extraKeys = {{"OPMEXTRA", Opm::UnitSystem::measure::identity, false},
-                                                  {"THPRESPR", Opm::UnitSystem::measure::pressure, inputThpres.active()}};
+                                                  {"THRESHPR", Opm::UnitSystem::measure::pressure, inputThpres.active()}};
 
         unsigned episodeIdx = simulator_.episodeIndex();
         const auto& gridView = simulator_.vanguard().gridView();
@@ -350,7 +350,7 @@ public:
         if (inputThpres.active()) {
             Simulator& mutableSimulator = const_cast<Simulator&>(simulator_);
             auto& thpres = mutableSimulator.problem().thresholdPressure();
-            const auto& thpresValues = restartValues.getExtra("THPRESPR");
+            const auto& thpresValues = restartValues.getExtra("THRESHPR");
             thpres.setFromRestart(thpresValues);
         }
     }
