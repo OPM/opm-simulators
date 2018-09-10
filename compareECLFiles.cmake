@@ -38,7 +38,6 @@ function(add_test_compareECLFiles)
                            ${PROJECT_BINARY_DIR}/bin
                            ${PARAM_FILENAME}
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
-                           ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
                TEST_ARGS ${TEST_ARGS})
 endfunction()
@@ -67,7 +66,6 @@ function(add_test_compare_restarted_simulation)
                            ${PROJECT_BINARY_DIR}/bin
                            ${PARAM_FILENAME}
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
-                           ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
                            ${OPM_PACK_COMMAND}
                            0
@@ -99,7 +97,6 @@ function(add_test_compare_parallel_simulation)
                            ${PROJECT_BINARY_DIR}/bin
                            ${PARAM_FILENAME}
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
-                           ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
                TEST_ARGS ${TEST_ARGS})
 endfunction()
@@ -129,7 +126,6 @@ function(add_test_compare_parallel_restarted_simulation)
                            ${PROJECT_BINARY_DIR}/bin
                            ${PARAM_FILENAME}
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
-                           ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
                            ${OPM_PACK_COMMAND}
                            1

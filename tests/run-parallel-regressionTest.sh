@@ -10,10 +10,9 @@ BINPATH="$3"
 FILENAME="$4"
 ABS_TOL="$5"
 REL_TOL="$6"
-COMPARE_SUMMARY_COMMAND="$7"
-COMPARE_ECL_COMMAND="$8"
-EXE_NAME="${9}"
-shift 9
+COMPARE_ECL_COMMAND="$7"
+EXE_NAME="${8}"
+shift 8
 TEST_ARGS="$@"
 
 rm -Rf ${RESULT_PATH}
@@ -38,11 +37,11 @@ cd ..
 
 ecode=0
 echo "=== Executing comparison for summary file ==="
-${COMPARE_SUMMARY_COMMAND} -R ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
+${COMPARE_ECL_COMMAND} -t SMRY -R ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
   ecode=1
-  ${COMPARE_SUMMARY_COMMAND} -a -R ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
+  ${COMPARE_ECL_COMMAND} -t SMRY -a -R ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
 fi
 
 echo "=== Executing comparison for restart file ==="
