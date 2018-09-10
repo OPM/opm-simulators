@@ -567,22 +567,29 @@ private:
 
     void minPvFillNtg_(std::vector<double>& averageNtg) const {
 
+
         // compute volume weighted arithmetic average of NTG for
         // cells merged as an result of minpv.
         const auto& eclState = vanguard_.eclState();
         const auto& eclGrid = eclState.getInputGrid();
-        const auto& porv = eclState.get3DProperties().getDoubleGridProperty("PORV").getData();
-        const auto& actnum = eclState.get3DProperties().getIntGridProperty("ACTNUM").getData();
+
         const std::vector<double>& ntg =
             eclState.get3DProperties().getDoubleGridProperty("NTG").getData();
 
+        averageNtg = ntg;
+
+        bool opmfil = eclGrid.getMinpvMode() == Opm::MinpvMode::OpmFIL;
+
+        // just return the unmodified ntg if opmfil is not used
+        if (!opmfil)
+            return;
+
+        const auto& porv = eclState.get3DProperties().getDoubleGridProperty("PORV").getData();
+        const auto& actnum = eclState.get3DProperties().getIntGridProperty("ACTNUM").getData();
         const auto& cartMapper = vanguard_.cartesianIndexMapper();
         const auto& cartDims = cartMapper.cartesianDimensions();
         assert(dimWorld > 1);
         const size_t nxny = cartDims[0] * cartDims[1];
-
-        averageNtg = ntg;
-
         for (size_t cartesianCellIdx = 0; cartesianCellIdx < ntg.size(); ++cartesianCellIdx)
         {
             // use the original ntg values for the inactive cells
