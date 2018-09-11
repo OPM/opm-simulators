@@ -559,7 +559,7 @@ namespace Opm
                     std::vector<std::vector<int>> segment_perforations(well_nseg);
                     for (int perf = 0; perf < nperf; ++perf) {
                         const Connection& connection = completion_set.get(perf);
-                        const int segment_index = segment_set.segmentNumberToIndex(connection.segment_number);
+                        const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
                         segment_perforations[segment_index].push_back(perf);
                     }
 

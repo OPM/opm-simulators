@@ -59,7 +59,7 @@ namespace Opm
         const WellConnections& completion_set = well_ecl_->getConnections(current_step_);
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const Connection& connection = completion_set.get(perf);
-            const int segment_index = segmentNumberToIndex(connection.segment_number);
+            const int segment_index = segmentNumberToIndex(connection.segment());
             segment_perforations_[segment_index].push_back(perf);
         }
 
@@ -80,7 +80,7 @@ namespace Opm
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             const double segment_depth = segmentSet()[seg].depth();
             for (const int perf : segment_perforations_[seg]) {
-                perf_depth_[perf] = completion_set.get(perf).center_depth;
+                perf_depth_[perf] = completion_set.get(perf).depth();
                 perforation_segment_depth_diffs_[perf] = perf_depth_[perf] - segment_depth;
             }
         }

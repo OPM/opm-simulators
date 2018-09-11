@@ -54,12 +54,6 @@ namespace WellsManagerDetail
 
     } // namespace InjectionControl
 
-double computeWellIndex(const double radius,
-                        const std::array<double, 3>& cubical,
-                        const double* cell_permeability,
-                        const double skin_factor,
-                        const Opm::WellCompletion::DirectionEnum direction,
-                        const double ntg);
 
 template <int dim, class C2F, class FC>
 std::array<double, dim>
@@ -165,7 +159,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
             // shut completions and open ones stored in this process will have 1 others 0.
 
             for(const auto& completion : well->getConnections(timeStep)) {
-                if (completion.state == WellCompletion::OPEN) {
+                if (completion.state() == WellCompletion::OPEN) {
                     int i = completion.getI();
                     int j = completion.getJ();
                     int k = completion.getK();
@@ -193,41 +187,14 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
 
                         PerfData pd;
                         pd.cell = cell;
-                        {
-                            const Value<double>& transmissibilityFactor = completion.getConnectionTransmissibilityFactorAsValueObject();
-                            const double wellPi = completion.wellPi;
-                            if (transmissibilityFactor.hasValue()) {
-                                pd.well_index = transmissibilityFactor.getValue();
-                            } else {
-                                double radius = 0.5*completion.getDiameter();
-                                if (radius <= 0.0) {
-                                    radius = 0.5*unit::feet;
-                                    OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
-                                }
+                        pd.well_index = completion.CF() * completion.wellPi();
+                        pd.satnumid = completion.satTableId();
 
-                                std::array<double, 3> cubical =
-                                    WellsManagerDetail::getCubeDim<3>(c2f, begin_face_centroids, cell);
-
-                                // overwrite dz values calculated in getCubeDim.
-                                if (dz.size() > 0) {
-                                    cubical[2] = dz[cell];
-                                }
-
-                                const double* cell_perm = &permeability[dimensions*dimensions*cell];
-                                pd.well_index =
-                                    WellsManagerDetail::computeWellIndex(radius, cubical, cell_perm,
-                                                                         completion.getSkinFactor(),
-                                                                         completion.dir,
-                                                                         ntg[cell]);
-                            }
-                            pd.satnumid = completion.sat_tableId;
-                            pd.well_index *= wellPi;
-                        }
                         wellperf_data[active_well_index].push_back(pd);
                     }
                 } else {
-                    if (completion.state != WellCompletion::SHUT) {
-                        OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion.state ) << " not handled");
+                    if (completion.state() != WellCompletion::SHUT) {
+                        OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion.state() ) << " not handled");
                     }
                 }
             }
