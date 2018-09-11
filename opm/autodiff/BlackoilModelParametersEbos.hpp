@@ -78,6 +78,11 @@ SET_SCALAR_PROP(FlowModelParameters, MaxPressureChangeMsWells, 2.0 *1e5);
 SET_BOOL_PROP(FlowModelParameters, UseInnerIterationsMsWells, true);
 SET_INT_PROP(FlowModelParameters, MaxInnerIterMsWells, 10);
 
+// if openMP is available, determine the number threads per process automatically.
+#if _OPENMP
+SET_INT_PROP(FlowModelParameters, ThreadsPerProcess, -1);
+#endif
+
 END_PROPERTIES
 
 namespace Opm
