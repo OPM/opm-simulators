@@ -372,6 +372,9 @@ namespace Opm
             // Override output directory if user specified.
             ioConfig.setOutputDir(output_dir_);
 
+            bool opm_rst_file = param_.getDefault("enable-opm-rst-file", false);
+            ioConfig.setEclCompatibleRST(!opm_rst_file);
+
             // Write parameters used for later reference. (only if rank is zero)
             if (output_to_files_) {
                 // Create output directory if needed.

@@ -21,9 +21,9 @@ rm -Rf  ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
 if test "${EXE_NAME}" = "flow"; then
-    ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-dry-run=true --output-dir=${RESULT_PATH}
+    ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-opm-rst-file=true --enable-dry-run=true --output-dir=${RESULT_PATH}
 else
-    ${BINPATH}/${EXE_NAME} ${TEST_ARGS} nosim=true output_dir=${RESULT_PATH}
+    ${BINPATH}/${EXE_NAME} ${TEST_ARGS} enable-opm-rst-file=true nosim=true output_dir=${RESULT_PATH}
 fi
 cd ..
 
