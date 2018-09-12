@@ -82,13 +82,6 @@ public:
                 {
                     appendFile(*debugStream_, file, rank);
                 }
-                else
-                {
-                    std::cerr << "WARNING: Unrecognized file with name "
-                              << filename
-                              << " that might stem from a  parallel run."
-                              << std::endl;
-                }
             }
         }
     }
