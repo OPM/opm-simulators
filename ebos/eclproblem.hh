@@ -257,6 +257,9 @@ SET_BOOL_PROP(EclBaseProblem, EclOutputDoublePrecision, false);
 // The default location for the ECL output files
 SET_STRING_PROP(EclBaseProblem, OutputDir, ".");
 
+// Should we output OPM or ECL restart files
+SET_BOOL_PROP(EclBaseProblem, EnableOpmRstFile, false);
+
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
 SET_BOOL_PROP(EclBaseProblem, EnableIntensiveQuantityCache, true);
@@ -390,6 +393,8 @@ public:
                              "Tell the output writer to use double precision. Useful for 'perfect' restarts");
         EWOMS_REGISTER_PARAM(TypeTag, unsigned, RestartWritingInterval,
                              "The frequencies of which time steps are serialized to disk");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableOpmRstFile,
+                             "Should we include special OPM keywords to enable flow based restart");
     }
 
     /*!

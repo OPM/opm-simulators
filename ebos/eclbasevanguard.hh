@@ -63,10 +63,12 @@ NEW_PROP_TAG(EquilGrid);
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(EclDeckFileName);
 NEW_PROP_TAG(OutputDir);
+NEW_PROP_TAG(EnableOpmRstFile);
 NEW_PROP_TAG(EclOutputInterval);
 
 SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
 SET_INT_PROP(EclBaseVanguard, EclOutputInterval, -1); // use the deck-provided value
+SET_BOOL_PROP(EclBaseVanguard, EnableOpmRstFile, false);
 
 END_PROPERTIES
 
@@ -388,6 +390,9 @@ private:
         // specify the directory output. This is not a very nice mechanism because
         // the eclState is supposed to be immutable here, IMO.
         ioConfig.setOutputDir(outputDir);
+
+        bool opmRSTFile = EWOMS_GET_PARAM(TypeTag, bool, EnableOpmRstFile);
+        ioConfig.setEclCompatibleRST( !opmRSTFile );
     }
 
     Implementation& asImp_()
