@@ -251,6 +251,9 @@ public:
             krnSwMdcGo_.resize(bufferSize, 0.0);
         }
 
+        if (simulator_.vanguard().eclState().get3DProperties().hasDeckDoubleGridProperty("SWATINIT"))
+            ppcw_.resize(bufferSize, 0.0);
+
         if (FluidSystem::enableDissolvedGas() && rstKeywords["RSSAT"] > 0) {
             rstKeywords["RSSAT"] = 0;
             gasDissolutionFactor_.resize(bufferSize, 0.0);
@@ -495,6 +498,10 @@ public:
                 }
             }
 
+
+            if (ppcw_.size() > 0)
+                ppcw_[globalDofIdx] = matLawManager->oilWaterScaledEpsInfoDrainage(globalDofIdx).maxPcow;
+
             // hack to make the intial output of rs and rv Ecl compatible.
             // For cells with swat == 1 Ecl outputs; rs = rsSat and rv=rvSat, in all but the initial step
             // where it outputs rs and rv values calculated by the initialization. To be compatible we overwrite
@@ -713,8 +720,8 @@ public:
         if (FluidSystem::phaseIsActive(gasPhaseIdx) && saturation_[gasPhaseIdx].size() > 0) {
             sol.insert("SGAS", Opm::UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), Opm::data::TargetType::RESTART_SOLUTION);
         }
-        if (pcSwMdcOw_.size() > 0) {
-            sol.insert ("PPCW", Opm::UnitSystem::measure::identity, std::move(pcSwMdcOw_), Opm::data::TargetType::RESTART_SOLUTION);
+        if (ppcw_.size() > 0) {
+            sol.insert ("PPCW", Opm::UnitSystem::measure::pressure, std::move(ppcw_), Opm::data::TargetType::RESTART_SOLUTION);
         }
 
         if (gasDissolutionFactor_.size() > 0) {
@@ -770,6 +777,9 @@ public:
         if (relativePermeability_[gasPhaseIdx].size() > 0) {
             sol.insert("GASKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
         }
+
+        if (pcSwMdcOw_.size() > 0)
+            sol.insert ("PCSWM_OW", Opm::UnitSystem::measure::identity, std::move(pcSwMdcOw_), Opm::data::TargetType::RESTART_AUXILIARY);
 
         if (krnSwMdcOw_.size() > 0)
             sol.insert ("KRNSW_OW", Opm::UnitSystem::measure::identity, std::move(krnSwMdcOw_), Opm::data::TargetType::RESTART_AUXILIARY);
@@ -945,6 +955,9 @@ public:
             pcSwMdcGo_[elemIdx] = sol.data("PCSWM_GO")[globalDofIndex];
         if (krnSwMdcGo_.size() > 0 && sol.has("KRNSW_GO"))
             krnSwMdcGo_[elemIdx] = sol.data("KRNSW_GO")[globalDofIndex];
+        if (ppcw_.size() > 0 && sol.has("PPCW"))
+            ppcw_[elemIdx] = sol.data("PPCW")[globalDofIndex];
+
     }
 
     template <class FluidState>
@@ -1003,6 +1016,12 @@ public:
                             elemIdx);
             }
         }
+
+        if (simulator_.vanguard().eclState().get3DProperties().hasDeckDoubleGridProperty("SWATINIT")) {
+            auto oilWaterScaledEpsInfoDrainage = simulator.problem().materialLawManager()->oilWaterScaledEpsInfoDrainagePointerReferenceHack(elemIdx);
+            oilWaterScaledEpsInfoDrainage->maxPcow =  ppcw_[elemIdx];
+        }
+
 
     }
 
@@ -1317,6 +1336,7 @@ private:
     ScalarBuffer krnSwMdcOw_;
     ScalarBuffer pcSwMdcGo_;
     ScalarBuffer krnSwMdcGo_;
+    ScalarBuffer ppcw_;
     ScalarBuffer bubblePointPressure_;
     ScalarBuffer dewPointPressure_;
     std::vector<int> failedCellsPb_;

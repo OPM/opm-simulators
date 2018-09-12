@@ -319,6 +319,7 @@ public:
     void restartBegin()
     {
         bool enableHysteresis = simulator_.problem().materialLawManager()->enableHysteresis();
+        bool enableSwatinit = simulator_.vanguard().eclState().get3DProperties().hasDeckDoubleGridProperty("SWATINIT");
         std::vector<Opm::RestartKey> solutionKeys{
             {"PRESSURE" , Opm::UnitSystem::measure::pressure},
             {"SWAT" ,     Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
@@ -330,7 +331,8 @@ public:
             {"PCSWM_OW",  Opm::UnitSystem::measure::identity, enableHysteresis},
             {"KRNSW_OW",  Opm::UnitSystem::measure::identity, enableHysteresis},
             {"PCSWM_GO",  Opm::UnitSystem::measure::identity, enableHysteresis},
-            {"KRNSW_GO",  Opm::UnitSystem::measure::identity, enableHysteresis}
+            {"KRNSW_GO",  Opm::UnitSystem::measure::identity, enableHysteresis},
+            {"PPCW",      Opm::UnitSystem::measure::pressure, enableSwatinit}
         };
 
         const auto& inputThpres = eclState().getSimulationConfig().getThresholdPressure();
