@@ -104,6 +104,8 @@ public:
                              "The name of the file which contains the ECL deck to be simulated");
         EWOMS_REGISTER_PARAM(TypeTag, int, EclOutputInterval,
                              "The number of report steps that ought to be skipped between two writes of ECL results");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableOpmRstFile,
+                             "Include OPM-specific keywords in the ECL restart file to enable restart of OPM simulators from these files");
     }
 
     /*!
