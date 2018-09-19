@@ -118,3 +118,6 @@ endif (NOT EIGEN3_FOUND)
 if (HAVE_OPM_TESTS)
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
 endif()
+
+include(OpmBashCompletion)
+opm_add_bash_completion(flow)
