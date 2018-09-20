@@ -202,7 +202,7 @@ public:
             deltaX = 0;
 
             try { J.solve(deltaX, b); }
-            catch (Dune::FMatrixError e) {
+            catch (const Dune::FMatrixError& e) {
                 throw Opm::NumericalIssue(e.what());
             }
             Valgrind::CheckDefined(deltaX);
