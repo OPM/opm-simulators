@@ -266,14 +266,6 @@ namespace Opm
                                                                      comm, amg, parameters_ );
         }
 
-
-        template <class C, class MatrixOperator, class POrComm, class AMG >
-        void
-        constructAMGPrecond(MatrixOperator& opA, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >&, const double relax, const MILU_VARIANT milu ) const
-        {
-            ISTLUtility::template createAMGPreconditionerPointer<C>( opA, relax, milu,
-                                                                     comm, amg, parameters_ );
-        }
         /// \brief Solve the system using the given preconditioner and scalar product.
         template <class Operator, class ScalarProd, class Precond>
         void solve(Operator& opA, Vector& x, Vector& istlb, ScalarProd& sp, Precond& precond, Dune::InverseOperatorResult& result) const
