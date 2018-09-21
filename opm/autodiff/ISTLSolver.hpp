@@ -234,13 +234,6 @@ namespace Opm
         }
 #endif
 
-        template <class LinearOperator, class MatrixOperator, class POrComm, class AMG >
-        void
-        constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax, const MILU_VARIANT milu) const
-        {
-            ISTLUtility::template createAMGPreconditionerPointer<pressureIndex>( *opA, relax, milu, comm, amg );
-        }
-
 
         template <class MatrixOperator, class POrComm, class AMG >
         void
@@ -249,15 +242,6 @@ namespace Opm
         {
             ISTLUtility::template createAMGPreconditionerPointer<pressureIndex>( opA, relax,
                                                                                  milu, comm, amg );
-        }
-
-        template <class C, class LinearOperator, class MatrixOperator, class POrComm, class AMG >
-        void
-        constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax,
-                            const MILU_VARIANT milu ) const
-        {
-            ISTLUtility::template createAMGPreconditionerPointer<C>( *opA, relax,
-                                                                     comm, amg, parameters_ );
         }
 
         /// \brief Solve the system using the given preconditioner and scalar product.
