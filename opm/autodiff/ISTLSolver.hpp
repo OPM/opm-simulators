@@ -155,20 +155,14 @@ namespace Opm
                 const MILU_VARIANT ilu_milu  = parameters_.ilu_milu_;
                 if (  parameters_.use_cpr_ )
                 {
-                    using Matrix         = typename MatrixOperator::matrix_type;
-                    using CouplingMetric = Dune::Amg::Diagonal<pressureIndex>;
-                    using CritBase       = Dune::Amg::SymmetricCriterion<Matrix, CouplingMetric>;
-                    using Criterion      = Dune::Amg::CoarsenCriterion<CritBase>;
-                    using AMG = typename ISTLUtility
-                        ::BlackoilAmgSelector< Matrix, Vector, Vector,POrComm, Criterion, pressureIndex >::AMG;
-
-                    std::unique_ptr< AMG > amg;
-                    // Construct preconditioner.
-                    Criterion crit(15, 2000);
-                    constructAMGPrecond<Criterion>( linearOperator, parallelInformation_arg, amg, opA, relax, ilu_milu );
-
-                    // Solve.
-                    solve(linearOperator, x, istlb, *sp, *amg, result);
+                    // We should never end up here as this code is
+                    // only part of flow_legacy  and if use_cpr_ is
+                    // true for flow_legacy then solver_approach=cpr
+                    // was specified and NewtonIterationBlackoilCPR
+                    // is used as a solve and not ISTLSolver.
+                    OPM_THROW(std::logic_error,
+                              "This code path should bever be exectuded for parameters_.use_cpr_="
+                              <<parameters_.use_cpr_<<" in flow_legacy.");
                 }
                 else
                 {
@@ -240,13 +234,6 @@ namespace Opm
         }
 #endif
 
-        template <class LinearOperator, class MatrixOperator, class POrComm, class AMG >
-        void
-        constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax, const MILU_VARIANT milu) const
-        {
-            ISTLUtility::template createAMGPreconditionerPointer<pressureIndex>( *opA, relax, milu, comm, amg );
-        }
-
 
         template <class MatrixOperator, class POrComm, class AMG >
         void
@@ -257,23 +244,6 @@ namespace Opm
                                                                                  milu, comm, amg );
         }
 
-        template <class C, class LinearOperator, class MatrixOperator, class POrComm, class AMG >
-        void
-        constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax,
-                            const MILU_VARIANT milu ) const
-        {
-            ISTLUtility::template createAMGPreconditionerPointer<C>( *opA, relax,
-                                                                     comm, amg, parameters_ );
-        }
-
-
-        template <class C, class MatrixOperator, class POrComm, class AMG >
-        void
-        constructAMGPrecond(MatrixOperator& opA, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >&, const double relax, const MILU_VARIANT milu ) const
-        {
-            ISTLUtility::template createAMGPreconditionerPointer<C>( opA, relax, milu,
-                                                                     comm, amg, parameters_ );
-        }
         /// \brief Solve the system using the given preconditioner and scalar product.
         template <class Operator, class ScalarProd, class Precond>
         void solve(Operator& opA, Vector& x, Vector& istlb, ScalarProd& sp, Precond& precond, Dune::InverseOperatorResult& result) const
