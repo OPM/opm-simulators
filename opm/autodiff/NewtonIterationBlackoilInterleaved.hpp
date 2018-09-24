@@ -57,7 +57,7 @@ NEW_PROP_TAG(UseCpr);
 
 SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
 SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
-SET_INT_PROP(FlowIstlSolverParams, LinearSolverMaxIter, 150);
+SET_INT_PROP(FlowIstlSolverParams, LinearSolverMaxIter, 200);
 SET_INT_PROP(FlowIstlSolverParams, LinearSolverRestart, 40);
 SET_INT_PROP(FlowIstlSolverParams, FlowLinearSolverVerbosity, 0);
 SET_INT_PROP(FlowIstlSolverParams, IluFillinLevel, 0);
