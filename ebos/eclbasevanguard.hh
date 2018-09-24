@@ -68,7 +68,7 @@ NEW_PROP_TAG(EclOutputInterval);
 
 SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
 SET_INT_PROP(EclBaseVanguard, EclOutputInterval, -1); // use the deck-provided value
-SET_BOOL_PROP(EclBaseVanguard, EnableOpmRstFile, false);
+SET_BOOL_PROP(EclBaseVanguard, EnableOpmRstFile, true);
 
 END_PROPERTIES
 
