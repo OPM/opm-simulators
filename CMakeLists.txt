@@ -113,8 +113,21 @@ if (NOT EIGEN3_FOUND)
 	add_dependencies (opmsimulators Eigen3)
 endif (NOT EIGEN3_FOUND)
 
-
-
 if (HAVE_OPM_TESTS)
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
 endif()
+
+opm_add_test(flow
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators"
+  SOURCES
+    flow/flow.cpp
+    flow/flow_ebos_blackoil.cpp
+    flow/flow_ebos_gasoil.cpp
+    flow/flow_ebos_oilwater.cpp
+    flow/flow_ebos_polymer.cpp
+    flow/flow_ebos_solvent.cpp
+    flow/flow_ebos_energy.cpp
+    flow/flow_ebos_oilwater_polymer.cpp)

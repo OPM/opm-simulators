@@ -20,13 +20,13 @@
 */
 #include "config.h"
 
-#include <opm/simulators/flow_ebos_blackoil.hpp>
-#include <opm/simulators/flow_ebos_gasoil.hpp>
-#include <opm/simulators/flow_ebos_oilwater.hpp>
-#include <opm/simulators/flow_ebos_solvent.hpp>
-#include <opm/simulators/flow_ebos_polymer.hpp>
-#include <opm/simulators/flow_ebos_energy.hpp>
-#include <opm/simulators/flow_ebos_oilwater_polymer.hpp>
+#include <flow/flow_ebos_blackoil.hpp>
+#include <flow/flow_ebos_gasoil.hpp>
+#include <flow/flow_ebos_oilwater.hpp>
+#include <flow/flow_ebos_solvent.hpp>
+#include <flow/flow_ebos_polymer.hpp>
+#include <flow/flow_ebos_energy.hpp>
+#include <flow/flow_ebos_oilwater_polymer.hpp>
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
