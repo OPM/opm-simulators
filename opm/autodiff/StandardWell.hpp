@@ -242,6 +242,13 @@ namespace Opm
         // the saturations in the well bore under surface conditions at the beginning of the time step
         std::vector<double> F0_;
 
+        // the vectors used to describe the inflow performance relationship (IPR)
+        // Q = IPR_A - BHP * IPR_B
+        // TODO: it minght need to go to WellInterface, let us implement it in StandardWell first
+        // TODO: first implementationn will only hanle producers
+        mutable std::vector<double> ipr_a_;
+        mutable std::vector<double> ipr_b_;
+
         const EvalWell& getBhp() const;
 
         EvalWell getQs(const int comp_idx) const;
@@ -338,6 +345,22 @@ namespace Opm
 
         // handle the non reasonable fractions due to numerical overshoot
         void processFractions() const;
+
+        // updating the inflow based on the current reservoir condition
+        void updateIPR(const Simulator& ebos_simulator) const;
+
+        // check whether the well is operable under the current reservoir condition
+        // mostly related to BHP limit and THP limit
+        // One thing is not covered in this function is that even we pass this check,
+        // we might not get desired well rates with respect to the well type (injector/producer)
+        // it will be called everytime when we try to assemble the well equations
+        void checkWellOperatability(const Simulator& ebos_simulator);
+
+        // check whether the well is operable under BHP limit with current reservoir condition
+        bool operableUnderBHPLimit(const Simulator& ebos_simulator) const;
+
+        // check whether the well is operable under THP limit with current reservoir condition
+        bool operableUnderTHPLimit(const Simulator& ebos_simulator) const;
 
     };
 
