@@ -66,7 +66,7 @@ SET_SCALAR_PROP(FlowModelParameters, ToleranceWellControl, 1e-7);
 SET_INT_PROP(FlowModelParameters, MaxWelleqIter, 30);
 SET_BOOL_PROP(FlowModelParameters, UseMultisegmentWell, true);
 SET_SCALAR_PROP(FlowModelParameters, MaxSinglePrecisionDays, 20.0);
-SET_INT_PROP(FlowModelParameters, MaxStrictIter, 8);
+SET_INT_PROP(FlowModelParameters, MaxStrictIter, 4);
 SET_BOOL_PROP(FlowModelParameters, SolveWelleqInitially, true);
 SET_BOOL_PROP(FlowModelParameters, UpdateEquationsScaling, false);
 SET_BOOL_PROP(FlowModelParameters, UseUpdateStabilization, true);
