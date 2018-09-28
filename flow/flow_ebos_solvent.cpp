@@ -16,14 +16,9 @@
 */
 #include "config.h"
 
-// Define making clear that the simulator supports AMG
-#define FLOW_SUPPORT_AMG 1
-
-#include <opm/simulators/flow_ebos_oilwater.hpp>
+#include <flow/flow_ebos_solvent.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
-#include <ewoms/models/blackoil/blackoiltwophaseindices.hh>
-
 #include <opm/grid/CpGrid.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
@@ -36,50 +31,35 @@
 
 namespace Ewoms {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowOilWaterProblem, INHERITS_FROM(EclFlowProblem));
-
-//! The indices required by the model
-SET_PROP(EclFlowOilWaterProblem, Indices)
-{
-private:
-    // it is unfortunately not possible to simply use 'TypeTag' here because this leads
-    // to cyclic definitions of some properties. if this happens the compiler error
-    // messages unfortunately are *really* confusing and not really helpful.
-    typedef TTAG(EclFlowProblem) BaseTypeTag;
-    typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
-
-public:
-    typedef Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
-                                           GET_PROP_VALUE(TypeTag, EnablePolymer),
-                                           GET_PROP_VALUE(TypeTag, EnableEnergy),
-                                           /*PVOffset=*/0,
-                                           /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
-};
+NEW_TYPE_TAG(EclFlowSolventProblem, INHERITS_FROM(EclFlowProblem));
+SET_BOOL_PROP(EclFlowSolventProblem, EnableSolvent, true);
 }}
 
 namespace Opm {
-void flowEbosOilWaterSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosSolventSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
-    typedef TTAG(EclFlowOilWaterProblem) TypeTag;
+    typedef TTAG(EclFlowSolventProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalDeck(&deck, &eclState, &schedule, &summaryConfig);
 }
 
+
 // ----------------- Main program -----------------
-int flowEbosOilWaterMain(int argc, char** argv)
+int flowEbosSolventMain(int argc, char** argv)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     Opm::resetLocale();
 
+    // initialize MPI, finalize is done automatically on exit
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argc, argv);
 #else
-    Dune::MPIHelper::instance(argc, argv);
+    Dune::MPIHelper::instance(argc, argv).rank();
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowOilWaterProblem)> mainfunc;
+    Opm::FlowMainEbos<TTAG(EclFlowSolventProblem)> mainfunc;
     return mainfunc.execute(argc, argv);
 }
 

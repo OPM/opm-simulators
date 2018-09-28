@@ -23,17 +23,6 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
-	# place the flow_ebos_*.cpp files on top of the list because they
-	# take the longest to compile, and compiling them first speeds up
-	# parallel builds because it allows the jobserver to do better scheduling
-  opm/simulators/flow_ebos_blackoil.cpp
-  opm/simulators/flow_ebos_gasoil.cpp
-  opm/simulators/flow_ebos_oilwater.cpp
-  opm/simulators/flow_ebos_polymer.cpp
-  opm/simulators/flow_ebos_solvent.cpp
-  opm/simulators/flow_ebos_energy.cpp
-  opm/simulators/flow_ebos_oilwater_polymer.cpp
-
   opm/autodiff/Compat.cpp
   opm/autodiff/ExtractParallelGridInformationToISTL.cpp
   opm/autodiff/NewtonIterationBlackoilCPR.cpp
@@ -226,7 +215,6 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/flow_legacy.cpp
   examples/flow_reorder.cpp
   examples/flow_sequential.cpp
-  examples/flow.cpp
   examples/sim_2p_incomp_ad.cpp
   examples/sim_2p_comp_reorder.cpp
   examples/sim_simple.cpp
@@ -252,7 +240,6 @@ list (APPEND PROGRAM_SOURCE_FILES
   examples/sim_2p_incomp.cpp
   examples/sim_2p_incomp_ad.cpp
   examples/sim_2p_comp_reorder.cpp
-  examples/flow.cpp
   examples/flow_legacy.cpp
   examples/flow_reorder.cpp
   examples/flow_sequential.cpp
@@ -447,13 +434,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/polymer/TransportSolverTwophaseCompressiblePolymer.hpp
   opm/polymer/Point2D.hpp
   opm/polymer/TransportSolverTwophasePolymer.hpp
-  opm/simulators/flow_ebos_blackoil.hpp
-  opm/simulators/flow_ebos_gasoil.hpp
-  opm/simulators/flow_ebos_oilwater.hpp
-  opm/simulators/flow_ebos_polymer.hpp
-  opm/simulators/flow_ebos_solvent.hpp
-  opm/simulators/flow_ebos_energy.hpp
-  opm/simulators/flow_ebos_oilwater_polymer.hpp
   opm/simulators/ensureDirectoryExists.hpp
   opm/simulators/ParallelFileMerger.hpp
   opm/simulators/SimulatorCompressibleTwophase.hpp

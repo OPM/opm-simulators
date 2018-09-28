@@ -19,7 +19,7 @@
 // Define making clear that the simulator supports AMG
 #define FLOW_SUPPORT_AMG 1
 
-#include <opm/simulators/flow_ebos_gasoil.hpp>
+#include <flow/flow_ebos_oilwater_polymer.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
 #include <ewoms/models/blackoil/blackoiltwophaseindices.hh>
@@ -36,10 +36,11 @@
 
 namespace Ewoms {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowGasOilProblem, INHERITS_FROM(EclFlowProblem));
-
+NEW_TYPE_TAG(EclFlowOilWaterPolymerProblem, INHERITS_FROM(EclFlowProblem));
+SET_BOOL_PROP(EclFlowOilWaterPolymerProblem, EnablePolymer, true);
 //! The indices required by the model
-SET_PROP(EclFlowGasOilProblem, Indices)
+//! The indices required by the model
+SET_PROP(EclFlowOilWaterPolymerProblem, Indices)
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -53,22 +54,21 @@ public:
                                            GET_PROP_VALUE(TypeTag, EnablePolymer),
                                            GET_PROP_VALUE(TypeTag, EnableEnergy),
                                            /*PVOffset=*/0,
-                                           /*disabledCompIdx=*/FluidSystem::waterCompIdx> type;
+                                           /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
 };
 }}
 
 namespace Opm {
-void flowEbosGasOilSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule,  SummaryConfig& summaryConfig)
+void flowEbosOilWaterPolymerSetDeck(Deck& deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
-    typedef TTAG(EclFlowGasOilProblem) TypeTag;
+    typedef TTAG(EclFlowOilWaterPolymerProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalDeck(&deck, &eclState, &schedule, &summaryConfig);
 }
 
-
 // ----------------- Main program -----------------
-int flowEbosGasOilMain(int argc, char** argv)
+int flowEbosOilWaterPolymerMain(int argc, char** argv)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -80,7 +80,7 @@ int flowEbosGasOilMain(int argc, char** argv)
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowGasOilProblem)> mainfunc;
+    Opm::FlowMainEbos<TTAG(EclFlowOilWaterPolymerProblem)> mainfunc;
     return mainfunc.execute(argc, argv);
 }
 

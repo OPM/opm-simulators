@@ -16,7 +16,7 @@
 */
 #include "config.h"
 
-#include <opm/simulators/flow_ebos_energy.hpp>
+#include <flow/flow_ebos_polymer.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/grid/CpGrid.hpp>
@@ -31,21 +31,21 @@
 
 namespace Ewoms {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowEnergyProblem, INHERITS_FROM(EclFlowProblem));
-SET_BOOL_PROP(EclFlowEnergyProblem, EnableEnergy, true);
+NEW_TYPE_TAG(EclFlowPolymerProblem, INHERITS_FROM(EclFlowProblem));
+SET_BOOL_PROP(EclFlowPolymerProblem, EnablePolymer, true);
 }}
 
 namespace Opm {
-void flowEbosEnergySetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosPolymerSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
-    typedef TTAG(EclFlowEnergyProblem) TypeTag;
+    typedef TTAG(EclFlowPolymerProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalDeck(&deck, &eclState, &schedule, &summaryConfig);
 }
 
 // ----------------- Main program -----------------
-int flowEbosEnergyMain(int argc, char** argv)
+int flowEbosPolymerMain(int argc, char** argv)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -58,7 +58,7 @@ int flowEbosEnergyMain(int argc, char** argv)
     Dune::MPIHelper::instance(argc, argv).rank();
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowEnergyProblem)> mainfunc;
+    Opm::FlowMainEbos<TTAG(EclFlowPolymerProblem)> mainfunc;
     return mainfunc.execute(argc, argv);
 }
 
