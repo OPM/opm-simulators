@@ -1,3 +1,16 @@
+Changes in opm-material 2018.10
+===============================
+
+- Support for dynamically-sized automatic diffentiation objects has
+  been added. This feature is provided by the `DynamicEvaluation`
+  class.
+- The nested `Opm::FluidSystems` namespace has been removed. All fluid
+  system classes are now located directly in the `Opm` namespace and
+  are suffixed by `FluidSystem`.
+- Setting the second item of the EHYSTR keyword to "1" is now
+  supported by the ECL saturation functions.
+- Various minor fixes and improvements.
+
 Changes in opm-material 2018.04
 ===============================
 
