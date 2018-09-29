@@ -485,8 +485,6 @@ public:
         , transmissibilities_(simulator.vanguard())
         , thresholdPressures_(simulator)
         , wellModel_(simulator)
-        , eclWriter_(EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput)
-                     ? new EclWriterType(simulator) : nullptr)
         , pffDofData_(simulator.gridView(), this->elementMapper())
     {
         // Tell the black-oil extensions to initialize their internal data structures
@@ -496,7 +494,6 @@ public:
         if (EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput))
             // create the ECL writer
             eclWriter_.reset(new EclWriterType(simulator));
-
     }
 
     /*!
