@@ -5,7 +5,7 @@
 %define tag final
 
 Name:           opm-simulators
-Version:        2018.04
+Version:        2018.10
 Release:        0
 Summary:        Open Porous Media - core library
 License:        GPL-3.0
