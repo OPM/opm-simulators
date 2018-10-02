@@ -238,9 +238,9 @@ namespace Opm {
                 well->initPrimaryVariablesEvaluation();
 
                 bool testWell = true;
-		// if a well is closed because all completions are closed, we need to check each completion
-		// individually. We first open all completions, then we close one by one by calling updateWellTestState
-		// untill the number of closed completions do not increase anymore. 
+        // if a well is closed because all completions are closed, we need to check each completion
+        // individually. We first open all completions, then we close one by one by calling updateWellTestState
+        // untill the number of closed completions do not increase anymore. 
                 while (testWell) {
                     const size_t numberOfClosedCompletions = wellTestStateForTheWellTest.sizeCompletions();
                     well->solveWellForTesting(ebosSimulator_, wellStateCopy, B_avg, terminal_output_);
@@ -336,20 +336,21 @@ namespace Opm {
                 const Well* well_ecl = wells_ecl_[index_well];
 
                 // well is closed due to economical reasons
-                if (wellTestState_.hasWell(well_name, WellTestConfig::Reason::ECONOMIC)) { 
-		    if( well_ecl->getAutomaticShutIn() ) {
-                        // shut wells are not added to the well container 
-                        well_state_.bhp()[w] = 0;
+                if ( wellTestState_.hasWell(well_name, WellTestConfig::Reason::ECONOMIC) ||
+                     wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL) ) {
+                    if( well_ecl->getAutomaticShutIn() ) {
+                        // shut wells are not added to the well container
+                        well_state_.thp()[w] = 0.;
+                        well_state_.bhp()[w] = 0.;
                         const int np = numPhases();
                         for (int p = 0; p < np; ++p) {
-                            well_state_.wellRates()[np * w + p] = 0;
-			}
-			continue;
-                    }
-		    else {
-		        // close wells are added to the container but marked as closed
-		        struct WellControls* well_controls = wells()->ctrls[w];
-		        well_controls_stop_well(well_controls);
+                            well_state_.wellRates()[np * w + p] = 0.;
+                        }
+                        continue;
+                    } else {
+                        // close wells are added to the container but marked as closed
+                        struct WellControls* well_controls = wells()->ctrls[w];
+                        well_controls_stop_well(well_controls);
                     }
                 }
 
@@ -663,7 +664,9 @@ namespace Opm {
         ConvergenceReport report;
 
         for (const auto& well : well_container_) {
-            report += well->getWellConvergence(B_avg);
+            if ( well->isWellOperable() ) {
+                report += well->getWellConvergence(B_avg);
+            }
         }
 
         // checking NaN residuals
@@ -718,9 +721,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     calculateExplicitQuantities() const
     {
-         for (auto& well : well_container_) {
-             well->calculateExplicitQuantities(ebosSimulator_, well_state_);
-         }
+        // TODO: checking isWellOperable() ?
+        for (auto& well : well_container_) {
+            well->calculateExplicitQuantities(ebosSimulator_, well_state_);
+        }
     }
 
 

@@ -37,6 +37,7 @@ namespace Opm
     , rateConverter_(rate_converter)
     , pvtRegionIdx_(pvtRegionIdx)
     , num_components_(num_components)
+    , is_well_operable_(true) // TODO: should it be State value?
     {
         if (!well) {
             OPM_THROW(std::invalid_argument, "Null pointer of Well is used to construct WellInterface");
@@ -209,6 +210,16 @@ namespace Opm
     wellEcl() const
     {
         return well_ecl_;
+    }
+
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    isWellOperable() const
+    {
+        return is_well_operable_;
     }
 
 
@@ -387,6 +398,9 @@ namespace Opm
     updateWellControl(WellState& well_state,
                       wellhelpers::WellSwitchingLogger& logger) const
     {
+        // well is shut for this iteration
+        if (!is_well_operable_) return;
+
         const int np = number_of_phases_;
         const int w = index_of_well_;
 
@@ -649,6 +663,17 @@ namespace Opm
             return;
         }
 
+        const std::string well_name = name();
+
+        if (!is_well_operable_) {
+            wellTestState.addClosedWell(well_name, WellTestConfig::Reason::PHYSICAL, simulationTime);
+            // TODO: considering auto shut in?
+            const std::string msg = "well " + well_name
+                                  + std::string(" will be shut as it can not operate under current reservoir condition");
+            OpmLog::info(msg);
+            // TODO: should we return?
+        }
+
         // flag to check if the mim oil/gas rate limit is violated
         bool rate_limit_violated = false;
         const WellEconProductionLimits& econ_production_limits = well_ecl_->getEconProductionLimits(current_step_);
@@ -657,8 +682,6 @@ namespace Opm
         if ( !econ_production_limits.onAnyEffectiveLimit() ) {
             return;
         }
-
-        const std::string well_name = name();
 
         // for the moment, we only handle rate limits, not handling potential limits
         // the potential limits should not be difficult to add

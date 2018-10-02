@@ -440,7 +440,9 @@ namespace Opm
                    bool only_wells)
     {
 
-        updateIPR(ebosSimulator);
+        checkWellOperatability(ebosSimulator);
+
+        if (!is_well_operable_) return;
 
         const int np = number_of_phases_;
 
@@ -856,6 +858,8 @@ namespace Opm
     updateWellState(const BVectorWell& dwells,
                     WellState& well_state) const
     {
+        if (!is_well_operable_) return;
+
         updatePrimaryVariablesNewton(dwells, well_state);
 
         updateWellStateFromPrimaryVariables(well_state);
@@ -1651,6 +1655,8 @@ namespace Opm
     StandardWell<TypeTag>::
     solveEqAndUpdateWellState(WellState& well_state)
     {
+        if (!is_well_operable_) return;
+
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         BVectorWell dx_well(1);
@@ -1696,6 +1702,8 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
+        if (!is_well_operable_) return;
+
         if ( param_.matrix_add_well_contributions_ )
         {
             // Contributions are already in the matrix itself
@@ -1724,6 +1732,8 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(BVector& r) const
     {
+        if (!is_well_operable_) return;
+
         assert( invDrw_.size() == invDuneD_.N() );
 
         // invDrw_ = invDuneD_ * resWell_
@@ -1741,6 +1751,8 @@ namespace Opm
     StandardWell<TypeTag>::
     recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     {
+        if (!is_well_operable_) return;
+
         BVectorWell resWell = resWell_;
         // resWell = resWell - B * x
         duneB_.mmv(x, resWell);
@@ -1758,6 +1770,8 @@ namespace Opm
     recoverWellSolutionAndUpdateWellState(const BVector& x,
                                           WellState& well_state) const
     {
+        if (!is_well_operable_) return;
+
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);
         updateWellState(xw, well_state);
@@ -1962,6 +1976,8 @@ namespace Opm
     StandardWell<TypeTag>::
     updatePrimaryVariables(const WellState& well_state) const
     {
+        if (!is_well_operable_) return;
+
         const int well_index = index_of_well_;
         const int np = number_of_phases_;
 
@@ -2289,25 +2305,59 @@ namespace Opm
             // the well index associated with the connection
             const double tw_perf = well_index_[perf];
 
+            const double pressure_diff = p_r - h_perf;
+
+            // Let us add a check, since the pressure is calculated based on zero value BHP
+            // it should not be negative anyway. If it is negative, we might need to re-formulate
+            // to taking into consideration the crossflow here.
+            assert(pressure_diff > 0.);
 
             // TODO: there are some indices related problems here
             // phases vs components
+            // they are the ipr values for the perforation
+            std::vector<double> ipr_a_perf(ipr_a_.size());
+            std::vector<double> ipr_b_perf(ipr_b_.size());
             for (int p = 0; p < number_of_phases_; ++p) {
                 const double tw_mob = tw_perf * mob[p].value() * b_perf[p];
-                ipr_a_[p] += tw_mob * (p_r - h_perf);
-                ipr_b_[p] += tw_mob;
+                ipr_a_perf[p] += tw_mob * pressure_diff;
+                ipr_b_perf[p] += tw_mob;
+            }
+
+            // we need to handle the rs and rv when oil and gas are present
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const unsigned oil_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                const double rs = (fs.Rs()).value();
+                const double rv = (fs.Rv()).value();
+
+                const double dis_gas_a = rs * ipr_a_perf[oil_comp_idx];
+                const double vap_oil_a = rv * ipr_a_perf[gas_comp_idx];
+
+                ipr_a_perf[gas_comp_idx] += dis_gas_a;
+                ipr_a_perf[oil_comp_idx] += vap_oil_a;
+
+                const double dis_gas_b = rs * ipr_b_perf[oil_comp_idx];
+                const double vap_oil_b = rv * ipr_b_perf[gas_comp_idx];
+
+                ipr_b_perf[gas_comp_idx] += dis_gas_b;
+                ipr_b_perf[oil_comp_idx] += vap_oil_b;
+            }
+
+            for (int p = 0; p < number_of_phases_; ++p) {
+                ipr_a_[p] += ipr_a_perf[p];
+                ipr_b_[p] += ipr_b_perf[p];
             }
         }
 
         std::cout << " the inflow performance relationship curves for the well " << name() << std::endl;
         std::cout << " ipr_a ";
         for (const double value : ipr_a_) {
-            std::cout << " " << value;
+            std::cout << " " << value * 86400.;
         }
         std::cout << std::endl;
         std::cout << " ipr_b ";
         for (const double value : ipr_b_) {
-            std::cout << " " << value;
+            std::cout << " " << value * 86400.;
         }
         std::cout << std::endl;
         // TODO: should we consider rs, rv and b for this
@@ -2334,20 +2384,69 @@ namespace Opm
         // if they are not used outside this checkWhetherOperable function
         updateIPR(ebos_simulator);
 
-        const double bhp_limit = mostStrictBhpFromBhpLimits();
+        bool well_operable = true;
 
-        bool operable_under_bhp_limit = true;
+        // checking BHP limit
+        if (well_operable) {
+            const double bhp_limit = mostStrictBhpFromBhpLimits();
 
-        for (int p = 0; p < number_of_phases_; ++p) {
-            const double temp = ipr_a_[p] - ipr_b_[p] * bhp_limit;
-            if (temp < 0.) {
-                operable_under_bhp_limit = false;
+            bool operable_under_bhp_limit = true;
+
+            for (int p = 0; p < number_of_phases_; ++p) {
+                const double temp = ipr_a_[p] - ipr_b_[p] * bhp_limit;
+                if (temp < 0.) {
+                    operable_under_bhp_limit = false;
+                }
+            }
+
+            if (!operable_under_bhp_limit) {
+                std::cout << " well " << name() << " not operatable under BHP limit " << bhp_limit << std::endl;
+                well_operable = false;
+            } else {
+                std::cout << " well " << name() << " working well with BHP limit " << bhp_limit << std::endl;
             }
         }
 
-        if (operable_under_bhp_limit) {
-            // check whether violate the thp limit
+        // checking whether operable with current bhp value
+        if (well_operable) {
+
+            bool operable_under_bhp = true;
+            const double current_bhp = getBhp().value();
+
+            for (int p = 0; p < number_of_phases_; ++p) {
+                const double temp = ipr_a_[p] - ipr_b_[p] * current_bhp * 0.9;
+                if (temp < 0.) {
+                    operable_under_bhp = false;
+                }
+            }
+
+            if (!operable_under_bhp) {
+                std::cout << " well " << name() << " not operatable under BHP value " << current_bhp << std::endl;
+                well_operable = false;
+            } else {
+                std::cout << " well " << name() << " working well with current BHP value " << current_bhp << std::endl;
+            }
         }
+
+        if (!well_operable) {
+            if (is_well_operable_) {
+                std::cout << " well " << name() << " gets SHUT during iteration " << std::endl;
+            }
+            is_well_operable_ = well_operable;
+        } else {
+            if (!is_well_operable_) {
+                std::cout << " well " << name() << " gets REVIVED during iteration " << std::endl;
+            }
+            is_well_operable_ = true;
+        }
+
+        // TODO: There will be other conditions needs to be check, like the THP limit
+        // TODO: if the well is under THP target control, we check whether it can work under THP limit.
+        // TODO: but when the THP limit will not work, how to make it switch to other target / limit.
+
+        // if (operable_under_bhp_limit) {
+            // check whether violate the thp limit
+        // }
 
         // test the BHP limit, the standard is as follows,
         // 1. the well should be able to produce

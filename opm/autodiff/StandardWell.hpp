@@ -214,6 +214,8 @@ namespace Opm
         using Base::perf_length_;
         using Base::bore_diameters_;
 
+        using Base::is_well_operable_;
+
         // densities of the fluid in each perforation
         std::vector<double> perf_densities_;
         // pressure drop between different perforations
@@ -350,10 +352,11 @@ namespace Opm
         void updateIPR(const Simulator& ebos_simulator) const;
 
         // check whether the well is operable under the current reservoir condition
-        // mostly related to BHP limit and THP limit
-        // One thing is not covered in this function is that even we pass this check,
-        // we might not get desired well rates with respect to the well type (injector/producer)
-        // it will be called everytime when we try to assemble the well equations
+        // mostly related to BHP limit and THP limit, and also the BHP under this iteration
+        // For the BHP limit and THP limit, they are the hard limits.
+        // What if the BHP we obtained for this iteration is too high, while the well can work under
+        // BHP limit or THP limit, then how should we handle this,
+        // TODO: maybe we should switch to the less strict one between BHP limit and THP limit?
         void checkWellOperatability(const Simulator& ebos_simulator);
 
         // check whether the well is operable under BHP limit with current reservoir condition
