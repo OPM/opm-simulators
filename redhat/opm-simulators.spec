@@ -2,7 +2,7 @@
 # spec file for package opm-simulators
 #
 
-%define tag final
+%define tag rc1
 
 Name:           opm-simulators
 Version:        2018.10
