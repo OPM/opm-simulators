@@ -2312,7 +2312,7 @@ namespace Opm
             // to taking into consideration the crossflow here.
             assert(pressure_diff > 0.);
 
-            // TODO: there are some indices related problems here
+            // TODO: there might be some indices related problems here
             // phases vs components
             // they are the ipr values for the perforation
             std::vector<double> ipr_a_perf(ipr_a_.size());
@@ -2349,7 +2349,8 @@ namespace Opm
             }
         }
 
-        std::cout << " the inflow performance relationship curves for the well " << name() << std::endl;
+        // debugging output for the IPR relationship
+        /* std::cout << " the inflow performance relationship curves for the well " << name() << std::endl;
         std::cout << " ipr_a ";
         for (const double value : ipr_a_) {
             std::cout << " " << value * 86400.;
@@ -2359,11 +2360,10 @@ namespace Opm
         for (const double value : ipr_b_) {
             std::cout << " " << value * 86400.;
         }
-        std::cout << std::endl;
-        // TODO: should we consider rs, rv and b for this
-        // ideally, yes, let us try without it first to see what gonna happen
+        std::cout << std::endl; */
+
         // TODO: we should be able to consider rs, rv and b for this, assuming we do not need to consider
-        // cross-flow here, since h_perf should be relatively small value
+        // cross-flow here, since h_perf should be relatively small value compared with reservoir pressure
     }
 
 
@@ -2403,7 +2403,7 @@ namespace Opm
                 std::cout << " well " << name() << " not operatable under BHP limit " << bhp_limit << std::endl;
                 well_operable = false;
             } else {
-                std::cout << " well " << name() << " working well with BHP limit " << bhp_limit << std::endl;
+                // std::cout << " well " << name() << " working well with BHP limit " << bhp_limit << std::endl;
             }
         }
 
@@ -2424,7 +2424,7 @@ namespace Opm
                 std::cout << " well " << name() << " not operatable under BHP value " << current_bhp << std::endl;
                 well_operable = false;
             } else {
-                std::cout << " well " << name() << " working well with current BHP value " << current_bhp << std::endl;
+                // std::cout << " well " << name() << " working well with current BHP value " << current_bhp << std::endl;
             }
         }
 
@@ -2453,7 +2453,6 @@ namespace Opm
         // 2. it does not violate the THP limit when producing under BHP limit
 
         // if either of the above is false, the well should be SHUT for this iteration
-
 
         // if the well is requested to run under THP target, we will test
         // if the well can be operated under the THP target.
