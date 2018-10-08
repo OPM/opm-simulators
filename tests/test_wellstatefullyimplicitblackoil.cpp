@@ -74,8 +74,7 @@ namespace {
             setup.es, setup.sched, timeStep, *setup.grid.c_grid()
         };
 
-        state.init(wmgr.c_wells(), cpress, setup.sched,
-                   setup.sched.getWells(timeStep),
+        state.init(wmgr.c_wells(), cpress, setup.sched.getWells(timeStep),
                    timeStep, nullptr, setup.pu);
 
         state.initWellStateMSWell(wmgr.c_wells(), setup.sched.getWells(timeStep),
