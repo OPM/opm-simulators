@@ -579,6 +579,12 @@ namespace Opm
                     }
                 }
                 assert(local_comp_index == this->wells_->well_connpos[ w + 1 ] - this->wells_->well_connpos[ w ]);
+
+                const auto nSeg = this->numSegments(w);
+                for (auto segID = 0*nSeg; segID < nSeg; ++segID) {
+                    well.segments[segID + 1] =
+                        this->reportSegmentResults(pu, w, segID);
+                }
             }
 
             return res;
@@ -935,6 +941,49 @@ namespace Opm
         // Well potentials
         std::vector<double> well_potentials_;
 
+        ::Opm::data::Segment
+        reportSegmentResults(const PhaseUsage& pu,
+                             const int         wellID,
+                             const int         segmentID) const
+        {
+            auto segRes = ::Opm::data::Segment{};
+
+            const auto segDoF =
+                this->topSegmentIndex(wellID) + segmentID;
+
+            const auto* rate =
+                &this->segRates()[segDoF * this->numPhases()];
+
+            segRes.pressure = this->segPress()[segDoF];
+
+            if (pu.phase_used[Water]) {
+                segRes.rates.set(data::Rates::opt::wat,
+                                 rate[pu.phase_pos[Water]]);
+            }
+
+            if (pu.phase_used[Oil]) {
+                segRes.rates.set(data::Rates::opt::oil,
+                                 rate[pu.phase_pos[Oil]]);
+            }
+
+            if (pu.phase_used[Gas]) {
+                segRes.rates.set(data::Rates::opt::gas,
+                                 rate[pu.phase_pos[Gas]]);
+            }
+
+            segRes.segNumber = segmentID + 1;
+
+            return segRes;
+        }
+
+        int numSegments(const int wellID) const
+        {
+            const auto topSeg = this->topSegmentIndex(wellID);
+
+            return (wellID + 1 == this->numWells()) // Last well?
+                ? (this->numSegment() - topSeg)
+                : (this->topSegmentIndex(wellID + 1) - topSeg);
+        }
     };
 
 } // namespace Opm
