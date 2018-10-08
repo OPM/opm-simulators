@@ -593,7 +593,22 @@ namespace Opm {
 
           virtual void apply( const X& x, Y& y ) const
           {
-            A_.mv( x, y );
+            //A_.mv( x, y );
+            const size_t nRows = A_.N();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+            for( size_t i = 0; i<nRows; ++i )
+            {
+              const auto& row = A_[ i ];
+
+              y[ i ] = 0;
+              const auto endj = row.end();
+              for (auto j=row.begin(); j!=endj; ++j)
+              {
+                (*j).umv( x[ j.index() ], y[ i ]);
+              }
+            }
 
             // add well model modification to y
             wellMod_.apply(x, y );
@@ -607,7 +622,22 @@ namespace Opm {
           // y += \alpha * A * x
           virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
           {
-            A_.usmv(alpha,x,y);
+            //A_.usmv(alpha,x,y);
+            const size_t nRows = A_.N();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+            for( size_t i = 0; i<nRows; ++i )
+            {
+              const auto& row = A_[ i ];
+
+              const auto endj = row.end();
+              for (auto j=row.begin(); j!=endj; ++j)
+              {
+                (*j).usmv(alpha, x[ j.index() ], y[ i ]);
+              }
+            }
+
 
             // add scaled well model modification to y
             wellMod_.applyScaleAdd( alpha, x, y );
@@ -947,7 +977,7 @@ namespace Opm {
         /// Should not be called
         std::vector<std::vector<double> >
         computeFluidInPlace(const std::vector<int>& /*fipnum*/) const
-        {            
+        {
             //assert(true)
             //return an empty vector
             std::vector<std::vector<double> > regionValues(0, std::vector<double>(0,0.0));
