@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
-    const Eclipse3DProperties eclipseProperties ( deck , table, grid);
+    const Eclipse3DProperties eclipseProperties ( deck , table, grid, eclipseState);
     const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
 
 
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
-    const Eclipse3DProperties eclipseProperties ( deck , table, grid);
+    const Eclipse3DProperties eclipseProperties ( deck , table, grid, eclipseState);
     const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
 
     size_t timestep = 2;

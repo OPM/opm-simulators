@@ -151,6 +151,9 @@ int main(int argc, char** argv)
         tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN));
         Opm::ParseContext parseContext(tmp);
 
+        Ewoms::EclTransmissibilityInitializer<PreTypeTag>* transInit = new Ewoms::EclTransmissibilityInitializer<PreTypeTag>;
+        Opm::EclipseState::setTransmissibilityInitializer(transInit);
+
         std::shared_ptr<Opm::Deck> deck = std::make_shared< Opm::Deck >( parser.parseFile(deckFilename , parseContext) );
         if ( outputCout ) {
             Opm::checkDeck(*deck, parser);

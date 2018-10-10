@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
     EclipseState eclipseState(deck , parseContext);
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
-    const Eclipse3DProperties eclipseProperties ( deck , table, grid);
+    const Eclipse3DProperties eclipseProperties ( deck , table, grid, eclipseState);
     const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
 
    PhaseUsage pu = phaseUsageFromDeck(eclipseState);

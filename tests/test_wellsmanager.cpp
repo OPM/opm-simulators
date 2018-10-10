@@ -183,7 +183,7 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
     Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
-    const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
+    const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid, eclipseState);
     const Opm::Schedule sched(deck, grid, eclipseProperties, Opm::Phases(true, true, true), parseContext );
 
  

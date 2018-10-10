@@ -78,7 +78,7 @@ struct SetupTest {
         ecl_state.reset(new Opm::EclipseState(deck , parse_context) );
         {
           const Opm::TableManager table ( deck );
-          const Opm::Eclipse3DProperties eclipseProperties ( deck , table, ecl_state->getInputGrid());
+          const Opm::Eclipse3DProperties eclipseProperties ( deck , table, ecl_state->getInputGrid(), *ecl_state);
           schedule.reset( new Opm::Schedule(deck, ecl_state->getInputGrid(), eclipseProperties, Opm::Phases(true, true, true), parse_context ));
         }
 
