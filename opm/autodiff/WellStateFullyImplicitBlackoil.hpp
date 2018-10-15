@@ -281,9 +281,12 @@ namespace Opm
                 // we need to create a trival segment related values to avoid there will be some
                 // multi-segment wells added later.
                 nseg_ = nw;
+                seg_number_.clear();
                 top_segment_index_.reserve(nw);
+                seg_number_.reserve(nw);
                 for (int w = 0; w < nw; ++w) {
                     top_segment_index_.push_back(w);
+                    seg_number_.push_back(1); // Top segment is segment #1
                 }
                 segpress_ = bhp();
                 segrates_ = wellRates();
@@ -581,10 +584,11 @@ namespace Opm
                 }
                 assert(local_comp_index == this->wells_->well_connpos[ w + 1 ] - this->wells_->well_connpos[ w ]);
 
-                const auto nSeg = this->numSegments(w);
-                for (auto segID = 0*nSeg; segID < nSeg; ++segID) {
-                    well.segments[segID + 1] =
-                        this->reportSegmentResults(pu, w, segID);
+                const auto nseg = this->numSegments(w);
+                for (auto seg_ix = 0*nseg; seg_ix < nseg; ++seg_ix) {
+                    const auto seg_no = this->segmentNumber(w, seg_ix);
+                    well.segments[seg_no] =
+                        this->reportSegmentResults(pu, w, seg_ix, seg_no);
                 }
             }
 
@@ -609,6 +613,7 @@ namespace Opm
             segpress_.reserve(nw);
             segrates_.clear();
             segrates_.reserve(nw * numPhases());
+            seg_number_.clear();
 
             nseg_ = 0;
             // in the init function, the well rates and perforation rates have been initialized or copied from prevState
@@ -632,6 +637,7 @@ namespace Opm
                 top_segment_index_.push_back(nseg_);
                 if ( !well_ecl->isMultiSegment(time_step) ) { // not multi-segment well
                     nseg_ += 1;
+                    seg_number_.push_back(1); // Assign single segment (top) as number 1.
                     segpress_.push_back(bhp()[w]);
                     const int np = numPhases();
                     for (int p = 0; p < np; ++p) {
@@ -645,6 +651,9 @@ namespace Opm
                     const int well_nseg = segment_set.size();
                     const int nperf = completion_set.size();
                     nseg_ += well_nseg;
+                    for (auto segID = 0*well_nseg; segID < well_nseg; ++segID) {
+                        this->seg_number_.push_back(segment_set[segID].segmentNumber());
+                    }
                     // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
                     // that is why I think we should use a well model to initialize the WellState here
                     std::vector<std::vector<int>> segment_perforations(well_nseg);
@@ -942,48 +951,65 @@ namespace Opm
         // Well potentials
         std::vector<double> well_potentials_;
 
+        /// Map segment index to segment number, mostly for MS wells.
+        ///
+        /// Segment number (one-based) of j-th segment in i-th well is
+        /// \code
+        ///    const auto top    = topSegmentIndex(i);
+        ///    const auto seg_No = seg_number_[top + j];
+        /// \end
+        std::vector<int> seg_number_;
+
         ::Opm::data::Segment
         reportSegmentResults(const PhaseUsage& pu,
-                             const int         wellID,
-                             const int         segmentID) const
+                             const int         well_id,
+                             const int         seg_ix,
+                             const int         seg_no) const
         {
-            auto segRes = ::Opm::data::Segment{};
+            auto seg_res = ::Opm::data::Segment{};
 
-            const auto segDoF =
-                this->topSegmentIndex(wellID) + segmentID;
+            const auto seg_dof =
+                this->topSegmentIndex(well_id) + seg_ix;
 
             const auto* rate =
-                &this->segRates()[segDoF * this->numPhases()];
+                &this->segRates()[seg_dof * this->numPhases()];
 
-            segRes.pressure = this->segPress()[segDoF];
+            seg_res.pressure = this->segPress()[seg_dof];
 
             if (pu.phase_used[Water]) {
-                segRes.rates.set(data::Rates::opt::wat,
-                                 rate[pu.phase_pos[Water]]);
+                seg_res.rates.set(data::Rates::opt::wat,
+                                  rate[pu.phase_pos[Water]]);
             }
 
             if (pu.phase_used[Oil]) {
-                segRes.rates.set(data::Rates::opt::oil,
-                                 rate[pu.phase_pos[Oil]]);
+                seg_res.rates.set(data::Rates::opt::oil,
+                                  rate[pu.phase_pos[Oil]]);
             }
 
             if (pu.phase_used[Gas]) {
-                segRes.rates.set(data::Rates::opt::gas,
-                                 rate[pu.phase_pos[Gas]]);
+                seg_res.rates.set(data::Rates::opt::gas,
+                                  rate[pu.phase_pos[Gas]]);
             }
 
-            segRes.segNumber = segmentID + 1;
+            seg_res.segNumber = seg_no;
 
-            return segRes;
+            return seg_res;
         }
 
-        int numSegments(const int wellID) const
+        int numSegments(const int well_id) const
         {
-            const auto topSeg = this->topSegmentIndex(wellID);
+            const auto topseg = this->topSegmentIndex(well_id);
 
-            return (wellID + 1 == this->numWells()) // Last well?
-                ? (this->numSegment() - topSeg)
-                : (this->topSegmentIndex(wellID + 1) - topSeg);
+            return (well_id + 1 == this->numWells()) // Last well?
+                ? (this->numSegment() - topseg)
+                : (this->topSegmentIndex(well_id + 1) - topseg);
+        }
+
+        int segmentNumber(const int well_id, const int seg_id) const
+        {
+            const auto top_offset = this->topSegmentIndex(well_id);
+
+            return this->seg_number_[top_offset + seg_id];
         }
     };
 

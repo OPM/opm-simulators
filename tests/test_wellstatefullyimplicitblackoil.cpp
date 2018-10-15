@@ -98,16 +98,21 @@ namespace {
             const auto  topSegIx = wstate.topSegmentIndex(wellID);
             const auto  pressTop = 100.0 * wellID;
 
-            segPress[topSegIx] = pressTop;
+            auto* press = &segPress[topSegIx];
+
+            press[0] = pressTop;
 
             if (! well->isMultiSegment(tstep)) {
                 continue;
             }
 
-            const auto nSeg = well->getWellSegments(tstep).size();
+            const auto& segSet = well->getWellSegments(tstep);
+            const auto  nSeg   = segSet.size();
 
             for (auto segID = 0*nSeg + 1; segID < nSeg; ++segID) {
-                segPress[topSegIx + segID] = pressTop + 1.0*segID;
+                // One-based numbering scheme for segments.
+                const auto segNo = segSet[segID].segmentNumber();
+                press[segNo - 1] = pressTop + 1.0*(segNo - 1);
             }
         }
     }
@@ -136,7 +141,7 @@ namespace {
         for (auto wellID = 0*nWell; wellID < nWell; ++wellID) {
             const auto* well     = wells[wellID];
             const auto  topSegIx = wstate.topSegmentIndex(wellID);
-            const auto  rateTop = 1000.0 * wellID;
+            const auto  rateTop  = 1000.0 * wellID;
 
             if (wat) { segRates[np*topSegIx + iw] = rateTop; }
             if (oil) { segRates[np*topSegIx + io] = rateTop; }
@@ -146,14 +151,18 @@ namespace {
                 continue;
             }
 
-            const auto nSeg = well->getWellSegments(tstep).size();
+            const auto& segSet = well->getWellSegments(tstep);
+            const auto  nSeg   = segSet.size();
 
             for (auto segID = 0*nSeg + 1; segID < nSeg; ++segID) {
-                auto* rates = &segRates[(topSegIx + segID) * np];
+                // One-based numbering scheme for segments.
+                const auto segNo = segSet[segID].segmentNumber();
 
-                if (wat) { rates[iw] = rateTop + 100.0*segID; }
-                if (oil) { rates[io] = rateTop + 200.0*segID; }
-                if (gas) { rates[ig] = rateTop + 400.0*segID; }
+                auto* rates = &segRates[(topSegIx + segNo - 1) * np];
+
+                if (wat) { rates[iw] = rateTop + 100.0*(segNo - 1); }
+                if (oil) { rates[io] = rateTop + 200.0*(segNo - 1); }
+                if (gas) { rates[ig] = rateTop + 400.0*(segNo - 1); }
             }
         }
     }
@@ -260,9 +269,14 @@ BOOST_AUTO_TEST_CASE(Rates)
         const auto& xseg = xw.segments.at(1);
 
         BOOST_CHECK_EQUAL(xseg.segNumber, 1);
-        BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::wat), rateTop, 1.0e-10);
-        BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::oil), rateTop, 1.0e-10);
-        BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::gas), rateTop, 1.0e-10);
+        BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::wat),
+                          rateTop, 1.0e-10);
+
+        BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::oil),
+                          rateTop, 1.0e-10);
+
+        BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::gas),
+                          rateTop, 1.0e-10);
     }
 
     {
@@ -273,19 +287,19 @@ BOOST_AUTO_TEST_CASE(Rates)
 
         const auto rateTop = prod01_first ? 0.0 : 1000.0;
 
-        for (auto segID = 0; segID < expect_nSeg; ++segID) {
-            const auto& xseg = xw.segments.at(segID + 1);
+        for (auto segNum = 1; segNum <= expect_nSeg; ++segNum) {
+            const auto& xseg = xw.segments.at(segNum);
 
-            BOOST_CHECK_EQUAL(xseg.segNumber, segID + 1);
+            BOOST_CHECK_EQUAL(xseg.segNumber, segNum);
 
             BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::wat),
-                              rateTop + 100.0*segID, 1.0e-10);
+                              rateTop + 100.0*(segNum - 1), 1.0e-10);
 
             BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::oil),
-                              rateTop + 200.0*segID, 1.0e-10);
+                              rateTop + 200.0*(segNum - 1), 1.0e-10);
 
             BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::gas),
-                              rateTop + 400.0*segID, 1.0e-10);
+                              rateTop + 400.0*(segNum - 1), 1.0e-10);
         }
     }
 }
