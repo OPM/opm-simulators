@@ -84,6 +84,7 @@ namespace {
         return state;
     }
 
+
     void setSegPress(const std::vector<const Opm::Well*>& wells,
                      const std::size_t                    tstep,
                      Opm::WellStateFullyImplicitBlackoil& wstate)
@@ -110,6 +111,7 @@ namespace {
             }
         }
     }
+
 
     void setSegRates(const std::vector<const Opm::Well*>& wells,
                      const std::size_t                    tstep,
@@ -159,6 +161,8 @@ namespace {
 
 BOOST_AUTO_TEST_SUITE(Segment)
 
+// ---------------------------------------------------------------------
+
 BOOST_AUTO_TEST_CASE(Linearisation)
 {
     const Setup setup{ "msw.data" };
@@ -177,6 +181,8 @@ BOOST_AUTO_TEST_CASE(Linearisation)
     BOOST_CHECK_EQUAL(wstate.topSegmentIndex(1),
                       prod01_first ? 6 : 1);
 }
+
+// ---------------------------------------------------------------------
 
 BOOST_AUTO_TEST_CASE(Pressure)
 {
@@ -219,6 +225,8 @@ BOOST_AUTO_TEST_CASE(Pressure)
         }
     }
 }
+
+// ---------------------------------------------------------------------
 
 BOOST_AUTO_TEST_CASE(Rates)
 {
