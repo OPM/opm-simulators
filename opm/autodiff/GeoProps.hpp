@@ -320,7 +320,7 @@ namespace Opm
                          aboveCellCartIdx >= 0;
                          aboveCellCartIdx -= nx*ny)
                     {
-                        if (porvData[aboveCellCartIdx] >= eclGrid.getMinpvValue()) {
+                        if (porvData[aboveCellCartIdx] >= eclGrid.getMinpvVector()[aboveCellCartIdx]) {
                             // stop if we encounter a cell which has a pore volume which is
                             // at least as large as the minimum one
                             break;
@@ -434,7 +434,7 @@ namespace Opm
             int cartesianCellIdxAbove = cartesianCellIdx - nx*ny;
             while ( cartesianCellIdxAbove >= 0 &&
                  actnum[cartesianCellIdxAbove] > 0 &&
-                 porv[cartesianCellIdxAbove] < eclgrid.getMinpvValue() ) {
+                 porv[cartesianCellIdxAbove] < eclgrid.getMinpvVector()[cartesianCellIdxAbove] ) {
 
                 // Volume weighted arithmetic average of NTG
                 const double cellAboveVolume = eclgrid.getCellVolume(cartesianCellIdxAbove);
@@ -454,34 +454,9 @@ namespace Opm
                                                  const Opm::EclipseState& eclState,
                                                  const Vector& htrans,
                                                        int numCells)
-       {
-        // NOTE that this function is currently never invoked due to
-        // opmfil being hardcoded to be true.
-        auto  eclgrid = eclState.getInputGrid();
-        auto& eclProps = eclState.get3DProperties();
-        const double minpv = eclgrid.getMinpvValue();
-        const double thickness = eclgrid.getPinchThresholdThickness();
-        auto transMode = eclgrid.getPinchOption();
-        auto multzMode = eclgrid.getMultzOption();
-        PinchProcessor<GridType> pinch(minpv, thickness, transMode, multzMode);
-
-        std::vector<double> htrans_copy(htrans.size());
-        std::copy_n(htrans.data(), htrans.size(), htrans_copy.begin());
-
-        std::vector<int> actnum;
-        eclgrid.exportACTNUM(actnum);
-
-        const auto& transMult = eclState.getTransMult();
-        std::vector<double> multz(numCells, 0.0);
-        const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
-
-        for (int i = 0; i < numCells; ++i) {
-            multz[i] = transMult.getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
-        }
-
-        // Note the pore volume from eclState is used and not the pvol_ calculated above
-        const auto& porv = eclProps.getDoubleGridProperty("PORV").getData();
-        pinch.process(grid, htrans_copy, actnum, multz, porv, nnc_);
+    {
+    // this is not used
+           OPM_THROW(std::runtime_error, "This method is not implemented");
     }
 
 

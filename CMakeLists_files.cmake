@@ -161,7 +161,6 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_wellcontrols.cpp
   tests/test_wellsgroup.cpp
   tests/test_wellcollection.cpp
-  tests/test_pinchprocessor.cpp
   tests/test_anisotropiceikonal.cpp
   tests/test_stoppedwells.cpp
   tests/test_relpermdiagnostics.cpp
@@ -197,7 +196,6 @@ list (APPEND TEST_DATA_FILES
   tests/satfuncEPS_D.DATA
   tests/testBlackoilState1.DATA
   tests/testBlackoilState2.DATA
-  tests/testPinch1.DATA
   tests/wells_manager_data.data
   tests/wells_manager_data_expanded.data
   tests/wells_manager_data_wellSTOP.data
