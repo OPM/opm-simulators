@@ -604,7 +604,7 @@ private:
             int cartesianCellIdxAbove = cartesianCellIdx - nxny;
             while ( cartesianCellIdxAbove >= 0 &&
                  actnum[cartesianCellIdxAbove] > 0 &&
-                 porv[cartesianCellIdxAbove] < eclGrid.getMinpvValue() ) {
+                 porv[cartesianCellIdxAbove] < eclGrid.getMinpvVector()[cartesianCellIdxAbove] ) {
 
                 // Volume weighted arithmetic average of NTG
                 const double cellAboveVolume = eclGrid.getCellVolume(cartesianCellIdxAbove);

@@ -1657,12 +1657,12 @@ private:
             // conserved, cells are not disabled due to a too small pore volume because
             // such cells still store and conduct energy.
             if (!enableEnergy && eclGrid.getMinpvMode() == Opm::MinpvMode::ModeEnum::OpmFIL) {
-                Scalar minPvValue = eclGrid.getMinpvValue();
+                const std::vector<Scalar>& minPvVector = eclGrid.getMinpvVector();
                 for (int aboveElemCartIdx = static_cast<int>(cartElemIdx) - nx*ny;
                      aboveElemCartIdx >= 0;
                      aboveElemCartIdx -= nx*ny)
                 {
-                    if (porvData[aboveElemCartIdx] >= minPvValue)
+                    if (porvData[aboveElemCartIdx] >= minPvVector[aboveElemCartIdx])
                         // the cartesian element above exhibits a pore volume which larger or
                         // equal to the minimum one
                         break;
