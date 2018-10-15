@@ -538,30 +538,56 @@ public:
         }
 
         // deal with DRSDT
-        maxDRsDt_ = 0.0;
-        maxDRs_ = -1.0;
-        if (!vapparsActive_ && deck.hasKeyword("DRSDT")) {
-            drsdtActive_ = !vapparsActive_;
-            const auto& drsdtKeyword = deck.getKeyword("DRSDT");
-            maxDRsDt_ = drsdtKeyword.getRecord(0).getItem("DRSDT_MAX").getSIDouble(0);
-            size_t numDof = this->model().numGridDof();
-            lastRs_.resize(numDof, 0.0);
+        const auto& eclState = simulator.vanguard().eclState();
+        unsigned ntpvt = eclState.runspec().tabdims().getNumPVTTables();
+        maxDRsDt_.resize(ntpvt, 0.0);
+        maxDRs_.resize(ntpvt, -1.0);
+        dRsDtOnlyFreeGas_.resize(ntpvt, false);
+        if (!vapparsActive_) {
+            if (deck.hasKeyword("DRSDT")) {
+                drsdtActive_ = !vapparsActive_;
+                const auto& drsdtKeyword = deck.getKeyword("DRSDT");
+                std::fill(maxDRsDt_.begin(), maxDRsDt_.end(), drsdtKeyword.getRecord(0).getItem("DRSDT_MAX").getSIDouble(0));
+                size_t numDof = this->model().numGridDof();
+                lastRs_.resize(numDof, 0.0);
+                std::string drsdtFlag =
+                        drsdtKeyword.getRecord(0).getItem("Option").getTrimmedString(0);
+                std::transform(drsdtFlag.begin(), drsdtFlag.end(), drsdtFlag.begin(), ::toupper);
 
-            std::string drsdtFlag =
-                drsdtKeyword.getRecord(0).getItem("Option").getTrimmedString(0);
-            std::transform(drsdtFlag.begin(), drsdtFlag.end(), drsdtFlag.begin(), ::toupper);
-
-            dRsDtOnlyFreeGas_ = (drsdtFlag == "FREE");
+                std::fill(dRsDtOnlyFreeGas_.begin(), dRsDtOnlyFreeGas_.end(), (drsdtFlag == "FREE"));
+            } else if (deck.hasKeyword("DRSDTR")) {
+                drsdtActive_ = !vapparsActive_;
+                const auto& drsdtrKeyword = deck.getKeyword("DRSDTR");
+                size_t numDof = this->model().numGridDof();
+                lastRs_.resize(numDof, 0.0);
+                for (size_t recordIdx = 0; recordIdx < drsdtrKeyword.size(); ++recordIdx) {
+                    const Opm::DeckRecord& record = drsdtrKeyword.getRecord(recordIdx);
+                    maxDRsDt_[recordIdx] = record.getItem("DRSDT_MAX").getSIDouble(0);
+                    std::string drsdtFlag = record.getItem("Option").getTrimmedString(0);
+                    std::transform(drsdtFlag.begin(), drsdtFlag.end(), drsdtFlag.begin(), ::toupper);
+                    dRsDtOnlyFreeGas_[recordIdx] = (drsdtFlag == "FREE");
+                }
+            }
         }
 
         // deal with DRVDT
-        maxDRvDt_ = 0.0;
-        maxDRv_ = -1.0;
-        if (!vapparsActive_ && deck.hasKeyword("DRVDT")) {
-            const auto& drvdtKeyword = deck.getKeyword("DVSDT");
-            maxDRvDt_ = drvdtKeyword.getRecord(0).getItem("DRVDT_MAX").getSIDouble(0);
-            size_t numDof = this->model().numGridDof();
-            lastRv_.resize(numDof, 0.0);
+        maxDRvDt_.resize(ntpvt, 0.0);
+        maxDRv_.resize(ntpvt, -1.0);
+        if (!vapparsActive_) {
+            if (deck.hasKeyword("DRVDT")) {
+                const auto& drvdtKeyword = deck.getKeyword("DRVDT");
+                std::fill(maxDRvDt_.begin(), maxDRvDt_.end(), drvdtKeyword.getRecord(0).getItem("DRVDT_MAX").getSIDouble(0));
+                size_t numDof = this->model().numGridDof();
+                lastRv_.resize(numDof, 0.0);
+            } else if (deck.hasKeyword("DRVDTR")) {
+                const auto& drvdtrKeyword = deck.getKeyword("DRVDTR");
+                size_t numDof = this->model().numGridDof();
+                lastRv_.resize(numDof, 0.0);
+                for (size_t recordIdx = 0; recordIdx < drvdtrKeyword.size(); ++recordIdx) {
+                    const Opm::DeckRecord& record = drvdtrKeyword.getRecord(recordIdx);
+                    maxDRvDt_[recordIdx] = record.getItem("DRVDT_MAX").getSIDouble(0);
+                }
+            }
         }
 
         initFluidSystem_();
@@ -571,7 +597,6 @@ public:
         readThermalParameters_();
         transmissibilities_.finishInit();
 
-        const auto& eclState = simulator.vanguard().eclState();
         const auto& initconfig = eclState.getInitConfig();
         const auto& timeMap = simulator.vanguard().schedule().getTimeMap();
         if(initconfig.restartRequested()) {
@@ -737,11 +762,13 @@ public:
     {
         if (drsdtActive_)
             // DRSDT is enabled
-            maxDRs_ = maxDRsDt_*this->simulator().timeStepSize();
+            for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx )
+                maxDRs_[pvtRegionIdx] = maxDRsDt_[pvtRegionIdx]*this->simulator().timeStepSize();
 
         if (drvdtActive_)
             // DRVDT is enabled
-            maxDRv_ = maxDRvDt_*this->simulator().timeStepSize();
+            for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx )
+                maxDRv_[pvtRegionIdx] = maxDRvDt_[pvtRegionIdx]*this->simulator().timeStepSize();
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells))
             wellModel_.beginTimeStep();
@@ -1354,10 +1381,11 @@ public:
      */
     Scalar maxGasDissolutionFactor(unsigned globalDofIdx) const
     {
-        if (!drsdtActive_ || maxDRs_ < 0.0)
+        int pvtRegionIdx = pvtRegionIndex(globalDofIdx);
+        if (!drsdtActive_ || maxDRs_[pvtRegionIdx] < 0.0)
             return std::numeric_limits<Scalar>::max()/2;
 
-        return lastRs_[globalDofIdx] + maxDRs_;
+        return lastRs_[globalDofIdx] + maxDRs_[pvtRegionIdx];
     }
 
     /*!
@@ -1366,10 +1394,11 @@ public:
      */
     Scalar maxOilVaporizationFactor(unsigned globalDofIdx) const
     {
-        if (!drvdtActive_ || maxDRv_ < 0.0)
+        int pvtRegionIdx = pvtRegionIndex(globalDofIdx);
+        if (!drvdtActive_ || maxDRv_[pvtRegionIdx] < 0.0)
             return std::numeric_limits<Scalar>::max()/2;
 
-        return lastRv_[globalDofIdx] + maxDRv_;
+        return lastRv_[globalDofIdx] + maxDRv_[pvtRegionIdx];
     }
 
     /*!
@@ -1483,7 +1512,8 @@ private:
 
                 typedef typename std::decay<decltype(fs) >::type FluidState;
 
-                if (!dRsDtOnlyFreeGas_ || fs.saturation(gasPhaseIdx) > freeGasMinSaturation_)
+                int pvtRegionIdx = pvtRegionIndex(compressedDofIdx);
+                if (!dRsDtOnlyFreeGas_[pvtRegionIdx] || fs.saturation(gasPhaseIdx) > freeGasMinSaturation_)
                     lastRs_[compressedDofIdx] =
                         Opm::BlackOil::template getRs_<FluidSystem,
                                                        FluidState,
@@ -2123,14 +2153,14 @@ private:
     std::vector<Scalar> solventSaturation_;
 
     bool drsdtActive_; // if no, VAPPARS *might* be active
-    bool dRsDtOnlyFreeGas_; // apply the DRSDT rate limit only to cells that exhibit free gas
+    std::vector<bool> dRsDtOnlyFreeGas_; // apply the DRSDT rate limit only to cells that exhibit free gas
     std::vector<Scalar> lastRs_;
-    Scalar maxDRsDt_;
-    Scalar maxDRs_;
+    std::vector<Scalar> maxDRsDt_;
+    std::vector<Scalar> maxDRs_;
     bool drvdtActive_; // if no, VAPPARS *might* be active
     std::vector<Scalar> lastRv_;
-    Scalar maxDRvDt_;
-    Scalar maxDRv_;
+    std::vector<Scalar> maxDRvDt_;
+    std::vector<Scalar> maxDRv_;
     constexpr static Scalar freeGasMinSaturation_ = 1e-7;
 
     bool vapparsActive_; // if no, DRSDT and/or DRVDT *might* be active
