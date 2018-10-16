@@ -354,6 +354,18 @@ namespace Opm
         // handle the non reasonable fractions due to numerical overshoot
         void processFractions() const;
 
+        // relaxation factor considering only one fraction value
+        static double relaxationFactorFraction(const double old_value,
+                                               const double dx);
+
+        // calculate a relaxation factor to avoid overshoot
+        // which might result in negative rates
+        static double determineRelaxationFactorProducer(const std::vector<double>& primary_variables,
+                                                        const BVectorWell& dwells);
+
+        // calcualte a relaxation factor to avoid overshoot for injectors
+        static double determineRelaxationFactorInjector(const std::vector<double>& primary_variables,
+                                                        const BVectorWell& dwells);
     };
 
 }
