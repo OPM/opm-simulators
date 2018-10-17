@@ -240,7 +240,7 @@ public:
                 const auto& grid = internalEclState_->getInputGrid();
                 const Opm::TableManager table ( *internalDeck_ );
                 const Opm::Eclipse3DProperties eclipseProperties (*internalDeck_  , table, grid);
-                internalSchedule_.reset(new Opm::Schedule(*internalDeck_, grid, eclipseProperties, Opm::Phases(true, true, true), parseContext ));
+                internalSchedule_.reset(new Opm::Schedule(*internalDeck_, grid, eclipseProperties, internalEclState_->runspec(), parseContext ));
                 internalSummaryConfig_.reset(new Opm::SummaryConfig(*internalDeck_, *internalSchedule_, table,  parseContext));
             }
 
