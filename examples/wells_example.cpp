@@ -38,7 +38,7 @@ try
     Opm::Parser parser;
     Opm::Deck deck = parser.parseFile(file_name , parseContext);
     Opm::EclipseState eclipseState(deck , parseContext);
-    Opm::Schedule schedule(deck, eclipseState.getInputGrid(), eclipseState.get3DProperties(), eclipseState.runspec().phases(), parseContext);
+    Opm::Schedule schedule(deck, eclipseState.getInputGrid(), eclipseState.get3DProperties(), eclipseState.runspec(), parseContext);
     std::cout << "Done!" << std::endl;
 
     // Setup grid

@@ -47,7 +47,8 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
-    const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
+    const Opm::Runspec runspec (deck);
+    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
 
 
     double target_surfacerate_inj;

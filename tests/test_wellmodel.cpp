@@ -79,7 +79,8 @@ struct SetupTest {
         {
           const Opm::TableManager table ( deck );
           const Opm::Eclipse3DProperties eclipseProperties ( deck , table, ecl_state->getInputGrid());
-          schedule.reset( new Opm::Schedule(deck, ecl_state->getInputGrid(), eclipseProperties, Opm::Phases(true, true, true), parse_context ));
+          const Opm::Runspec runspec (deck);
+          schedule.reset( new Opm::Schedule(deck, ecl_state->getInputGrid(), eclipseProperties, runspec, parse_context ));
         }
 
         // Create grid.
