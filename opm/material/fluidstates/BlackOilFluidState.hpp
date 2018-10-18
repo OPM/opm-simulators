@@ -37,6 +37,7 @@
 #include <opm/material/common/ConditionalStorage.hpp>
 
 namespace Opm {
+
 OPM_GENERATE_HAS_MEMBER(pvtRegionIndex, ) // Creates 'HasMember_pvtRegionIndex<T>'.
 
 template <class FluidState>
@@ -116,14 +117,14 @@ public:
 #ifndef NDEBUG
         Opm::Valgrind::CheckDefined(pvtRegionIdx_);
 
-        for (unsigned StoragePhaseIdx = 0; StoragePhaseIdx < numStoragePhases; ++ StoragePhaseIdx) {
-            Opm::Valgrind::CheckDefined(saturation_[StoragePhaseIdx]);
-            Opm::Valgrind::CheckDefined(pressure_[StoragePhaseIdx]);
-            Opm::Valgrind::CheckDefined(density_[StoragePhaseIdx]);
-            Opm::Valgrind::CheckDefined(invB_[StoragePhaseIdx]);
+        for (unsigned storagePhaseIdx = 0; storagePhaseIdx < numStoragePhases; ++ storagePhaseIdx) {
+            Opm::Valgrind::CheckDefined(saturation_[storagePhaseIdx]);
+            Opm::Valgrind::CheckDefined(pressure_[storagePhaseIdx]);
+            Opm::Valgrind::CheckDefined(density_[storagePhaseIdx]);
+            Opm::Valgrind::CheckDefined(invB_[storagePhaseIdx]);
 
             if (enableEnergy)
-                Opm::Valgrind::CheckDefined((*enthalpy_)[StoragePhaseIdx]);
+                Opm::Valgrind::CheckDefined((*enthalpy_)[storagePhaseIdx]);
         }
 
         if (enableDissolution) {
@@ -155,7 +156,7 @@ public:
         }
 
         for (unsigned storagePhaseIdx = 0; storagePhaseIdx < numStoragePhases; ++storagePhaseIdx) {
-            unsigned phaseIdx = storageToCanonicalPhaseIdx(storagePhaseIdx);
+            unsigned phaseIdx = storageToCanonicalPhaseIndex_(storagePhaseIdx);
             setSaturation(storagePhaseIdx, fs.saturation(phaseIdx));
             setPressure(storagePhaseIdx, fs.pressure(phaseIdx));
             setDensity(storagePhaseIdx, fs.density(phaseIdx));
@@ -180,13 +181,13 @@ public:
      * \brief Set the pressure of a fluid phase [-].
      */
     void setPressure(unsigned phaseIdx, const Scalar& p)
-    { pressure_[canonicalToStoragePhaseIdx(phaseIdx)] = p; }
+    { pressure_[canonicalToStoragePhaseIndex_(phaseIdx)] = p; }
 
     /*!
      * \brief Set the saturation of a fluid phase [-].
      */
     void setSaturation(unsigned phaseIdx, const Scalar& S)
-    { saturation_[canonicalToStoragePhaseIdx(phaseIdx)] = S; }
+    { saturation_[canonicalToStoragePhaseIndex_(phaseIdx)] = S; }
 
     /*!
      * \brief Set the temperature [K]
@@ -211,20 +212,20 @@ public:
     {
         assert(enableTemperature || enableEnergy);
 
-        (*enthalpy_)[canonicalToStoragePhaseIdx(phaseIdx)] = value;
+        (*enthalpy_)[canonicalToStoragePhaseIndex_(phaseIdx)] = value;
     }
 
     /*!
      * \ brief Set the inverse formation volume factor of a fluid phase
      */
     void setInvB(unsigned phaseIdx, const Scalar& b)
-    { invB_[canonicalToStoragePhaseIdx(phaseIdx)] = b; }
+    { invB_[canonicalToStoragePhaseIndex_(phaseIdx)] = b; }
 
     /*!
      * \ brief Set the density of a fluid phase
      */
     void setDensity(unsigned phaseIdx, const Scalar& rho)
-    { density_[canonicalToStoragePhaseIdx(phaseIdx)] = rho; }
+    { density_[canonicalToStoragePhaseIndex_(phaseIdx)] = rho; }
 
     /*!
      * \brief Set the gas dissolution factor [m^3/m^3] of the oil phase.
@@ -246,13 +247,13 @@ public:
      * \brief Return the pressure of a fluid phase [Pa]
      */
     const Scalar& pressure(unsigned phaseIdx) const
-    { return pressure_[canonicalToStoragePhaseIdx(phaseIdx)]; }
+    { return pressure_[canonicalToStoragePhaseIndex_(phaseIdx)]; }
 
     /*!
      * \brief Return the saturation of a fluid phase [-]
      */
     const Scalar& saturation(unsigned phaseIdx) const
-    { return saturation_[canonicalToStoragePhaseIdx(phaseIdx)]; }
+    { return saturation_[canonicalToStoragePhaseIndex_(phaseIdx)]; }
 
     /*!
      * \brief Return the temperature [K]
@@ -274,7 +275,7 @@ public:
      * pressure and temperature at reservoir conditions compared to surface conditions.
      */
     const Scalar& invB(unsigned phaseIdx) const
-    { return invB_[canonicalToStoragePhaseIdx(phaseIdx)]; }
+    { return invB_[canonicalToStoragePhaseIndex_(phaseIdx)]; }
 
     /*!
      * \brief Return the gas dissulition factor of oil [m^3/m^3].
@@ -302,8 +303,7 @@ public:
      */
     const Scalar& Rv() const
     {
-        if (!enableDissolution)
-        {
+        if (!enableDissolution) {
             static Scalar null = 0.0;
             return null;
         }
@@ -326,7 +326,7 @@ public:
      * \brief Return the density [kg/m^3] of a given fluid phase.
       */
     Scalar density(unsigned phaseIdx) const
-    { return density_[canonicalToStoragePhaseIdx(phaseIdx)]; }
+    { return density_[canonicalToStoragePhaseIndex_(phaseIdx)]; }
 
     /*!
      * \brief Return the specific enthalpy [J/kg] of a given fluid phase.
@@ -335,7 +335,7 @@ public:
      * exception!
      */
     const Scalar& enthalpy(unsigned phaseIdx) const
-    { return (*enthalpy_)[canonicalToStoragePhaseIdx(phaseIdx)]; }
+    { return (*enthalpy_)[canonicalToStoragePhaseIndex_(phaseIdx)]; }
 
     /*!
      * \brief Return the specific internal energy [J/kg] of a given fluid phase.
@@ -344,7 +344,7 @@ public:
      * exception!
      */
     Scalar internalEnergy(unsigned phaseIdx OPM_UNUSED) const
-    { return (*enthalpy_)[canonicalToStoragePhaseIdx(phaseIdx)] - pressure(phaseIdx)/density(phaseIdx); }
+    { return (*enthalpy_)[canonicalToStoragePhaseIndex_(phaseIdx)] - pressure(phaseIdx)/density(phaseIdx); }
 
     //////
     // slow methods
@@ -493,19 +493,20 @@ public:
     }
 
 private:
-
-    static unsigned storageToCanonicalPhaseIdx(unsigned phaseIdx) {
+    static unsigned storageToCanonicalPhaseIndex_(unsigned storagePhaseIdx)
+    {
         if (numStoragePhases == 3)
-            return phaseIdx;
+            return storagePhaseIdx;
 
-        return FluidSystem::activeToCanonicalPhaseIdx(phaseIdx);
+        return FluidSystem::activeToCanonicalPhaseIdx(storagePhaseIdx);
     }
 
-    static unsigned canonicalToStoragePhaseIdx(unsigned phaseIdx) {
+    static unsigned canonicalToStoragePhaseIndex_(unsigned canonicalPhaseIdx)
+    {
         if (numStoragePhases == 3)
-            return phaseIdx;
+            return canonicalPhaseIdx;
 
-        return FluidSystem::canonicalToActivePhaseIdx(phaseIdx);
+        return FluidSystem::canonicalToActivePhaseIdx(canonicalPhaseIdx);
     }
 
     Opm::ConditionalStorage<enableTemperature || enableEnergy, Scalar> temperature_;
