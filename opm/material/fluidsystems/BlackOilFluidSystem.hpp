@@ -343,6 +343,15 @@ public:
             molarMass_[regionIdx][oilCompIdx] = 175e-3; // kg/mol
         }
 
+
+        int activePhaseIdx = 0;
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if(phaseIsActive(phaseIdx)){
+                canonicalToActivePhaseIdx_[phaseIdx] = activePhaseIdx;
+                activeToCanonicalPhaseIdx_[activePhaseIdx] = phaseIdx;
+                activePhaseIdx++;
+            }
+        }
         isInitialized_ = true;
     }
 
@@ -1241,6 +1250,18 @@ public:
     static void setReservoirTemperature(Scalar value)
     { reservoirTemperature_ = value; }
 
+    static short activeToCanonicalPhaseIdx(unsigned activePhaseIdx) {
+        assert(activePhaseIdx<numActivePhases());
+        return activeToCanonicalPhaseIdx_[activePhaseIdx];
+    }
+
+    static short canonicalToActivePhaseIdx(unsigned phaseIdx) {
+        assert(phaseIdx<numPhases);
+        assert(phaseIsActive(phaseIdx));
+        return canonicalToActivePhaseIdx_[phaseIdx];
+    }
+
+
 private:
     static void resizeArrays_(size_t numRegions)
     {
@@ -1262,6 +1283,9 @@ private:
     // the BlackOil fluid system in the attribute declaration below...
     static std::vector<std::array<Scalar, /*numPhases=*/3> > referenceDensity_;
     static std::vector<std::array<Scalar, /*numComponents=*/3> > molarMass_;
+
+    static short activeToCanonicalPhaseIdx_[numPhases];
+    static short canonicalToActivePhaseIdx_[numPhases];
 
     static bool isInitialized_;
 };
@@ -1288,6 +1312,12 @@ unsigned char BlackOilFluidSystem<Scalar>::numActivePhases_;
 
 template <class Scalar>
 bool BlackOilFluidSystem<Scalar>::phaseIsActive_[numPhases];
+
+template <class Scalar>
+short BlackOilFluidSystem<Scalar>::activeToCanonicalPhaseIdx_[numPhases];
+
+template <class Scalar>
+short BlackOilFluidSystem<Scalar>::canonicalToActivePhaseIdx_[numPhases];
 
 template <class Scalar>
 Scalar

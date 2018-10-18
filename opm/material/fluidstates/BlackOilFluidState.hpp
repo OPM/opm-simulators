@@ -85,7 +85,9 @@ LhsEval getInvB_(typename std::enable_if<!HasMember_invB<FluidState>::value,
 template <class ScalarT,
           class FluidSystem,
           bool enableTemperature = false,
-          bool enableEnergy = false>
+          bool enableEnergy = false,
+          bool enableDissolution = true,
+          unsigned numStoragePhases = FluidSystem::numPhases>
 class BlackOilFluidState
 {
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -114,18 +116,20 @@ public:
 #ifndef NDEBUG
         Opm::Valgrind::CheckDefined(pvtRegionIdx_);
 
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            Opm::Valgrind::CheckDefined(saturation_[phaseIdx]);
-            Opm::Valgrind::CheckDefined(pressure_[phaseIdx]);
-            Opm::Valgrind::CheckDefined(density_[phaseIdx]);
-            Opm::Valgrind::CheckDefined(invB_[phaseIdx]);
+        for (unsigned StoragePhaseIdx = 0; StoragePhaseIdx < numStoragePhases; ++ StoragePhaseIdx) {
+            Opm::Valgrind::CheckDefined(saturation_[StoragePhaseIdx]);
+            Opm::Valgrind::CheckDefined(pressure_[StoragePhaseIdx]);
+            Opm::Valgrind::CheckDefined(density_[StoragePhaseIdx]);
+            Opm::Valgrind::CheckDefined(invB_[StoragePhaseIdx]);
 
             if (enableEnergy)
-                Opm::Valgrind::CheckDefined((*enthalpy_)[phaseIdx]);
+                Opm::Valgrind::CheckDefined((*enthalpy_)[StoragePhaseIdx]);
         }
 
-        Opm::Valgrind::CheckDefined(Rs_);
-        Opm::Valgrind::CheckDefined(Rv_);
+        if (enableDissolution) {
+            Opm::Valgrind::CheckDefined(*Rs_);
+            Opm::Valgrind::CheckDefined(*Rv_);
+        }
 
         if (enableTemperature || enableEnergy)
             Opm::Valgrind::CheckDefined(*temperature_);
@@ -144,18 +148,22 @@ public:
 
         unsigned pvtRegionIdx = getPvtRegionIndex_<FluidState>(fs);
         setPvtRegionIndex(pvtRegionIdx);
-        setRs(Opm::BlackOil::getRs_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
-        setRv(Opm::BlackOil::getRv_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
 
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            setSaturation(phaseIdx, fs.saturation(phaseIdx));
-            setPressure(phaseIdx, fs.pressure(phaseIdx));
-            setDensity(phaseIdx, fs.density(phaseIdx));
+        if (enableDissolution) {
+            setRs(Opm::BlackOil::getRs_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
+            setRv(Opm::BlackOil::getRv_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
+        }
+
+        for (unsigned storagePhaseIdx = 0; storagePhaseIdx < numStoragePhases; ++storagePhaseIdx) {
+            unsigned phaseIdx = storageToCanonicalPhaseIdx(storagePhaseIdx);
+            setSaturation(storagePhaseIdx, fs.saturation(phaseIdx));
+            setPressure(storagePhaseIdx, fs.pressure(phaseIdx));
+            setDensity(storagePhaseIdx, fs.density(phaseIdx));
 
             if (enableEnergy)
-                setEnthalpy(phaseIdx, fs.enthalpy(phaseIdx));
+                setEnthalpy(storagePhaseIdx, fs.enthalpy(phaseIdx));
 
-            setInvB(phaseIdx, getInvB_<FluidSystem, FluidState, Scalar>(fs, phaseIdx, pvtRegionIdx));
+            setInvB(storagePhaseIdx, getInvB_<FluidSystem, FluidState, Scalar>(fs, phaseIdx, pvtRegionIdx));
         }
     }
 
@@ -172,13 +180,13 @@ public:
      * \brief Set the pressure of a fluid phase [-].
      */
     void setPressure(unsigned phaseIdx, const Scalar& p)
-    { pressure_[phaseIdx] = p; }
+    { pressure_[canonicalToStoragePhaseIdx(phaseIdx)] = p; }
 
     /*!
      * \brief Set the saturation of a fluid phase [-].
      */
     void setSaturation(unsigned phaseIdx, const Scalar& S)
-    { saturation_[phaseIdx] = S; }
+    { saturation_[canonicalToStoragePhaseIdx(phaseIdx)] = S; }
 
     /*!
      * \brief Set the temperature [K]
@@ -203,20 +211,20 @@ public:
     {
         assert(enableTemperature || enableEnergy);
 
-        (*enthalpy_)[phaseIdx] = value;
+        (*enthalpy_)[canonicalToStoragePhaseIdx(phaseIdx)] = value;
     }
 
     /*!
      * \ brief Set the inverse formation volume factor of a fluid phase
      */
     void setInvB(unsigned phaseIdx, const Scalar& b)
-    { invB_[phaseIdx] = b; }
+    { invB_[canonicalToStoragePhaseIdx(phaseIdx)] = b; }
 
     /*!
      * \ brief Set the density of a fluid phase
      */
     void setDensity(unsigned phaseIdx, const Scalar& rho)
-    { density_[phaseIdx] = rho; }
+    { density_[canonicalToStoragePhaseIdx(phaseIdx)] = rho; }
 
     /*!
      * \brief Set the gas dissolution factor [m^3/m^3] of the oil phase.
@@ -224,7 +232,7 @@ public:
      * This quantity is very specific to the black-oil model.
      */
     void setRs(const Scalar& newRs)
-    { Rs_ = newRs; }
+    { *Rs_ = newRs; }
 
     /*!
      * \brief Set the oil vaporization factor [m^3/m^3] of the gas phase.
@@ -232,19 +240,19 @@ public:
      * This quantity is very specific to the black-oil model.
      */
     void setRv(const Scalar& newRv)
-    { Rv_ = newRv; }
+    { *Rv_ = newRv; }
 
     /*!
      * \brief Return the pressure of a fluid phase [Pa]
      */
     const Scalar& pressure(unsigned phaseIdx) const
-    { return pressure_[phaseIdx]; }
+    { return pressure_[canonicalToStoragePhaseIdx(phaseIdx)]; }
 
     /*!
      * \brief Return the saturation of a fluid phase [-]
      */
     const Scalar& saturation(unsigned phaseIdx) const
-    { return saturation_[phaseIdx]; }
+    { return saturation_[canonicalToStoragePhaseIdx(phaseIdx)]; }
 
     /*!
      * \brief Return the temperature [K]
@@ -266,7 +274,7 @@ public:
      * pressure and temperature at reservoir conditions compared to surface conditions.
      */
     const Scalar& invB(unsigned phaseIdx) const
-    { return invB_[phaseIdx]; }
+    { return invB_[canonicalToStoragePhaseIdx(phaseIdx)]; }
 
     /*!
      * \brief Return the gas dissulition factor of oil [m^3/m^3].
@@ -276,7 +284,14 @@ public:
      * conditions. This method is specific to the black-oil model.
      */
     const Scalar& Rs() const
-    { return Rs_; }
+    {
+        if (!enableDissolution) {
+            static Scalar null = 0.0;
+            return null;
+        }
+
+        return *Rs_;
+    }
 
     /*!
      * \brief Return the oil vaporization factor of gas [m^3/m^3].
@@ -286,7 +301,15 @@ public:
      * conditions. This method is specific to the black-oil model.
      */
     const Scalar& Rv() const
-    { return Rv_; }
+    {
+        if (!enableDissolution)
+        {
+            static Scalar null = 0.0;
+            return null;
+        }
+
+        return *Rv_;
+    }
 
     /*!
      * \brief Return the PVT region where the current fluid state is assumed to be part of.
@@ -303,7 +326,7 @@ public:
      * \brief Return the density [kg/m^3] of a given fluid phase.
       */
     Scalar density(unsigned phaseIdx) const
-    { return density_[phaseIdx]; }
+    { return density_[canonicalToStoragePhaseIdx(phaseIdx)]; }
 
     /*!
      * \brief Return the specific enthalpy [J/kg] of a given fluid phase.
@@ -312,7 +335,7 @@ public:
      * exception!
      */
     const Scalar& enthalpy(unsigned phaseIdx) const
-    { return (*enthalpy_)[phaseIdx]; }
+    { return (*enthalpy_)[canonicalToStoragePhaseIdx(phaseIdx)]; }
 
     /*!
      * \brief Return the specific internal energy [J/kg] of a given fluid phase.
@@ -321,7 +344,7 @@ public:
      * exception!
      */
     Scalar internalEnergy(unsigned phaseIdx OPM_UNUSED) const
-    { return (*enthalpy_)[phaseIdx] - pressure(phaseIdx)/density(phaseIdx); }
+    { return (*enthalpy_)[canonicalToStoragePhaseIdx(phaseIdx)] - pressure(phaseIdx)/density(phaseIdx); }
 
     //////
     // slow methods
@@ -372,10 +395,10 @@ public:
             if (compIdx == waterCompIdx)
                 return 0.0;
             else if (compIdx == oilCompIdx)
-                return 1.0 - FluidSystem::convertRsToXoG(Rs_, pvtRegionIdx_);
+                return 1.0 - FluidSystem::convertRsToXoG(Rs(), pvtRegionIdx_);
             else {
                 assert(compIdx == gasCompIdx);
-                return FluidSystem::convertRsToXoG(Rs_, pvtRegionIdx_);
+                return FluidSystem::convertRsToXoG(Rs(), pvtRegionIdx_);
             }
             break;
 
@@ -383,10 +406,10 @@ public:
             if (compIdx == waterCompIdx)
                 return 0.0;
             else if (compIdx == oilCompIdx)
-                return FluidSystem::convertRvToXgO(Rv_, pvtRegionIdx_);
+                return FluidSystem::convertRvToXgO(Rv(), pvtRegionIdx_);
             else {
                 assert(compIdx == gasCompIdx);
-                return 1.0 - FluidSystem::convertRvToXgO(Rv_, pvtRegionIdx_);
+                return 1.0 - FluidSystem::convertRvToXgO(Rv(), pvtRegionIdx_);
             }
             break;
         }
@@ -409,11 +432,11 @@ public:
             if (compIdx == waterCompIdx)
                 return 0.0;
             else if (compIdx == oilCompIdx)
-                return 1.0 - FluidSystem::convertXoGToxoG(FluidSystem::convertRsToXoG(Rs_, pvtRegionIdx_),
+                return 1.0 - FluidSystem::convertXoGToxoG(FluidSystem::convertRsToXoG(Rs(), pvtRegionIdx_),
                                                           pvtRegionIdx_);
             else {
                 assert(compIdx == gasCompIdx);
-                return FluidSystem::convertXoGToxoG(FluidSystem::convertRsToXoG(Rs_, pvtRegionIdx_),
+                return FluidSystem::convertXoGToxoG(FluidSystem::convertRsToXoG(Rs(), pvtRegionIdx_),
                                                     pvtRegionIdx_);
             }
             break;
@@ -422,11 +445,11 @@ public:
             if (compIdx == waterCompIdx)
                 return 0.0;
             else if (compIdx == oilCompIdx)
-                return FluidSystem::convertXgOToxgO(FluidSystem::convertRvToXgO(Rv_, pvtRegionIdx_),
+                return FluidSystem::convertXgOToxgO(FluidSystem::convertRvToXgO(Rv(), pvtRegionIdx_),
                                                     pvtRegionIdx_);
             else {
                 assert(compIdx == gasCompIdx);
-                return 1.0 - FluidSystem::convertXgOToxgO(FluidSystem::convertRvToXgO(Rv_, pvtRegionIdx_),
+                return 1.0 - FluidSystem::convertXgOToxgO(FluidSystem::convertRvToXgO(Rv(), pvtRegionIdx_),
                                                           pvtRegionIdx_);
             }
             break;
@@ -470,14 +493,29 @@ public:
     }
 
 private:
+
+    static unsigned storageToCanonicalPhaseIdx(unsigned phaseIdx) {
+        if (numStoragePhases == 3)
+            return phaseIdx;
+
+        return FluidSystem::activeToCanonicalPhaseIdx(phaseIdx);
+    }
+
+    static unsigned canonicalToStoragePhaseIdx(unsigned phaseIdx) {
+        if (numStoragePhases == 3)
+            return phaseIdx;
+
+        return FluidSystem::canonicalToActivePhaseIdx(phaseIdx);
+    }
+
     Opm::ConditionalStorage<enableTemperature || enableEnergy, Scalar> temperature_;
-    Opm::ConditionalStorage<enableEnergy, std::array<Scalar, numPhases> > enthalpy_;
-    std::array<Scalar, numPhases> pressure_;
-    std::array<Scalar, numPhases> saturation_;
-    std::array<Scalar, numPhases> invB_;
-    std::array<Scalar, numPhases> density_;
-    Scalar Rs_;
-    Scalar Rv_;
+    Opm::ConditionalStorage<enableEnergy, std::array<Scalar, numStoragePhases> > enthalpy_;
+    std::array<Scalar, numStoragePhases> pressure_;
+    std::array<Scalar, numStoragePhases> saturation_;
+    std::array<Scalar, numStoragePhases> invB_;
+    std::array<Scalar, numStoragePhases> density_;
+    Opm::ConditionalStorage<enableDissolution,Scalar> Rs_;
+    Opm::ConditionalStorage<enableDissolution, Scalar> Rv_;
     unsigned short pvtRegionIdx_;
 };
 
