@@ -354,10 +354,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef BlackOilSolventModule<TypeTag> SolventModule;
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
 
-    typedef Opm::BlackOilFluidState<Scalar,
-                                    FluidSystem,
-                                    enableTemperature,
-                                    enableEnergy> InitialFluidState;
+    typedef typename EclEquilInitializer<TypeTag>::ScalarFluidState InitialFluidState;
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
