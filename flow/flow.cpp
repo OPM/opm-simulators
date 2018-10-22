@@ -134,13 +134,16 @@ int main(int argc, char** argv)
         deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
     }
     catch (const std::exception& e) {
-        Ewoms::Parameters::printUsage<PreTypeTag>(PreProblem::helpPreamble(argc, const_cast<const char**>(argv)),
-                                                  e.what());
+        std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
         return 1;
     }
 
+    Opm::FlowMainEbos<PreTypeTag>::printBanner();
+
     // Create Deck and EclipseState.
     try {
+        std::cout << "Reading deck file '" << deckFilename << "'\n";
+        std::cout.flush();
         Opm::Parser parser;
         typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
         typedef std::vector<ParseModePair> ParseModePairs;
