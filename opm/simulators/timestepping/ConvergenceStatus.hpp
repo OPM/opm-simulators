@@ -55,7 +55,7 @@ namespace Opm
         };
         struct WellFailure
         {
-            enum struct Type { Mb, CtrlBHP, CtrlTHP, CtrlRate };
+            enum struct Type { Mb, Pressure, CtrlBHP, CtrlTHP, CtrlRate };
             Type type;
             Severity severity;
             int phase;
