@@ -1483,7 +1483,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    typename StandardWell<TypeTag>::ConvergenceReport
+    ConvergenceStatus
     StandardWell<TypeTag>::
     getWellConvergence(const std::vector<double>& B_avg) const
     {
@@ -1508,7 +1508,9 @@ namespace Opm
             well_flux_residual[compIdx] = B_avg[compIdx] * res[compIdx];
         }
 
-        ConvergenceReport report;
+        ConvergenceStatus report;
+        using CS = ConvergenceStatus;
+        CS::WellFailure::Type type = CS::WellFailure::Type::Mb;
         // checking if any NaN or too large residuals found
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -1517,21 +1519,16 @@ namespace Opm
 
             const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
             const std::string& compName = FluidSystem::componentName(canonicalCompIdx);
-            const unsigned compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
+            const int compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
 
             if (std::isnan(well_flux_residual[compIdx])) {
-                report.nan_residual_found = true;
-                const typename ConvergenceReport::ProblemWell problem_well = {name(), compName};
-                report.nan_residual_wells.push_back(problem_well);
-            } else {
-                if (well_flux_residual[compIdx] > maxResidualAllowed) {
-                    report.too_large_residual_found = true;
-                    const typename ConvergenceReport::ProblemWell problem_well = {name(), compName};
-                    report.too_large_residual_wells.push_back(problem_well);
-                }
+                report.setWellFailed({type, CS::Severity::NotANumber, compIdx, name()});
+            } else if (well_flux_residual[compIdx] > maxResidualAllowed) {
+                report.setWellFailed({type, CS::Severity::TooLarge, compIdx, name()});
+            } else if (well_flux_residual[compIdx] > tol_wells) {
+                report.setWellFailed({type, CS::Severity::Normal, compIdx, name()});
             }
         }
-
 
         // processing the residual of the well control equation
         const double well_control_residual = res[numWellEq - 1];
@@ -1539,40 +1536,29 @@ namespace Opm
         double control_tolerance = 0.;
         switch(well_controls_get_current_type(well_controls_)) {
             case THP:
+                type = CS::WellFailure::Type::CtrlTHP;
+                control_tolerance = 1.e3; // 0.01 bar
+                break;
             case BHP:  // pressure type of control
+                type = CS::WellFailure::Type::CtrlBHP;
                 control_tolerance = 1.e3; // 0.01 bar
                 break;
             case RESERVOIR_RATE:
             case SURFACE_RATE:
+                type = CS::WellFailure::Type::CtrlRate;
                 control_tolerance = 1.e-4; // smaller tolerance for rate control
                 break;
             default:
                 OPM_THROW(std::runtime_error, "Unknown well control control types for well " << name());
         }
 
-        const bool control_eq_converged = well_control_residual < control_tolerance;
-
+        const int dummy_component = -1;
         if (std::isnan(well_control_residual)) {
-            report.nan_residual_found = true;
-            const typename ConvergenceReport::ProblemWell problem_well = {name(), "control"};
-            report.nan_residual_wells.push_back(problem_well);
-        } else {
-            // TODO: for pressure control equations, it can be pretty big during Newton iteration
-            if (well_control_residual > maxResidualAllowed * 10.) {
-                report.too_large_residual_found = true;
-                const typename ConvergenceReport::ProblemWell problem_well = {name(), "control"};
-                report.too_large_residual_wells.push_back(problem_well);
-            }
-        }
-
-        if ( !(report.nan_residual_found || report.too_large_residual_found) ) { // no abnormal residual value found
-            // check convergence
-            for ( int compIdx = 0; compIdx < num_components_; ++compIdx )
-            {
-                report.converged = report.converged && (well_flux_residual[compIdx] < tol_wells) && control_eq_converged;
-            }
-        } else { // abnormal values found and no need to check the convergence
-            report.converged = false;
+            report.setWellFailed({type, CS::Severity::NotANumber, dummy_component, name()});
+        } else if (well_control_residual > maxResidualAllowed * 10.) {
+            report.setWellFailed({type, CS::Severity::TooLarge, dummy_component, name()});
+        } else if ( well_control_residual > control_tolerance) {
+            report.setWellFailed({type, CS::Severity::Normal, dummy_component, name()});
         }
 
         return report;

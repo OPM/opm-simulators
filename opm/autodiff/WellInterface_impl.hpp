@@ -932,10 +932,8 @@ namespace Opm
         do {
             assembleWellEq(ebosSimulator, dt, well_state, true);
 
-            ConvergenceReport report;
-            report = getWellConvergence(B_avg);
-            converged = report.converged;
-
+            auto report = getWellConvergence(B_avg);
+            converged = report.converged();
             if (converged) {
                 break;
             }

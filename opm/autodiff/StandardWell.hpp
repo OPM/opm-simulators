@@ -86,7 +86,6 @@ namespace Opm
         static const int Bhp = numWellEq - numWellControlEq;
 
         using typename Base::Scalar;
-        using typename Base::ConvergenceReport;
 
 
         using Base::name;
@@ -145,7 +144,7 @@ namespace Opm
         virtual void updateWellStateWithTarget(WellState& well_state) const;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const;
+        virtual ConvergenceStatus getWellConvergence(const std::vector<double>& B_avg) const;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const;

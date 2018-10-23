@@ -234,8 +234,6 @@ namespace Opm {
             // a vector of all the wells.
             std::vector<WellInterfacePtr > well_container_;
 
-            using ConvergenceReport = typename WellInterface<TypeTag>::ConvergenceReport;
-
             // create the well container
             std::vector<WellInterfacePtr > createWellContainer(const int time_step);
 

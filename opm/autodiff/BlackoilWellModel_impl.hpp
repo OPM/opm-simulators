@@ -660,45 +660,53 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     getWellConvergence(const std::vector<Scalar>& B_avg) const
     {
-        ConvergenceReport report;
+        ConvergenceStatus report;
 
         for (const auto& well : well_container_) {
             report += well->getWellConvergence(B_avg);
         }
+        auto severity = report.severityOfWorstFailure();
 
         // checking NaN residuals
         {
-            bool nan_residual_found = report.nan_residual_found;
+            // Debug reporting.
+            for (const auto& f : report.wellFailures()) {
+                if (f.severity == ConvergenceStatus::Severity::NotANumber) {
+                    OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase) + " for well " + f.well_name);
+                }
+            }
+
+            // Throw if any nan residual found.
+            bool nan_residual_found = (severity == ConvergenceStatus::Severity::NotANumber);
             const auto& grid = ebosSimulator_.vanguard().grid();
             int value = nan_residual_found ? 1 : 0;
-
             nan_residual_found = grid.comm().max(value);
-
             if (nan_residual_found) {
-                for (const auto& well : report.nan_residual_wells) {
-                    OpmLog::debug("NaN residual found with phase " + well.phase_name + " for well " + well.well_name);
-                }
                 OPM_THROW(Opm::NumericalIssue, "NaN residual found!");
             }
         }
 
         // checking too large residuals
         {
-            bool too_large_residual_found = report.too_large_residual_found;
+            // Debug reporting.
+            for (const auto& f : report.wellFailures()) {
+                if (f.severity == ConvergenceStatus::Severity::TooLarge) {
+                    OpmLog::debug("Too large residual found with phase " + std::to_string(f.phase) + " for well " + f.well_name);
+                }
+            }
+
+            // Throw if any too large residual found.
+            bool too_large_residual_found = (severity == ConvergenceStatus::Severity::TooLarge);
             const auto& grid = ebosSimulator_.vanguard().grid();
             int value = too_large_residual_found ? 1 : 0;
-
             too_large_residual_found = grid.comm().max(value);
             if (too_large_residual_found) {
-                for (const auto& well : report.too_large_residual_wells) {
-                    OpmLog::debug("Too large residual found with phase " + well.phase_name + " fow well " + well.well_name);
-                }
                 OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
             }
         }
 
         // checking convergence
-        bool converged_well = report.converged;
+        bool converged_well = report.converged();
         {
             const auto& grid = ebosSimulator_.vanguard().grid();
             int value = converged_well ? 1 : 0;
