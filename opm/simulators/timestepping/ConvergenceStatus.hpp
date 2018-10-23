@@ -49,7 +49,7 @@ namespace Opm
         };
         struct WellFailure
         {
-            enum struct Type { Mb, Ctrl };
+            enum struct Type { Mb, CtrlBHP, CtrlTHP, CtrlRate };
             Type type;
             int phase;
             std::string well_name;

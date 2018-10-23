@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(Failures)
     }
 
     Opm::ConvergenceStatus s2;
-    s2.setWellFailed({CS::WellFailure::Type::Ctrl, -1, "PRODUCER-123"});
+    s2.setWellFailed({CS::WellFailure::Type::CtrlTHP, -1, "PRODUCER-123"});
     s2.setWellFailed({CS::WellFailure::Type::Mb, 2, "INJECTOR-XYZ"});
     {
         BOOST_CHECK(!s2.converged());
@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(s2.reservoirFailures().empty());
         BOOST_REQUIRE(s2.wellFailures().size() == 2);
         const auto f0 = s2.wellFailures()[0];
-        BOOST_CHECK(f0.type == CS::WellFailure::Type::Ctrl);
+        BOOST_CHECK(f0.type == CS::WellFailure::Type::CtrlTHP);
         BOOST_CHECK(f0.phase == -1);
         BOOST_CHECK(f0.well_name == "PRODUCER-123");
         const auto f1 = s2.wellFailures()[1];
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(f.cell_index == 100);
         BOOST_REQUIRE(s1.wellFailures().size() == 2);
         const auto f0 = s1.wellFailures()[0];
-        BOOST_CHECK(f0.type == CS::WellFailure::Type::Ctrl);
+        BOOST_CHECK(f0.type == CS::WellFailure::Type::CtrlTHP);
         BOOST_CHECK(f0.phase == -1);
         BOOST_CHECK(f0.well_name == "PRODUCER-123");
         const auto f1 = s1.wellFailures()[1];
@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(s1.reservoirFailures().empty());
         BOOST_REQUIRE(s1.wellFailures().size() == 2);
         const auto f0 = s1.wellFailures()[0];
-        BOOST_CHECK(f0.type == CS::WellFailure::Type::Ctrl);
+        BOOST_CHECK(f0.type == CS::WellFailure::Type::CtrlTHP);
         BOOST_CHECK(f0.phase == -1);
         BOOST_CHECK(f0.well_name == "PRODUCER-123");
         const auto f1 = s1.wellFailures()[1];
