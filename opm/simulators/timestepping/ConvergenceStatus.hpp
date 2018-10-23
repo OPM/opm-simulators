@@ -40,10 +40,12 @@ namespace Opm
         enum Status { AllGood            = 0,
                       ReservoirFailed    = 1 << 0,
                       WellFailed         = 1 << 1 };
+        enum struct Severity { Normal, TooLarge, NotANumber };
         struct ReservoirFailure
         {
             enum struct Type { Mb, Cnv };
             Type type;
+            Severity severity;
             int phase;
             int cell_index;
         };
@@ -51,6 +53,7 @@ namespace Opm
         {
             enum struct Type { Mb, CtrlBHP, CtrlTHP, CtrlRate };
             Type type;
+            Severity severity;
             int phase;
             std::string well_name;
         };
