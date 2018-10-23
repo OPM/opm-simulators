@@ -24,17 +24,19 @@
 
 #include <opm/simulators/timestepping/ConvergenceStatus.hpp>
 
+using CS = Opm::ConvergenceStatus;
+
 BOOST_AUTO_TEST_CASE(DefaultConstructor)
 {
     Opm::ConvergenceStatus s;
     BOOST_CHECK(s.converged());
     BOOST_CHECK(!s.reservoirFailed());
     BOOST_CHECK(!s.wellFailed());
+    BOOST_CHECK(s.severityOfWorstFailure() == CS::Severity::None);
 }
 
 BOOST_AUTO_TEST_CASE(Failures)
 {
-    using CS = Opm::ConvergenceStatus;
     Opm::ConvergenceStatus s1;
     s1.setReservoirFailed({CS::ReservoirFailure::Type::Cnv, CS::Severity::Normal, 2, 100});
     {
@@ -48,6 +50,7 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(f.phase == 2);
         BOOST_CHECK(f.cell_index == 100);
         BOOST_CHECK(s1.wellFailures().empty());
+        BOOST_CHECK(s1.severityOfWorstFailure() == CS::Severity::Normal);
     }
 
     Opm::ConvergenceStatus s2;
@@ -69,6 +72,7 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(f1.severity == CS::Severity::TooLarge);
         BOOST_CHECK(f1.phase == 2);
         BOOST_CHECK(f1.well_name == "INJECTOR-XYZ");
+        BOOST_CHECK(s2.severityOfWorstFailure() == CS::Severity::TooLarge);
     }
 
     s1 += s2;
@@ -93,6 +97,7 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(f1.severity == CS::Severity::TooLarge);
         BOOST_CHECK(f1.phase == 2);
         BOOST_CHECK(f1.well_name == "INJECTOR-XYZ");
+        BOOST_CHECK(s1.severityOfWorstFailure() == CS::Severity::TooLarge);
     }
 
     s1.clear();
@@ -100,6 +105,7 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(s1.converged());
         BOOST_CHECK(!s1.reservoirFailed());
         BOOST_CHECK(!s1.wellFailed());
+        BOOST_CHECK(s1.severityOfWorstFailure() == CS::Severity::None);
     }
 
     s1 += s2;
@@ -119,6 +125,7 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(f1.severity == CS::Severity::TooLarge);
         BOOST_CHECK(f1.phase == 2);
         BOOST_CHECK(f1.well_name == "INJECTOR-XYZ");
+        BOOST_CHECK(s1.severityOfWorstFailure() == CS::Severity::TooLarge);
     }
 }
 

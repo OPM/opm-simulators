@@ -22,6 +22,7 @@
 #define OPM_CONVERGENCESTATUS_HEADER_INCLUDED
 
 #include <cassert>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -40,7 +41,10 @@ namespace Opm
         enum Status { AllGood            = 0,
                       ReservoirFailed    = 1 << 0,
                       WellFailed         = 1 << 1 };
-        enum struct Severity { Normal, TooLarge, NotANumber };
+        enum struct Severity { None       = 0,
+                               Normal     = 1,
+                               TooLarge   = 2,
+                               NotANumber = 3 };
         struct ReservoirFailure
         {
             enum struct Type { Mb, Cnv };
@@ -121,6 +125,22 @@ namespace Opm
         const std::vector<WellFailure>& wellFailures() const
         {
             return well_failures_;
+        }
+
+        Severity severityOfWorstFailure() const
+        {
+            // A function to get the worst of two severities.
+            auto smax = [](Severity s1, Severity s2) {
+                return s1 < s2 ? s2 : s1;
+            };
+            auto s = Severity::None;
+            for (const auto f : res_failures_) {
+                s = smax(s, f.severity);
+            }
+            for (const auto f : well_failures_) {
+                s = smax(s, f.severity);
+            }
+            return s;
         }
 
     private:
