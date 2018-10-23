@@ -59,6 +59,7 @@
 #include "eclthresholdpressure.hh"
 #include "ecldummygradientcalculator.hh"
 #include "eclfluxmodule.hh"
+#include "eclbaseaquifermodel.hh"
 
 #include <ewoms/common/pffgridvector.hh>
 #include <ewoms/models/blackoil/blackoilmodel.hh>
@@ -133,6 +134,9 @@ NEW_PROP_TAG(EnableDebuggingChecks);
 // thermal gradient specified via the TEMPVD keyword
 NEW_PROP_TAG(EnableThermalFluxBoundaries);
 
+// The class which deals with ECL aquifers
+NEW_PROP_TAG(EclAquiferModel);
+
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 
@@ -200,6 +204,9 @@ public:
                                /*needIntegrationPos=*/false,
                                /*needNormal=*/false> type;
 };
+
+// by default use the dummy aquifer "model"
+SET_TYPE_PROP(EclBaseProblem, EclAquiferModel, Ewoms::EclBaseAquiferModel<TypeTag>);
 
 // use the built-in proof of concept well model by default
 SET_TYPE_PROP(EclBaseProblem, EclWellModel, EclWellManager<TypeTag>);
@@ -350,6 +357,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
     typedef typename GET_PROP_TYPE(TypeTag, EclWellModel) EclWellModel;
+    typedef typename GET_PROP_TYPE(TypeTag, EclAquiferModel) EclAquiferModel;
 
     typedef BlackOilSolventModule<TypeTag> SolventModule;
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
@@ -485,6 +493,7 @@ public:
         , transmissibilities_(simulator.vanguard())
         , thresholdPressures_(simulator)
         , wellModel_(simulator)
+        , aquiferModel_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
     {
         // Tell the black-oil extensions to initialize their internal data structures
@@ -609,10 +618,11 @@ public:
     { pffDofData_.prefetch(elem); }
 
     /*!
-     * \brief This method restores the complete state of the well
+     * \brief This method restores the complete state of the problem and its sub-objects
      *        from disk.
      *
-     * It is the inverse of the serialize() method.
+     * The serialization format used by this method is ad-hoc. It is the inverse of the
+     * serialize() method.
      *
      * \tparam Restarter The deserializer type
      *
@@ -626,15 +636,23 @@ public:
 
         // deserialize the wells
         wellModel_.deserialize(res);
+
+        // deserialize the aquifer
+        aquiferModel_.deserialize(res);
     }
 
     /*!
-     * \brief This method writes the complete state of the well
-     *        to the harddisk.
+     * \brief This method writes the complete state of the problem and its subobjects to
+     *        disk.
+     *
+     * The file format used here is ad-hoc.
      */
     template <class Restarter>
     void serialize(Restarter& res)
-    { wellModel_.serialize(res); }
+    {
+        wellModel_.serialize(res);
+        aquiferModel_.serialize(res);
+    }
 
     /*!
      * \brief Called by the simulator before an episode begins.
@@ -702,10 +720,14 @@ public:
             updateMaxPolymerAdsorption_();
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells))
-            // set up the wells
+            // set up the wells for the next episode.
+            //
+            // TODO: the first two arguments seem to be unnecessary
             wellModel_.beginEpisode(this->simulator().vanguard().eclState(),
                                     this->simulator().vanguard().schedule(),
                                     isOnRestart);
+
+        aquiferModel_.beginEpisode();
 
         if (doInvalidate)
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
@@ -724,9 +746,10 @@ public:
             // DRVDT is enabled
             maxDRv_ = maxDRvDt_*this->simulator().timeStepSize();
 
-        if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
+        if (!GET_PROP_VALUE(TypeTag, DisableWells))
             wellModel_.beginTimeStep();
-        }
+
+        aquiferModel_.beginTimeStep();
     }
 
     /*!
@@ -736,6 +759,8 @@ public:
     {
         if (!GET_PROP_VALUE(TypeTag, DisableWells))
             wellModel_.beginIteration();
+
+        aquiferModel_.beginIteration();
     }
 
     /*!
@@ -745,6 +770,8 @@ public:
     {
         if (!GET_PROP_VALUE(TypeTag, DisableWells))
             wellModel_.endIteration();
+
+        aquiferModel_.endIteration();
     }
 
     /*!
@@ -762,9 +789,10 @@ public:
         }
 #endif // NDEBUG
 
-        if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
+        if (!GET_PROP_VALUE(TypeTag, DisableWells))
             wellModel_.endTimeStep();
-        }
+
+        aquiferModel_.endTimeStep();
 
         // we no longer need the initial soluiton
         if (this->simulator().episodeIndex() == 0 && !initialFluidStates_.empty())  {
@@ -781,7 +809,6 @@ public:
 
             initialFluidStates_.clear();
         }
-
 
         updateCompositionChangeLimits_();
     }
@@ -802,6 +829,11 @@ public:
             simulator.setFinished(true);
             return;
         }
+
+        if (!GET_PROP_VALUE(TypeTag, DisableWells))
+            wellModel_.endEpisode();
+
+        aquiferModel_.endEpisode();
     }
 
     /*!
@@ -1314,6 +1346,8 @@ public:
                 assert(Opm::isfinite(rate[eqIdx]));
             }
         }
+
+        aquiferModel_.addToSource(rate, context, spaceIdx, timeIdx);
     }
 
     /*!
@@ -1361,8 +1395,6 @@ public:
      *
      * This a hack on top of the maxOilSaturation() hack but it is currently required to
      * do restart externally. i.e. from the flow code.
-     *
-     * TODO: move the restart-from-ECL-restart-files functionality to EclProblem!
      */
     void setMaxOilSaturation(unsigned globalDofIdx, Scalar value)
     {
@@ -1913,8 +1945,6 @@ private:
         }
     }
 
-
-
     // update the hysteresis parameters of the material laws for the whole grid
     bool updateHysteresis_()
     {
@@ -2109,6 +2139,7 @@ private:
     std::vector<Scalar> maxOilSaturation_;
 
     EclWellModel wellModel_;
+    EclAquiferModel aquiferModel_;
 
     std::unique_ptr<EclWriterType> eclWriter_;
 
