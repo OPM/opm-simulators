@@ -19,7 +19,6 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-
 #ifndef OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 #define OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 
@@ -193,6 +192,24 @@ namespace Opm
             return status;
         }
 
+        static void printBanner()
+        {
+            const int lineLen = 70;
+            const std::string version = moduleVersionName();
+            const std::string banner = "This is flow "+version;
+            const int bannerPreLen = (lineLen - 2 - banner.size())/2;
+            const int bannerPostLen = bannerPreLen + (lineLen - 2 - banner.size())%2;
+            std::cout << "**********************************************************************\n";
+            std::cout << "*                                                                    *\n";
+            std::cout << "*" << std::string(bannerPreLen, ' ') << banner << std::string(bannerPostLen, ' ') << "*\n";
+            std::cout << "*                                                                    *\n";
+            std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
+            std::cout << "*             including solvent and polymer capabilities.            *\n";
+            std::cout << "*          For more information, see https://opm-project.org         *\n";
+            std::cout << "*                                                                    *\n";
+            std::cout << "**********************************************************************\n\n";
+        }
+
         /// This is the main function of Flow.  It runs a complete simulation with the
         /// given grid and simulator classes, based on the user-specified command-line
         /// input.
@@ -207,7 +224,6 @@ namespace Opm
 
                 setupParallelism();
                 setupOutput();
-                printStartupMessage();
                 setupEbosSimulator();
                 setupLogging();
                 printPRTHeader();
@@ -264,28 +280,6 @@ namespace Opm
 
             typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
             ThreadManager::init();
-        }
-
-        // Print startup message if on output rank.
-        void printStartupMessage()
-        {
-
-            if (output_cout_) {
-                const int lineLen = 70;
-                const std::string version = moduleVersionName();
-                const std::string banner = "This is flow "+version;
-                const int bannerPreLen = (lineLen - 2 - banner.size())/2;
-                const int bannerPostLen = bannerPreLen + (lineLen - 2 - banner.size())%2;
-                std::cout << "**********************************************************************\n";
-                std::cout << "*                                                                    *\n";
-                std::cout << "*" << std::string(bannerPreLen, ' ') << banner << std::string(bannerPostLen, ' ') << "*\n";
-                std::cout << "*                                                                    *\n";
-                std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
-                std::cout << "*             including solvent and polymer capabilities.            *\n";
-                std::cout << "*          For more information, see https://opm-project.org          *\n";
-                std::cout << "*                                                                    *\n";
-                std::cout << "**********************************************************************\n\n";
-            }
         }
 
         // Extract the minimum priority and determines if log files ought to be created.

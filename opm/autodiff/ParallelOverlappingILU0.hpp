@@ -921,7 +921,7 @@ protected:
                 milun_decomposition( A, iluIteration, milu, *ILU, *reorderer, *inverseReorderer );
             }
         }
-        catch ( Dune::MatrixBlockError error )
+        catch ( const Dune::MatrixBlockError& error )
         {
             message = error.what();
             std::cerr<<"Exception occured on process " << rank << " during " <<
