@@ -484,7 +484,7 @@ namespace Opm
                 const double pressure_residual = maximum_residual[eq_idx];
                 if (std::isnan(pressure_residual)) {
                     report.setWellFailed({CS::WellFailure::Type::Pressure, CS::Severity::NotANumber, -1, name()});
-                } else if (pressure_residual > param_.max_residual_allowed_) {
+                } else if (std::isinf(pressure_residual)) {
                     report.setWellFailed({CS::WellFailure::Type::Pressure, CS::Severity::TooLarge, -1, name()});
                 } else if (pressure_residual > param_.tolerance_pressure_ms_wells_) {
                     report.setWellFailed({CS::WellFailure::Type::Pressure, CS::Severity::Normal, -1, name()});
