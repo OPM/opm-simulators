@@ -138,13 +138,16 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (outputCout)
+    if (outputCout) {
         Opm::FlowMainEbos<PreTypeTag>::printBanner();
+    }
 
     // Create Deck and EclipseState.
     try {
-        std::cout << "Reading deck file '" << deckFilename << "'\n";
-        std::cout.flush();
+        if (outputCout) {
+            std::cout << "Reading deck file '" << deckFilename << "'\n";
+            std::cout.flush();
+        }
         Opm::Parser parser;
         typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
         typedef std::vector<ParseModePair> ParseModePairs;
