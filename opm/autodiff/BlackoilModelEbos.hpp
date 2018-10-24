@@ -705,26 +705,12 @@ namespace Opm {
             return pvSum;
         }
 
-        /// Compute convergence based on total mass balance (tol_mb) and maximum
-        /// residual mass balance (tol_cnv).
-        /// \param[in]   timer       simulation timer
-        /// \param[in]   dt          timestep length
-        /// \param[in]   iteration   current iteration number
-        bool getConvergence(const SimulatorTimerInterface& timer, const int iteration, std::vector<double>& residual_norms)
+        // Get reservoir quantities on this process needed for convergence calculations.
+        double localConvergenceData(std::vector<Scalar>& R_sum,
+                                    std::vector<Scalar>& maxCoeff,
+                                    std::vector<Scalar>& B_avg)
         {
-            typedef std::vector< Scalar > Vector;
-
-            const double dt = timer.currentStepLength();
-            const double tol_mb    = param_.tolerance_mb_;
-            const double tol_cnv   = param_.tolerance_cnv_;
-            const double tol_cnv_relaxed = param_.tolerance_cnv_relaxed_;
-
-            const int numComp = numEq;
-
-            Vector R_sum(numComp, 0.0 );
-            Vector B_avg(numComp, 0.0 );
-            Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
-
+            double pvSumLocal = 0.0;
             const auto& ebosModel = ebosSimulator_.model();
             const auto& ebosProblem = ebosSimulator_.problem();
 
@@ -734,7 +720,6 @@ namespace Opm {
             const auto& gridView = ebosSimulator().gridView();
             const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
 
-            double pvSumLocal = 0.0;
             for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
                  elemIt != elemEndIt;
                  ++elemIt)
@@ -792,9 +777,29 @@ namespace Opm {
                 B_avg[ i ] /= Scalar( global_nc_ );
             }
 
-            // TODO: we remove the maxNormWell for now because the convergence of wells are on a individual well basis.
-            // Anyway, we need to provide some infromation to help debug the well iteration process.
+            return pvSumLocal;
+        }
 
+        /// Compute convergence based on total mass balance (tol_mb) and maximum
+        /// residual mass balance (tol_cnv).
+        /// \param[in]   timer       simulation timer
+        /// \param[in]   dt          timestep length
+        /// \param[in]   iteration   current iteration number
+        bool getConvergence(const SimulatorTimerInterface& timer, const int iteration, std::vector<double>& residual_norms)
+        {
+            typedef std::vector< Scalar > Vector;
+
+            const double dt = timer.currentStepLength();
+            const double tol_mb    = param_.tolerance_mb_;
+            const double tol_cnv   = param_.tolerance_cnv_;
+            const double tol_cnv_relaxed = param_.tolerance_cnv_relaxed_;
+
+            const int numComp = numEq;
+
+            Vector R_sum(numComp, 0.0 );
+            Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
+            Vector B_avg(numComp, 0.0 );
+            const double pvSumLocal = localConvergenceData(R_sum, maxCoeff, B_avg);
 
             // compute global sum and max of quantities
             const double pvSum = convergenceReduction(grid_.comm(), pvSumLocal,
