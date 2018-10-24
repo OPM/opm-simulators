@@ -138,7 +138,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    Opm::FlowMainEbos<PreTypeTag>::printBanner();
+    if (outputCout)
+        Opm::FlowMainEbos<PreTypeTag>::printBanner();
 
     // Create Deck and EclipseState.
     try {
