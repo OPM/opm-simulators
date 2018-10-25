@@ -201,8 +201,6 @@ public:
             ebosSimulator_.model().addAuxiliaryModule(wellAuxMod_.get());
         }
 
-        AquiferModel aquifer_model(ebosSimulator_);
-
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -217,7 +215,7 @@ public:
 
             wellModel.beginReportStep(timer.currentStepNum());
 
-            auto solver = createSolver(wellModel, aquifer_model);
+            auto solver = createSolver(wellModel);
 
             // write the inital state at the report stage
             if (timer.initialStep()) {
@@ -343,12 +341,11 @@ public:
 
 protected:
 
-    std::unique_ptr<Solver> createSolver(WellModel& wellModel, AquiferModel& aquifer_model)
+    std::unique_ptr<Solver> createSolver(WellModel& wellModel)
     {
         auto model = std::unique_ptr<Model>(new Model(ebosSimulator_,
                                                       modelParam_,
                                                       wellModel,
-                                                      aquifer_model,
                                                       linearSolver_,
                                                       terminalOutput_));
 

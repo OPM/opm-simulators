@@ -45,6 +45,7 @@ namespace Opm
             typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
             typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
             typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
+            typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
             typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
             enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
             enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
@@ -61,8 +62,8 @@ namespace Opm
 
 
             AquiferCarterTracy( const AquiferCT::AQUCT_data& aquct_data,
-                                         const Aquancon::AquanconOutput& connection,
-                                         Simulator& ebosSimulator                    )
+                                const Aquancon::AquanconOutput& connection,
+                                const Simulator& ebosSimulator                    )
             : ebos_simulator_ (ebosSimulator),
               aquct_data_ (aquct_data),
               gravity_ (ebos_simulator_.problem().gravity()[2])
@@ -70,56 +71,45 @@ namespace Opm
                 initQuantities(connection);
             }
 
-            inline void assembleAquiferEq(const SimulatorTimerInterface& timer)
+            template <class Context>
+            void addToSource(RateVector& rates, const Context& context, unsigned spaceIdx, unsigned timeIdx)
             {
-                auto& ebosJac = ebos_simulator_.model().linearizer().matrix();
-                auto& ebosResid = ebos_simulator_.model().linearizer().residual();
+                unsigned idx = context.globalSpaceIndex(spaceIdx, timeIdx);
 
-                size_t cellID;
-                for ( size_t idx = 0; idx < cell_idx_.size(); ++idx )
-                {
-                    Eval qinflow = 0.0;
-                    cellID = cell_idx_.at(idx);
-                    // We are dereferencing the value of IntensiveQuantities because cachedIntensiveQuantities return a const pointer to
-                    // IntensiveQuantities of that particular cell_id
-                    const IntensiveQuantities intQuants = *(ebos_simulator_.model().cachedIntensiveQuantities(cellID, /*timeIdx=*/ 0));
-                    // This is the pressure at td + dt
-                    updateCellPressure(pressure_current_,idx,intQuants);
-                    updateCellDensity(idx,intQuants);
-                    calculateInflowRate(idx, timer);
-                    qinflow = Qai_.at(idx);
-                    ebosResid[cellID][waterCompIdx] -= qinflow.value();
+                // We are dereferencing the value of IntensiveQuantities because cachedIntensiveQuantities return a const pointer to
+                // IntensiveQuantities of that particular cell_id
+                const IntensiveQuantities intQuants = context.intensiveQuantities(spaceIdx, timeIdx);
+                // This is the pressure at td + dt
+                updateCellPressure(pressure_current_,idx,intQuants);
+                updateCellDensity(idx,intQuants);
+                calculateInflowRate(idx, context.simulator());
 
-                    for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) 
-                    {
-                        // also need to consider the efficiency factor when manipulating the jacobians.
-                        ebosJac[cellID][cellID][waterCompIdx][pvIdx] -= qinflow.derivative(pvIdx);
-                    }
-                }
+                rates[BlackoilIndices::conti0EqIdx + FluidSystem::waterCompIdx] -=
+                    Qai_.at(idx)/context.dofVolume(spaceIdx, timeIdx);
             }
 
-            inline void beforeTimeStep(const SimulatorTimerInterface& timer)
+            inline void beforeTimeStep(const Simulator& simulator)
             {
                 auto cellID = cell_idx_.begin();
                 size_t idx;
                 for ( idx = 0; cellID != cell_idx_.end(); ++cellID, ++idx )
                 {
-                    const auto& intQuants = *(ebos_simulator_.model().cachedIntensiveQuantities(*cellID, /*timeIdx=*/ 0));
+                    const auto& intQuants = *(simulator.model().cachedIntensiveQuantities(*cellID, /*timeIdx=*/ 0));
                     updateCellPressure(pressure_previous_ ,idx,intQuants);
                 }
             }
 
-            inline void afterTimeStep(const SimulatorTimerInterface& timer)
+            inline void afterTimeStep(const Simulator& simulator)
             {
                 for (auto Qai = Qai_.begin(); Qai != Qai_.end(); ++Qai)
                 {
-                    W_flux_ += (*Qai)*timer.currentStepLength();
+                    W_flux_ += (*Qai)*simulator.timeStepSize();
                 }
             }
 
 
         private:
-            Simulator& ebos_simulator_;
+            const Simulator& ebos_simulator_;
 
             // Grid variables
             std::vector<size_t> cell_idx_;
@@ -132,6 +122,8 @@ namespace Opm
             std::vector<Eval> Qai_;
             std::vector<Eval> rhow_;
             std::vector<Scalar> alphai_;
+
+            std::vector<Eval> aquiferWaterInflux_;
 
             // Variables constants
             const AquiferCT::AQUCT_data aquct_data_;
@@ -164,6 +156,7 @@ namespace Opm
 
                 calculateAquiferConstants();
 
+                aquiferWaterInflux_.resize(cell_idx_.size());
                 pressure_previous_.resize(cell_idx_.size(), 0.);
                 pressure_current_.resize(cell_idx_.size(), 0.);
                 Qai_.resize(cell_idx_.size(), 0.0);
@@ -194,10 +187,10 @@ namespace Opm
             }
 
             // This function implements Eqs 5.8 and 5.9 of the EclipseTechnicalDescription
-            inline void calculateEqnConstants(Scalar& a, Scalar& b, const int idx, const SimulatorTimerInterface& timer)
+            inline void calculateEqnConstants(Scalar& a, Scalar& b, const int idx, const Simulator& simulator)
             {
-                const Scalar td_plus_dt = (timer.currentStepLength() + timer.simulationTimeElapsed()) / Tc_;
-                const Scalar td = timer.simulationTimeElapsed() / Tc_;
+                const Scalar td_plus_dt = (simulator.timeStepSize() + simulator.time()) / Tc_;
+                const Scalar td = simulator.time() / Tc_;
                 Scalar PItdprime = 0.;
                 Scalar PItd = 0.;
                 getInfluenceTableValues(PItd, PItdprime, td_plus_dt);
@@ -206,10 +199,10 @@ namespace Opm
             }
 
             // This function implements Eq 5.7 of the EclipseTechnicalDescription       
-            inline void calculateInflowRate(int idx, const SimulatorTimerInterface& timer)
+            inline void calculateInflowRate(int idx, const Simulator& simulator)
             {
                 Scalar a, b;
-                calculateEqnConstants(a,b,idx,timer);
+                calculateEqnConstants(a,b,idx,simulator);
                 Qai_.at(idx) = alphai_.at(idx)*( a - b * ( pressure_current_.at(idx) - pressure_previous_.at(idx) ) );
             }
 
