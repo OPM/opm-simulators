@@ -86,7 +86,6 @@ namespace Opm
         static const int Bhp = numWellEq - numWellControlEq;
 
         using typename Base::Scalar;
-        using typename Base::ConvergenceReport;
 
 
         using Base::name;

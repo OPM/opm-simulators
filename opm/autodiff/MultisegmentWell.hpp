@@ -71,7 +71,6 @@ namespace Opm
         static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq : numEq + 1;
 
         using typename Base::Scalar;
-        using typename Base::ConvergenceReport;
 
         /// the matrix and vector types for the reservoir
         using typename Base::Mat;
