@@ -44,7 +44,7 @@
 #include <opm/autodiff/BlackoilModelParametersEbos.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 
-#include <opm/simulators/timestepping/ConvergenceStatus.hpp>
+#include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
 #include<dune/common/fmatrix.hh>
@@ -138,7 +138,7 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const = 0;
 
-        virtual ConvergenceStatus getWellConvergence(const std::vector<double>& B_avg) const = 0;
+        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const = 0;
 
         virtual void solveEqAndUpdateWellState(WellState& well_state) = 0;
 

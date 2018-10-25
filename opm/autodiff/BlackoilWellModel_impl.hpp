@@ -660,7 +660,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     getWellConvergence(const std::vector<Scalar>& B_avg) const
     {
-        ConvergenceStatus report;
+        ConvergenceReport report;
 
         for (const auto& well : well_container_) {
             report += well->getWellConvergence(B_avg);
@@ -671,13 +671,13 @@ namespace Opm {
         {
             // Debug reporting.
             for (const auto& f : report.wellFailures()) {
-                if (f.severity == ConvergenceStatus::Severity::NotANumber) {
+                if (f.severity == ConvergenceReport::Severity::NotANumber) {
                     OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase) + " for well " + f.well_name);
                 }
             }
 
             // Throw if any nan residual found.
-            bool nan_residual_found = (severity == ConvergenceStatus::Severity::NotANumber);
+            bool nan_residual_found = (severity == ConvergenceReport::Severity::NotANumber);
             const auto& grid = ebosSimulator_.vanguard().grid();
             int value = nan_residual_found ? 1 : 0;
             nan_residual_found = grid.comm().max(value);
@@ -690,13 +690,13 @@ namespace Opm {
         {
             // Debug reporting.
             for (const auto& f : report.wellFailures()) {
-                if (f.severity == ConvergenceStatus::Severity::TooLarge) {
+                if (f.severity == ConvergenceReport::Severity::TooLarge) {
                     OpmLog::debug("Too large residual found with phase " + std::to_string(f.phase) + " for well " + f.well_name);
                 }
             }
 
             // Throw if any too large residual found.
-            bool too_large_residual_found = (severity == ConvergenceStatus::Severity::TooLarge);
+            bool too_large_residual_found = (severity == ConvergenceReport::Severity::TooLarge);
             const auto& grid = ebosSimulator_.vanguard().grid();
             int value = too_large_residual_found ? 1 : 0;
             too_large_residual_found = grid.comm().max(value);

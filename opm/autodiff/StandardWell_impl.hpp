@@ -1483,7 +1483,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    ConvergenceStatus
+    ConvergenceReport
     StandardWell<TypeTag>::
     getWellConvergence(const std::vector<double>& B_avg) const
     {
@@ -1508,9 +1508,9 @@ namespace Opm
             well_flux_residual[compIdx] = B_avg[compIdx] * res[compIdx];
         }
 
-        ConvergenceStatus report;
-        using CS = ConvergenceStatus;
-        CS::WellFailure::Type type = CS::WellFailure::Type::Mb;
+        ConvergenceReport report;
+        using CR = ConvergenceReport;
+        CR::WellFailure::Type type = CR::WellFailure::Type::Mb;
         // checking if any NaN or too large residuals found
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -1522,11 +1522,11 @@ namespace Opm
             const int compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
 
             if (std::isnan(well_flux_residual[compIdx])) {
-                report.setWellFailed({type, CS::Severity::NotANumber, compIdx, name()});
+                report.setWellFailed({type, CR::Severity::NotANumber, compIdx, name()});
             } else if (well_flux_residual[compIdx] > maxResidualAllowed) {
-                report.setWellFailed({type, CS::Severity::TooLarge, compIdx, name()});
+                report.setWellFailed({type, CR::Severity::TooLarge, compIdx, name()});
             } else if (well_flux_residual[compIdx] > tol_wells) {
-                report.setWellFailed({type, CS::Severity::Normal, compIdx, name()});
+                report.setWellFailed({type, CR::Severity::Normal, compIdx, name()});
             }
         }
 
@@ -1536,16 +1536,16 @@ namespace Opm
         double control_tolerance = 0.;
         switch(well_controls_get_current_type(well_controls_)) {
             case THP:
-                type = CS::WellFailure::Type::CtrlTHP;
+                type = CR::WellFailure::Type::CtrlTHP;
                 control_tolerance = 1.e3; // 0.01 bar
                 break;
             case BHP:  // pressure type of control
-                type = CS::WellFailure::Type::CtrlBHP;
+                type = CR::WellFailure::Type::CtrlBHP;
                 control_tolerance = 1.e3; // 0.01 bar
                 break;
             case RESERVOIR_RATE:
             case SURFACE_RATE:
-                type = CS::WellFailure::Type::CtrlRate;
+                type = CR::WellFailure::Type::CtrlRate;
                 control_tolerance = 1.e-4; // smaller tolerance for rate control
                 break;
             default:
@@ -1554,11 +1554,11 @@ namespace Opm
 
         const int dummy_component = -1;
         if (std::isnan(well_control_residual)) {
-            report.setWellFailed({type, CS::Severity::NotANumber, dummy_component, name()});
+            report.setWellFailed({type, CR::Severity::NotANumber, dummy_component, name()});
         } else if (well_control_residual > maxResidualAllowed * 10.) {
-            report.setWellFailed({type, CS::Severity::TooLarge, dummy_component, name()});
+            report.setWellFailed({type, CR::Severity::TooLarge, dummy_component, name()});
         } else if ( well_control_residual > control_tolerance) {
-            report.setWellFailed({type, CS::Severity::Normal, dummy_component, name()});
+            report.setWellFailed({type, CR::Severity::Normal, dummy_component, name()});
         }
 
         return report;

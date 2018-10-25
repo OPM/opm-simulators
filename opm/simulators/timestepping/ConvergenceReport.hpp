@@ -18,8 +18,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_CONVERGENCESTATUS_HEADER_INCLUDED
-#define OPM_CONVERGENCESTATUS_HEADER_INCLUDED
+#ifndef OPM_CONVERGENCEREPORT_HEADER_INCLUDED
+#define OPM_CONVERGENCEREPORT_HEADER_INCLUDED
 
 #include <cassert>
 #include <numeric>
@@ -32,7 +32,7 @@ namespace Opm
     /// Represents the convergence status of the whole simulator, to
     /// make it possible to query and store the reasons for
     /// convergence failures.
-    class ConvergenceStatus
+    class ConvergenceReport
     {
     public:
 
@@ -64,7 +64,7 @@ namespace Opm
 
         // ----------- Mutating member functions -----------
 
-        ConvergenceStatus()
+        ConvergenceReport()
             : status_{AllGood}
             , res_failures_{}
             , well_failures_{}
@@ -90,7 +90,7 @@ namespace Opm
             well_failures_.push_back(wf);
         }
 
-        ConvergenceStatus& operator+=(const ConvergenceStatus& other)
+        ConvergenceReport& operator+=(const ConvergenceReport& other)
         {
             status_ = static_cast<Status>(status_ | other.status_);
             res_failures_.insert(res_failures_.end(), other.res_failures_.begin(), other.res_failures_.end());
@@ -153,4 +153,4 @@ namespace Opm
 
 } // namespace Opm
 
-#endif // OPM_CONVERGENCESTATUS_HEADER_INCLUDED
+#endif // OPM_CONVERGENCEREPORT_HEADER_INCLUDED

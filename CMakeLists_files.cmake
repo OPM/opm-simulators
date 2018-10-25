@@ -131,7 +131,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_blackoil_amg.cpp
   tests/test_block.cpp
   tests/test_boprops_ad.cpp
-  tests/test_convergencestatus.cpp
+  tests/test_convergencereport.cpp
   tests/test_graphcoloring.cpp
   tests/test_rateconverter.cpp
   tests/test_span.cpp
@@ -445,7 +445,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/AdaptiveTimeStepping.hpp
   opm/simulators/timestepping/AdaptiveTimeStepping_impl.hpp
   opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp
-  opm/simulators/timestepping/ConvergenceStatus.hpp
+  opm/simulators/timestepping/ConvergenceReport.hpp
   opm/simulators/timestepping/TimeStepControl.hpp
   opm/simulators/timestepping/TimeStepControlInterface.hpp
   opm/simulators/timestepping/SimulatorTimer.hpp

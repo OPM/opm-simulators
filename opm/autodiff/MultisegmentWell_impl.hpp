@@ -405,7 +405,7 @@ namespace Opm
 
 
     template <typename TypeTag>
-    ConvergenceStatus
+    ConvergenceReport
     MultisegmentWell<TypeTag>::
     getWellConvergence(const std::vector<double>& B_avg) const
     {
@@ -419,18 +419,18 @@ namespace Opm
             }
         }
 
-        using CS = ConvergenceStatus;
-        CS::WellFailure::Type ctrltype = CS::WellFailure::Type::Mb;
+        using CR = ConvergenceReport;
+        CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Mb;
         switch(well_controls_get_current_type(well_controls_)) {
             case THP:
-                ctrltype = CS::WellFailure::Type::CtrlTHP;
+                ctrltype = CR::WellFailure::Type::CtrlTHP;
                 break;
             case BHP:
-                ctrltype = CS::WellFailure::Type::CtrlBHP;
+                ctrltype = CR::WellFailure::Type::CtrlBHP;
                 break;
             case RESERVOIR_RATE:
             case SURFACE_RATE:
-                ctrltype = CS::WellFailure::Type::CtrlRate;
+                ctrltype = CR::WellFailure::Type::CtrlRate;
                 break;
             default:
                 OPM_THROW(std::runtime_error, "Unknown well control control types for well " << name());
@@ -438,7 +438,7 @@ namespace Opm
 
         std::vector<double> maximum_residual(numWellEq, 0.0);
 
-        ConvergenceStatus report;
+        ConvergenceReport report;
         // TODO: the following is a little complicated, maybe can be simplified in some way?
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             for (int seg = 0; seg < numberOfSegments(); ++seg) {
@@ -452,11 +452,11 @@ namespace Opm
                         // Control equation
                         const double control_residual = abs_residual[seg][eq_idx];
                         if (std::isnan(control_residual)) {
-                            report.setWellFailed({ctrltype, CS::Severity::NotANumber, -1, name()});
+                            report.setWellFailed({ctrltype, CR::Severity::NotANumber, -1, name()});
                         } else if (control_residual > param_.max_residual_allowed_) {
-                            report.setWellFailed({ctrltype, CS::Severity::TooLarge, -1, name()});
+                            report.setWellFailed({ctrltype, CR::Severity::TooLarge, -1, name()});
                         } else if (control_residual > param_.tolerance_wells_) {
-                            report.setWellFailed({ctrltype, CS::Severity::Normal, -1, name()});
+                            report.setWellFailed({ctrltype, CR::Severity::Normal, -1, name()});
                         }
                     } else {
                         // Pressure equation
@@ -474,20 +474,20 @@ namespace Opm
                 const double flux_residual = maximum_residual[eq_idx];
                 // TODO: the report can not handle the segment number yet.
                 if (std::isnan(flux_residual)) {
-                    report.setWellFailed({CS::WellFailure::Type::Mb, CS::Severity::NotANumber, eq_idx, name()});
+                    report.setWellFailed({CR::WellFailure::Type::Mb, CR::Severity::NotANumber, eq_idx, name()});
                 } else if (flux_residual > param_.max_residual_allowed_) {
-                    report.setWellFailed({CS::WellFailure::Type::Mb, CS::Severity::TooLarge, eq_idx, name()});
+                    report.setWellFailed({CR::WellFailure::Type::Mb, CR::Severity::TooLarge, eq_idx, name()});
                 } else if (flux_residual > param_.tolerance_wells_) {
-                    report.setWellFailed({CS::WellFailure::Type::Mb, CS::Severity::Normal, eq_idx, name()});
+                    report.setWellFailed({CR::WellFailure::Type::Mb, CR::Severity::Normal, eq_idx, name()});
                 }
             } else { // pressure equation
                 const double pressure_residual = maximum_residual[eq_idx];
                 if (std::isnan(pressure_residual)) {
-                    report.setWellFailed({CS::WellFailure::Type::Pressure, CS::Severity::NotANumber, -1, name()});
+                    report.setWellFailed({CR::WellFailure::Type::Pressure, CR::Severity::NotANumber, -1, name()});
                 } else if (std::isinf(pressure_residual)) {
-                    report.setWellFailed({CS::WellFailure::Type::Pressure, CS::Severity::TooLarge, -1, name()});
+                    report.setWellFailed({CR::WellFailure::Type::Pressure, CR::Severity::TooLarge, -1, name()});
                 } else if (pressure_residual > param_.tolerance_pressure_ms_wells_) {
-                    report.setWellFailed({CS::WellFailure::Type::Pressure, CS::Severity::Normal, -1, name()});
+                    report.setWellFailed({CR::WellFailure::Type::Pressure, CR::Severity::Normal, -1, name()});
                 }
             }
         }

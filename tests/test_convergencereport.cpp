@@ -19,43 +19,43 @@
 */
 
 #include <config.h>
-#define BOOST_TEST_MODULE ConvergenceStatusTest
+#define BOOST_TEST_MODULE ConvergenceReportTest
 #include <boost/test/unit_test.hpp>
 
-#include <opm/simulators/timestepping/ConvergenceStatus.hpp>
+#include <opm/simulators/timestepping/ConvergenceReport.hpp>
 
-using CS = Opm::ConvergenceStatus;
+using CR = Opm::ConvergenceReport;
 
 BOOST_AUTO_TEST_CASE(DefaultConstructor)
 {
-    Opm::ConvergenceStatus s;
+    Opm::ConvergenceReport s;
     BOOST_CHECK(s.converged());
     BOOST_CHECK(!s.reservoirFailed());
     BOOST_CHECK(!s.wellFailed());
-    BOOST_CHECK(s.severityOfWorstFailure() == CS::Severity::None);
+    BOOST_CHECK(s.severityOfWorstFailure() == CR::Severity::None);
 }
 
 BOOST_AUTO_TEST_CASE(Failures)
 {
-    Opm::ConvergenceStatus s1;
-    s1.setReservoirFailed({CS::ReservoirFailure::Type::Cnv, CS::Severity::Normal, 2, 100});
+    Opm::ConvergenceReport s1;
+    s1.setReservoirFailed({CR::ReservoirFailure::Type::Cnv, CR::Severity::Normal, 2, 100});
     {
         BOOST_CHECK(!s1.converged());
         BOOST_CHECK(s1.reservoirFailed());
         BOOST_CHECK(!s1.wellFailed());
         BOOST_REQUIRE(s1.reservoirFailures().size() == 1);
         const auto f = s1.reservoirFailures()[0];
-        BOOST_CHECK(f.type == CS::ReservoirFailure::Type::Cnv);
-        BOOST_CHECK(f.severity == CS::Severity::Normal);
+        BOOST_CHECK(f.type == CR::ReservoirFailure::Type::Cnv);
+        BOOST_CHECK(f.severity == CR::Severity::Normal);
         BOOST_CHECK(f.phase == 2);
         BOOST_CHECK(f.cell_index == 100);
         BOOST_CHECK(s1.wellFailures().empty());
-        BOOST_CHECK(s1.severityOfWorstFailure() == CS::Severity::Normal);
+        BOOST_CHECK(s1.severityOfWorstFailure() == CR::Severity::Normal);
     }
 
-    Opm::ConvergenceStatus s2;
-    s2.setWellFailed({CS::WellFailure::Type::CtrlTHP, CS::Severity::Normal, -1, "PRODUCER-123"});
-    s2.setWellFailed({CS::WellFailure::Type::Mb, CS::Severity::TooLarge, 2, "INJECTOR-XYZ"});
+    Opm::ConvergenceReport s2;
+    s2.setWellFailed({CR::WellFailure::Type::CtrlTHP, CR::Severity::Normal, -1, "PRODUCER-123"});
+    s2.setWellFailed({CR::WellFailure::Type::Mb, CR::Severity::TooLarge, 2, "INJECTOR-XYZ"});
     {
         BOOST_CHECK(!s2.converged());
         BOOST_CHECK(!s2.reservoirFailed());
@@ -63,16 +63,16 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(s2.reservoirFailures().empty());
         BOOST_REQUIRE(s2.wellFailures().size() == 2);
         const auto f0 = s2.wellFailures()[0];
-        BOOST_CHECK(f0.type == CS::WellFailure::Type::CtrlTHP);
-        BOOST_CHECK(f0.severity == CS::Severity::Normal);
+        BOOST_CHECK(f0.type == CR::WellFailure::Type::CtrlTHP);
+        BOOST_CHECK(f0.severity == CR::Severity::Normal);
         BOOST_CHECK(f0.phase == -1);
         BOOST_CHECK(f0.well_name == "PRODUCER-123");
         const auto f1 = s2.wellFailures()[1];
-        BOOST_CHECK(f1.type == CS::WellFailure::Type::Mb);
-        BOOST_CHECK(f1.severity == CS::Severity::TooLarge);
+        BOOST_CHECK(f1.type == CR::WellFailure::Type::Mb);
+        BOOST_CHECK(f1.severity == CR::Severity::TooLarge);
         BOOST_CHECK(f1.phase == 2);
         BOOST_CHECK(f1.well_name == "INJECTOR-XYZ");
-        BOOST_CHECK(s2.severityOfWorstFailure() == CS::Severity::TooLarge);
+        BOOST_CHECK(s2.severityOfWorstFailure() == CR::Severity::TooLarge);
     }
 
     s1 += s2;
@@ -82,22 +82,22 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(s1.wellFailed());
         BOOST_REQUIRE(s1.reservoirFailures().size() == 1);
         const auto f = s1.reservoirFailures()[0];
-        BOOST_CHECK(f.type == CS::ReservoirFailure::Type::Cnv);
-        BOOST_CHECK(f.severity == CS::Severity::Normal);
+        BOOST_CHECK(f.type == CR::ReservoirFailure::Type::Cnv);
+        BOOST_CHECK(f.severity == CR::Severity::Normal);
         BOOST_CHECK(f.phase == 2);
         BOOST_CHECK(f.cell_index == 100);
         BOOST_REQUIRE(s1.wellFailures().size() == 2);
         const auto f0 = s1.wellFailures()[0];
-        BOOST_CHECK(f0.type == CS::WellFailure::Type::CtrlTHP);
-        BOOST_CHECK(f0.severity == CS::Severity::Normal);
+        BOOST_CHECK(f0.type == CR::WellFailure::Type::CtrlTHP);
+        BOOST_CHECK(f0.severity == CR::Severity::Normal);
         BOOST_CHECK(f0.phase == -1);
         BOOST_CHECK(f0.well_name == "PRODUCER-123");
         const auto f1 = s1.wellFailures()[1];
-        BOOST_CHECK(f1.type == CS::WellFailure::Type::Mb);
-        BOOST_CHECK(f1.severity == CS::Severity::TooLarge);
+        BOOST_CHECK(f1.type == CR::WellFailure::Type::Mb);
+        BOOST_CHECK(f1.severity == CR::Severity::TooLarge);
         BOOST_CHECK(f1.phase == 2);
         BOOST_CHECK(f1.well_name == "INJECTOR-XYZ");
-        BOOST_CHECK(s1.severityOfWorstFailure() == CS::Severity::TooLarge);
+        BOOST_CHECK(s1.severityOfWorstFailure() == CR::Severity::TooLarge);
     }
 
     s1.clear();
@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(s1.converged());
         BOOST_CHECK(!s1.reservoirFailed());
         BOOST_CHECK(!s1.wellFailed());
-        BOOST_CHECK(s1.severityOfWorstFailure() == CS::Severity::None);
+        BOOST_CHECK(s1.severityOfWorstFailure() == CR::Severity::None);
     }
 
     s1 += s2;
@@ -116,16 +116,16 @@ BOOST_AUTO_TEST_CASE(Failures)
         BOOST_CHECK(s1.reservoirFailures().empty());
         BOOST_REQUIRE(s1.wellFailures().size() == 2);
         const auto f0 = s1.wellFailures()[0];
-        BOOST_CHECK(f0.type == CS::WellFailure::Type::CtrlTHP);
-        BOOST_CHECK(f0.severity == CS::Severity::Normal);
+        BOOST_CHECK(f0.type == CR::WellFailure::Type::CtrlTHP);
+        BOOST_CHECK(f0.severity == CR::Severity::Normal);
         BOOST_CHECK(f0.phase == -1);
         BOOST_CHECK(f0.well_name == "PRODUCER-123");
         const auto f1 = s1.wellFailures()[1];
-        BOOST_CHECK(f1.type == CS::WellFailure::Type::Mb);
-        BOOST_CHECK(f1.severity == CS::Severity::TooLarge);
+        BOOST_CHECK(f1.type == CR::WellFailure::Type::Mb);
+        BOOST_CHECK(f1.severity == CR::Severity::TooLarge);
         BOOST_CHECK(f1.phase == 2);
         BOOST_CHECK(f1.well_name == "INJECTOR-XYZ");
-        BOOST_CHECK(s1.severityOfWorstFailure() == CS::Severity::TooLarge);
+        BOOST_CHECK(s1.severityOfWorstFailure() == CR::Severity::TooLarge);
     }
 }
 
