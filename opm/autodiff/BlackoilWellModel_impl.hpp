@@ -665,7 +665,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             report += well->getWellConvergence(B_avg);
         }
-        auto severity = report.severityOfWorstFailure();
+        ConvergenceReport::Severity severity = report.severityOfWorstFailure();
 
         // checking NaN residuals
         {

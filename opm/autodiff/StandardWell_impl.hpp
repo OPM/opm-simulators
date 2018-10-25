@@ -1510,7 +1510,7 @@ namespace Opm
 
         ConvergenceReport report;
         using CR = ConvergenceReport;
-        CR::WellFailure::Type type = CR::WellFailure::Type::Mb;
+        CR::WellFailure::Type type = CR::WellFailure::Type::MassBalance;
         // checking if any NaN or too large residuals found
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -1536,16 +1536,16 @@ namespace Opm
         double control_tolerance = 0.;
         switch(well_controls_get_current_type(well_controls_)) {
             case THP:
-                type = CR::WellFailure::Type::CtrlTHP;
+                type = CR::WellFailure::Type::ControlTHP;
                 control_tolerance = 1.e3; // 0.01 bar
                 break;
             case BHP:  // pressure type of control
-                type = CR::WellFailure::Type::CtrlBHP;
+                type = CR::WellFailure::Type::ControlBHP;
                 control_tolerance = 1.e3; // 0.01 bar
                 break;
             case RESERVOIR_RATE:
             case SURFACE_RATE:
-                type = CR::WellFailure::Type::CtrlRate;
+                type = CR::WellFailure::Type::ControlRate;
                 control_tolerance = 1.e-4; // smaller tolerance for rate control
                 break;
             default:

@@ -47,7 +47,7 @@ namespace Opm
                                NotANumber = 3 };
         struct ReservoirFailure
         {
-            enum struct Type { Mb, Cnv };
+            enum struct Type { Invalid, MassBalance, Cnv };
             Type type;
             Severity severity;
             int phase;
@@ -55,7 +55,7 @@ namespace Opm
         };
         struct WellFailure
         {
-            enum struct Type { Mb, Pressure, CtrlBHP, CtrlTHP, CtrlRate };
+            enum struct Type { Invalid, MassBalance, Pressure, ControlBHP, ControlTHP, ControlRate };
             Type type;
             Severity severity;
             int phase;
