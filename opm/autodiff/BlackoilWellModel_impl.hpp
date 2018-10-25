@@ -671,8 +671,8 @@ namespace Opm {
         {
             // Debug reporting.
             for (const auto& f : report.wellFailures()) {
-                if (f.severity == ConvergenceReport::Severity::NotANumber) {
-                    OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase) + " for well " + f.well_name);
+                if (f.severity() == ConvergenceReport::Severity::NotANumber) {
+                    OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
                 }
             }
 
@@ -690,8 +690,8 @@ namespace Opm {
         {
             // Debug reporting.
             for (const auto& f : report.wellFailures()) {
-                if (f.severity == ConvergenceReport::Severity::TooLarge) {
-                    OpmLog::debug("Too large residual found with phase " + std::to_string(f.phase) + " for well " + f.well_name);
+                if (f.severity() == ConvergenceReport::Severity::TooLarge) {
+                    OpmLog::debug("Too large residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
                 }
             }
 

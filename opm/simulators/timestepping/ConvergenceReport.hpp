@@ -45,21 +45,41 @@ namespace Opm
                                Normal     = 1,
                                TooLarge   = 2,
                                NotANumber = 3 };
-        struct ReservoirFailure
+        class ReservoirFailure
         {
+        public:
             enum struct Type { Invalid, MassBalance, Cnv };
-            Type type;
-            Severity severity;
-            int phase;
-            int cell_index;
+            ReservoirFailure(Type t, Severity s, int phase, int cell_index)
+                : type_(t), severity_(s), phase_(phase), cell_index_(cell_index)
+            {
+            }
+            Type type() const { return type_; }
+            Severity severity() const { return severity_; }
+            int phase() const { return phase_; }
+            int cellIndex() const { return cell_index_; }
+        private:
+            Type type_;
+            Severity severity_;
+            int phase_;
+            int cell_index_;
         };
-        struct WellFailure
+        class WellFailure
         {
+        public:
             enum struct Type { Invalid, MassBalance, Pressure, ControlBHP, ControlTHP, ControlRate };
-            Type type;
-            Severity severity;
-            int phase;
-            std::string well_name;
+            WellFailure(Type t, Severity s, int phase, const std::string& well_name)
+                : type_(t), severity_(s), phase_(phase), well_name_(well_name)
+            {
+            }
+            Type type() const { return type_; }
+            Severity severity() const { return severity_; }
+            int phase() const { return phase_; }
+            const std::string& wellName() const { return well_name_; }
+        private:
+            Type type_;
+            Severity severity_;
+            int phase_;
+            std::string well_name_;
         };
 
         // ----------- Mutating member functions -----------
@@ -135,10 +155,10 @@ namespace Opm
             };
             auto s = Severity::None;
             for (const auto f : res_failures_) {
-                s = smax(s, f.severity);
+                s = smax(s, f.severity());
             }
             for (const auto f : well_failures_) {
-                s = smax(s, f.severity);
+                s = smax(s, f.severity());
             }
             return s;
         }
