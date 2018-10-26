@@ -46,6 +46,13 @@ namespace Opm {
         public:
             explicit BlackoilAquiferModel(Simulator& ebosSimulator);
 
+            void initialSolutionApplied()
+            {
+                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
+                    aquifer->initialSolutionApplied();
+
+            }
+
             // at the beginning of each time step (Not report step)
             void beginTimeStep();
 

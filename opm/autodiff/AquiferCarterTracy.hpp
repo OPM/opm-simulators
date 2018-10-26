@@ -43,6 +43,7 @@ namespace Opm
         public:
 
             typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+            typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
             typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
             typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
             typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
@@ -63,29 +64,44 @@ namespace Opm
 
             AquiferCarterTracy( const AquiferCT::AQUCT_data& aquct_data,
                                 const Aquancon::AquanconOutput& connection,
-                                const Simulator& ebosSimulator                    )
-            : ebos_simulator_ (ebosSimulator),
-              aquct_data_ (aquct_data),
-              gravity_ (ebos_simulator_.problem().gravity()[2])
+                                const Simulator& ebosSimulator)
+            : ebos_simulator_ (ebosSimulator)
+            , aquct_data_ (aquct_data)
+            , connection_(connection)
+            {}
+
+            void initialSolutionApplied()
             {
-                initQuantities(connection);
+                initQuantities(connection_);
             }
 
             template <class Context>
             void addToSource(RateVector& rates, const Context& context, unsigned spaceIdx, unsigned timeIdx)
             {
-                unsigned idx = context.globalSpaceIndex(spaceIdx, timeIdx);
+                unsigned cellIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+
+#warning HACK
+                // check if idx is in cell_idx_
+                int connIdx = -1;
+                for (auto tmp: cell_idx_)  {
+                    if (cell_idx_[tmp] == cellIdx) {
+                        connIdx = tmp;
+                        break;
+                    }
+                }
+                if (connIdx < 0)
+                    return;
 
                 // We are dereferencing the value of IntensiveQuantities because cachedIntensiveQuantities return a const pointer to
                 // IntensiveQuantities of that particular cell_id
                 const IntensiveQuantities intQuants = context.intensiveQuantities(spaceIdx, timeIdx);
                 // This is the pressure at td + dt
-                updateCellPressure(pressure_current_,idx,intQuants);
-                updateCellDensity(idx,intQuants);
-                calculateInflowRate(idx, context.simulator());
+                updateCellPressure(pressure_current_,connIdx,intQuants);
+                updateCellDensity(connIdx,intQuants);
+                calculateInflowRate(connIdx, context.simulator());
 
                 rates[BlackoilIndices::conti0EqIdx + FluidSystem::waterCompIdx] -=
-                    Qai_.at(idx)/context.dofVolume(spaceIdx, timeIdx);
+                    Qai_.at(connIdx)/context.dofVolume(spaceIdx, timeIdx);
             }
 
             inline void beforeTimeStep(const Simulator& simulator)
@@ -128,14 +144,16 @@ namespace Opm
             // Variables constants
             const AquiferCT::AQUCT_data aquct_data_;
 
-            Scalar mu_w_    , //water viscosity
-                   beta_    , // Influx constant
-                   Tc_     , // Time constant
-                   pa0_     , // initial aquifer pressure
-                   gravity_ ; // gravitational acceleration
+            Scalar mu_w_; //water viscosity
+            Scalar beta_; // Influx constant
+            Scalar Tc_; // Time constant
+            Scalar pa0_; // initial aquifer pressure
 
             Eval W_flux_;
 
+
+            Scalar gravity_() const
+            { return ebos_simulator_.problem().gravity()[2]; }
 
             inline void getInfluenceTableValues(Scalar& pitd, Scalar& pitd_prime, const Scalar& td)
             {
@@ -182,7 +200,7 @@ namespace Opm
 
             inline Scalar dpai(int idx)
             {
-                Scalar dp = pa0_ + rhow_.at(idx).value()*gravity_*(cell_depth_.at(idx) - aquct_data_.d0) - pressure_previous_.at(idx);
+                Scalar dp = pa0_ + rhow_.at(idx).value()*gravity_()*(cell_depth_.at(idx) - aquct_data_.d0) - pressure_previous_.at(idx);
                 return dp;
             }
 
@@ -314,11 +332,18 @@ namespace Opm
                    pa0_ = aquct_data_.p0;
                 }
 
+                // use the thermodynamic state of the first active cell as a
+                // reference. there might be better ways to do this...
+                ElementContext elemCtx(ebos_simulator_);
+                const auto& elem = *ebos_simulator_.gridView().template begin</*codim=*/0>();
+                elemCtx.updateAll(elem);
+                const auto& iq0 = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+
                 // Initialize a FluidState object first
                 FluidState fs_aquifer;
                 // We use the temperature of the first cell connected to the aquifer
                 // Here we copy the fluidstate of the first cell, so we do not accidentally mess up the reservoir fs
-                fs_aquifer.assign( ebos_simulator_.model().cachedIntensiveQuantities(cell_idx_.at(0), /*timeIdx=*/ 0)->fluidState() );
+                fs_aquifer.assign( iq0.fluidState() );
                 Eval temperature_aq, pa0_mean;
                 temperature_aq = fs_aquifer.temperature(0);
                 pa0_mean = pa0_;
@@ -344,7 +369,7 @@ namespace Opm
                     
                     water_pressure_reservoir = fs.pressure(waterPhaseIdx).value();
                     rhow_.at(idx) = fs.density(waterPhaseIdx);
-                    pw_aquifer.push_back( (water_pressure_reservoir - rhow_.at(idx).value()*gravity_*(cell_depth_.at(idx) - aquct_data_.d0))*alphai_.at(idx) );
+                    pw_aquifer.push_back( (water_pressure_reservoir - rhow_.at(idx).value()*gravity_()*(cell_depth_.at(idx) - aquct_data_.d0))*alphai_.at(idx) );
                 }
 
                 // We take the average of the calculated equilibrium pressures.
@@ -352,7 +377,7 @@ namespace Opm
                 return aquifer_pres_avg;
             }
 
-
+            const Aquancon::AquanconOutput connection_;
     }; // class AquiferCarterTracy
 
 
