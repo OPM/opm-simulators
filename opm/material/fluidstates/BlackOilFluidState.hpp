@@ -157,14 +157,14 @@ public:
 
         for (unsigned storagePhaseIdx = 0; storagePhaseIdx < numStoragePhases; ++storagePhaseIdx) {
             unsigned phaseIdx = storageToCanonicalPhaseIndex_(storagePhaseIdx);
-            setSaturation(storagePhaseIdx, fs.saturation(phaseIdx));
-            setPressure(storagePhaseIdx, fs.pressure(phaseIdx));
-            setDensity(storagePhaseIdx, fs.density(phaseIdx));
+            setSaturation(phaseIdx, fs.saturation(phaseIdx));
+            setPressure(phaseIdx, fs.pressure(phaseIdx));
+            setDensity(phaseIdx, fs.density(phaseIdx));
 
             if (enableEnergy)
-                setEnthalpy(storagePhaseIdx, fs.enthalpy(phaseIdx));
+                setEnthalpy(phaseIdx, fs.enthalpy(phaseIdx));
 
-            setInvB(storagePhaseIdx, getInvB_<FluidSystem, FluidState, Scalar>(fs, phaseIdx, pvtRegionIdx));
+            setInvB(phaseIdx, getInvB_<FluidSystem, FluidState, Scalar>(fs, phaseIdx, pvtRegionIdx));
         }
     }
 
