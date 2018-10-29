@@ -29,6 +29,13 @@
 
 #include <ewoms/common/propertysystem.hh>
 
+BEGIN_PROPERTIES
+
+NEW_PROP_TAG(Simulator);
+NEW_PROP_TAG(RateVector);
+
+END_PROPERTIES
+
 namespace Ewoms {
 
 /*!
