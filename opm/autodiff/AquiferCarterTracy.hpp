@@ -46,12 +46,14 @@ namespace Opm
             typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
             typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
             typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
+            enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
+            enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
 
             static const int numEq = BlackoilIndices::numEq;
             typedef double Scalar;
 
             typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
-            typedef Opm::BlackOilFluidState<Eval, FluidSystem> FluidState;
+            typedef Opm::BlackOilFluidState<Eval, FluidSystem, enableTemperature, enableEnergy, BlackoilIndices::gasEnabled, BlackoilIndices::numPhases> FluidState;
 
             static const auto waterCompIdx = FluidSystem::waterCompIdx;
             static const auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
