@@ -641,16 +641,57 @@ namespace Opm
     WellInterface<TypeTag>::
     updateWellTestState(const WellState& well_state,
                         const double& simulationTime,
-                        WellTestState& wellTestState,
-                        const bool& writeMessageToOPMLog) const
+                        const bool& writeMessageToOPMLog,
+                        WellTestState& wellTestState) const
     {
-        // economic limits only apply for production wells.
+        // currently, we only updateWellTestState for producers
         if (wellType() != PRODUCER) {
             return;
         }
 
-        // flag to check if the mim oil/gas rate limit is violated
-        bool rate_limit_violated = false;
+        // updating well test state based on physical (THP/BHP) limits.
+        updateWellTestStatePhysical(well_state, simulationTime, writeMessageToOPMLog, wellTestState);
+
+        // updating well test state based on Economic limits.
+        updateWellTestStateEconomic(well_state, simulationTime, writeMessageToOPMLog, wellTestState);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updateWellTestStatePhysical(const WellState& /* well_state */,
+                                const double /* simulation_time */,
+                                const bool /* write_message_to_opmlog */,
+                                WellTestState& /* well_test_state */) const
+    {
+        // TODO: other facilities are required to make the following action work
+        /* if (!isOperable()) {
+            well_test_state.addClosedWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
+            if (write_message_to_opmlog) {
+                // TODO: considering auto shut in?
+                const std::string msg = "well " + name()
+                             + std::string(" will be shut as it can not operate under current reservoir condition");
+                OpmLog::info(msg);
+            }
+        } */
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updateWellTestStateEconomic(const WellState& well_state,
+                                const double simulation_time,
+                                const bool write_message_to_opmlog,
+                                WellTestState& well_test_state) const
+    {
         const WellEconProductionLimits& econ_production_limits = well_ecl_->getEconProductionLimits(current_step_);
 
         // if no limit is effective here, then continue to the next well
@@ -658,13 +699,14 @@ namespace Opm
             return;
         }
 
-        const std::string well_name = name();
+        // flag to check if the mim oil/gas rate limit is violated
+        bool rate_limit_violated = false;
 
         // for the moment, we only handle rate limits, not handling potential limits
         // the potential limits should not be difficult to add
         const WellEcon::QuantityLimitEnum& quantity_limit = econ_production_limits.quantityLimit();
         if (quantity_limit == WellEcon::POTN) {
-            const std::string msg = std::string("POTN limit for well ") + well_name + std::string(" is not supported for the moment. \n")
+            const std::string msg = std::string("POTN limit for well ") + name() + std::string(" is not supported for the moment. \n")
                                   + std::string("All the limits will be evaluated based on RATE. ");
             OpmLog::warning("NOT_SUPPORTING_POTN", msg);
         }
@@ -675,8 +717,10 @@ namespace Opm
 
         if (rate_limit_violated) {
             if (econ_production_limits.endRun()) {
-                const std::string warning_message = std::string("ending run after well closed due to economic limits is not supported yet \n")
-                                                  + std::string("the program will keep running after ") + well_name + std::string(" is closed");
+                const std::string warning_message = std::string("ending run after well closed due to economic limits")
+                                                  + std::string("is not supported yet \n")
+                                                  + std::string("the program will keep running after ") + name()
+                                                  + std::string(" is closed");
                 OpmLog::warning("NOT_SUPPORTING_ENDRUN", warning_message);
             }
 
@@ -684,13 +728,13 @@ namespace Opm
                 OpmLog::warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
             }
 
-            wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, simulationTime);
-            if (writeMessageToOPMLog) {
+            well_test_state.addClosedWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+            if (write_message_to_opmlog) {
                 if (well_ecl_->getAutomaticShutIn()) {
-                    const std::string msg = std::string("well ") + well_name + std::string(" will be shut due to rate economic limit");
+                    const std::string msg = std::string("well ") + name() + std::string(" will be shut due to rate economic limit");
                     OpmLog::info(msg);
                 } else {
-                    const std::string msg = std::string("well ") + well_name + std::string(" will be stopped due to rate economic limit");
+                    const std::string msg = std::string("well ") + name() + std::string(" will be stopped due to rate economic limit");
                     OpmLog::info(msg);
                 }
             }
@@ -714,15 +758,15 @@ namespace Opm
                 {
                     const int worst_offending_completion = std::get<1>(ratio_check_return);
 
-                    wellTestState.addClosedCompletion(well_name, worst_offending_completion, simulationTime);
-                    if (writeMessageToOPMLog) {
+                    well_test_state.addClosedCompletion(name(), worst_offending_completion, simulation_time);
+                    if (write_message_to_opmlog) {
                         if (worst_offending_completion < 0) {
-                            const std::string msg = std::string("Connection ") + std::to_string(- worst_offending_completion) + std::string(" for well ")
-                                    + well_name + std::string(" will be closed due to economic limit");
+                            const std::string msg = std::string("Connection ") + std::to_string(- worst_offending_completion)
+                                    + std::string(" for well ") + name() + std::string(" will be closed due to economic limit");
                             OpmLog::info(msg);
                         } else {
-                            const std::string msg = std::string("Completion ") + std::to_string(worst_offending_completion) + std::string(" for well ")
-                                    + well_name + std::string(" will be closed due to economic limit");
+                            const std::string msg = std::string("Completion ") + std::to_string(worst_offending_completion)
+                                    + std::string(" for well ") + name() + std::string(" will be closed due to economic limit");
                             OpmLog::info(msg);
                         }
                     }
@@ -730,19 +774,19 @@ namespace Opm
                     bool allCompletionsClosed = true;
                     const auto& connections = well_ecl_->getConnections(current_step_);
                     for (const auto& connection : connections) {
-                        if (!wellTestState.hasCompletion(name(), connection.complnum())) {
+                        if (!well_test_state.hasCompletion(name(), connection.complnum())) {
                             allCompletionsClosed = false;
                         }
                     }
 
                     if (allCompletionsClosed) {
-                        wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, simulationTime);
-                        if (writeMessageToOPMLog) {
+                        well_test_state.addClosedWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+                        if (write_message_to_opmlog) {
                             if (well_ecl_->getAutomaticShutIn()) {
-                            	const std::string msg = well_name + std::string(" will be shut due to last completion closed");
+                                const std::string msg = name() + std::string(" will be shut due to last completion closed");
                             	OpmLog::info(msg);
                             } else {
-                            	const std::string msg = well_name + std::string(" will be stopped due to last completion closed");
+                                const std::string msg = name() + std::string(" will be stopped due to last completion closed");
                                 OpmLog::info(msg);
                             }
                         }
@@ -751,14 +795,14 @@ namespace Opm
                 }
                 case WellEcon::WELL:
                 {
-                wellTestState.addClosedWell(well_name, WellTestConfig::Reason::ECONOMIC, 0);
-                if (writeMessageToOPMLog) {
+                well_test_state.addClosedWell(name(), WellTestConfig::Reason::ECONOMIC, 0);
+                if (write_message_to_opmlog) {
                     if (well_ecl_->getAutomaticShutIn()) {
                         // tell the controll that the well is closed
-                        const std::string msg = well_name + std::string(" will be shut due to ratio economic limit");
+                        const std::string msg = name() + std::string(" will be shut due to ratio economic limit");
                         OpmLog::info(msg);
                     } else {
-                        const std::string msg = well_name + std::string(" will be stopped due to ratio economic limit");
+                        const std::string msg = name() + std::string(" will be stopped due to ratio economic limit");
                         OpmLog::info(msg);
                     }
                 }
@@ -768,7 +812,8 @@ namespace Opm
                     break;
                 default:
                 {
-                    OpmLog::warning("NOT_SUPPORTED_WORKOVER_TYPE", "not supporting workover type " + WellEcon::WorkoverEnumToString(workover) );
+                    OpmLog::warning("NOT_SUPPORTED_WORKOVER_TYPE",
+                                    "not supporting workover type " + WellEcon::WorkoverEnumToString(workover) );
                 }
             }
         }

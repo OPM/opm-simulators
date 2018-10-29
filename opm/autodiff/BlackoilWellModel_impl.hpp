@@ -207,7 +207,7 @@ namespace Opm {
                         wellidx = w;
                         break;
                     }
-                }                
+                }
                 if (wellidx < 0) {
                     OPM_THROW(std::logic_error, "Could not find the well  " << testWell.first << " in the well struct ");
                 }
@@ -238,18 +238,18 @@ namespace Opm {
                 well->initPrimaryVariablesEvaluation();
 
                 bool testWell = true;
-		// if a well is closed because all completions are closed, we need to check each completion
-		// individually. We first open all completions, then we close one by one by calling updateWellTestState
-		// untill the number of closed completions do not increase anymore. 
+                // if a well is closed because all completions are closed, we need to check each completion
+                // individually. We first open all completions, then we close one by one by calling updateWellTestState
+                // untill the number of closed completions do not increase anymore.
                 while (testWell) {
                     const size_t numberOfClosedCompletions = wellTestStateForTheWellTest.sizeCompletions();
                     well->solveWellForTesting(ebosSimulator_, wellStateCopy, B_avg, terminal_output_);
-                    well->updateWellTestState(wellStateCopy, simulationTime, wellTestStateForTheWellTest, /*writeMessageToOPMLog=*/ false);
+                    well->updateWellTestState(wellStateCopy, simulationTime, /*writeMessageToOPMLog=*/ false, wellTestStateForTheWellTest);
                     well->closeCompletions(wellTestStateForTheWellTest);
 
                     // Stop testing if the well is closed or shut due to all completions shut
                     // Also check if number of completions has increased. If the number of closed completions do not increased
-                    // we stop the testing.  
+                    // we stop the testing.
                     if (wellTestStateForTheWellTest.sizeWells() > 0 || numberOfClosedCompletions == wellTestStateForTheWellTest.sizeCompletions())
                         testWell = false;
                 }
@@ -598,7 +598,6 @@ namespace Opm {
         do {
             assembleWellEq(dt, true);
 
-            //std::cout << "well convergence only wells " << std::endl;
             converged = getWellConvergence(B_avg);
 
             // checking whether the group targets are converged
@@ -767,7 +766,7 @@ namespace Opm {
     updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const
     {
         for (const auto& well : well_container_) {
-            well->updateWellTestState(well_state_, simulationTime, wellTestState, /*writeMessageToOPMLog=*/ true);
+            well->updateWellTestState(well_state_, simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState);
         }
     }
 

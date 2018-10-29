@@ -149,8 +149,18 @@ namespace Opm
 
         void updateWellTestState(const WellState& well_state,
                                  const double& simulationTime,
-                                 WellTestState& wellTestState,
-                                 const bool& writeMessageToOPMLog) const;
+                                 const bool& writeMessageToOPMLog,
+                                 WellTestState& wellTestState) const;
+
+        void updateWellTestStatePhysical(const WellState& well_state,
+                                         const double simulation_time,
+                                         const bool write_message_to_opmlog,
+                                         WellTestState& well_test_state) const;
+
+        void updateWellTestStateEconomic(const WellState& well_state,
+                                         const double simulation_time,
+                                         const bool write_message_to_opmlog,
+                                         WellTestState& well_test_state) const;
 
         void setWellEfficiencyFactor(const double efficiency_factor);
 
