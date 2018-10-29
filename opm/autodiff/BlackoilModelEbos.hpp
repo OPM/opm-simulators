@@ -510,8 +510,82 @@ namespace Opm {
             // Solve system.
             if( isParallel() )
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
-                Operator opA(ebosJac, actual_mat_for_prec, wellModel(),
+
+	      
+	        typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
+
+
+		auto ebosJacIgnoreOverlap = Dune::BCRSMatrix< MatrixBlockType >(ebosJac);
+  
+  
+		//local id's of cells
+		auto lid = grid_.localIdSet();
+		
+		//value to set on diagonal
+		double diag_val = 1.0e100;
+		
+		const auto& gridView = ebosSimulator_.gridView();
+		auto elemIt = gridView.template begin<0>();
+		const auto& elemEndIt = gridView.template end<0>();
+		
+		//loop over cells in mesh
+		for (; elemIt != elemEndIt; ++elemIt) {
+		  
+		  const auto& elem = *elemIt;
+		  
+		  //If cell has partition type not equal to Interior change matrix
+		  if (elem.partitionType() != Dune::InteriorEntity)
+		    {
+		      
+		      //find local id of overlap cell
+		      int lcell = lid.id(elem);
+		      
+		      //loop over block matrix 
+		      for (int ii=0;ii<numEq;++ii)
+			{
+			  for (int jj=0;jj<numEq;++jj)
+			    {
+			      //If we are on the diagonal set matrix to "large" value. Otherwise set value to zero
+			      if (ii==jj)
+				{	
+				  ebosJacIgnoreOverlap[lcell][lcell][ii][jj]=diag_val;//std::numeric_limits<double>::max();   
+				}
+			      else
+				{
+				  ebosJacIgnoreOverlap[lcell][lcell][ii][jj]=0.0;
+				}
+			    }
+			}
+		      
+		      //loop over faces of cell
+		      auto isend = gridView.iend(elem);
+		      for (auto is = gridView.ibegin(elem); is!=isend; ++is) 
+			{
+			  //check if face has neighbour
+			  if (is->neighbor())
+			    {
+			      //get index of neighbour cell
+			      int ncell = lid.id(is->outside());
+			      
+			      //loop over block matrix and zero out all values.
+			      for (int ii=0;ii<numEq;++ii)
+				{
+				  for (int jj=0;jj<numEq;++jj)
+				    { 
+				      ebosJacIgnoreOverlap[lcell][ncell][ii][jj]=0.0;
+				    }
+				}
+			    }
+			  
+			}
+		      
+		    }
+		  
+		}
+
+		//Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
+		//to be certain that correct matrix is used for preconditioning.
+                Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel(),
                              istlSolver().parallelInformation() );
                 assert( opA.comm() );
                 istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
