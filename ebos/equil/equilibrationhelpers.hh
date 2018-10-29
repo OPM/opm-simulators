@@ -119,6 +119,8 @@ namespace Miscibility {
 class RsFunction
 {
 public:
+    virtual ~RsFunction() = default;
+
     /**
      * Function call operator.
      *
@@ -147,6 +149,8 @@ public:
 class NoMixing : public RsFunction
 {
 public:
+    virtual ~NoMixing() = default;
+
     /**
      * Function call.
      *
@@ -196,6 +200,8 @@ public:
         : pvtRegionIdx_(pvtRegionIdx)
         , rsVsDepth_(depth, rs)
     {}
+
+    virtual ~RsVD() = default;
 
     /**
      * Function call.
@@ -264,6 +270,8 @@ public:
         , pbubVsDepth_(depth, pbub)
     {}
 
+    virtual ~PBVD() = default;
+
     /**
      * Function call.
      *
@@ -329,6 +337,8 @@ public:
         : pvtRegionIdx_(pvtRegionIdx)
         , pdewVsDepth_(depth, pdew)
     {}
+
+    virtual ~PDVD() = default;
 
     /**
      * Function call.
