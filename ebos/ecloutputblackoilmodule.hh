@@ -912,7 +912,7 @@ public:
 
     }
 
-    void setRestart(const Opm::data::Solution& sol, unsigned elemIdx, unsigned globalDofIndex) 
+    void setRestart(const Opm::data::Solution& sol, unsigned elemIdx, unsigned globalDofIndex)
     {
         Scalar so = 1.0;
         if (saturation_[waterPhaseIdx].size() > 0 && sol.has("SWAT")) {
