@@ -58,6 +58,13 @@ public:
     {}
 
     /*!
+     * \brief Called once the problem has been fully initialized and the initial
+     *        condition has been applied.
+     */
+    void initialSolutionApplied()
+    { }
+
+    /*!
      * \brief This method is called when a new episode (report step) starts.
      */
     void beginEpisode()
