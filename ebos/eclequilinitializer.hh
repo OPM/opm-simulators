@@ -69,6 +69,7 @@ class EclEquilInitializer
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
+    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
@@ -84,14 +85,18 @@ class EclEquilInitializer
     enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
 
+public:
     // NB: setting the enableEnergy argument to true enables storage of enthalpy and
     // internal energy!
     typedef Opm::BlackOilFluidState<Scalar,
                                     FluidSystem,
                                     enableTemperature,
-                                    enableEnergy> ScalarFluidState;
+                                    enableEnergy,
+                                    Indices::gasEnabled,
+                                    Indices::numPhases
+                                    > ScalarFluidState;
 
-public:
+
     template <class EclMaterialLawManager>
     EclEquilInitializer(const Simulator& simulator,
                         EclMaterialLawManager& materialLawManager)
@@ -123,18 +128,18 @@ public:
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (FluidSystem::phaseIsActive(phaseIdx))
                     fluidState.setSaturation(phaseIdx, initialState.saturation()[phaseIdx][elemIdx]);
-                else
+                else if (Indices::numPhases == 3)
                     fluidState.setSaturation(phaseIdx, 0.0);
             }
 
             if (FluidSystem::enableDissolvedGas())
                 fluidState.setRs(initialState.rs()[elemIdx]);
-            else
+            else if (Indices::gasEnabled)
                 fluidState.setRs(0.0);
 
             if (FluidSystem::enableVaporizedOil())
                 fluidState.setRv(initialState.rv()[elemIdx]);
-            else
+            else if (Indices::gasEnabled)
                 fluidState.setRv(0.0);
 
 
@@ -143,8 +148,11 @@ public:
                 fluidState.setTemperature(initialState.temperature()[elemIdx]);
 
             // set the phase pressures.
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
                 fluidState.setPressure(phaseIdx, initialState.press()[phaseIdx][elemIdx]);
+            }
         }
     }
 
