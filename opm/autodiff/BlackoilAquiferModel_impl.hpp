@@ -3,8 +3,8 @@ namespace Opm {
 
     template<typename TypeTag>
     BlackoilAquiferModel<TypeTag>::
-    BlackoilAquiferModel(Simulator& ebosSimulator)
-        : ParentType(ebosSimulator)
+    BlackoilAquiferModel(Simulator& simulator)
+        : simulator_(simulator)
     {
         init();
     }

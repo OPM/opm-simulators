@@ -36,28 +36,33 @@ namespace Opm {
 
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
-        class BlackoilAquiferModel : public Ewoms::EclBaseAquiferModel<TypeTag>
+        class BlackoilAquiferModel
         {
-            typedef Ewoms::EclBaseAquiferModel<TypeTag> ParentType;
-
             typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
             typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
 
         public:
-            explicit BlackoilAquiferModel(Simulator& ebosSimulator);
+            explicit BlackoilAquiferModel(Simulator& simulator);
 
             void initialSolutionApplied()
             {
-                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
+                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer) {
                     aquifer->initialSolutionApplied();
-
+                }
             }
+
+            void beginEpisode()
+            { }
 
             void beginTimeStep()
             {
-                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
+                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer) {
                     aquifer->beginTimeStep();
+                }
             }
+
+            void beginIteration()
+            { }
 
             // add the water rate due to aquifers to the source term.
             template <class Context>
@@ -66,15 +71,23 @@ namespace Opm {
                              unsigned spaceIdx,
                              unsigned timeIdx) const
             {
-                for (auto& aquifer: aquifers_)
+                for (auto& aquifer: aquifers_) {
                     aquifer.addToSource(rates, context, spaceIdx, timeIdx);
+                }
             }
+
+            void endIteration()
+            { }
 
             void endTimeStep()
             {
-                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
+                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer) {
                     aquifer->endTimeStep();
+                }
             }
+
+            void endEpisode()
+            { }
 
         protected:
             // ---------      Types      ---------
@@ -86,6 +99,8 @@ namespace Opm {
             // TODO: declaring this as mutable is a hack which should be fixed in the
             // long term
             mutable std::vector<AquiferType> aquifers_;
+
+            Simulator& simulator_;
 
             // This initialization function is used to connect the parser objects with the ones needed by AquiferCarterTracy
             void init();
