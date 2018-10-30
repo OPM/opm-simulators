@@ -53,8 +53,11 @@ namespace Opm {
 
             }
 
-            // at the beginning of each time step (Not report step)
-            void beginTimeStep();
+            void beginTimeStep()
+            {
+                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
+                    aquifer->beginTimeStep();
+            }
 
             // add the water rate due to aquifers to the source term.
             template <class Context>
@@ -63,9 +66,14 @@ namespace Opm {
                              unsigned spaceIdx,
                              unsigned timeIdx) const
             {
-                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
-                    aquifer->addToSource(rates, context, spaceIdx, timeIdx);
+                for (auto& aquifer: aquifers_)
+                    aquifer.addToSource(rates, context, spaceIdx, timeIdx);
+            }
 
+            void endTimeStep()
+            {
+                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
+                    aquifer->endTimeStep();
             }
 
         protected:
@@ -73,11 +81,11 @@ namespace Opm {
             typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
             typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
 
-            typedef AquiferCarterTracy<TypeTag> Aquifer_object;
+            typedef AquiferCarterTracy<TypeTag> AquiferType;
 
-            // TODO: declaring this to be mutable is a hack which should be fixed in the
+            // TODO: declaring this as mutable is a hack which should be fixed in the
             // long term
-            mutable std::vector<Aquifer_object> aquifers_;
+            mutable std::vector<AquiferType> aquifers_;
 
             // This initialization function is used to connect the parser objects with the ones needed by AquiferCarterTracy
             void init();

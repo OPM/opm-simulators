@@ -9,20 +9,6 @@ namespace Opm {
         init();
     }
 
-    // Protected function
-    // some preparation work, mostly related to group control and RESV,
-    // at the beginning of each time step (Not report step)
-    template<typename TypeTag>
-    void
-    BlackoilAquiferModel<TypeTag>::beginTimeStep()
-    {
-        // Here we can ask each carter tracy aquifers to get the current previous time step's pressure
-        for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer)
-        {
-            aquifer->beforeTimeStep(this->simulator_);
-        }
-    }
-
     // Initialize the aquifers in the deck
     template<typename TypeTag>
     void
