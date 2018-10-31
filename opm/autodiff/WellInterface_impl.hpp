@@ -826,6 +826,78 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
+    wellTesting(Simulator& simulator, const std::vector<double>& B_avg,
+                const double simulation_time, const int report_step, const bool terminal_output,
+                const WellTestConfig::Reason testing_reason, const WellState& well_state,
+                WellTestState& well_test_state)
+    {
+        if (testing_reason == WellTestConfig::Reason::ECONOMIC) {
+            wellTestingEcnomic(simulator, B_avg, simulation_time, report_step,
+                               terminal_output, well_state, well_test_state);
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    wellTestingEcnomic(Simulator& simulator, const std::vector<double>& B_avg,
+                       const double simulation_time, const int report_step, const bool terminal_output,
+                       const WellState& well_state, WellTestState& welltest_state)
+    {
+        WellState well_state_copy = well_state;
+
+        updatePrimaryVariables(well_state_copy);
+        initPrimaryVariablesEvaluation();
+
+        // create a well
+        WellTestState welltest_state_temp;
+
+        bool testWell = true;
+        // if a well is closed because all completions are closed, we need to check each completion
+        // individually. We first open all completions, then we close one by one by calling updateWellTestState
+        // untill the number of closed completions do not increase anymore.
+        while (testWell) {
+            const size_t original_number_closed_completions = welltest_state_temp.sizeCompletions();
+            solveWellForTesting(simulator, well_state_copy, B_avg, terminal_output);
+            updateWellTestState(well_state_copy, simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp);
+            closeCompletions(welltest_state_temp);
+
+            // Stop testing if the well is closed or shut due to all completions shut
+            // Also check if number of completions has increased. If the number of closed completions do not increased
+            // we stop the testing.
+            // TODO: it can be tricky here, if the well is shut/closed due to other reasons
+            if ( welltest_state_temp.sizeWells() > 0 ||
+                (original_number_closed_completions == welltest_state_temp.sizeCompletions()) ) {
+                    testWell = false; // this terminates the while loop
+            }
+        }
+
+        // update wellTestState if the well test succeeds
+        if (!welltest_state_temp.hasWell(name(), WellTestConfig::Reason::ECONOMIC)) {
+            welltest_state.openWell(name());
+            const std::string msg = std::string("well ") + name() + std::string(" is re-opened");
+            OpmLog::info(msg);
+
+            // also reopen completions
+            for (auto& completion : well_ecl_->getCompletions(report_step)) {
+                if (!welltest_state_temp.hasCompletion(name(), completion.first)) {
+                    welltest_state.dropCompletion(name(), completion.first);
+                }
+            }
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
     computeRepRadiusPerfLength(const Grid& grid,
                                const std::map<int, int>& cartesian_to_compressed)
     {

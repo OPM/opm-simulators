@@ -211,6 +211,12 @@ namespace Opm
 
         const Well* wellEcl() const;
 
+        // TODO: theoretically, it should be a const function
+        // Simulator is not const is because that assembleWellEq is non-const Simulator
+        void wellTesting(Simulator& simulator, const std::vector<double>& B_avg,
+                         const double simulation_time, const int report_step,  const bool terminal_output,
+                         const WellTestConfig::Reason testing_reason, const WellState& well_state,
+                         WellTestState& welltest_state);
 
     protected:
 
@@ -327,6 +333,9 @@ namespace Opm
 
         double scalingFactor(const int comp_idx) const;
 
+        void wellTestingEcnomic(Simulator& simulator, const std::vector<double>& B_avg,
+                                const double simulation_time, const int report_step, const bool terminal_output,
+                                const WellState& well_state, WellTestState& welltest_state);
 
     };
 
