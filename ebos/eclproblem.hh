@@ -1298,7 +1298,6 @@ public:
      */
     void initialSolutionApplied()
     {
-
         if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
             // initialize the wells. Note that this needs to be done after initializing the
             // intrinsic permeabilities and the after applying the initial solution because
@@ -1315,6 +1314,8 @@ public:
         this->simulator().vanguard().releaseEquilGrid();
 
         updateCompositionChangeLimits_();
+
+        aquiferModel_.initialSolutionApplied();
     }
 
     /*!
