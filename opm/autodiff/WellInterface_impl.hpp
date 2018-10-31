@@ -649,35 +649,10 @@ namespace Opm
             return;
         }
 
-        // updating well test state based on physical (THP/BHP) limits.
-        updateWellTestStatePhysical(well_state, simulationTime, writeMessageToOPMLog, wellTestState);
-
         // updating well test state based on Economic limits.
         updateWellTestStateEconomic(well_state, simulationTime, writeMessageToOPMLog, wellTestState);
-    }
 
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    updateWellTestStatePhysical(const WellState& /* well_state */,
-                                const double /* simulation_time */,
-                                const bool /* write_message_to_opmlog */,
-                                WellTestState& /* well_test_state */) const
-    {
-        // TODO: other facilities are required to make the following action work
-        /* if (!isOperable()) {
-            well_test_state.addClosedWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
-            if (write_message_to_opmlog) {
-                // TODO: considering auto shut in?
-                const std::string msg = "well " + name()
-                             + std::string(" will be shut as it can not operate under current reservoir condition");
-                OpmLog::info(msg);
-            }
-        } */
+        // TODO: well can be shut/closed due to other reasons
     }
 
 
@@ -832,8 +807,8 @@ namespace Opm
                 WellTestState& well_test_state)
     {
         if (testing_reason == WellTestConfig::Reason::ECONOMIC) {
-            wellTestingEcnomic(simulator, B_avg, simulation_time, report_step,
-                               terminal_output, well_state, well_test_state);
+            wellTestingEconomic(simulator, B_avg, simulation_time, report_step,
+                                terminal_output, well_state, well_test_state);
         }
     }
 
@@ -844,9 +819,9 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    wellTestingEcnomic(Simulator& simulator, const std::vector<double>& B_avg,
-                       const double simulation_time, const int report_step, const bool terminal_output,
-                       const WellState& well_state, WellTestState& welltest_state)
+    wellTestingEconomic(Simulator& simulator, const std::vector<double>& B_avg,
+                        const double simulation_time, const int report_step, const bool terminal_output,
+                        const WellState& well_state, WellTestState& welltest_state)
     {
         WellState well_state_copy = well_state;
 

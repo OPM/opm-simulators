@@ -158,7 +158,7 @@ namespace Opm {
             well->setVFPProperties(vfp_properties_.get());
         }
 
-        // Close wells and completions due to economical reasons
+        // Close completions due to economical reasons
         for (auto& well : well_container_) {
             well->closeCompletions(wellTestState_);
         }
