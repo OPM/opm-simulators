@@ -9,6 +9,66 @@ namespace Opm {
         init();
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilAquiferModel<TypeTag>::initialSolutionApplied()
+    {
+        for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer) {
+            aquifer->initialSolutionApplied();
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilAquiferModel<TypeTag>::beginEpisode()
+    { }
+
+    template<typename TypeTag>
+    void
+    BlackoilAquiferModel<TypeTag>::beginTimeStep()
+    {
+        for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer) {
+            aquifer->beginTimeStep();
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilAquiferModel<TypeTag>::beginIteration()
+    { }
+
+    template<typename TypeTag>
+    template <class Context>
+    void
+    BlackoilAquiferModel<TypeTag>::addToSource(RateVector& rates,
+                                               const Context& context,
+                                               unsigned spaceIdx,
+                                               unsigned timeIdx) const
+    {
+        for (auto& aquifer: aquifers_) {
+            aquifer.addToSource(rates, context, spaceIdx, timeIdx);
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilAquiferModel<TypeTag>::endIteration()
+    { }
+
+    template<typename TypeTag>
+    void
+    BlackoilAquiferModel<TypeTag>::endTimeStep()
+    {
+        for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer) {
+            aquifer->endTimeStep();
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilAquiferModel<TypeTag>::endEpisode()
+    { }
+
     // Initialize the aquifers in the deck
     template<typename TypeTag>
     void

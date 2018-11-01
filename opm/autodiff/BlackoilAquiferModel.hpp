@@ -44,50 +44,19 @@ namespace Opm {
         public:
             explicit BlackoilAquiferModel(Simulator& simulator);
 
-            void initialSolutionApplied()
-            {
-                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer) {
-                    aquifer->initialSolutionApplied();
-                }
-            }
-
-            void beginEpisode()
-            { }
-
-            void beginTimeStep()
-            {
-                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer) {
-                    aquifer->beginTimeStep();
-                }
-            }
-
-            void beginIteration()
-            { }
-
+            void initialSolutionApplied();
+            void beginEpisode();
+            void beginTimeStep();
+            void beginIteration();
             // add the water rate due to aquifers to the source term.
             template <class Context>
             void addToSource(RateVector& rates,
                              const Context& context,
                              unsigned spaceIdx,
-                             unsigned timeIdx) const
-            {
-                for (auto& aquifer: aquifers_) {
-                    aquifer.addToSource(rates, context, spaceIdx, timeIdx);
-                }
-            }
-
-            void endIteration()
-            { }
-
-            void endTimeStep()
-            {
-                for (auto aquifer = aquifers_.begin(); aquifer != aquifers_.end(); ++aquifer) {
-                    aquifer->endTimeStep();
-                }
-            }
-
-            void endEpisode()
-            { }
+                             unsigned timeIdx) const;
+            void endIteration();
+            void endTimeStep();
+            void endEpisode();
 
         protected:
             // ---------      Types      ---------
