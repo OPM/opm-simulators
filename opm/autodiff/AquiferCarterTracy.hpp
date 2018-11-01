@@ -334,8 +334,9 @@ namespace Opm
                 // use the thermodynamic state of the first active cell as a
                 // reference. there might be better ways to do this...
                 ElementContext elemCtx(ebos_simulator_);
-                const auto& elem = *ebos_simulator_.gridView().template begin</*codim=*/0>();
-                elemCtx.updateAll(elem);
+                auto elemIt = ebos_simulator_.gridView().template begin</*codim=*/0>();
+                elemCtx.updatePrimaryStencil(*elemIt);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 const auto& iq0 = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
 
                 // Initialize a FluidState object first
