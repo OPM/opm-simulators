@@ -166,6 +166,8 @@ namespace Opm {
         {
             // compute global sum of number of cells
             global_nc_ = detail::countGlobalCells(grid_);
+	    //find rows of matrix corresponding to overlap
+	    detail::findOverlapRowsAndColumns(grid_,overlapRowAndColumns_);
             if (!istlSolver_)
             {
                 OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
@@ -487,52 +489,29 @@ namespace Opm {
 
         void makeOverlapRowsInvalid(Mat& ebosJacIgnoreOverlap) const
         {
-	  //local id's of cells
-	  auto lid = grid_.localIdSet();
-	  
+	  	  
 	  //value to set on diagonal
 	  MatrixBlockType diag_block(0.0);
 	  for (int ii=0;ii<numEq;++ii)
 	    diag_block[ii][ii]=1.0e100;
-	  
-	  const auto& gridView = ebosSimulator_.gridView();
-	  auto elemIt = gridView.template begin<0>();
-	  const auto& elemEndIt = gridView.template end<0>();
-	  
-	  //loop over cells in mesh
-	  for (; elemIt != elemEndIt; ++elemIt) {
-	    
-	    const auto& elem = *elemIt;
-	    
-	    //If cell has partition type not equal to Interior change matrix
-	    if (elem.partitionType() != Dune::InteriorEntity)
-	      {
-	
-		//find local id of overlap cell
-		int lcell = lid.id(elem);
-		
-		//diagonal block set to large value diagonal
-		ebosJacIgnoreOverlap[lcell][lcell]=diag_block;
-		
-		//loop over faces of cell
-		auto isend = gridView.iend(elem);
-		for (auto is = gridView.ibegin(elem); is!=isend; ++is) 
-		  {
-		    //check if face has neighbor
-		    if (is->neighbor())
-		      {
-			//get index of neighbor cell
-			int ncell = lid.id(is->outside());
-			
-			//zero out off-diagonal blocks
-			ebosJacIgnoreOverlap[lcell][ncell]=0.0;			
-		      }
-		    
-		  }
-	
-	      }
+	  	  
+	  //loop over precalculated overlap rows and columns
+	  for ( auto row = overlapRowAndColumns_.begin(); row != overlapRowAndColumns_.end(); row++ )
+	    {
+	      int lcell = row->first; 
+	      //diagonal block set to large value diagonal
+	      ebosJacIgnoreOverlap[lcell][lcell]=diag_block;
+	      
+	      //loop over off diagonal blocks in overlap row	      
+	      for(auto col = row->second.begin(); col != row->second.end(); ++col)
+		{
+		  int ncell = *col;
+		  //zero out block
+		  ebosJacIgnoreOverlap[lcell][ncell]=0.0;
+		}
+	    }
     
-	  }
+	  
 	}
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
@@ -1033,7 +1012,8 @@ namespace Opm {
         BVector dx_old_;
 
         std::unique_ptr<Mat> matrix_for_preconditioner_;
-
+      
+        std::vector<std::pair<int,std::vector<int>>> overlapRowAndColumns_;
     public:
         /// return the StandardWells object
         BlackoilWellModel<TypeTag>&
