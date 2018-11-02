@@ -158,7 +158,7 @@ namespace Opm {
             well->setVFPProperties(vfp_properties_.get());
         }
 
-        // Close wells and completions due to economical reasons
+        // Close completions due to economical reasons
         for (auto& well : well_container_) {
             well->closeCompletions(wellTestState_);
         }
@@ -170,102 +170,38 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::wellTesting(const int timeStepIdx, const double simulationTime) {
         const auto& wtest_config = schedule().wtestConfig(timeStepIdx);
+        if (wtest_config.size() == 0) { // there is no WTEST request
+            return;
+        }
+
         const auto& wellsForTesting = wellTestState_.updateWell(wtest_config, simulationTime);
+        if (wellsForTesting.size() == 0) { // there is no well available for WTEST at the moment
+            return;
+        }
 
-        // Do the well testing if enabled
-        if (wtest_config.size() > 0 && wellsForTesting.size() > 0) {
-            // solve the well equation isolated from the reservoir.
-            const int numComp = numComponents();
-            std::vector< Scalar > B_avg( numComp, Scalar() );
-            computeAverageFormationFactor(B_avg);
-            std::vector<WellInterfacePtr> well_container;
+        // average B factors are required for the convergence checking of well equations
+        std::vector< Scalar > B_avg(numComponents(), Scalar() );
+        computeAverageFormationFactor(B_avg);
 
-            well_container.reserve(wellsForTesting.size());
-            for (auto& testWell : wellsForTesting) {
-                const std::string msg = std::string("well ") + testWell.first + std::string(" is tested");
-                OpmLog::info(msg);
+        for (const auto& testWell : wellsForTesting) {
+            const std::string& well_name = testWell.first;
+            const std::string msg = std::string("well ") + well_name + std::string(" is tested");
+            OpmLog::info(msg);
 
-                // Finding the location of the well in wells_ecl
-                const int nw_wells_ecl = wells_ecl_.size();
-                int index_well = 0;
-                for (; index_well < nw_wells_ecl; ++index_well) {
-                    if (testWell.first == wells_ecl_[index_well]->name()) {
-                        break;
-                    }
-                }
-                // It should be able to find in wells_ecl.
-                if (index_well == nw_wells_ecl) {
-                    OPM_THROW(std::logic_error, "Could not find well " << testWell.first << " in wells_ecl ");
-                }
-                const Well* well_ecl = wells_ecl_[index_well];
+            // this is the well we will test
+            WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx);
 
-                // Finding the location of the well in wells struct.
-                const int nw = numWells();
-                int wellidx = -999;
-                for (int w = 0; w < nw; ++w) {
-                    if (testWell.first == std::string(wells()->name[w])) {
-                        wellidx = w;
-                        break;
-                    }
-                }                
-                if (wellidx < 0) {
-                    OPM_THROW(std::logic_error, "Could not find the well  " << testWell.first << " in the well struct ");
-                }
+            // some preparation before the well can be used
+            well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
+            const WellNode& well_node = wellCollection().findWellNode(well_name);
+            const double well_efficiency_factor = well_node.getAccumulativeEfficiencyFactor();
+            well->setWellEfficiencyFactor(well_efficiency_factor);
+            well->setVFPProperties(vfp_properties_.get());
 
-                // Use the pvtRegionIdx from the top cell
-                const int well_cell_top = wells()->well_cells[wells()->well_connpos[wellidx]];
-                const int pvtreg = pvt_region_idx_[well_cell_top];
+            const WellTestConfig::Reason testing_reason = testWell.second;
 
-                if ( !well_ecl->isMultiSegment(timeStepIdx) || !param_.use_multisegment_well_) {
-                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, timeStepIdx, wells(),
-                                                                          param_, *rateConverter_, pvtreg, numComponents() ) );
-                } else {
-                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, timeStepIdx, wells(),
-                                                                              param_, *rateConverter_, pvtreg, numComponents() ) );
-                }
-            }
-
-            for (auto& well : well_container) {
-                WellTestState wellTestStateForTheWellTest;
-                WellState wellStateCopy = well_state_;
-                well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
-                const std::string& well_name = well->name();
-                const WellNode& well_node = wellCollection().findWellNode(well_name);
-                const double well_efficiency_factor = well_node.getAccumulativeEfficiencyFactor();
-                well->setWellEfficiencyFactor(well_efficiency_factor);
-                well->setVFPProperties(vfp_properties_.get());
-                well->updatePrimaryVariables(wellStateCopy);
-                well->initPrimaryVariablesEvaluation();
-
-                bool testWell = true;
-		// if a well is closed because all completions are closed, we need to check each completion
-		// individually. We first open all completions, then we close one by one by calling updateWellTestState
-		// untill the number of closed completions do not increase anymore. 
-                while (testWell) {
-                    const size_t numberOfClosedCompletions = wellTestStateForTheWellTest.sizeCompletions();
-                    well->solveWellForTesting(ebosSimulator_, wellStateCopy, B_avg, terminal_output_);
-                    well->updateWellTestState(wellStateCopy, simulationTime, wellTestStateForTheWellTest, /*writeMessageToOPMLog=*/ false);
-                    well->closeCompletions(wellTestStateForTheWellTest);
-
-                    // Stop testing if the well is closed or shut due to all completions shut
-                    // Also check if number of completions has increased. If the number of closed completions do not increased
-                    // we stop the testing.  
-                    if (wellTestStateForTheWellTest.sizeWells() > 0 || numberOfClosedCompletions == wellTestStateForTheWellTest.sizeCompletions())
-                        testWell = false;
-                }
-
-                // update wellTestState if the well test succeeds
-                if (!wellTestStateForTheWellTest.hasWell(well->name(), WellTestConfig::Reason::ECONOMIC)) {
-                    wellTestState_.openWell(well->name());
-                    const std::string msg = std::string("well ") + well->name() + std::string(" is re-opened");
-                    OpmLog::info(msg);
-                    // also reopen completions
-                    for (auto& completion : well->wellEcl()->getCompletions(timeStepIdx)) {
-                        if (!wellTestStateForTheWellTest.hasCompletion(well->name(), completion.first))
-                            wellTestState_.dropCompletion(well->name(), completion.first);
-                    }
-                }
-            }
+            well->wellTesting(ebosSimulator_, B_avg, simulationTime, timeStepIdx, terminal_output_,
+                              testing_reason, well_state_, wellTestState_);
         }
     }
 
@@ -367,6 +303,58 @@ namespace Opm {
             }
         }
         return well_container;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename BlackoilWellModel<TypeTag>::WellInterfacePtr
+    BlackoilWellModel<TypeTag>::
+    createWellForWellTest(const std::string& well_name,
+                          const int report_step) const
+    {
+        // Finding the location of the well in wells_ecl
+        const int nw_wells_ecl = wells_ecl_.size();
+        int index_well_ecl = 0;
+        for (; index_well_ecl < nw_wells_ecl; ++index_well_ecl) {
+            if (well_name == wells_ecl_[index_well_ecl]->name()) {
+                break;
+            }
+        }
+        // It should be able to find in wells_ecl.
+        if (index_well_ecl == nw_wells_ecl) {
+            OPM_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ");
+        }
+
+        const Well* well_ecl = wells_ecl_[index_well_ecl];
+
+        // Finding the location of the well in wells struct.
+        const int nw = numWells();
+        int well_index_wells = -999;
+        for (int w = 0; w < nw; ++w) {
+            if (well_name == std::string(wells()->name[w])) {
+                well_index_wells = w;
+                break;
+            }
+        }
+
+        if (well_index_wells < 0) {
+            OPM_THROW(std::logic_error, "Could not find the well  " << well_name << " in the well struct ");
+        }
+
+        // Use the pvtRegionIdx from the top cell
+        const int well_cell_top = wells()->well_cells[wells()->well_connpos[well_index_wells]];
+        const int pvtreg = pvt_region_idx_[well_cell_top];
+
+        if ( !well_ecl->isMultiSegment(report_step) || !param_.use_multisegment_well_) {
+             return WellInterfacePtr(new StandardWell<TypeTag>(well_ecl, report_step, wells(),
+                                                 param_, *rateConverter_, pvtreg, numComponents() ) );
+        } else {
+             return WellInterfacePtr(new MultisegmentWell<TypeTag>(well_ecl, report_step, wells(),
+                                                 param_, *rateConverter_, pvtreg, numComponents() ) );
+        }
     }
 
 
@@ -598,7 +586,6 @@ namespace Opm {
         do {
             assembleWellEq(dt, true);
 
-            //std::cout << "well convergence only wells " << std::endl;
             converged = getWellConvergence(B_avg);
 
             // checking whether the group targets are converged
@@ -767,7 +754,7 @@ namespace Opm {
     updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const
     {
         for (const auto& well : well_container_) {
-            well->updateWellTestState(well_state_, simulationTime, wellTestState, /*writeMessageToOPMLog=*/ true);
+            well->updateWellTestState(well_state_, simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState);
         }
     }
 

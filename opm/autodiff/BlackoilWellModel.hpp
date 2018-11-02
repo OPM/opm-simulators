@@ -237,6 +237,8 @@ namespace Opm {
             // create the well container
             std::vector<WellInterfacePtr > createWellContainer(const int time_step);
 
+            WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step) const;
+
             WellState well_state_;
             WellState previous_well_state_;
 
