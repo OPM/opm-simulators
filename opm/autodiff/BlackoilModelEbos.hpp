@@ -78,6 +78,8 @@ SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
 SET_BOOL_PROP(EclFlowProblem, BlackoilConserveSurfaceVolume, true);
 SET_BOOL_PROP(EclFlowProblem, UseVolumetricResidual, false);
 
+SET_TYPE_PROP(EclFlowProblem, EclAquiferModel, Opm::BlackoilAquiferModel<TypeTag>);
+
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit
 SET_BOOL_PROP(EclFlowProblem, EnablePolymer, false);
@@ -145,7 +147,6 @@ namespace Opm {
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters& param,
                           BlackoilWellModel<TypeTag>& well_model,
-                          BlackoilAquiferModel<TypeTag>& aquifer_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
@@ -159,7 +160,6 @@ namespace Opm {
         , has_energy_(GET_PROP_VALUE(TypeTag, EnableEnergy))
         , param_( param )
         , well_model_ (well_model)
-        , aquifer_model_(aquifer_model)
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
         , dx_old_(UgGridHelpers::numCells(grid_))
@@ -342,7 +342,6 @@ namespace Opm {
         void afterStep(const SimulatorTimerInterface& OPM_UNUSED timer)
         {
             wellModel().timeStepSucceeded(timer.simulationTimeElapsed());
-            aquiferModel().timeStepSucceeded(timer);
             ebosSimulator_.problem().endTimeStep();
 
         }
@@ -359,17 +358,6 @@ namespace Opm {
             ebosSimulator_.problem().beginIteration();
             ebosSimulator_.model().linearizer().linearize();
             ebosSimulator_.problem().endIteration();
-
-            // -------- Aquifer models ----------
-            try
-            {
-                // Modify the Jacobian and residuals according to the aquifer models
-                aquiferModel().assemble(timer, iterationIdx);
-            }
-            catch( ... )
-            {
-                OPM_THROW(Opm::NumericalIssue,"Error when assembling aquifer models");
-            }
 
             // -------- Current time step length ----------
             const double dt = timer.currentStepLength();
@@ -959,9 +947,6 @@ namespace Opm {
         // Well Model
         BlackoilWellModel<TypeTag>& well_model_;
 
-        // Aquifer Model
-        BlackoilAquiferModel<TypeTag>& aquifer_model_;
-
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
         /// \brief The number of cells of the global grid.
@@ -980,9 +965,6 @@ namespace Opm {
 
         const BlackoilWellModel<TypeTag>&
         wellModel() const { return well_model_; }
-
-        BlackoilAquiferModel<TypeTag>&
-        aquiferModel() { return aquifer_model_; }
 
         void beginReportStep()
         {

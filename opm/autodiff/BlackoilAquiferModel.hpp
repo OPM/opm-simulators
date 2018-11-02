@@ -24,6 +24,8 @@
 #ifndef OPM_BLACKOILAQUIFERMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILAQUIFERMODEL_HEADER_INCLUDED
 
+#include <ebos/eclbaseaquifermodel.hh>
+
 #include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
@@ -34,45 +36,45 @@ namespace Opm {
 
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
-        class BlackoilAquiferModel {
+        class BlackoilAquiferModel
+        {
+            typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+            typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
 
         public:
+            explicit BlackoilAquiferModel(Simulator& simulator);
 
-            // ---------      Types      ---------
-            typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
-            typedef typename GET_PROP_TYPE(TypeTag, Simulator)           Simulator;
-            typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
-
-            typedef AquiferCarterTracy<TypeTag> Aquifer_object;
-
-            explicit BlackoilAquiferModel(Simulator& ebosSimulator);
-
-            // compute the well fluxes and assemble them in to the reservoir equations as source terms
-            // and in the well equations.
-            void assemble( const SimulatorTimerInterface& timer,
-                           const int iterationIdx                );
-
-            // called at the end of a time step
-            void timeStepSucceeded(const SimulatorTimerInterface& timer);
+            void initialSolutionApplied();
+            void beginEpisode();
+            void beginTimeStep();
+            void beginIteration();
+            // add the water rate due to aquifers to the source term.
+            template <class Context>
+            void addToSource(RateVector& rates,
+                             const Context& context,
+                             unsigned spaceIdx,
+                             unsigned timeIdx) const;
+            void endIteration();
+            void endTimeStep();
+            void endEpisode();
 
         protected:
+            // ---------      Types      ---------
+            typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
+            typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
 
-            Simulator& ebosSimulator_;
+            typedef AquiferCarterTracy<TypeTag> AquiferType;
 
-            std::vector<Aquifer_object> aquifers_;
+            // TODO: declaring this as mutable is a hack which should be fixed in the
+            // long term
+            mutable std::vector<AquiferType> aquifers_;
+
+            Simulator& simulator_;
 
             // This initialization function is used to connect the parser objects with the ones needed by AquiferCarterTracy
             void init();
 
-            void updateConnectionIntensiveQuantities() const;
-
-            void assembleAquiferEq(const SimulatorTimerInterface& timer);
-
-            // at the beginning of each time step (Not report step)
-            void prepareTimeStep(const SimulatorTimerInterface& timer);
-
             bool aquiferActive() const;
-
         };
 
 
