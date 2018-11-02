@@ -103,6 +103,7 @@ namespace Opm
                       saturation_table_number_.begin() );
         }
         well_efficiency_factor_ = 1.0;
+
     }
 
 
@@ -1048,4 +1049,37 @@ namespace Opm
             }
         }
     }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index) const
+    {
+
+        const auto& connection = well_ecl_->getConnections(current_step_)[perfIdx];
+
+        if (well_ecl_->getDrainageRadius(current_step_) < 0) {
+            OpmLog::warning("PRODUCTIVITY_INDEX_WARNING", "Negative drainage radius not supported. The productivity index is set to zero");
+            productivity_index = 0.0;
+            return;
+        }
+
+        if (connection.r0() > well_ecl_->getDrainageRadius(current_step_)) {
+            OpmLog::info("PRODUCTIVITY_INDEX_INFO", "The effective radius is larger then the well drainage radius for well " + name() +
+                         " They are set to equal in the well productivity index calculations");
+            return;
+        }
+
+        // For zero drainage radius the productivity index is just the transmissibility times the mobility
+        if (well_ecl_->getDrainageRadius(current_step_) == 0) {
+            return;
+        }
+
+        // Scale the productivity index to account for the drainage radius.
+        // Assumes steady radial flow only valied for horizontal wells
+        productivity_index *=
+        (std::log(connection.r0() / connection.rw()) + connection.skinFactor()) /
+        (std::log(well_ecl_->getDrainageRadius(current_step_) / connection.rw()) + connection.skinFactor());
+    }
+
+
 }
