@@ -491,7 +491,9 @@ namespace Opm {
 	  auto lid = grid_.localIdSet();
 	  
 	  //value to set on diagonal
-	  double diag_val = 1.0e100;
+	  MatrixBlockType diag_block(0.0);
+	  for (int ii=0;ii<numEq;++ii)
+	    diag_block[ii][ii]=1.0e100;
 	  
 	  const auto& gridView = ebosSimulator_.gridView();
 	  auto elemIt = gridView.template begin<0>();
@@ -509,41 +511,21 @@ namespace Opm {
 		//find local id of overlap cell
 		int lcell = lid.id(elem);
 		
-		//loop over block matrix 
-		for (int ii=0;ii<numEq;++ii)
-		  {
-		    for (int jj=0;jj<numEq;++jj)
-		      {
-			//If we are on the diagonal set matrix to "large" value. Otherwise set value to zero
-			if (ii==jj)
-			  {	
-			    ebosJacIgnoreOverlap[lcell][lcell][ii][jj]=diag_val;
-			  }
-			else
-			  {
-			    ebosJacIgnoreOverlap[lcell][lcell][ii][jj]=0.0;
-			  }
-		      }
-		  }
+		//diagonal block set to large value diagonal
+		ebosJacIgnoreOverlap[lcell][lcell]=diag_block;
 		
 		//loop over faces of cell
 		auto isend = gridView.iend(elem);
 		for (auto is = gridView.ibegin(elem); is!=isend; ++is) 
 		  {
-		    //check if face has neighbour
+		    //check if face has neighbor
 		    if (is->neighbor())
 		      {
-			//get index of neighbour cell
+			//get index of neighbor cell
 			int ncell = lid.id(is->outside());
 			
-			//loop over block matrix and zero out all values.
-			for (int ii=0;ii<numEq;++ii)
-			  {
-			    for (int jj=0;jj<numEq;++jj)
-			      { 
-				ebosJacIgnoreOverlap[lcell][ncell][ii][jj]=0.0;
-			      }
-			  }
+			//zero out off-diagonal blocks
+			ebosJacIgnoreOverlap[lcell][ncell]=0.0;			
 		      }
 		    
 		  }
