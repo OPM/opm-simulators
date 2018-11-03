@@ -134,9 +134,11 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_convergencereport.cpp
   tests/test_graphcoloring.cpp
   tests/test_rateconverter.cpp
+	tests/test_parallel_ilu.cpp
   tests/test_span.cpp
   tests/test_syntax.cpp
   tests/test_scalar_mult.cpp
+	tests/test_sendreceive_communicator.cpp
   tests/test_transmissibilitymultipliers.cpp
   tests/test_welldensitysegmented.cpp
   tests/test_vfpproperties.cpp
@@ -299,9 +301,11 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/LinearisedBlackoilResidual.hpp
   opm/autodiff/ParallelDebugOutput.hpp
   opm/autodiff/ParallelOverlappingILU0.hpp
+	opm/autodiff/ParallelILU0.hpp
   opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp
   opm/autodiff/RateConverter.hpp
   opm/autodiff/RedistributeDataHandles.hpp
+  opm/autodiff/SendReceiveCommunicator.hpp
   opm/autodiff/SimFIBODetails.hpp
   opm/autodiff/SimulatorBase.hpp
   opm/autodiff/SimulatorBase_impl.hpp
