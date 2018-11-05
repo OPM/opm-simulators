@@ -492,22 +492,22 @@ namespace Opm {
         {	  	  
             //value to set on diagonal
             MatrixBlockType diag_block(0.0);
-            for (int ii=0;ii<numEq;++ii)	    
-                diag_block[ii][ii]=1.0e100;
+            for (int eq = 0; eq < numEq; ++eq)	    
+                diag_block[eq][eq] = 1.0e100;
 	  	  
             //loop over precalculated overlap rows and columns
-            for ( auto row = overlapRowAndColumns_.begin(); row != overlapRowAndColumns_.end(); row++ )
+            for (auto row = overlapRowAndColumns_.begin(); row != overlapRowAndColumns_.end(); row++ )
             {
                 int lcell = row->first; 
                 //diagonal block set to large value diagonal
-                ebosJacIgnoreOverlap[lcell][lcell]=diag_block;
+                ebosJacIgnoreOverlap[lcell][lcell] = diag_block;
 
                 //loop over off diagonal blocks in overlap row	      
-                for(auto col = row->second.begin(); col != row->second.end(); ++col)
+                for (auto col = row->second.begin(); col != row->second.end(); ++col)
                 {
                     int ncell = *col;
                     //zero out block
-                    ebosJacIgnoreOverlap[lcell][ncell]=0.0;
+                    ebosJacIgnoreOverlap[lcell][ncell] = 0.0;
                 }
             }    	  
         }

@@ -221,7 +221,7 @@ namespace detail {
                 {		
                     const auto& elem = *elemIt;
 
-                    //If cell has partition type not equual to interior save row
+                    //If cell has partition type not equal to interior save row
                     if (elem.partitionType() != Dune::InteriorEntity)
                     {		    
                         //local id of overlap cell
