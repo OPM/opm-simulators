@@ -99,6 +99,9 @@ namespace Opm {
         if (!localWellsActive())
             return;
 
+        // we don't what to add the schur complement
+        // here since it affects the getConvergence method
+        /*
         for (const auto& well: well_container_) {
             if (param_.matrix_add_well_contributions_)
                 well->addWellContributions(mat);
@@ -107,6 +110,7 @@ namespace Opm {
             // r = r - duneC_^T * invDuneD_ * resWell_
             well->apply(res);
         }
+        */
     }
 
 
@@ -549,6 +553,19 @@ namespace Opm {
         }
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    apply( BVector& r) const
+    {
+        if ( ! localWellsActive() ) {
+            return;
+        }
+
+        for (auto& well : well_container_) {
+            well->apply(r);
+        }
+    }
 
 
     // Ax = A x - C D^-1 B x

@@ -202,6 +202,9 @@ namespace Opm {
             Opm::data::Wells wellData() const
             { return well_state_.report(phase_usage_, Opm::UgGridHelpers::globalCell(grid())); }
 
+            // substract Binv(D)rw from r;
+            void apply( BVector& r) const;
+
             // subtract B*inv(D)*C * x from A*x
             void apply(const BVector& x, BVector& Ax) const;
 
@@ -224,6 +227,13 @@ namespace Opm {
             const WellState& wellState() const;
 
             const SimulatorReport& lastReport() const;
+
+            void addWellContributions(Mat& mat)
+            {
+                for ( const auto& well: well_container_ ) {
+                    well->addWellContributions(mat);
+                }
+            }
 
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
