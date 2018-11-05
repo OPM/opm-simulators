@@ -308,7 +308,7 @@ namespace Opm {
         { return failureReport_; }
 
         // need for fullfilling nonliner solver interface
-        void adjoint_serialize(){}
+        void adjointSerialize(){}
 
     protected:
 

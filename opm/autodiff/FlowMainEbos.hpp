@@ -62,7 +62,7 @@ NEW_PROP_TAG(OutputMode);
 NEW_PROP_TAG(EnableDryRun);
 NEW_PROP_TAG(OutputInterval);
 NEW_PROP_TAG(UseAmg);
-NEW_PROP_TAG(UseAdjoint);
+NEW_PROP_TAG(EnableAdjoint);
 
 SET_STRING_PROP(EclFlowProblem, OutputMode, "all");
 
@@ -71,7 +71,7 @@ SET_STRING_PROP(EclFlowProblem, EnableDryRun, "auto");
 
 SET_INT_PROP(EclFlowProblem, OutputInterval, 1);
 
-SET_BOOL_PROP(EclFlowProblem, UseAdjoint, false);
+SET_BOOL_PROP(EclFlowProblem, EnableAdjoint, false);
 
 END_PROPERTIES;
 
@@ -534,7 +534,7 @@ namespace Opm
 
                 SimulatorReport successReport = simulator_->run(simtimer);
                 SimulatorReport failureReport = simulator_->failureReport();
-                if (EWOMS_GET_PARAM(TypeTag, bool, UseAdjoint)) {
+                if (EWOMS_GET_PARAM(TypeTag, bool, EnableAdjoint)) {
                     SimulatorTimer simtimer_adjoint;
                     simtimer_adjoint.init(successReport.time_steps, successReport.report_stepindx);
                     int end_step = int(successReport.time_steps.size());// at end of last time step

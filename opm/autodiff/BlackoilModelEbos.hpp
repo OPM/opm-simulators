@@ -248,7 +248,7 @@ namespace Opm {
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
 
             this->prepareStep(timer);
-            this->deserialize_reservoir( timer.simulationTimeElapsed() );
+            this->deserializeReservoir( timer.simulationTimeElapsed() );
             SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             // Store the initial previous.
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
@@ -270,7 +270,7 @@ namespace Opm {
             //timer.report(std::cout);
             this->prepareStep(timer);
             // std::cout << "Current time end " <<  timer.simulationTimeElapsed()  << std::endl;
-            this->deserialize_reservoir( timer.simulationTimeElapsed() );
+            this->deserializeReservoir( timer.simulationTimeElapsed() );
             // seralizing may owerwrite prevois step since it was intended for restart ??
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
 
@@ -357,25 +357,25 @@ namespace Opm {
                 }
 
                 // Create matrix for external linear solvers.
-                const auto& ebosJac_org = ebosSimulator_.model().linearizer().matrix();
-                auto ebosJac_trans = ebosJac_org;
+                const auto& ebosJacOrg = ebosSimulator_.model().linearizer().matrix();
+                auto ebosJacTrans = ebosJac_org;
                 auto adjRhs_cp = adjRhs;
-                Dune::MatrixVector::transpose(ebosJac_org, ebosJac_trans);
-                MatrixBlockType left_trans = 0.0;
+                Dune::MatrixVector::transpose(ebosJac_org, ebosJacTrans);
+                MatrixBlockType leftTrans = 0.0;
                 if(param_.use_amgcl_drs_){
-                    left_trans=getBlockTransform(2);
+                    leftTrans=getBlockTransform(2);
                 }else{
                     auto eq_change=getBlockTransform(2);
                     auto cpr_trans = getBlockTransform(1);
-                    left_trans= cpr_trans.rightmultiply(eq_change);
+                    leftTrans= cpr_trans.rightmultiply(eqChange);
                 }
-                auto  right_trans = left_trans;
-                Dune::MatrixVector::transpose(left_trans, right_trans);
+                auto  right_trans = leftTrans;
+                Dune::MatrixVector::transpose(leftTrans, right_trans);
                 if(param_.use_amgcl_){
-                    multBlocksInMatrix(ebosJac_trans, right_trans, false);
-                    //multBlocksVector(adjRhs_cp, left_trans);
+                    multBlocksInMatrix(ebosJacTrans, right_trans, false);
+                    //multBlocksVector(adjRhs_cp, leftTrans);
                 }
-                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJac_trans);
+                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJacTrans);
                 //CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(true);
 
                 // Copy right-hand side (blocked structure -> unblocked).
@@ -830,10 +830,10 @@ namespace Opm {
                 }
             }
         }
-        void multBlocksVector(BVector& ebosResid_cp,const MatrixBlockType& left_trans) const{
+        void multBlocksVector(BVector& ebosResid_cp,const MatrixBlockType& leftTrans) const{
             for( auto& bvec: ebosResid_cp){
                 auto bvec_new=bvec;
-                left_trans.mv(bvec, bvec_new);
+                leftTrans.mv(bvec, bvec_new);
                 bvec=bvec_new;
             }
         }
@@ -964,19 +964,19 @@ namespace Opm {
                 // Create matrix for external linear solvers.
                 //const bool do_transpose=false;
                 const int np = numPhases();
-                MatrixBlockType left_trans = 0.0;
+                MatrixBlockType leftTrans = 0.0;
                 if(param_.use_amgcl_drs_){
-                    left_trans=getBlockTransform(2);
+                    leftTrans=getBlockTransform(2);
                 }else{
-                    auto eq_change=getBlockTransform(2);
-                    auto cpr_trans = getBlockTransform(1);
-                    left_trans= cpr_trans.rightmultiply(eq_change);
+                    auto eqChange=getBlockTransform(2);
+                    auto cprTrans = getBlockTransform(1);
+                    leftTrans= cprTrans.rightmultiply(eqChange);
                 }
                 bool print_matrix_system=false;
                 auto ebosJac_cp = ebosSimulator_.model().linearizer().matrix();
                 auto ebosResid_cp = ebosResid;
-                multBlocksInMatrix(ebosJac_cp, left_trans,true);
-                multBlocksVector(ebosResid_cp, left_trans);
+                multBlocksInMatrix(ebosJac_cp, leftTrans,true);
+                multBlocksVector(ebosResid_cp, leftTrans);
 
                 if(print_matrix_system){
                     std::ofstream filem("matrix.txt");
@@ -1539,7 +1539,7 @@ namespace Opm {
             boost::archive::text_iarchive oa(ifs);
             oa >> well_state;
         }
-        void deserialize_reservoir(Scalar t){
+        void deserializeReservoir(Scalar t){
             // intended only for adjoint simulation
             ebosSimulator_.deserializeAll(t);
         }
@@ -1556,7 +1556,7 @@ namespace Opm {
         }
         MatrixBlockType getBlockTransform(int meth_trans) const{
             int np = numPhases();
-            MatrixBlockType left_trans=0.0;
+            MatrixBlockType leftTrans=0.0;
             switch(meth_trans)
             {
             case 1 :
@@ -1564,10 +1564,10 @@ namespace Opm {
                 for (int row = 0; row < np; ++row) {
                     for (int col = 0; col < np; ++col) {
                         if(row==0){
-                            left_trans[row][col]=1.0;
+                            leftTrans[row][col]=1.0;
                         }else{
                             if(row==col){
-                                left_trans[row][col]=1.0;
+                                leftTrans[row][col]=1.0;
                             }
                         }
                     }
@@ -1578,18 +1578,18 @@ namespace Opm {
                 for (int row = 0; row < 2; ++row) {
                     for (int col = 0; col < 2; ++col) {
                         if(row!=col){
-                            left_trans[row][col]=1.0;
+                            leftTrans[row][col]=1.0;
                         }
                     }
                 }
                 if(np==3){
-                    left_trans[2][2]=1.0;
+                    leftTrans[2][2]=1.0;
                 }
                break;
             default:
                 OPM_THROW(std::logic_error,"return zero tranformation matrix");
             }
-            return left_trans;
+            return leftTrans;
         }
         // ---------  Data members  ---------
 
