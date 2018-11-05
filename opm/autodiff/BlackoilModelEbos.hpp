@@ -538,7 +538,7 @@ namespace Opm {
             // Solve system.
             if( isParallel() )
             {	      
-	        typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
 
                 auto ebosJacIgnoreOverlap = Mat(ebosJac);
                 //remove ghost rows in local matrix
