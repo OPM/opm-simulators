@@ -1249,6 +1249,10 @@ private:
         if (forceDisableFipOutput_)
             return;
 
+        // don't output FIPNUM report if the region has no porv.
+        if (cip[FipDataType::PoreVolume] == 0)
+            return;
+
         const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         std::ostringstream ss;
         if (!reg) {
