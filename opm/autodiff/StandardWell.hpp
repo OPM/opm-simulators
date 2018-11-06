@@ -363,7 +363,7 @@ namespace Opm
         static double determineRelaxationFactorProducer(const std::vector<double>& primary_variables,
                                                         const BVectorWell& dwells);
 
-        // calcualte a relaxation factor to avoid overshoot for injectors
+        // calculate a relaxation factor to avoid overshoot for injectors
         static double determineRelaxationFactorInjector(const std::vector<double>& primary_variables,
                                                         const BVectorWell& dwells);
     };
