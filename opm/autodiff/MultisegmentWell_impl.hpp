@@ -373,8 +373,6 @@ namespace Opm
 
             break;
         } // end of switch
-
-        updatePrimaryVariables(well_state);
     }
 
 

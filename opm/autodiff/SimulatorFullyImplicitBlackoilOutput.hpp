@@ -460,7 +460,7 @@ namespace Opm
 
         const Wells* wells = wellsmanager.c_wells();
         size_t numCells = Opm::UgGridHelpers::numCells(grid);
-        wellstate.resize(wells, numCells, phaseUsage ); //Resize for restart step
+        wellstate.resize(wells, numCells); //Resize for restart step
         auto restart_values = eclIO_->loadRestart(solution_keys, extra_keys);
 
         solutionToSim( restart_values, phaseUsage, simulatorstate );

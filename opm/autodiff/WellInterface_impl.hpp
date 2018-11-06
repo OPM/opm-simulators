@@ -438,6 +438,7 @@ namespace Opm
 
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
             updateWellStateWithTarget(well_state);
+            updatePrimaryVariables(well_state);
         }
     }
 
