@@ -184,7 +184,8 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
-    const Opm::Schedule sched(deck, grid, eclipseProperties, Opm::Phases(true, true, true), parseContext );
+    const Opm::Runspec runspec (deck);
+    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
 
  
     {
@@ -225,7 +226,8 @@ BOOST_AUTO_TEST_CASE(WellsEqual) {
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
-    const Opm::Schedule sched(deck, grid, eclipseProperties, Opm::Phases(true, true, true), parseContext );
+    const Opm::Runspec runspec (deck);
+    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
 
 
     Opm::WellsManager wellsManager0(eclipseState, sched, 0, *vanguard.c_grid());
@@ -245,7 +247,8 @@ BOOST_AUTO_TEST_CASE(ControlsEqual) {
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
-    const Opm::Schedule sched(deck, grid, eclipseProperties, Opm::Phases(true, true, true), parseContext );
+    const Opm::Runspec runspec (deck);
+    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
 
 
 
@@ -273,7 +276,8 @@ BOOST_AUTO_TEST_CASE(WellShutOK) {
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
-    const Opm::Schedule sched(deck, grid, eclipseProperties, Opm::Phases(true, true, true), parseContext );
+    const Opm::Runspec runspec (deck);
+    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
 
 
     Opm::WellsManager wellsManager2(eclipseState, sched, 2, *vanguard.c_grid());
@@ -294,7 +298,8 @@ BOOST_AUTO_TEST_CASE(WellSTOPOK) {
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
-    const Opm::Schedule sched(deck, grid, eclipseProperties, Opm::Phases(true, true, true), parseContext );
+    const Opm::Runspec runspec (deck);
+    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
 
 
 

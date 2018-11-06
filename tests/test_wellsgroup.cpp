@@ -52,7 +52,8 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
-    const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
+    const Opm::Runspec runspec (deck);
+    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
 
    PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
@@ -91,7 +92,8 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
-    const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
+    const Opm::Runspec runspec (deck);
+    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
 
 
     const auto& nodes = sched.getGroupTree(2);
@@ -128,7 +130,8 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
-    const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
+    const Opm::Runspec runspec (deck);
+    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
 
 
     const auto& nodes = sched.getGroupTree(2);

@@ -507,7 +507,7 @@ namespace Opm
                 schedule_.reset(new Schedule(*deck_,
                                              eclipse_state_->getInputGrid(),
                                              eclipse_state_->get3DProperties(),
-                                             eclipse_state_->runspec().phases(),
+                                             eclipse_state_->runspec(),
                                              parseContext));
                 summary_config_.reset(new SummaryConfig(*deck_,
                                                         *schedule_,

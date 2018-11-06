@@ -109,7 +109,7 @@ try
         schedule.reset( new Schedule(deck,
                                      eclipseState->getInputGrid(),
                                      eclipseState->get3DProperties(),
-                                     eclipseState->runspec().phases(),
+                                     eclipseState->runspec(),
                                      parseContext));
 
 

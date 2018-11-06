@@ -212,7 +212,7 @@ public:
 
             // Run a multiple steps of the solver depending on the time step control.
             solverTimer.start();
-
+            //ebosSimulator_.setEpisodeIndex(timer.reportStepNum());
             wellModel.beginReportStep(timer.currentStepNum());
 
             auto solver = createSolver(wellModel);

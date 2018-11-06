@@ -45,7 +45,8 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
-    const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
+    const Runspec runspec(deck);
+    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
 
 
     WellCollection collection;
@@ -84,7 +85,8 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
-    const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
+    const Runspec runspec(deck);
+    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
 
     size_t timestep = 2;
     WellCollection collection;
