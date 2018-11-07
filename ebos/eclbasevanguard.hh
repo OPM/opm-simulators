@@ -153,12 +153,10 @@ public:
      * management of these two objects, i.e., they are not allowed to be deleted as long
      * as the simulator vanguard object is alive.
      */
-    static void setExternalDeck(Opm::Deck* deck, Opm::EclipseState* eclState, Opm::Schedule* schedule, Opm::SummaryConfig* summaryConfig)
+    static void setExternalDeck(Opm::Deck* deck, Opm::EclipseState* eclState)
     {
         externalDeck_ = deck;
         externalEclState_ = eclState;
-        externalSchedule_ = schedule;
-        externalSummaryConfig_ = summaryConfig;
     }
 
     /*!
@@ -205,62 +203,56 @@ public:
         caseName_ = rawCaseName;
         std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
 
+        typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
+        typedef std::vector<ParseModePair> ParseModePairs;
+        ParseModePairs tmp;
+        tmp.emplace_back(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
+        tmp.emplace_back(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
+        tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
+        tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
+        Opm::ParseContext parseContext(tmp);
+
+        const std::string ignoredKeywords = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
+        if (ignoredKeywords.size() > 0) {
+            size_t pos, offset = 0;
+            while (true) {
+                pos = ignoredKeywords.find(':', offset);
+                if (pos == std::string::npos) {
+                    parseContext.ignoreKeyword(ignoredKeywords.substr(offset));
+                    break;
+                }
+                parseContext.ignoreKeyword(ignoredKeywords.substr(offset, pos - offset));
+                offset = pos + 1;
+            }
+        }
+
         if (!externalDeck_) {
             if (myRank == 0)
                 std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
 
             Opm::Parser parser;
-            typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
-            typedef std::vector<ParseModePair> ParseModePairs;
-
-            ParseModePairs tmp;
-            tmp.emplace_back(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
-            tmp.emplace_back(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
-            tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
-            tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
-            Opm::ParseContext parseContext(tmp);
-            {
-                const std::string ignoredKeywords = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
-                if (ignoredKeywords.size() > 0 ) {
-                    size_t pos, offset = 0;
-                    while (true) {
-                        pos = ignoredKeywords.find(':', offset);
-                        if (pos == std::string::npos) {
-                            parseContext.ignoreKeyword( ignoredKeywords.substr(offset));
-                            break;
-                        }
-                        parseContext.ignoreKeyword( ignoredKeywords.substr(offset, pos - offset));
-                        offset = pos + 1;
-                    }
-                }
-            }
             internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName , parseContext)));
             internalEclState_.reset(new Opm::EclipseState(*internalDeck_, parseContext));
-            {
-                const auto& grid = internalEclState_->getInputGrid();
-                const Opm::TableManager table ( *internalDeck_ );
-                const Opm::Eclipse3DProperties eclipseProperties (*internalDeck_  , table, grid);
-                internalSchedule_.reset(new Opm::Schedule(*internalDeck_, grid, eclipseProperties, internalEclState_->runspec(), parseContext ));
-                internalSummaryConfig_.reset(new Opm::SummaryConfig(*internalDeck_, *internalSchedule_, table,  parseContext));
-            }
-
 
             deck_ = &(*internalDeck_);
             eclState_ = &(*internalEclState_);
-            summaryConfig_ = &(*internalSummaryConfig_);
-            schedule_ = &(*internalSchedule_);
         }
         else {
             assert(externalDeck_);
             assert(externalEclState_);
-            assert(externalSchedule_);
-            assert(externalSummaryConfig_);
 
             deck_ = externalDeck_;
             eclState_ = externalEclState_;
-            schedule_ = externalSchedule_;
-            summaryConfig_ = externalSummaryConfig_;
         }
+
+        // create the schedule and summary config objects. Note that if eclState is
+        // supposed to represent the internalized version of the deck, this constitutes a
+        // layering violation.
+        eclSchedule_.reset(new Opm::Schedule(*deck_, *eclState_, parseContext));
+        eclSummaryConfig_.reset(new Opm::SummaryConfig(*deck_,
+                                                       *eclSchedule_,
+                                                       eclState_->getTableManager(),
+                                                       parseContext));
 
         // Possibly override IOConfig setting for how often RESTART files should get
         // written to disk (every N report step)
@@ -275,7 +267,7 @@ public:
     }
 
     /*!
-     * \brief Return a pointer to the parsed ECL deck
+     * \brief Return a reference to the parsed ECL deck.
      */
     const Opm::Deck& deck() const
     { return *deck_; }
@@ -284,7 +276,7 @@ public:
     { return *deck_; }
 
     /*!
-     * \brief Return a pointer to the internalized ECL deck
+     * \brief Return a reference to the internalized ECL deck.
      */
     const Opm::EclipseState& eclState() const
     { return *eclState_; }
@@ -292,17 +284,22 @@ public:
     Opm::EclipseState& eclState()
     { return *eclState_; }
 
-    const Opm::Schedule& schedule() const {
-        return *schedule_;
-    }
+    /*!
+     * \brief Return a reference to the object that managages the ECL schedule.
+     */
+    const Opm::Schedule& schedule() const
+    { return *eclSchedule_; }
 
-    Opm::Schedule& schedule() {
-        return *schedule_;
-    }
+    Opm::Schedule& schedule()
+    { return *eclSchedule_; }
 
-    const Opm::SummaryConfig& summaryConfig() const {
-        return *summaryConfig_;
-    }
+    /*!
+     * \brief Return a reference to the object that determines which quantities ought to
+     *        be put into the ECL summary output.
+     */
+    const Opm::SummaryConfig& summaryConfig() const
+    { return *eclSummaryConfig_; }
+
     /*!
      * \brief Returns the name of the case.
      *
@@ -411,8 +408,7 @@ private:
         // the eclState is supposed to be immutable here, IMO.
         ioConfig.setOutputDir(outputDir);
 
-        bool opmRSTFile = EWOMS_GET_PARAM(TypeTag, bool, EnableOpmRstFile);
-        ioConfig.setEclCompatibleRST( !opmRSTFile );
+        ioConfig.setEclCompatibleRST(!EWOMS_GET_PARAM(TypeTag, bool, EnableOpmRstFile));
     }
 
     Implementation& asImp_()
@@ -425,19 +421,15 @@ private:
 
     static Opm::Deck* externalDeck_;
     static Opm::EclipseState* externalEclState_;
-    static Opm::Schedule* externalSchedule_;
-    static Opm::SummaryConfig* externalSummaryConfig_;
     std::unique_ptr<Opm::Deck> internalDeck_;
     std::unique_ptr<Opm::EclipseState> internalEclState_;
-    std::unique_ptr<Opm::Schedule> internalSchedule_;
-    std::unique_ptr<Opm::SummaryConfig> internalSummaryConfig_;
+    std::unique_ptr<Opm::Schedule> eclSchedule_;
+    std::unique_ptr<Opm::SummaryConfig> eclSummaryConfig_;
 
     // these two attributes point either to the internal or to the external version of the
     // Deck and EclipsState objects.
     Opm::Deck* deck_;
     Opm::EclipseState* eclState_;
-    Opm::Schedule* schedule_;
-    Opm::SummaryConfig* summaryConfig_;
 };
 
 template <class TypeTag>
@@ -445,13 +437,6 @@ Opm::Deck* EclBaseVanguard<TypeTag>::externalDeck_ = nullptr;
 
 template <class TypeTag>
 Opm::EclipseState* EclBaseVanguard<TypeTag>::externalEclState_;
-
-template <class TypeTag>
-Opm::Schedule* EclBaseVanguard<TypeTag>::externalSchedule_ = nullptr;
-
-template <class TypeTag>
-Opm::SummaryConfig* EclBaseVanguard<TypeTag>::externalSummaryConfig_ = nullptr;
-
 
 } // namespace Ewoms
 
