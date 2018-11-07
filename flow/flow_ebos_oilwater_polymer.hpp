@@ -19,13 +19,10 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-
 
 namespace Opm {
-  void flowEbosOilWaterPolymerSetDeck(Deck& deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summary_config);
-  int flowEbosOilWaterPolymerMain(int argc, char** argv);
+void flowEbosOilWaterPolymerSetDeck(Deck& deck, EclipseState& eclState);
+int flowEbosOilWaterPolymerMain(int argc, char** argv);
 }
 
 #endif // FLOW_EBOS_OILWATER_POLYMER_HPP

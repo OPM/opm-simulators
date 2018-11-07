@@ -59,12 +59,12 @@ public:
 }}
 
 namespace Opm {
-void flowEbosOilWaterPolymerSetDeck(Deck& deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosOilWaterPolymerSetDeck(Deck& deck, EclipseState& eclState)
 {
     typedef TTAG(EclFlowOilWaterPolymerProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
-    Vanguard::setExternalDeck(&deck, &eclState, &schedule, &summaryConfig);
+    Vanguard::setExternalDeck(&deck, &eclState);
 }
 
 // ----------------- Main program -----------------

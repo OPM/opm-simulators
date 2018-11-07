@@ -34,12 +34,12 @@
 
 namespace Opm {
 
-void flowEbosBlackoilSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosBlackoilSetDeck(Deck &deck, EclipseState& eclState)
 {
     typedef TTAG(EclFlowProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
-    Vanguard::setExternalDeck(&deck, &eclState, &schedule, &summaryConfig);
+    Vanguard::setExternalDeck(&deck, &eclState);
 }
 
 // ----------------- Main program -----------------
