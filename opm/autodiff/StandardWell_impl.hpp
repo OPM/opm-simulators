@@ -437,6 +437,9 @@ namespace Opm
                    WellState& well_state,
                    bool only_wells)
     {
+
+        const Opm::SummaryConfig summaryConfig = ebosSimulator.vanguard().summaryConfig();
+
         const int np = number_of_phases_;
 
         // clear all entries
@@ -606,13 +609,19 @@ namespace Opm
             // Store the perforation pressure for later usage.
             well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[index_of_well_] + perf_pressure_diffs_[perf];
 
-            // Compute Productivity index
+            // Compute Productivity index if asked for
+             const auto& pu = phaseUsage();
             for (int p = 0; p < np; ++p) {
-                const unsigned int compIdx = flowPhaseToEbosCompIdx(p);
-                const double drawdown = well_state.perfPress()[first_perf_ + perf] - intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx).value();
-                double productivity_index = cq_s[compIdx].value() / drawdown;
-                scaleProductivityIndex(perf, productivity_index);
-                well_state.productivityIndex()[np*index_of_well_ + p] += productivity_index;
+                if ( (pu.phase_pos[Water] == p && (summaryConfig.hasSummaryKey("WPIW:" + name()) || summaryConfig.hasSummaryKey("WPIL:" + name())))
+                        || (pu.phase_pos[Oil] == p && (summaryConfig.hasSummaryKey("WPIO:" + name()) || summaryConfig.hasSummaryKey("WPIL:" + name())))
+                        || (pu.phase_pos[Gas] == p && summaryConfig.hasSummaryKey("WPIG:" + name()))) {
+
+                    const unsigned int compIdx = flowPhaseToEbosCompIdx(p);
+                    const double drawdown = well_state.perfPress()[first_perf_ + perf] - intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx).value();
+                    double productivity_index = cq_s[compIdx].value() / drawdown;
+                    scaleProductivityIndex(perf, productivity_index);
+                    well_state.productivityIndex()[np*index_of_well_ + p] += productivity_index;
+                }
             }
 
         }
