@@ -245,14 +245,29 @@ public:
             eclState_ = externalEclState_;
         }
 
-        // create the schedule and summary config objects. Note that if eclState is
-        // supposed to represent the internalized version of the deck, this constitutes a
-        // layering violation.
-        eclSchedule_.reset(new Opm::Schedule(*deck_, *eclState_, parseContext));
-        eclSummaryConfig_.reset(new Opm::SummaryConfig(*deck_,
-                                                       *eclSchedule_,
-                                                       eclState_->getTableManager(),
-                                                       parseContext));
+        if (!externalEclSchedule_) {
+            // create the schedule object. Note that if eclState is supposed to represent
+            // the internalized version of the deck, this constitutes a layering
+            // violation.
+            internalEclSchedule_.reset(new Opm::Schedule(*deck_, *eclState_, parseContext));
+            eclSchedule_ = &(*internalEclSchedule_);
+        }
+        else
+            eclSchedule_ = externalEclSchedule_;
+
+        if (!externalEclSummaryConfig_) {
+            // create the schedule object. Note that if eclState is supposed to represent
+            // the internalized version of the deck, this constitutes a layering
+            // violation.
+            internalEclSummaryConfig_.reset(new Opm::SummaryConfig(*deck_,
+                                                                   *eclSchedule_,
+                                                                   eclState_->getTableManager(),
+                                                                   parseContext));
+
+            eclSummaryConfig_ = &(*internalEclSummaryConfig_);
+        }
+        else
+            eclSummaryConfig_ = externalEclSummaryConfig_;
 
         // Possibly override IOConfig setting for how often RESTART files should get
         // written to disk (every N report step)
@@ -294,11 +309,29 @@ public:
     { return *eclSchedule_; }
 
     /*!
+     * \brief Set the schedule object.
+     *
+     * The lifetime of this object is not managed by the vanguard, i.e., the object must
+     * stay valid until after the vanguard gets destroyed.
+     */
+    static void setExternalSchedule(Opm::Schedule* schedule)
+    { externalEclSchedule_ = schedule; }
+
+    /*!
      * \brief Return a reference to the object that determines which quantities ought to
      *        be put into the ECL summary output.
      */
     const Opm::SummaryConfig& summaryConfig() const
     { return *eclSummaryConfig_; }
+
+    /*!
+     * \brief Set the summary configuration object.
+     *
+     * The lifetime of this object is not managed by the vanguard, i.e., the object must
+     * stay valid until after the vanguard gets destroyed.
+     */
+    static void setExternalSummaryConfig(Opm::SummaryConfig* summaryConfig)
+    { externalEclSummaryConfig_ = summaryConfig; }
 
     /*!
      * \brief Returns the name of the case.
@@ -421,15 +454,20 @@ private:
 
     static Opm::Deck* externalDeck_;
     static Opm::EclipseState* externalEclState_;
+    static Opm::Schedule* externalEclSchedule_;
+    static Opm::SummaryConfig* externalEclSummaryConfig_;
     std::unique_ptr<Opm::Deck> internalDeck_;
     std::unique_ptr<Opm::EclipseState> internalEclState_;
-    std::unique_ptr<Opm::Schedule> eclSchedule_;
-    std::unique_ptr<Opm::SummaryConfig> eclSummaryConfig_;
+    std::unique_ptr<Opm::Schedule> internalEclSchedule_;
+    std::unique_ptr<Opm::SummaryConfig> internalEclSummaryConfig_;
 
     // these two attributes point either to the internal or to the external version of the
     // Deck and EclipsState objects.
     Opm::Deck* deck_;
     Opm::EclipseState* eclState_;
+
+    Opm::Schedule* eclSchedule_;
+    Opm::SummaryConfig* eclSummaryConfig_;
 };
 
 template <class TypeTag>
@@ -437,6 +475,12 @@ Opm::Deck* EclBaseVanguard<TypeTag>::externalDeck_ = nullptr;
 
 template <class TypeTag>
 Opm::EclipseState* EclBaseVanguard<TypeTag>::externalEclState_;
+
+template <class TypeTag>
+Opm::Schedule* EclBaseVanguard<TypeTag>::externalEclSchedule_ = nullptr;
+
+template <class TypeTag>
+Opm::SummaryConfig* EclBaseVanguard<TypeTag>::externalEclSummaryConfig_ = nullptr;
 
 } // namespace Ewoms
 
