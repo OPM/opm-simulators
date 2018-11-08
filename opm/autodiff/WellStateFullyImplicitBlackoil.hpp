@@ -128,6 +128,8 @@ namespace Opm
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
 
+            productivity_index_.resize(nw * np, 0.0);
+
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if(prevState && !prevState->wellMap().empty()) {
@@ -261,6 +263,8 @@ namespace Opm
             well_reservoir_rates_.resize(nw * np, 0.0);
             well_dissolved_gas_rates_.resize(nw, 0.0);
             well_vaporized_oil_rates_.resize(nw, 0.0);
+
+            productivity_index_.resize(nw * np, 0.0);
 
             // Ensure that we start out with zero rates by default.
             perfphaserates_.clear();
@@ -478,6 +482,18 @@ namespace Opm
 
                 if ( pu.phase_used[Gas] ) {
                     well.rates.set( rt::reservoir_gas, this->well_reservoir_rates_[well_rate_index + pu.phase_pos[Gas]] );
+                }
+
+                if ( pu.phase_used[Water] ) {
+                    well.rates.set( rt::productivity_index_water, this->productivity_index_[well_rate_index + pu.phase_pos[Water]] );
+                }
+
+                if ( pu.phase_used[Oil] ) {
+                    well.rates.set( rt::productivity_index_oil, this->productivity_index_[well_rate_index + pu.phase_pos[Oil]] );
+                }
+
+                if ( pu.phase_used[Gas] ) {
+                    well.rates.set( rt::productivity_index_gas, this->productivity_index_[well_rate_index + pu.phase_pos[Gas]] );
                 }
 
                 well.rates.set( rt::dissolved_gas, this->well_dissolved_gas_rates_[w] );
@@ -761,6 +777,14 @@ namespace Opm
             return top_segment_index_[w];
         }
 
+        std::vector<double>& productivityIndex() {
+            return productivity_index_;
+        }
+
+        const std::vector<double>& productivityIndex() const {
+            return productivity_index_;
+        }
+
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
@@ -792,6 +816,9 @@ namespace Opm
         // multisegment well related information in WellState
         std::vector<int> top_segment_index_;
         int nseg_; // total number of the segments
+
+        // Productivity Index
+        std::vector<double> productivity_index_;
 
     };
 

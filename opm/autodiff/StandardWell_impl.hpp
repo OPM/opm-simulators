@@ -461,6 +461,10 @@ namespace Opm
         well_state.wellVaporizedOilRates()[index_of_well_] = 0.;
         well_state.wellDissolvedGasRates()[index_of_well_] = 0.;
 
+        for (int p = 0; p < np; ++p) {
+            well_state.productivityIndex()[np*index_of_well_ + p] = 0.;
+        }
+
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
 
             const int cell_idx = well_cells_[perf];
@@ -601,7 +605,18 @@ namespace Opm
 
             // Store the perforation pressure for later usage.
             well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[index_of_well_] + perf_pressure_diffs_[perf];
+
+            // Compute Productivity index
+            for (int p = 0; p < np; ++p) {
+                const unsigned int compIdx = flowPhaseToEbosCompIdx(p);
+                const double drawdown = well_state.perfPress()[first_perf_ + perf] - intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx).value();
+                double productivity_index = cq_s[compIdx].value() / drawdown;
+                scaleProductivityIndex(perf, productivity_index);
+                well_state.productivityIndex()[np*index_of_well_ + p] += productivity_index;
+            }
+
         }
+
 
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {

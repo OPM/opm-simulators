@@ -187,6 +187,7 @@ namespace Opm
         using Base::wellHasTHPConstraints;
         using Base::mostStrictBhpFromBhpLimits;
         using Base::scalingFactor;
+        using Base::scaleProductivityIndex;
 
         // protected member variables from the Base class
         using Base::current_step_;
