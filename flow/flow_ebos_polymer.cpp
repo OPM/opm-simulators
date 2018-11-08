@@ -36,12 +36,12 @@ SET_BOOL_PROP(EclFlowPolymerProblem, EnablePolymer, true);
 }}
 
 namespace Opm {
-void flowEbosPolymerSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosPolymerSetDeck(Deck &deck, EclipseState& eclState)
 {
     typedef TTAG(EclFlowPolymerProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
-    Vanguard::setExternalDeck(&deck, &eclState, &schedule, &summaryConfig);
+    Vanguard::setExternalDeck(&deck, &eclState);
 }
 
 // ----------------- Main program -----------------
