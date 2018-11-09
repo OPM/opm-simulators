@@ -52,6 +52,10 @@ namespace Opm
         if (has_polymer) {
             OPM_THROW(std::runtime_error, "polymer is not supported by multisegment well yet");
         }
+
+	if (Base::has_energy) {
+            OPM_THROW(std::runtime_error, "energy is not supported by multisegment well yet");
+	}
         // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.
         // for other facilities needed but not available from parser, we need to process them here
 
@@ -109,6 +113,8 @@ namespace Opm
          const int num_cells)
     {
         Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells);
+
+        connectionRates_.resize(number_of_perforations_);
 
         // TODO: for StandardWell, we need to update the perf depth here using depth_arg.
         // for MultisegmentWell, it is much more complicated.
@@ -228,10 +234,9 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    assembleWellEq(Simulator& ebosSimulator,
+    assembleWellEq(const Simulator& ebosSimulator,
                    const double dt,
-                   WellState& well_state,
-                   bool only_wells)
+                   WellState& well_state)
     {
 
         const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
@@ -239,7 +244,7 @@ namespace Opm
             iterateWellEquations(ebosSimulator, dt, well_state);
         }
 
-        assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, only_wells);
+        assembleWellEqWithoutIteration(ebosSimulator, dt, well_state);
     }
 
 
@@ -1719,7 +1724,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    iterateWellEquations(Simulator& ebosSimulator,
+    iterateWellEquations(const Simulator& ebosSimulator,
                          const double dt,
                          WellState& well_state)
     {
@@ -1732,7 +1737,7 @@ namespace Opm
         int it = 0;
         for (; it < max_iter_number; ++it) {
 
-            assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, true);
+            assembleWellEqWithoutIteration(ebosSimulator, dt, well_state);
 
             const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
@@ -1762,19 +1767,16 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    assembleWellEqWithoutIteration(Simulator& ebosSimulator,
+    assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                    const double dt,
-                                   WellState& well_state,
-                                   bool only_wells)
+                                   WellState& well_state)
     {
         // calculate the fluid properties needed.
         computeSegmentFluidProperties(ebosSimulator);
 
         // clear all entries
-        if (!only_wells) {
-            duneB_ = 0.0;
-            duneC_ = 0.0;
-        }
+        duneB_ = 0.0;
+        duneC_ = 0.0;
 
         duneD_ = 0.0;
         resWell_ = 0.0;
@@ -1783,9 +1785,6 @@ namespace Opm
         // the first three of them are the mass balance equations, the last one is the pressure equations.
         //
         // but for the top segment, the pressure equation will be the well control equation, and the other three will be the same.
-
-        auto& ebosJac = ebosSimulator.model().linearizer().matrix();
-        auto& ebosResid = ebosSimulator.model().linearizer().residual();
 
         const bool allow_cf = getAllowCrossFlow();
 
@@ -1835,31 +1834,24 @@ namespace Opm
                     // the cq_s entering mass balance equations need to consider the efficiency factors.
                     const EvalWell cq_s_effective = cq_s[comp_idx] * well_efficiency_factor_;
 
-                    if (!only_wells) {
-                        // subtract sum of component fluxes in the reservoir equation.
-                        // need to consider the efficiency factor
-                        ebosResid[cell_idx][comp_idx] -= cq_s_effective.value();
-                    }
+                    connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
 
                     // subtract sum of phase fluxes in the well equations.
                     resWell_[seg][comp_idx] -= cq_s_effective.value();
 
                     // assemble the jacobians
                     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                        if (!only_wells) {
-                            // also need to consider the efficiency factor when manipulating the jacobians.
-                            duneC_[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + numEq); // intput in transformed matrix
-                        }
+
+                        // also need to consider the efficiency factor when manipulating the jacobians.
+                        duneC_[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + numEq); // intput in transformed matrix
+                        
                         // the index name for the D should be eq_idx / pv_idx
                         duneD_[seg][seg][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx + numEq);
                     }
 
                     for (int pv_idx = 0; pv_idx < numEq; ++pv_idx) {
-                        if (!only_wells) {
-                            // also need to consider the efficiency factor when manipulating the jacobians.
-                            ebosJac[cell_idx][cell_idx][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx);
-                            duneB_[seg][cell_idx][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx);
-                        }
+                        // also need to consider the efficiency factor when manipulating the jacobians.
+                        duneB_[seg][cell_idx][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx);   
                     }
                 }
                 // TODO: we should save the perforation pressure and preforation rates?

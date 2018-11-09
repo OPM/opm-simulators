@@ -33,6 +33,7 @@ namespace Opm
     {
     public:
         typedef WellInterface<TypeTag> Base;
+        typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
 
         using typename Base::WellState;
         using typename Base::Simulator;
@@ -107,50 +108,60 @@ namespace Opm
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
-                          const int num_cells);
+                          const int num_cells) override;
 
 
-        virtual void initPrimaryVariablesEvaluation() const;
+        virtual void initPrimaryVariablesEvaluation() const override;
 
-        virtual void assembleWellEq(Simulator& ebosSimulator,
+        virtual void assembleWellEq(const Simulator& ebosSimulator,
                                     const double dt,
-                                    WellState& well_state,
-                                    bool only_wells);
+                                    WellState& well_state) override;
 
         /// updating the well state based the control mode specified with current
         // TODO: later will check wheter we need current
-        virtual void updateWellStateWithTarget(WellState& well_state) const;
+        virtual void updateWellStateWithTarget(WellState& well_state) const override;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const;
+        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const override;
 
         /// Ax = Ax - C D^-1 B x
-        virtual void apply(const BVector& x, BVector& Ax) const;
+        virtual void apply(const BVector& x, BVector& Ax) const override;
         /// r = r - C D^-1 Rw
-        virtual void apply(BVector& r) const;
+        virtual void apply(BVector& r) const override;
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                                           WellState& well_state) const;
+                                                           WellState& well_state) const override;
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,
-                                           std::vector<double>& well_potentials);
+                                           std::vector<double>& well_potentials) override;
 
-        virtual void updatePrimaryVariables(const WellState& well_state) const;
+        virtual void updatePrimaryVariables(const WellState& well_state) const override;
 
-        virtual void solveEqAndUpdateWellState(WellState& well_state); // const?
+        virtual void solveEqAndUpdateWellState(WellState& well_state) override; // const?
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
-                                                 const WellState& well_state); // should be const?
+                                                 const WellState& well_state) override; // should be const?
 
         /// number of segments for this well
         /// int number_of_segments_;
         int numberOfSegments() const;
 
         int numberOfPerforations() const;
+
+        void addCellRates(RateVector& rates, int cellIdx) const override
+        {
+            for (int perfIdx = 0; perfIdx < number_of_perforations_; ++perfIdx) {
+                if (Base::cells()[perfIdx] == cellIdx) {
+                    for (int i = 0; i < RateVector::dimension; ++i) {
+                        rates[i] += connectionRates_[perfIdx][i];
+                    }
+                }
+            }
+        }
 
     protected:
         int number_segments_;
@@ -253,6 +264,8 @@ namespace Opm
 
         std::vector<double> segment_depth_diffs_;
 
+        std::vector<RateVector> connectionRates_;
+
         void initMatrixAndVectors(const int num_cells) const;
 
         // protected functions
@@ -337,14 +350,13 @@ namespace Opm
         bool accelerationalPressureLossConsidered() const;
 
         // TODO: try to make ebosSimulator const, as it should be
-        void iterateWellEquations(Simulator& ebosSimulator,
+        void iterateWellEquations(const Simulator& ebosSimulator,
                                   const double dt,
                                   WellState& well_state);
 
-        void assembleWellEqWithoutIteration(Simulator& ebosSimulator,
+        void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                             const double dt,
-                                            WellState& well_state,
-                                            bool only_wells);
+                                            WellState& well_state);
     };
 
 }

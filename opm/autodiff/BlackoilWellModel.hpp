@@ -24,6 +24,7 @@
 #ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 
+#include <ebos/eclproblem.hh>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
@@ -60,12 +61,18 @@
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
+BEGIN_PROPERTIES
+
+NEW_PROP_TAG(EnableTerminalOutput);
+
+END_PROPERTIES
 
 namespace Opm {
 
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
-        class BlackoilWellModel {
+        class BlackoilWellModel : public Ewoms::BaseAuxiliaryModule<TypeTag>
+        {
         public:
             // ---------      Types      ---------
             typedef WellStateFullyImplicitBlackoil WellState;
@@ -77,6 +84,11 @@ namespace Opm {
             typedef typename GET_PROP_TYPE(TypeTag, Indices)             Indices;
             typedef typename GET_PROP_TYPE(TypeTag, Simulator)           Simulator;
             typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
+            typedef typename GET_PROP_TYPE(TypeTag, RateVector)          RateVector;
+            typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector)      GlobalEqVector;
+            typedef typename GET_PROP_TYPE(TypeTag, JacobianMatrix)      JacobianMatrix;
+
+            typedef typename Ewoms::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
             static const int numEq = Indices::numEq;
             static const int solventSaturationIdx = Indices::solventSaturationIdx;
@@ -101,48 +113,94 @@ namespace Opm {
             using RateConverterType = RateConverter::
                 SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
 
-            BlackoilWellModel(Simulator& ebosSimulator,
-                              const ModelParameters& param,
-                              const bool terminal_output);
+            BlackoilWellModel(Simulator& ebosSimulator);
 
-            void initFromRestartFile(const RestartValue& restartValues)
+            void init(const Opm::EclipseState& eclState, const Opm::Schedule& schedule);
+
+            /////////////
+            // <eWoms auxiliary module stuff>
+            /////////////
+            unsigned numDofs() const
+            // No extra dofs are inserted for wells. (we use a Schur complement.)
+            { return 0; }
+
+            void addNeighbors(std::vector<NeighborSet>& neighbors) const;
+
+            void applyInitial()
+            {}
+
+            void linearize(JacobianMatrix& mat , GlobalEqVector& res);
+
+            void postSolve(GlobalEqVector& deltaX)
             {
-                // gives a dummy dynamic_list_econ_limited
-                DynamicListEconLimited dummyListEconLimited;
-                const auto& defunctWellNames = ebosSimulator_.vanguard().defunctWellNames();
-                WellsManager wellsmanager(eclState(),
-                                          schedule(),
-                                          // The restart step value is used to identify wells present at the given
-                                          // time step. Wells that are added at the same time step as RESTART is initiated
-                                          // will not be present in a restart file. Use the previous time step to retrieve
-                                          // wells that have information written to the restart file.
-                                          std::max(eclState().getInitConfig().getRestartStep() - 1, 0),
-                                          Opm::UgGridHelpers::numCells(grid()),
-                                          Opm::UgGridHelpers::globalCell(grid()),
-                                          Opm::UgGridHelpers::cartDims(grid()),
-                                          Opm::UgGridHelpers::dimensions(grid()),
-                                          Opm::UgGridHelpers::cell2Faces(grid()),
-                                          Opm::UgGridHelpers::beginFaceCentroids(grid()),
-                                          dummyListEconLimited,
-                                          grid().comm().size() > 1,
-                                          defunctWellNames);
-
-                const Wells* wells = wellsmanager.c_wells();
-
-                const int nw = wells->number_of_wells;
-                if (nw > 0) {
-                    auto phaseUsage = phaseUsageFromDeck(eclState());
-                    size_t numCells = Opm::UgGridHelpers::numCells(grid());
-                    well_state_.resize(wells, numCells, phaseUsage); //Resize for restart step
-                    wellsToState(restartValues.wells, phaseUsage, well_state_);
-                    previous_well_state_ = well_state_;
-                }
+                recoverWellSolutionAndUpdateWellState(deltaX);
             }
 
-            // compute the well fluxes and assemble them in to the reservoir equations as source terms
-            // and in the well equations.
-            void assemble(const int iterationIdx,
-                          const double dt);
+            /////////////
+            // </ eWoms auxiliary module stuff>
+            /////////////
+
+            template <class Restarter>
+            void deserialize(Restarter& res)
+            {
+                // TODO (?)
+            }
+
+            /*!
+             * \brief This method writes the complete state of the well
+             *        to the harddisk.
+             */
+            template <class Restarter>
+            void serialize(Restarter& res)
+            {
+                // TODO (?)
+            }
+
+            void beginEpisode(const Opm::EclipseState& eclState,
+                              const Opm::Schedule& schedule,
+                              bool isRestart)
+            {
+                size_t episodeIdx = ebosSimulator_.episodeIndex();
+                // beginEpisode in eclProblem advances the episode index
+                // we don't want this when we are at the beginning of an
+                // restart.
+                if (isRestart)
+                    episodeIdx -= 1;
+
+                beginReportStep(episodeIdx);
+            }
+
+            void beginTimeStep();
+
+            void beginIteration()
+            {
+                assemble(ebosSimulator_.model().newtonMethod().numIterations(),
+                         ebosSimulator_.timeStepSize());
+            }
+
+            void endIteration()
+            { }
+
+            void endTimeStep()
+            {
+                timeStepSucceeded(ebosSimulator_.time());
+            }
+
+            void endEpisode()
+            {
+                endReportStep();
+            }
+
+            template <class Context>
+            void computeTotalRatesForDof(RateVector& rate,
+                                         const Context& context,
+                                         unsigned spaceIdx,
+                                         unsigned timeIdx) const;
+
+            void initFromRestartFile(const RestartValue& restartValues);
+
+            Opm::data::Wells wellData() const
+            { return well_state_.report(phase_usage_, Opm::UgGridHelpers::globalCell(grid())); }
 
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;
@@ -152,10 +210,6 @@ namespace Opm {
 
             // apply well model with scaling of alpha
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
-
-            // using the solution x to recover the solution xw for wells and applying
-            // xw to update Well State
-            void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
             // Check if well equations is converged.
             bool getWellConvergence(const std::vector<Scalar>& B_avg) const;
@@ -172,31 +226,20 @@ namespace Opm {
             // return the internal well state
             const WellState& wellState() const;
 
-            // only use this for restart.
-            void setRestartWellState(const WellState& well_state);
-
-            // called at the beginning of a time step
-            void beginTimeStep(const int timeStepIdx,const double simulationTime);
-            // called at the end of a time step
-            void timeStepSucceeded(const double& simulationTime);
-
-            // called at the beginning of a report step
-            void beginReportStep(const int time_step);
-
-            // called at the end of a report step
-            void endReportStep();
-
             const SimulatorReport& lastReport() const;
-
 
             void addWellContributions(Mat& mat)
             {
                 for ( const auto& well: well_container_ ) {
-                        well->addWellContributions(mat);
+                    well->addWellContributions(mat);
                 }
             }
 
+            // called at the beginning of a report step
+            void beginReportStep(const int time_step);
+
         protected:
+
             void extractLegacyPressure_(std::vector<double>& cellPressure) const
             {
                 size_t nc = number_of_cells_;
@@ -233,6 +276,9 @@ namespace Opm {
             using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
             // a vector of all the wells.
             std::vector<WellInterfacePtr > well_container_;
+
+            // map from logically cartesian cell indices to compressed ones
+            std::vector<int> cartesian_to_compressed_;
 
             // create the well container
             std::vector<WellInterfacePtr > createWellContainer(const int time_step);
@@ -276,6 +322,21 @@ namespace Opm {
             const Schedule& schedule() const
             { return ebosSimulator_.vanguard().schedule(); }
 
+            // compute the well fluxes and assemble them in to the reservoir equations as source terms
+            // and in the well equations.
+            void assemble(const int iterationIdx,
+                          const double dt);
+
+            // called at the end of a time step
+            void timeStepSucceeded(const double& simulationTime);
+
+            // called at the end of a report step
+            void endReportStep();
+
+            // using the solution x to recover the solution xw for wells and applying
+            // xw to update Well State
+            void recoverWellSolutionAndUpdateWellState(const BVector& x);
+
             void updateWellControls();
 
             void updateGroupControls();
@@ -283,7 +344,7 @@ namespace Opm {
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables();
 
-            void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const;
+            void setupCartesianToCompressed_(const int* global_cell, int number_of_cells);
 
             void computeRepRadiusPerfLength(const Grid& grid);
 
@@ -322,8 +383,7 @@ namespace Opm {
 
             void resetWellControlFromState() const;
 
-            void assembleWellEq(const double dt,
-                                bool only_wells);
+            void assembleWellEq(const double dt);
 
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)

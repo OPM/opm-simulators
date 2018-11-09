@@ -72,7 +72,6 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowNonLinearSolver, FlowIstlSolver, FlowModelParameters, FlowTimeSteppingParameters));
 SET_STRING_PROP(EclFlowProblem, OutputDir, "");
-SET_BOOL_PROP(EclFlowProblem, DisableWells, true);
 SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
 // default in flow is to formulate the equations in surface volumes
 SET_BOOL_PROP(EclFlowProblem, BlackoilConserveSurfaceVolume, true);
@@ -86,6 +85,8 @@ SET_BOOL_PROP(EclFlowProblem, EnablePolymer, false);
 SET_BOOL_PROP(EclFlowProblem, EnableSolvent, false);
 SET_BOOL_PROP(EclFlowProblem, EnableTemperature, true);
 SET_BOOL_PROP(EclFlowProblem, EnableEnergy, false);
+
+SET_TYPE_PROP(EclFlowProblem, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
 
 END_PROPERTIES
 
@@ -209,8 +210,6 @@ namespace Opm {
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
-            wellModel().beginTimeStep(timer.reportStepNum(), timer.simulationTimeElapsed());
-
             if (param_.update_equations_scaling_) {
                 std::cout << "equation scaling not suported yet" << std::endl;
                 //updateEquationsScaling();
@@ -302,7 +301,7 @@ namespace Opm {
                 // handling well state update before oscillation treatment is a decision based
                 // on observation to avoid some big performance degeneration under some circumstances.
                 // there is no theorectical explanation which way is better for sure.
-                wellModel().recoverWellSolutionAndUpdateWellState(x);
+                wellModel().postSolve(x);
 
                 if (param_.use_update_stabilization_) {
                     // Stabilize the nonlinear update.
@@ -343,9 +342,7 @@ namespace Opm {
         /// \param[in] timer                  simulation timer
         void afterStep(const SimulatorTimerInterface& OPM_UNUSED timer)
         {
-            wellModel().timeStepSucceeded(timer.simulationTimeElapsed());
             ebosSimulator_.problem().endTimeStep();
-
         }
 
         /// Assemble the residual and Jacobian of the nonlinear system.
@@ -361,28 +358,12 @@ namespace Opm {
             ebosSimulator_.model().linearizer().linearize();
             ebosSimulator_.problem().endIteration();
 
-            // -------- Current time step length ----------
-            const double dt = timer.currentStepLength();
-
-            // -------- Well equations ----------
-
-            try
-            {
-                // assembles the well equations and applies the wells to
-                // the reservoir equations as a source term.
-                wellModel().assemble(iterationIdx, dt);
-            }
-            catch ( const Dune::FMatrixError& )
-            {
-                OPM_THROW(Opm::NumericalIssue,"Error encounted when solving well equations");
-            }
-
             auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             if (param_.matrix_add_well_contributions_) {
                 wellModel().addWellContributions(ebosJac);
             }
             if ( param_.preconditioner_add_well_contributions_ &&
-                 ! param_.matrix_add_well_contributions_ ) {
+                                  ! param_.matrix_add_well_contributions_ ) {
                 matrix_for_preconditioner_ .reset(new Mat(ebosJac));
                 wellModel().addWellContributions(*matrix_for_preconditioner_);
             }
@@ -504,9 +485,6 @@ namespace Opm {
         /// r is the residual.
         void solveJacobianSystem(BVector& x) const
         {
-            const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
-            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-
             // J = [A, B; C, D], where A is the reservoir equations, B and C the interaction of well
             // with the reservoir and D is the wells itself.
             // The full system is reduced to a number of cells X number of cells system via Schur complement
@@ -516,7 +494,9 @@ namespace Opm {
             // r = [r, r_well], where r is the residual and r_well the well residual.
             // r -= B^T * D^-1 r_well
 
-            // apply well residual to the residual.
+            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+
             wellModel().apply(ebosResid);
 
             // set initial guess
@@ -1001,9 +981,9 @@ namespace Opm {
         const BlackoilWellModel<TypeTag>&
         wellModel() const { return well_model_; }
 
-        void beginReportStep()
+        void beginReportStep(bool isRestart)
         {
-            ebosSimulator_.problem().beginEpisode();
+            ebosSimulator_.problem().beginEpisode(isRestart);
         }
 
         void endReportStep()

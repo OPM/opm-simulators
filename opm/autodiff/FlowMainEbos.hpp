@@ -437,6 +437,7 @@ namespace Opm
         void setupEbosSimulator()
         {
             ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
+            ebosSimulator_->executionTimer().start();
             ebosSimulator_->model().applyInitialSolution();
 
             try {
