@@ -33,7 +33,7 @@
 #include <numeric>
 #include <type_traits>
 
-#if HAVE_MPI && HAVE_DUNE_ISTL
+#if HAVE_MPI //&& HAVE_DUNE_ISTL
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <mpi.h>
