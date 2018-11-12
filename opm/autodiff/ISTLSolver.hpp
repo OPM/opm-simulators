@@ -20,7 +20,6 @@
 #ifndef OPM_ISTLSOLVER_HEADER_INCLUDED
 #define OPM_ISTLSOLVER_HEADER_INCLUDED
 
-#include <opm/autodiff/ISTLSolverEbos.hpp>
 #include <opm/autodiff/BlackoilAmg.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
@@ -28,6 +27,7 @@
 #include <opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp>
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/autodiff/MatrixBlock.hpp>
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
