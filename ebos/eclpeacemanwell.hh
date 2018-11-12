@@ -343,13 +343,16 @@ public:
     {
         const SolutionVector& curSol = simulator_.model().solution(/*timeIdx=*/0);
 
+        typedef typename JacobianMatrix::block_type MatrixBlock;
+
         unsigned wellGlobalDofIdx = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
         residual[wellGlobalDofIdx] = 0.0;
 
-        auto& diagBlock = matrix[wellGlobalDofIdx][wellGlobalDofIdx];
-        diagBlock = 0.0;
+        MatrixBlock diagBlock(0.0);
         for (unsigned i = 0; i < numModelEq; ++ i)
             diagBlock[i][i] = 1.0;
+
+        MatrixBlock block(0.0);
 
         if (wellStatus() == Shut) {
             // if the well is shut, make the auxiliary DOFs a trivial equation in the
@@ -358,16 +361,16 @@ public:
             auto wellDofIt = dofVariables_.begin();
             const auto& wellDofEndIt = dofVariables_.end();
             for (; wellDofIt != wellDofEndIt; ++ wellDofIt) {
-                matrix[wellGlobalDofIdx][wellDofIt->first] = 0.0;
-                matrix[wellDofIt->first][wellGlobalDofIdx] = 0.0;
+                matrix.setBlock(wellGlobalDofIdx, wellDofIt->first, block);
+                matrix.setBlock(wellDofIt->first, wellGlobalDofIdx, block);
             }
-            matrix[wellGlobalDofIdx][wellGlobalDofIdx] = diagBlock;
+            matrix.setBlock(wellGlobalDofIdx, wellGlobalDofIdx, diagBlock);
             residual[wellGlobalDofIdx] = 0.0;
             return;
         }
         else if (dofVariables_.empty()) {
             // the well does not feature any perforations on the local process
-            matrix[wellGlobalDofIdx][wellGlobalDofIdx] = diagBlock;
+            matrix.setBlock(wellGlobalDofIdx, wellGlobalDofIdx, diagBlock);
             residual[wellGlobalDofIdx] = 0.0;
             return;
         }
@@ -389,10 +392,9 @@ public:
 
             /////////////
             // influence of grid on well
-            auto& curBlock = matrix[wellGlobalDofIdx][gridDofIdx];
-
             elemCtx.updateStencil( dofVars.element );
-            curBlock = 0.0;
+            // reset block from previous values
+            block = 0.0;
             for (unsigned priVarIdx = 0; priVarIdx < numModelEq; ++priVarIdx) {
                 // calculate the derivative of the well equation w.r.t. the current
                 // primary variable using forward differences
@@ -408,11 +410,13 @@ public:
                 Scalar dWellEq_dPV =
                     (wellResidual_(actualBottomHolePressure_, &tmpDofVars, gridDofIdx) - wellResid)
                     / eps;
-                curBlock[0][priVarIdx] = dWellEq_dPV;
+                block[0][priVarIdx] = dWellEq_dPV;
 
                 // go back to the original primary variables
                 priVars[priVarIdx] -= eps;
             }
+            matrix.setBlock(wellGlobalDofIdx, gridDofIdx, block);
+
             //
             /////////////
 
@@ -462,10 +466,12 @@ public:
             // the black-oil model for now anyway, so this should not be too much of a
             // problem...
             Opm::Valgrind::CheckDefined(q);
-            auto& matrixEntry = matrix[gridDofIdx][wellGlobalDofIdx];
-            matrixEntry = 0.0;
+            block = 0.0;
             for (unsigned eqIdx = 0; eqIdx < numModelEq; ++ eqIdx)
-                matrixEntry[eqIdx][0] = - Toolbox::value(q[eqIdx])/dofVars.totalVolume;
+                block[eqIdx][0] = - Opm::getValue(q[eqIdx])/dofVars.totalVolume;
+
+            matrix.setBlock(gridDofIdx, wellGlobalDofIdx, block);
+
             //
             /////////////
         }
@@ -477,6 +483,8 @@ public:
             *std::max<Scalar>(1e7, targetBottomHolePressure_);
         Scalar wellResidStar = wellResidual_(actualBottomHolePressure_ + eps);
         diagBlock[0][0] = (wellResidStar - wellResid)/eps;
+
+        matrix.setBlock(wellGlobalDofIdx, wellGlobalDofIdx, diagBlock);
     }
 
 
