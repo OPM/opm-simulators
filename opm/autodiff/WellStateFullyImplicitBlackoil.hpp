@@ -87,27 +87,37 @@ namespace Opm
             well_vaporized_oil_rates_.resize(nw, 0.0);
 
             // checking whether some effective well control happens
-            effective_events_happen_.resize(nw);
-            for (int w = 0; w <nw; ++w) {
-                const int nw_wells_ecl = wells_ecl.size();
-                int index_well_ecl = 0;
-                const std::string well_name(wells->name[w]);
-                for (; index_well_ecl < nw_wells_ecl; ++index_well_ecl) {
-                    if (well_name == wells_ecl[index_well_ecl]->name()) {
-                        break;
-                    }
-                }
+            effective_events_occurred_.resize(nw, true);
 
-                // It should be able to find in wells_ecl.
-                if (index_well_ecl == nw_wells_ecl) {
-                    OPM_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ");
-                }
-
-                const Well* well_ecl = wells_ecl[index_well_ecl];
+            // a hack to make the resize() function used in RESTART related work
+            if (!wells_ecl.empty() ) {
+                // At the moment, the following events are considered to be effective events
+                // more events might join as effective events
                 // PRODUCTION_UPDATE, INJECTION_UPDATE, WELL_STATUS_CHANGE
                 // 16 + 32 + 128
-                effective_events_happen_[w] = (well_ecl->hasEvent(176, report_step) );
-            }
+                const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
+                                                     + ScheduleEvents::PRODUCTION_UPDATE
+                                                     + ScheduleEvents::INJECTION_UPDATE;
+
+                for (int w = 0; w <nw; ++w) {
+                    const int nw_wells_ecl = wells_ecl.size();
+                    int index_well_ecl = 0;
+                    const std::string well_name(wells->name[w]);
+                    for (; index_well_ecl < nw_wells_ecl; ++index_well_ecl) {
+                        if (well_name == wells_ecl[index_well_ecl]->name()) {
+                            break;
+                        }
+                    }
+
+                    // It should be able to find in wells_ecl.
+                    if (index_well_ecl == nw_wells_ecl) {
+                        OPM_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ");
+                    }
+
+                    const Well* well_ecl = wells_ecl[index_well_ecl];
+                    effective_events_occurred_[w] = (well_ecl->hasEvent(effective_events_mask, report_step) );
+                }
+            } // end of if (!well_ecl.empty() )
 
             // Ensure that we start out with zero rates by default.
             perfphaserates_.clear();
@@ -131,19 +141,9 @@ namespace Opm
                 }
             }
 
-            // set up the current well controls, if there are some effective events happened to the well,
-            // we use the control specified in the DECK
-            // if not, we will just use the control from the prevState
-            // the second part will be done when copying the data from  prevState
-            // here, we initilaize all the current_controls_ based on the control mode from the DECK
             current_controls_.resize(nw);
-            for (int w = 0; w < nw; ++w) {
-                current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
-            }
-
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
-
             productivity_index_.resize(nw * np, 0.0);
 
             // intialize wells that have been there before
@@ -166,11 +166,13 @@ namespace Opm
                         thp()[ newIndex ] = prevState->thp()[ oldIndex ];
 
                         // if there is no effective control event happens to the well, we use the current_controls_ from prevState
-                        if (!effective_events_happen_[w]) {
+                        // otherwise, we use the control specified in the deck
+                        if (!effective_events_occurred_[w]) {
                             current_controls_[ newIndex ] = prevState->currentControls()[ oldIndex ];
                             // also change the one in the WellControls
-                            // TODO: checking if this is appropriate
                             well_controls_set_current(wells->ctrls[w], current_controls_[ newIndex ]);
+                        } else {
+                            current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
                         }
 
                         // wellrates
@@ -254,24 +256,11 @@ namespace Opm
             }
         }
 
-        void resize(const Wells* wells, size_t numCells)
+        void resize(const Wells* wells, size_t numCells, const PhaseUsage& pu)
         {
-            std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-            BaseType :: init(wells, tmp);
-
-            const int np = wells->number_of_phases;
-            const int nw = wells->number_of_wells;
-            const int nperf = wells->well_connpos[nw];
-
-            well_reservoir_rates_.resize(nw * np, 0.0);
-            well_dissolved_gas_rates_.resize(nw, 0.0);
-            well_vaporized_oil_rates_.resize(nw, 0.0);
-            effective_events_happen_.resize(nw);
-            perfphaserates_.resize(nperf * np, 0.0);
-            current_controls_.resize(nw);
-            perfRateSolvent_.resize(nperf, 0.0);
-            top_segment_index_.resize(nw);
-            // TODO: segrates_ and segpress_ are not taken care of here
+            const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
+            const std::vector<const Well*> wells_ecl;
+            init(wells, tmp, wells_ecl, 0, nullptr, pu);
         }
 
         /// Allocate and initialize if wells is non-null.  Also tries
@@ -740,13 +729,13 @@ namespace Opm
         }
 
 
-        bool effectiveEventsHappen(const int w) const {
-            return effective_events_happen_[w];
+        bool effectiveEventsOccurred(const int w) const {
+            return effective_events_occurred_[w];
         }
 
 
-        void setEffeciveEventHappen(const int w, const bool effective_events_happen) {
-            effective_events_happen_[w] = effective_events_happen;
+        void setEffectiveEventsOccurred(const int w, const bool effective_events_occurred) {
+            effective_events_occurred_[w] = effective_events_occurred;
         }
 
 
@@ -838,7 +827,7 @@ namespace Opm
         // some events happens to the well, like this well is a new well
         // or new well control keywords happens
         // \Note: for now, only WCON* keywords, and well status change is considered
-        std::vector<bool> effective_events_happen_;
+        std::vector<bool> effective_events_occurred_;
 
         // MS well related
         // for StandardWell, the number of segments will be one

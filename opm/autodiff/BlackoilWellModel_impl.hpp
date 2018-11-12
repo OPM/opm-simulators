@@ -362,9 +362,9 @@ namespace Opm {
 
         const int nw = wells->number_of_wells;
         if (nw > 0) {
-            auto phaseUsage = phaseUsageFromDeck(eclState());
-            size_t numCells = Opm::UgGridHelpers::numCells(grid());
-            well_state_.resize(wells, numCells); //Resize for restart step
+            const auto phaseUsage = phaseUsageFromDeck(eclState());
+            const size_t numCells = Opm::UgGridHelpers::numCells(grid());
+            well_state_.resize(wells, numCells, phaseUsage); // Resize for restart step
             wellsToState(restartValues.wells, phaseUsage, well_state_);
             previous_well_state_ = well_state_;
         }
@@ -939,14 +939,14 @@ namespace Opm {
             const int control = well_controls_get_current(wc);
             well_state_.currentControls()[w] = control;
 
-            if (well_state_.effectiveEventsHappen(w) ) {
+            if (well_state_.effectiveEventsOccurred(w) ) {
                 well->updateWellStateWithTarget(well_state_);
             }
 
             // there is no new well control change input within a report step,
             // so next time step, the well does not consider to have effective events anymore
-            if (well_state_.effectiveEventsHappen(w) ) {
-                well_state_.setEffeciveEventHappen(w, false);
+            if (well_state_.effectiveEventsOccurred(w) ) {
+                well_state_.setEffectiveEventsOccurred(w, false);
             }
         }  // end of for (int w = 0; w < nw; ++w)
 
