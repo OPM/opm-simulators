@@ -32,6 +32,12 @@
 #include <array>
 #include <memory>
 
+namespace Opm {
+template <class TypeTag>
+class ISTLSolverEbos;
+}
+
+
 BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(FlowIstlSolverParams);
@@ -51,6 +57,8 @@ NEW_PROP_TAG(LinearSolverRequireFullSparsityPattern);
 NEW_PROP_TAG(LinearSolverIgnoreConvergenceFailure);
 NEW_PROP_TAG(UseAmg);
 NEW_PROP_TAG(UseCpr);
+NEW_PROP_TAG(LinearSolverBackend);
+NEW_PROP_TAG(PreconditionerAddWellContributions);
 
 SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
 SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
@@ -66,6 +74,10 @@ SET_BOOL_PROP(FlowIstlSolverParams, LinearSolverRequireFullSparsityPattern, fals
 SET_BOOL_PROP(FlowIstlSolverParams, LinearSolverIgnoreConvergenceFailure, false);
 SET_BOOL_PROP(FlowIstlSolverParams, UseAmg, false);
 SET_BOOL_PROP(FlowIstlSolverParams, UseCpr, false);
+SET_TYPE_PROP(FlowIstlSolverParams, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
+SET_BOOL_PROP(FlowIstlSolverParams, PreconditionerAddWellContributions, false);
+
+
 
 END_PROPERTIES
 
@@ -186,6 +198,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseAmg, "Use AMG as the linear solver's preconditioner");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseCpr, "Use CPR as the linear solver's preconditioner");
+
         }
 
         FlowLinearSolverParameters() { reset(); }
