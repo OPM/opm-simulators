@@ -71,9 +71,11 @@ namespace Opm
     class ISTLSolverEbos : public NewtonIterationBlackoilInterface
     {
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-        typedef typename GET_PROP_TYPE(TypeTag, JacobianMatrix) Matrix;
+        typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
         typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
         typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+
+        typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
 
         enum { pressureIndex = Indices::pressureSwitchIdx };
 

@@ -94,7 +94,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    linearize(JacobianMatrix& mat , GlobalEqVector& res)
+    linearize(SparseMatrixAdapter& mat , GlobalEqVector& res)
     {
         if (!localWellsActive())
             return;

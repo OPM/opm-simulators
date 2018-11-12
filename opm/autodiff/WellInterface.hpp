@@ -80,6 +80,7 @@ namespace Opm
         typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
         typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
+        typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
         typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
 
         static const int numEq = Indices::numEq;
@@ -87,7 +88,7 @@ namespace Opm
 
         typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
         typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
-        typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
+        typedef typename SparseMatrixAdapter::IstlMatrix Mat;
         typedef Dune::BlockVector<VectorBlockType> BVector;
         typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 

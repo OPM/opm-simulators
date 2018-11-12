@@ -26,13 +26,13 @@
 // Define making clear that the simulator supports AMG
 #define FLOW_SUPPORT_AMG !defined(HAVE_UMFPACK)
 
-#include <opm/autodiff/DuneMatrix.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
 #include <opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp>
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/autodiff/DuneMatrix.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 

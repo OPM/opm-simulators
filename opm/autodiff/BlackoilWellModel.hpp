@@ -86,7 +86,7 @@ namespace Opm {
             typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
             typedef typename GET_PROP_TYPE(TypeTag, RateVector)          RateVector;
             typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector)      GlobalEqVector;
-            typedef typename GET_PROP_TYPE(TypeTag, JacobianMatrix)      JacobianMatrix;
+            typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
 
             typedef typename Ewoms::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
@@ -105,7 +105,7 @@ namespace Opm {
 #else
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
 #endif
-            typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
+            typedef typename SparseMatrixAdapter::IstlMatrix Mat;
 
             typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
@@ -129,7 +129,7 @@ namespace Opm {
             void applyInitial()
             {}
 
-            void linearize(JacobianMatrix& mat , GlobalEqVector& res);
+            void linearize(SparseMatrixAdapter& mat , GlobalEqVector& res);
 
             void postSolve(GlobalEqVector& deltaX)
             {
