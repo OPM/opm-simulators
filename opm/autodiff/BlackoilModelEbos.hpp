@@ -86,6 +86,8 @@ SET_BOOL_PROP(EclFlowProblem, EnableTemperature, true);
 SET_BOOL_PROP(EclFlowProblem, EnableEnergy, false);
 
 SET_TYPE_PROP(EclFlowProblem, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
+SET_TAG_PROP(EclFlowProblem, LinearSolverSplice, FlowIstlSolver);
+
 
 END_PROPERTIES
 
@@ -149,11 +151,9 @@ namespace Opm {
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters& param,
                           BlackoilWellModel<TypeTag>& well_model,
-                          const ISTLSolverType& linsolver,
                           const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
         , grid_(ebosSimulator_.vanguard().grid())
-        , istlSolver_( dynamic_cast< const ISTLSolverType* > (&linsolver) )
         , phaseUsage_(phaseUsageFromDeck(eclState()))
         , has_disgas_(FluidSystem::enableDissolvedGas())
         , has_vapoil_(FluidSystem::enableVaporizedOil())
@@ -169,12 +169,6 @@ namespace Opm {
         {
             // compute global sum of number of cells
             global_nc_ = detail::countGlobalCells(grid_);
-            //find rows of matrix corresponding to overlap
-            detail::findOverlapRowsAndColumns(grid_,overlapRowAndColumns_);
-            if (!istlSolver_)
-            {
-                OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
-            }
             convergence_reports_.reserve(300); // Often insufficient, but avoids frequent moves.
         }
 
@@ -375,16 +369,6 @@ namespace Opm {
             ebosSimulator_.model().linearizer().linearize();
             ebosSimulator_.problem().endIteration();
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
-            if (param_.matrix_add_well_contributions_) {
-                wellModel().addWellContributions(ebosJac.istlMatrix());
-            }
-            if ( param_.preconditioner_add_well_contributions_ &&
-                                  ! param_.matrix_add_well_contributions_ ) {
-                matrix_for_preconditioner_ .reset(new Mat(ebosJac.istlMatrix()));
-                wellModel().addWellContributions(*matrix_for_preconditioner_);
-            }
-
             return wellModel().lastReport();
         }
 
@@ -469,179 +453,39 @@ namespace Opm {
         /// Number of linear iterations used in last call to solveJacobianSystem().
         int linearIterationsLastSolve() const
         {
-            return istlSolver().iterations();
-        }
-
-        /// Zero out off-diagonal blocks on rows corresponding to overlap cells
-        /// Diagonal blocks on ovelap rows are set to diag(1e100).
-        void makeOverlapRowsInvalid(Mat& ebosJacIgnoreOverlap) const
-        {	  	  
-            //value to set on diagonal
-            MatrixBlockType diag_block(0.0);
-            for (int eq = 0; eq < numEq; ++eq)	    
-                diag_block[eq][eq] = 1.0e100;
-	  	  
-            //loop over precalculated overlap rows and columns
-            for (auto row = overlapRowAndColumns_.begin(); row != overlapRowAndColumns_.end(); row++ )
-            {
-                int lcell = row->first; 
-                //diagonal block set to large value diagonal
-                ebosJacIgnoreOverlap[lcell][lcell] = diag_block;
-
-                //loop over off diagonal blocks in overlap row	      
-                for (auto col = row->second.begin(); col != row->second.end(); ++col)
-                {
-                    int ncell = *col;
-                    //zero out block
-                    ebosJacIgnoreOverlap[lcell][ncell] = 0.0;
-                }
-            }    	  
+            return ebosSimulator_.model().newtonMethod().linearSolver().iterations ();
         }
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
-        void solveJacobianSystem(BVector& x) const
+        void solveJacobianSystem(BVector& x)
         {
+
+            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
+            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             // J = [A, B; C, D], where A is the reservoir equations, B and C the interaction of well
             // with the reservoir and D is the wells itself.
             // The full system is reduced to a number of cells X number of cells system via Schur complement
             // A -= B^T D^-1 C
-            // Instead of modifying A, the Ax operator is modified. i.e Ax -= B^T D^-1 C x in the WellModelMatrixAdapter.
+            // If matrix_add_well_contribution is false, the Ax operator is modified. i.e Ax -= B^T D^-1 C x in the WellModelMatrixAdapter
+            // instead of A.
             // The residual is modified similarly.
             // r = [r, r_well], where r is the residual and r_well the well residual.
             // r -= B^T * D^-1 r_well
-
-            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
-            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-
             wellModel().apply(ebosResid);
+            if (param_.matrix_add_well_contributions_) {
+                wellModel().addWellContributions(ebosJac.istlMatrix());
+            }
 
             // set initial guess
             x = 0.0;
 
-            const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac.istlMatrix();
-            // Solve system.
-            if( isParallel() )
-            {	      
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
+            auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
+            ebosSolver.prepare(ebosJac.istlMatrix(), ebosResid);
+            ebosSolver.solve(x);
+       }
 
-                auto ebosJacIgnoreOverlap = Mat(ebosJac.istlMatrix());
-                //remove ghost rows in local matrix
-                makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
 
-                //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
-                //to be certain that correct matrix is used for preconditioning.
-                Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel(),
-                             istlSolver().parallelInformation() );
-                assert( opA.comm() );
-                istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
-            }
-            else
-            {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
-                Operator opA(ebosJac.istlMatrix(), actual_mat_for_prec, wellModel());
-                istlSolver().solve( opA, x, ebosResid );
-            }
-        }
-
-        //=====================================================================
-        // Implementation for ISTL-matrix based operator
-        //=====================================================================
-
-        /*!
-           \brief Adapter to turn a matrix into a linear operator.
-
-           Adapts a matrix to the assembled linear operator interface
-         */
-        template<class M, class X, class Y, class WellModel, bool overlapping >
-        class WellModelMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
-        {
-          typedef Dune::AssembledLinearOperator<M,X,Y> BaseType;
-
-        public:
-          typedef M matrix_type;
-          typedef X domain_type;
-          typedef Y range_type;
-          typedef typename X::field_type field_type;
-
-#if HAVE_MPI
-          typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
-#else
-          typedef Dune::CollectiveCommunication< Grid > communication_type;
-#endif
-
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
-          Dune::SolverCategory::Category category() const override
-          {
-            return overlapping ?
-                   Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
-          }
-#else
-          enum {
-            //! \brief The solver category.
-            category = overlapping ?
-                Dune::SolverCategory::overlapping :
-                Dune::SolverCategory::sequential
-          };
-#endif
-
-          //! constructor: just store a reference to a matrix
-          WellModelMatrixAdapter (const M& A,
-                                  const M& A_for_precond,
-                                  const WellModel& wellMod,
-                                  const boost::any& parallelInformation = boost::any() )
-              : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_()
-          {
-#if HAVE_MPI
-            if( parallelInformation.type() == typeid(ParallelISTLInformation) )
-            {
-              const ParallelISTLInformation& info =
-                  boost::any_cast<const ParallelISTLInformation&>( parallelInformation);
-              comm_.reset( new communication_type( info.communicator() ) );
-            }
-#endif
-          }
-
-          virtual void apply( const X& x, Y& y ) const
-          {
-            A_.mv( x, y );
-
-            // add well model modification to y
-            wellMod_.apply(x, y );
-
-#if HAVE_MPI
-            if( comm_ )
-              comm_->project( y );
-#endif
-          }
-
-          // y += \alpha * A * x
-          virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
-          {
-            A_.usmv(alpha,x,y);
-
-            // add scaled well model modification to y
-            wellMod_.applyScaleAdd( alpha, x, y );
-
-#if HAVE_MPI
-            if( comm_ )
-              comm_->project( y );
-#endif
-          }
-
-          virtual const matrix_type& getmat() const { return A_for_precond_; }
-
-          communication_type* comm()
-          {
-              return comm_.operator->();
-          }
-
-        protected:
-          const matrix_type& A_ ;
-          const matrix_type& A_for_precond_ ;
-          const WellModel& wellMod_;
-          std::unique_ptr< communication_type > comm_;
-        };
 
         /// Apply an update to the primary variables.
         void updateSolution(const BVector& dx)
@@ -945,6 +789,15 @@ namespace Opm {
             std::vector<Scalar> B_avg(numEq, 0.0);
             auto report = getReservoirConvergence(timer.currentStepLength(), iteration, B_avg, residual_norms);
             report += wellModel().getWellConvergence(B_avg);
+
+            // Throw if any NaN or too large residual found.
+            ConvergenceReport::Severity severity = report.severityOfWorstFailure();
+            if (severity == ConvergenceReport::Severity::NotANumber) {
+                OPM_THROW(Opm::NumericalIssue, "NaN residual found!");
+            } else if (severity == ConvergenceReport::Severity::TooLarge) {
+                OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
+            }
+
             return report;
         }
 
@@ -1029,9 +882,6 @@ namespace Opm {
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
         BVector dx_old_;
-
-        std::unique_ptr<Mat> matrix_for_preconditioner_;        
-        std::vector<std::pair<int,std::vector<int>>> overlapRowAndColumns_;
 
         std::vector<StepReport> convergence_reports_;
     public:

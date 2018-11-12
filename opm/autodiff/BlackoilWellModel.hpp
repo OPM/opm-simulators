@@ -230,7 +230,7 @@ namespace Opm {
 
             const SimulatorReport& lastReport() const;
 
-            void addWellContributions(Mat& mat)
+            void addWellContributions(Mat& mat) const
             {
                 for ( const auto& well: well_container_ ) {
                     well->addWellContributions(mat);
