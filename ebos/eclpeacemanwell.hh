@@ -76,7 +76,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
     typedef BaseAuxiliaryModule<TypeTag> AuxModule;
 
     typedef typename AuxModule::NeighborSet NeighborSet;
-    typedef typename GET_PROP_TYPE(TypeTag, JacobianMatrix) JacobianMatrix;
+    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
     typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
     typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
 
@@ -339,11 +339,11 @@ public:
     /*!
      * \copydoc Ewoms::BaseAuxiliaryModule::linearize()
      */
-    virtual void linearize(JacobianMatrix& matrix, GlobalEqVector& residual)
+    virtual void linearize(SparseMatrixAdapter& matrix, GlobalEqVector& residual)
     {
         const SolutionVector& curSol = simulator_.model().solution(/*timeIdx=*/0);
 
-        typedef typename JacobianMatrix::block_type MatrixBlock;
+        typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlock;
 
         unsigned wellGlobalDofIdx = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
         residual[wellGlobalDofIdx] = 0.0;
