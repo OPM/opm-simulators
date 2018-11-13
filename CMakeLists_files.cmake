@@ -132,7 +132,6 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_block.cpp
   tests/test_boprops_ad.cpp
   tests/test_convergencereport.cpp
-  tests/test_gatherconvergencereport.cpp
   tests/test_graphcoloring.cpp
   tests/test_rateconverter.cpp
   tests/test_span.cpp
