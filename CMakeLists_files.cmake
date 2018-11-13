@@ -40,6 +40,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/BlackoilModelParameters.cpp
   opm/autodiff/WellDensitySegmented.cpp
   opm/autodiff/LinearisedBlackoilResidual.cpp
+  opm/autodiff/MPIUtilities.cpp
   opm/autodiff/VFPProperties.cpp
   opm/autodiff/VFPProdProperties.cpp
   opm/autodiff/VFPInjProperties.cpp
