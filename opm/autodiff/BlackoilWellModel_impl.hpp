@@ -713,7 +713,8 @@ namespace Opm {
         do {
             assembleWellEq(dt);
 
-            converged = getWellConvergence(B_avg);
+            const auto report = getWellConvergence(B_avg);
+            converged = report.converged();
 
             // checking whether the group targets are converged
             if (wellCollection().groupControlActive()) {
@@ -770,65 +771,35 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    bool
+    ConvergenceReport
     BlackoilWellModel<TypeTag>::
     getWellConvergence(const std::vector<Scalar>& B_avg) const
     {
-        ConvergenceReport report;
-
+        // Get global (from all processes) convergence report.
+        ConvergenceReport local_report;
         for (const auto& well : well_container_) {
-            report += well->getWellConvergence(B_avg);
+            local_report += well->getWellConvergence(B_avg);
         }
+        ConvergenceReport report = gatherConvergenceReport(local_report);
+
+        // Log debug messages for NaN or too large residuals.
+        for (const auto& f : report.wellFailures()) {
+            if (f.severity() == ConvergenceReport::Severity::NotANumber) {
+                OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
+            } else if (f.severity() == ConvergenceReport::Severity::TooLarge) {
+                OpmLog::debug("Too large residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
+            }
+        }
+
+        // Throw if any NaN or too large residual found.
         ConvergenceReport::Severity severity = report.severityOfWorstFailure();
-
-        // checking NaN residuals
-        {
-            // Debug reporting.
-            for (const auto& f : report.wellFailures()) {
-                if (f.severity() == ConvergenceReport::Severity::NotANumber) {
-                    OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
-                }
-            }
-
-            // Throw if any nan residual found.
-            bool nan_residual_found = (severity == ConvergenceReport::Severity::NotANumber);
-            const auto& grid = ebosSimulator_.vanguard().grid();
-            int value = nan_residual_found ? 1 : 0;
-            nan_residual_found = grid.comm().max(value);
-            if (nan_residual_found) {
-                OPM_THROW(Opm::NumericalIssue, "NaN residual found!");
-            }
+        if (severity == ConvergenceReport::Severity::NotANumber) {
+            OPM_THROW(Opm::NumericalIssue, "NaN residual found!");
+        } else if (severity == ConvergenceReport::Severity::TooLarge) {
+            OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
         }
 
-        // checking too large residuals
-        {
-            // Debug reporting.
-            for (const auto& f : report.wellFailures()) {
-                if (f.severity() == ConvergenceReport::Severity::TooLarge) {
-                    OpmLog::debug("Too large residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
-                }
-            }
-
-            // Throw if any too large residual found.
-            bool too_large_residual_found = (severity == ConvergenceReport::Severity::TooLarge);
-            const auto& grid = ebosSimulator_.vanguard().grid();
-            int value = too_large_residual_found ? 1 : 0;
-            too_large_residual_found = grid.comm().max(value);
-            if (too_large_residual_found) {
-                OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
-            }
-        }
-
-        // checking convergence
-        bool converged_well = report.converged();
-        {
-            const auto& grid = ebosSimulator_.vanguard().grid();
-            int value = converged_well ? 1 : 0;
-
-            converged_well = grid.comm().min(value);
-        }
-
-        return converged_well;
+        return report;
     }
 
 
