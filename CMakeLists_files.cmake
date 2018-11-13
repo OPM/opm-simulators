@@ -41,9 +41,10 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/WellDensitySegmented.cpp
   opm/autodiff/LinearisedBlackoilResidual.cpp
   opm/autodiff/MPIUtilities.cpp
-  opm/autodiff/VFPProperties.cpp
   opm/autodiff/VFPProdProperties.cpp
+  opm/autodiff/VFPProdPropertiesLegacy.cpp
   opm/autodiff/VFPInjProperties.cpp
+  opm/autodiff/VFPInjPropertiesLegacy.cpp
   opm/autodiff/MissingFeatures.cpp
   opm/core/flowdiagnostics/AnisotropicEikonal.cpp
   opm/core/flowdiagnostics/DGBasis.cpp
