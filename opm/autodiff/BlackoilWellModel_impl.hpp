@@ -712,7 +712,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     solveWellEq(const double dt)
     {
-        const int nw = numWells();
         WellState well_state0 = well_state_;
 
         const int numComp = numComponents();
@@ -767,9 +766,10 @@ namespace Opm {
             well_state_ = well_state0;
             updatePrimaryVariables();
             // also recover the old well controls
-            for (int w = 0; w < nw; ++w) {
-                WellControls* wc = well_container_[w]->wellControls();
-                well_controls_set_current(wc, well_state_.currentControls()[w]);
+            for (const auto& well : well_container_) {
+                const int index_of_well = well->indexOfWell();
+                WellControls* wc = well->wellControls();
+                well_controls_set_current(wc, well_state_.currentControls()[index_of_well]);
             }
         }
 
