@@ -117,6 +117,19 @@ if (HAVE_OPM_TESTS)
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
 endif()
 
+opm_set_test_driver(${CMAKE_CURRENT_SOURCE_DIR}/tests/run-parallel-unitTest.sh "")
+
+opm_add_test(test_gatherconvergencereport
+  DEPENDS "opmsimulators"
+  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  SOURCES
+    tests/test_gatherconvergencereport.cpp
+  CONDITION
+    MPI_FOUND
+  DRIVER_ARGS
+    5 ${CMAKE_BINARY_DIR}
+)
+
 opm_add_test(flow
   ONLY_COMPILE
   ALWAYS_ENABLE
