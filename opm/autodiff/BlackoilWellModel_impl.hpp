@@ -314,6 +314,19 @@ namespace Opm {
             well->calculateReservoirRates(well_state_);
         }
         updateWellTestState(simulationTime, wellTestState_);
+
+        // calculate the well potentials for output
+        // TODO: when necessary
+        try
+        {
+            std::vector<double> well_potentials;
+            computeWellPotentials(well_potentials);
+        }
+        catch ( std::runtime_error& e )
+        {
+            const std::string msg = "A zero well potential is returned for output purposes. ";
+            OpmLog::warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
+        }
         previous_well_state_ = well_state_;
     }
 
@@ -897,15 +910,31 @@ namespace Opm {
         const int np = numPhases();
         well_potentials.resize(nw * np, 0.0);
 
+        const Opm::SummaryConfig summaryConfig = ebosSimulator_.vanguard().summaryConfig();
         for (const auto& well : well_container_) {
-            std::vector<double> potentials;
-            well->computeWellPotentials(ebosSimulator_, well_state_, potentials);
+            // Only compute the well potential when asked for
+            bool needed_for_output = ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
+                                       summaryConfig.hasSummaryKey( "WOPI:" + well->name()) ||
+                                       summaryConfig.hasSummaryKey( "WGPI:" + well->name())) && well->wellType() == INJECTOR) ||
+                                    ((summaryConfig.hasSummaryKey( "WWPP:" + well->name()) ||
+                                                       summaryConfig.hasSummaryKey( "WOPP:" + well->name()) ||
+                                                       summaryConfig.hasSummaryKey( "WGPP:" + well->name())) && well->wellType() == PRODUCER);
 
-            // putting the sucessfully calculated potentials to the well_potentials
-            for (int p = 0; p < np; ++p) {
-                well_potentials[well->indexOfWell() * np + p] = std::abs(potentials[p]);
+            if (needed_for_output || wellCollection().requireWellPotentials())
+            {
+                std::vector<double> potentials;
+                well->computeWellPotentials(ebosSimulator_, well_state_, potentials);
+
+                // putting the sucessfully calculated potentials to the well_potentials
+                for (int p = 0; p < np; ++p) {
+                    well_potentials[well->indexOfWell() * np + p] = std::abs(potentials[p]);
+                }
             }
         } // end of for (int w = 0; w < nw; ++w)
+
+        // Store it in the well state
+        well_state_.wellPotentials() = well_potentials;
+
     }
 
 
