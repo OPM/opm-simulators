@@ -76,7 +76,7 @@ namespace Opm {
             void init(const BlackoilPropsAdFromDeck* fluid_arg,
                       const std::vector<bool>* active_arg,
                       const std::vector<PhasePresence>* pc_arg,
-                      const VFPProperties*  vfp_properties_arg,
+                      const VFPProperties<VFPInjPropertiesLegacy,VFPProdPropertiesLegacy>*  vfp_properties_arg,
                       const double gravity_arg,
                       const Vector& depth_arg);
 
@@ -223,7 +223,7 @@ namespace Opm {
             const BlackoilPropsAdFromDeck* fluid_;
             const std::vector<bool>*  active_;
             const std::vector<PhasePresence>*  phase_condition_;
-            const VFPProperties* vfp_properties_;
+            const VFPProperties<VFPInjPropertiesLegacy,VFPProdPropertiesLegacy>* vfp_properties_;
             double gravity_;
             // the depth of the all the cell centers
             // for standard Wells, it the same with the perforation depth

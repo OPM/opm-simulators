@@ -2,8 +2,8 @@
 
 
 namespace Opm {
-    template<typename TypeTag>
-    BlackoilWellModel<TypeTag>::
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     BlackoilWellModel(Simulator& ebosSimulator)
         : ebosSimulator_(ebosSimulator)
         , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
@@ -14,9 +14,9 @@ namespace Opm {
             terminal_output_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     init(const Opm::EclipseState& eclState, const Opm::Schedule& schedule)
     {
         gravity_ = ebosSimulator_.problem().gravity()[2];
@@ -48,9 +48,9 @@ namespace Opm {
         ebosSimulator_.model().addAuxiliaryModule(this);
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     addNeighbors(std::vector<NeighborSet>& neighbors) const
     {
         if (!param_.matrix_add_well_contributions_) {
@@ -91,9 +91,9 @@ namespace Opm {
         }
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     linearize(JacobianMatrix& mat , GlobalEqVector& res)
     {
         if (!localWellsActive())
@@ -114,9 +114,9 @@ namespace Opm {
     }
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     beginReportStep(const int timeStepIdx)
     {
         const Grid& grid = ebosSimulator_.vanguard().grid();
@@ -196,7 +196,7 @@ namespace Opm {
         computeRESV(timeStepIdx);
 
         // update VFP properties
-        vfp_properties_.reset (new VFPProperties (
+        vfp_properties_.reset (new VFPProperties<VFPInjProp,VFPProdProp> (
                                    schedule().getVFPInjTables(timeStepIdx),
                                    schedule().getVFPProdTables(timeStepIdx)) );
 
@@ -206,9 +206,9 @@ namespace Opm {
 
 
     // called at the beginning of a time step
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     beginTimeStep() {
         well_state_ = previous_well_state_;
 
@@ -251,9 +251,9 @@ namespace Opm {
     }
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::wellTesting(const int timeStepIdx, const double simulationTime) {
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::wellTesting(const int timeStepIdx, const double simulationTime) {
         const auto& wtest_config = schedule().wtestConfig(timeStepIdx);
         if (wtest_config.size() == 0) { // there is no WTEST request
             return;
@@ -291,22 +291,22 @@ namespace Opm {
     }
 
     // called at the end of a report step
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     endReportStep() {
     }
 
     // called at the end of a report step
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     const SimulatorReport&
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     lastReport() const {return last_report_; }
 
     // called at the end of a time step
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     timeStepSucceeded(const double& simulationTime) {
         // TODO: when necessary
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
@@ -318,10 +318,10 @@ namespace Opm {
     }
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     template <class Context>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     computeTotalRatesForDof(RateVector& rate,
                             const Context& context,
                             unsigned spaceIdx,
@@ -333,9 +333,9 @@ namespace Opm {
             well->addCellRates(rate, elemIdx);
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     initFromRestartFile(const RestartValue& restartValues)
     {
         // gives a dummy dynamic_list_econ_limited
@@ -371,9 +371,9 @@ namespace Opm {
         initial_step_ = false;
     }
 
-    template<typename TypeTag>
-    std::vector<typename BlackoilWellModel<TypeTag>::WellInterfacePtr >
-    BlackoilWellModel<TypeTag>::
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
+    std::vector<typename BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::WellInterfacePtr >
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     createWellContainer(const int time_step)
     {
         std::vector<WellInterfacePtr> well_container;
@@ -427,10 +427,10 @@ namespace Opm {
                 const int pvtreg = pvt_region_idx_[well_cell_top];
 
                 if ( !well_ecl->isMultiSegment(time_step) || !param_.use_multisegment_well_) {
-                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
+                    well_container.emplace_back(new StandardWell<TypeTag,VFPInjProp,VFPProdProp>(well_ecl, time_step, wells(),
                                                 param_, *rateConverter_, pvtreg, numComponents() ) );
                 } else {
-                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(),
+                    well_container.emplace_back(new MultisegmentWell<TypeTag,VFPInjProp,VFPProdProp>(well_ecl, time_step, wells(),
                                                 param_, *rateConverter_, pvtreg, numComponents() ) );
                 }
             }
@@ -442,9 +442,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
-    typename BlackoilWellModel<TypeTag>::WellInterfacePtr
-    BlackoilWellModel<TypeTag>::
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
+    typename BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::WellInterfacePtr
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     createWellForWellTest(const std::string& well_name,
                           const int report_step) const
     {
@@ -482,10 +482,10 @@ namespace Opm {
         const int pvtreg = pvt_region_idx_[well_cell_top];
 
         if ( !well_ecl->isMultiSegment(report_step) || !param_.use_multisegment_well_) {
-             return WellInterfacePtr(new StandardWell<TypeTag>(well_ecl, report_step, wells(),
+             return WellInterfacePtr(new StandardWell<TypeTag,VFPInjProp,VFPProdProp>(well_ecl, report_step, wells(),
                                                  param_, *rateConverter_, pvtreg, numComponents() ) );
         } else {
-             return WellInterfacePtr(new MultisegmentWell<TypeTag>(well_ecl, report_step, wells(),
+             return WellInterfacePtr(new MultisegmentWell<TypeTag,VFPInjProp,VFPProdProp>(well_ecl, report_step, wells(),
                                                  param_, *rateConverter_, pvtreg, numComponents() ) );
         }
     }
@@ -494,9 +494,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     assemble(const int iterationIdx,
              const double dt)
     {
@@ -543,9 +543,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     assembleWellEq(const double dt)
     {
         for (auto& well : well_container_) {
@@ -553,9 +553,9 @@ namespace Opm {
         }
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     apply( BVector& r) const
     {
         if ( ! localWellsActive() ) {
@@ -569,9 +569,9 @@ namespace Opm {
 
 
     // Ax = A x - C D^-1 B x
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     apply(const BVector& x, BVector& Ax) const
     {
         // TODO: do we still need localWellsActive()?
@@ -589,9 +589,9 @@ namespace Opm {
 
 
     // Ax = Ax - alpha * C D^-1 B x
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const
     {
         if ( ! localWellsActive() ) {
@@ -613,9 +613,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     recoverWellSolutionAndUpdateWellState(const BVector& x)
     {
         if (!localWellsActive())
@@ -629,9 +629,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     resetWellControlFromState() const
     {
         for (auto& well : well_container_) {
@@ -644,9 +644,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     bool
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     wellsActive() const
     {
         return wells_active_;
@@ -656,9 +656,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     setWellsActive(const bool wells_active)
     {
         wells_active_ = wells_active;
@@ -668,9 +668,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     bool
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     localWellsActive() const
     {
         return numWells() > 0;
@@ -680,9 +680,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     initPrimaryVariablesEvaluation() const
     {
         for (auto& well : well_container_) {
@@ -694,9 +694,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     SimulatorReport
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     solveWellEq(const double dt)
     {
         const int nw = numWells();
@@ -769,9 +769,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     bool
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     getWellConvergence(const std::vector<Scalar>& B_avg) const
     {
         ConvergenceReport report;
@@ -835,9 +835,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     calculateExplicitQuantities() const
     {
          for (auto& well : well_container_) {
@@ -849,9 +849,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     updateWellControls()
     {
         // Even if there no wells active locally, we cannot
@@ -875,9 +875,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const
     {
         for (const auto& well : well_container_) {
@@ -887,9 +887,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     computeWellPotentials(std::vector<double>& well_potentials)
     {
         // number of wells and phases
@@ -912,9 +912,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     prepareTimeStep()
     {
 
@@ -959,9 +959,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     prepareGroupControl()
     {
         // group control related processing
@@ -1016,36 +1016,36 @@ namespace Opm {
         }
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     const WellCollection&
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     wellCollection() const
     {
         return wells_manager_->wellCollection();
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     WellCollection&
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     wellCollection()
     {
         return wells_manager_->wellCollection();
     }
 
-    template<typename TypeTag>
-    const typename BlackoilWellModel<TypeTag>::WellState&
-    BlackoilWellModel<TypeTag>::
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
+    const typename BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::WellState&
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     wellState() const { return well_state_; }
 
-    template<typename TypeTag>
-    const typename BlackoilWellModel<TypeTag>::WellState&
-    BlackoilWellModel<TypeTag>::
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
+    const typename BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::WellState&
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     wellState(const WellState& well_state OPM_UNUSED) const { return wellState(); }
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     calculateEfficiencyFactors()
     {
         if ( !localWellsActive() ) {
@@ -1066,9 +1066,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     computeWellVoidageRates(std::vector<double>& well_voidage_rates,
                             std::vector<double>& voidage_conversion_coeffs) const
     {
@@ -1129,9 +1129,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     applyVREPGroupControl()
     {
         if ( wellCollection().havingVREPGroups() ) {
@@ -1157,9 +1157,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     updateGroupControls()
     {
 
@@ -1195,9 +1195,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     setupCartesianToCompressed_(const int* global_cell, int number_of_cartesian_cells)
     {
         cartesian_to_compressed_.resize(number_of_cartesian_cells, -1);
@@ -1214,9 +1214,9 @@ namespace Opm {
 
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     computeRepRadiusPerfLength(const Grid& grid)
     {
         for (const auto& well : well_container_) {
@@ -1228,9 +1228,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     computeAverageFormationFactor(std::vector<double>& B_avg) const
     {
         const auto& grid = ebosSimulator_.vanguard().grid();
@@ -1276,9 +1276,9 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     updatePrimaryVariables()
     {
         for (const auto& well : well_container_) {
@@ -1286,9 +1286,9 @@ namespace Opm {
         }
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::extractLegacyCellPvtRegionIndex_()
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::extractLegacyCellPvtRegionIndex_()
     {
         const auto& grid = ebosSimulator_.vanguard().grid();
         const auto& eclProblem = ebosSimulator_.problem();
@@ -1302,9 +1302,9 @@ namespace Opm {
     }
 
     // The number of components in the model.
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     int
-    BlackoilWellModel<TypeTag>::numComponents() const
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::numComponents() const
     {
         if (numPhases() == 2) {
             return 2;
@@ -1317,23 +1317,23 @@ namespace Opm {
         return numComp;
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     int
-    BlackoilWellModel<TypeTag>:: numWells() const
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>:: numWells() const
     {
         return wells() ? wells()->number_of_wells : 0;
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     int
-    BlackoilWellModel<TypeTag>:: numPhases() const
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>:: numPhases() const
     {
         return wells() ? wells()->number_of_phases : 1;
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::extractLegacyDepth_()
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::extractLegacyDepth_()
     {
         const auto& grid = ebosSimulator_.vanguard().grid();
         const unsigned numCells = grid.size(/*codim=*/0);
@@ -1345,9 +1345,9 @@ namespace Opm {
         }
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     updatePerforationIntensiveQuantities() {
         ElementContext elemCtx(ebosSimulator_);
         const auto& gridView = ebosSimulator_.gridView();
@@ -1362,9 +1362,9 @@ namespace Opm {
     }
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProp, typename VFPProdProp>
     void
-    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel<TypeTag,VFPInjProp,VFPProdProp>::
     computeRESV(const std::size_t step)
     {
         typedef SimFIBODetails::WellMap WellMap;

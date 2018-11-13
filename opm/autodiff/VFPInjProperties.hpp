@@ -33,13 +33,8 @@
 
 namespace Opm {
 
-template <class Scalar>
-class AutoDiffBlock;
-
 class VFPInjProperties {
 public:
-    typedef AutoDiffBlock<double> ADB;
-
     /**
      * Empty constructor
      */
@@ -57,43 +52,8 @@ public:
      * Takes *no* ownership of data.
      * @param inj_tables A map of different VFPINJ tables.
      */
-    explicit VFPInjProperties(const std::map<int, std::shared_ptr<const VFPInjTable> >& inj_tables);
-
-    /**
-     * Linear interpolation of bhp as function of the input parameters.
-     * @param table_id Table number to use
-     * @param wells Wells structure with information about wells in qs
-     * @param qs Flow quantities
-     * @param thp Tubing head pressure
-     *
-     * @return The bottom hole pressure, interpolated/extrapolated linearly using
-     * the above parameters from the values in the input table.
-     */
-    ADB bhp(const std::vector<int>& table_id,
-            const Wells& wells,
-            const ADB& qs,
-            const ADB& thp) const;
-
-    /**
-     * Linear interpolation of bhp as a function of the input parameters given as ADBs
-     * Each entry corresponds typically to one well.
-     * @param table_id Table number to use. A negative entry (e.g., -1)
-     *                 will indicate that no table is used, and the corresponding
-     *                 BHP will be calculated as a constant -1e100.
-     * @param aqua Water phase
-     * @param liquid Oil phase
-     * @param vapour Gas phase
-     * @param thp Tubing head pressure
-     *
-     * @return The bottom hole pressure, interpolated/extrapolated linearly using
-     * the above parameters from the values in the input table, for each entry in the
-     * input ADB objects.
-     */
-    ADB bhp(const std::vector<int>& table_id,
-            const ADB& aqua,
-            const ADB& liquid,
-            const ADB& vapour,
-            const ADB& thp) const;
+    using InjTable = std::map<int, std::shared_ptr<const VFPInjTable> >;
+    explicit VFPInjProperties(const InjTable& inj_tables);
 
     /**
      * Linear interpolation of bhp as a function of the input parameters given as
@@ -144,6 +104,19 @@ public:
     }
 
     /**
+     * Returns the table associated with the ID, or throws an exception if
+     * the table does not exist
+     */
+    const VFPInjTable* getTable(const int table_id) const;
+
+    /**
+     * Returns true if no vfp tables are in the current map
+     */
+    bool empty() const {
+        return m_tables.empty();
+    }
+
+    /**
      * Linear interpolation of bhp as a function of the input parameters
      * @param table_id Table number to use
      * @param aqua Water phase
@@ -159,7 +132,6 @@ public:
                const double& liquid,
                const double& vapour,
                const double& thp) const;
-
 
     /**
      * Linear interpolation of thp as a function of the input parameters
@@ -178,20 +150,7 @@ public:
                const double& vapour,
                const double& bhp) const;
 
-    /**
-     * Returns the table associated with the ID, or throws an exception if
-     * the table does not exist
-     */
-    const VFPInjTable* getTable(const int table_id) const;
-
-    /**
-     * Returns true if no vfp tables are in the current map
-     */
-    bool empty() const {
-        return m_tables.empty();
-    }
-
-private:
+protected:
     // Map which connects the table number with the table itself
     std::map<int, const VFPInjTable*> m_tables;
 };

@@ -31,12 +31,14 @@
 namespace Opm
 {
 
-    template<typename TypeTag>
-    class StandardWell: public WellInterface<TypeTag>
+    template<typename TypeTag,
+             typename VFPInjProps  = VFPInjProperties,
+             typename VFPProdProps = VFPProdProperties>
+    class StandardWell: public WellInterface<TypeTag,VFPInjProps,VFPProdProps>
     {
 
     public:
-        typedef WellInterface<TypeTag> Base;
+        typedef WellInterface<TypeTag,VFPInjProps,VFPProdProps> Base;
         typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
 
         // TODO: some functions working with AD variables handles only with values (double) without

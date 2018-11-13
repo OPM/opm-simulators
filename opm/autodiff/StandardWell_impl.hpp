@@ -23,8 +23,8 @@
 namespace Opm
 {
 
-    template<typename TypeTag>
-    StandardWell<TypeTag>::
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     StandardWell(const Well* well, const int time_step, const Wells* wells,
                  const ModelParameters& param,
                  const RateConverterType& rate_converter,
@@ -48,9 +48,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<double>& depth_arg,
          const double gravity_arg,
@@ -105,8 +105,8 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
-    void StandardWell<TypeTag>::
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
+    void StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     initPrimaryVariablesEvaluation() const
     {
         for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
@@ -122,9 +122,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
-    const typename StandardWell<TypeTag>::EvalWell&
-    StandardWell<TypeTag>::
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
+    const typename StandardWell<TypeTag,VFPInjProps,VFPProdProps>::EvalWell&
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     getBhp() const
     {
         return primary_variables_evaluation_[Bhp];
@@ -134,9 +134,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
-    const typename StandardWell<TypeTag>::EvalWell&
-    StandardWell<TypeTag>::
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
+    const typename StandardWell<TypeTag,VFPInjProps,VFPProdProps>::EvalWell&
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     getWQTotal() const
     {
         return primary_variables_evaluation_[WQTotal];
@@ -146,9 +146,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
-    typename StandardWell<TypeTag>::EvalWell
-    StandardWell<TypeTag>::
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
+    typename StandardWell<TypeTag,VFPInjProps,VFPProdProps>::EvalWell
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     getQs(const int comp_idx) const
     {
         // Note: currently, the WQTotal definition is still depends on Injector/Producer.
@@ -183,9 +183,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
-    typename StandardWell<TypeTag>::EvalWell
-    StandardWell<TypeTag>::
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
+    typename StandardWell<TypeTag,VFPInjProps,VFPProdProps>::EvalWell
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     wellVolumeFractionScaled(const int compIdx) const
     {
 
@@ -202,9 +202,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
-    typename StandardWell<TypeTag>::EvalWell
-    StandardWell<TypeTag>::
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
+    typename StandardWell<TypeTag,VFPInjProps,VFPProdProps>::EvalWell
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     wellVolumeFraction(const unsigned compIdx) const
     {
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
@@ -238,9 +238,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
-    typename StandardWell<TypeTag>::EvalWell
-    StandardWell<TypeTag>::
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
+    typename StandardWell<TypeTag,VFPInjProps,VFPProdProps>::EvalWell
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     wellSurfaceVolumeFraction(const int compIdx) const
     {
 
@@ -258,9 +258,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
-    typename StandardWell<TypeTag>::EvalWell
-    StandardWell<TypeTag>::
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
+    typename StandardWell<TypeTag,VFPInjProps,VFPProdProps>::EvalWell
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     extendEval(const Eval& in) const
     {
         EvalWell out = 0.0;
@@ -275,9 +275,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     computePerfRate(const IntensiveQuantities& intQuants,
                     const std::vector<EvalWell>& mob_perfcells_dense,
                     const double Tw, const EvalWell& bhp, const double& cdp,
@@ -432,9 +432,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     assembleWellEq(const Simulator& ebosSimulator,
                    const double dt,
                    WellState& well_state)
@@ -625,9 +625,9 @@ namespace Opm
 
 
 
-    template <typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     assembleControlEq()
     {
         EvalWell control_eq(0.0);
@@ -738,9 +738,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     bool
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     crossFlowAllowed(const Simulator& ebosSimulator) const
     {
         if (getAllowCrossFlow()) {
@@ -777,9 +777,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     getMobility(const Simulator& ebosSimulator,
                 const int perf,
                 std::vector<EvalWell>& mob) const
@@ -845,9 +845,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     updateWellState(const BVectorWell& dwells,
                     WellState& well_state) const
     {
@@ -860,9 +860,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     updatePrimaryVariablesNewton(const BVectorWell& dwells,
                                  const WellState& well_state) const
     {
@@ -908,9 +908,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     processFractions() const
     {
         assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
@@ -988,9 +988,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     updateWellStateFromPrimaryVariables(WellState& well_state) const
     {
         const PhaseUsage& pu = phaseUsage();
@@ -1062,9 +1062,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     updateThp(WellState& well_state) const
     {
         // for the wells having a THP constaint, we should update their thp value
@@ -1111,9 +1111,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     updateWellStateWithTarget(WellState& well_state) const
     {
         // number of phases
@@ -1222,9 +1222,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
                                                 const WellState& well_state,
                                                 std::vector<double>& b_perf,
@@ -1340,9 +1340,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     computeConnectionDensities(const std::vector<double>& perfComponentRates,
                                const std::vector<double>& b_perf,
                                const std::vector<double>& rsmax_perf,
@@ -1441,9 +1441,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     computeConnectionPressureDelta()
     {
         // Algorithm:
@@ -1482,9 +1482,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     ConvergenceReport
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     getWellConvergence(const std::vector<double>& B_avg) const
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
@@ -1568,9 +1568,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     computeWellConnectionDensitesPressures(const WellState& well_state,
                                            const std::vector<double>& b_perf,
                                            const std::vector<double>& rsmax_perf,
@@ -1601,9 +1601,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     computeWellConnectionPressures(const Simulator& ebosSimulator,
                                    const WellState& well_state)
     {
@@ -1622,9 +1622,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     solveEqAndUpdateWellState(WellState& well_state)
     {
         // We assemble the well equations, then we check the convergence,
@@ -1639,9 +1639,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     calculateExplicitQuantities(const Simulator& ebosSimulator,
                                 const WellState& well_state)
     {
@@ -1653,9 +1653,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     computeAccumWell()
     {
         for (int eq_idx = 0; eq_idx < numWellConservationEq; ++eq_idx) {
@@ -1667,9 +1667,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     apply(const BVector& x, BVector& Ax) const
     {
         if ( param_.matrix_add_well_contributions_ )
@@ -1695,9 +1695,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     apply(BVector& r) const
     {
         assert( invDrw_.size() == invDuneD_.N() );
@@ -1712,9 +1712,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     {
         BVectorWell resWell = resWell_;
@@ -1728,9 +1728,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     recoverWellSolutionAndUpdateWellState(const BVector& x,
                                           WellState& well_state) const
     {
@@ -1743,9 +1743,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     computeWellRatesWithBhp(const Simulator& ebosSimulator,
                             const EvalWell& bhp,
                             std::vector<double>& well_flux) const
@@ -1777,9 +1777,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     std::vector<double>
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     computeWellPotentialWithTHP(const Simulator& ebosSimulator,
                                 const double initial_bhp, // bhp from BHP constraints
                                 const std::vector<double>& initial_potential) const
@@ -1880,9 +1880,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     computeWellPotentials(const Simulator& ebosSimulator,
                           const WellState& well_state,
                           std::vector<double>& well_potentials) // const
@@ -1933,9 +1933,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     updatePrimaryVariables(const WellState& well_state) const
     {
         const int well_index = index_of_well_;
@@ -2024,10 +2024,10 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     template<class ValueType>
     ValueType
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     calculateBhpFromThp(const std::vector<ValueType>& rates,
                         const int control_index) const
     {
@@ -2077,9 +2077,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     double
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     calculateThpFromBhp(const std::vector<double>& rates,
                         const int control_index,
                         const double bhp) const
@@ -2124,9 +2124,9 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::
     updateWaterMobilityWithPolymer(const Simulator& ebos_simulator,
                                    const int perf,
                                    std::vector<EvalWell>& mob) const
@@ -2184,9 +2184,9 @@ namespace Opm
         }
     }
 
-    template<typename TypeTag>
+    template<typename TypeTag, typename VFPInjProps, typename VFPProdProps>
     void
-    StandardWell<TypeTag>::addWellContributions(Mat& mat) const
+    StandardWell<TypeTag,VFPInjProps,VFPProdProps>::addWellContributions(Mat& mat) const
     {
         // We need to change matrx A as follows
         // A -= C^T D^-1 B

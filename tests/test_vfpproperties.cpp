@@ -42,9 +42,8 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
-#include <opm/autodiff/VFPProperties.hpp>
-#include <opm/autodiff/VFPProdProperties.hpp>
-#include <opm/autodiff/VFPHelpers.hpp>
+#include <opm/autodiff/VFPHelpersLegacy.hpp>
+#include <opm/autodiff/VFPProdPropertiesLegacy.hpp>
 
 
 
@@ -115,7 +114,7 @@ BOOST_AUTO_TEST_SUITE_END() // HelperTests
 
 
 struct ConversionFixture {
-    typedef Opm::VFPProdProperties::ADB ADB;
+    typedef Opm::VFPProdPropertiesLegacy::ADB ADB;
 
     ConversionFixture() :
             num_wells(5),
@@ -284,7 +283,7 @@ BOOST_AUTO_TEST_SUITE_END() // unit tests
  * values data is given at
  */
 struct TrivialFixture {
-    typedef Opm::VFPProdProperties::ADB ADB;
+    typedef Opm::VFPProdPropertiesLegacy::ADB ADB;
     typedef Opm::detail::VFPEvaluation VFPEvaluation;
 
     TrivialFixture() : table_ids(1, 1),
@@ -386,7 +385,7 @@ struct TrivialFixture {
                                           alq_axis,
                                           data));
 
-        properties.reset(new Opm::VFPProdProperties(table.get()));
+        properties.reset(new Opm::VFPProdPropertiesLegacy(table.get()));
     }
 
 
@@ -400,7 +399,7 @@ struct TrivialFixture {
         return adb;
     }
 
-    std::shared_ptr<Opm::VFPProdProperties> properties;
+    std::shared_ptr<Opm::VFPProdPropertiesLegacy> properties;
     std::shared_ptr<Opm::VFPProdTable> table;
     std::vector<int> table_ids;
 
