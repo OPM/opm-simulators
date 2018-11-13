@@ -116,6 +116,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
+  opm/simulators/timestepping/gatherConvergenceReport.cpp
   )
 
 if(PETSc_FOUND)
@@ -448,4 +449,5 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/TimeStepControlInterface.hpp
   opm/simulators/timestepping/SimulatorTimer.hpp
   opm/simulators/timestepping/SimulatorTimerInterface.hpp
+  opm/simulators/timestepping/gatherConvergenceReport.hpp
   )

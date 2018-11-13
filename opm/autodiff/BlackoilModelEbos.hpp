@@ -824,9 +824,10 @@ namespace Opm {
                 residual_norms.push_back(CNV[compIdx]);
             }
 
-            const bool converged_Well = wellModel().getWellConvergence(B_avg);
+            const auto report_well = wellModel().getWellConvergence(B_avg);
+            const bool converged_well = report_well.converged();
 
-            bool converged = converged_MB && converged_Well;
+            bool converged = converged_MB && converged_well;
 
             converged = converged && converged_CNV;
 
