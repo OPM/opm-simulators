@@ -37,15 +37,15 @@ typedef AutoDiffBlock<double> ADB;
 
 
 /**
- * Returns zero for every entry in the ADB which is NaN
- */
-inline ADB zeroIfNan(const ADB& values) {
-    Selector<ADB::V::Scalar> not_nan_selector(values.value(), Selector<ADB::V::Scalar>::NotNaN);
+ *  * Returns zero for every entry in the ADB which is NaN or INF
+ *   */
+inline ADB zeroIfNanInf(const ADB& values) {
+    Selector<ADB::V::Scalar> not_nan_inf_selector(values.value(), Selector<ADB::V::Scalar>::NotNaNInf);
 
     const ADB::V z = ADB::V::Zero(values.size());
     const ADB zero = ADB::constant(z, values.blockPattern());
 
-    ADB retval = not_nan_selector.select(values, zero);
+    ADB retval = not_nan_inf_selector.select(values, zero);
     return retval;
 }
 

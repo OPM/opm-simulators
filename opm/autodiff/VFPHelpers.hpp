@@ -21,6 +21,7 @@
 #ifndef OPM_AUTODIFF_VFPHELPERS_HPP_
 #define OPM_AUTODIFF_VFPHELPERS_HPP_
 
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <cmath>
 #include <opm/common/ErrorMacros.hpp>
@@ -37,19 +38,31 @@ namespace detail {
 
 
 /**
- * Returns zero if input value is NaN
+ * Returns zero if input value is NaN of INF
  */
-inline double zeroIfNan(const double& value) {
-    return (std::isnan(value)) ? 0.0 : value;
+inline double zeroIfNanInf(const double& value) {
+    const bool nan_or_inf = std::isnan(value) || std::isinf(value);
+
+    if (nan_or_inf) {
+        OpmLog::warning("NAN_OR_INF_VFP", "NAN or INF value encountered during VFP calculation, the value is set to zero");
+    }
+
+    return nan_or_inf ? 0.0 : value;
 }
 
 
 /**
- * Returns zero if input value is NaN
+ * Returns zero if input value is NaN or INF
  */
 template <class EvalWell>
-inline EvalWell zeroIfNan(const EvalWell& value) {
-    return (std::isnan(value.value())) ? 0.0 : value;
+inline EvalWell zeroIfNanInf(const EvalWell& value) {
+    const bool nan_or_inf = std::isnan(value.value()) || std::isinf(value.value());
+
+    if (nan_or_inf) {
+        OpmLog::warning("NAN_OR_INF_VFP_EVAL", "NAN or INF Evalution encountered during VFP calculation, the Evalution is set to zero");
+    }
+
+    return nan_or_inf ? 0.0 : value;
 }
 
 
@@ -120,14 +133,14 @@ static T getWFR(const T& aqua, const T& liquid, const T& vapour,
         case VFPProdTable::WFR_WOR: {
             //Water-oil ratio = water / oil
             T wor = aqua / liquid;
-            return zeroIfNan(wor);
+            return zeroIfNanInf(wor);
         }
         case VFPProdTable::WFR_WCT:
             //Water cut = water / (water + oil)
-            return zeroIfNan(aqua / (aqua + liquid));
+            return zeroIfNanInf(aqua / (aqua + liquid));
         case VFPProdTable::WFR_WGR:
             //Water-gas ratio = water / gas
-            return zeroIfNan(aqua / vapour);
+            return zeroIfNanInf(aqua / vapour);
         case VFPProdTable::WFR_INVALID: //Intentional fall-through
         default:
             OPM_THROW(std::logic_error, "Invalid WFR_TYPE: '" << type << "'");
@@ -149,13 +162,13 @@ static T getGFR(const T& aqua, const T& liquid, const T& vapour,
     switch(type) {
         case VFPProdTable::GFR_GOR:
             // Gas-oil ratio = gas / oil
-            return zeroIfNan(vapour / liquid);
+            return zeroIfNanInf(vapour / liquid);
         case VFPProdTable::GFR_GLR:
             // Gas-liquid ratio = gas / (oil + water)
-            return zeroIfNan(vapour / (liquid + aqua));
+            return zeroIfNanInf(vapour / (liquid + aqua));
         case VFPProdTable::GFR_OGR:
             // Oil-gas ratio = oil / gas
-            return zeroIfNan(liquid / vapour);
+            return zeroIfNanInf(liquid / vapour);
         case VFPProdTable::GFR_INVALID: //Intentional fall-through
         default:
             OPM_THROW(std::logic_error, "Invalid GFR_TYPE: '" << type << "'");
