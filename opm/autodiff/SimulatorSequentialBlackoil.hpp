@@ -59,7 +59,7 @@ public:
     SimulatorSequentialBlackoil(const ParameterGroup& param,
                                 const typename Base::Grid& grid,
                                 DerivedGeology& geo,
-                                BlackoilPropsAdFromDeck& props,
+                                BlackoilPropsAdFromDeckLegacy& props,
                                 const RockCompressibility* rock_comp_props,
                                 NewtonIterationBlackoilInterface& linsolver,
                                 const double* gravity,

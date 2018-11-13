@@ -62,7 +62,7 @@
 
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
-#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeckLegacy.hpp>
 #include <opm/autodiff/RedistributeDataHandles.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
 #include <opm/autodiff/MissingFeatures.hpp>
@@ -190,7 +190,7 @@ namespace Opm
         // ------------   Types   ------------
 
 
-        typedef BlackoilPropsAdFromDeck FluidProps;
+        typedef BlackoilPropsAdFromDeckLegacy FluidProps;
         typedef FluidProps::MaterialLawManager MaterialLawManager;
         typedef typename Simulator::ReservoirState ReservoirState;
         typedef typename Simulator::OutputWriter OutputWriter;
@@ -562,7 +562,7 @@ namespace Opm
             material_law_manager_->initFromDeck(*deck_, *eclipse_state_, compressedToCartesianIdx);
 
             // Rock and fluid properties.
-            fluidprops_.reset(new BlackoilPropsAdFromDeck(*deck_, *eclipse_state_, material_law_manager_, grid));
+            fluidprops_.reset(new BlackoilPropsAdFromDeckLegacy(*deck_, *eclipse_state_, material_law_manager_, grid));
 
             // Rock compressibility.
             rock_comp_.reset(new RockCompressibility(*eclipse_state_, output_cout_));

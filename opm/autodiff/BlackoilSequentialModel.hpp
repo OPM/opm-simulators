@@ -78,7 +78,7 @@ namespace Opm {
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilSequentialModel(const ModelParameters&          param,
                                 const Grid&                     grid ,
-                                const BlackoilPropsAdFromDeck& fluid,
+                                const BlackoilPropsAdFromDeckLegacy& fluid,
                                 const DerivedGeology&           geo  ,
                                 const RockCompressibility*      rock_comp_props,
                                 const WellModel                 well_model,

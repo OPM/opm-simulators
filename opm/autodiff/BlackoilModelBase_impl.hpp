@@ -100,7 +100,7 @@ typedef Eigen::Array<double,
     BlackoilModelBase<Grid, WellModel, Implementation>::
     BlackoilModelBase(const ModelParameters&          param,
                   const Grid&                     grid ,
-                  const BlackoilPropsAdFromDeck& fluid,
+                  const BlackoilPropsAdFromDeckLegacy& fluid,
                   const DerivedGeology&           geo  ,
                   const RockCompressibility*      rock_comp_props,
                   const WellModel&                well_model,

@@ -41,7 +41,7 @@
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeckLegacy.hpp>
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
 namespace Opm {
@@ -73,7 +73,7 @@ namespace Opm {
             // ---------  Public methods  ---------
             StandardWells(const Wells* wells_arg, WellCollection* well_collection, const int current_step);
 
-            void init(const BlackoilPropsAdFromDeck* fluid_arg,
+            void init(const BlackoilPropsAdFromDeckLegacy* fluid_arg,
                       const std::vector<bool>* active_arg,
                       const std::vector<PhasePresence>* pc_arg,
                       const VFPProperties*  vfp_properties_arg,
@@ -220,7 +220,7 @@ namespace Opm {
             // By default, they should all be one.
             Vector well_perforation_efficiency_factors_;
 
-            const BlackoilPropsAdFromDeck* fluid_;
+            const BlackoilPropsAdFromDeckLegacy* fluid_;
             const std::vector<bool>*  active_;
             const std::vector<PhasePresence>*  phase_condition_;
             const VFPProperties* vfp_properties_;

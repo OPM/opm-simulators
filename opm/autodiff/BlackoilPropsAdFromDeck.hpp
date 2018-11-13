@@ -22,7 +22,6 @@
 #ifndef OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED
 #define OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED
 
-#include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
@@ -182,8 +181,6 @@ namespace Opm
         //      Fluid interface   //
         ////////////////////////////
 
-        typedef AutoDiffBlock<double> ADB;
-        typedef ADB::V V;
         typedef std::vector<int> Cells;
 
         /// \return   Number of active phases (also the number of components).
@@ -192,168 +189,6 @@ namespace Opm
         /// \return   Object describing the active phases.
         PhaseUsage phaseUsage() const;
 
-        // ------ Density ------
-
-        /// Densities of stock components at surface conditions.
-        /// \param[in] phaseIdx
-        /// \param[in] cells  Array of n cell indices to be associated with the pressure values.
-        /// \return Array of n density values for phase given by phaseIdx.
-        V surfaceDensity(const int phaseIdx , const Cells& cells) const;
-
-
-        // ------ Viscosity ------
-
-        /// Water viscosity.
-        /// \param[in]  pw     Array of n water pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n viscosity values.
-        ADB muWat(const ADB& pw,
-                  const ADB& T,
-                  const Cells& cells) const;
-
-        /// Oil viscosity.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  rs     Array of n gas solution factor values.
-        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n viscosity values.
-        ADB muOil(const ADB& po,
-                  const ADB& T,
-                  const ADB& rs,
-                  const std::vector<PhasePresence>& cond,
-                  const Cells& cells) const;
-
-        /// Gas viscosity.
-        /// \param[in]  pg     Array of n gas pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  rv     Array of n vapor oil/gas ratios.
-        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n viscosity values.
-        ADB muGas(const ADB& pg,
-                  const ADB& T,
-                  const ADB& rv,
-                  const std::vector<PhasePresence>& cond,
-                  const Cells& cells) const;
-
-        // ------ Formation volume factor (b) ------
-
-        /// Water formation volume factor.
-        /// \param[in]  pw     Array of n water pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
-        ADB bWat(const ADB& pw,
-                 const ADB& T,
-                 const Cells& cells) const;
-
-        /// Oil formation volume factor.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  rs     Array of n gas solution factor values.
-        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
-        ADB bOil(const ADB& po,
-                 const ADB& T,
-                 const ADB& rs,
-                 const std::vector<PhasePresence>& cond,
-                 const Cells& cells) const;
-
-        /// Gas formation volume factor.
-        /// \param[in]  pg     Array of n gas pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  rv     Array of n vapor oil/gas ratio
-        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
-        ADB bGas(const ADB& pg,
-                 const ADB& T,
-                 const ADB& rv,
-                 const std::vector<PhasePresence>& cond,
-                 const Cells& cells) const;
-
-        // ------ Rs bubble point curve ------
-
-        /// Bubble point curve for Rs as function of oil pressure.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n bubble point values for Rs.
-        V rsSat(const V& po,
-                const Cells& cells) const;
-
-        /// Bubble point curve for Rs as function of oil pressure.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  so     Array of n oil saturation values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n bubble point values for Rs.
-        V rsSat(const V& po,
-                const V& so,
-                const Cells& cells) const;
-
-        /// Bubble point curve for Rs as function of oil pressure.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n bubble point values for Rs.
-        ADB rsSat(const ADB& po,
-                  const Cells& cells) const;
-
-        /// Bubble point curve for Rs as function of oil pressure.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  so     Array of n oil saturation values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n bubble point values for Rs.
-        ADB rsSat(const ADB& po,
-                  const ADB& so,
-                  const Cells& cells) const;
-
-        // ------ Rv condensation curve ------
-
-        /// Condensation curve for Rv as function of oil pressure.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n condensation point values for Rv.
-        ADB rvSat(const ADB& po,
-                  const Cells& cells) const;
-
-        /// Condensation curve for Rv as function of oil pressure.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  so     Array of n oil saturation values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n condensation point values for Rv.
-        ADB rvSat(const ADB& po,
-                  const ADB& so,
-                  const Cells& cells) const;
-
-        // ------ Relative permeability ------
-
-        /// Relative permeabilities for all phases.
-        /// \param[in]  sw     Array of n water saturation values.
-        /// \param[in]  so     Array of n oil saturation values.
-        /// \param[in]  sg     Array of n gas saturation values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
-        /// \return            An std::vector with 3 elements, each an array of n relperm values,
-        ///                    containing krw, kro, krg. Use PhaseIndex for indexing into the result.
-        std::vector<ADB> relperm(const ADB& sw,
-                                 const ADB& so,
-                                 const ADB& sg,
-                                 const Cells& cells) const;
-
-        /// Capillary pressure for all phases.
-        /// \param[in]  sw     Array of n water saturation values.
-        /// \param[in]  so     Array of n oil saturation values.
-        /// \param[in]  sg     Array of n gas saturation values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
-        /// \return            An std::vector with 3 elements, each an array of n capillary pressure values,
-        ///                    containing the offsets for each p_g, p_o, p_w. The capillary pressure between
-        ///                    two arbitrary phases alpha and beta is then given as p_alpha - p_beta.
-        std::vector<ADB> capPress(const ADB& sw,
-                                  const ADB& so,
-                                  const ADB& sg,
-                                  const Cells& cells) const;
-                                  
         /// Saturation update for hysteresis behavior.
         /// \param[in]  cells       Array of n cell indices to be associated with the saturation values.
         void updateSatHyst(const std::vector<double>& saturation,
@@ -401,31 +236,11 @@ namespace Opm
         /// @see satOilMax()
         void setSatOilMax(const std::vector<double>& max_sat);
 
-        /// Returns the bubble point pressures
-        std::vector<double> bubblePointPressure(const Cells& cells,
-                const V& T,
-                const V& rs) const;
-
-        /// Returns the dew point pressures
-        std::vector<double> dewPointPressure(const Cells& cells,
-                const V& T,
-                const V& rv) const;
-
         /// Set capillary pressure scaling according to pressure diff. and initial water saturation.
         /// \param[in]  saturation Array of n*numPhases saturation values.
         /// \param[in]  pc         Array of n*numPhases capillary pressure values.
         void setSwatInitScaling(const std::vector<double>& saturation,
                       const std::vector<double>& pc);
-
-        /// Obtain the scaled critical oil in gas saturation values.
-        /// \param[in]  cells  Array of cell indices.
-        /// \return Array of critical oil in gas saturaion values.
-        V scaledCriticalOilinGasSaturations(const Cells& cells) const;
-
-        /// Obtain the scaled critical gas saturation values.
-        /// \param[in]  cells  Array of cell indices.
-        /// \return Array of scaled critical gas saturaion values.
-        V scaledCriticalGasSaturations(const Cells& cells) const;
 
         /// Direct access to lower-level water pvt props.
         const WaterPvt& waterProps() const
@@ -458,7 +273,7 @@ namespace Opm
         }
 
 
-    private:
+    protected:
         /// Initializes the properties.
         void init(const Opm::Deck& deck,
                   const Opm::EclipseState& eclState,
@@ -467,17 +282,6 @@ namespace Opm
                   const int* global_cell,
                   const int* cart_dims,
                   const bool init_rock);
-
-        /// Correction to rs/rv according to kw VAPPARS
-        void applyVap(V& r,
-                      const V& so,
-                      const std::vector<int>& cells,
-                      const double vap) const;
-
-        void applyVap(ADB& r,
-                      const ADB& so,
-                      const std::vector<int>& cells,
-                      const double vap) const;
 
         RockFromDeck rock_;
 

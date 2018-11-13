@@ -26,7 +26,7 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeckLegacy.hpp>
 
 #include <opm/grid/GridManager.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
@@ -74,7 +74,7 @@ struct TestFixture : public Setup
     using Setup::eclState;
 
     Opm::GridManager             grid;
-    Opm::BlackoilPropsAdFromDeck boprops_ad;
+    Opm::BlackoilPropsAdFromDeckLegacy boprops_ad;
 };
 
 template <class Setup>
@@ -93,7 +93,7 @@ struct TestFixtureAd : public Setup
     using Setup::eclState;
 
     Opm::GridManager             grid;
-    Opm::BlackoilPropsAdFromDeck props;
+    Opm::BlackoilPropsAdFromDeckLegacy props;
 };
 
 
@@ -103,14 +103,14 @@ BOOST_FIXTURE_TEST_CASE(Construction, TestFixture<SetupSimple>)
 
 BOOST_FIXTURE_TEST_CASE(SubgridConstruction, TestFixtureAd<SetupSimple>)
 {
-    Opm::BlackoilPropsAdFromDeck subgrid_props(props);
+    Opm::BlackoilPropsAdFromDeckLegacy subgrid_props(props);
 }
 
 BOOST_FIXTURE_TEST_CASE(SurfaceDensity, TestFixture<SetupSimple>)
 {
-    const Opm::BlackoilPropsAdFromDeck::Cells cells(1, 0);
+    const Opm::BlackoilPropsAdFromDeckLegacy::Cells cells(1, 0);
 
-    typedef Opm::BlackoilPropsAdFromDeck::V V;
+    typedef Opm::BlackoilPropsAdFromDeckLegacy::V V;
 
     enum { Water = Opm::Water };
     V rho0AD_Water = boprops_ad.surfaceDensity(Water, cells);
@@ -131,10 +131,10 @@ BOOST_FIXTURE_TEST_CASE(SurfaceDensity, TestFixture<SetupSimple>)
 
 BOOST_FIXTURE_TEST_CASE(ViscosityValue, TestFixture<SetupSimple>)
 {
-    const Opm::BlackoilPropsAdFromDeck::Cells cells(5, 0);
+    const Opm::BlackoilPropsAdFromDeckLegacy::Cells cells(5, 0);
 
-    typedef Opm::BlackoilPropsAdFromDeck::V V;
-    typedef Opm::BlackoilPropsAdFromDeck::ADB ADB;
+    typedef Opm::BlackoilPropsAdFromDeckLegacy::V V;
+    typedef Opm::BlackoilPropsAdFromDeckLegacy::ADB ADB;
 
     V Vpw;
     Vpw.resize(cells.size());
@@ -162,10 +162,10 @@ BOOST_FIXTURE_TEST_CASE(ViscosityValue, TestFixture<SetupSimple>)
 
 BOOST_FIXTURE_TEST_CASE(ViscosityAD, TestFixture<SetupSimple>)
 {
-    const Opm::BlackoilPropsAdFromDeck::Cells cells(5, 0);
+    const Opm::BlackoilPropsAdFromDeckLegacy::Cells cells(5, 0);
 
-    typedef Opm::BlackoilPropsAdFromDeck::V V;
-    typedef Opm::BlackoilPropsAdFromDeck::ADB ADB;
+    typedef Opm::BlackoilPropsAdFromDeckLegacy::V V;
+    typedef Opm::BlackoilPropsAdFromDeckLegacy::ADB ADB;
 
     V Vpw;
     Vpw.resize(cells.size());
@@ -178,13 +178,13 @@ BOOST_FIXTURE_TEST_CASE(ViscosityAD, TestFixture<SetupSimple>)
     // standard temperature
     V T = V::Constant(cells.size(), 273.15+20);
 
-    typedef Opm::BlackoilPropsAdFromDeck::ADB ADB;
+    typedef Opm::BlackoilPropsAdFromDeckLegacy::ADB ADB;
 
     const V VmuWat = boprops_ad.muWat(ADB::constant(Vpw), ADB::constant(T), cells).value();
     for (V::Index i = 0, n = Vpw.size(); i < n; ++i) {
         const std::vector<int> bp(1, grid.c_grid()->number_of_cells);
 
-        const Opm::BlackoilPropsAdFromDeck::Cells c(1, 0);
+        const Opm::BlackoilPropsAdFromDeckLegacy::Cells c(1, 0);
         const V   pw     = V(1, 1) * Vpw[i];
         const ADB Apw    = ADB::variable(0, pw, bp);
         const ADB AT     = ADB::constant(T);
@@ -196,9 +196,9 @@ BOOST_FIXTURE_TEST_CASE(ViscosityAD, TestFixture<SetupSimple>)
 
 BOOST_FIXTURE_TEST_CASE(criticalSaturations, TestFixture<SetupSimple>)
 {
-   const Opm::BlackoilPropsAdFromDeck::Cells cells(10, 0);
+   const Opm::BlackoilPropsAdFromDeckLegacy::Cells cells(10, 0);
 
-    typedef Opm::BlackoilPropsAdFromDeck::V V;
+    typedef Opm::BlackoilPropsAdFromDeckLegacy::V V;
 
     V sgcr = boprops_ad.scaledCriticalGasSaturations(cells);
     V sogcr = boprops_ad.scaledCriticalOilinGasSaturations(cells);

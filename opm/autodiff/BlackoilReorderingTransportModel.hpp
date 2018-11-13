@@ -227,7 +227,7 @@ namespace Opm {
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilReorderingTransportModel(const typename Base::ModelParameters&   param,
                                          const Grid&                             grid,
-                                         const BlackoilPropsAdFromDeck&          fluid,
+                                         const BlackoilPropsAdFromDeckLegacy&    fluid,
                                          const DerivedGeology&                   geo,
                                          const RockCompressibility*              rock_comp_props,
                                          const StandardWells&                    std_wells,
@@ -241,7 +241,7 @@ namespace Opm {
             : Base(param, grid, fluid, geo, rock_comp_props, std_wells, linsolver,
                    eclState, schedule, summary_config, has_disgas, has_vapoil, terminal_output)
             , graph_(Base::ops_)
-            , props_(dynamic_cast<const BlackoilPropsAdFromDeck&>(fluid)) // TODO: remove the need for this cast.
+            , props_(dynamic_cast<const BlackoilPropsAdFromDeckLegacy&>(fluid)) // TODO: remove the need for this cast.
             , state0_{ ReservoirState(0, 0, 0), WellState(), V(), V() }
             , state_{ ReservoirState(0, 0, 0), WellState(), V(), V() }
             , tr_model_(param, grid, fluid, geo, rock_comp_props, std_wells, linsolver,
@@ -428,7 +428,7 @@ namespace Opm {
 
         const detail::ConnectivityGraph graph_;
 
-        const BlackoilPropsAdFromDeck& props_;
+        const BlackoilPropsAdFromDeckLegacy& props_;
 
         State state0_;
         State state_;
@@ -495,7 +495,7 @@ namespace Opm {
 
             // Compute relative permeabilities amd capillary pressures.
             const auto& params = satfunc.materialLawParams(cell);
-            typedef BlackoilPropsAdFromDeck::MaterialLawManager::MaterialLaw MaterialLaw;
+            typedef BlackoilPropsAdFromDeckLegacy::MaterialLawManager::MaterialLaw MaterialLaw;
             MaterialLaw::relativePermeabilities(cstate.kr, params, cstate);
             MaterialLaw::capillaryPressures(cstate.pc, params, cstate);
 
