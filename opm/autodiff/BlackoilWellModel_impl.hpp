@@ -172,7 +172,7 @@ namespace Opm {
             const double p = fs.pressure(FluidSystem::oilPhaseIdx).value();
             cellPressures[cellIdx] = p;
         }
-        well_state_.init(wells(), cellPressures, &previous_well_state_, phase_usage_);
+        well_state_.init(wells(), cellPressures, wells_ecl_, timeStepIdx, &previous_well_state_, phase_usage_);
 
         // handling MS well related
         if (param_.use_multisegment_well_) { // if we use MultisegmentWell model
@@ -362,9 +362,9 @@ namespace Opm {
 
         const int nw = wells->number_of_wells;
         if (nw > 0) {
-            auto phaseUsage = phaseUsageFromDeck(eclState());
-            size_t numCells = Opm::UgGridHelpers::numCells(grid());
-            well_state_.resize(wells, numCells, phaseUsage); //Resize for restart step
+            const auto phaseUsage = phaseUsageFromDeck(eclState());
+            const size_t numCells = Opm::UgGridHelpers::numCells(grid());
+            well_state_.resize(wells, numCells, phaseUsage); // Resize for restart step
             wellsToState(restartValues.wells, phaseUsage, well_state_);
             previous_well_state_ = well_state_;
         }
@@ -938,18 +938,19 @@ namespace Opm {
             WellControls* wc = well->wellControls();
             const int control = well_controls_get_current(wc);
             well_state_.currentControls()[w] = control;
-            // TODO: for VFP control, the perf_densities are still zero here, investigate better
-            // way to handle it later.
-            well->updateWellStateWithTarget(well_state_);
 
-            // The wells are not considered to be newly added
-            // for next time step
-            if (well_state_.isNewWell(w) ) {
-                well_state_.setNewWell(w, false);
+            if (well_state_.effectiveEventsOccurred(w) ) {
+                well->updateWellStateWithTarget(well_state_);
+            }
+
+            // there is no new well control change input within a report step,
+            // so next time step, the well does not consider to have effective events anymore
+            if (well_state_.effectiveEventsOccurred(w) ) {
+                well_state_.setEffectiveEventsOccurred(w, false);
             }
         }  // end of for (int w = 0; w < nw; ++w)
 
-
+        updatePrimaryVariables();
     }
 
 
@@ -1185,8 +1186,10 @@ namespace Opm {
             // it will not change the control mode, only update the targets
             wellCollection().updateWellTargets(well_state_.wellRates());
 
+            // TODO: we should only do the well is involved in the update group targets
             for (auto& well : well_container_) {
                 well->updateWellStateWithTarget(well_state_);
+                well->updatePrimaryVariables(well_state_);
             }
         }
     }

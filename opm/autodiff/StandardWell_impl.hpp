@@ -1222,8 +1222,6 @@ namespace Opm
 
             break;
         } // end of switch
-
-        updatePrimaryVariables(well_state);
     }
 
 
@@ -1916,7 +1914,7 @@ namespace Opm
         } else {
             // the well has a THP related constraint
             // checking whether a well is newly added, it only happens at the beginning of the report step
-            if ( !well_state.isNewWell(index_of_well_) ) {
+            if ( !well_state.effectiveEventsOccurred(index_of_well_) ) {
                 for (int p = 0; p < np; ++p) {
                     // This is dangerous for new added well
                     // since we are not handling the initialization correctly for now
