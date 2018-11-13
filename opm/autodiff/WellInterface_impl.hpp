@@ -979,6 +979,50 @@ namespace Opm
 
 
 
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::isVFPActive() const
+    {
+        // since the well_controls only handles the VFP number when THP constraint/target is there.
+        // we need to get the table number through the parser, in case THP constraint/target is not there.
+        // When THP control/limit is not active, if available VFP table is provided, we will still need to
+        // update THP value. However, it will only used for output purpose.
+
+        if (well_type_ == PRODUCER) { // producer
+            const int table_id = well_ecl_->getProductionProperties(current_step_).VFPTableNumber;
+            if (table_id <= 0) {
+                return false;
+            } else {
+                if (vfp_properties_->getProd()->getTable(table_id)) {
+                    return true;
+                } else {
+                    OPM_THROW(std::runtime_error, "VFPPROD table " << std::to_string(table_id) << " is specfied,"
+                              << " for well " << name() << ", while we could not access it during simulation");
+                    return false;
+                }
+            }
+
+        } else { // injector
+            const int table_id = well_ecl_->getInjectionProperties(current_step_).VFPTableNumber;
+            if (table_id <= 0) {
+                return false;
+            } else {
+                if (vfp_properties_->getInj()->getTable(table_id)) {
+                    return true;
+                } else {
+                    OPM_THROW(std::runtime_error, "VFPINJ table " << std::to_string(table_id) << " is specfied,"
+                              << " for well " << name() << ", while we could not access it during simulation");
+                    return false;
+                }
+            }
+        }
+    }
+
+
+
+
+
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::calculateReservoirRates(WellState& well_state) const

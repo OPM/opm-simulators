@@ -334,6 +334,9 @@ namespace Opm
 
         double scalingFactor(const int comp_idx) const;
 
+        // whether a well is specified with a non-zero and valid VFP table number
+        bool isVFPActive() const;
+
         void wellTestingEconomic(Simulator& simulator, const std::vector<double>& B_avg,
                                  const double simulation_time, const int report_step, const bool terminal_output,
                                  const WellState& well_state, WellTestState& welltest_state);
