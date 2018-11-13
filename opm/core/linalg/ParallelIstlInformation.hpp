@@ -32,6 +32,7 @@
 #include <limits>
 #include <numeric>
 #include <type_traits>
+#include <vector>
 
 #if HAVE_MPI && HAVE_DUNE_ISTL
 
