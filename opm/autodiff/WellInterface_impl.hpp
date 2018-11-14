@@ -449,6 +449,31 @@ namespace Opm
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
+    underPredictionMode() const
+    {
+        bool under_prediction_mode = false;
+
+        switch( well_type_ ) {
+        case PRODUCER:
+            under_prediction_mode = well_ecl_->getProductionProperties(current_step_).predictionMode;
+            break;
+        case INJECTOR:
+            under_prediction_mode = well_ecl_->getInjectionProperties(current_step_).predictionMode;
+            break;
+        default:
+            OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name());
+        }
+
+        return under_prediction_mode;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
     checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                         const WellState& well_state) const
     {

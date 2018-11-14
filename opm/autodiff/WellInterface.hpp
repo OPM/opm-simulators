@@ -312,6 +312,8 @@ namespace Opm
         bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                                  const WellState& well_state) const;
 
+        bool underPredictionMode() const;
+
         bool wellHasTHPConstraints() const;
 
         // Component fractions for each phase for the well
