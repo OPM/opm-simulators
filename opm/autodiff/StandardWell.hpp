@@ -25,7 +25,7 @@
 
 
 #include <opm/autodiff/WellInterface.hpp>
-#include <opm/autodiff/ISTLSolver.hpp>
+#include <opm/autodiff/ISTLSolverEbos.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 
 namespace Opm
