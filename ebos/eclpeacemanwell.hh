@@ -487,6 +487,15 @@ public:
         matrix.setBlock(wellGlobalDofIdx, wellGlobalDofIdx, diagBlock);
     }
 
+    Scalar volumetricSurfaceRateForConnection(int globalDofIdx, int phaseIdx) const {
+        const DofVariables& dofVars = *dofVariables_.at(globalDofIdx);
+        std::array<Scalar, numPhases> volumetricReservoirRates;
+        computeVolumetricDofRates_(volumetricReservoirRates, actualBottomHolePressure_, dofVars);
+        std::array<Scalar, numPhases> volumetricSurfaceRates;
+        computeSurfaceRates_(volumetricSurfaceRates, volumetricReservoirRates, dofVars);
+        return volumetricSurfaceRates[phaseIdx];
+    }
+
 
     // reset the well to the initial state, i.e. remove all degrees of freedom...
     void clear()
