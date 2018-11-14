@@ -808,7 +808,7 @@ inline bool findIntersectionForBhp(const std::vector<double>&rate_samples,
                                    const double flo_rate2,
                                    const double bhp1,
                                    const double bhp2,
-                                   double& bhp)
+                                   double& obtained_bhp)
 {
     // there possibly two intersection point, then we choose the bigger one
     // we choose the bigger one, then it will be the later one in the rate_samples
@@ -851,10 +851,10 @@ inline bool findIntersectionForBhp(const std::vector<double>&rate_samples,
     const std::array<DataPoint, 2> line { DataPoint{flo_rate1, bhp1},
                                           DataPoint{flo_rate2, bhp2} };
 
-    const bool inter_section_found = findIntersection(line_segment, line, bhp);
+    const bool inter_section_found = findIntersection(line_segment, line, obtained_bhp);
 
     if (inter_section_found) {
-        std::cout << " found a bhp is " << bhp << std::endl;
+        std::cout << " found a bhp is " << obtained_bhp << std::endl;
         return true;
     } else {
         std::cout << " did not find the intersection point " << std::endl;

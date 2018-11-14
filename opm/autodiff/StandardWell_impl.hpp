@@ -1315,8 +1315,9 @@ namespace Opm
             }
 
             for (int p = 0; p < number_of_phases_; ++p) {
-                ipr_a_[p] += ipr_a_perf[p];
-                ipr_b_[p] += ipr_b_perf[p];
+                // TODO: double check the indices here
+                ipr_a_[ebosCompIdxToFlowCompIdx(p)] += ipr_a_perf[p];
+                ipr_b_[ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
             }
         }
     }
