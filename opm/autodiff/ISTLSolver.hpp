@@ -20,6 +20,7 @@
 #ifndef OPM_ISTLSOLVER_HEADER_INCLUDED
 #define OPM_ISTLSOLVER_HEADER_INCLUDED
 
+#include <opm/autodiff/MPIUtilities.hpp>
 #include <opm/autodiff/BlackoilAmg.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
