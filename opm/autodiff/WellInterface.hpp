@@ -37,8 +37,6 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 
 #include <opm/autodiff/VFPProperties.hpp>
-#include <opm/autodiff/VFPInjProperties.hpp>
-#include <opm/autodiff/VFPProdProperties.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParametersEbos.hpp>
@@ -130,7 +128,7 @@ namespace Opm
         /// Well controls
         WellControls* wellControls() const;
 
-        void setVFPProperties(const VFPProperties* vfp_properties_arg);
+        void setVFPProperties(const VFPProperties<VFPInjProperties,VFPProdProperties>* vfp_properties_arg);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
@@ -287,7 +285,7 @@ namespace Opm
 
         bool getAllowCrossFlow() const;
 
-        const VFPProperties* vfp_properties_;
+        const VFPProperties<VFPInjProperties,VFPProdProperties>* vfp_properties_;
 
         double gravity_;
 
