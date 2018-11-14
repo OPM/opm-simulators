@@ -195,6 +195,10 @@ namespace Opm {
                                          unsigned spaceIdx,
                                          unsigned timeIdx) const;
 
+
+            using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag> >;
+            WellInterfacePtr well(const std::string& wellName) const;
+
             void initFromRestartFile(const RestartValue& restartValues);
 
             Opm::data::Wells wellData() const
@@ -271,7 +275,6 @@ namespace Opm {
 
             bool wells_active_;
 
-            using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
             // a vector of all the wells.
             std::vector<WellInterfacePtr > well_container_;
 

@@ -199,6 +199,9 @@ namespace Opm
 
         void addCellRates(RateVector& rates, int cellIdx) const;
 
+        Scalar volumetricSurfaceRateForConnection(int cellIdx, int phaseIdx) const;
+
+
         template <class EvalWell>
         Eval restrictEval(const EvalWell& in) const
         {

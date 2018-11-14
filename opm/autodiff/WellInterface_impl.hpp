@@ -1206,5 +1206,19 @@ namespace Opm
         }
     }
 
+    template<typename TypeTag>
+    typename WellInterface<TypeTag>::Scalar
+    WellInterface<TypeTag>::volumetricSurfaceRateForConnection(int cellIdx, int phaseIdx) const {
+        for (int perfIdx = 0; perfIdx < number_of_perforations_; ++perfIdx) {
+            if (cells()[perfIdx] == cellIdx) {
+                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                return connectionRates_[perfIdx][activeCompIdx].value();
+            }
+        }
+        OPM_THROW(std::invalid_argument, "The well with name " + name()
+                  + " does not perforate cell " + std::to_string(cellIdx));
+        return 0.0;
+    }
+
 
 }
