@@ -550,7 +550,7 @@ template <typename T>
 const T* getTable(const std::map<int, T*> tables, int table_id) {
     auto entry = tables.find(table_id);
     if (entry == tables.end()) {
-        OPM_THROW(std::invalid_argument, "Nonexistent table " << table_id << " referenced.");
+        OPM_THROW(std::invalid_argument, "Nonexistent VFP table " << table_id << " referenced.");
     }
     else {
         return entry->second;

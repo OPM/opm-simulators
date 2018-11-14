@@ -996,10 +996,6 @@ namespace Opm
             } else {
                 if (vfp_properties_->getProd()->getTable(table_id)) {
                     return true;
-                } else {
-                    OPM_THROW(std::runtime_error, "VFPPROD table " << std::to_string(table_id) << " is specfied,"
-                              << " for well " << name() << ", while we could not access it during simulation");
-                    return false;
                 }
             }
 
@@ -1010,10 +1006,6 @@ namespace Opm
             } else {
                 if (vfp_properties_->getInj()->getTable(table_id)) {
                     return true;
-                } else {
-                    OPM_THROW(std::runtime_error, "VFPINJ table " << std::to_string(table_id) << " is specfied,"
-                              << " for well " << name() << ", while we could not access it during simulation");
-                    return false;
                 }
             }
         }

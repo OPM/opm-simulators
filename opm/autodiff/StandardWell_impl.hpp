@@ -1110,7 +1110,6 @@ namespace Opm
                 rates[ Gas ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Gas ] ];
             }
 
-            // TODO: we should have some guard here to avoid some NAN or INF ratios
             const double bhp = well_state.bhp()[index_of_well_];
 
             well_state.thp()[index_of_well_] = calculateThpFromBhp(rates, bhp);
