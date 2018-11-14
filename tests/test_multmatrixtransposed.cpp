@@ -21,7 +21,7 @@
 
 #define BOOST_TEST_MODULE MultMatrixTransposed
 #include <boost/test/unit_test.hpp>
-#include <opm/autodiff/ISTLSolver.hpp>
+#include <opm/autodiff/ISTLSolverEbos.hpp>
 
 using namespace Dune;
 using namespace Opm::Detail;
