@@ -20,6 +20,8 @@
 #ifndef OPM_MPIUTILITIES_HEADER_INCLUDED
 #define OPM_MPIUTILITIES_HEADER_INCLUDED
 
+#include <boost/any.hpp>
+
 namespace Opm
 {
     /// Return true if this is a serial run, or rank zero on an MPI run.
