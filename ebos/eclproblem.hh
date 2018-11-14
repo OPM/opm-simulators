@@ -236,10 +236,10 @@ SET_SCALAR_PROP(EclBaseProblem, EndTime, 1e100);
 // not millions of trillions of years, that is...)
 SET_SCALAR_PROP(EclBaseProblem, InitialTimeStepSize, 1e100);
 
-// set the tolerated amount of "incorrect" mass to ~1e-6 kg of oil per time step for a
+// set the tolerated amount of "incorrect" mass to ~1e-4 kg of oil per time step for a
 // reservoir that exhibits a pore volume of 1 m^3. larger reservoirs will tolerate larger
 // residuals.
-SET_SCALAR_PROP(EclBaseProblem, NewtonSumTolerance, 1e-6);
+SET_SCALAR_PROP(EclBaseProblem, NewtonSumTolerance, 1e-4);
 
 // the default for the volumetric error for oil per second is 10^-2 kg/(m^3 * s).
 SET_SCALAR_PROP(EclBaseProblem, NewtonRawTolerance, 1e-2);

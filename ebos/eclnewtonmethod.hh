@@ -98,7 +98,7 @@ public:
      */
     bool converged() const
     {
-        if (errorPvFraction_ < 0.01)
+        if (errorPvFraction_ < 0.03)
             return (this->error_ < relaxedTolerance_ && errorSum_ < sumTolerance_) ;
         else if (this->numIterations() > 8)
             return (this->error_ < relaxedTolerance_ && errorSum_ < sumTolerance_) ;
