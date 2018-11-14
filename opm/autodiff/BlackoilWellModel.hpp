@@ -42,8 +42,6 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
-#include <opm/autodiff/WellHelpers.hpp>
-#include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>
