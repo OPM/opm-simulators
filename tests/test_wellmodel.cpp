@@ -43,7 +43,7 @@
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-#include <opm/autodiff/GridHelpers.hpp>
+#include <opm/grid/GridHelpers.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
 #include <opm/autodiff/createGlobalCellArray.hpp>

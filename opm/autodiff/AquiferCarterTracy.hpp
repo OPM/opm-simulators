@@ -257,7 +257,7 @@ namespace Opm
                 Scalar faceArea;
 
                 auto cell2Faces = Opm::UgGridHelpers::cell2Faces(ugrid);
-                auto faceCells  = Opm::AutoDiffGrid::faceCells(ugrid);
+                auto faceCells  = Opm::UgGridHelpers::faceCells(ugrid);
 
                 // Translate the C face tag into the enum used by opm-parser's TransMult class
                 Opm::FaceDir::DirEnum faceDirection;
