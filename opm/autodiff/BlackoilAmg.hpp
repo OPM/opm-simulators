@@ -19,6 +19,7 @@
 #ifndef OPM_AMG_HEADER_INCLUDED
 #define OPM_AMG_HEADER_INCLUDED
 
+#include <ewoms/linear/matrixblock.hh>
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
 #include <dune/istl/paamg/twolevelmethod.hh>
@@ -166,6 +167,12 @@ template<typename FieldType, int ROWS, int COLS>
 struct ScalarType<Dune::MatrixBlock<FieldType, ROWS, COLS> >
 {
     typedef Dune::MatrixBlock<FieldType, 1, 1> value;
+};
+
+template<typename FieldType, int ROWS, int COLS>
+struct ScalarType<Ewoms::MatrixBlock<FieldType, ROWS, COLS> >
+{
+    typedef Ewoms::MatrixBlock<FieldType, 1, 1> value;
 };
 
 template<typename BlockType, typename Allocator>
