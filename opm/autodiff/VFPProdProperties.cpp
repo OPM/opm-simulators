@@ -105,5 +105,9 @@ const VFPProdTable* VFPProdProperties::getTable(const int table_id) const {
     return detail::getTable(m_tables, table_id);
 }
 
+bool VFPProdProperties::hasTable(const int table_id) const {
+    return detail::hasTable(m_tables, table_id);
+}
+
 
 }

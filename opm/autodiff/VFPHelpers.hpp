@@ -557,6 +557,15 @@ const T* getTable(const std::map<int, T*> tables, int table_id) {
     }
 }
 
+/**
+ * Check whether we have a table with the table number
+ */
+template <typename T>
+bool hasTable(const std::map<int, T*> tables, int table_id) {
+    const auto entry = tables.find(table_id);
+    return (entry != tables.end() );
+}
+
 
 /**
  * Returns the type variable for FLO/GFR/WFR for production tables
