@@ -99,20 +99,6 @@ endmacro (tests_hook)
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
 
-# download Eigen if user doesn't have the correct version
-if (NOT EIGEN3_FOUND)
-	message (STATUS "Downloading Eigen3")
-	include (ExternalProject)
-	externalProject_Add (Eigen3
-		GIT_REPOSITORY git://github.com/OPM/eigen3
-		UPDATE_COMMAND git checkout 9e788db99d73f3199ade74bfda8d9f73fdfbbe4c
-		CMAKE_ARGS -Wno-dev -DEIGEN_TEST_NO_OPENGL=1 -DEIGEN_BUILD_PKGCONFIG=0 -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/eigen3-installed
-		)
-
-	include_directories (${CMAKE_BINARY_DIR}/eigen3-installed/include/eigen3)
-	add_dependencies (opmsimulators Eigen3)
-endif (NOT EIGEN3_FOUND)
-
 if (HAVE_OPM_TESTS)
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
 endif()

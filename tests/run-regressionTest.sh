@@ -16,11 +16,7 @@ TEST_ARGS="$@"
 
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-if test "${EXE_NAME}" = "flow"; then
-    ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-opm-rst-file=true --output-dir=${RESULT_PATH}
-else
-    ${BINPATH}/${EXE_NAME} ${TEST_ARGS} enable-opm-rst-file=true output_dir=${RESULT_PATH}
-fi
+${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-opm-rst-file=true --output-dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
 cd ..
 
