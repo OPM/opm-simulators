@@ -22,6 +22,10 @@
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+#include <dune/istl/matrixutils.hh>
+#include <dune/istl/umfpack.hh>
+#include <dune/istl/superlu.hh>
 
 namespace Dune
 {
