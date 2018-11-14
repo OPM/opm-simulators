@@ -143,6 +143,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_transmissibilitymultipliers.cpp
   tests/test_welldensitysegmented.cpp
   tests/test_vfpproperties.cpp
+  tests/test_vfpproperties_legacy.cpp
   tests/test_singlecellsolves.cpp
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
