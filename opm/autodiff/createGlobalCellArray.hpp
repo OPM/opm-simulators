@@ -19,7 +19,7 @@
 #ifndef OPM_CREATE_GLOBAL_CELL_ARRAY_HPP
 #define OPM_CREATE_GLOBAL_CELL_ARRAY_HPP
 
-#include <opm/autodiff/GridHelpers.hpp>
+#include <opm/grid/GridHelpers.hpp>
 
 namespace Opm
 {

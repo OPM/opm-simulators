@@ -36,20 +36,17 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
-#include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-#include <opm/autodiff/GridHelpers.hpp>
+#include <opm/grid/GridHelpers.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
 #include <opm/autodiff/createGlobalCellArray.hpp>
 #include <opm/autodiff/GridInit.hpp>
-
-#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
 #include <ebos/eclproblem.hh>
 #include <ewoms/common/start.hh>
