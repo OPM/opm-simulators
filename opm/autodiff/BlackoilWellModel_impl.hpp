@@ -196,7 +196,7 @@ namespace Opm {
         computeRESV(timeStepIdx);
 
         // update VFP properties
-        vfp_properties_.reset (new VFPProperties (
+        vfp_properties_.reset (new VFPProperties<VFPInjProperties,VFPProdProperties> (
                                    schedule().getVFPInjTables(timeStepIdx),
                                    schedule().getVFPProdTables(timeStepIdx)) );
 

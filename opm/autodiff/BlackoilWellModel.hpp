@@ -40,11 +40,11 @@
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
-#include <opm/autodiff/VFPProperties.hpp>
+#include <opm/autodiff/VFPInjProperties.hpp>
+#include <opm/autodiff/VFPProdProperties.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
-#include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/WellInterface.hpp>
@@ -302,7 +302,7 @@ namespace Opm {
             bool initial_step_;
 
             std::unique_ptr<RateConverterType> rateConverter_;
-            std::unique_ptr<VFPProperties> vfp_properties_;
+            std::unique_ptr<VFPProperties<VFPInjProperties,VFPProdProperties>> vfp_properties_;
 
             SimulatorReport last_report_;
 
