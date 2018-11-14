@@ -257,6 +257,13 @@ namespace Opm
         // the saturations in the well bore under surface conditions at the beginning of the time step
         std::vector<double> F0_;
 
+        // the vectors used to describe the inflow performance relationship (IPR)
+        // Q = IPR_A - BHP * IPR_B
+        // TODO: it minght need to go to WellInterface, let us implement it in StandardWell first
+        // it is only updated and used for producers for now
+        mutable std::vector<double> ipr_a_;
+        mutable std::vector<double> ipr_b_;
+
         const EvalWell& getBhp() const;
 
         EvalWell getQs(const int comp_idx) const;
@@ -353,6 +360,9 @@ namespace Opm
 
         // handle the non reasonable fractions due to numerical overshoot
         void processFractions() const;
+
+        // updating the inflow based on the current reservoir condition
+        void updateIPR(const Simulator& ebos_simulator) const;
 
         // relaxation factor considering only one fraction value
         static double relaxationFactorFraction(const double old_value,

@@ -36,6 +36,8 @@ namespace Opm
     , primary_variables_(numWellEq, 0.0)
     , primary_variables_evaluation_(numWellEq) // the number of the primary variables
     , F0_(numWellConservationEq)
+    , ipr_a_(number_of_phases_)
+    , ipr_b_(number_of_phases_)
     {
         assert(num_components_ == numWellConservationEq);
 
@@ -1223,6 +1225,100 @@ namespace Opm
 
             break;
         } // end of switch
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateIPR(const Simulator& ebos_simulator) const
+    {
+        // TODO: not handling solvent related here for now
+
+        // TODO: it only handles the producers for now
+        // the formular for the injectors are not formulated yet
+        if (well_type_ == INJECTOR) {
+            return;
+        }
+
+        // initialize all the values to be zero to begin with
+        std::fill(ipr_a_.begin(), ipr_a_.end(), 0.);
+        std::fill(ipr_b_.begin(), ipr_b_.end(), 0.);
+
+        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+            std::vector<EvalWell> mob(num_components_, 0.0);
+            // TODO: mabye we should store the mobility somewhere, so that we only need to calculate it one per iteration
+            getMobility(ebos_simulator, perf, mob);
+
+            const int cell_idx = well_cells_[perf];
+            const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+            const auto& fs = int_quantities.fluidState();
+            // the pressure of the reservoir grid block the well connection is in
+            const double p_r = fs.pressure(FluidSystem::oilPhaseIdx).value();
+
+            // calculating the b for the connection
+            std::vector<double> b_perf(num_components_);
+            for (int phase = 0; phase < FluidSystem::numPhases; ++phase) {
+                if (!FluidSystem::phaseIsActive(phase)) {
+                    continue;
+                }
+                const unsigned comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phase));
+                b_perf[comp_idx] = fs.invB(phase).value();
+            }
+
+            // the pressure difference between the connection and BHP
+            const double h_perf = perf_pressure_diffs_[perf];
+            const double pressure_diff = p_r - h_perf;
+
+            // Let us add a check, since the pressure is calculated based on zero value BHP
+            // it should not be negative anyway. If it is negative, we might need to re-formulate
+            // to taking into consideration the crossflow here.
+            if (pressure_diff <= 0.) {
+                OpmLog::warning("NON_POSITIVE_DRAWDOWN_IPR", "non-positive drawdown found when updateIPR for well " + name());
+            }
+
+            // the well index associated with the connection
+            const double tw_perf = well_index_[perf];
+
+            // TODO: there might be some indices related problems here
+            // phases vs components
+            // ipr values for the perforation
+            std::vector<double> ipr_a_perf(ipr_a_.size());
+            std::vector<double> ipr_b_perf(ipr_b_.size());
+            for (int p = 0; p < number_of_phases_; ++p) {
+                const double tw_mob = tw_perf * mob[p].value() * b_perf[p];
+                ipr_a_perf[p] += tw_mob * pressure_diff;
+                ipr_b_perf[p] += tw_mob;
+            }
+
+            // we need to handle the rs and rv when both oil and gas are present
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const unsigned oil_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                const double rs = (fs.Rs()).value();
+                const double rv = (fs.Rv()).value();
+
+                const double dis_gas_a = rs * ipr_a_perf[oil_comp_idx];
+                const double vap_oil_a = rv * ipr_a_perf[gas_comp_idx];
+
+                ipr_a_perf[gas_comp_idx] += dis_gas_a;
+                ipr_a_perf[oil_comp_idx] += vap_oil_a;
+
+                const double dis_gas_b = rs * ipr_b_perf[oil_comp_idx];
+                const double vap_oil_b = rv * ipr_b_perf[gas_comp_idx];
+
+                ipr_b_perf[gas_comp_idx] += dis_gas_b;
+                ipr_b_perf[oil_comp_idx] += vap_oil_b;
+            }
+
+            for (int p = 0; p < number_of_phases_; ++p) {
+                ipr_a_[p] += ipr_a_perf[p];
+                ipr_b_[p] += ipr_b_perf[p];
+            }
+        }
     }
 
 
