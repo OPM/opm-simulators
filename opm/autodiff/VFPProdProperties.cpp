@@ -220,9 +220,16 @@ calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
     // get the bhp sampling values based on the flo sample values
     const std::vector<double> bhp_flo_samples = bhpwithflo(flo_samples, thp_table_id, wfr, gfr, thp_limit, alq, dp);
 
+    std::vector<detail::RateBhpPair> ratebhp_samples;
+    for (size_t i = 0; i < flo_samples.size(); ++i) {
+        ratebhp_samples.push_back( detail::RateBhpPair{flo_samples[i], bhp_flo_samples[i]} );
+    }
+
+    const std::array<detail::RateBhpPair, 2> ratebhp_twopoints_ipr {detail::RateBhpPair{flo_bhp_middle, bhp_middle},
+                                                                    detail::RateBhpPair{flo_bhp_limit, bhp_limit} };
+
     double obtain_bhp = 0.;
-    const bool obtain_solution_with_thp_limit = detail::findIntersectionForBhp(flo_samples, bhp_flo_samples,
-                                                        flo_bhp_middle, flo_bhp_limit, bhp_middle, bhp_limit, obtain_bhp);
+    const bool obtain_solution_with_thp_limit = detail::findIntersectionForBhp(ratebhp_samples, ratebhp_twopoints_ipr, obtain_bhp);
 
     // \Note: assuming not that negative BHP does not make sense
     if (obtain_solution_with_thp_limit && obtain_bhp > 0.) {
