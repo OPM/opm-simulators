@@ -62,7 +62,9 @@ namespace Opm
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
-        void init(const Wells* wells, const std::vector<double>& cellPressures, const WellStateFullyImplicitBlackoil* prevState, const PhaseUsage& pu)
+        void init(const Wells* wells, const std::vector<double>& cellPressures,
+                  const std::vector<const Well*>& wells_ecl, const int report_step,
+                  const WellStateFullyImplicitBlackoil* prevState, const PhaseUsage& pu)
         {
             // call init on base class
             BaseType :: init(wells, cellPressures);
@@ -84,16 +86,38 @@ namespace Opm
             well_dissolved_gas_rates_.resize(nw, 0.0);
             well_vaporized_oil_rates_.resize(nw, 0.0);
 
-            is_new_well_.resize(nw, true);
-            if (prevState && !prevState->wellMap().empty()) {
-                const auto& end = prevState->wellMap().end();
-                for (int w = 0; w < nw; ++w) {
-                    const auto& it = prevState->wellMap().find( wells->name[w]);
-                    if (it != end) {
-                        is_new_well_[w] = false;
+            // checking whether some effective well control happens
+            effective_events_occurred_.resize(nw, true);
+
+            // a hack to make the resize() function used in RESTART related work
+            if (!wells_ecl.empty() ) {
+                // At the moment, the following events are considered to be effective events
+                // more events might join as effective events
+                // PRODUCTION_UPDATE, INJECTION_UPDATE, WELL_STATUS_CHANGE
+                // 16 + 32 + 128
+                const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
+                                                     + ScheduleEvents::PRODUCTION_UPDATE
+                                                     + ScheduleEvents::INJECTION_UPDATE;
+
+                for (int w = 0; w <nw; ++w) {
+                    const int nw_wells_ecl = wells_ecl.size();
+                    int index_well_ecl = 0;
+                    const std::string well_name(wells->name[w]);
+                    for (; index_well_ecl < nw_wells_ecl; ++index_well_ecl) {
+                        if (well_name == wells_ecl[index_well_ecl]->name()) {
+                            break;
+                        }
                     }
+
+                    // It should be able to find in wells_ecl.
+                    if (index_well_ecl == nw_wells_ecl) {
+                        OPM_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ");
+                    }
+
+                    const Well* well_ecl = wells_ecl[index_well_ecl];
+                    effective_events_occurred_[w] = (well_ecl->hasEvent(effective_events_mask, report_step) );
                 }
-            }
+            } // end of if (!well_ecl.empty() )
 
             // Ensure that we start out with zero rates by default.
             perfphaserates_.clear();
@@ -117,18 +141,11 @@ namespace Opm
                 }
             }
 
-            // Initialize current_controls_.
-            // The controls set in the Wells object are treated as defaults,
-            // and also used for initial values.
             current_controls_.resize(nw);
-            for (int w = 0; w < nw; ++w) {
-                current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
-            }
-
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
-
             productivity_index_.resize(nw * np, 0.0);
+            well_potentials_.resize(nw * np, 0.0);
 
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
@@ -136,7 +153,7 @@ namespace Opm
                 typedef typename WellMapType :: const_iterator const_iterator;
                 const_iterator end = prevState->wellMap().end();
                 for (int w = 0; w < nw; ++w) {
-                    std::string name( wells->name[ w ] );
+                    const std::string name( wells->name[ w ] );
                     const_iterator it = prevState->wellMap().find( name );
                     if( it != end )
                     {
@@ -148,6 +165,16 @@ namespace Opm
 
                         // thp
                         thp()[ newIndex ] = prevState->thp()[ oldIndex ];
+
+                        // if there is no effective control event happens to the well, we use the current_controls_ from prevState
+                        // otherwise, we use the control specified in the deck
+                        if (!effective_events_occurred_[w]) {
+                            current_controls_[ newIndex ] = prevState->currentControls()[ oldIndex ];
+                            // also change the one in the WellControls
+                            well_controls_set_current(wells->ctrls[w], current_controls_[ newIndex ]);
+                        } else {
+                            current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
+                        }
 
                         // wellrates
                         for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )
@@ -232,8 +259,9 @@ namespace Opm
 
         void resize(const Wells* wells, size_t numCells, const PhaseUsage& pu)
         {
-            std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-            init(wells, tmp, nullptr, pu);
+            const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
+            const std::vector<const Well*> wells_ecl;
+            init(wells, tmp, wells_ecl, 0, nullptr, pu);
         }
 
         /// Allocate and initialize if wells is non-null.  Also tries
@@ -265,6 +293,7 @@ namespace Opm
             well_vaporized_oil_rates_.resize(nw, 0.0);
 
             productivity_index_.resize(nw * np, 0.0);
+            well_potentials_.resize(nw*np, 0.0);
 
             // Ensure that we start out with zero rates by default.
             perfphaserates_.clear();
@@ -296,8 +325,6 @@ namespace Opm
                 current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
             }
 
-            is_new_well_.resize(nw, true);
-
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
 
@@ -312,9 +339,6 @@ namespace Opm
                     const_iterator it = prevState.wellMap().find( name );
                     if( it != end )
                     {
-                        // this is not a new added well
-                        is_new_well_[w] = false;
-
                         const int oldIndex = (*it).second[ 0 ];
                         const int newIndex = w;
 
@@ -494,6 +518,18 @@ namespace Opm
 
                 if ( pu.phase_used[Gas] ) {
                     well.rates.set( rt::productivity_index_gas, this->productivity_index_[well_rate_index + pu.phase_pos[Gas]] );
+                }
+
+                if ( pu.phase_used[Water] ) {
+                    well.rates.set( rt::well_potential_water, this->well_potentials_[well_rate_index + pu.phase_pos[Water]] );
+                }
+
+                if ( pu.phase_used[Oil] ) {
+                    well.rates.set( rt::well_potential_oil, this->well_potentials_[well_rate_index + pu.phase_pos[Oil]] );
+                }
+
+                if ( pu.phase_used[Gas] ) {
+                    well.rates.set( rt::well_potential_gas, this->well_potentials_[well_rate_index + pu.phase_pos[Gas]] );
                 }
 
                 well.rates.set( rt::dissolved_gas, this->well_dissolved_gas_rates_[w] );
@@ -707,13 +743,13 @@ namespace Opm
         }
 
 
-        bool isNewWell(const int w) const {
-            return is_new_well_[w];
+        bool effectiveEventsOccurred(const int w) const {
+            return effective_events_occurred_[w];
         }
 
 
-        void setNewWell(const int w, const bool is_new_well) {
-            is_new_well_[w] = is_new_well;
+        void setEffectiveEventsOccurred(const int w, const bool effective_events_occurred) {
+            effective_events_occurred_[w] = effective_events_occurred;
         }
 
 
@@ -785,6 +821,14 @@ namespace Opm
             return productivity_index_;
         }
 
+        std::vector<double>& wellPotentials() {
+            return well_potentials_;
+        }
+
+        const std::vector<double>& wellPotentials() const {
+            return well_potentials_;
+        }
+
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
@@ -802,11 +846,10 @@ namespace Opm
         // should be zero for injection wells
         std::vector<double> well_vaporized_oil_rates_;
 
-        // marking whether the well is just added
-        // for newly added well, the current initialized rates from WellState
-        // will have very wrong compositions for production wells, will mostly cause
-        // problem with VFP interpolation
-        std::vector<bool> is_new_well_;
+        // some events happens to the well, like this well is a new well
+        // or new well control keywords happens
+        // \Note: for now, only WCON* keywords, and well status change is considered
+        std::vector<bool> effective_events_occurred_;
 
         // MS well related
         // for StandardWell, the number of segments will be one
@@ -819,6 +862,9 @@ namespace Opm
 
         // Productivity Index
         std::vector<double> productivity_index_;
+
+        // Well potentials
+        std::vector<double> well_potentials_;
 
     };
 

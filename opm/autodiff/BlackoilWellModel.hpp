@@ -43,7 +43,6 @@
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
-#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
@@ -52,6 +51,7 @@
 #include <opm/autodiff/StandardWell.hpp>
 #include <opm/autodiff/MultisegmentWell.hpp>
 #include <opm/autodiff/Compat.hpp>
+#include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
 #include<opm/autodiff/SimFIBODetails.hpp>
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
@@ -212,7 +212,7 @@ namespace Opm {
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
 
             // Check if well equations is converged.
-            bool getWellConvergence(const std::vector<Scalar>& B_avg) const;
+            ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg) const;
 
             // return all the wells.
             const WellCollection& wellCollection() const;

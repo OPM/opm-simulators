@@ -373,8 +373,6 @@ namespace Opm
 
             break;
         } // end of switch
-
-        updatePrimaryVariables(well_state);
     }
 
 
@@ -561,9 +559,17 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computeWellPotentials(const Simulator& /* ebosSimulator */,
                           const WellState& /* well_state */,
-                          std::vector<double>& /* well_potentials */)
+                          std::vector<double>& well_potentials)
     {
-        OPM_THROW(std::runtime_error, "well potential calculation for multisegment wells is not supported yet");
+        const std::string msg = std::string("Well potential calculation is not supported for multisegment wells \n")
+                + "A well potential of zero is returned for output purposes. \n"
+                + "If you need well potential to set the guide rate for group controled wells \n"
+                + "you will have to change the " + name() + " well to a standard well \n";
+
+        OpmLog::warning("WELL_POTENTIAL_NOT_IMPLEMENTED_FOR_MULTISEG_WELLS", msg);
+
+        const int np = number_of_phases_;
+        well_potentials.resize(np, 0.0);
     }
 
 

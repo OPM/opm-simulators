@@ -32,7 +32,6 @@
 #include <opm/autodiff/MissingFeatures.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
 #include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
-#include <opm/autodiff/RedistributeDataHandles.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>

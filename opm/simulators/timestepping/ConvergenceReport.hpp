@@ -49,19 +49,17 @@ namespace Opm
         {
         public:
             enum struct Type { Invalid, MassBalance, Cnv };
-            ReservoirFailure(Type t, Severity s, int phase, int cell_index)
-                : type_(t), severity_(s), phase_(phase), cell_index_(cell_index)
+            ReservoirFailure(Type t, Severity s, int phase)
+                : type_(t), severity_(s), phase_(phase)
             {
             }
             Type type() const { return type_; }
             Severity severity() const { return severity_; }
             int phase() const { return phase_; }
-            int cellIndex() const { return cell_index_; }
         private:
             Type type_;
             Severity severity_;
             int phase_;
-            int cell_index_;
         };
         class WellFailure
         {

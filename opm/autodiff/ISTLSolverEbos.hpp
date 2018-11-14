@@ -23,7 +23,7 @@
 #include <opm/autodiff/BlackoilAmg.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
-#include <opm/autodiff/NewtonIterationUtilities.hpp>
+#include <opm/autodiff/MPIUtilities.hpp>
 #include <opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp>
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
