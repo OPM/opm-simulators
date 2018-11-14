@@ -844,8 +844,6 @@ namespace Opm {
         // we simply return.
         if( !wellsActive() ) return ;
 
-#if HAVE_OPENMP
-#endif // HAVE_OPENMP
         wellhelpers::WellSwitchingLogger logger;
 
         for (const auto& well : well_container_) {

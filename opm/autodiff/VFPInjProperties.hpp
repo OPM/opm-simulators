@@ -110,6 +110,11 @@ public:
     const VFPInjTable* getTable(const int table_id) const;
 
     /**
+     * Check whether there is table associated with ID
+     */
+    bool hasTable(const int table_id) const;
+
+    /**
      * Returns true if no vfp tables are in the current map
      */
     bool empty() const {
