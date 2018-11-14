@@ -764,8 +764,103 @@ inline double findTHP(
 
 
 
+// a data type use to do the intersection calculation to get the intial bhp under THP control
+struct DataPoint {
+    double rate;
+    double bhp;
+};
 
 
+// looking for a intersection point a line segment and a line, they are both defined with two points
+// it is copied from #include <opm/polymer/Point2D.hpp>, which should be removed since it is only required by the lagacy polymer
+inline bool findIntersection(const std::array<DataPoint, 2>& line_segment, const std::array<DataPoint, 2>& line, double& bhp) {
+    const double x1 = line_segment[0].rate;
+    const double y1 = line_segment[0].bhp;
+    const double x2 = line_segment[1].rate;
+    const double y2 = line_segment[1].bhp;
+
+    const double x3 = line[0].rate;
+    const double y3 = line[0].bhp;
+    const double x4 = line[1].rate;
+    const double y4 = line[1].bhp;
+
+    const double d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+
+    if (d == 0.) {
+        return false;
+    }
+
+    const double x = ((x3 - x4) * (x1 * y2 - y1 * x2) - (x1 - x2) * (x3 * y4 - y3 * x4)) / d;
+    const double y = ((y3 - y4) * (x1 * y2 - y1 * x2) - (y1 - y2) * (x3 * y4 - y3 * x4)) / d;
+
+    if (x >= std::min(x1,x2) && x <= std::max(x1,x2)) {
+        bhp = y;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+// calculating the BHP from thp through the intersection of VFP curves and inflow performance relationship
+inline bool findIntersectionForBhp(const std::vector<double>&rate_samples,
+                                   const std::vector<double>&bhp_samples,
+                                   const double flo_rate1,
+                                   const double flo_rate2,
+                                   const double bhp1,
+                                   const double bhp2,
+                                   double& bhp)
+{
+    // there possibly two intersection point, then we choose the bigger one
+    // we choose the bigger one, then it will be the later one in the rate_samples
+
+    const size_t num_samples = rate_samples.size();
+    assert(num_samples == bhp_samples.size());
+
+    assert(flo_rate1 != flo_rate2);
+
+    const double line_slope = (bhp2 - bhp1) / (flo_rate2 - flo_rate1);
+    // line equation will be
+    // bhp - bhp1 - line_slope * (flo_rate - flo_rate1) = 0
+    auto flambda = [&](const double flo_rate, const double bhp) {
+        return bhp - bhp1 - line_slope * (flo_rate - flo_rate1);
+    };
+
+    int number_intersection_found = 0;
+    int index_segment = 0; // the intersection segment that intersection happens
+    for (size_t i = 0; i < rate_samples.size() - 1; ++i) {
+        const double temp1 = flambda(rate_samples[i], bhp_samples[i]);
+        const double temp2 = flambda(rate_samples[i+1], bhp_samples[i+1]);
+        if (temp1 * temp2 <= 0.) { // intersection happens
+            // in theory there should be maximum two intersection points
+            // while considering the situation == 0. here, we might find more
+            // we always use the last one, which is the one has the biggest rate
+            ++number_intersection_found;
+            index_segment = i;
+            std::cout << " temp1 " << temp1 << " temp2 " << temp2 << std::endl;
+        }
+    }
+
+    if (number_intersection_found == 0) { // there is not intersection point
+        return false;
+    }
+
+    // then we need to calculate the intersection point
+    const std::array<DataPoint, 2> line_segment{ DataPoint{rate_samples[index_segment], bhp_samples[index_segment]},
+                                                 DataPoint{rate_samples[index_segment + 1], bhp_samples[index_segment + 1]} };
+
+    const std::array<DataPoint, 2> line { DataPoint{flo_rate1, bhp1},
+                                          DataPoint{flo_rate2, bhp2} };
+
+    const bool inter_section_found = findIntersection(line_segment, line, bhp);
+
+    if (inter_section_found) {
+        std::cout << " found a bhp is " << bhp << std::endl;
+        return true;
+    } else {
+        std::cout << " did not find the intersection point " << std::endl;
+        return false;
+    }
+}
 
 
 } // namespace detail
