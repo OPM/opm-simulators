@@ -46,6 +46,8 @@ namespace Opm {
 
         // add the eWoms auxiliary module for the wells to the list
         ebosSimulator_.model().addAuxiliaryModule(this);
+
+        is_cell_perforated_.resize(number_of_cells_, false);
     }
 
     template<typename TypeTag>
@@ -200,8 +202,6 @@ namespace Opm {
                                    schedule().getVFPInjTables(timeStepIdx),
                                    schedule().getVFPProdTables(timeStepIdx)) );
 
-
-
     }
 
 
@@ -226,6 +226,12 @@ namespace Opm {
         // optimize the usage of the following several member variables
         for (auto& well : well_container_) {
             well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
+        }
+
+        // update the updated cell flag
+        std::fill(is_cell_perforated_.begin(), is_cell_perforated_.end(), false);
+        for (auto& well : well_container_) {
+            well->updatePerforatedCell(is_cell_perforated_);
         }
 
         // calculate the efficiency factors for each well
@@ -342,6 +348,10 @@ namespace Opm {
     {
         rate = 0;
         int elemIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+
+        if (!is_cell_perforated_[elemIdx])
+            return;
+
         for (const auto& well : well_container_)
             well->addCellRates(rate, elemIdx);
     }

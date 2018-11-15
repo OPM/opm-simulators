@@ -195,8 +195,7 @@ namespace Opm
         virtual void addWellContributions(Mat&) const
         {}
 
-        virtual void addCellRates(RateVector& rates, int cellIdx) const
-        {}
+        void addCellRates(RateVector& rates, int cellIdx) const;
 
         template <class EvalWell>
         Eval restrictEval(const EvalWell& in) const
@@ -219,6 +218,9 @@ namespace Opm
                          const double simulation_time, const int report_step,  const bool terminal_output,
                          const WellTestConfig::Reason testing_reason, const WellState& well_state,
                          WellTestState& welltest_state);
+
+        void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
+
 
     protected:
 
@@ -299,6 +301,8 @@ namespace Opm
 
         const int num_components_;
 
+        std::vector<RateVector> connectionRates_;
+
         const PhaseUsage& phaseUsage() const;
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
@@ -350,6 +354,7 @@ namespace Opm
         void solveWellForTesting(Simulator& ebosSimulator, WellState& well_state, const std::vector<double>& B_avg, bool terminal_output);
 
         void scaleProductivityIndex(const int perfIdx, double& productivity_index) const;
+
 
     };
 

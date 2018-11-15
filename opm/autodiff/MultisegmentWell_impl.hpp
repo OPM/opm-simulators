@@ -114,8 +114,6 @@ namespace Opm
     {
         Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells);
 
-        connectionRates_.resize(number_of_perforations_);
-
         // TODO: for StandardWell, we need to update the perf depth here using depth_arg.
         // for MultisegmentWell, it is much more complicated.
         // It can be specified directly, it can be calculated from the segment depth,

@@ -102,11 +102,23 @@ namespace Opm
                       wells->sat_table_id + perf_index_end,
                       saturation_table_number_.begin() );
         }
+
         well_efficiency_factor_ = 1.0;
+
+        connectionRates_.resize(number_of_perforations_);
 
     }
 
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updatePerforatedCell(std::vector<bool>& is_cell_perforated)
+    {
 
+        for (int perf_idx = 0; perf_idx<number_of_perforations_; ++perf_idx) {
+            is_cell_perforated[well_cells_[perf_idx]] = true;
+        }
+    }
 
 
 
@@ -116,12 +128,11 @@ namespace Opm
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<double>& /* depth_arg */,
          const double gravity_arg,
-         const int /* num_cells */)
+         const int /*num_cells*/)
     {
         phase_usage_ = phase_usage_arg;
         gravity_ = gravity_arg;
     }
-
 
 
 
@@ -1123,6 +1134,19 @@ namespace Opm
         productivity_index *=
         (std::log(connection.r0() / connection.rw()) + connection.skinFactor()) /
         (std::log(well_ecl_->getDrainageRadius(current_step_) / connection.rw()) + connection.skinFactor());
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::addCellRates(RateVector& rates, int cellIdx) const
+    {
+        for (int perfIdx = 0; perfIdx < number_of_perforations_; ++perfIdx) {
+            if (cells()[perfIdx] == cellIdx) {
+                for (int i = 0; i < RateVector::dimension; ++i) {
+                    rates[i] += connectionRates_[perfIdx][i];
+                }
+            }
+        }
     }
 
 

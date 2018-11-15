@@ -37,7 +37,6 @@ namespace Opm
 
     public:
         typedef WellInterface<TypeTag> Base;
-        typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
 
         // TODO: some functions working with AD variables handles only with values (double) without
         // dealing with derivatives. It can be beneficial to make functions can work with either AD or scalar value.
@@ -177,17 +176,6 @@ namespace Opm
             return param_.matrix_add_well_contributions_;
         }
 
-        void addCellRates(RateVector& rates, int cellIdx) const override
-        {
-            for (int perfIdx = 0; perfIdx < number_of_perforations_; ++perfIdx) {
-                if (Base::cells()[perfIdx] == cellIdx) {
-                    for (int i = 0; i < RateVector::dimension; ++i) {
-                        rates[i] += connectionRates_[perfIdx][i];
-                    }
-                }
-            }
-        }
-
     protected:
 
         // protected functions from the Base class
@@ -222,6 +210,7 @@ namespace Opm
         using Base::well_controls_;
         using Base::well_type_;
         using Base::num_components_;
+        using Base::connectionRates_;
 
         using Base::perf_rep_radius_;
         using Base::perf_length_;
@@ -240,8 +229,6 @@ namespace Opm
         OffDiagMatWell duneC_;
         // diagonal matrix for the well
         DiagMatWell invDuneD_;
-
-        std::vector<RateVector> connectionRates_;
 
         // several vector used in the matrix calculation
         mutable BVectorWell Bx_;

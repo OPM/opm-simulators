@@ -278,6 +278,8 @@ namespace Opm {
             // map from logically cartesian cell indices to compressed ones
             std::vector<int> cartesian_to_compressed_;
 
+            std::vector<bool> is_cell_perforated_;
+
             // create the well container
             std::vector<WellInterfacePtr > createWellContainer(const int time_step);
 
