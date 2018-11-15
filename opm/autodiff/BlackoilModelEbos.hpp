@@ -780,64 +780,73 @@ namespace Opm {
             return pvSumLocal;
         }
 
-        /// Compute convergence based on total mass balance (tol_mb) and maximum
-        /// residual mass balance (tol_cnv).
-        /// \param[in]   timer       simulation timer
-        /// \param[in]   dt          timestep length
-        /// \param[in]   iteration   current iteration number
-        bool getConvergence(const SimulatorTimerInterface& timer, const int iteration, std::vector<double>& residual_norms)
+        ConvergenceReport getReservoirConvergence(const double dt,
+                                                  const int iteration,
+                                                  std::vector<Scalar>& B_avg,
+                                                  std::vector<Scalar>& residual_norms)
         {
             typedef std::vector< Scalar > Vector;
 
-            const double dt = timer.currentStepLength();
-            const double tol_mb    = param_.tolerance_mb_;
-            const double tol_cnv   = param_.tolerance_cnv_;
-            const double tol_cnv_relaxed = param_.tolerance_cnv_relaxed_;
+            const double tol_mb  = param_.tolerance_mb_;
+            const double tol_cnv = (iteration < param_.max_strict_iter_) ? param_.tolerance_cnv_ : param_.tolerance_cnv_relaxed_;
 
             const int numComp = numEq;
-
             Vector R_sum(numComp, 0.0 );
             Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
-            Vector B_avg(numComp, 0.0 );
             const double pvSumLocal = localConvergenceData(R_sum, maxCoeff, B_avg);
 
             // compute global sum and max of quantities
             const double pvSum = convergenceReduction(grid_.comm(), pvSumLocal,
                                                       R_sum, maxCoeff, B_avg);
 
-            Vector CNV(numComp);
-            Vector mass_balance_residual(numComp);
-
-            bool converged_MB = true;
-            bool converged_CNV = true;
             // Finish computation
+            std::vector<Scalar> CNV(numComp);
+            std::vector<Scalar> mass_balance_residual(numComp);
             for ( int compIdx = 0; compIdx < numComp; ++compIdx )
             {
                 CNV[compIdx]                    = B_avg[compIdx] * dt * maxCoeff[compIdx];
                 mass_balance_residual[compIdx]  = std::abs(B_avg[compIdx]*R_sum[compIdx]) * dt / pvSum;
-                converged_MB                    = converged_MB && (mass_balance_residual[compIdx] < tol_mb);
-                if (iteration < param_.max_strict_iter_)
-                    converged_CNV = converged_CNV && (CNV[compIdx] < tol_cnv);
-                else
-                    converged_CNV = converged_CNV && (CNV[compIdx] < tol_cnv_relaxed);
-
                 residual_norms.push_back(CNV[compIdx]);
             }
 
-            const auto report_well = wellModel().getWellConvergence(B_avg);
-            const bool converged_well = report_well.converged();
+            // Create convergence report.
+            ConvergenceReport report;
+            using CR = ConvergenceReport;
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+                const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
+                const std::string& compName = FluidSystem::componentName(canonicalCompIdx);
+                const int compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
+                double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
+                CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
+                                                        CR::ReservoirFailure::Type::Cnv };
+                double tol[2] = { tol_mb, tol_cnv };
+                for (int ii : {0, 1}) {
+                    if (std::isnan(res[ii])) {
+                        report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
+                        OpmLog::debug("NaN residual for " + compName + " equation.");
+                    } else if (res[ii] > maxResidualAllowed()) {
+                        report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
+                        OpmLog::debug("Too large residual for " + compName + " equation.");
+                    } else if (res[ii] < 0.0) {
+                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
+                        OpmLog::debug("Negative residual for " + compName + " equation.");
+                    } else if (res[ii] > tol[ii]) {
+                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
+                    }
+                }
+            }
 
-            bool converged = converged_MB && converged_well;
-
-            converged = converged && converged_CNV;
-
+            // Output of residuals.
             if ( terminal_output_ )
             {
                 // Only rank 0 does print to std::cout
                 if (iteration == 0) {
                     std::string msg = "Iter";
 
-                    std::vector< std::string > key( numComp );
+                    std::vector< std::string > key( numEq );
                     for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
                         if (!FluidSystem::phaseIsActive(phaseIdx)) {
                             continue;
@@ -883,29 +892,32 @@ namespace Opm {
                 OpmLog::debug(ss.str());
             }
 
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
-                    continue;
+            return report;
+        }
 
-                const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-                const std::string& compName = FluidSystem::componentName(canonicalCompIdx);
-                const unsigned compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
+        /// Compute convergence based on total mass balance (tol_mb) and maximum
+        /// residual mass balance (tol_cnv).
+        /// \param[in]   timer       simulation timer
+        /// \param[in]   iteration   current iteration number
+        /// \param[out]  residual_norms   CNV residuals by phase
+        bool getConvergence(const SimulatorTimerInterface& timer,
+                            const int iteration,
+                            std::vector<double>& residual_norms)
+        {
+            // Get convergence reports for reservoir and wells.
+            std::vector<Scalar> B_avg(numEq, 0.0);
+            auto report = getReservoirConvergence(timer.currentStepLength(), iteration, B_avg, residual_norms);
+            report += wellModel().getWellConvergence(B_avg);
 
-                if (std::isnan(mass_balance_residual[compIdx])
-                    || std::isnan(CNV[compIdx])) {
-                    OPM_THROW(Opm::NumericalIssue, "NaN residual for " << compName << " equation");
-                }
-                if (mass_balance_residual[compIdx] > maxResidualAllowed()
-                    || CNV[compIdx] > maxResidualAllowed()) {
-                    OPM_THROW(Opm::NumericalIssue, "Too large residual for " << compName << " equation");
-                }
-                if (mass_balance_residual[compIdx] < 0
-                    || CNV[compIdx] < 0) {
-                    OPM_THROW(Opm::NumericalIssue, "Negative residual for " << compName << " equation");
-                }
+            // Throw if any NaN or too large residual found.
+            ConvergenceReport::Severity severity = report.severityOfWorstFailure();
+            if (severity == ConvergenceReport::Severity::NotANumber) {
+                OPM_THROW(Opm::NumericalIssue, "NaN residual found!");
+            } else if (severity == ConvergenceReport::Severity::TooLarge) {
+                OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
             }
 
-            return converged;
+            return report.converged();
         }
 
 
