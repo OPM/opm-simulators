@@ -76,6 +76,7 @@ public:
     typedef typename Solver::SolverParameters SolverParameters;
     typedef BlackoilWellModel<TypeTag> WellModel;
     typedef BlackoilAquiferModel<TypeTag> AquiferModel;
+    typedef typename BlackoilModelEbos<TypeTag>::ISTLSolverType ISTLSolverType;
 
 
     /// Initialise from parameters and objects to observe.
@@ -100,7 +101,7 @@ public:
     /// \param[in] output_writer
     /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
     SimulatorFullyImplicitBlackoilEbos(Simulator& ebosSimulator,
-                                       NewtonIterationBlackoilInterface& linearSolver)
+                                       ISTLSolverType& linearSolver)
         : ebosSimulator_(ebosSimulator)
         , linearSolver_(linearSolver)
     {
@@ -375,7 +376,7 @@ protected:
     SolverParameters solverParam_;
 
     // Observed objects.
-    NewtonIterationBlackoilInterface& linearSolver_;
+    ISTLSolverType& linearSolver_;
     PhaseUsage phaseUsage_;
     // Misc. data
     bool terminalOutput_;

@@ -28,7 +28,6 @@
 #include <opm/simulators/ParallelFileMerger.hpp>
 
 #include <opm/autodiff/BlackoilModelEbos.hpp>
-#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/MissingFeatures.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
 #include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
@@ -97,6 +96,7 @@ namespace Opm
 
         typedef Opm::SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
         typedef typename Simulator::ReservoirState ReservoirState;
+        typedef typename BlackoilModelEbos<TypeTag>::ISTLSolverType ISTLSolverType;
 
         // Read the command line parameters. Throws an exception if something goes wrong.
         static int setupParameters_(int argc, char** argv)
@@ -110,7 +110,6 @@ namespace Opm
                                  "Specify the number of report steps between two consecutive writes of restart data");
             Simulator::registerParameters();
 
-            typedef typename BlackoilModelEbos<TypeTag>::ISTLSolverType ISTLSolverType;
             ISTLSolverType::registerParameters();
 
             // register the parameters inherited from ebos
@@ -554,8 +553,6 @@ namespace Opm
         //   linearSolver_
         void setupLinearSolver()
         {
-            typedef typename BlackoilModelEbos<TypeTag>::ISTLSolverType ISTLSolverType;
-
             extractParallelGridInformationToISTL(grid(), parallel_information_);
             auto *tmp = new ISTLSolverType(parallel_information_);
             linearSolver_.reset(tmp);
@@ -607,7 +604,7 @@ namespace Opm
         FileOutputMode output_ = OUTPUT_ALL;
         bool output_to_files_ = false;
         boost::any parallel_information_;
-        std::unique_ptr<NewtonIterationBlackoilInterface> linearSolver_;
+        std::unique_ptr<ISTLSolverType> linearSolver_;
         std::unique_ptr<Simulator> simulator_;
         std::string logFile_;
     };
