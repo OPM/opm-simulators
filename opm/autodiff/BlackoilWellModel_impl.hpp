@@ -847,7 +847,7 @@ namespace Opm {
         wellhelpers::WellSwitchingLogger logger;
 
         for (const auto& well : well_container_) {
-            well->updateWellControl(well_state_, logger);
+            well->updateWellControl(ebosSimulator_, well_state_, logger);
         }
 
         updateGroupControls();
@@ -938,7 +938,7 @@ namespace Opm {
             well_state_.currentControls()[w] = control;
 
             if (well_state_.effectiveEventsOccurred(w) ) {
-                well->updateWellStateWithTarget(well_state_);
+                well->updateWellStateWithTarget(ebosSimulator_, well_state_);
             }
 
             // there is no new well control change input within a report step,
@@ -1186,7 +1186,7 @@ namespace Opm {
 
             // TODO: we should only do the well is involved in the update group targets
             for (auto& well : well_container_) {
-                well->updateWellStateWithTarget(well_state_);
+                well->updateWellStateWithTarget(ebosSimulator_, well_state_);
                 well->updatePrimaryVariables(well_state_);
             }
         }

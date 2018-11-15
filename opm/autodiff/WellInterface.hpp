@@ -172,10 +172,12 @@ namespace Opm
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials) = 0;
 
-        virtual void updateWellStateWithTarget(WellState& well_state) const = 0;
+        virtual void updateWellStateWithTarget(/* const */ Simulator& ebos_simulator,
+                                               WellState& well_state) /* const */ = 0;
 
-        void updateWellControl(WellState& well_state,
-                               wellhelpers::WellSwitchingLogger& logger) const;
+        void updateWellControl(/* const */ Simulator& ebos_simulator,
+                               WellState& well_state,
+                               wellhelpers::WellSwitchingLogger& logger) /* const */;
 
         virtual void updatePrimaryVariables(const WellState& well_state) const = 0;
 

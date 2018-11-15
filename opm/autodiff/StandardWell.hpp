@@ -140,9 +140,8 @@ namespace Opm
                                     const double dt,
                                     WellState& well_state) override;
 
-        /// updating the well state based the control mode specified with current
-        // TODO: later will check wheter we need current
-        virtual void updateWellStateWithTarget(WellState& well_state) const override;
+        virtual void updateWellStateWithTarget(/* const */ Simulator& ebos_simulator,
+                                               WellState& well_state) /* const */ override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const override;
@@ -363,6 +362,18 @@ namespace Opm
 
         // updating the inflow based on the current reservoir condition
         void updateIPR(const Simulator& ebos_simulator) const;
+
+        // update WellState based on IPR and associated VFP table
+        void updateWellStateWithTHPTargetIPR(const Simulator& ebos_simulator,
+                                             WellState& well_state) const;
+
+        void updateWellStateWithTHPTargetIPRProducer(const Simulator& ebos_simulator,
+                                                     WellState& well_state) const;
+
+        // calculate the BHP from THP target based on IPR
+        // TODO: we need to check the operablility here first, if not operable, then maybe there is
+        // no point to do this
+        double calculateBHPWithTHPTargetIPR() const;
 
         // relaxation factor considering only one fraction value
         static double relaxationFactorFraction(const double old_value,

@@ -415,8 +415,9 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateWellControl(WellState& well_state,
-                      wellhelpers::WellSwitchingLogger& logger) const
+    updateWellControl(/* const */ Simulator& ebos_simulator,
+                      WellState& well_state,
+                      wellhelpers::WellSwitchingLogger& logger) /* const */
     {
         const int np = number_of_phases_;
         const int w = index_of_well_;
@@ -467,7 +468,7 @@ namespace Opm
         }
 
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
-            updateWellStateWithTarget(well_state);
+            updateWellStateWithTarget(ebos_simulator, well_state);
             updatePrimaryVariables(well_state);
         }
     }
@@ -1133,7 +1134,7 @@ namespace Opm
             solveEqAndUpdateWellState(well_state);
 
             wellhelpers::WellSwitchingLogger logger;
-            updateWellControl(well_state, logger);
+            updateWellControl(ebosSimulator, well_state, logger);
             initPrimaryVariablesEvaluation();
         } while (it < max_iter);
 

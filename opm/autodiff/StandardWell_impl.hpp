@@ -1125,7 +1125,8 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellStateWithTarget(WellState& well_state) const
+    updateWellStateWithTarget(/* const */ Simulator& ebos_simulator,
+                              WellState& well_state) /* const */
     {
         // number of phases
         const int np = number_of_phases_;
@@ -1142,32 +1143,23 @@ namespace Opm
             // TODO: similar to the way below to handle THP
             // we should not something related to thp here when there is thp constraint
             // or when can calculate the THP (table avaiable or requested for output?)
+            // TODO: we should address this in a function updateWellStateWithBHPTarget.
+            // TODO: however, the reason that this one minght not be that critical with
+            // TODO: the effects remaining to be investigated.
+
             break;
-
         case THP: {
-            // TODO: this will be the big task here.
-            // p_bhp = BHP(THP, rates(p_bhp))
-            // more sophiscated techniques is required to obtain the bhp and rates here
-            well_state.thp()[well_index] = target;
-
-            const Opm::PhaseUsage& pu = phaseUsage();
-            std::vector<double> rates(3, 0.0);
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                rates[ Water ] = well_state.wellRates()[well_index*np + pu.phase_pos[ Water ] ];
-            }
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                 rates[ Oil ] = well_state.wellRates()[well_index*np + pu.phase_pos[ Oil ] ];
-            }
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                rates[ Gas ] = well_state.wellRates()[well_index*np + pu.phase_pos[ Gas ] ];
-            }
-
-            well_state.bhp()[well_index] = calculateBhpFromThp(rates, current);
+            // TODO: adding the checking for the operability
+            // TODO: should we do updateIPR before this or within the related functions
+            updateIPR(ebos_simulator);
+            updateWellStateWithTHPTargetIPR(ebos_simulator, well_state);
             break;
         }
 
         case RESERVOIR_RATE: // intentional fall-through
         case SURFACE_RATE:
+            // TODO: something needs to be done with BHP and THP here
+            // TODO: they should go to a separate function
             // checking the number of the phases under control
             int numPhasesWithTargetsUnderThisControl = 0;
             for (int phase = 0; phase < np; ++phase) {
@@ -1320,6 +1312,101 @@ namespace Opm
                 ipr_b_[ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
             }
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateWellStateWithTHPTargetIPR(const Simulator& ebos_simulator,
+                                    WellState& well_state) const
+    {
+        if (well_type_ == PRODUCER) {
+            updateWellStateWithTHPTargetIPRProducer(ebos_simulator,
+                                                    well_state);
+        }
+
+        if (well_type_ == INJECTOR) {
+            well_state.thp()[index_of_well_] = this->getTHPConstraint();
+            // TODO: more work needs to be done for the injectors here, while injectors
+            // have been okay with the current strategy relying on well control equation directly.
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateWellStateWithTHPTargetIPRProducer(const Simulator& ebos_simulator,
+                                            WellState& well_state) const
+    {
+
+        well_state.thp()[index_of_well_] = this->getTHPConstraint();
+
+        const double bhp = calculateBHPWithTHPTargetIPR();
+
+        well_state.bhp()[index_of_well_] = bhp;
+
+        // TODO: explicit quantities are always tricky for this type of situation
+        updatePrimaryVariables(well_state);
+        initPrimaryVariablesEvaluation();
+
+        std::vector<double> rates;
+        computeWellRatesWithBhp(ebos_simulator, bhp, rates);
+
+        // TODO: double checke the obtained rates
+        // this is another places we might obtain negative rates
+
+        for (size_t p = 0; p < number_of_phases_; ++p) {
+            well_state.wellRates()[number_of_phases_ * index_of_well_ + p] = rates[p];
+        }
+
+        // TODO: there will be something need to be done for the cases not the defaulted 3 phases,
+        // like 2 phases or solvent, polymer, etc. But we are not addressing them with THP control yet.
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    double
+    StandardWell<TypeTag>::
+    calculateBHPWithTHPTargetIPR() const
+    {
+        const double thp_target = this->getTHPConstraint();
+        const double thp_control_index = this->getTHPControlIndex();
+        const  int thp_table_id = well_controls_iget_vfp(well_controls_, thp_control_index);
+        const double alq = well_controls_iget_alq(well_controls_, thp_control_index);
+
+        // not considering injectors for now
+        const double vfp_ref_depth = vfp_properties_->getProd()->getTable(thp_table_id)->getDatumDepth();
+
+        // the density of the top perforation
+        // TODO: make sure this is properly initialized
+        // TODO: with IPR, it should be possible, even this well is a new well, we do not have
+        // TODO: any information of previous rates. However, we are lacking the pressure though.
+        // TODO: but let us not do more work related now to see what will happen
+        const double rho = perf_densities_[0];
+
+        // TODO: call a/the function for dp
+        const double dp = (vfp_ref_depth - ref_depth_) * rho * gravity_;
+
+        const double  bhp_limit = mostStrictBhpFromBhpLimits();
+
+        const double obtain_bhp = vfp_properties_->getProd()->calculateBhpWithTHPTarget(ipr_a_, ipr_b_,
+                                             bhp_limit, thp_table_id, thp_target, alq, dp);
+
+        // we should have made sure that this well should be operable under THP limit now
+        assert(obtain_bhp > 0.);
+
+        return obtain_bhp;
     }
 
 
