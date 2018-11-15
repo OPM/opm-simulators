@@ -235,14 +235,18 @@ calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
     if (obtain_solution_with_thp_limit && obtain_bhp > 0.) {
         // getting too high bhp that might cause negative rates (rates in the undesired direction)
         if (obtain_bhp >= bhp_safe_limit) {
-            std::cout << " Look like we are getting a too high BHP value from the THP constraint "
-                      << " which might cause problems later " << std::endl;
+            const std::string msg (" We are getting a too high BHP value from the THP constraint, which may "
+                                   " cause problems later ");
+            OpmLog::info("TOO_HIGH_BHP_FOUND_THP_TARGET", msg);
 
-            std::cout << " obtain_bhp " << obtain_bhp << " bhp_safe_limit " << bhp_safe_limit << std::endl;
+            const std::string debug_msg = " obtain_bhp " + std::to_string(obtain_bhp)
+                                        + " bhp_safe_limit " + std::to_string(bhp_safe_limit)
+                                        + " thp limit " + std::to_string(thp_limit);
+            OpmLog::debug(debug_msg);
         }
         return obtain_bhp;
     } else {
-        std::cout << " COULD NOT find an Intersection point " << std::endl;
+        OpmLog::warning("NO_BHP_FOUND_THP_TARGET", " we could not find a bhp value with thp target.");
         return -100.;
     }
 }
