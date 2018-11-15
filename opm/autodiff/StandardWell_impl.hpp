@@ -1228,7 +1228,8 @@ namespace Opm
             // it should not be negative anyway. If it is negative, we might need to re-formulate
             // to taking into consideration the crossflow here.
             if (pressure_diff <= 0.) {
-                OpmLog::warning("NON_POSITIVE_DRAWDOWN_IPR", "non-positive drawdown found when updateIPR for well " + name());
+                OpmLog::warning("NON_POSITIVE_DRAWDOWN_IPR",
+                                "non-positive drawdown found when updateIPR for well " + name());
             }
 
             // the well index associated with the connection
@@ -1271,6 +1272,171 @@ namespace Opm
                 ipr_b_[ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
             }
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    checkWellOperatability(const Simulator& ebos_simulator)
+    {
+        // TODO: this function is probably can split another function out so that
+        // wellTestingPhysical can share some code with this function
+        // on solution is that this function will be called updateWellOperatability
+        // and the actual checking part become another function checkWellOperatability
+        // Let us finish the wellTestingPhysical first.
+
+        // focusing on PRODUCER for now
+        if (well_type_ == INJECTOR) {
+            return;
+        }
+
+        if (!this->underPredictionMode() ) {
+            return;
+        }
+
+        const bool old_well_operable = this->operability_status_.isOperable();
+
+        this->operability_status_.reset();
+
+        updateIPR(ebos_simulator);
+
+        // checking the BHP limit related
+        checkOperabilityUnderBHPLimit(ebos_simulator);
+
+        // TODO: if the BHP limit does not work anyway, we do not need to do the following
+        // We do it now for studying purpose.
+        // checking whether the well can operate under the THP constraints.
+        if (this->wellHasTHPConstraints()) {
+            checkOperabilityUnderTHPLimit(ebos_simulator);
+        }
+
+        // checking whether the well can not produce or something else
+        this->operability_status_.negative_well_rates = allDrawDownWrongDirection(ebos_simulator);
+
+        const bool well_operable = this->operability_status_.isOperable();
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    checkOperabilityUnderBHPLimit(const Simulator& ebos_simulator)
+    {
+        const double bhp_limit = mostStrictBhpFromBhpLimits();
+        // TODO: a better way to detect whether the BHP is defaulted or not
+        if ( bhp_limit > 1.5e5 || !this->wellHasTHPConstraints() ) {
+        // if ( !(bhp_limit < 1.5e5 && this->wellHasTHPConstraints()) ) {
+            // if there is a non-defaulted BHP limit or the well does not have a THP limit
+
+            for (int p = 0; p < number_of_phases_; ++p) {
+                const double temp = ipr_a_[p] - ipr_b_[p] * bhp_limit;
+                if (temp < 0.) {
+                    this->operability_status_.operable_under_only_bhp_limit = false;
+                    break;
+                }
+            }
+
+            // checking whether running under BHP limit will violate THP limit
+            if (this->operability_status_.operable_under_only_bhp_limit && this->wellHasTHPConstraints()) {
+                // option 1: calculate well rates based on the BHP limit.
+                // option 2: stick with the above IPR curve
+                // TODO: most likely, we can use IPR here
+                const double bhp_limit = mostStrictBhpFromBhpLimits();
+                std::vector<double> well_rates_bhp_limit;
+                computeWellRatesWithBhp(ebos_simulator, bhp_limit, well_rates_bhp_limit);
+
+                const double thp = calculateThpFromBhp(well_rates_bhp_limit, bhp_limit);
+                const double thp_limit = this->getTHPConstraint();
+
+                if (thp < thp_limit || thp >  bhp_limit) {
+                    this->operability_status_.violate_thp_limit_under_bhp_limit = true;
+                }
+            }
+        } else {
+            // defaulted BHP and there is THP constraints
+            // default BHP limit is about 1.03 bar.
+            // when applied the hydrostatic pressure correction,
+            // most likely we get a negative bhp value to search in the VFP table,
+            // which is not desirable
+            this->operability_status_.operable_under_only_bhp_limit = true;
+            this->operability_status_.violate_thp_limit_under_bhp_limit = true;
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    checkOperabilityUnderTHPLimit(const Simulator& ebos_simulator)
+    {
+        // We will use IPR to make the rates for now
+        const double  bhp_limit = mostStrictBhpFromBhpLimits();
+        const double thp_limit = this->getTHPConstraint();
+        const double thp_control_index = this->getTHPControlIndex();
+        const  int thp_table_id = well_controls_iget_vfp(well_controls_, thp_control_index);
+        const double alq = well_controls_iget_alq(well_controls_, thp_control_index);
+
+        double vfp_ref_depth = 0.;
+
+        // not considering injectors for now
+        vfp_ref_depth = vfp_properties_->getProd()->getTable(thp_table_id)->getDatumDepth();
+
+        // the density of the top perforation
+        const double rho = perf_densities_[0];
+
+        const double dp = (vfp_ref_depth - ref_depth_) * rho * gravity_;
+
+        vfp_properties_->getProd()->operabilityCheckingUnderTHP(ipr_a_, ipr_b_, bhp_limit,
+                                           thp_table_id, thp_limit, alq, dp,
+                                           this->operability_status_.obtain_solution_with_thp_limit,
+                                           this->operability_status_.violate_bhp_limit_with_thp_limit );
+
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    bool
+    StandardWell<TypeTag>::
+    allDrawDownWrongDirection(const Simulator& ebosSimulator) const
+    {
+        bool all_drawdown_wrong_direction = true;
+
+        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+            const int cell_idx = well_cells_[perf];
+            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+            const auto& fs = intQuants.fluidState();
+
+            const double pressure = (fs.pressure(FluidSystem::oilPhaseIdx)).value();
+            const double bhp = getBhp().value();
+
+            // Pressure drawdown (also used to determine direction of flow)
+            const double well_pressure = bhp + perf_pressure_diffs_[perf];
+            const double drawdown = pressure - well_pressure;
+
+            // for now, if there is one perforation can produce/inject in the correct
+            // direction, we consider this well can still produce/inject.
+            // TODO: it can be more complicated than this
+            if ( (drawdown < 0. && well_type_ == INJECTOR) ||
+                 (drawdown > 0. && well_type_ == PRODUCER) )  {
+                all_drawdown_wrong_direction = false;
+                break;
+            }
+        }
+
+        return all_drawdown_wrong_direction;
     }
 
 

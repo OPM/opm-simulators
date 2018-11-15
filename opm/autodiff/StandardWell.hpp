@@ -348,12 +348,26 @@ namespace Opm
         // updating the inflow based on the current reservoir condition
         void updateIPR(const Simulator& ebos_simulator) const;
 
+        // check whether the well is operable under the current reservoir condition
+        // mostly related to BHP limit and THP limit
+        virtual void checkWellOperatability(const Simulator& ebos_simulator) override;
+
+        // check whether the well is operable under BHP limit with current reservoir condition
+        void checkOperabilityUnderBHPLimit(const Simulator& ebos_simulator);
+
+        // check whether the well is operable under THP limit with current reservoir condition
+        void checkOperabilityUnderTHPLimit(const Simulator& ebos_simulator);
+
         // update WellState based on IPR and associated VFP table
         void updateWellStateWithTHPTargetIPR(const Simulator& ebos_simulator,
                                              WellState& well_state) const;
 
         void updateWellStateWithTHPTargetIPRProducer(const Simulator& ebos_simulator,
                                                      WellState& well_state) const;
+
+        // for a well, when all drawdown are in the wrong direction, then this well will not
+        // be able to produce/inject .
+        bool allDrawDownWrongDirection(const Simulator& ebosSimulator) const;
 
         // calculate the BHP from THP target based on IPR
         // TODO: we need to check the operablility here first, if not operable, then maybe there is
