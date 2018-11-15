@@ -173,6 +173,7 @@ namespace Opm {
             {
                 OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
             }
+            convergence_reports_.reserve(300); // Often insufficient, but avoids frequent moves.
         }
 
         bool isParallel() const
@@ -242,6 +243,8 @@ namespace Opm {
                 residual_norms_history_.clear();
                 current_relaxation_ = 1.0;
                 dx_old_ = 0.0;
+                convergence_reports_.push_back({});
+                convergence_reports_.back().reserve(11);
             }
 
             report.total_linearizations = 1;
@@ -261,7 +264,11 @@ namespace Opm {
             perfTimer.reset();
             perfTimer.start();
             // the step is not considered converged until at least minIter iterations is done
-            report.converged = getConvergence(timer, iteration,residual_norms) && iteration > nonlinear_solver.minIter();
+            {
+                auto convrep = getConvergence(timer, iteration,residual_norms);
+                report.converged = convrep.converged()  && iteration > nonlinear_solver.minIter();;
+                convergence_reports_.back().push_back(std::move(convrep));
+            }
 
              // checking whether the group targets are converged
              if (wellModel().wellCollection().groupControlActive()) {
@@ -900,9 +907,9 @@ namespace Opm {
         /// \param[in]   timer       simulation timer
         /// \param[in]   iteration   current iteration number
         /// \param[out]  residual_norms   CNV residuals by phase
-        bool getConvergence(const SimulatorTimerInterface& timer,
-                            const int iteration,
-                            std::vector<double>& residual_norms)
+        ConvergenceReport getConvergence(const SimulatorTimerInterface& timer,
+                                         const int iteration,
+                                         std::vector<double>& residual_norms)
         {
             // Get convergence reports for reservoir and wells.
             std::vector<Scalar> B_avg(numEq, 0.0);
@@ -917,7 +924,7 @@ namespace Opm {
                 OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
             }
 
-            return report.converged();
+            return report;
         }
 
 
@@ -991,6 +998,8 @@ namespace Opm {
 
         std::unique_ptr<Mat> matrix_for_preconditioner_;        
         std::vector<std::pair<int,std::vector<int>>> overlapRowAndColumns_;
+
+        std::vector<std::vector<ConvergenceReport>> convergence_reports_;
     public:
         /// return the StandardWells object
         BlackoilWellModel<TypeTag>&
