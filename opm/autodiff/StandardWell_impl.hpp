@@ -453,7 +453,7 @@ namespace Opm
         // TODO: it probably can be static member for StandardWell
         const double volume = 0.002831684659200; // 0.1 cu ft;
 
-        const bool allow_cf = crossFlowAllowed(ebosSimulator);
+        const bool allow_cf = getAllowCrossFlow();
 
         const EvalWell& bhp = getBhp();
 
@@ -741,45 +741,6 @@ namespace Opm
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
             invDuneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + numEq);
         }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    bool
-    StandardWell<TypeTag>::
-    crossFlowAllowed(const Simulator& ebosSimulator) const
-    {
-        if (getAllowCrossFlow()) {
-            return true;
-        }
-
-        // TODO: investigate the justification of the following situation
-
-        // check for special case where all perforations have cross flow
-        // then the wells must allow for cross flow
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
-            const int cell_idx = well_cells_[perf];
-            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-            const auto& fs = intQuants.fluidState();
-            const EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
-            const EvalWell& bhp = getBhp();
-
-            // Pressure drawdown (also used to determine direction of flow)
-            const EvalWell well_pressure = bhp + perf_pressure_diffs_[perf];
-            const EvalWell drawdown = pressure - well_pressure;
-
-            if (drawdown.value() < 0 && well_type_ == INJECTOR)  {
-                return false;
-            }
-
-            if (drawdown.value() > 0 && well_type_ == PRODUCER)  {
-                return false;
-            }
-        }
-        return true;
     }
 
 
@@ -1942,7 +1903,7 @@ namespace Opm
         const int np = number_of_phases_;
         well_flux.resize(np, 0.0);
 
-        const bool allow_cf = crossFlowAllowed(ebosSimulator);
+        const bool allow_cf = getAllowCrossFlow();
 
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
@@ -2337,7 +2298,7 @@ namespace Opm
                 return;
             }
             // compute the well water velocity with out shear effects.
-            const bool allow_cf = crossFlowAllowed(ebos_simulator);
+            const bool allow_cf = getAllowCrossFlow();
             const EvalWell& bhp = getBhp();
             std::vector<EvalWell> cq_s(num_components_,0.0);
             double perf_dis_gas_rate = 0.;

@@ -264,8 +264,6 @@ namespace Opm
 
         EvalWell extendEval(const Eval& in) const;
 
-        bool crossFlowAllowed(const Simulator& ebosSimulator) const;
-
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 

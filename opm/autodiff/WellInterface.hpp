@@ -429,8 +429,6 @@ namespace Opm
 
 }
 
-}
-
 #include "WellInterface_impl.hpp"
 
 #endif // OPM_WELLINTERFACE_HEADER_INCLUDED
