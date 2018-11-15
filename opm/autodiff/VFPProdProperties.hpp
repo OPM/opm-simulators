@@ -184,6 +184,16 @@ public:
                                const double alq,
                                const double dp) const;
 
+    void operabilityCheckingUnderTHP(const std::vector<double>& ipr_a,
+                                     const std::vector<double>& ipr_b,
+                                     const double bhp_limit,
+                                     const double thp_table_id,
+                                     const double thp_limit,
+                                     const double alq,
+                                     const double dp,
+                                     bool& obtain_solution_with_thp_limit,
+                                     bool& voilate_bhp_limit_with_thp_limit) const;
+
 protected:
     // calculate a group bhp values with a group of flo rate values
     std::vector<double> bhpwithflo(const std::vector<double>& flos,

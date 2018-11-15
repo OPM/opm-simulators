@@ -253,4 +253,35 @@ calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
 
 
 
+
+void VFPProdProperties::
+operabilityCheckingUnderTHP(const std::vector<double>& ipr_a,
+                            const std::vector<double>& ipr_b,
+                            const double bhp_limit,
+                            const double thp_table_id,
+                            const double thp_limit,
+                            const double alq,
+                            const double dp,
+                            bool& obtain_solution_with_thp_limit,
+                            bool& violate_bhp_limit_with_thp_limit) const
+{
+    const double obtain_bhp = calculateBhpWithTHPTarget(ipr_a, ipr_b, bhp_limit, thp_table_id, thp_limit, alq, dp);
+
+    if (obtain_bhp > 0.) {
+        obtain_solution_with_thp_limit = true;
+
+        violate_bhp_limit_with_thp_limit = (obtain_bhp < bhp_limit);
+
+        if (obtain_bhp < thp_limit) {
+            std::cout << " obtain_bhp " << obtain_bhp / 1.e5 << " is SMALLER than thp limit " << thp_limit / 1.e5 << std::endl;
+        }
+
+    } else {
+        obtain_solution_with_thp_limit = false;
+        std::cout << " COULD NOT find an Intersection point, the well might need to be closed " << std::endl;
+        violate_bhp_limit_with_thp_limit = false;
+    }
+}
+
+
 }
