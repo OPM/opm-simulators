@@ -167,6 +167,12 @@ int main(int argc, char** argv)
         const auto& phases = runspec.phases();
 
         std::shared_ptr<Opm::EclipseState> eclipseState = std::make_shared< Opm::EclipseState > ( *deck, parseContext );
+
+        // run the actual simulator
+        //
+        // TODO: make sure that no illegal combinations like thermal and twophase are
+        //       requested.
+
         // Twophase cases
         if( phases.size() == 2 ) {
             // oil-gas
@@ -211,7 +217,7 @@ int main(int argc, char** argv)
             return Opm::flowEbosSolventMain(argc, argv);
         }
         // Energy case
-        else if ( phases.active( Opm::Phase::ENERGY ) ) {
+        else if (eclipseState->getSimulationConfig().isThermal()) {
             Opm::flowEbosEnergySetDeck(*deck, *eclipseState);
             return Opm::flowEbosEnergyMain(argc, argv);
         }
