@@ -438,7 +438,7 @@ namespace Opm
                    WellState& well_state)
     {
 
-        const Opm::SummaryConfig summaryConfig = ebosSimulator.vanguard().summaryConfig();
+        const Opm::SummaryConfig& summaryConfig = ebosSimulator.vanguard().summaryConfig();
 
         const int np = number_of_phases_;
 

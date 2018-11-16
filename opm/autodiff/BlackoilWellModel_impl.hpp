@@ -202,6 +202,8 @@ namespace Opm {
                                    schedule().getVFPInjTables(timeStepIdx),
                                    schedule().getVFPProdTables(timeStepIdx)) );
 
+
+
     }
 
 
@@ -889,7 +891,7 @@ namespace Opm {
         const int np = numPhases();
         well_potentials.resize(nw * np, 0.0);
 
-        const Opm::SummaryConfig summaryConfig = ebosSimulator_.vanguard().summaryConfig();
+        const Opm::SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
         for (const auto& well : well_container_) {
             // Only compute the well potential when asked for
             bool needed_for_output = ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
