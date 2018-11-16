@@ -18,20 +18,12 @@ TEST_ARGS="$@"
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-if test "${EXE_NAME}" = "flow"; then
-    ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --enable-opm-rst-file=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --output-dir=${RESULT_PATH}
-else
-    ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA enable-opm-rst-file=true linear_solver_reduction=1e-7 tolerance_cnv=5e-6 tolerance_mb=1e-8 output_dir=${RESULT_PATH}
-fi
+${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --enable-opm-rst-file=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --output-dir=${RESULT_PATH}
 
 test $? -eq 0 || exit 1
 mkdir mpi
 cd mpi
-if test "${EXE_NAME}" = "flow"; then
-    mpirun -np 4 ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --enable-opm-rst-file=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --output-dir=${RESULT_PATH}/mpi
-else
-    mpirun -np 4 ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA enable-opm-rst-file=true linear_solver_reduction=1e-7 tolerance_cnv=5e-6 tolerance_mb=1e-8 output_dir=${RESULT_PATH}/mpi
-fi
+mpirun -np 4 ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --enable-opm-rst-file=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --output-dir=${RESULT_PATH}/mpi
 test $? -eq 0 || exit 1
 cd ..
 
