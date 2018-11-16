@@ -142,6 +142,10 @@ namespace Opm
             }
 
             current_controls_.resize(nw);
+            // The controls set in the Wells (specified in the DECK) are treated as default initial value
+            for (int w = 0; w < nw; ++w) {
+                current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
+            }
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
             productivity_index_.resize(nw * np, 0.0);
@@ -172,8 +176,6 @@ namespace Opm
                             current_controls_[ newIndex ] = prevState->currentControls()[ oldIndex ];
                             // also change the one in the WellControls
                             well_controls_set_current(wells->ctrls[w], current_controls_[ newIndex ]);
-                        } else {
-                            current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
                         }
 
                         // wellrates
