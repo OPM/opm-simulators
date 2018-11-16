@@ -1253,7 +1253,7 @@ namespace Opm
 
             // calculating the b for the connection
             std::vector<double> b_perf(num_components_);
-            for (int phase = 0; phase < FluidSystem::numPhases; ++phase) {
+            for (size_t phase = 0; phase < FluidSystem::numPhases; ++phase) {
                 if (!FluidSystem::phaseIsActive(phase)) {
                     continue;
                 }
@@ -1363,7 +1363,7 @@ namespace Opm
         // TODO: double checke the obtained rates
         // this is another places we might obtain negative rates
 
-        for (size_t p = 0; p < number_of_phases_; ++p) {
+        for (int p = 0; p < number_of_phases_; ++p) {
             well_state.wellRates()[number_of_phases_ * index_of_well_ + p] = rates[p];
         }
 
