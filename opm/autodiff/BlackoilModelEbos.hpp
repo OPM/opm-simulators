@@ -109,6 +109,7 @@ namespace Opm {
         typedef typename GET_PROP_TYPE(TypeTag, Simulator)         Simulator;
         typedef typename GET_PROP_TYPE(TypeTag, Grid)              Grid;
         typedef typename GET_PROP_TYPE(TypeTag, ElementContext)    ElementContext;
+        typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
         typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
         typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)  PrimaryVariables ;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)       FluidSystem;
@@ -126,8 +127,8 @@ namespace Opm {
         static const int temperatureIdx = Indices::temperatureIdx;
 
         typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
-        typedef Dune::FieldMatrix<Scalar, numEq, numEq >        MatrixBlockType;
-        typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
+        typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
+        typedef typename SparseMatrixAdapter::IstlMatrix Mat;
         typedef Dune::BlockVector<VectorBlockType>      BVector;
 
         typedef ISTLSolverEbos<TypeTag> ISTLSolverType;
@@ -358,13 +359,13 @@ namespace Opm {
             ebosSimulator_.model().linearizer().linearize();
             ebosSimulator_.problem().endIteration();
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
             if (param_.matrix_add_well_contributions_) {
-                wellModel().addWellContributions(ebosJac);
+                wellModel().addWellContributions(ebosJac.istlMatrix());
             }
             if ( param_.preconditioner_add_well_contributions_ &&
                                   ! param_.matrix_add_well_contributions_ ) {
-                matrix_for_preconditioner_ .reset(new Mat(ebosJac));
+                matrix_for_preconditioner_ .reset(new Mat(ebosJac.istlMatrix()));
                 wellModel().addWellContributions(*matrix_for_preconditioner_);
             }
 
@@ -494,7 +495,7 @@ namespace Opm {
             // r = [r, r_well], where r is the residual and r_well the well residual.
             // r -= B^T * D^-1 r_well
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
             wellModel().apply(ebosResid);
@@ -502,13 +503,13 @@ namespace Opm {
             // set initial guess
             x = 0.0;
 
-            const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac;
+            const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac.istlMatrix();
             // Solve system.
             if( isParallel() )
             {	      
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
 
-                auto ebosJacIgnoreOverlap = Mat(ebosJac);
+                auto ebosJacIgnoreOverlap = Mat(ebosJac.istlMatrix());
                 //remove ghost rows in local matrix
                 makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
 
@@ -522,7 +523,7 @@ namespace Opm {
             else
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
-                Operator opA(ebosJac, actual_mat_for_prec, wellModel());
+                Operator opA(ebosJac.istlMatrix(), actual_mat_for_prec, wellModel());
                 istlSolver().solve( opA, x, ebosResid );
             }
         }

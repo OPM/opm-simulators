@@ -42,8 +42,6 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
-#include <opm/autodiff/WellHelpers.hpp>
-#include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>
@@ -86,7 +84,7 @@ namespace Opm {
             typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
             typedef typename GET_PROP_TYPE(TypeTag, RateVector)          RateVector;
             typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector)      GlobalEqVector;
-            typedef typename GET_PROP_TYPE(TypeTag, JacobianMatrix)      JacobianMatrix;
+            typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
 
             typedef typename Ewoms::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
@@ -105,7 +103,7 @@ namespace Opm {
 #else
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
 #endif
-            typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
+            typedef typename SparseMatrixAdapter::IstlMatrix Mat;
 
             typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
@@ -129,7 +127,7 @@ namespace Opm {
             void applyInitial()
             {}
 
-            void linearize(JacobianMatrix& mat , GlobalEqVector& res);
+            void linearize(SparseMatrixAdapter& mat , GlobalEqVector& res);
 
             void postSolve(GlobalEqVector& deltaX)
             {

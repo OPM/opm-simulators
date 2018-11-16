@@ -364,18 +364,48 @@ namespace Opm
 
 
 
+
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
     wellHasTHPConstraints() const
     {
+        return getTHPControlIndex() >= 0;
+    }
+
+
+
+
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::
+    getTHPConstraint() const
+    {
+        const int thp_control_index = getTHPControlIndex();
+
+        if (thp_control_index < 0) {
+            OPM_THROW(std::runtime_error, " there is no THP constraint/limit for well " << name()
+                                          << ", while we are requesting it ");
+        }
+
+        return well_controls_iget_target(well_controls_, thp_control_index);
+    }
+
+
+
+
+    template<typename TypeTag>
+    int
+    WellInterface<TypeTag>::
+    getTHPControlIndex() const
+    {
         const int nwc = well_controls_get_num(well_controls_);
         for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
             if (well_controls_iget_type(well_controls_, ctrl_index) == THP) {
-                return true;
+                return ctrl_index;
             }
         }
-        return false;
+        return -1;
     }
 
 
@@ -385,8 +415,9 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateWellControl(WellState& well_state,
-                      wellhelpers::WellSwitchingLogger& logger) const
+    updateWellControl(/* const */ Simulator& ebos_simulator,
+                      WellState& well_state,
+                      wellhelpers::WellSwitchingLogger& logger) /* const */
     {
         const int np = number_of_phases_;
         const int w = index_of_well_;
@@ -437,9 +468,34 @@ namespace Opm
         }
 
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
-            updateWellStateWithTarget(well_state);
+            updateWellStateWithTarget(ebos_simulator, well_state);
             updatePrimaryVariables(well_state);
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    underPredictionMode() const
+    {
+        bool under_prediction_mode = false;
+
+        switch( well_type_ ) {
+        case PRODUCER:
+            under_prediction_mode = well_ecl_->getProductionProperties(current_step_).predictionMode;
+            break;
+        case INJECTOR:
+            under_prediction_mode = well_ecl_->getInjectionProperties(current_step_).predictionMode;
+            break;
+        default:
+            OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name());
+        }
+
+        return under_prediction_mode;
     }
 
 
@@ -979,6 +1035,48 @@ namespace Opm
 
 
 
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::isVFPActive() const
+    {
+        // since the well_controls only handles the VFP number when THP constraint/target is there.
+        // we need to get the table number through the parser, in case THP constraint/target is not there.
+        // When THP control/limit is not active, if available VFP table is provided, we will still need to
+        // update THP value. However, it will only used for output purpose.
+
+        if (well_type_ == PRODUCER) { // producer
+            const int table_id = well_ecl_->getProductionProperties(current_step_).VFPTableNumber;
+            if (table_id <= 0) {
+                return false;
+            } else {
+                if (vfp_properties_->getProd()->hasTable(table_id)) {
+                    return true;
+                } else {
+                    OPM_THROW(std::runtime_error, "VFPPROD table " << std::to_string(table_id) << " is specfied,"
+                              << " for well " << name() << ", while we could not access it during simulation");
+                }
+            }
+
+        } else { // injector
+            const int table_id = well_ecl_->getInjectionProperties(current_step_).VFPTableNumber;
+            if (table_id <= 0) {
+                return false;
+            } else {
+                if (vfp_properties_->getInj()->hasTable(table_id)) {
+                    return true;
+                } else {
+                    OPM_THROW(std::runtime_error, "VFPINJ table " << std::to_string(table_id) << " is specfied,"
+                              << " for well " << name() << ", while we could not access it during simulation");
+                }
+            }
+        }
+    }
+
+
+
+
+
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::calculateReservoirRates(WellState& well_state) const
@@ -1036,7 +1134,7 @@ namespace Opm
             solveEqAndUpdateWellState(well_state);
 
             wellhelpers::WellSwitchingLogger logger;
-            updateWellControl(well_state, logger);
+            updateWellControl(ebosSimulator, well_state, logger);
             initPrimaryVariablesEvaluation();
         } while (it < max_iter);
 

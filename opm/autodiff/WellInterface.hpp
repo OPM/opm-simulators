@@ -80,6 +80,7 @@ namespace Opm
         typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
         typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
+        typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
         typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
 
         static const int numEq = Indices::numEq;
@@ -87,7 +88,7 @@ namespace Opm
 
         typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
         typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
-        typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
+        typedef typename SparseMatrixAdapter::IstlMatrix Mat;
         typedef Dune::BlockVector<VectorBlockType> BVector;
         typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
@@ -171,10 +172,12 @@ namespace Opm
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials) = 0;
 
-        virtual void updateWellStateWithTarget(WellState& well_state) const = 0;
+        virtual void updateWellStateWithTarget(/* const */ Simulator& ebos_simulator,
+                                               WellState& well_state) /* const */ = 0;
 
-        void updateWellControl(WellState& well_state,
-                               wellhelpers::WellSwitchingLogger& logger) const;
+        void updateWellControl(/* const */ Simulator& ebos_simulator,
+                               WellState& well_state,
+                               wellhelpers::WellSwitchingLogger& logger) /* const */;
 
         virtual void updatePrimaryVariables(const WellState& well_state) const = 0;
 
@@ -311,7 +314,13 @@ namespace Opm
         bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                                  const WellState& well_state) const;
 
+        bool underPredictionMode() const;
+
         bool wellHasTHPConstraints() const;
+
+        double getTHPConstraint() const;
+
+        int getTHPControlIndex() const;
 
         // Component fractions for each phase for the well
         const std::vector<double>& compFrac() const;
@@ -333,6 +342,9 @@ namespace Opm
                                              const WellState& well_state) const;
 
         double scalingFactor(const int comp_idx) const;
+
+        // whether a well is specified with a non-zero and valid VFP table number
+        bool isVFPActive() const;
 
         void wellTestingEconomic(Simulator& simulator, const std::vector<double>& B_avg,
                                  const double simulation_time, const int report_step, const bool terminal_output,

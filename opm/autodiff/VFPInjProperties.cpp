@@ -91,9 +91,12 @@ double VFPInjProperties::thp(int table_id,
     return retval;
 }
 
-
 const VFPInjTable* VFPInjProperties::getTable(const int table_id) const {
     return detail::getTable(m_tables, table_id);
+}
+
+bool VFPInjProperties::hasTable(const int table_id) const {
+    return detail::hasTable(m_tables, table_id);
 }
 
 } //Namespace Opm

@@ -365,7 +365,7 @@ spdiag(const AutoDiffBlock<double>::V& d)
     public:
         typedef AutoDiffBlock<Scalar> ADB;
 
-        enum CriterionForLeftElement { GreaterEqualZero, GreaterZero, Zero, NotEqualZero, LessZero, LessEqualZero, NotNaN };
+        enum CriterionForLeftElement { GreaterEqualZero, GreaterZero, Zero, NotEqualZero, LessZero, LessEqualZero, NotNaN, NotNaNInf };
 
         Selector(const typename ADB::V& selection_basis,
                  CriterionForLeftElement crit = GreaterEqualZero)
@@ -399,6 +399,9 @@ spdiag(const AutoDiffBlock<double>::V& d)
                     break;
                 case NotNaN:
                     chooseleft = !isnan(selection_basis[i]);
+                    break;
+                case NotNaNInf:
+                    chooseleft = !isnan(selection_basis[i]) && !std::isinf(selection_basis[i]);
                     break;
                 default:
                     OPM_THROW(std::logic_error, "No such criterion: " << crit);
