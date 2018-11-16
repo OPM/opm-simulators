@@ -91,6 +91,7 @@ class EclOutputBlackOilModule
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
+    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
 
     typedef std::vector<Scalar> ScalarBuffer;
 
@@ -732,7 +733,7 @@ public:
             sol.insert("PRESSURE", Opm::UnitSystem::measure::pressure, std::move(oilPressure_), Opm::data::TargetType::RESTART_SOLUTION);
         }
 
-        if (temperature_.size() > 0) {
+        if (enableEnergy) {
             sol.insert("TEMP", Opm::UnitSystem::measure::temperature, std::move(temperature_), Opm::data::TargetType::RESTART_SOLUTION);
         }
 
