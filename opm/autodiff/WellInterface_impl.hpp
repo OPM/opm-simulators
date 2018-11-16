@@ -457,8 +457,24 @@ namespace Opm
             if (wellhelpers::constraintBroken(
                     well_state.bhp(), well_state.thp(), well_state.wellRates(),
                     w, np, well_type_, wc, ctrl_index)) {
-                // ctrl_index will be the index of the broken constraint after the loop.
-                break;
+
+                // if the well can not work under THP / BHP control, we should not switch to THP / BHP control
+                // TODO: does this mean the well is not operable anymore, while it is within the non-linear iteration?
+                if ( !( well_controls_iget_type(wc, ctrl_index) == BHP && !operability_status_.isOperableUnderBHPLimit() ) &&
+                     !( well_controls_iget_type(wc, ctrl_index) == THP && !operability_status_.isOperableUnderTHPLimit() ) ) {
+
+                    // ctrl_index will be the index of the broken constraint after the loop.
+                    break;
+                } else {
+                    // before we figure out to handle it, we give some debug information here
+                    if ( well_controls_iget_type(wc, ctrl_index) == BHP && !operability_status_.isOperableUnderBHPLimit() ) {
+                        OpmLog::debug("well " + name() + " breaks the BHP limit, while it is not operable under BHP limit");
+                    }
+
+                    if ( well_controls_iget_type(wc, ctrl_index) == THP && !operability_status_.isOperableUnderTHPLimit() ) {
+                        OpmLog::debug("well " + name() + " breaks the THP limit, while it is not operable under THP limit");
+                    }
+                }
             }
         }
 
