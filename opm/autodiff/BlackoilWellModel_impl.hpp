@@ -1367,7 +1367,13 @@ namespace Opm {
              elemIt != elemEndIt;
              ++elemIt)
         {
+
             elemCtx.updatePrimaryStencil(*elemIt);
+            int elemIdx = elemCtx.globalSpaceIndex(0, 0);
+
+            if (!is_cell_perforated_[elemIdx]) {
+                continue;
+            }
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         }
     }
