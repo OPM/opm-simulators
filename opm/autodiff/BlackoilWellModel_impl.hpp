@@ -803,7 +803,9 @@ namespace Opm {
         // Get global (from all processes) convergence report.
         ConvergenceReport local_report;
         for (const auto& well : well_container_) {
-            local_report += well->getWellConvergence(B_avg);
+            if (well->isOperable() ) {
+                local_report += well->getWellConvergence(B_avg);
+            }
         }
         ConvergenceReport report = gatherConvergenceReport(local_report);
 
@@ -828,9 +830,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     calculateExplicitQuantities() const
     {
-         for (auto& well : well_container_) {
-             well->calculateExplicitQuantities(ebosSimulator_, well_state_);
-         }
+        // TODO: checking isOperable() ?
+        for (auto& well : well_container_) {
+            well->calculateExplicitQuantities(ebosSimulator_, well_state_);
+        }
     }
 
 
@@ -934,6 +937,10 @@ namespace Opm {
         // process group control related
         prepareGroupControl();
 
+        for (const auto& well : well_container_) {
+            well->checkWellOperatability(ebosSimulator_);
+        }
+
         // since the controls are all updated, we should update well_state accordingly
         for (const auto& well : well_container_) {
             const int w = well->indexOfWell();
@@ -941,16 +948,22 @@ namespace Opm {
             const int control = well_controls_get_current(wc);
             well_state_.currentControls()[w] = control;
 
+            if (!well->isOperable() ) continue;
+
             if (well_state_.effectiveEventsOccurred(w) ) {
                 well->updateWellStateWithTarget(ebosSimulator_, well_state_);
             }
 
             // there is no new well control change input within a report step,
             // so next time step, the well does not consider to have effective events anymore
+            // TODO: if we can know whether this is the first time step within the report step,
+            // we do not need to change this
+            // TODO: we should do this at the end of the time step in case we will need it within
+            // this time step somewhere
             if (well_state_.effectiveEventsOccurred(w) ) {
                 well_state_.setEffectiveEventsOccurred(w, false);
             }
-        }  // end of for (int w = 0; w < nw; ++w)
+        }  // end of for (const auto& well : well_container_)
 
         updatePrimaryVariables();
     }

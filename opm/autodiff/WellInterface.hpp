@@ -225,6 +225,9 @@ namespace Opm
 
         virtual void checkWellOperatability(const Simulator& ebos_simulator) = 0;
 
+        // whether the well is operable
+        bool isOperable() const;
+
     protected:
 
         // to indicate a invalid completion
@@ -400,7 +403,7 @@ namespace Opm
             violate_thp_limit_under_bhp_limit = false;
             obtain_solution_with_thp_limit = true;
             violate_bhp_limit_with_thp_limit = false;
-            // TODO: the following one might need to be different
+            // TODO: the following one might need to be treated differently
             negative_well_rates = false;
         }
 
@@ -425,7 +428,7 @@ namespace Opm
 
         // could not get converged, maybe at the end of the time step, after chopping for some steps.
         // TODO: the best way is that this well can not get converged during local iterations.
-        bool could_not_get_converged = false;
+        // bool could_not_get_converged = false;
     };
 
 }

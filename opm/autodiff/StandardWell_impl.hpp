@@ -440,9 +440,9 @@ namespace Opm
                    WellState& well_state)
     {
 
-        const Opm::SummaryConfig& summaryConfig = ebosSimulator.vanguard().summaryConfig();
+        checkWellOperatability(ebosSimulator);
 
-        const int np = number_of_phases_;
+        if (!this->isOperable()) return;
 
         // clear all entries
         duneB_ = 0.0;
@@ -461,6 +461,7 @@ namespace Opm
         well_state.wellVaporizedOilRates()[index_of_well_] = 0.;
         well_state.wellDissolvedGasRates()[index_of_well_] = 0.;
 
+        const int np = number_of_phases_;
         for (int p = 0; p < np; ++p) {
             well_state.productivityIndex()[np*index_of_well_ + p] = 0.;
         }
@@ -588,7 +589,8 @@ namespace Opm
             well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[index_of_well_] + perf_pressure_diffs_[perf];
 
             // Compute Productivity index if asked for
-             const auto& pu = phaseUsage();
+            const auto& pu = phaseUsage();
+            const Opm::SummaryConfig& summaryConfig = ebosSimulator.vanguard().summaryConfig();
             for (int p = 0; p < np; ++p) {
                 if ( (pu.phase_pos[Water] == p && (summaryConfig.hasSummaryKey("WPIW:" + name()) || summaryConfig.hasSummaryKey("WPIL:" + name())))
                         || (pu.phase_pos[Oil] == p && (summaryConfig.hasSummaryKey("WPIO:" + name()) || summaryConfig.hasSummaryKey("WPIL:" + name())))
@@ -821,6 +823,8 @@ namespace Opm
     updateWellState(const BVectorWell& dwells,
                     WellState& well_state) const
     {
+        if (!this->isOperable()) return;
+
         updatePrimaryVariablesNewton(dwells, well_state);
 
         updateWellStateFromPrimaryVariables(well_state);
@@ -1287,7 +1291,7 @@ namespace Opm
         // wellTestingPhysical can share some code with this function
         // on solution is that this function will be called updateWellOperatability
         // and the actual checking part become another function checkWellOperatability
-        // Let us finish the wellTestingPhysical first.
+        // Let us wait until finishing the wellTestingPhysical first.
 
         // focusing on PRODUCER for now
         if (well_type_ == INJECTOR) {
@@ -1318,6 +1322,12 @@ namespace Opm
         this->operability_status_.negative_well_rates = allDrawDownWrongDirection(ebos_simulator);
 
         const bool well_operable = this->operability_status_.isOperable();
+
+        if (!well_operable && old_well_operable) {
+            OpmLog::info(" well " + name() + " gets SHUT during iteration ");
+        } else if (well_operable && !old_well_operable) {
+            OpmLog::info(" well " + name() + " gets REVIVED during iteration ");
+        }
     }
 
 
@@ -1943,6 +1953,8 @@ namespace Opm
     StandardWell<TypeTag>::
     solveEqAndUpdateWellState(WellState& well_state)
     {
+        if (!this->isOperable()) return;
+
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         BVectorWell dx_well(1);
@@ -1988,6 +2000,8 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
+        if (!this->isOperable()) return;
+
         if ( param_.matrix_add_well_contributions_ )
         {
             // Contributions are already in the matrix itself
@@ -2016,6 +2030,8 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(BVector& r) const
     {
+        if (!this->isOperable()) return;
+
         assert( invDrw_.size() == invDuneD_.N() );
 
         // invDrw_ = invDuneD_ * resWell_
@@ -2033,6 +2049,8 @@ namespace Opm
     StandardWell<TypeTag>::
     recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     {
+        if (!this->isOperable()) return;
+
         BVectorWell resWell = resWell_;
         // resWell = resWell - B * x
         duneB_.mmv(x, resWell);
@@ -2050,6 +2068,8 @@ namespace Opm
     recoverWellSolutionAndUpdateWellState(const BVector& x,
                                           WellState& well_state) const
     {
+        if (!this->isOperable()) return;
+
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);
         updateWellState(xw, well_state);
@@ -2254,6 +2274,8 @@ namespace Opm
     StandardWell<TypeTag>::
     updatePrimaryVariables(const WellState& well_state) const
     {
+        if (!this->isOperable()) return;
+
         const int well_index = index_of_well_;
         const int np = number_of_phases_;
 

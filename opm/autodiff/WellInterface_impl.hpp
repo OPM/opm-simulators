@@ -1223,4 +1223,15 @@ namespace Opm
     }
 
 
+
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    isOperable() const {
+        return operability_status_.isOperable();
+    }
+
+
 }
