@@ -735,10 +735,43 @@ namespace Opm
             return;
         }
 
+        // if we understand correctly, only under prediction mode, we need to do well testing
+        // TODO: which remains to be corrected
+        if (!underPredictionMode() ) {
+            return;
+        }
+
+        // updating well test state based on physical (THP/BHP) limits.
+        updateWellTestStatePhysical(well_state, simulationTime, writeMessageToOPMLog, wellTestState);
+
         // updating well test state based on Economic limits.
         updateWellTestStateEconomic(well_state, simulationTime, writeMessageToOPMLog, wellTestState);
 
         // TODO: well can be shut/closed due to other reasons
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updateWellTestStatePhysical(const WellState& well_state,
+                                const double simulation_time,
+                                const bool write_message_to_opmlog,
+                                WellTestState& well_test_state) const
+    {
+        if (!isOperable()) {
+            well_test_state.addClosedWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
+            if (write_message_to_opmlog) {
+                // TODO: considering auto shut in?
+                const std::string msg = "well " + name()
+                             + std::string(" will be shut as it can not operate under current reservoir condition");
+                OpmLog::info(msg);
+            }
+        }
+
     }
 
 

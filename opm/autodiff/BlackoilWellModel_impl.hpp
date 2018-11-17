@@ -434,16 +434,24 @@ namespace Opm {
 		    if( well_ecl->getAutomaticShutIn() ) {
                         // shut wells are not added to the well container 
                         well_state_.bhp()[w] = 0;
+
+                // TODO: should we do this for all kinds of closing reasons?
+                // something like wellTestState_.hasWell(well_name)?
+                if ( wellTestState_.hasWell(well_name, WellTestConfig::Reason::ECONOMIC) ||
+                     wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL) ) {
+                    if( well_ecl->getAutomaticShutIn() ) {
+                        // shut wells are not added to the well container
+                        well_state_.thp()[w] = 0.;
+                        well_state_.bhp()[w] = 0.;
                         const int np = numPhases();
                         for (int p = 0; p < np; ++p) {
-                            well_state_.wellRates()[np * w + p] = 0;
-			}
-			continue;
-                    }
-		    else {
-		        // close wells are added to the container but marked as closed
-		        struct WellControls* well_controls = wells()->ctrls[w];
-		        well_controls_stop_well(well_controls);
+                            well_state_.wellRates()[np * w + p] = 0.;
+                        }
+                        continue;
+                    } else {
+                        // close wells are added to the container but marked as closed
+                        struct WellControls* well_controls = wells()->ctrls[w];
+                        well_controls_stop_well(well_controls);
                     }
                 }
 
