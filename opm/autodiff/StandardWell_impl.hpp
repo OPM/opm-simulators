@@ -440,7 +440,7 @@ namespace Opm
                    WellState& well_state)
     {
 
-        checkWellOperatability(ebosSimulator);
+        checkWellOperability(ebosSimulator);
 
         if (!this->isOperable()) return;
 
@@ -453,7 +453,11 @@ namespace Opm
         // TODO: it probably can be static member for StandardWell
         const double volume = 0.002831684659200; // 0.1 cu ft;
 
-        const bool allow_cf = getAllowCrossFlow();
+        // to avoid singularity of the well equation when all the drawdown is in the wrong direction
+        // TODO: make it a function, and avoid repeated calculation
+        // TODO: it can be avoided through adjusting the bhp of the well
+        const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
+
 
         const EvalWell& bhp = getBhp();
 
@@ -1293,12 +1297,12 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    checkWellOperatability(const Simulator& ebos_simulator)
+    checkWellOperability(const Simulator& ebos_simulator)
     {
         // TODO: this function is probably can split another function out so that
         // wellTestingPhysical can share some code with this function
-        // on solution is that this function will be called updateWellOperatability
-        // and the actual checking part become another function checkWellOperatability
+        // on solution is that this function will be called updateWellOperability
+        // and the actual checking part become another function checkWellOperability
         // Let us wait until finishing the wellTestingPhysical first.
 
         // focusing on PRODUCER for now
@@ -1428,13 +1432,13 @@ namespace Opm
     template<typename TypeTag>
     bool
     StandardWell<TypeTag>::
-    allDrawDownWrongDirection(const Simulator& ebosSimulator) const
+    allDrawDownWrongDirection(const Simulator& ebos_simulator) const
     {
         bool all_drawdown_wrong_direction = true;
 
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
-            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+            const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
 
             const double pressure = (fs.pressure(FluidSystem::oilPhaseIdx)).value();
@@ -1455,6 +1459,18 @@ namespace Opm
         }
 
         return all_drawdown_wrong_direction;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    bool
+    StandardWell<TypeTag>::
+    openCrossFlowAvoidSingularity(const Simulator& ebos_simulator) const
+    {
+        return !getAllowCrossFlow() && allDrawDownWrongDirection(ebos_simulator);
     }
 
 
@@ -2494,7 +2510,8 @@ namespace Opm
                 return;
             }
             // compute the well water velocity with out shear effects.
-            const bool allow_cf = getAllowCrossFlow();
+            // TODO: do we need to turn on crossflow here?
+            const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebos_simulator);
             const EvalWell& bhp = getBhp();
             std::vector<EvalWell> cq_s(num_components_,0.0);
             double perf_dis_gas_rate = 0.;

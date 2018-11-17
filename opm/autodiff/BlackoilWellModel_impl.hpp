@@ -433,10 +433,9 @@ namespace Opm {
 
                 const Well* well_ecl = wells_ecl_[index_well];
 
-                // TODO: a new WCON keyword can re-open the well closed by physical reason
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
                 if ( wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL ) ) {
-                    // TODO: more checking here, to makre sure this standard more specific and complete
+                    // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     if (well_state_.effectiveEventsOccurred(w) ) {
                         wellTestState_.openWell(well_name);
@@ -449,6 +448,7 @@ namespace Opm {
                      wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL) ) {
                     if( well_ecl->getAutomaticShutIn() ) {
                         // shut wells are not added to the well container
+                        // TODO: make a function from well_state side to handle the following
                         well_state_.thp()[w] = 0.;
                         well_state_.bhp()[w] = 0.;
                         const int np = numPhases();
@@ -954,7 +954,7 @@ namespace Opm {
         prepareGroupControl();
 
         for (const auto& well : well_container_) {
-            well->checkWellOperatability(ebosSimulator_);
+            well->checkWellOperability(ebosSimulator_);
         }
 
         // since the controls are all updated, we should update well_state accordingly
@@ -973,7 +973,7 @@ namespace Opm {
             // there is no new well control change input within a report step,
             // so next time step, the well does not consider to have effective events anymore
             // TODO: if we can know whether this is the first time step within the report step,
-            // we do not need to change this
+            // we do not need to set it to false
             // TODO: we should do this at the end of the time step in case we will need it within
             // this time step somewhere
             if (well_state_.effectiveEventsOccurred(w) ) {

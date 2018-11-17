@@ -223,7 +223,7 @@ namespace Opm
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
-        virtual void checkWellOperatability(const Simulator& ebos_simulator) = 0;
+        virtual void checkWellOperability(const Simulator& ebos_simulator) = 0;
 
         // whether the well is operable
         bool isOperable() const;
