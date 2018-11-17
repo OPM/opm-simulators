@@ -396,6 +396,10 @@ namespace Opm {
         initial_step_ = false;
     }
 
+
+
+
+
     template<typename TypeTag>
     std::vector<typename BlackoilWellModel<TypeTag>::WellInterfacePtr >
     BlackoilWellModel<TypeTag>::
@@ -429,11 +433,15 @@ namespace Opm {
 
                 const Well* well_ecl = wells_ecl_[index_well];
 
-                // well is closed due to economical reasons
-                if (wellTestState_.hasWell(well_name, WellTestConfig::Reason::ECONOMIC)) { 
-		    if( well_ecl->getAutomaticShutIn() ) {
-                        // shut wells are not added to the well container 
-                        well_state_.bhp()[w] = 0;
+                // TODO: a new WCON keyword can re-open the well closed by physical reason
+                // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
+                if ( wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL ) ) {
+                    // TODO: more checking here, to makre sure this standard more specific and complete
+                    // maybe there is some WCON keywords will not open the well
+                    if (well_state_.effectiveEventsOccurred(w) ) {
+                        wellTestState_.openWell(well_name);
+                    }
+                }
 
                 // TODO: should we do this for all kinds of closing reasons?
                 // something like wellTestState_.hasWell(well_name)?
