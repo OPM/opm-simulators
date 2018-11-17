@@ -1109,13 +1109,21 @@ namespace Opm
             // TODO: we should address this in a function updateWellStateWithBHPTarget.
             // TODO: however, the reason that this one minght not be that critical with
             // TODO: the effects remaining to be investigated.
-
             break;
+
         case THP: {
-            // TODO: adding the checking for the operability
-            // TODO: should we do updateIPR before this or within the related functions
-            updateIPR(ebos_simulator);
-            updateWellStateWithTHPTargetIPR(ebos_simulator, well_state);
+            assert(this->isOperable() );
+
+            // when a well can not work under THP target, it change to work under BHP target
+            if (this->operability_status_.isOperableUnderTHPLimit() ) {
+                updateWellStateWithTHPTargetIPR(ebos_simulator, well_state);
+            } else { // go to BHP limit
+                assert(this->operability_status_.isOperableUnderBHPLimit() );
+
+                OpmLog::info("well " + name() + " can not work with THP target, switching to BHP control");
+
+                well_state.bhp()[well_index] = mostStrictBhpFromBhpLimits();
+            }
             break;
         }
 
