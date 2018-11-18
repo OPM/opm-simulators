@@ -353,10 +353,10 @@ namespace Opm
         virtual void checkWellOperability(const Simulator& ebos_simulator) override;
 
         // check whether the well is operable under BHP limit with current reservoir condition
-        void checkOperabilityUnderBHPLimit(const Simulator& ebos_simulator);
+        void checkOperabilityUnderBHPLimitProducer(const Simulator& ebos_simulator);
 
         // check whether the well is operable under THP limit with current reservoir condition
-        void checkOperabilityUnderTHPLimit(const Simulator& ebos_simulator);
+        void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator);
 
         // update WellState based on IPR and associated VFP table
         void updateWellStateWithTHPTargetIPR(const Simulator& ebos_simulator,

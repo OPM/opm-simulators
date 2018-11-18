@@ -453,11 +453,7 @@ namespace Opm
         // TODO: it probably can be static member for StandardWell
         const double volume = 0.002831684659200; // 0.1 cu ft;
 
-        // to avoid singularity of the well equation when all the drawdown is in the wrong direction
-        // TODO: make it a function, and avoid repeated calculation
-        // TODO: it can be avoided through adjusting the bhp of the well
         const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
-
 
         const EvalWell& bhp = getBhp();
 
@@ -1321,13 +1317,13 @@ namespace Opm
         updateIPR(ebos_simulator);
 
         // checking the BHP limit related
-        checkOperabilityUnderBHPLimit(ebos_simulator);
+        checkOperabilityUnderBHPLimitProducer(ebos_simulator);
 
         // TODO: if the BHP limit does not work anyway, we do not need to do the following
         // We do it now for studying purpose.
         // checking whether the well can operate under the THP constraints.
         if (this->wellHasTHPConstraints()) {
-            checkOperabilityUnderTHPLimit(ebos_simulator);
+            checkOperabilityUnderTHPLimitProducer(ebos_simulator);
         }
 
         // checking whether the well can not produce or something else
@@ -1349,13 +1345,13 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    checkOperabilityUnderBHPLimit(const Simulator& ebos_simulator)
+    checkOperabilityUnderBHPLimitProducer(const Simulator& ebos_simulator)
     {
         const double bhp_limit = mostStrictBhpFromBhpLimits();
         // TODO: a better way to detect whether the BHP is defaulted or not
         if ( bhp_limit > 1.5e5 || !this->wellHasTHPConstraints() ) {
-        // if ( !(bhp_limit < 1.5e5 && this->wellHasTHPConstraints()) ) {
-            // if there is a non-defaulted BHP limit or the well does not have a THP limit
+            // if the BHP limit is not defaulted or the well does not have a THP limit
+            // we need to check the BHP limit
 
             for (int p = 0; p < number_of_phases_; ++p) {
                 const double temp = ipr_a_[p] - ipr_b_[p] * bhp_limit;
@@ -1387,6 +1383,8 @@ namespace Opm
             // when applied the hydrostatic pressure correction,
             // most likely we get a negative bhp value to search in the VFP table,
             // which is not desirable
+            // we assume we can operate under thi BHP limit and will violate the THP limit
+            // when operating under this BHP limit
             this->operability_status_.operable_under_only_bhp_limit = true;
             this->operability_status_.violate_thp_limit_under_bhp_limit = true;
         }
@@ -1399,19 +1397,15 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    checkOperabilityUnderTHPLimit(const Simulator& ebos_simulator)
+    checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator)
     {
-        // We will use IPR to make the rates for now
         const double  bhp_limit = mostStrictBhpFromBhpLimits();
         const double thp_limit = this->getTHPConstraint();
         const double thp_control_index = this->getTHPControlIndex();
-        const  int thp_table_id = well_controls_iget_vfp(well_controls_, thp_control_index);
+        const  int table_id = well_controls_iget_vfp(well_controls_, thp_control_index);
         const double alq = well_controls_iget_alq(well_controls_, thp_control_index);
 
-        double vfp_ref_depth = 0.;
-
-        // not considering injectors for now
-        vfp_ref_depth = vfp_properties_->getProd()->getTable(thp_table_id)->getDatumDepth();
+        const double vfp_ref_depth = vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
 
         // the density of the top perforation
         const double rho = perf_densities_[0];
@@ -1419,7 +1413,7 @@ namespace Opm
         const double dp = (vfp_ref_depth - ref_depth_) * rho * gravity_;
 
         vfp_properties_->getProd()->operabilityCheckingUnderTHP(ipr_a_, ipr_b_, bhp_limit,
-                                           thp_table_id, thp_limit, alq, dp,
+                                           table_id, thp_limit, alq, dp,
                                            this->operability_status_.obtain_solution_with_thp_limit,
                                            this->operability_status_.violate_bhp_limit_with_thp_limit );
 
@@ -1450,7 +1444,7 @@ namespace Opm
 
             // for now, if there is one perforation can produce/inject in the correct
             // direction, we consider this well can still produce/inject.
-            // TODO: it can be more complicated than this
+            // TODO: it can be more complicated than this to cause worng-signed rates
             if ( (drawdown < 0. && well_type_ == INJECTOR) ||
                  (drawdown > 0. && well_type_ == PRODUCER) )  {
                 all_drawdown_wrong_direction = false;

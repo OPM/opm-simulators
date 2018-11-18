@@ -273,12 +273,15 @@ operabilityCheckingUnderTHP(const std::vector<double>& ipr_a,
         violate_bhp_limit_with_thp_limit = (obtain_bhp < bhp_limit);
 
         if (obtain_bhp < thp_limit) {
-            std::cout << " obtain_bhp " << obtain_bhp / 1.e5 << " is SMALLER than thp limit " << thp_limit / 1.e5 << std::endl;
+            const std::string msg = " obtained bhp " + std::to_string(obtain_bhp / 1.e5) +
+                                    " is SMALLER than thp limit " + std::to_string(thp_limit / 1.e5) + " as a producer ";
+            OpmLog::debug(msg);
         }
 
     } else {
         obtain_solution_with_thp_limit = false;
-        std::cout << " COULD NOT find an Intersection point, the well might need to be closed " << std::endl;
+        OpmLog::debug(" COULD NOT find bhp value under thp_limit " + std::to_string(thp_limit / 1.e5) +
+                      ", the well might need to be closed ");
         violate_bhp_limit_with_thp_limit = false;
     }
 }
