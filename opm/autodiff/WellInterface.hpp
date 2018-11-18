@@ -391,45 +391,46 @@ namespace Opm
             if (!operable_under_only_bhp_limit) {
                 return false;
             } else {
-                return !negative_well_rates && (isOperableUnderBHPLimit() || isOperableUnderTHPLimit());
+                return existing_drawdown_correct_direction &&
+                       (isOperableUnderBHPLimit() || isOperableUnderTHPLimit());
             }
         }
 
         bool isOperableUnderBHPLimit() const {
-            return operable_under_only_bhp_limit && !violate_thp_limit_under_bhp_limit;
+            return operable_under_only_bhp_limit && obey_thp_limit_under_bhp_limit;
         }
 
         bool isOperableUnderTHPLimit() const {
-            return obtain_solution_with_thp_limit && !violate_bhp_limit_with_thp_limit;
+            return obtain_solution_with_thp_limit && obey_bhp_limit_with_thp_limit;
         }
 
         void reset() {
             operable_under_only_bhp_limit = true;
-            violate_thp_limit_under_bhp_limit = false;
+            obey_thp_limit_under_bhp_limit = true;
             obtain_solution_with_thp_limit = true;
-            violate_bhp_limit_with_thp_limit = false;
+            obey_bhp_limit_with_thp_limit = true;
             // TODO: the following one might need to be treated differently
-            negative_well_rates = false;
+            existing_drawdown_correct_direction = true;
         }
-
-        // TODO: re-design the boolean variables so that they have meaning in the same directions.
-        // For example, true are all for positive situation, and false are all for negative circumstances.
 
         // whether the well can be operated under bhp limit
         // without considering other limits.
         // if it is false, then the well is not operable for sure.
         bool operable_under_only_bhp_limit = true;
-        // if the well can be operated under bhp limit, will it violate
+        // if the well can be operated under bhp limit, will it obey(not violate)
         // the thp limit when operated under bhp limit
-        bool violate_thp_limit_under_bhp_limit = false;
+        bool obey_thp_limit_under_bhp_limit = true;
         // whether the well operate under the thp limit only
         bool obtain_solution_with_thp_limit = true;
-        // whether the well violate bhp limit when operated under thp limit
-        bool violate_bhp_limit_with_thp_limit = false;
+        // whether the well obey bhp limit when operated under thp limit
+        bool obey_bhp_limit_with_thp_limit = true;
 
-        // we get negatvie well rates
-        // currently, we are trying to address the one result from updateWellStateWithTHPTargetIPR
-        bool negative_well_rates = false;
+        // there is some drawdown with correct sign/direction
+        // if all the drawdown are with wrong sign/direction, it means producer can not produce
+        // and injector can not inject.
+        // TODO: even not all the drawdown are with wrong sign, it is still possible that
+        // producer can not produce and injector can not inject if the crossflow is allowed
+        bool existing_drawdown_correct_direction = true;
 
         // could not get converged, maybe at the end of the time step, after chopping for some steps.
         // TODO: the best way is that this well can not get converged during local iterations.

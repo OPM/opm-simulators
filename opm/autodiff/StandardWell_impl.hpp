@@ -1326,8 +1326,9 @@ namespace Opm
             checkOperabilityUnderTHPLimitProducer(ebos_simulator);
         }
 
-        // checking whether the well can not produce or something else
-        this->operability_status_.negative_well_rates = allDrawDownWrongDirection(ebos_simulator);
+        // checking whether the well can not produce/inject
+        this->operability_status_.existing_drawdown_correct_direction =
+                                                   ! allDrawDownWrongDirection(ebos_simulator);
 
         const bool well_operable = this->operability_status_.isOperable();
 
@@ -1365,7 +1366,7 @@ namespace Opm
             if (this->operability_status_.operable_under_only_bhp_limit && this->wellHasTHPConstraints()) {
                 // option 1: calculate well rates based on the BHP limit.
                 // option 2: stick with the above IPR curve
-                // TODO: most likely, we can use IPR here
+                // we use IPR here
                 const double bhp_limit = mostStrictBhpFromBhpLimits();
                 std::vector<double> well_rates_bhp_limit;
                 computeWellRatesWithBhp(ebos_simulator, bhp_limit, well_rates_bhp_limit);
@@ -1373,8 +1374,8 @@ namespace Opm
                 const double thp = calculateThpFromBhp(well_rates_bhp_limit, bhp_limit);
                 const double thp_limit = this->getTHPConstraint();
 
-                if (thp < thp_limit || thp >  bhp_limit) {
-                    this->operability_status_.violate_thp_limit_under_bhp_limit = true;
+                if (thp < thp_limit) {
+                    this->operability_status_.obey_thp_limit_under_bhp_limit = false;
                 }
             }
         } else {
@@ -1386,7 +1387,7 @@ namespace Opm
             // we assume we can operate under thi BHP limit and will violate the THP limit
             // when operating under this BHP limit
             this->operability_status_.operable_under_only_bhp_limit = true;
-            this->operability_status_.violate_thp_limit_under_bhp_limit = true;
+            this->operability_status_.obey_thp_limit_under_bhp_limit = false;
         }
     }
 
@@ -1415,7 +1416,7 @@ namespace Opm
         vfp_properties_->getProd()->operabilityCheckingUnderTHP(ipr_a_, ipr_b_, bhp_limit,
                                            table_id, thp_limit, alq, dp,
                                            this->operability_status_.obtain_solution_with_thp_limit,
-                                           this->operability_status_.violate_bhp_limit_with_thp_limit );
+                                           this->operability_status_.obey_bhp_limit_with_thp_limit );
 
     }
 

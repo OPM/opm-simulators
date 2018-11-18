@@ -263,14 +263,14 @@ operabilityCheckingUnderTHP(const std::vector<double>& ipr_a,
                             const double alq,
                             const double dp,
                             bool& obtain_solution_with_thp_limit,
-                            bool& violate_bhp_limit_with_thp_limit) const
+                            bool& obey_bhp_limit_with_thp_limit) const
 {
     const double obtain_bhp = calculateBhpWithTHPTarget(ipr_a, ipr_b, bhp_limit, thp_table_id, thp_limit, alq, dp);
 
     if (obtain_bhp > 0.) {
         obtain_solution_with_thp_limit = true;
 
-        violate_bhp_limit_with_thp_limit = (obtain_bhp < bhp_limit);
+        obey_bhp_limit_with_thp_limit = (obtain_bhp >= bhp_limit);
 
         if (obtain_bhp < thp_limit) {
             const std::string msg = " obtained bhp " + std::to_string(obtain_bhp / 1.e5) +
@@ -282,7 +282,7 @@ operabilityCheckingUnderTHP(const std::vector<double>& ipr_a,
         obtain_solution_with_thp_limit = false;
         OpmLog::debug(" COULD NOT find bhp value under thp_limit " + std::to_string(thp_limit / 1.e5) +
                       ", the well might need to be closed ");
-        violate_bhp_limit_with_thp_limit = false;
+        obey_bhp_limit_with_thp_limit = true;
     }
 }
 
