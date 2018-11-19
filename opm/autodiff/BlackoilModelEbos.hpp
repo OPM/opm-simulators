@@ -816,16 +816,33 @@ namespace Opm {
                 residual_norms.push_back(CNV[compIdx]);
             }
 
+            // Setup component names, only the first time the function is run.
+            static std::vector<std::string> compNames;
+            if (compNames.empty()) {
+                compNames.resize(numComp);
+                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
+                    const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
+                    const unsigned compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
+                    compNames[compIdx] = FluidSystem::componentName(canonicalCompIdx);
+                }
+                if (has_solvent_) {
+                    compNames[solventSaturationIdx] = "Solvent";
+                }
+                if (has_polymer_) {
+                    compNames[polymerConcentrationIdx] = "Polymer";
+                }
+                if (has_energy_) {
+                    compNames[temperatureIdx] = "Energy";
+                }
+            }
+
             // Create convergence report.
             ConvergenceReport report;
             using CR = ConvergenceReport;
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-                const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-                const std::string& compName = FluidSystem::componentName(canonicalCompIdx);
-                const int compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
+            for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                 double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
                 CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
                                                         CR::ReservoirFailure::Type::Cnv };
@@ -833,13 +850,19 @@ namespace Opm {
                 for (int ii : {0, 1}) {
                     if (std::isnan(res[ii])) {
                         report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
-                        OpmLog::debug("NaN residual for " + compName + " equation.");
+                        if ( terminal_output_ ) {
+                            OpmLog::debug("NaN residual for " + compNames[compIdx] + " equation.");
+                        }
                     } else if (res[ii] > maxResidualAllowed()) {
                         report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
-                        OpmLog::debug("Too large residual for " + compName + " equation.");
+                        if ( terminal_output_ ) {
+                            OpmLog::debug("Too large residual for " + compNames[compIdx] + " equation.");
+                        }
                     } else if (res[ii] < 0.0) {
                         report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                        OpmLog::debug("Negative residual for " + compName + " equation.");
+                        if ( terminal_output_ ) {
+                            OpmLog::debug("Negative residual for " + compNames[compIdx] + " equation.");
+                        }
                     } else if (res[ii] > tol[ii]) {
                         report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                     }
@@ -852,35 +875,15 @@ namespace Opm {
                 // Only rank 0 does print to std::cout
                 if (iteration == 0) {
                     std::string msg = "Iter";
-
-                    std::vector< std::string > key( numEq );
-                    for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                        if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                            continue;
-                        }
-
-                        const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-                        const std::string& compName = FluidSystem::componentName(canonicalCompIdx);
-                        const unsigned compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
-                        key[ compIdx ] = std::toupper( compName.front() );
-                    }
-                    if (has_solvent_) {
-                        key[ solventSaturationIdx ] = "S";
-                    }
-
-                    if (has_polymer_) {
-                        key[ polymerConcentrationIdx ] = "P";
-                    }
-
-                    if (has_energy_) {
-                        key[ temperatureIdx ] = "E";
-                    }
-
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                        msg += "    MB(" + key[ compIdx ] + ")  ";
+                        msg += "    MB(";
+                        msg += compNames[compIdx][0];
+                        msg += ")  ";
                     }
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                        msg += "    CNV(" + key[ compIdx ] + ") ";
+                        msg += "    CNV(";
+                        msg += compNames[compIdx][0];
+                        msg += ") ";
                     }
                     OpmLog::debug(msg);
                 }
