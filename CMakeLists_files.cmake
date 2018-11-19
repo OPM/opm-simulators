@@ -123,6 +123,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/GraphColoring.hpp
   opm/autodiff/ISTLSolverEbos.hpp
   opm/autodiff/IterationReport.hpp
+  opm/autodiff/MatrixBlock.hpp
   opm/autodiff/moduleVersion.hpp
   opm/autodiff/NonlinearSolverEbos.hpp
   opm/autodiff/ParallelOverlappingILU0.hpp
