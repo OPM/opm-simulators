@@ -125,6 +125,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/IterationReport.hpp
   opm/autodiff/MatrixBlock.hpp
   opm/autodiff/moduleVersion.hpp
+  opm/autodiff/MPIUtilities.hpp
   opm/autodiff/NonlinearSolverEbos.hpp
   opm/autodiff/ParallelOverlappingILU0.hpp
   opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp
