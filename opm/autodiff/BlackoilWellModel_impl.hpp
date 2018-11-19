@@ -46,6 +46,8 @@ namespace Opm {
 
         // add the eWoms auxiliary module for the wells to the list
         ebosSimulator_.model().addAuxiliaryModule(this);
+
+        is_cell_perforated_.resize(number_of_cells_, false);
     }
 
     template<typename TypeTag>
@@ -228,6 +230,12 @@ namespace Opm {
             well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
         }
 
+        // update the updated cell flag
+        std::fill(is_cell_perforated_.begin(), is_cell_perforated_.end(), false);
+        for (auto& well : well_container_) {
+            well->updatePerforatedCell(is_cell_perforated_);
+        }
+
         // calculate the efficiency factors for each well
         calculateEfficiencyFactors();
 
@@ -342,6 +350,10 @@ namespace Opm {
     {
         rate = 0;
         int elemIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+
+        if (!is_cell_perforated_[elemIdx])
+            return;
+
         for (const auto& well : well_container_)
             well->addCellRates(rate, elemIdx);
     }
@@ -879,7 +891,7 @@ namespace Opm {
         const int np = numPhases();
         well_potentials.resize(nw * np, 0.0);
 
-        const Opm::SummaryConfig summaryConfig = ebosSimulator_.vanguard().summaryConfig();
+        const Opm::SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
         for (const auto& well : well_container_) {
             // Only compute the well potential when asked for
             bool needed_for_output = ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
@@ -1357,7 +1369,13 @@ namespace Opm {
              elemIt != elemEndIt;
              ++elemIt)
         {
+
             elemCtx.updatePrimaryStencil(*elemIt);
+            int elemIdx = elemCtx.globalSpaceIndex(0, 0);
+
+            if (!is_cell_perforated_[elemIdx]) {
+                continue;
+            }
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         }
     }

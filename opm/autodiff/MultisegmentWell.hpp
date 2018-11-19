@@ -33,7 +33,6 @@ namespace Opm
     {
     public:
         typedef WellInterface<TypeTag> Base;
-        typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
 
         using typename Base::WellState;
         using typename Base::Simulator;
@@ -152,17 +151,6 @@ namespace Opm
 
         int numberOfPerforations() const;
 
-        void addCellRates(RateVector& rates, int cellIdx) const override
-        {
-            for (int perfIdx = 0; perfIdx < number_of_perforations_; ++perfIdx) {
-                if (Base::cells()[perfIdx] == cellIdx) {
-                    for (int i = 0; i < RateVector::dimension; ++i) {
-                        rates[i] += connectionRates_[perfIdx][i];
-                    }
-                }
-            }
-        }
-
     protected:
         int number_segments_;
 
@@ -194,6 +182,7 @@ namespace Opm
         using Base::well_controls_;
         using Base::perf_depth_;
         using Base::num_components_;
+        using Base::connectionRates_;
 
         // protected functions from the Base class
         using Base::phaseUsage;
@@ -263,8 +252,6 @@ namespace Opm
         std::vector<EvalWell> segment_mass_rates_;
 
         std::vector<double> segment_depth_diffs_;
-
-        std::vector<RateVector> connectionRates_;
 
         void initMatrixAndVectors(const int num_cells) const;
 

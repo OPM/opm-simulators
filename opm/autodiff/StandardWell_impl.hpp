@@ -60,8 +60,6 @@ namespace Opm
     {
         Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells);
 
-        connectionRates_.resize(number_of_perforations_);
-
         perf_depth_.resize(number_of_perforations_, 0.);
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
@@ -442,7 +440,7 @@ namespace Opm
                    WellState& well_state)
     {
 
-        const Opm::SummaryConfig summaryConfig = ebosSimulator.vanguard().summaryConfig();
+        const Opm::SummaryConfig& summaryConfig = ebosSimulator.vanguard().summaryConfig();
 
         const int np = number_of_phases_;
 
