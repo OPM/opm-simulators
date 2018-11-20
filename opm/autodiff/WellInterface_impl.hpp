@@ -459,9 +459,10 @@ namespace Opm
                     w, np, well_type_, wc, ctrl_index)) {
 
                 // if the well can not work under THP / BHP control, we should not switch to THP / BHP control
-                // TODO: does this mean the well is not operable anymore, while it is within the non-linear iteration?
-                if ( !( well_controls_iget_type(wc, ctrl_index) == BHP && !operability_status_.isOperableUnderBHPLimit() ) &&
-                     !( well_controls_iget_type(wc, ctrl_index) == THP && !operability_status_.isOperableUnderTHPLimit() ) ) {
+                const bool cannot_switch_to_bhp = well_controls_iget_type(wc, ctrl_index) == BHP && !operability_status_.isOperableUnderBHPLimit();
+                const bool cannot_switch_to_thp = well_controls_iget_type(wc, ctrl_index) == THP && !operability_status_.isOperableUnderTHPLimit();
+                const bool cannot_switch = cannot_switch_to_bhp || cannot_switch_to_thp;
+                if ( !cannot_switch ) {
 
                     // ctrl_index will be the index of the broken constraint after the loop.
                     break;
@@ -735,8 +736,8 @@ namespace Opm
             return;
         }
 
-        // if we understand correctly, only under prediction mode, we need to do well testing
-        // TODO: which remains to be corrected
+        // Based on current understanding, only under prediction mode, we need to shut well due to various
+        // reasons or limits. With more knowlage or testing cases later, this might need to be corrected.
         if (!underPredictionMode() ) {
             return;
         }

@@ -229,10 +229,10 @@ calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
                                                                     detail::RateBhpPair{flo_bhp_limit, bhp_limit} };
 
     double obtain_bhp = 0.;
-    const bool obtain_solution_with_thp_limit = detail::findIntersectionForBhp(ratebhp_samples, ratebhp_twopoints_ipr, obtain_bhp);
+    const bool can_obtain_bhp_with_thp_limit = detail::findIntersectionForBhp(ratebhp_samples, ratebhp_twopoints_ipr, obtain_bhp);
 
-    // \Note: assuming not that negative BHP does not make sense
-    if (obtain_solution_with_thp_limit && obtain_bhp > 0.) {
+    // \Note: assuming that negative BHP does not make sense
+    if (can_obtain_bhp_with_thp_limit && obtain_bhp > 0.) {
         // getting too high bhp that might cause negative rates (rates in the undesired direction)
         if (obtain_bhp >= bhp_safe_limit) {
             const std::string msg (" We are getting a too high BHP value from the THP constraint, which may "
@@ -248,41 +248,6 @@ calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
     } else {
         OpmLog::warning("NO_BHP_FOUND_THP_TARGET", " we could not find a bhp value with thp target.");
         return -100.;
-    }
-}
-
-
-
-
-void VFPProdProperties::
-operabilityCheckingUnderTHP(const std::vector<double>& ipr_a,
-                            const std::vector<double>& ipr_b,
-                            const double bhp_limit,
-                            const double thp_table_id,
-                            const double thp_limit,
-                            const double alq,
-                            const double dp,
-                            bool& obtain_solution_with_thp_limit,
-                            bool& obey_bhp_limit_with_thp_limit) const
-{
-    const double obtain_bhp = calculateBhpWithTHPTarget(ipr_a, ipr_b, bhp_limit, thp_table_id, thp_limit, alq, dp);
-
-    if (obtain_bhp > 0.) {
-        obtain_solution_with_thp_limit = true;
-
-        obey_bhp_limit_with_thp_limit = (obtain_bhp >= bhp_limit);
-
-        if (obtain_bhp < thp_limit) {
-            const std::string msg = " obtained bhp " + std::to_string(obtain_bhp / 1.e5) +
-                                    " is SMALLER than thp limit " + std::to_string(thp_limit / 1.e5) + " as a producer ";
-            OpmLog::debug(msg);
-        }
-
-    } else {
-        obtain_solution_with_thp_limit = false;
-        OpmLog::debug(" COULD NOT find bhp value under thp_limit " + std::to_string(thp_limit / 1.e5) +
-                      ", the well might need to be closed ");
-        obey_bhp_limit_with_thp_limit = true;
     }
 }
 

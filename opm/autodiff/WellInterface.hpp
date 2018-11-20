@@ -401,13 +401,13 @@ namespace Opm
         }
 
         bool isOperableUnderTHPLimit() const {
-            return obtain_solution_with_thp_limit && obey_bhp_limit_with_thp_limit;
+            return can_obtain_bhp_with_thp_limit && obey_bhp_limit_with_thp_limit;
         }
 
         void reset() {
             operable_under_only_bhp_limit = true;
             obey_thp_limit_under_bhp_limit = true;
-            obtain_solution_with_thp_limit = true;
+            can_obtain_bhp_with_thp_limit = true;
             obey_bhp_limit_with_thp_limit = true;
             // TODO: the following one might need to be treated differently
             existing_drawdown_correct_direction = true;
@@ -421,20 +421,17 @@ namespace Opm
         // the thp limit when operated under bhp limit
         bool obey_thp_limit_under_bhp_limit = true;
         // whether the well operate under the thp limit only
-        bool obtain_solution_with_thp_limit = true;
+        bool can_obtain_bhp_with_thp_limit = true;
         // whether the well obey bhp limit when operated under thp limit
         bool obey_bhp_limit_with_thp_limit = true;
 
         // there is some drawdown with correct sign/direction
         // if all the drawdown are with wrong sign/direction, it means producer can not produce
         // and injector can not inject.
-        // TODO: even not all the drawdown are with wrong sign, it is still possible that
-        // producer can not produce and injector can not inject if the crossflow is allowed
+        // TODO: even there exist some drawdown with correct direction, it is still possible that
+        // producer can not produce and injector can not inject if the crossflow is allowed, since
+        // the well rate is the sum of the rates from all the perofrations
         bool existing_drawdown_correct_direction = true;
-
-        // could not get converged, maybe at the end of the time step, after chopping for some steps.
-        // TODO: the best way is that this well can not get converged during local iterations.
-        // bool could_not_get_converged = false;
     };
 
 }

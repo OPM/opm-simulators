@@ -1114,7 +1114,7 @@ namespace Opm
         case THP: {
             assert(this->isOperable() );
 
-            // when a well can not work under THP target, it change to work under BHP target
+            // when a well can not work under THP target, it switches to BHP control
             if (this->operability_status_.isOperableUnderTHPLimit() ) {
                 updateWellStateWithTHPTargetIPR(ebos_simulator, well_state);
             } else { // go to BHP limit
@@ -1295,12 +1295,6 @@ namespace Opm
     StandardWell<TypeTag>::
     checkWellOperability(const Simulator& ebos_simulator)
     {
-        // TODO: this function is probably can split another function out so that
-        // wellTestingPhysical can share some code with this function
-        // on solution is that this function will be called updateWellOperability
-        // and the actual checking part become another function checkWellOperability
-        // Let us wait until finishing the wellTestingPhysical first.
-
         // focusing on PRODUCER for now
         if (well_type_ == INJECTOR) {
             return;
@@ -1319,8 +1313,6 @@ namespace Opm
         // checking the BHP limit related
         checkOperabilityUnderBHPLimitProducer(ebos_simulator);
 
-        // TODO: if the BHP limit does not work anyway, we do not need to do the following
-        // We do it now for studying purpose.
         // checking whether the well can operate under the THP constraints.
         if (this->wellHasTHPConstraints()) {
             checkOperabilityUnderTHPLimitProducer(ebos_simulator);
@@ -1349,8 +1341,10 @@ namespace Opm
     checkOperabilityUnderBHPLimitProducer(const Simulator& ebos_simulator)
     {
         const double bhp_limit = mostStrictBhpFromBhpLimits();
+        // Crude but works: default is one atmosphere.
         // TODO: a better way to detect whether the BHP is defaulted or not
-        if ( bhp_limit > 1.5e5 || !this->wellHasTHPConstraints() ) {
+        const bool bhp_limit_not_defaulted = bhp_limit > 1.5 * unit::barsa;
+        if ( bhp_limit_not_defaulted || !this->wellHasTHPConstraints() ) {
             // if the BHP limit is not defaulted or the well does not have a THP limit
             // we need to check the BHP limit
 
@@ -1367,7 +1361,6 @@ namespace Opm
                 // option 1: calculate well rates based on the BHP limit.
                 // option 2: stick with the above IPR curve
                 // we use IPR here
-                const double bhp_limit = mostStrictBhpFromBhpLimits();
                 std::vector<double> well_rates_bhp_limit;
                 computeWellRatesWithBhp(ebos_simulator, bhp_limit, well_rates_bhp_limit);
 
@@ -1379,13 +1372,13 @@ namespace Opm
                 }
             }
         } else {
-            // defaulted BHP and there is THP constraints
-            // default BHP limit is about 1.03 bar.
-            // when applied the hydrostatic pressure correction,
-            // most likely we get a negative bhp value to search in the VFP table,
-            // which is not desirable
-            // we assume we can operate under thi BHP limit and will violate the THP limit
-            // when operating under this BHP limit
+            // defaulted BHP and there is a THP constraint
+            // default BHP limit is about 1 atm.
+            // when applied the hydrostatic pressure correction dp,
+            // most likely we get a negative value (bhp + dp)to search in the VFP table,
+            // which is not desirable.
+            // we assume we can operate under defaulted BHP limit and will violate the THP limit
+            // when operating under defaulted BHP limit.
             this->operability_status_.operable_under_only_bhp_limit = true;
             this->operability_status_.obey_thp_limit_under_bhp_limit = false;
         }
@@ -1400,24 +1393,30 @@ namespace Opm
     StandardWell<TypeTag>::
     checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator)
     {
-        const double  bhp_limit = mostStrictBhpFromBhpLimits();
-        const double thp_limit = this->getTHPConstraint();
-        const double thp_control_index = this->getTHPControlIndex();
-        const  int table_id = well_controls_iget_vfp(well_controls_, thp_control_index);
-        const double alq = well_controls_iget_alq(well_controls_, thp_control_index);
+        const double obtain_bhp =  calculateBHPWithTHPTargetIPR();
 
-        const double vfp_ref_depth = vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
+        if (obtain_bhp > 0.) {
+            this->operability_status_.can_obtain_bhp_with_thp_limit = true;
 
-        // the density of the top perforation
-        const double rho = perf_densities_[0];
+            const double  bhp_limit = mostStrictBhpFromBhpLimits();
+            this->operability_status_.obey_bhp_limit_with_thp_limit = (obtain_bhp >= bhp_limit);
 
-        const double dp = (vfp_ref_depth - ref_depth_) * rho * gravity_;
-
-        vfp_properties_->getProd()->operabilityCheckingUnderTHP(ipr_a_, ipr_b_, bhp_limit,
-                                           table_id, thp_limit, alq, dp,
-                                           this->operability_status_.obtain_solution_with_thp_limit,
-                                           this->operability_status_.obey_bhp_limit_with_thp_limit );
-
+            const double thp_limit = this->getTHPConstraint();
+            if (obtain_bhp < thp_limit) {
+                const std::string msg = " obtained bhp " + std::to_string(unit::convert::to(obtain_bhp, unit::barsa))
+                                        + " bars is SMALLER than thp limit "
+                                        + std::to_string(unit::convert::to(thp_limit, unit::barsa))
+                                        + " bars as a producer for well " + name();
+                OpmLog::debug(msg);
+            }
+        } else {
+            this->operability_status_.can_obtain_bhp_with_thp_limit = false;
+            const double thp_limit = this->getTHPConstraint();
+            OpmLog::debug(" COULD NOT find bhp value under thp_limit "
+                          + std::to_string(unit::convert::to(thp_limit, unit::barsa))
+                          + " bars for well " + name() + ", the well might need to be closed ");
+            this->operability_status_.obey_bhp_limit_with_thp_limit = false;
+        }
     }
 
 
@@ -1445,7 +1444,7 @@ namespace Opm
 
             // for now, if there is one perforation can produce/inject in the correct
             // direction, we consider this well can still produce/inject.
-            // TODO: it can be more complicated than this to cause worng-signed rates
+            // TODO: it can be more complicated than this to cause wrong-signed rates
             if ( (drawdown < 0. && well_type_ == INJECTOR) ||
                  (drawdown > 0. && well_type_ == PRODUCER) )  {
                 all_drawdown_wrong_direction = false;
@@ -1505,6 +1504,8 @@ namespace Opm
 
         const double bhp = calculateBHPWithTHPTargetIPR();
 
+        assert(bhp > 0.0);
+
         well_state.bhp()[index_of_well_] = bhp;
 
         // TODO: explicit quantities are always tricky for this type of situation
@@ -1556,9 +1557,6 @@ namespace Opm
 
         const double obtain_bhp = vfp_properties_->getProd()->calculateBhpWithTHPTarget(ipr_a_, ipr_b_,
                                              bhp_limit, thp_table_id, thp_target, alq, dp);
-
-        // we should have made sure that this well should be operable under THP limit now
-        assert(obtain_bhp > 0.);
 
         return obtain_bhp;
     }
