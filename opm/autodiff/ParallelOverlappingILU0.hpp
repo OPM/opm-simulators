@@ -442,17 +442,30 @@ namespace Opm
         upper.resize( A.N() );
         inv.resize( A.N() );
 
-        lower.reserveAdditional( 2*A.N() );
+        // Count the lower and upper matrix entries.
+        size_type numLower = 0;
+        size_type numUpper = 0;
+        const auto endi = A.end();
+        for (auto i=A.begin(); i!=endi; ++i) {
+          const size_type iIndex = i.index();
+          for (auto j = (*i).begin(); j.index() < iIndex; ++j) {
+              ++numLower;
+          }
+          for (auto j = (*i).beforeEnd(); j.index() > iIndex; --j) {
+              ++numUpper;
+          }
+        }
+        assert(numLower + numUpper + A.N() == A.nonzeroes());
+
+        lower.reserveAdditional( numLower );
 
         // implement left looking variant with stored inverse
-        const auto endi = A.end();
         size_type row = 0;
         size_type colcount = 0;
         lower.rows_[ 0 ] = colcount;
         for (auto i=A.begin(); i!=endi; ++i, ++row)
         {
           const size_type iIndex  = i.index();
-          lower.reserveAdditional( (*i).size() );
 
           // eliminate entries left of diagonal; store L factor
           for (auto j=(*i).begin(); j.index() < iIndex; ++j )
@@ -463,19 +476,20 @@ namespace Opm
           lower.rows_[ iIndex+1 ] = colcount;
         }
 
+        assert(colcount == numLower);
+
         const auto rendi = A.beforeBegin();
         row = 0;
         colcount = 0;
         upper.rows_[ 0 ] = colcount ;
 
-        upper.reserveAdditional( lower.nonZeros() + A.N() );
+        upper.reserveAdditional( numUpper );
 
         // NOTE: upper and inv store entries in reverse order, reverse here
         // relative to ILU
         for (auto i=A.beforeEnd(); i!=rendi; --i, ++ row )
         {
           const size_type iIndex = i.index();
-          upper.reserveAdditional( (*i).size() );
 
           // store in reverse row order
           // eliminate entries left of diagonal; store L factor
@@ -495,6 +509,7 @@ namespace Opm
           }
           upper.rows_[ row+1 ] = colcount;
         }
+        assert(colcount == numUpper);
       }
     } // end namespace detail
 
