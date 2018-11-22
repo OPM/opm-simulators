@@ -1648,7 +1648,7 @@ namespace Opm
     checkWellOperability(const Simulator& /* ebos_simulator */,
                          const WellState& /* well_state */)
     {
-        const std::string msg = "Support of well operatability checking for mutlisegment wells is not implemented "
+        const std::string msg = "Support of well operability checking for multisegment wells is not implemented "
                                 "yet, checkWellOperability() for " + name() + " will do nothing";
         OpmLog::warning("NO_OPERATABILITY_CHECKING_MS_WELLS", msg);
     }
@@ -1886,6 +1886,22 @@ namespace Opm
                 assemblePressureEq(seg);
             }
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
+                        const double simulation_time, const int report_step, const bool terminal_output,
+                        WellState& well_state, WellTestState& welltest_state)
+    {
+        const std::string msg = "Support of well testing for physical limits for multisegment wells is not "
+                                "implemented yet, wellTestingPhysical() for " + name() + " will do nothing";
+        OpmLog::warning("NO_WELLTESTPHYSICAL_CHECKING_MS_WELLS", msg);
     }
 
 }

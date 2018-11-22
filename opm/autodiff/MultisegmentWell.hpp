@@ -349,6 +349,11 @@ namespace Opm
         void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                             const double dt,
                                             WellState& well_state);
+
+        virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
+                                         const double simulation_time, const int report_step,
+                                         const bool terminal_output,
+                                         WellState& well_state, WellTestState& welltest_state) override;
     };
 
 }

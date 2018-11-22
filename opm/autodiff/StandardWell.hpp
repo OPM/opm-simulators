@@ -348,10 +348,15 @@ namespace Opm
         // updating the inflow based on the current reservoir condition
         void updateIPR(const Simulator& ebos_simulator) const;
 
-        // check whether the well is operable under the current reservoir condition
+        // update the operability status of the well is operable under the current reservoir condition
         // mostly related to BHP limit and THP limit
         virtual void checkWellOperability(const Simulator& ebos_simulator,
                                           const WellState& well_state) override;
+
+        // check whether the well is operable under the current reservoir condition
+        // mostly related to BHP limit and THP limit
+        void updateWellOperability(const Simulator& ebos_simulator,
+                                   const WellState& well_state);
 
         // check whether the well is operable under BHP limit with current reservoir condition
         void checkOperabilityUnderBHPLimitProducer(const Simulator& ebos_simulator);
@@ -398,6 +403,10 @@ namespace Opm
         // calculate a relaxation factor to avoid overshoot of total rates
         static double relaxationFactorRate(const std::vector<double>& primary_variables,
                                            const BVectorWell& dwells);
+
+        virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
+                                         const double simulation_time, const int report_step, const bool terminal_output,
+                                         WellState& well_state, WellTestState& welltest_state);
     };
 
 }

@@ -218,8 +218,8 @@ namespace Opm
         // Simulator is not const is because that assembleWellEq is non-const Simulator
         void wellTesting(Simulator& simulator, const std::vector<double>& B_avg,
                          const double simulation_time, const int report_step,  const bool terminal_output,
-                         const WellTestConfig::Reason testing_reason, const WellState& well_state,
-                         WellTestState& welltest_state);
+                         const WellTestConfig::Reason testing_reason,
+                         /* const */ WellState& well_state, WellTestState& welltest_state);
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
@@ -364,6 +364,10 @@ namespace Opm
                                  const double simulation_time, const int report_step, const bool terminal_output,
                                  const WellState& well_state, WellTestState& welltest_state);
 
+        virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
+                                 const double simulation_time, const int report_step, const bool terminal_output,
+                                 WellState& well_state, WellTestState& welltest_state) = 0;
+
         void updateWellTestStateEconomic(const WellState& well_state,
                                          const double simulation_time,
                                          const bool write_message_to_opmlog,
@@ -374,7 +378,12 @@ namespace Opm
                                          const bool write_message_to_opmlog,
                                          WellTestState& well_test_state) const;
 
-        void solveWellForTesting(Simulator& ebosSimulator, WellState& well_state, const std::vector<double>& B_avg, bool terminal_output);
+        void  solveWellForTesting(Simulator& ebosSimulator, WellState& well_state,
+                                  const std::vector<double>& B_avg, bool terminal_output);
+
+        bool solveWellEqUntilConverged(Simulator& ebosSimulator,
+                                        const std::vector<double>& B_avg,
+                                        WellState& well_state);
 
         void scaleProductivityIndex(const int perfIdx, double& productivity_index) const;
 
