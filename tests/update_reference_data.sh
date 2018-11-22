@@ -31,12 +31,9 @@ copyToReferenceDir () {
 declare -A tests
 # binary dirname casename [testname]
 # you only have to specify testname if it differs from dirname
-tests[spe11_seq]="flow_sequential spe1 SPE1CASE1"
 tests[spe1]="flow spe1 SPE1CASE1"
 tests[spe12]="flow spe1 SPE1CASE2"
-tests[spe12_legacy]="flow_legacy spe1 SPE1CASE2"
 tests[spe12p]="flow spe1 SPE1CASE2_2P spe1_2p"
-tests[spe12p_legacy]="flow_legacy spe1 SPE1CASE2_2P spe1_2p"
 tests[spe1oilgas]="flow spe1 SPE1CASE2_OILGAS spe1_oilgas"
 tests[spe1nowells]="flow spe1 SPE1CASE2_NOWELLS spe1_nowells"
 tests[spe1thermal]="flow spe1 SPE1CASE2_THERMAL spe1_thermal"
@@ -46,11 +43,9 @@ tests[msw_3d_hfa]="flow msw_3d_hfa 3D_MSW"
 tests[polymer_oilwater]="flow polymer_oilwater 2D_OILWATER_POLYMER"
 tests[polymer2d]="flow polymer_simple2D 2D_THREEPHASE_POLY_HETER"
 tests[spe3]="flow spe3 SPE3CASE1"
-tests[spe3_legacy]="flow_legacy spe3 SPE3CASE1"
 tests[spe5]="flow spe5 SPE5CASE1"
 tests[spe9group]="flow spe9group SPE9_CP_GROUP"
 tests[spe9]="flow spe9 SPE9_CP_SHORT"
-tests[spe9_legacy]="flow_legacy spe9 SPE9_CP_SHORT"
 tests[wecon_wtest]="flow wecon_wtest 3D_WECON"
 tests[spe1_metric_vfp1]="flow vfpprod_spe1 SPE1CASE1_METRIC_VFP1 spe1_metric_vfp1"
 tests[base_model_1]="flow model1 BASE_MODEL_1 base_model_1"
@@ -80,13 +75,6 @@ copyToReferenceDir \
       NORNE_ATW2013 \
       EGRID INIT
 test $? -eq 0 && changed_tests="$changed_tests norne_init"
-
-copyToReferenceDir \
-   $configuration/build-opm-simulators/tests/results/init/flow_legacy+norne/ \
-   $OPM_TESTS_ROOT/norne/opm-simulation-reference/flow_legacy \
-   NORNE_ATW2013 \
-   EGRID INIT
-test $? -eq 0 && changed_tests="$changed_tests norne_init_legacy"
 
 changed_tests=`echo $changed_tests | xargs`
 echo -e "update reference data for $changed_tests\n" > /tmp/cmsg
