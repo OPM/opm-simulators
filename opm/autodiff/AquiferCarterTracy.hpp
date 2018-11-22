@@ -246,7 +246,7 @@ namespace Opm
                 auto globalCellIdx = ugrid.globalCell();
 
                 assert( cell_idx_ == connection.global_index);
-                assert( (cell_idx_.size() == connection.influx_coeff.size()) );
+                assert( (cell_idx_.size() <= connection.influx_coeff.size()) );
                 assert( (connection.influx_coeff.size() == connection.influx_multiplier.size()) );
                 assert( (connection.influx_multiplier.size() == connection.reservoir_face_dir.size()) );
 
@@ -300,7 +300,18 @@ namespace Opm
                             // Check now if the face is outside of the reservoir, or if it adjoins an inactive cell
                             // Do not make the connection if the product of the two cellIdx > 0. This is because the
                             // face is within the reservoir/not connected to boundary. (We still have yet to check for inactive cell adjoining)
-                            faceArea = (faceCells(faceIdx,0)*faceCells(faceIdx,1) > 0)? 0. : Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
+                            auto cellNeighbour0 = faceCells(faceIdx,0);
+                            auto cellNeighbour1 = faceCells(faceIdx,1);
+                            auto defaultFaceArea = Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
+                            auto calculatedFaceArea = (!connection.influx_coeff.at(idx))? defaultFaceArea : *(connection.influx_coeff.at(idx));
+                            faceArea = (cellNeighbour0 * cellNeighbour1 > 0)? 0. : calculatedFaceArea;
+                            if (cellNeighbour1 == 0){
+                                faceArea = (cellNeighbour0 < 0)? faceArea : 0.;
+                            }
+                            else if (cellNeighbour0 == 0){
+                                faceArea = (cellNeighbour1 < 0)? faceArea : 0.;
+                            }
+
                             faceArea_connected_.at(idx) = faceArea;
                             denom_face_areas += ( connection.influx_multiplier.at(idx) * faceArea_connected_.at(idx) );
                         }
@@ -309,9 +320,13 @@ namespace Opm
                     cell_depth_.at(idx) = cellCenter[2];
                 }
 
+                const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
+
                 for (size_t idx = 0; idx < cell_idx_.size(); ++idx)
                 {
-                    alphai_.at(idx) = ( connection.influx_multiplier.at(idx) * faceArea_connected_.at(idx) )/denom_face_areas;
+                    alphai_.at(idx) = (denom_face_areas < eps_sqrt)? // Prevent no connection NaNs due to division by zero
+                                      0.
+                                    : ( connection.influx_multiplier.at(idx) * faceArea_connected_.at(idx) )/denom_face_areas;
                 }
             }
 
@@ -322,13 +337,13 @@ namespace Opm
                 
                 rhow_.resize(cell_idx_.size(),0.);
                 
-                if (aquct_data_.p0 < 1.0)
+                if (!aquct_data_.p0)
                 {
                    pa0_ = calculateReservoirEquilibrium();
                 }
                 else
                 {
-                   pa0_ = aquct_data_.p0;
+                   pa0_ = *(aquct_data_.p0);
                 }
 
                 // use the thermodynamic state of the first active cell as a
