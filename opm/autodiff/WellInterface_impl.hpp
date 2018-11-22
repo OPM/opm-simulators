@@ -457,8 +457,25 @@ namespace Opm
             if (wellhelpers::constraintBroken(
                     well_state.bhp(), well_state.thp(), well_state.wellRates(),
                     w, np, well_type_, wc, ctrl_index)) {
-                // ctrl_index will be the index of the broken constraint after the loop.
-                break;
+
+                // if the well can not work under THP / BHP control, we should not switch to THP / BHP control
+                const bool cannot_switch_to_bhp = well_controls_iget_type(wc, ctrl_index) == BHP && !operability_status_.isOperableUnderBHPLimit();
+                const bool cannot_switch_to_thp = well_controls_iget_type(wc, ctrl_index) == THP && !operability_status_.isOperableUnderTHPLimit();
+                const bool cannot_switch = cannot_switch_to_bhp || cannot_switch_to_thp;
+                if ( !cannot_switch ) {
+
+                    // ctrl_index will be the index of the broken constraint after the loop.
+                    break;
+                } else {
+                    // before we figure out to handle it, we give some debug information here
+                    if ( well_controls_iget_type(wc, ctrl_index) == BHP && !operability_status_.isOperableUnderBHPLimit() ) {
+                        OpmLog::debug("well " + name() + " breaks the BHP limit, while it is not operable under BHP limit");
+                    }
+
+                    if ( well_controls_iget_type(wc, ctrl_index) == THP && !operability_status_.isOperableUnderTHPLimit() ) {
+                        OpmLog::debug("well " + name() + " breaks the THP limit, while it is not operable under THP limit");
+                    }
+                }
             }
         }
 
@@ -719,10 +736,43 @@ namespace Opm
             return;
         }
 
+        // Based on current understanding, only under prediction mode, we need to shut well due to various
+        // reasons or limits. With more knowlage or testing cases later, this might need to be corrected.
+        if (!underPredictionMode() ) {
+            return;
+        }
+
+        // updating well test state based on physical (THP/BHP) limits.
+        updateWellTestStatePhysical(well_state, simulationTime, writeMessageToOPMLog, wellTestState);
+
         // updating well test state based on Economic limits.
         updateWellTestStateEconomic(well_state, simulationTime, writeMessageToOPMLog, wellTestState);
 
         // TODO: well can be shut/closed due to other reasons
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updateWellTestStatePhysical(const WellState& well_state,
+                                const double simulation_time,
+                                const bool write_message_to_opmlog,
+                                WellTestState& well_test_state) const
+    {
+        if (!isOperable()) {
+            well_test_state.addClosedWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
+            if (write_message_to_opmlog) {
+                // TODO: considering auto shut in?
+                const std::string msg = "well " + name()
+                             + std::string(" will be shut as it can not operate under current reservoir condition");
+                OpmLog::info(msg);
+            }
+        }
+
     }
 
 
@@ -1204,6 +1254,17 @@ namespace Opm
                 }
             }
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    isOperable() const {
+        return operability_status_.isOperable();
     }
 
 

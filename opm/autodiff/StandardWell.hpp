@@ -264,8 +264,6 @@ namespace Opm
 
         EvalWell extendEval(const Eval& in) const;
 
-        bool crossFlowAllowed(const Simulator& ebosSimulator) const;
-
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
@@ -350,12 +348,38 @@ namespace Opm
         // updating the inflow based on the current reservoir condition
         void updateIPR(const Simulator& ebos_simulator) const;
 
+        // check whether the well is operable under the current reservoir condition
+        // mostly related to BHP limit and THP limit
+        virtual void checkWellOperability(const Simulator& ebos_simulator,
+                                          const WellState& well_state) override;
+
+        // check whether the well is operable under BHP limit with current reservoir condition
+        void checkOperabilityUnderBHPLimitProducer(const Simulator& ebos_simulator);
+
+        // check whether the well is operable under THP limit with current reservoir condition
+        void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator);
+
         // update WellState based on IPR and associated VFP table
         void updateWellStateWithTHPTargetIPR(const Simulator& ebos_simulator,
                                              WellState& well_state) const;
 
         void updateWellStateWithTHPTargetIPRProducer(const Simulator& ebos_simulator,
                                                      WellState& well_state) const;
+
+        // for a well, when all drawdown are in the wrong direction, then this well will not
+        // be able to produce/inject .
+        bool allDrawDownWrongDirection(const Simulator& ebos_simulator) const;
+
+        // whether the well can produce / inject based on the current well state (bhp)
+        bool canProduceInjectWithCurrentBhp(const Simulator& ebos_simulator,
+                                            const WellState& well_state);
+
+        // turn on crossflow to avoid singular well equations
+        // when the well is banned from cross-flow and the BHP is not properly initialized,
+        // we turn on crossflow to avoid singular well equations. It can result in wrong-signed
+        // well rates, it can cause problem for THP calculation
+        // TODO: looking for better alternative to avoid wrong-signed well rates
+        bool openCrossFlowAvoidSingularity(const Simulator& ebos_simulator) const;
 
         // calculate the BHP from THP target based on IPR
         // TODO: we need to check the operablility here first, if not operable, then maybe there is

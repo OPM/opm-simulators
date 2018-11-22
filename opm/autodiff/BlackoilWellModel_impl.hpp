@@ -396,6 +396,10 @@ namespace Opm {
         initial_step_ = false;
     }
 
+
+
+
+
     template<typename TypeTag>
     std::vector<typename BlackoilWellModel<TypeTag>::WellInterfacePtr >
     BlackoilWellModel<TypeTag>::
@@ -429,21 +433,33 @@ namespace Opm {
 
                 const Well* well_ecl = wells_ecl_[index_well];
 
-                // well is closed due to economical reasons
-                if (wellTestState_.hasWell(well_name, WellTestConfig::Reason::ECONOMIC)) { 
-		    if( well_ecl->getAutomaticShutIn() ) {
-                        // shut wells are not added to the well container 
-                        well_state_.bhp()[w] = 0;
+                // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
+                if ( wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL ) ) {
+                    // TODO: more checking here, to make sure this standard more specific and complete
+                    // maybe there is some WCON keywords will not open the well
+                    if (well_state_.effectiveEventsOccurred(w) ) {
+                        wellTestState_.openWell(well_name);
+                    }
+                }
+
+                // TODO: should we do this for all kinds of closing reasons?
+                // something like wellTestState_.hasWell(well_name)?
+                if ( wellTestState_.hasWell(well_name, WellTestConfig::Reason::ECONOMIC) ||
+                     wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL) ) {
+                    if( well_ecl->getAutomaticShutIn() ) {
+                        // shut wells are not added to the well container
+                        // TODO: make a function from well_state side to handle the following
+                        well_state_.thp()[w] = 0.;
+                        well_state_.bhp()[w] = 0.;
                         const int np = numPhases();
                         for (int p = 0; p < np; ++p) {
-                            well_state_.wellRates()[np * w + p] = 0;
-			}
-			continue;
-                    }
-		    else {
-		        // close wells are added to the container but marked as closed
-		        struct WellControls* well_controls = wells()->ctrls[w];
-		        well_controls_stop_well(well_controls);
+                            well_state_.wellRates()[np * w + p] = 0.;
+                        }
+                        continue;
+                    } else {
+                        // close wells are added to the container but marked as closed
+                        struct WellControls* well_controls = wells()->ctrls[w];
+                        well_controls_stop_well(well_controls);
                     }
                 }
 
@@ -803,7 +819,9 @@ namespace Opm {
         // Get global (from all processes) convergence report.
         ConvergenceReport local_report;
         for (const auto& well : well_container_) {
-            local_report += well->getWellConvergence(B_avg);
+            if (well->isOperable() ) {
+                local_report += well->getWellConvergence(B_avg);
+            }
         }
         ConvergenceReport report = gatherConvergenceReport(local_report);
 
@@ -828,9 +846,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     calculateExplicitQuantities() const
     {
-         for (auto& well : well_container_) {
-             well->calculateExplicitQuantities(ebosSimulator_, well_state_);
-         }
+        // TODO: checking isOperable() ?
+        for (auto& well : well_container_) {
+            well->calculateExplicitQuantities(ebosSimulator_, well_state_);
+        }
     }
 
 
@@ -934,6 +953,10 @@ namespace Opm {
         // process group control related
         prepareGroupControl();
 
+        for (const auto& well : well_container_) {
+            well->checkWellOperability(ebosSimulator_, well_state_);
+        }
+
         // since the controls are all updated, we should update well_state accordingly
         for (const auto& well : well_container_) {
             const int w = well->indexOfWell();
@@ -941,16 +964,22 @@ namespace Opm {
             const int control = well_controls_get_current(wc);
             well_state_.currentControls()[w] = control;
 
+            if (!well->isOperable() ) continue;
+
             if (well_state_.effectiveEventsOccurred(w) ) {
                 well->updateWellStateWithTarget(ebosSimulator_, well_state_);
             }
 
             // there is no new well control change input within a report step,
             // so next time step, the well does not consider to have effective events anymore
+            // TODO: if we can know whether this is the first time step within the report step,
+            // we do not need to set it to false
+            // TODO: we should do this at the end of the time step in case we will need it within
+            // this time step somewhere
             if (well_state_.effectiveEventsOccurred(w) ) {
                 well_state_.setEffectiveEventsOccurred(w, false);
             }
-        }  // end of for (int w = 0; w < nw; ++w)
+        }  // end of for (const auto& well : well_container_)
 
         updatePrimaryVariables();
     }

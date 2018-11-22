@@ -229,10 +229,10 @@ calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
                                                                     detail::RateBhpPair{flo_bhp_limit, bhp_limit} };
 
     double obtain_bhp = 0.;
-    const bool obtain_solution_with_thp_limit = detail::findIntersectionForBhp(ratebhp_samples, ratebhp_twopoints_ipr, obtain_bhp);
+    const bool can_obtain_bhp_with_thp_limit = detail::findIntersectionForBhp(ratebhp_samples, ratebhp_twopoints_ipr, obtain_bhp);
 
-    // \Note: assuming not that negative BHP does not make sense
-    if (obtain_solution_with_thp_limit && obtain_bhp > 0.) {
+    // \Note: assuming that negative BHP does not make sense
+    if (can_obtain_bhp_with_thp_limit && obtain_bhp > 0.) {
         // getting too high bhp that might cause negative rates (rates in the undesired direction)
         if (obtain_bhp >= bhp_safe_limit) {
             const std::string msg (" We are getting a too high BHP value from the THP constraint, which may "
@@ -250,7 +250,6 @@ calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
         return -100.;
     }
 }
-
 
 
 }
