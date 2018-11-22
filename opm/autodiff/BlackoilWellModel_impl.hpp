@@ -133,6 +133,33 @@ namespace Opm {
 
 
 
+    /// Return true if any well has a THP constraint.
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    forceShutWellByName(const std::string& wellname,
+                        const double simulation_time)
+    {
+        // Only add the well to the closed list on the
+        // process that owns it.
+        for (const auto& well : well_container_) {
+            if (well->name() == wellname) {
+                wellTestState_.addClosedWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+                break;
+            }
+        }
+
+        // Only log a message on the output rank.
+        if (terminal_output_) {
+            const std::string msg = "Well " + wellname
+                + " will be shut because it cannot get converged.";
+            OpmLog::info(msg);
+        }
+    }
+
+
+
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::

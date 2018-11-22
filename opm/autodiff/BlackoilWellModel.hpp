@@ -239,6 +239,9 @@ namespace Opm {
             /// Return true if any well has a THP constraint.
             bool hasTHPConstraints() const;
 
+            /// Shut down any single well.
+            void forceShutWellByName(const std::string& wellname, const double simulation_time);
+
         protected:
 
             void extractLegacyPressure_(std::vector<double>& cellPressure) const
