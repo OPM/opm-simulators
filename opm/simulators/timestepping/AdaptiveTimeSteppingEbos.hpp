@@ -298,6 +298,13 @@ namespace Opm {
                         restarts = 0;
                     }
 
+                    // further restrict time step size if we are in
+                    // prediction mode with THP constraints.
+                    if (solver.model().wellModel().hasTHPConstraints()) {
+                        const double maxPredictionTHPTimestep = 16.0 * unit::day;
+                        dtEstimate = std::min(dtEstimate, maxPredictionTHPTimestep);
+                    }
+
                     if (timestepVerbose_) {
                         std::ostringstream ss;
                         substepReport.reportStep(ss);

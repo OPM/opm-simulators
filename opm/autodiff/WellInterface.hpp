@@ -228,6 +228,9 @@ namespace Opm
         // whether the well is operable
         bool isOperable() const;
 
+        /// Returns true if the well has one or more THP limits/constraints.
+        bool wellHasTHPConstraints() const;
+
     protected:
 
         // to indicate a invalid completion
@@ -323,8 +326,6 @@ namespace Opm
                                  const WellState& well_state) const;
 
         bool underPredictionMode() const;
-
-        bool wellHasTHPConstraints() const;
 
         double getTHPConstraint() const;
 

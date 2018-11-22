@@ -116,6 +116,23 @@ namespace Opm {
     }
 
 
+    /// Return true if any well has a THP constraint.
+    template<typename TypeTag>
+    bool
+    BlackoilWellModel<TypeTag>::
+    hasTHPConstraints() const
+    {
+        for (const auto& well : well_container_) {
+            if (well->wellHasTHPConstraints()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
