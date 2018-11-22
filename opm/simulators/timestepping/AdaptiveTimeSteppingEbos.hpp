@@ -298,7 +298,7 @@ namespace Opm {
                         restarts = 0;
                     }
 
-                    // further restrict time step size if we are in
+                    // Further restrict time step size if we are in
                     // prediction mode with THP constraints.
                     if (solver.model().wellModel().hasTHPConstraints()) {
                         const double maxPredictionTHPTimestep = 16.0 * unit::day;
@@ -350,16 +350,50 @@ namespace Opm {
                     }
 
                     const double newTimeStep = restartFactor_ * dt;
-                    // we need to revise this
-                    substepTimer.provideTimeStepEstimate(newTimeStep);
-                    if (solverVerbose_) {
-                        std::string msg;
-                        msg = causeOfFailure + "\nTimestep chopped to "
-                            + std::to_string(unit::convert::to(substepTimer.currentStepLength(), unit::day)) + " days\n";
-                        OpmLog::problem(msg);
-                    }
+                    const double minimumChoppedTimestep = 0.25 * unit::day;
+                    if (newTimeStep > minimumChoppedTimestep) {
+                        // Chop the timestep.
+                        substepTimer.provideTimeStepEstimate(newTimeStep);
+                        if (solverVerbose_) {
+                            std::string msg;
+                            msg = causeOfFailure + "\nTimestep chopped to "
+                                + std::to_string(unit::convert::to(substepTimer.currentStepLength(), unit::day)) + " days\n";
+                            OpmLog::problem(msg);
+                        }
+                        ++restarts;
+                    } else {
+                        // We are below the threshold, and will check if there are any
+                        // wells we should close rather than chopping again.
+                        std::set<std::string> failing_wells = consistentlyFailingWells(solver.model().stepReports());
+                        if (failing_wells.empty()) {
+                            // Found no wells to close, chop the timestep as above.
+                            substepTimer.provideTimeStepEstimate(newTimeStep);
+                            if (solverVerbose_) {
+                                std::string msg;
+                                msg = causeOfFailure + "\nTimestep chopped to "
+                                    + std::to_string(unit::convert::to(substepTimer.currentStepLength(), unit::day)) + " days\n";
+                                OpmLog::problem(msg);
+                            }
+                            ++restarts;
+                        } else {
+                            // Close all consistently failing wells.
+                            for (const auto& well : failing_wells) {
+                                solver.model().wellModel().forceShutWellByName(well, substepTimer.simulationTimeElapsed());
+                            }
+                            substepTimer.provideTimeStepEstimate(dt);
+                            if (solverVerbose_) {
+                                std::string msg;
+                                msg = "\nProblematic well(s) were shut: ";
+                                for (const auto& well : failing_wells) {
+                                    msg += well;
+                                    msg += " ";
+                                }
+                                msg += "(retrying timestep)\n";
+                                OpmLog::problem(msg);
+                            }
+                        }
 
-                    ++restarts;
+                    }
                 }
                 ebosProblem.setNextTimeStepSize(substepTimer.currentStepLength());
             }
@@ -439,6 +473,54 @@ namespace Opm {
             // make sure growth factor is something reasonable
             assert(growthFactor_ >= 1.0);
         }
+
+
+        template <class StepReportVector>
+        std::set<std::string> consistentlyFailingWells(const StepReportVector& sr)
+        {
+            // If there are wells that cause repeated failures, we
+            // close them, and restart the un-chopped timestep.
+            std::ostringstream msg;
+            msg << "    Excessive chopping detected in report step "
+                << sr.back().report_step << ", substep " << sr.back().current_step << "\n";
+            const auto& wfs = sr.back().report.back().wellFailures();
+            for (const auto& wf : wfs) {
+                msg << "        Well that failed: " << wf.wellName() << "\n";
+            }
+            msg.flush();
+            OpmLog::debug(msg.str());
+
+            // Check the last few step reports.
+            const int num_steps = 3;
+            const int rep_step = sr.back().report_step;
+            const int sub_step = sr.back().current_step;
+            const int sr_size = sr.size();
+            std::set<std::string> failing_wells;
+            for (const auto& wf : wfs) {
+                failing_wells.insert(wf.wellName());
+            }
+            if (sr_size >= num_steps) {
+                for (int step = 1; step < num_steps; ++step) {
+                    const auto& srep = sr[sr_size - 1 - step];
+                    // Report must be from same report step and substep, otherwise we have
+                    // not chopped/retried enough times on this step.
+                    if (srep.report_step != rep_step || srep.current_step != sub_step) {
+                        break;
+                    }
+                    // Get the failing wells for this step, that also failed all other steps.
+                    std::set<std::string> failing_wells_step;
+                    for (const auto& wf : srep.report.back().wellFailures()) {
+                        if (failing_wells.count(wf.wellName()) > 0) {
+                            failing_wells_step.insert(wf.wellName());
+                        }
+                    }
+                    failing_wells.swap(failing_wells_step);
+                }
+            }
+            return failing_wells;
+        }
+
+
 
         typedef std::unique_ptr<TimeStepControlInterface> TimeStepControlType;
 
