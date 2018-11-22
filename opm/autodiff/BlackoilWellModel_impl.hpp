@@ -954,7 +954,7 @@ namespace Opm {
         prepareGroupControl();
 
         for (const auto& well : well_container_) {
-            well->checkWellOperability(ebosSimulator_);
+            well->checkWellOperability(ebosSimulator_, well_state_);
         }
 
         // since the controls are all updated, we should update well_state accordingly

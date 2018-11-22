@@ -350,7 +350,8 @@ namespace Opm
 
         // check whether the well is operable under the current reservoir condition
         // mostly related to BHP limit and THP limit
-        virtual void checkWellOperability(const Simulator& ebos_simulator) override;
+        virtual void checkWellOperability(const Simulator& ebos_simulator,
+                                          const WellState& well_state) override;
 
         // check whether the well is operable under BHP limit with current reservoir condition
         void checkOperabilityUnderBHPLimitProducer(const Simulator& ebos_simulator);
@@ -368,6 +369,10 @@ namespace Opm
         // for a well, when all drawdown are in the wrong direction, then this well will not
         // be able to produce/inject .
         bool allDrawDownWrongDirection(const Simulator& ebos_simulator) const;
+
+        // whether the well can produce / inject based on the current well state (bhp)
+        bool canProduceInjectWithCurrentBhp(const Simulator& ebos_simulator,
+                                            const WellState& well_state);
 
         // turn on crossflow to avoid singular well equations
         // when the well is banned from cross-flow and the BHP is not properly initialized,

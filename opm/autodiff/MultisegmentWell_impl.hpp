@@ -1645,7 +1645,8 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    checkWellOperability(const Simulator& ebos_simulator)
+    checkWellOperability(const Simulator& /* ebos_simulator */,
+                         const WellState& /* well_state */)
     {
         const std::string msg = "Support of well operatability checking for mutlisegment wells is not implemented "
                                 "yet, checkWellOperability() for " + name() + " will do nothing";

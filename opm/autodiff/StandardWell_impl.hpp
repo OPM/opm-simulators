@@ -440,7 +440,7 @@ namespace Opm
                    WellState& well_state)
     {
 
-        checkWellOperability(ebosSimulator);
+        checkWellOperability(ebosSimulator, well_state);
 
         if (!this->isOperable()) return;
 
@@ -1293,7 +1293,8 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    checkWellOperability(const Simulator& ebos_simulator)
+    checkWellOperability(const Simulator& ebos_simulator,
+                         const WellState& well_state)
     {
         // focusing on PRODUCER for now
         if (well_type_ == INJECTOR) {
@@ -1315,12 +1316,11 @@ namespace Opm
 
         // checking whether the well can operate under the THP constraints.
         if (this->wellHasTHPConstraints()) {
+            this->operability_status_.has_thp_constaint = true;
             checkOperabilityUnderTHPLimitProducer(ebos_simulator);
+            this->operability_status_.can_produce_inject_with_current_bhp =
+                canProduceInjectWithCurrentBhp(ebos_simulator, well_state);
         }
-
-        // checking whether the well can not produce/inject
-        this->operability_status_.existing_drawdown_correct_direction =
-                                                   ! allDrawDownWrongDirection(ebos_simulator);
 
         const bool well_operable = this->operability_status_.isOperable();
 
@@ -1453,6 +1453,40 @@ namespace Opm
         }
 
         return all_drawdown_wrong_direction;
+    }
+
+
+
+
+    template<typename TypeTag>
+    bool
+    StandardWell<TypeTag>::
+    canProduceInjectWithCurrentBhp(const Simulator& ebos_simulator,
+                                   const WellState& well_state)
+    {
+        const double bhp = well_state.bhp()[index_of_well_];
+        std::vector<double> well_rates;
+        computeWellRatesWithBhp(ebos_simulator, bhp, well_rates);
+
+        const double sign = (well_type_ == PRODUCER) ? -1. : 1.;
+        const double threshold = sign * std::numeric_limits<double>::min();
+
+        bool can_produce_inject = false;
+        for (const auto value : well_rates) {
+            if (well_type_ == PRODUCER && value < threshold) {
+                can_produce_inject = true;
+                break;
+            } else if (well_type_ == INJECTOR && value > threshold) {
+                can_produce_inject = true;
+                break;
+            }
+        }
+
+        if (!can_produce_inject) {
+            OpmLog::debug(" well " + name() + " CANNOT produce or inejct ");
+        }
+
+        return can_produce_inject;
     }
 
 

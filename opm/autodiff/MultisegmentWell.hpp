@@ -332,7 +332,8 @@ namespace Opm
 
         // checking the operability of the well based on current reservoir condition
         // it is not implemented for multisegment well yet
-        virtual void checkWellOperability(const Simulator& ebos_simulator);
+        virtual void checkWellOperability(const Simulator& ebos_simulator,
+                                          const WellState& well_state) override;
 
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;
 

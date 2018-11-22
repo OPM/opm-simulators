@@ -223,7 +223,7 @@ namespace Opm
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
-        virtual void checkWellOperability(const Simulator& ebos_simulator) = 0;
+        virtual void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state) = 0;
 
         // whether the well is operable
         bool isOperable() const;
@@ -391,8 +391,8 @@ namespace Opm
             if (!operable_under_only_bhp_limit) {
                 return false;
             } else {
-                return existing_drawdown_correct_direction &&
-                       (isOperableUnderBHPLimit() || isOperableUnderTHPLimit());
+                return ( (isOperableUnderBHPLimit() || isOperableUnderTHPLimit()) &&
+                        !(has_thp_constaint && !can_produce_inject_with_current_bhp) );
             }
         }
 
@@ -409,8 +409,8 @@ namespace Opm
             obey_thp_limit_under_bhp_limit = true;
             can_obtain_bhp_with_thp_limit = true;
             obey_bhp_limit_with_thp_limit = true;
-            // TODO: the following one might need to be treated differently
-            existing_drawdown_correct_direction = true;
+            can_produce_inject_with_current_bhp = true;
+            has_thp_constaint = false;
         }
 
         // whether the well can be operated under bhp limit
@@ -425,13 +425,14 @@ namespace Opm
         // whether the well obey bhp limit when operated under thp limit
         bool obey_bhp_limit_with_thp_limit = true;
 
-        // there is some drawdown with correct sign/direction
-        // if all the drawdown are with wrong sign/direction, it means producer can not produce
-        // and injector can not inject.
-        // TODO: even there exist some drawdown with correct direction, it is still possible that
-        // producer can not produce and injector can not inject if the crossflow is allowed, since
-        // the well rate is the sum of the rates from all the perofrations
-        bool existing_drawdown_correct_direction = true;
+        // TODO: the following criterion is based on the current state of
+        // the well, we consider it is a numerical criterion.
+        // at the moment, we only apply it with well has THP constraint.
+        // whether the well can produce / inject with the current bhp of the well
+        // it might be updated with other criterion with investigation with more cases.
+        bool can_produce_inject_with_current_bhp = true;
+        // whether the well has a THP constraint
+        bool has_thp_constaint = false;
     };
 
 }
