@@ -1088,8 +1088,8 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellStateWithTarget(/* const */ Simulator& ebos_simulator,
-                              WellState& well_state) /* const */
+    updateWellStateWithTarget(const Simulator& ebos_simulator,
+                              WellState& well_state) const
     {
         // number of phases
         const int np = number_of_phases_;
@@ -1337,7 +1337,7 @@ namespace Opm
 
         // checking whether the well can operate under the THP constraints.
         if (this->wellHasTHPConstraints()) {
-            this->operability_status_.has_thp_constaint = true;
+            this->operability_status_.has_thp_constraint = true;
             checkOperabilityUnderTHPLimitProducer(ebos_simulator);
             this->operability_status_.can_produce_inject_with_current_bhp =
                 canProduceInjectWithCurrentBhp(ebos_simulator, well_state);

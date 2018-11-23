@@ -117,8 +117,8 @@ namespace Opm
                                     WellState& well_state) override;
 
         /// updating the well state based the current control mode
-        virtual void updateWellStateWithTarget(/* const */ Simulator& ebos_simulator,
-                                               WellState& well_state) /* const */ override;
+        virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                               WellState& well_state) const override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const override;

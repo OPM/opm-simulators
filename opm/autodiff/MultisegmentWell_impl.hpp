@@ -252,8 +252,8 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWellStateWithTarget(/* const */ Simulator& ebos_simulator,
-                              WellState& well_state) /* const */
+    updateWellStateWithTarget(const Simulator& ebos_simulator,
+                              WellState& well_state) const
     {
         // Updating well state bas on well control
         // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE

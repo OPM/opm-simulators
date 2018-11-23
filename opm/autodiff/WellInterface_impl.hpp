@@ -949,6 +949,8 @@ namespace Opm
                         const double simulation_time, const int report_step, const bool terminal_output,
                         const WellState& well_state, WellTestState& welltest_state)
     {
+        OpmLog::debug(" well " + name() + " is being tested for economic limits");
+
         WellState well_state_copy = well_state;
 
         updatePrimaryVariables(well_state_copy);

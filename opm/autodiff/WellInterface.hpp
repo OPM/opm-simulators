@@ -172,8 +172,8 @@ namespace Opm
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials) = 0;
 
-        virtual void updateWellStateWithTarget(/* const */ Simulator& ebos_simulator,
-                                               WellState& well_state) /* const */ = 0;
+        virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                               WellState& well_state) const = 0;
 
         void updateWellControl(/* const */ Simulator& ebos_simulator,
                                WellState& well_state,
@@ -403,7 +403,7 @@ namespace Opm
                 return false;
             } else {
                 return ( (isOperableUnderBHPLimit() || isOperableUnderTHPLimit()) &&
-                        !(has_thp_constaint && !can_produce_inject_with_current_bhp) );
+                        !(has_thp_constraint && !can_produce_inject_with_current_bhp) );
             }
         }
 
@@ -421,7 +421,7 @@ namespace Opm
             can_obtain_bhp_with_thp_limit = true;
             obey_bhp_limit_with_thp_limit = true;
             can_produce_inject_with_current_bhp = true;
-            has_thp_constaint = false;
+            has_thp_constraint = false;
         }
 
         // whether the well can be operated under bhp limit
@@ -443,7 +443,7 @@ namespace Opm
         // it might be updated with other criterion with investigation with more cases.
         bool can_produce_inject_with_current_bhp = true;
         // whether the well has a THP constraint
-        bool has_thp_constaint = false;
+        bool has_thp_constraint = false;
     };
 
 }
