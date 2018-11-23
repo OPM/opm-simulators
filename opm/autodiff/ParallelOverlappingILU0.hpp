@@ -446,14 +446,14 @@ namespace Opm
         size_type numLower = 0;
         size_type numUpper = 0;
         const auto endi = A.end();
-        for (auto i=A.begin(); i!=endi; ++i) {
+        for (auto i = A.begin(); i != endi; ++i) {
           const size_type iIndex = i.index();
+          size_type numLowerRow = 0;
           for (auto j = (*i).begin(); j.index() < iIndex; ++j) {
-              ++numLower;
+              ++numLowerRow;
           }
-          for (auto j = (*i).beforeEnd(); j.index() > iIndex; --j) {
-              ++numUpper;
-          }
+          numLower += numLowerRow;
+          numUpper += (*i).size() - numLowerRow - 1;
         }
         assert(numLower + numUpper + A.N() == A.nonzeroes());
 
