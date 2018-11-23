@@ -313,15 +313,13 @@ namespace Opm {
             return;
         }
 
-        const auto& wellsForTesting = wellTestState_.updateWell(wtest_config, simulationTime);
-        if (wellsForTesting.size() == 0) { // there is no well available for WTEST at the moment
-            return;
-        }
-
         // average B factors are required for the convergence checking of well equations
+        // Note: this must be done on all processes, even those with
+        // no wells needing testing, otherwise we will have locking.
         std::vector< Scalar > B_avg(numComponents(), Scalar() );
         computeAverageFormationFactor(B_avg);
 
+        const auto& wellsForTesting = wellTestState_.updateWell(wtest_config, simulationTime);
         for (const auto& testWell : wellsForTesting) {
             const std::string& well_name = testWell.first;
 
