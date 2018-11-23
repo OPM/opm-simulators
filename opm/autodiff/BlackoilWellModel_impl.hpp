@@ -318,6 +318,7 @@ namespace Opm {
         // no wells needing testing, otherwise we will have locking.
         std::vector< Scalar > B_avg(numComponents(), Scalar() );
         computeAverageFormationFactor(B_avg);
+        wellhelpers::WellSwitchingLogger logger;
 
         const auto& wellsForTesting = wellTestState_.updateWell(wtest_config, simulationTime);
         for (const auto& testWell : wellsForTesting) {
@@ -336,7 +337,7 @@ namespace Opm {
             const WellTestConfig::Reason testing_reason = testWell.second;
 
             well->wellTesting(ebosSimulator_, B_avg, simulationTime, timeStepIdx, terminal_output_,
-                              testing_reason, well_state_, wellTestState_);
+                              testing_reason, well_state_, wellTestState_, logger);
         }
     }
 

@@ -1897,7 +1897,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
                         const double simulation_time, const int report_step, const bool terminal_output,
-                        WellState& well_state, WellTestState& welltest_state)
+                        WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger)
     {
         const std::string msg = "Support of well testing for physical limits for multisegment wells is not "
                                 "implemented yet, wellTestingPhysical() for " + name() + " will do nothing";
