@@ -239,8 +239,8 @@ namespace Opm {
             /// Return true if any well has a THP constraint.
             bool hasTHPConstraints() const;
 
-            /// Shut down any single well.
-            void forceShutWellByName(const std::string& wellname, const double simulation_time);
+            /// Shut down any single well, but only if it is in prediction mode.
+            void forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
 
         protected:
 

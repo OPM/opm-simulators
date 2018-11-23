@@ -378,7 +378,7 @@ namespace Opm {
                         } else {
                             // Close all consistently failing wells.
                             for (const auto& well : failing_wells) {
-                                solver.model().wellModel().forceShutWellByName(well, substepTimer.simulationTimeElapsed());
+                                solver.model().wellModel().forceShutWellByNameIfPredictionMode(well, substepTimer.simulationTimeElapsed());
                             }
                             substepTimer.provideTimeStepEstimate(dt);
                             if (solverVerbose_) {

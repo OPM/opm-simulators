@@ -137,14 +137,16 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    forceShutWellByName(const std::string& wellname,
-                        const double simulation_time)
+    forceShutWellByNameIfPredictionMode(const std::string& wellname,
+                                        const double simulation_time)
     {
         // Only add the well to the closed list on the
         // process that owns it.
         for (const auto& well : well_container_) {
             if (well->name() == wellname) {
-                wellTestState_.addClosedWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+                if (well->underPredictionMode()) {
+                    wellTestState_.addClosedWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+                }
                 break;
             }
         }

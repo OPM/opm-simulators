@@ -231,6 +231,9 @@ namespace Opm
         /// Returns true if the well has one or more THP limits/constraints.
         bool wellHasTHPConstraints() const;
 
+        /// Returns true if the well is currently in prediction mode (i.e. not history mode).
+        bool underPredictionMode() const;
+
     protected:
 
         // to indicate a invalid completion
@@ -324,8 +327,6 @@ namespace Opm
 
         bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                                  const WellState& well_state) const;
-
-        bool underPredictionMode() const;
 
         double getTHPConstraint() const;
 
