@@ -236,6 +236,12 @@ namespace Opm {
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
 
+            /// Return true if any well has a THP constraint.
+            bool hasTHPConstraints() const;
+
+            /// Shut down any single well, but only if it is in prediction mode.
+            void forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
+
         protected:
 
             void extractLegacyPressure_(std::vector<double>& cellPressure) const
