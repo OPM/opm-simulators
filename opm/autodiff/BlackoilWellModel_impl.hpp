@@ -916,6 +916,9 @@ namespace Opm {
         wellhelpers::WellSwitchingLogger logger;
 
         for (const auto& well : well_container_) {
+
+            if ( !well->isOperable() ) continue;
+
             well->updateWellControl(ebosSimulator_, well_state_, logger);
         }
 
