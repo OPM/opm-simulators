@@ -1112,8 +1112,6 @@ namespace Opm
             break;
 
         case THP: {
-            assert(this->isOperable() );
-
             // when a well can not work under THP target, it switches to BHP control
             if (this->operability_status_.isOperableUnderTHPLimit() ) {
                 updateWellStateWithTHPTargetIPR(ebos_simulator, well_state);
@@ -1337,10 +1335,7 @@ namespace Opm
 
         // checking whether the well can operate under the THP constraints.
         if (this->wellHasTHPConstraints()) {
-            this->operability_status_.has_thp_constraint = true;
             checkOperabilityUnderTHPLimitProducer(ebos_simulator);
-            this->operability_status_.can_produce_inject_with_current_bhp =
-                canProduceInjectWithCurrentBhp(ebos_simulator, well_state);
         }
     }
 
