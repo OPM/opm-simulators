@@ -117,8 +117,8 @@ namespace Opm
                                     WellState& well_state) override;
 
         /// updating the well state based the current control mode
-        virtual void updateWellStateWithTarget(/* const */ Simulator& ebos_simulator,
-                                               WellState& well_state) /* const */ override;
+        virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                               WellState& well_state) const override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const override;
@@ -349,6 +349,11 @@ namespace Opm
         void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                             const double dt,
                                             WellState& well_state);
+
+        virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
+                                         const double simulation_time, const int report_step,
+                                         const bool terminal_output,
+                                         WellState& well_state, WellTestState& welltest_state) override;
     };
 
 }

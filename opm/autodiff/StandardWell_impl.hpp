@@ -1088,8 +1088,8 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellStateWithTarget(/* const */ Simulator& ebos_simulator,
-                              WellState& well_state) /* const */
+    updateWellStateWithTarget(const Simulator& ebos_simulator,
+                              WellState& well_state) const
     {
         // number of phases
         const int np = number_of_phases_;
@@ -1112,8 +1112,6 @@ namespace Opm
             break;
 
         case THP: {
-            assert(this->isOperable() );
-
             // when a well can not work under THP target, it switches to BHP control
             if (this->operability_status_.isOperableUnderTHPLimit() ) {
                 updateWellStateWithTHPTargetIPR(ebos_simulator, well_state);
@@ -1307,6 +1305,27 @@ namespace Opm
 
         const bool old_well_operable = this->operability_status_.isOperable();
 
+        updateWellOperability(ebos_simulator, well_state);
+
+        const bool well_operable = this->operability_status_.isOperable();
+
+        if (!well_operable && old_well_operable) {
+            OpmLog::info(" well " + name() + " gets SHUT during iteration ");
+        } else if (well_operable && !old_well_operable) {
+            OpmLog::info(" well " + name() + " gets REVIVED during iteration ");
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateWellOperability(const Simulator& ebos_simulator,
+                          const WellState& well_state)
+    {
         this->operability_status_.reset();
 
         updateIPR(ebos_simulator);
@@ -1316,18 +1335,7 @@ namespace Opm
 
         // checking whether the well can operate under the THP constraints.
         if (this->wellHasTHPConstraints()) {
-            this->operability_status_.has_thp_constaint = true;
             checkOperabilityUnderTHPLimitProducer(ebos_simulator);
-            this->operability_status_.can_produce_inject_with_current_bhp =
-                canProduceInjectWithCurrentBhp(ebos_simulator, well_state);
-        }
-
-        const bool well_operable = this->operability_status_.isOperable();
-
-        if (!well_operable && old_well_operable) {
-            OpmLog::info(" well " + name() + " gets SHUT during iteration ");
-        } else if (well_operable && !old_well_operable) {
-            OpmLog::info(" well " + name() + " gets REVIVED during iteration ");
         }
     }
 
@@ -2705,5 +2713,68 @@ namespace Opm
         assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
 
         return relaxation_factor;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    wellTestingPhysical(Simulator& ebos_simulator, const std::vector<double>& B_avg,
+                        const double simulation_time, const int report_step, const bool terminal_output,
+                        WellState& well_state, WellTestState& welltest_state)
+    {
+        OpmLog::debug(" well " + name() + " is being tested for physical limits");
+
+        // some most difficult things are the explicit quantities, since there is no information
+        // in the WellState to do a decent initialization
+
+        // TODO: Let us assume that the simulator is updated
+
+        // Let us try to do a normal simualtion running, to keep checking the operability status
+        // If the well is not operable during any of the time. It means it does not pass the physical
+        // limit test.
+
+        // create a copy of the well_state to use. If the operability checking is sucessful, we use this one
+        // to replace the original one
+        WellState well_state_copy = well_state;
+
+        // TODO: well state for this well is kind of all zero status
+        // we should be able to provide a better initialization
+        calculateExplicitQuantities(ebos_simulator, well_state_copy);
+
+        updateWellOperability(ebos_simulator, well_state_copy);
+
+        if ( !this->isOperable() ) {
+            const std::string msg = " well " + name() + " is not operable during well testing for physical reason";
+            OpmLog::debug(msg);
+            return;
+        }
+
+        updateWellStateWithTarget(ebos_simulator, well_state_copy);
+
+        calculateExplicitQuantities(ebos_simulator, well_state_copy);
+        updatePrimaryVariables(well_state_copy);
+        initPrimaryVariablesEvaluation();
+
+        const bool converged = this->solveWellEqUntilConverged(ebos_simulator, B_avg, well_state_copy);
+
+        if (!converged) {
+            const std::string msg = " well " + name() + " did not get converged during well testing for physical reason";
+            OpmLog::debug(msg);
+            return;
+        }
+
+        if (this->isOperable() ) {
+            welltest_state.openWell(name() );
+            const std::string msg = " well " + name() + " is re-opened through well testing for physical reason";
+            OpmLog::info(msg);
+            well_state = well_state_copy;
+        } else {
+            const std::string msg = " well " + name() + " is not operable during well testing for physical reason";
+            OpmLog::debug(msg);
+        }
     }
 }

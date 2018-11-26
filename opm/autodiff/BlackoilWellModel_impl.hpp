@@ -324,8 +324,6 @@ namespace Opm {
 
         for (const auto& testWell : wellsForTesting) {
             const std::string& well_name = testWell.first;
-            const std::string msg = std::string("well ") + well_name + std::string(" is tested");
-            OpmLog::info(msg);
 
             // this is the well we will test
             WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx);

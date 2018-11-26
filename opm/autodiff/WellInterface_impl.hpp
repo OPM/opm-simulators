@@ -923,9 +923,15 @@ namespace Opm
     WellInterface<TypeTag>::
     wellTesting(Simulator& simulator, const std::vector<double>& B_avg,
                 const double simulation_time, const int report_step, const bool terminal_output,
-                const WellTestConfig::Reason testing_reason, const WellState& well_state,
+                const WellTestConfig::Reason testing_reason,
+                /* const */ WellState& well_state,
                 WellTestState& well_test_state)
     {
+        if (testing_reason == WellTestConfig::Reason::PHYSICAL) {
+            wellTestingPhysical(simulator, B_avg, simulation_time, report_step,
+                                terminal_output, well_state, well_test_state);
+        }
+
         if (testing_reason == WellTestConfig::Reason::ECONOMIC) {
             wellTestingEconomic(simulator, B_avg, simulation_time, report_step,
                                 terminal_output, well_state, well_test_state);
@@ -943,6 +949,8 @@ namespace Opm
                         const double simulation_time, const int report_step, const bool terminal_output,
                         const WellState& well_state, WellTestState& welltest_state)
     {
+        OpmLog::debug(" well " + name() + " is being tested for economic limits");
+
         WellState well_state_copy = well_state;
 
         updatePrimaryVariables(well_state_copy);
@@ -1140,6 +1148,42 @@ namespace Opm
 
 
     template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    solveWellEqUntilConverged(Simulator& ebosSimulator,
+                              const std::vector<double>& B_avg,
+                              WellState& well_state)
+    {
+        const int max_iter = param_.max_welleq_iter_;
+        int it = 0;
+        const double dt = 1.0; //not used for the well tests
+        bool converged;
+        WellState well_state0 = well_state;
+        do {
+            assembleWellEq(ebosSimulator, dt, well_state);
+
+            auto report = getWellConvergence(B_avg);
+            converged = report.converged();
+            if (converged) {
+                break;
+            }
+
+            ++it;
+            solveEqAndUpdateWellState(well_state);
+
+            wellhelpers::WellSwitchingLogger logger;
+            updateWellControl(ebosSimulator, well_state, logger);
+            initPrimaryVariablesEvaluation();
+        } while (it < max_iter);
+
+        return converged;
+    }
+
+
+
+
+
+    template<typename TypeTag>
     void
     WellInterface<TypeTag>::calculateReservoirRates(WellState& well_state) const
     {
@@ -1176,37 +1220,24 @@ namespace Opm
 
     template<typename TypeTag>
     void
-    WellInterface<TypeTag>::solveWellForTesting(Simulator& ebosSimulator, WellState& well_state, const std::vector<double>& B_avg, bool terminal_output)
+    WellInterface<TypeTag>::
+    solveWellForTesting(Simulator& ebosSimulator, WellState& well_state,
+                        const std::vector<double>& B_avg, bool terminal_output)
     {
-        const int max_iter = param_.max_welleq_iter_;
-        int it = 0;
-        const double dt = 1.0; //not used for the well tests
-        bool converged;
-        WellState well_state0 = well_state;
-        do {
-            assembleWellEq(ebosSimulator, dt, well_state);
+        // keep a copy of the original well state
+        const WellState well_state0 = well_state;
 
-            auto report = getWellConvergence(B_avg);
-            converged = report.converged();
-            if (converged) {
-                break;
-            }
-
-            ++it;
-            solveEqAndUpdateWellState(well_state);
-
-            wellhelpers::WellSwitchingLogger logger;
-            updateWellControl(ebosSimulator, well_state, logger);
-            initPrimaryVariablesEvaluation();
-        } while (it < max_iter);
+        const bool converged = solveWellEqUntilConverged(ebosSimulator, B_avg, well_state);
 
         if (converged) {
             if ( terminal_output ) {
-                OpmLog::debug("WellTest: Well equation for well " + name() +  " solution gets converged with " + std::to_string(it) + " iterations");
+                OpmLog::debug("WellTest: Well equation for well " + name() +  " solution gets converged");
             }
         } else {
             if ( terminal_output ) {
-                OpmLog::debug("WellTest: Well equation for well" +name() + " solution failed in getting converged with " + std::to_string(it) + " iterations");
+                const int max_iter = param_.max_welleq_iter_;
+                OpmLog::debug("WellTest: Well equation for well" +name() + " solution failed in getting converged with "
+                              + std::to_string(max_iter) + " iterations");
             }
             well_state = well_state0;
         }

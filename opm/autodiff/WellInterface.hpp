@@ -172,8 +172,8 @@ namespace Opm
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials) = 0;
 
-        virtual void updateWellStateWithTarget(/* const */ Simulator& ebos_simulator,
-                                               WellState& well_state) /* const */ = 0;
+        virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                               WellState& well_state) const = 0;
 
         void updateWellControl(/* const */ Simulator& ebos_simulator,
                                WellState& well_state,
@@ -218,8 +218,8 @@ namespace Opm
         // Simulator is not const is because that assembleWellEq is non-const Simulator
         void wellTesting(Simulator& simulator, const std::vector<double>& B_avg,
                          const double simulation_time, const int report_step,  const bool terminal_output,
-                         const WellTestConfig::Reason testing_reason, const WellState& well_state,
-                         WellTestState& welltest_state);
+                         const WellTestConfig::Reason testing_reason,
+                         /* const */ WellState& well_state, WellTestState& welltest_state);
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
@@ -364,6 +364,10 @@ namespace Opm
                                  const double simulation_time, const int report_step, const bool terminal_output,
                                  const WellState& well_state, WellTestState& welltest_state);
 
+        virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
+                                 const double simulation_time, const int report_step, const bool terminal_output,
+                                 WellState& well_state, WellTestState& welltest_state) = 0;
+
         void updateWellTestStateEconomic(const WellState& well_state,
                                          const double simulation_time,
                                          const bool write_message_to_opmlog,
@@ -374,7 +378,12 @@ namespace Opm
                                          const bool write_message_to_opmlog,
                                          WellTestState& well_test_state) const;
 
-        void solveWellForTesting(Simulator& ebosSimulator, WellState& well_state, const std::vector<double>& B_avg, bool terminal_output);
+        void  solveWellForTesting(Simulator& ebosSimulator, WellState& well_state,
+                                  const std::vector<double>& B_avg, bool terminal_output);
+
+        bool solveWellEqUntilConverged(Simulator& ebosSimulator,
+                                        const std::vector<double>& B_avg,
+                                        WellState& well_state);
 
         void scaleProductivityIndex(const int perfIdx, double& productivity_index) const;
 
@@ -393,8 +402,7 @@ namespace Opm
             if (!operable_under_only_bhp_limit) {
                 return false;
             } else {
-                return ( (isOperableUnderBHPLimit() || isOperableUnderTHPLimit()) &&
-                        !(has_thp_constaint && !can_produce_inject_with_current_bhp) );
+                return ( (isOperableUnderBHPLimit() || isOperableUnderTHPLimit()) );
             }
         }
 
@@ -411,8 +419,6 @@ namespace Opm
             obey_thp_limit_under_bhp_limit = true;
             can_obtain_bhp_with_thp_limit = true;
             obey_bhp_limit_with_thp_limit = true;
-            can_produce_inject_with_current_bhp = true;
-            has_thp_constaint = false;
         }
 
         // whether the well can be operated under bhp limit
@@ -426,15 +432,6 @@ namespace Opm
         bool can_obtain_bhp_with_thp_limit = true;
         // whether the well obey bhp limit when operated under thp limit
         bool obey_bhp_limit_with_thp_limit = true;
-
-        // TODO: the following criterion is based on the current state of
-        // the well, we consider it is a numerical criterion.
-        // at the moment, we only apply it with well has THP constraint.
-        // whether the well can produce / inject with the current bhp of the well
-        // it might be updated with other criterion with investigation with more cases.
-        bool can_produce_inject_with_current_bhp = true;
-        // whether the well has a THP constraint
-        bool has_thp_constaint = false;
     };
 
 }
