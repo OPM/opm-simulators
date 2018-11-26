@@ -925,16 +925,17 @@ namespace Opm
                 const double simulation_time, const int report_step, const bool terminal_output,
                 const WellTestConfig::Reason testing_reason,
                 /* const */ WellState& well_state,
-                WellTestState& well_test_state)
+                WellTestState& well_test_state,
+                wellhelpers::WellSwitchingLogger& logger)
     {
         if (testing_reason == WellTestConfig::Reason::PHYSICAL) {
             wellTestingPhysical(simulator, B_avg, simulation_time, report_step,
-                                terminal_output, well_state, well_test_state);
+                                terminal_output, well_state, well_test_state, logger);
         }
 
         if (testing_reason == WellTestConfig::Reason::ECONOMIC) {
             wellTestingEconomic(simulator, B_avg, simulation_time, report_step,
-                                terminal_output, well_state, well_test_state);
+                                terminal_output, well_state, well_test_state, logger);
         }
     }
 
@@ -947,7 +948,7 @@ namespace Opm
     WellInterface<TypeTag>::
     wellTestingEconomic(Simulator& simulator, const std::vector<double>& B_avg,
                         const double simulation_time, const int report_step, const bool terminal_output,
-                        const WellState& well_state, WellTestState& welltest_state)
+                        const WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger)
     {
         OpmLog::debug(" well " + name() + " is being tested for economic limits");
 
@@ -965,7 +966,7 @@ namespace Opm
         // untill the number of closed completions do not increase anymore.
         while (testWell) {
             const size_t original_number_closed_completions = welltest_state_temp.sizeCompletions();
-            solveWellForTesting(simulator, well_state_copy, B_avg, terminal_output);
+            solveWellForTesting(simulator, well_state_copy, B_avg, terminal_output, logger);
             updateWellTestState(well_state_copy, simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp);
             closeCompletions(welltest_state_temp);
 
@@ -1152,7 +1153,8 @@ namespace Opm
     WellInterface<TypeTag>::
     solveWellEqUntilConverged(Simulator& ebosSimulator,
                               const std::vector<double>& B_avg,
-                              WellState& well_state)
+                              WellState& well_state,
+                              wellhelpers::WellSwitchingLogger& logger)
     {
         const int max_iter = param_.max_welleq_iter_;
         int it = 0;
@@ -1171,7 +1173,6 @@ namespace Opm
             ++it;
             solveEqAndUpdateWellState(well_state);
 
-            wellhelpers::WellSwitchingLogger logger;
             updateWellControl(ebosSimulator, well_state, logger);
             initPrimaryVariablesEvaluation();
         } while (it < max_iter);
@@ -1222,13 +1223,12 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     solveWellForTesting(Simulator& ebosSimulator, WellState& well_state,
-                        const std::vector<double>& B_avg, bool terminal_output)
+                        const std::vector<double>& B_avg, bool terminal_output,
+                        wellhelpers::WellSwitchingLogger& logger)
     {
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
-
-        const bool converged = solveWellEqUntilConverged(ebosSimulator, B_avg, well_state);
-
+        const bool converged = solveWellEqUntilConverged(ebosSimulator, B_avg, well_state, logger);
         if (converged) {
             if ( terminal_output ) {
                 OpmLog::debug("WellTest: Well equation for well " + name() +  " solution gets converged");

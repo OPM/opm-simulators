@@ -219,7 +219,8 @@ namespace Opm
         void wellTesting(Simulator& simulator, const std::vector<double>& B_avg,
                          const double simulation_time, const int report_step,  const bool terminal_output,
                          const WellTestConfig::Reason testing_reason,
-                         /* const */ WellState& well_state, WellTestState& welltest_state);
+                         /* const */ WellState& well_state, WellTestState& welltest_state,
+                         wellhelpers::WellSwitchingLogger& logger);
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
@@ -362,11 +363,11 @@ namespace Opm
 
         void wellTestingEconomic(Simulator& simulator, const std::vector<double>& B_avg,
                                  const double simulation_time, const int report_step, const bool terminal_output,
-                                 const WellState& well_state, WellTestState& welltest_state);
+                                 const WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger);
 
         virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
                                  const double simulation_time, const int report_step, const bool terminal_output,
-                                 WellState& well_state, WellTestState& welltest_state) = 0;
+                                         WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger) = 0;
 
         void updateWellTestStateEconomic(const WellState& well_state,
                                          const double simulation_time,
@@ -379,11 +380,13 @@ namespace Opm
                                          WellTestState& well_test_state) const;
 
         void  solveWellForTesting(Simulator& ebosSimulator, WellState& well_state,
-                                  const std::vector<double>& B_avg, bool terminal_output);
+                                  const std::vector<double>& B_avg, bool terminal_output,
+                                  wellhelpers::WellSwitchingLogger& logger);
 
         bool solveWellEqUntilConverged(Simulator& ebosSimulator,
-                                        const std::vector<double>& B_avg,
-                                        WellState& well_state);
+                                       const std::vector<double>& B_avg,
+                                       WellState& well_state,
+                                       wellhelpers::WellSwitchingLogger& logger);
 
         void scaleProductivityIndex(const int perfIdx, double& productivity_index) const;
 
