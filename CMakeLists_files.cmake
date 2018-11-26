@@ -23,7 +23,6 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
-  opm/autodiff/Compat.cpp
   opm/autodiff/ExtractParallelGridInformationToISTL.cpp
   opm/autodiff/moduleVersion.cpp
   opm/autodiff/MPIUtilities.cpp
@@ -32,7 +31,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/MissingFeatures.cpp
   opm/core/props/rock/RockFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
-  opm/core/simulator/BlackoilState.cpp
   opm/core/simulator/SimulatorReport.cpp
   opm/core/wells/InjectionSpecification.cpp
   opm/core/wells/ProductionSpecification.cpp
@@ -41,7 +39,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/wells/WellsManager.cpp
   opm/core/wells/well_controls.c
   opm/core/wells/wells.c
-  opm/polymer/PolymerBlackoilState.cpp
   opm/simulators/WellSwitchingLogger.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
@@ -63,7 +60,6 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_timer.cpp
   tests/test_invert.cpp
   tests/test_wells.cpp
-  tests/test_blackoilstate.cpp
   tests/test_wellsmanager.cpp
   tests/test_wellcontrols.cpp
   tests/test_wellsgroup.cpp
@@ -93,8 +89,6 @@ list (APPEND TEST_DATA_FILES
   tests/equil_rsvd_and_rvvd.DATA
   tests/wetgas.DATA
   tests/satfuncEPS_B.DATA
-  tests/testBlackoilState1.DATA
-  tests/testBlackoilState2.DATA
   tests/wells_manager_data.data
   tests/wells_manager_data_expanded.data
   tests/wells_manager_data_wellSTOP.data
@@ -114,7 +108,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilModelParametersEbos.hpp
   opm/autodiff/BlackoilAquiferModel.hpp
   opm/autodiff/BlackoilAquiferModel_impl.hpp
-  opm/autodiff/Compat.hpp
   opm/autodiff/CPRPreconditioner.hpp
   opm/autodiff/createGlobalCellArray.hpp
   opm/autodiff/ExtractParallelGridInformationToISTL.hpp
@@ -151,16 +144,12 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/MissingFeatures.hpp
   opm/core/linalg/ParallelIstlInformation.hpp
   opm/core/props/BlackoilPhases.hpp
-  opm/core/props/BlackoilPropertiesInterface.hpp
   opm/core/props/phaseUsageFromDeck.hpp
   opm/core/props/rock/RockFromDeck.hpp
   opm/core/props/satfunc/RelpermDiagnostics.hpp
   opm/core/props/satfunc/RelpermDiagnostics_impl.hpp
-  opm/core/simulator/BlackoilState.hpp
-  opm/core/simulator/BlackoilStateToFluidState.hpp
   opm/core/simulator/SimulatorReport.hpp
   opm/core/simulator/WellState.hpp
-  opm/core/utility/initHydroCarbonState.hpp
   opm/core/well_controls.h
   opm/core/wells.h
   opm/core/wells/InjectionSpecification.hpp
@@ -170,7 +159,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/core/wells/WellsManager.hpp
   opm/core/wells/DynamicListEconLimited.hpp
   opm/core/wells/WellsManager_impl.hpp
-  opm/polymer/PolymerBlackoilState.hpp
   opm/simulators/ParallelFileMerger.hpp
   opm/simulators/WellSwitchingLogger.hpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
