@@ -23,6 +23,7 @@
 #define OPM_RATECONVERTER_HPP_HEADER_INCLUDED
 
 #include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/grid/utility/RegionMapping.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
@@ -420,108 +421,42 @@ namespace Opm {
             {
             }
 
-
             /**
-             * Compute pore volume averaged hydrocarbon state pressure, rs and rv.
+             * Compute average hydrocarbon pressure and maximum
+             * dissolution and evaporation at average hydrocarbon
+             * pressure in all regions in field.
              *
              * Fluid properties are evaluated at average hydrocarbon
-             * state for purpose of conversion from surface rate to
+             * pressure for purpose of conversion from surface rate to
              * reservoir voidage rate.
              *
+             * \param[in] state Dynamic reservoir state.
+             * \param[in] any  The information and communication utilities
+             *                 about/of the parallelization. in any parallel
+             *                 it wraps a ParallelISTLInformation. Parameter
+             *                 is optional.
              */
-            template <typename ElementContext, class EbosSimulator>
-            void defineState(const EbosSimulator& simulator)
+            void
+            defineState(const BlackoilState& state,
+                        const boost::any& info = boost::any())
             {
-
-                // create map from cell to region
-                // and set all attributes to zero
-                const auto& grid = simulator.vanguard().grid();
-                const unsigned numCells = grid.size(/*codim=*/0);
-                std::vector<int> cell2region(numCells, -1);
-                for (const auto& reg : rmap_.activeRegions()) {
-                    for (const auto& cell : rmap_.cells(reg)) {
-                        cell2region[cell] = reg;
-                    }
-                    auto& ra = attr_.attributes(reg);
-                    ra.pressure = 0.0;
-                    ra.temperature = 0.0;
-                    ra.rs = 0.0;
-                    ra.rv = 0.0;
-                    ra.pv = 0.0;
-
-                }
-
-                ElementContext elemCtx( simulator );
-                const auto& gridView = simulator.gridView();
-                const auto& comm = gridView.comm();
-
-                const auto& elemEndIt = gridView.template end</*codim=*/0>();
-                for (auto elemIt = gridView.template begin</*codim=*/0>();
-                     elemIt != elemEndIt;
-                     ++elemIt)
+#if HAVE_MPI
+                if( info.type() == typeid(ParallelISTLInformation) )
                 {
-
-                    const auto& elem = *elemIt;
-                    if (elem.partitionType() != Dune::InteriorEntity)
-                        continue;
-
-                    elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                    const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                    const auto& fs = intQuants.fluidState();
-                    // use pore volume weighted averages.
-                    const double pv_cell =
-                            simulator.model().dofTotalVolume(cellIdx)
-                            * intQuants.porosity().value();
-
-                    // only count oil and gas filled parts of the domain
-                    double hydrocarbon = 1.0;
-                    const auto& pu = phaseUsage_;
-                    if (Details::PhaseUsed::water(pu)) {
-                        hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
-                    }
-
-                    int reg = cell2region[cellIdx];
-                    assert(reg >= 0);
-                    auto& ra = attr_.attributes(reg);
-                    auto& p  = ra.pressure;
-                    auto& T  = ra.temperature;
-                    auto& rs  = ra.rs;
-                    auto& rv  = ra.rv;
-                    auto& pv  = ra.pv;
-
-                    // sum p, rs, rv, and T.
-                    double hydrocarbonPV = pv_cell*hydrocarbon;
-                    pv += hydrocarbonPV;
-                    p += fs.pressure(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
-                    rs += fs.Rs().value()*hydrocarbonPV;
-                    rv += fs.Rv().value()*hydrocarbonPV;
-                    T += fs.temperature(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
+                    const auto& ownership =
+                        boost::any_cast<const ParallelISTLInformation&>(info)
+                        .updateOwnerMask(state.pressure());
+                    calcAverages<true>(state, info, ownership);
                 }
-
-                for (const auto& reg : rmap_.activeRegions()) {
-                      auto& ra = attr_.attributes(reg);
-                      auto& p  = ra.pressure;
-                      auto& T  = ra.temperature;
-                      auto& rs  = ra.rs;
-                      auto& rv  = ra.rv;
-                      auto& pv  = ra.pv;
-                      // communicate sums
-                      p = comm.sum(p);
-                      T = comm.sum(T);
-                      rs = comm.sum(rs);
-                      rv = comm.sum(rv);
-                      pv = comm.sum(pv);
-                      // compute average
-                      p /= pv;
-                      T /= pv;
-                      rs /= pv;
-                      rv /= pv;
-                }
+                else
+#endif
+                {
+                    std::vector<double> dummyOwnership; // not actually used
+                    calcAverages<false>(state, info, dummyOwnership);
+                }   
             }
 
-	    /**
+            /**
              * Region identifier.
              *
              * Integral type.
@@ -763,6 +698,76 @@ namespace Opm {
             };
 
             Details::RegionAttributes<RegionId, Attributes> attr_;
+
+
+            /**
+             * Compute average hydrocarbon pressure and temperatures in all
+             * regions.
+             *
+             * \param[in] state       Dynamic reservoir state.
+             * \param[in] info        The information and communication utilities
+             *                        about/of the parallelization.
+             * \param[in] ownership   In a parallel run this is vector containing
+             *                        1 for every owned unknown, zero otherwise.
+             *                        Not used in a sequential run.
+             * \tparam    is_parallel True if the run is parallel. In this case
+             *                        info has to contain a ParallelISTLInformation
+             *                        object.
+             */
+            template<bool is_parallel>
+            void
+            calcAverages(const BlackoilState& state, const boost::any& info,
+                         const std::vector<double>& ownerShip)
+            {
+                const auto& press = state.pressure();
+                const auto& temp  = state.temperature();
+                const auto& Rv  = state.rv();
+                const auto& Rs = state.gasoilratio();
+
+                for (const auto& reg : rmap_.activeRegions()) {
+                    auto& ra = attr_.attributes(reg);
+                    auto& p  = ra.pressure;
+                    auto& T  = ra.temperature;
+                    auto& rs  = ra.rs;
+                    auto& rv  = ra.rv;
+
+                    std::size_t n = 0;
+                    p = T = 0.0;
+                    for (const auto& cell : rmap_.cells(reg)) {
+                        auto increment = Details::
+                                AverageIncrementCalculator<is_parallel>()(press, temp, Rs, Rv,
+                                                                          ownerShip,
+                                                                          cell);
+                        p += std::get<0>(increment);
+                        T += std::get<1>(increment);
+                        rs += std::get<2>(increment);
+                        rv += std::get<3>(increment);
+                        n += std::get<4>(increment);
+                    }
+                    std::size_t global_n = n;
+                    double global_p = p;
+                    double global_T = T;
+                    double global_rs = rs;
+                    double global_rv = rv;
+#if HAVE_MPI
+                    if ( is_parallel )
+                    {
+                        const auto& real_info = boost::any_cast<const ParallelISTLInformation&>(info);
+                        global_n = real_info.communicator().sum(n);
+                        global_p = real_info.communicator().sum(p);
+                        global_rs = real_info.communicator().sum(rs);
+                        global_rv = real_info.communicator().sum(rv);
+                        global_T = real_info.communicator().sum(T);
+                    }
+#endif
+                    p = global_p / global_n;
+                    rs = global_rs / global_n;
+                    rv = global_rv / global_n;
+                    T = global_T / global_n;
+                }
+            }
+
+
 
         };
     } // namespace RateConverter

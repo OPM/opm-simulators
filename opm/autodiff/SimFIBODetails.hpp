@@ -25,7 +25,6 @@
 #include <algorithm>
 #include <locale>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
-#include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/core/well_controls.h>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 

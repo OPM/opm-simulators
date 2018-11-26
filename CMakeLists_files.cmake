@@ -130,6 +130,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/ParallelOverlappingILU0.hpp
   opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp
   opm/autodiff/RateConverter.hpp
+  opm/autodiff/RateConverterLegacy.hpp
   opm/autodiff/SimFIBODetails.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp
   opm/autodiff/WellConnectionAuxiliaryModule.hpp

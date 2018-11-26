@@ -69,7 +69,6 @@ public:
     typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
     typedef WellStateFullyImplicitBlackoil WellState;
-    typedef BlackoilState ReservoirState;
     typedef BlackoilModelEbos<TypeTag> Model;
     typedef NonlinearSolverEbos<TypeTag, Model> Solver;
     typedef typename Model::ModelParameters ModelParameters;

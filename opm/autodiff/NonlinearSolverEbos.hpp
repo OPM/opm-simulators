@@ -120,7 +120,6 @@ namespace Opm {
         };
 
         // Forwarding types from PhysicalModel.
-        typedef typename PhysicalModel::ReservoirState ReservoirState;
         typedef typename PhysicalModel::WellState WellState;
 
         // ---------  Public methods  ---------
@@ -235,14 +234,6 @@ namespace Opm {
         /// Number of well iterations used in all calls to step().
         int wellIterationsLastStep() const
         { return wellIterationsLast_; }
-
-        /// Compute fluid in place.
-        /// \param[in]    ReservoirState
-        /// \param[in]    FIPNUM for active cells not global cells.
-        /// \return fluid in place, number of fip regions, each region contains 5 values which are liquid, vapour, water, free gas and dissolved gas.
-        std::vector<std::vector<double> >
-        computeFluidInPlace(const ReservoirState& x, const std::vector<int>& fipnum) const
-        { return model_->computeFluidInPlace(x, fipnum); }
 
         std::vector<std::vector<double> >
         computeFluidInPlace(const std::vector<int>& fipnum) const
