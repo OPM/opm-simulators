@@ -122,6 +122,15 @@ namespace Opm
             // Ensure that we start out with zero rates by default.
             perfphaserates_.clear();
             perfphaserates_.resize(nperf * np, 0.0);
+
+            // these are only used to monitor the injectivity
+            perf_water_throughput_.clear();
+            perf_water_throughput_.resize(nperf, 0.0);
+            perf_water_velocity_.clear();
+            perf_water_velocity_.resize(nperf, 0.0);
+            perf_skin_pressure_.clear();
+            perf_skin_pressure_.resize(nperf, 0.0);
+
             for (int w = 0; w < nw; ++w) {
                 assert((wells->type[w] == INJECTOR) || (wells->type[w] == PRODUCER));
                 const WellControls* ctrl = wells->ctrls[w];
@@ -137,6 +146,13 @@ namespace Opm
                             perfphaserates_[np*perf + p] = wellRates()[np*w + p] / double(num_perf_this_well);
                         }
                         perfPress()[perf] = cellPressures[wells->well_cells[perf]];
+
+                        // here we did not consider the case that we close some perforation during the running
+                        // and also, wells can be shut and re-opened
+                        // it should only be updated when necessary, while WellState might not have the facility to do it
+                        perf_water_throughput_[ perf ] = prevState->perfThroughput()[ oldPerf_idx ];
+                        perf_skin_pressure_[ perf ] = prevState->perfSkinPressure()[ oldPerf_idx ];
+                        perf_water_velocity_[ perf ] = prevState->perfWaterVelocity()[ oldPerf_idx ];
                     }
                 }
             }
@@ -831,10 +847,47 @@ namespace Opm
             return well_potentials_;
         }
 
+        std::vector<double>& perfThroughput() {
+            return perf_water_throughput_;
+        }
+
+        const std::vector<double>& perfThroughput() const {
+            return perf_water_throughput_;
+        }
+
+        std::vector<double>& perfSkinPressure() {
+            return perf_skin_pressure_;
+        }
+
+        const std::vector<double>& perfSkinPressure() const {
+            return perf_skin_pressure_;
+        }
+
+        std::vector<double>& perfWaterVelocity() {
+            return perf_water_velocity_;
+        }
+
+        const std::vector<double>& perfWaterVelocity() const {
+            return perf_water_velocity_;
+        }
+
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
         std::vector<double> perfRateSolvent_;
+
+        // it is the throughput of water flow through the perforations
+        // it is used as a measure of formation damage around well-bore due to particle deposition
+        // it will only be used for injectors to check the injectivity
+        std::vector<double> perf_water_throughput_;
+
+        // skin pressure of peforation
+        // it will only be used for injectors to check the injectivity
+        std::vector<double> perf_skin_pressure_;
+
+        // it will only be used for injectors to check the injectivity
+        // water velocity of perforation
+        std::vector<double> perf_water_velocity_;
 
         // phase rates under reservoir condition for wells
         // or voidage phase rates
