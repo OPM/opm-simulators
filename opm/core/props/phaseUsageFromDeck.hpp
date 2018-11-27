@@ -107,6 +107,18 @@ namespace Opm
         else
             pu.phase_pos[BlackoilPhases::Energy] = -1;
 
+        // Add polymer molecular weight related
+        pu.has_polymermw = phase.active(Phase::POLYMW);
+        if (pu.has_polymermw) {
+            if (!pu.has_polymer) {
+                OPM_THROW(std::runtime_error, "pu.has_polymermw is true while pu.has_polymer is false");
+            }
+            pu.phase_pos[BlackoilPhases::PolymerMW] = numActivePhases;
+            ++ numActivePhases;
+        }
+        else
+            pu.phase_pos[BlackoilPhases::PolymerMW] = -1;
+
         return pu;
     }
 
