@@ -48,7 +48,6 @@
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/StandardWell.hpp>
 #include <opm/autodiff/MultisegmentWell.hpp>
-#include <opm/autodiff/Compat.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
 #include<opm/autodiff/SimFIBODetails.hpp>
 #include<dune/common/fmatrix.hh>
@@ -417,6 +416,11 @@ namespace Opm {
             void updatePerforationIntensiveQuantities();
 
             void wellTesting(const int timeStepIdx, const double simulationTime);
+
+            // convert well data from opm-common to well state from opm-core
+            void wellsToState( const data::Wells& wells,
+                               PhaseUsage phases,
+                               WellStateFullyImplicitBlackoil& state );
 
         };
 

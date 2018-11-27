@@ -101,7 +101,6 @@ namespace Opm {
     {
     public:
         // ---------  Types and enums  ---------
-        typedef BlackoilState ReservoirState;
         typedef WellStateFullyImplicitBlackoil WellState;
         typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 

@@ -1588,4 +1588,70 @@ namespace Opm {
         }
     }
 
+
+    // convert well data from opm-common to well state from opm-core
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    wellsToState( const data::Wells& wells,
+                       PhaseUsage phases,
+                       WellStateFullyImplicitBlackoil& state ) {
+
+        using rt = data::Rates::opt;
+        const auto np = phases.num_phases;
+
+        std::vector< rt > phs( np );
+        if( phases.phase_used[BlackoilPhases::Aqua] ) {
+            phs.at( phases.phase_pos[BlackoilPhases::Aqua] ) = rt::wat;
+        }
+
+        if( phases.phase_used[BlackoilPhases::Liquid] ) {
+            phs.at( phases.phase_pos[BlackoilPhases::Liquid] ) = rt::oil;
+        }
+
+        if( phases.phase_used[BlackoilPhases::Vapour] ) {
+            phs.at( phases.phase_pos[BlackoilPhases::Vapour] ) = rt::gas;
+        }
+
+        for( const auto& wm : state.wellMap() ) {
+            const auto well_index = wm.second[ 0 ];
+            const auto& well = wells.at( wm.first );
+            state.bhp()[ well_index ] = well.bhp;
+            state.temperature()[ well_index ] = well.temperature;
+            state.currentControls()[ well_index ] = well.control;
+            const auto wellrate_index = well_index * np;
+            for( size_t i = 0; i < phs.size(); ++i ) {
+                assert( well.rates.has( phs[ i ] ) );
+                state.wellRates()[ wellrate_index + i ] = well.rates.get( phs[ i ] );
+            }
+
+            const auto perforation_pressure = []( const data::Connection& comp ) {
+                return comp.pressure;
+            };
+
+            const auto perforation_reservoir_rate = []( const data::Connection& comp ) {
+                return comp.reservoir_rate;
+            };
+
+            std::transform( well.connections.begin(),
+                            well.connections.end(),
+                            state.perfPress().begin() + wm.second[ 1 ],
+                    perforation_pressure );
+
+            std::transform( well.connections.begin(),
+                            well.connections.end(),
+                            state.perfRates().begin() + wm.second[ 1 ],
+                    perforation_reservoir_rate );
+
+            int local_comp_index = 0;
+            for (const data::Connection& comp : well.connections) {
+                const int global_comp_index = wm.second[1] + local_comp_index;
+                for (int phase_index = 0; phase_index < np; ++phase_index) {
+                    state.perfPhaseRates()[global_comp_index*np + phase_index] = comp.rates.get(phs[phase_index]);
+                }
+                ++local_comp_index;
+            }
+        }
+    }
+
 } // namespace Opm

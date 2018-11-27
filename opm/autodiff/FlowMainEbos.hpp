@@ -95,7 +95,6 @@ namespace Opm
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
         typedef Opm::SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
-        typedef typename Simulator::ReservoirState ReservoirState;
         typedef typename BlackoilModelEbos<TypeTag>::ISTLSolverType ISTLSolverType;
 
         // Read the command line parameters. Throws an exception if something goes wrong.
