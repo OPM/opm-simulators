@@ -146,13 +146,6 @@ namespace Opm
                             perfphaserates_[np*perf + p] = wellRates()[np*w + p] / double(num_perf_this_well);
                         }
                         perfPress()[perf] = cellPressures[wells->well_cells[perf]];
-
-                        // here we did not consider the case that we close some perforation during the running
-                        // and also, wells can be shut and re-opened
-                        // it should only be updated when necessary, while WellState might not have the facility to do it
-                        perf_water_throughput_[ perf ] = prevState->perfThroughput()[ oldPerf_idx ];
-                        perf_skin_pressure_[ perf ] = prevState->perfSkinPressure()[ oldPerf_idx ];
-                        perf_water_velocity_[ perf ] = prevState->perfWaterVelocity()[ oldPerf_idx ];
                     }
                 }
             }
@@ -240,6 +233,23 @@ namespace Opm
                                      perf < wells->well_connpos[ newIndex + 1]; ++perf, ++oldPerf_idx )
                                 {
                                     perfRateSolvent()[ perf ] = prevState->perfRateSolvent()[ oldPerf_idx ];
+                                }
+                            }
+                        }
+
+                        // polymer injectivity related
+                        // here we did not consider the case that we close some perforation during the running
+                        // and also, wells can be shut and re-opened
+                        if (pu.has_polymermw) {
+                            if( num_perf_old_well == num_perf_this_well )
+                            {
+                                int oldPerf_idx = oldPerf_idx_beg;
+                                for (int perf = wells->well_connpos[ newIndex ];
+                                     perf < wells->well_connpos[ newIndex + 1]; ++perf, ++oldPerf_idx )
+                                {
+                                    perf_water_throughput_[ perf ] = prevState->perfThroughput()[ oldPerf_idx ];
+                                    perf_skin_pressure_[ perf ] = prevState->perfSkinPressure()[ oldPerf_idx ];
+                                    perf_water_velocity_[ perf ] = prevState->perfWaterVelocity()[ oldPerf_idx ];
                                 }
                             }
                         }
