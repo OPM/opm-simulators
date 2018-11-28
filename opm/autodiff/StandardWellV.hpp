@@ -177,6 +177,9 @@ namespace Opm
             return param_.matrix_add_well_contributions_;
         }
 
+        // update perforation water throughput based on solved water rate
+        virtual void updateWaterThroughput(const double dt, WellState& well_state) const;
+
     protected:
 
         // protected functions from the Base class
@@ -409,6 +412,17 @@ namespace Opm
         virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
                                          const double simulation_time, const int report_step, const bool terminal_output,
                                          WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger) override;
+
+        EvalWell pskin(const double througput,
+                       const EvalWell& water_velocity,
+                       const EvalWell& poly_inj_conc) const;
+
+        EvalWell pskinwater(const double througput,
+                            const EvalWell& water_velocity) const;
+
+        // return the injecting polymer molecular weight
+        EvalWell wpolymermw(const double throughput,
+                            const EvalWell& water_velocity) const;
     };
 
 }

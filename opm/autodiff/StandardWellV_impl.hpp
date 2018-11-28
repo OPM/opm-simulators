@@ -2810,4 +2810,127 @@ namespace Opm
             OpmLog::debug(msg);
         }
     }
+
+
+
+
+
+    template<typename TypeTag>
+    typename StandardWellV<TypeTag>::EvalWell
+    StandardWellV<TypeTag>::
+    pskinwater(const double throughput,
+               const EvalWell& water_velocity) const
+    {
+        if (!this->has_polymermw) {
+            OPM_THROW(std::runtime_error, "Polymermw is not activated, "
+                                          "while injecting skin pressure is requested" << name());
+        }
+         const int water_table_id = well_ecl_->getPolymerProperties(current_step_).m_skprwattable;
+        if (water_table_id <= 0) {
+            OPM_THROW(std::runtime_error, "Unused SKPRWAT table id used for well " << name());
+        }
+        const auto& water_table_func = PolymerModule::getSkprwatTable(water_table_id);
+         const EvalWell throughput_eval(throughput, numWellEq + numEq);
+        // the skin pressure when injecting water, which also means the polymer concentration is zero
+        EvalWell pskin_water(0.0, numWellEq + numEq);
+        water_table_func.eval(throughput_eval, water_velocity, pskin_water);
+        return pskin_water;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename StandardWellV<TypeTag>::EvalWell
+    StandardWellV<TypeTag>::
+    pskin(const double throughput,
+              const EvalWell& water_velocity,
+              const EvalWell& poly_inj_conc) const
+    {
+        // TODO: for the current implementation, without calculating the wellbore polymer concentration, poly_inj_conc can just be a scalar
+         // TODO: should we ignore the skin pressure when flowing from the reservoir into wellbore.
+        const double sign = water_velocity >= 0. ? 1.0 : -1.0;
+         const EvalWell water_velocity_magnitude = Opm::abs(water_velocity);
+        // TODO: we need to consider the direction of the water velocity here
+        if (!this->has_polymermw) {
+            OPM_THROW(std::runtime_error, "Polymermw is not activated, "
+                                          "while injecting skin pressure is requested" << name());
+        }
+         if (poly_inj_conc == 0.) {
+            // std::cout << " pksin calculated is " << sign * pskinwater(throughput, water_velocity_magnitude) << std::endl;
+            return sign * pskinwater(throughput, water_velocity_magnitude);
+        }
+         // otherwise, we need to use the skin pressure from polymer injection
+        // currently, we do not consider the reference concentration table. When there is polymer
+        // injection, we use SKPRPOLY table provided.
+        // TODO: we might need to do the interpolation when the polymer injection concentration
+        // is different from the reference concentration of the table.
+        const int polymer_table_id = well_ecl_->getPolymerProperties(current_step_).m_skprpolytable;
+        if (polymer_table_id <= 0) {
+            OPM_THROW(std::runtime_error, "Unavailable SKPRPOLY table id used for well " << name());
+        }
+         const auto& skprpolytable = PolymerModule::getSkprpolyTable(polymer_table_id);
+         // TODO: eventually it should be used
+        const double referene_concentration = skprpolytable.refConcentration;
+         const EvalWell throughput_eval(throughput, numWellEq + numEq);
+        // the skin pressure when injecting water, which also means the polymer concentration is zero
+        EvalWell pskin_poly(0.0, numWellEq + numEq);
+        skprpolytable.table_func.eval(throughput_eval, water_velocity_magnitude, pskin_poly);
+        if (poly_inj_conc == referene_concentration) {
+            return sign * pskin_poly;
+        }
+         // poly_inj_conc != reference concentration of the table, then some interpolation will be required
+        const EvalWell pskin_water = pskinwater(throughput, water_velocity_magnitude);
+         const EvalWell pskin = pskin_water + (pskin_poly - pskin_water) / referene_concentration * poly_inj_conc;
+        return sign * pskin;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename StandardWellV<TypeTag>::EvalWell
+    StandardWellV<TypeTag>::
+    wpolymermw(const double throughput,
+               const EvalWell& water_velocity) const
+    {
+        if (!this->has_polymermw) {
+            OPM_THROW(std::runtime_error, "Polymermw is not activated, "
+                                          "while injecting polymer molecular weight is requested" << name());
+        }
+         const int table_id = well_ecl_->getPolymerProperties(current_step_).m_plymwinjtable;
+        const auto& table_func = PolymerModule::getPlymwinjTable(table_id);
+        // TODO: more likely we can use extrapolation for the throughput while not for the velocity
+        // TODO: basically for velocity, we need to request a new table when it exceeds the velocity range
+        // TODO: from the table, we should give a clear message for that
+        const EvalWell throughput_eval(throughput, numWellEq + numEq);
+        EvalWell molecular_weight(0., numWellEq + numEq);
+        if (wpolymer() == 0.) { // not injecting polymer
+            return molecular_weight;
+        }
+         table_func.eval(throughput_eval, Opm::abs(water_velocity), molecular_weight);
+        return molecular_weight;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWellV<TypeTag>::
+    updateWaterThroughput(const double dt, WellState &well_state) const
+    {
+        if (well_type_ == INJECTOR) {
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const double perf_water_vel = primary_variables_[Bhp + 1 + perf];
+                // we do not consider the formation damage due to water flowing from reservoir into wellbore
+                if (perf_water_vel > 0.) {
+                    well_state.perfThroughput()[first_perf_ + perf] += perf_water_vel * dt;
+                }
+            }
+        }
+    }
 }

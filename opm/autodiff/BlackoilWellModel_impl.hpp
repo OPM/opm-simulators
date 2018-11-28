@@ -534,7 +534,7 @@ namespace Opm {
                 const int pvtreg = pvt_region_idx_[well_cell_top];
 
                 if ( !well_ecl->isMultiSegment(time_step) || !param_.use_multisegment_well_) {
-                    if ( GET_PROP_VALUE(TypeTag, EnablePolymerMW) ) {
+                    if ( GET_PROP_VALUE(TypeTag, EnablePolymerMW) && well_ecl->isInjector(time_step) ) {
                         well_container.emplace_back(new StandardWellV<TypeTag>(well_ecl, time_step, wells(),
                                                     param_, *rateConverter_, pvtreg, numComponents() ) );
                     } else {
