@@ -86,7 +86,7 @@ public:
 
         //Get the table
         const VFPProdTable* table = detail::getTable(m_tables, table_id);
-        EvalWell bhp = 0.0;
+        EvalWell bhp = 0.0 * aqua;
 
         //Find interpolation variables
         EvalWell flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());

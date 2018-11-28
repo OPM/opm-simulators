@@ -99,8 +99,12 @@ namespace Opm
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
         static const bool has_energy = GET_PROP_VALUE(TypeTag, EnableEnergy);
+        // flag for polymer molecular weight related
+        static const bool has_polymermw = GET_PROP_VALUE(TypeTag, EnablePolymerMW);
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
+        // index for the polymer molecular weight continuity equation
+        static const int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;
 
         // For the conversion between the surface volume rate and resrevoir voidage rate
         using RateConverterType = RateConverter::

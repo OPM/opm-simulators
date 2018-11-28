@@ -295,7 +295,7 @@ namespace Opm {
         if (has_polymer_)
         {
             const Grid& grid = ebosSimulator_.vanguard().grid();
-            if (PolymerModule::hasPlyshlog()) {
+            if (PolymerModule::hasPlyshlog() || GET_PROP_VALUE(TypeTag, EnablePolymerMW) ) {
                 computeRepRadiusPerfLength(grid);
             }
         }
@@ -534,8 +534,13 @@ namespace Opm {
                 const int pvtreg = pvt_region_idx_[well_cell_top];
 
                 if ( !well_ecl->isMultiSegment(time_step) || !param_.use_multisegment_well_) {
-                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
-                                                param_, *rateConverter_, pvtreg, numComponents() ) );
+                    if ( GET_PROP_VALUE(TypeTag, EnablePolymerMW) ) {
+                        well_container.emplace_back(new StandardWellV<TypeTag>(well_ecl, time_step, wells(),
+                                                    param_, *rateConverter_, pvtreg, numComponents() ) );
+                    } else {
+                        well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
+                                                    param_, *rateConverter_, pvtreg, numComponents() ) );
+                    }
                 } else {
                     well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(),
                                                 param_, *rateConverter_, pvtreg, numComponents() ) );

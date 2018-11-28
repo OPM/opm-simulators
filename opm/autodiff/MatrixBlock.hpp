@@ -206,6 +206,16 @@ static inline void invertMatrix (FieldMatrix<K,n,n> &matrix)
     matrix.invert();
 }
 
+//! invert matrix by calling matrix.invert
+template <typename K>
+static inline void invertMatrix (Dune::DynamicMatrix<K> &matrix)
+{
+#if ! DUNE_VERSION_NEWER( DUNE_COMMON, 2, 7 )
+    Dune::FMatrixPrecision<K>::set_singular_limit(1.e-30);
+#endif
+    matrix.invert();
+}
+
 } // end ISTLUtility
 
 template <class Scalar, int n, int m>

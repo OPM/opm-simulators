@@ -62,7 +62,7 @@ inline EvalWell zeroIfNanInf(const EvalWell& value) {
         OpmLog::warning("NAN_OR_INF_VFP_EVAL", "NAN or INF Evalution encountered during VFP calculation, the Evalution is set to zero");
     }
 
-    return nan_or_inf ? 0.0 : value;
+    return nan_or_inf ? 0.0 * value : value;
 }
 
 
