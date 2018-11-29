@@ -423,6 +423,11 @@ namespace Opm
         // return the injecting polymer molecular weight
         EvalWell wpolymermw(const double throughput,
                             const EvalWell& water_velocity) const;
+
+        void handleInjectivityRateAndEquations(const IntensiveQuantities& int_quants,
+                                               const WellState& well_state,
+                                               const int perf,
+                                               std::vector<EvalWell>& cq_s);
     };
 
 }

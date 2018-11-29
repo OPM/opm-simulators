@@ -583,6 +583,18 @@ namespace Opm
                     cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
                 }
                 connectionRates_[perf][contiPolymerEqIdx] = Base::restrictEval(cq_s_poly);
+
+                if (this->has_polymermw) {
+                    if (well_type_ == PRODUCER) {
+                        EvalWell cq_s_polymw = cq_s_poly;
+                        if (cq_s_polymw < 0.) {
+                            cq_s_polymw *= extendEval(intQuants.polymerMoleWeight() );
+                        } else {
+                            cq_s_polymw *= 0.;
+                        }
+                        connectionRates_[perf][this->contiPolymerMWEqIdx] = Base::restrictEval(cq_s_polymw);
+                    }
+                }
             }
 
             // Store the perforation pressure for later usage.

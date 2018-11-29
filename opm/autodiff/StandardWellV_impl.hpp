@@ -471,6 +471,7 @@ namespace Opm
                    const double dt,
                    WellState& well_state)
     {
+        // TODO: only_wells should be put back to save some computation
 
         checkWellOperability(ebosSimulator, well_state);
 
@@ -509,6 +510,11 @@ namespace Opm
             double perf_vap_oil_rate = 0.;
             computePerfRate(intQuants, mob, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate);
+
+            // better way to do here is that use the cq_s and then replace the cq_s_water here?
+            if (has_polymer && this->has_polymermw && well_type_ == INJECTOR) {
+                handleInjectivityRateAndEquations(intQuants, well_state, perf, cq_s);
+            }
 
             // updating the solution gas rate and solution oil rate
             if (well_type_ == PRODUCER) {
@@ -615,6 +621,24 @@ namespace Opm
                     cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
                 }
                 connectionRates_[perf][contiPolymerEqIdx] = Base::restrictEval(cq_s_poly);
+
+                if (this->has_polymermw) {
+                    // TODO: should molecular weight be a Evalution type?
+                    // the source term related to transport of molecular weight
+                    EvalWell cq_s_polymw = cq_s_poly;
+                    if (well_type_ == INJECTOR) {
+                        const int wat_vel_index = Bhp + 1 + perf;
+                        const EvalWell water_velocity = primary_variables_evaluation_[wat_vel_index];
+                        if (water_velocity > 0.) { // injecting
+                            const double throughput = well_state.perfThroughput()[first_perf_ + perf];
+                            const EvalWell molecular_weight = wpolymermw(throughput, water_velocity);
+                            cq_s_polymw *= molecular_weight;
+                        } else {
+                             cq_s_polymw *= 0.;
+                        }
+                    }
+                    connectionRates_[perf][this->contiPolymerMWEqIdx] = Base::restrictEval(cq_s_polymw);
+                }
             }
 
             // Store the perforation pressure for later usage.
@@ -1978,6 +2002,34 @@ namespace Opm
             report.setWellFailed({type, CR::Severity::Normal, dummy_component, name()});
         }
 
+        if (this->has_polymermw) {
+            //  checking the convergence of the perforation rates
+            const double wat_vel_tol = 1.e-8;
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const double wat_vel_residual = res[Bhp + 1 + perf];
+                if (std::isnan(wat_vel_tol)) {
+                    report.setWellFailed({type, CR::Severity::NotANumber, dummy_component, name()});
+                } else if (wat_vel_tol > maxResidualAllowed * 10.) {
+                    report.setWellFailed({type, CR::Severity::TooLarge, dummy_component, name()});
+                } else if (wat_vel_tol > wat_vel_tol) {
+                    report.setWellFailed({type, CR::Severity::Normal, dummy_component, name()});
+                }
+            }
+
+            // checking the convergence of the skin pressure
+            const double pskin_tol = 1000.; // 100 pascal
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const double pskin_residual = res[Bhp + 1 + perf + number_of_perforations_];
+                if (std::isnan(pskin_residual)) {
+                    report.setWellFailed({type, CR::Severity::NotANumber, dummy_component, name()});
+                } else if (pskin_residual > maxResidualAllowed * 10.) {
+                    report.setWellFailed({type, CR::Severity::TooLarge, dummy_component, name()});
+                } else if (pskin_residual > pskin_tol) {
+                    report.setWellFailed({type, CR::Severity::Normal, dummy_component, name()});
+                }
+            }
+        }
+
         return report;
     }
 
@@ -2557,6 +2609,11 @@ namespace Opm
                                    const int perf,
                                    std::vector<EvalWell>& mob) const
     {
+        // for the cases related to polymer molecular weight, we assume fully mixing
+        // as a result, the polymer and water share the same viscosity
+        if (this->has_polymermw) {
+            return;
+        }
         const int cell_idx = well_cells_[perf];
         const auto& int_quant = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
         const EvalWell polymer_concentration = extendEval(int_quant.polymerConcentration());
@@ -2931,6 +2988,58 @@ namespace Opm
                     well_state.perfThroughput()[first_perf_ + perf] += perf_water_vel * dt;
                 }
             }
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWellV<TypeTag>::
+    handleInjectivityRateAndEquations(const IntensiveQuantities& int_quants,
+                                      const WellState& well_state,
+                                      const int perf,
+                                      std::vector<EvalWell>& cq_s)
+    {
+        const unsigned water_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        const EvalWell& water_flux_s = cq_s[water_comp_idx];
+        const auto& fs = int_quants.fluidState();
+        const EvalWell b_w = extendEval(fs.invB(FluidSystem::waterPhaseIdx));
+        const EvalWell water_flux_r = water_flux_s / b_w;
+        const double area = M_PI * bore_diameters_[perf] * perf_length_[perf];
+        const EvalWell water_velocity = water_flux_r / area;
+        const int wat_vel_index = Bhp + 1 + perf;
+
+        // equation for the water velocity
+        const EvalWell eq_wat_vel = primary_variables_evaluation_[wat_vel_index] - water_velocity;
+        resWell_[0][wat_vel_index] = eq_wat_vel.value();
+
+        const double throughput = well_state.perfThroughput()[first_perf_ + perf];
+        const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
+
+        EvalWell poly_conc(numWellEq + numEq, 0.0);
+        poly_conc.setValue(wpolymer());
+
+        // equation for the skin pressure
+        const EvalWell eq_pskin = primary_variables_evaluation_[pskin_index]
+                                  - pskin(throughput, primary_variables_evaluation_[wat_vel_index], poly_conc);
+
+        resWell_[0][pskin_index] = eq_pskin.value();
+        for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+            invDuneD_[0][0][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx+numEq);
+            invDuneD_[0][0][pskin_index][pvIdx] = eq_pskin.derivative(pvIdx+numEq);
+        }
+
+        // water rate is update to use the form from water velocity, since water velocity is
+        // a primary variable now
+        cq_s[water_comp_idx] = area * primary_variables_evaluation_[wat_vel_index] * b_w;
+
+        // the water velocity is impacted by the reservoir primary varaibles. It needs to enter matrix B
+        const int cell_idx = well_cells_[perf];
+        for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
+            duneB_[0][cell_idx][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx);
         }
     }
 }
