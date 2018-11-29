@@ -235,6 +235,31 @@ namespace Opm
                       / ( aquct_data_.k_a * aquct_data_.c1 );
             }
 
+            template<class faceCellType, class ugridType>
+            inline const double getFaceArea(const faceCellType& faceCells, const ugridType& ugrid,
+                                            const int faceIdx, const int idx,
+                                            const Aquancon::AquanconOutput& connection) const
+            {
+                // Check now if the face is outside of the reservoir, or if it adjoins an inactive cell
+                // Do not make the connection if the product of the two cellIdx > 0. This is because the
+                // face is within the reservoir/not connected to boundary. (We still have yet to check for inactive cell adjoining)
+                double faceArea = 0.;
+                const auto cellNeighbour0 = faceCells(faceIdx,0);
+                const auto cellNeighbour1 = faceCells(faceIdx,1);
+                const auto defaultFaceArea = Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
+                const auto calculatedFaceArea = (!connection.influx_coeff.at(idx))? 
+                                                defaultFaceArea : 
+                                                *(connection.influx_coeff.at(idx));
+                faceArea = (cellNeighbour0 * cellNeighbour1 > 0)? 0. : calculatedFaceArea;
+                if (cellNeighbour1 == 0){
+                    faceArea = (cellNeighbour0 < 0)? faceArea : 0.;
+                }
+                else if (cellNeighbour0 == 0){
+                    faceArea = (cellNeighbour1 < 0)? faceArea : 0.;
+                }
+                return faceArea;
+            }
+
             // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer
             inline void initializeConnections(const Aquancon::AquanconOutput& connection)
             {
@@ -297,22 +322,7 @@ namespace Opm
 
                         if (faceDirection == connection.reservoir_face_dir.at(idx))
                         {
-                            // Check now if the face is outside of the reservoir, or if it adjoins an inactive cell
-                            // Do not make the connection if the product of the two cellIdx > 0. This is because the
-                            // face is within the reservoir/not connected to boundary. (We still have yet to check for inactive cell adjoining)
-                            auto cellNeighbour0 = faceCells(faceIdx,0);
-                            auto cellNeighbour1 = faceCells(faceIdx,1);
-                            auto defaultFaceArea = Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
-                            auto calculatedFaceArea = (!connection.influx_coeff.at(idx))? defaultFaceArea : *(connection.influx_coeff.at(idx));
-                            faceArea = (cellNeighbour0 * cellNeighbour1 > 0)? 0. : calculatedFaceArea;
-                            if (cellNeighbour1 == 0){
-                                faceArea = (cellNeighbour0 < 0)? faceArea : 0.;
-                            }
-                            else if (cellNeighbour0 == 0){
-                                faceArea = (cellNeighbour1 < 0)? faceArea : 0.;
-                            }
-
-                            faceArea_connected_.at(idx) = faceArea;
+                            faceArea_connected_.at(idx) = getFaceArea(faceCells, ugrid, faceIdx, idx, connection);
                             denom_face_areas += ( connection.influx_multiplier.at(idx) * faceArea_connected_.at(idx) );
                         }
                     }
