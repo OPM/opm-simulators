@@ -2789,4 +2789,15 @@ namespace Opm
             OpmLog::debug(msg);
         }
     }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateWaterThroughput(const double dt, WellState &well_state) const
+    {
+    }
 }

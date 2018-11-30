@@ -64,8 +64,9 @@ namespace Opm
 
         // polymer concentration and temperature are already known by the well, so
         // polymer and energy conservation do not need to be considered explicitly
-        static const int numPolymerEq = has_polymer ? 1 : 0;
-        static const int numEnergyEq = has_energy ? 1 : 0;
+        static const int numPolymerEq = Indices::numPolymers;
+        static const int numEnergyEq = Indices::numEnergy;
+
         // number of the conservation equations
         static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq;
         // number of the well control equations
@@ -176,9 +177,6 @@ namespace Opm
         {
             return param_.matrix_add_well_contributions_;
         }
-
-        // update perforation water throughput based on solved water rate
-        virtual void updateWaterThroughput(const double dt, WellState& well_state) const;
 
     protected:
 
@@ -309,7 +307,7 @@ namespace Opm
 
         // TODO: to check whether all the paramters are required
         void computePerfRate(const IntensiveQuantities& intQuants,
-                             const std::vector<EvalWell>& mob_perfcells_dense,
+                             const std::vector<EvalWell>& mob_perfcells_dense, const int perf,
                              const double Tw, const EvalWell& bhp, const double& cdp,
                              const bool& allow_cf, std::vector<EvalWell>& cq_s,
                              double& perf_dis_gas_rate, double& perf_vap_oil_rate) const;
@@ -428,6 +426,8 @@ namespace Opm
                                                const WellState& well_state,
                                                const int perf,
                                                std::vector<EvalWell>& cq_s);
+
+        virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
     };
 
 }

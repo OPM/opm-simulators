@@ -365,11 +365,14 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    timeStepSucceeded(const double& simulationTime) {
+    timeStepSucceeded(const double& simulationTime, const double dt) {
         // TODO: when necessary
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
         for (const auto& well : well_container_) {
             well->calculateReservoirRates(well_state_);
+            if (GET_PROP_VALUE(TypeTag, EnablePolymerMW) && well->wellType() == INJECTOR) {
+                well->updateWaterThroughput(dt, well_state_);
+            }
         }
         updateWellTestState(simulationTime, wellTestState_);
 

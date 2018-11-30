@@ -308,7 +308,7 @@ namespace Opm
     void
     StandardWellV<TypeTag>::
     computePerfRate(const IntensiveQuantities& intQuants,
-                    const std::vector<EvalWell>& mob_perfcells_dense,
+                    const std::vector<EvalWell>& mob_perfcells_dense, const int perf,
                     const double Tw, const EvalWell& bhp, const double& cdp,
                     const bool& allow_cf, std::vector<EvalWell>& cq_s,
                     double& perf_dis_gas_rate, double& perf_vap_oil_rate) const
@@ -339,7 +339,21 @@ namespace Opm
 
         // Pressure drawdown (also used to determine direction of flow)
         const EvalWell well_pressure = bhp + cdp;
-        const EvalWell drawdown = pressure - well_pressure;
+        EvalWell drawdown = pressure - well_pressure;
+
+        //  TODO: perf is introduced to handle the skin pressure only
+        const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
+        const EvalWell& skin_pressure = primary_variables_evaluation_[pskin_index];
+
+        /* if (drawdown.value() * skin_pressure.value() > 0.) {
+            std::cout << " the drawdown and skin_pressure has the same sign for well " << name() << " perf " << perf << std::endl;
+        }
+
+        if (drawdown.value() > 0.) {
+            std::cout << " perf " << perf << " of well " << name() << " has crossflow " << std::endl;
+        } */
+
+        drawdown += skin_pressure;
 
         // producing perforations
         if ( drawdown.value() > 0 )  {
@@ -508,7 +522,7 @@ namespace Opm
             getMobility(ebosSimulator, perf, mob);
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            computePerfRate(intQuants, mob, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf,
+            computePerfRate(intQuants, mob, perf, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate);
 
             // better way to do here is that use the cq_s and then replace the cq_s_water here?
@@ -632,9 +646,11 @@ namespace Opm
                         if (water_velocity > 0.) { // injecting
                             const double throughput = well_state.perfThroughput()[first_perf_ + perf];
                             const EvalWell molecular_weight = wpolymermw(throughput, water_velocity);
+                            // std::cout << " well " << name() << " perf " << perf << " throughput " << throughput << " water_velocity " << water_velocity
+                            //           << " molecular_weight " << molecular_weight.value() << std::endl;
                             cq_s_polymw *= molecular_weight;
                         } else {
-                             cq_s_polymw *= 0.;
+                            cq_s_polymw *= 0.;
                         }
                     }
                     connectionRates_[perf][this->contiPolymerMWEqIdx] = Base::restrictEval(cq_s_polymw);
@@ -940,6 +956,40 @@ namespace Opm
             // 1e5 to make sure bhp will not be below 1bar
             primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
         }
+
+        // for the water velocity and skin pressure
+        // TODO: it will be some part need to come back to make more sophiscated.
+        {
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const int wat_vel_index = Bhp + 1 + perf;
+                const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
+
+                // we can add a relaxation factor here
+                const double dx_wat_vel = dwells[0][wat_vel_index];
+                //  const double wat_vel_current = primary_variables_[wat_vel_index];
+
+                primary_variables_[wat_vel_index] -= 0.9 * dx_wat_vel;
+
+                /*
+                // the following is the techniques implemented in MRST for better convergence rate, while it did not help
+                const double updated_water_vel = primary_variables_[wat_vel_index] - 0.9 * dx_wat_vel;
+
+                if (updated_water_vel * primary_variables_[wat_vel_index] >= 0.) { // no changing sign
+                    primary_variables_[wat_vel_index] = updated_water_vel;
+                } else {
+                    if (perf_flow_switch_attemp_[perf]) {
+                        primary_variables_[wat_vel_index] = updated_water_vel;
+                        perf_flow_switch_attemp_[perf] = false;
+                    } else {
+                        primary_variables_[wat_vel_index] *= 1.e-8; // chopping it and waiting for next iteration to decide
+                        perf_flow_switch_attemp_[perf] = true;
+                    }
+                } */
+
+                const double dx_pskin = dwells[0][pskin_index];
+                primary_variables_[pskin_index] -= 0.9 * dx_pskin;
+            }
+        }
     }
 
 
@@ -1094,6 +1144,12 @@ namespace Opm
         }
 
         updateThp(well_state);
+
+        // other primary variables related to polymer injection
+        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+            well_state.perfWaterVelocity()[first_perf_ + perf] = primary_variables_[Bhp + 1 + perf];
+            well_state.perfSkinPressure()[first_perf_ + perf] = primary_variables_[Bhp + 1 + number_of_perforations_ + perf];
+        }
     }
 
 
@@ -2007,11 +2063,11 @@ namespace Opm
             const double wat_vel_tol = 1.e-8;
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 const double wat_vel_residual = res[Bhp + 1 + perf];
-                if (std::isnan(wat_vel_tol)) {
+                if (std::isnan(wat_vel_residual)) {
                     report.setWellFailed({type, CR::Severity::NotANumber, dummy_component, name()});
-                } else if (wat_vel_tol > maxResidualAllowed * 10.) {
+                } else if (wat_vel_residual > maxResidualAllowed * 10.) {
                     report.setWellFailed({type, CR::Severity::TooLarge, dummy_component, name()});
-                } else if (wat_vel_tol > wat_vel_tol) {
+                } else if (wat_vel_residual > wat_vel_tol) {
                     report.setWellFailed({type, CR::Severity::Normal, dummy_component, name()});
                 }
             }
@@ -2246,7 +2302,7 @@ namespace Opm
             getMobility(ebosSimulator, perf, mob);
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            computePerfRate(intQuants, mob, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf,
+            computePerfRate(intQuants, mob, perf, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate);
 
             for(int p = 0; p < np; ++p) {
@@ -2502,6 +2558,12 @@ namespace Opm
 
         // BHP
         primary_variables_[Bhp] = well_state.bhp()[index_of_well_];
+
+        // other primary variables related to polymer injection
+        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+            primary_variables_[Bhp + 1 + perf] = well_state.perfWaterVelocity()[first_perf_ + perf];
+            primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = well_state.perfSkinPressure()[first_perf_ + perf];
+        }
     }
 
 
@@ -2640,7 +2702,7 @@ namespace Opm
             std::vector<EvalWell> cq_s(num_components_, {numWellEq + numEq, 0.});
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            computePerfRate(int_quant, mob, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf,
+            computePerfRate(int_quant, mob, perf, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate);
             // TODO: make area a member
             const double area = 2 * M_PI * perf_rep_radius_[perf] * perf_length_[perf];
@@ -2887,9 +2949,9 @@ namespace Opm
             OPM_THROW(std::runtime_error, "Unused SKPRWAT table id used for well " << name());
         }
         const auto& water_table_func = PolymerModule::getSkprwatTable(water_table_id);
-         const EvalWell throughput_eval(throughput, numWellEq + numEq);
+         const EvalWell throughput_eval(numWellEq + numEq, throughput);
         // the skin pressure when injecting water, which also means the polymer concentration is zero
-        EvalWell pskin_water(0.0, numWellEq + numEq);
+        EvalWell pskin_water(numWellEq + numEq, 0.0);
         water_table_func.eval(throughput_eval, water_velocity, pskin_water);
         return pskin_water;
     }
@@ -2905,18 +2967,17 @@ namespace Opm
               const EvalWell& water_velocity,
               const EvalWell& poly_inj_conc) const
     {
-        // TODO: for the current implementation, without calculating the wellbore polymer concentration, poly_inj_conc can just be a scalar
-         // TODO: should we ignore the skin pressure when flowing from the reservoir into wellbore.
-        const double sign = water_velocity >= 0. ? 1.0 : -1.0;
-         const EvalWell water_velocity_magnitude = Opm::abs(water_velocity);
-        // TODO: we need to consider the direction of the water velocity here
         if (!this->has_polymermw) {
             OPM_THROW(std::runtime_error, "Polymermw is not activated, "
                                           "while injecting skin pressure is requested" << name());
         }
+        // TODO: for the current implementation, without calculating the wellbore polymer concentration, poly_inj_conc can just be a scalar
+         // TODO: should we ignore the skin pressure when flowing from the reservoir into wellbore.
+        const double sign = water_velocity >= 0. ? 1.0 : -1.0;
+        const EvalWell water_velocity_abs = Opm::abs(water_velocity);
+        // TODO: we need to consider the direction of the water velocity here
          if (poly_inj_conc == 0.) {
-            // std::cout << " pksin calculated is " << sign * pskinwater(throughput, water_velocity_magnitude) << std::endl;
-            return sign * pskinwater(throughput, water_velocity_magnitude);
+            return sign * pskinwater(throughput, water_velocity_abs);
         }
          // otherwise, we need to use the skin pressure from polymer injection
         // currently, we do not consider the reference concentration table. When there is polymer
@@ -2927,19 +2988,19 @@ namespace Opm
         if (polymer_table_id <= 0) {
             OPM_THROW(std::runtime_error, "Unavailable SKPRPOLY table id used for well " << name());
         }
-         const auto& skprpolytable = PolymerModule::getSkprpolyTable(polymer_table_id);
-         // TODO: eventually it should be used
+        const auto& skprpolytable = PolymerModule::getSkprpolyTable(polymer_table_id);
+        // TODO: eventually it should be used
         const double referene_concentration = skprpolytable.refConcentration;
-         const EvalWell throughput_eval(throughput, numWellEq + numEq);
+        const EvalWell throughput_eval(numWellEq + numEq, throughput);
         // the skin pressure when injecting water, which also means the polymer concentration is zero
-        EvalWell pskin_poly(0.0, numWellEq + numEq);
-        skprpolytable.table_func.eval(throughput_eval, water_velocity_magnitude, pskin_poly);
+        EvalWell pskin_poly(numWellEq + numEq, 0.0);
+        skprpolytable.table_func.eval(throughput_eval, water_velocity_abs, pskin_poly);
         if (poly_inj_conc == referene_concentration) {
             return sign * pskin_poly;
         }
-         // poly_inj_conc != reference concentration of the table, then some interpolation will be required
-        const EvalWell pskin_water = pskinwater(throughput, water_velocity_magnitude);
-         const EvalWell pskin = pskin_water + (pskin_poly - pskin_water) / referene_concentration * poly_inj_conc;
+        // poly_inj_conc != reference concentration of the table, then some interpolation will be required
+        const EvalWell pskin_water = pskinwater(throughput, water_velocity_abs);
+        const EvalWell pskin = pskin_water + (pskin_poly - pskin_water) / referene_concentration * poly_inj_conc;
         return sign * pskin;
     }
 
@@ -2957,13 +3018,13 @@ namespace Opm
             OPM_THROW(std::runtime_error, "Polymermw is not activated, "
                                           "while injecting polymer molecular weight is requested" << name());
         }
-         const int table_id = well_ecl_->getPolymerProperties(current_step_).m_plymwinjtable;
+        const int table_id = well_ecl_->getPolymerProperties(current_step_).m_plymwinjtable;
         const auto& table_func = PolymerModule::getPlymwinjTable(table_id);
         // TODO: more likely we can use extrapolation for the throughput while not for the velocity
         // TODO: basically for velocity, we need to request a new table when it exceeds the velocity range
         // TODO: from the table, we should give a clear message for that
-        const EvalWell throughput_eval(throughput, numWellEq + numEq);
-        EvalWell molecular_weight(0., numWellEq + numEq);
+        const EvalWell throughput_eval(numWellEq + numEq, throughput);
+        EvalWell molecular_weight(numWellEq + numEq, 0.);
         if (wpolymer() == 0.) { // not injecting polymer
             return molecular_weight;
         }

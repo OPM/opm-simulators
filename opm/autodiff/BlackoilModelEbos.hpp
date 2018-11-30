@@ -851,7 +851,7 @@ namespace Opm {
                 }
                 if (has_polymermw_) {
                     assert(has_polymer_);
-                    compNames[polymerMoleWeightIdx] = "PolymerMW";
+                    compNames[polymerMoleWeightIdx] = "MolecularWeightP";
                 }
                 if (has_energy_) {
                     compNames[temperatureIdx] = "Energy";

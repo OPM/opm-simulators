@@ -181,7 +181,7 @@ namespace Opm {
 
             void endTimeStep()
             {
-                timeStepSucceeded(ebosSimulator_.time());
+                timeStepSucceeded(ebosSimulator_.time(), ebosSimulator_.timeStepSize());
             }
 
             void endEpisode()
@@ -338,7 +338,7 @@ namespace Opm {
                           const double dt);
 
             // called at the end of a time step
-            void timeStepSucceeded(const double& simulationTime);
+            void timeStepSucceeded(const double& simulationTime, const double dt);
 
             // called at the end of a report step
             void endReportStep();

@@ -59,8 +59,9 @@ namespace Opm
 
         // polymer concentration and temperature are already known by the well, so
         // polymer and energy conservation do not need to be considered explicitly
-        static const int numPolymerEq = has_polymer ? 1 : 0;
-        static const int numEnergyEq = has_energy ? 1 : 0;
+        static const int numPolymerEq = Indices::numPolymers;
+        static const int numEnergyEq = Indices::numEnergy;
+
         // number of the conservation equations
         static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq;
         // number of the well control equations
@@ -407,6 +408,8 @@ namespace Opm
         virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
                                          const double simulation_time, const int report_step, const bool terminal_output,
                                          WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger) override;
+
+        virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
     };
 
 }

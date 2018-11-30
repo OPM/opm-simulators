@@ -244,6 +244,9 @@ namespace Opm
         /// Returns true if the well is currently in prediction mode (i.e. not history mode).
         bool underPredictionMode() const;
 
+        // update perforation water throughput based on solved water rate
+        virtual void updateWaterThroughput(const double dt, WellState& well_state) const = 0;
+
     protected:
 
         // to indicate a invalid completion
