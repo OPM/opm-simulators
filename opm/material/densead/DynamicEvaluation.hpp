@@ -361,7 +361,7 @@ public:
     // negation (unary minus) operator
     Evaluation operator-() const
     {
-        Evaluation result;
+        Evaluation result(*this);
 
         // set value and derivatives to negative
         for (int i = 0; i < length_(); ++i)
