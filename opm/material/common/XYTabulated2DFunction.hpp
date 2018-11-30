@@ -33,23 +33,18 @@
 #include <opm/material/common/Unused.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
-#include <iostream>
 #include <vector>
 #include <limits>
-#include <tuple>
 #include <sstream>
 #include <cassert>
 
 namespace Opm {
 
 /*!
- * \brief Implements a scalar function that depends on two variables and which is sampled
- *        in X and Y direction.
+ * \brief Implements a scalar function that depends on two variables, which are sampled
+ *        in X and Y directions with sampling points, respectively.
+ *        The table might be able to be extrapolated in certian directions.
  */
-
-// TODO: for now, we should not allow extraploation on the lower end, because we do not deal with
-// TODO: negative values
-// TODO: remove all the functions that will not be called from outside, or put them as private members
 
 template <class Scalar>
 class XYTabulated2DFunction
@@ -88,7 +83,8 @@ public:
      * \brief Evaluate the function at a given (x,y) position.
      *
      * If this method is called for a value outside of the tabulated
-     * range, a \c Opm::NumericalIssue exception is thrown.
+     * range, and extrapolation is not allowed in the corresponding direction,
+     * a \c Opm::NumericalIssue exception is thrown.
      */
     template <typename DataType>
     void eval(const DataType& x, const DataType& y, DataType& result) const
@@ -103,32 +99,9 @@ public:
         // bi-linear interpolation: first, calculate the x and y indices in the lookup
         // table ...
         const unsigned i = xSegmentIndex(x);
-
-        // std::cout << " i is " << i << std::endl;
-
         const unsigned j = ySegmentIndex(y);
-        // std::cout << " j is " << j << std::endl;
 
-        if ((i == numX() - 1) && (j == numY() - 1)) {
-            result = valueAt(i, j);
-            return;
-        }
-
-        if (i == numX() - 1) {
-            const DataType beta = yToBeta(y, j);
-            result = valueAt(i, j) * (1.0 - beta) + valueAt(i, j + 1) * beta;
-            Valgrind::CheckDefined(result);
-            return;
-        }
-
-        if (j == numY() - 1) {
-            const DataType alpha = xToAlpha(x, i);
-            result = valueAt(i, j) * (1.0 - alpha) + valueAt(i + 1, j) * alpha;
-            Valgrind::CheckDefined(result);
-            return;
-        }
-
-        // normal bi-linear interpolation / extrapolation
+        // bi-linear interpolation / extrapolation
         const DataType alpha = xToAlpha(x, i);
         const DataType beta = yToBeta(y, j);
 
@@ -148,7 +121,7 @@ private:
     std::vector<Scalar> xPos_;
     // the sampling points in the y-drection
     std::vector<Scalar> yPos_;
-
+    // data at the sampling points
     std::vector<std::vector<Scalar> > samples_;
 
     bool xExtrapolate_ = false;
@@ -230,19 +203,12 @@ private:
     {
         assert(xExtrapolate_ || (xMin() <= x && x <= xMax()));
 
-        // TODO: we should have better way to enforce no extrapolation in the low end
-        // assert(x >= xMin());
-
         // we need at least two sampling points!
-        // TODO: not necessary, right?
         assert(numX() >= 2);
 
-        if (x <= xMin())
+        if (x <= xMin() || numX() == 2)
             return 0;
         else if (x >= xMax())
-            if (xExtrapolate_)
-                return numX() - 1;
-            else
                 return numX() - 2;
         else {
             assert(numX() >= 3);
@@ -273,13 +239,10 @@ private:
         // we need at least two sampling points!
         assert(numY() >= 2);
 
-        if (y <= yMin())
+        if (y <= yMin() || numY() == 2)
             return 0;
         else if (y >= yMax())
-            if (yExtrapolate_)
                 return numY() - 2;
-            else
-                return numY() - 1;
         else {
             assert(numY() >= 3);
 
@@ -308,7 +271,7 @@ private:
     Evaluation xToAlpha(const Evaluation& x, unsigned xSegmentIdx) const
     {
         if ( xSegmentIdx == numX() -1 )
-            return 0.;
+            return blank(x);
 
         Scalar x1 = xPos_[xSegmentIdx];
         Scalar x2 = xPos_[xSegmentIdx + 1];
@@ -325,7 +288,7 @@ private:
     Evaluation yToBeta(const Evaluation& y, unsigned ySegmentIdx) const
     {
         if ( ySegmentIdx == numY() - 1)
-            return 0.;
+            return blank(y);
 
         Scalar y1 = yPos_[ySegmentIdx];
         Scalar y2 = yPos_[ySegmentIdx + 1];
