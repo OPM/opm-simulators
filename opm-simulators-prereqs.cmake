@@ -42,7 +42,7 @@ set (opm-simulators_DEPS
   "opm-material REQUIRED"
   "opm-grid REQUIRED"
   "ewoms REQUIRED"
-  "amgcl REQUIRED"
+  #"amgcl REQUIRED"
   # Eigen
   "Eigen3 3.2.0"
   )

@@ -42,12 +42,13 @@ NEW_PROP_TAG(EnableTerminalOutput);
 NEW_PROP_TAG(EnableAdaptiveTimeStepping);
 NEW_PROP_TAG(EnableTuning);
 NEW_PROP_TAG(AdjointResultsFile);
+NEW_PROP_TAG(NumWellAdjoint);
 
 SET_BOOL_PROP(EclFlowProblem, EnableTerminalOutput, true);
 SET_BOOL_PROP(EclFlowProblem, EnableAdaptiveTimeStepping, true);
 SET_BOOL_PROP(EclFlowProblem, EnableTuning, false);
 SET_STRING_PROP(EclFlowProblem, AdjointResultsFile, "adjoint_results.txt");
-
+SET_INT_PROP(EclFlowProblem,NumWellAdjoint,0);
 END_PROPERTIES;
 
 namespace Opm {
@@ -351,9 +352,9 @@ public:
     SimulatorReport runAdjoint(SimulatorTimer& timer)
                        // ReservoirState& state)
     {
-        static const int numAdjoint = GET_PROP_VALUE(TypeTag, numAdjoint);
-        if(numAdjoint==0){
-            OPM_THROW(std::runtime_error,"Compilation do not support adjoint change  GET_PROP_VALUE(TypeTag, numAdjoint)");
+        static const int numWellAdjoint = GET_PROP_VALUE(TypeTag, NumWellAdjoint);
+        if(numWellAdjoint==0){
+            OPM_THROW(std::runtime_error,"Compilation do not support adjoint change  GET_PROP_VALUE(TypeTag, NumWellAdjoint)");
         }
         static const int storagecache = GET_PROP_VALUE(TypeTag, EnableStorageCache);
         if(storagecache){

@@ -84,7 +84,7 @@ namespace Opm
         duneB_.setSize(1, num_cells, number_of_perforations_);
         duneC_.setSize(1, num_cells, number_of_perforations_);
         //
-        if(numAdjoint>0){
+        if(numWellAdjoint>0){
             duneCA_.setSize(1, num_cells, number_of_perforations_);
             duneDA_.setSize(1, 1, 1);
         }
@@ -93,7 +93,7 @@ namespace Opm
             // Add nonzeros for diagonal
             row.insert(row.index());
         }
-        if(numAdjoint>0){// only need for adjoint runs
+        if(numWellAdjoint>0){// only need for adjoint runs
             for (auto row=duneD_.createbegin(), end = duneD_.createend(); row!=end; ++row) {
                 // Add nonzeros for diagonal
                 row.insert(row.index());
@@ -114,7 +114,7 @@ namespace Opm
                 row.insert(cell_idx);
             }
         }
-        if(numAdjoint>0){
+        if(numWellAdjoint>0){
             // for adjoint
             for (auto row = duneCA_.createbegin(), end = duneCA_.createend(); row!=end; ++row) {
                 for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
@@ -124,7 +124,7 @@ namespace Opm
             }
         }
 
-        if(numAdjoint>0){
+        if(numWellAdjoint>0){
             // make the C^T matrix
             for (auto row=duneDA_.createbegin(), end = duneDA_.createend(); row!=end; ++row) {
                 // Add nonzeros for diagonal
@@ -137,7 +137,7 @@ namespace Opm
         // resize temporary class variables
         Bx_.resize( duneB_.N() );
         invDrw_.resize( invDuneD_.N() );
-        if(numAdjoint>0){
+        if(numWellAdjoint>0){
             adjWell_.resize(1);
             Ctx_.resize( duneC_.M());
             invDtadj_.resize( invDuneD_.N());
@@ -609,7 +609,7 @@ namespace Opm
             duneB_ = 0.0;
             duneC_ = 0.0;
         }
-        if(numAdjoint>0){
+        if(numWellAdjoint>0){
             duneDA_ = 0.0;
             duneCA_ = 0.0;
             duneD_ = 0.0;
@@ -671,7 +671,7 @@ namespace Opm
                     }
                     invDuneD_[0][0][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx+numEq);
                 }
-                if(numAdjoint>0){// NB we should probably also have a runtime switch here
+                if(numWellAdjoint>0){// NB we should probably also have a runtime switch here
                     duneDA_[0][0][componentIdx][0] -= cq_s_effective.derivative(controlIndex);
                     duneCA_[0][cell_idx][0][componentIdx] -= cq_s_effective.derivative(controlIndex);
                 }
@@ -786,7 +786,7 @@ namespace Opm
             for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
-            if(numAdjoint>0){//
+            if(numWellAdjoint>0){//
                 duneDA_[0][0][componentIdx][0] += resWell_loc.derivative(controlIndex);
             }
             resWell_[0][componentIdx] += resWell_loc.value();
@@ -794,7 +794,7 @@ namespace Opm
 
         assembleControlEq();
 
-        if(numAdjoint>0){
+        if(numWellAdjoint>0){
             duneD_= invDuneD_;
         }
         // do the local inversion of D.
@@ -833,7 +833,7 @@ namespace Opm
             case BHP:
             {
                 EvalWell target_bhp = well_controls_get_current_target(well_controls_);
-                if (numAdjoint > 0) {
+                if (numWellAdjoint > 0) {
                     target_bhp.setDerivative(controlIndex, 1.0);
                 }
                 control_eq = getBhp() - target_bhp;
@@ -842,7 +842,7 @@ namespace Opm
             case SURFACE_RATE:
             {
                 EvalWell target_rate = well_controls_get_current_target(well_controls_); // surface rate target
-                if (numAdjoint > 0) {
+                if (numWellAdjoint > 0) {
                     target_rate.setDerivative(controlIndex, 1.0);
                 }
                 if (well_type_ == INJECTOR) {
@@ -890,7 +890,7 @@ namespace Opm
             case RESERVOIR_RATE:
             {
                 EvalWell target_rate = well_controls_get_current_target(well_controls_); // surface rate target
-                if (numAdjoint > 0) {
+                if (numWellAdjoint > 0) {
                     target_rate.setDerivative(controlIndex, 1.0);
                 }
                 if (well_type_ == INJECTOR) {
@@ -923,7 +923,7 @@ namespace Opm
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
             invDuneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + numEq);
         }
-        if (numAdjoint > 0) {
+        if (numWellAdjoint > 0) {
             duneDA_[0][0][Bhp][0] = control_eq.derivative(controlIndex);
         }
     }
@@ -2336,7 +2336,7 @@ namespace Opm
         ValueType thp        = well_controls_iget_target(well_controls_, thp_control_index);
         const double& alq    = well_controls_iget_alq(well_controls_, thp_control_index);
 
-        if (numAdjoint > 0) {
+        if (numWellAdjoint > 0) {
             setControlDerivative(thp);
         }
 

@@ -358,21 +358,21 @@ namespace Opm {
 
                 // Create matrix for external linear solvers.
                 const auto& ebosJacOrg = ebosSimulator_.model().linearizer().matrix();
-                auto ebosJacTrans = ebosJac_org;
+                auto ebosJacTrans = ebosJacOrg;
                 auto adjRhs_cp = adjRhs;
-                Dune::MatrixVector::transpose(ebosJac_org, ebosJacTrans);
+                Dune::MatrixVector::transpose(ebosJacOrg, ebosJacTrans);
                 MatrixBlockType leftTrans = 0.0;
                 if(param_.use_amgcl_drs_){
                     leftTrans=getBlockTransform(2);
                 }else{
-                    auto eq_change=getBlockTransform(2);
+                    auto eqChange=getBlockTransform(2);
                     auto cpr_trans = getBlockTransform(1);
                     leftTrans= cpr_trans.rightmultiply(eqChange);
                 }
-                auto  right_trans = leftTrans;
-                Dune::MatrixVector::transpose(leftTrans, right_trans);
+                auto  rightTrans = leftTrans;
+                Dune::MatrixVector::transpose(leftTrans, rightTrans);
                 if(param_.use_amgcl_){
-                    multBlocksInMatrix(ebosJacTrans, right_trans, false);
+                    multBlocksInMatrix(ebosJacTrans, rightTrans, false);
                     //multBlocksVector(adjRhs_cp, leftTrans);
                 }
                 CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJacTrans);
@@ -423,7 +423,7 @@ namespace Opm {
                     }
                 }
                 if(param_.use_amgcl_){
-                    multBlocksVector(x, right_trans);
+                    multBlocksVector(x, rightTrans);
                 }
             }else{
 
@@ -843,10 +843,10 @@ namespace Opm {
         //CRSMatrixHelper buildCRSMatrixNoBlocks(bool do_transpose)  const
         {
         /*
-            const auto& ebosJac_org = ebosSimulator_.model().linearizer().matrix();
-            auto ebosJac = ebosJac_org;
+            const auto& ebosJacOrg = ebosSimulator_.model().linearizer().matrix();
+            auto ebosJac = ebosJacOrg;
             if(do_transpose){
-                Dune::MatrixVector::transpose(ebosJac_org, ebosJac);
+                Dune::MatrixVector::transpose(ebosJacOrg, ebosJac);
             }
         */
             //std::ofstream file("matrix.txt");

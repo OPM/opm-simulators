@@ -23,6 +23,11 @@
 #ifndef OPM_STANDARDWELL_HEADER_INCLUDED
 #define OPM_STANDARDWELL_HEADER_INCLUDED
 
+BEGIN_PROPERTIES;
+
+NEW_PROP_TAG(NumWellAdjoint);
+
+END_PROPERTIES;
 
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolver.hpp>
@@ -98,7 +103,7 @@ namespace Opm
 
         // TODO: with flow_ebos，for a 2P deck, // TODO: for the 2p deck, numEq will be 3, a dummy phase is already added from the reservoir side.
         // it will cause problem here without processing the dummy phase.
-        static const int numAdjoint = GET_PROP_VALUE(TypeTag, numAdjoint);
+        static const int numWellAdjoint = GET_PROP_VALUE(TypeTag, NumWellAdjoint);
         static const int controlIndex = numEq + numWellEq;
 
         using typename Base::Mat;
@@ -133,7 +138,7 @@ namespace Opm
         typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellAdjointType> OffDiagMatWellCtrl;
 
         // added extra space in derivative to have control derivatives
-        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq+numAdjoint> EvalWell;
+        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq+numWellAdjoint> EvalWell;
 
         using Base::contiSolventEqIdx;
         using Base::contiPolymerEqIdx;
