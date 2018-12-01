@@ -48,7 +48,7 @@ SET_BOOL_PROP(EclFlowProblem, EnableTerminalOutput, true);
 SET_BOOL_PROP(EclFlowProblem, EnableAdaptiveTimeStepping, true);
 SET_BOOL_PROP(EclFlowProblem, EnableTuning, false);
 SET_STRING_PROP(EclFlowProblem, AdjointResultsFile, "adjoint_results.txt");
-SET_INT_PROP(EclFlowProblem,NumWellAdjoint,0);
+SET_INT_PROP(EclFlowProblem,NumWellAdjoint,1);
 END_PROPERTIES;
 
 namespace Opm {
