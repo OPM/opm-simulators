@@ -62,7 +62,7 @@ NEW_PROP_TAG(OutputMode);
 NEW_PROP_TAG(EnableDryRun);
 NEW_PROP_TAG(OutputInterval);
 NEW_PROP_TAG(UseAmg);
-NEW_PROP_TAG(EnableAdjoint);
+NEW_PROP_TAG(UseAdjoint);
 
 SET_STRING_PROP(EclFlowProblem, OutputMode, "all");
 
@@ -71,7 +71,7 @@ SET_STRING_PROP(EclFlowProblem, EnableDryRun, "auto");
 
 SET_INT_PROP(EclFlowProblem, OutputInterval, 1);
 
-SET_BOOL_PROP(EclFlowProblem, EnableAdjoint, false);
+SET_BOOL_PROP(EclFlowProblem, UseAdjoint, false);
 
 END_PROPERTIES;
 
@@ -113,6 +113,9 @@ namespace Opm
                                  "Specify if the simulation ought to be actually run, or just pretended to be");
             EWOMS_REGISTER_PARAM(TypeTag, int, OutputInterval,
                                  "Specify the number of report steps between two consecutive writes of restart data");
+	    //EWOMS_REGISTER_PARAM(TypeTag, bool, UseAdjoint,
+            //                     "Do backward run to run Adjoint");
+	    EWOMS_REGISTER_PARAM(TypeTag, bool, UseAdjoint, "Compute adjoints of well controls");
             Simulator::registerParameters();
 
             typedef typename BlackoilModelEbos<TypeTag>::ISTLSolverType ISTLSolverType;
@@ -534,11 +537,14 @@ namespace Opm
 
                 SimulatorReport successReport = simulator_->run(simtimer);
                 SimulatorReport failureReport = simulator_->failureReport();
-                if (EWOMS_GET_PARAM(TypeTag, bool, EnableAdjoint)) {
-                    SimulatorTimer simtimer_adjoint;
-                    simtimer_adjoint.init(successReport.time_steps, successReport.report_stepindx);
-                    int end_step = int(successReport.time_steps.size());// at end of last time step
-                    simtimer_adjoint.setCurrentStepNum(end_step);
+                if (EWOMS_GET_PARAM(TypeTag, bool, UseAdjoint)) {
+		    std::string msg("\n\n================ Starting adjoint loop ===============\n");
+                    OpmLog::info(msg);
+		    //SimulatorTimer simtimer_adjoint;
+                    //simtimer_adjoint.init(successReport.time_steps, successReport.report_stepindx);
+                    //int end_step = int(successReport.time_steps.size());// at end of last time step
+                    //simtimer_adjoint.setCurrentStepNum(end_step);
+		    SimulatorTimer& simtimer_adjoint = simtimer;
                     SimulatorReport successReport_adjoint = simulator_->runAdjoint(simtimer_adjoint);//, *state_);
                 }
                 if (output_cout_) {

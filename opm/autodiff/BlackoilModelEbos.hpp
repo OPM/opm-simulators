@@ -88,6 +88,8 @@ SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
 // default in flow is to formulate the equations in surface volumes
 SET_BOOL_PROP(EclFlowProblem, BlackoilConserveSurfaceVolume, true);
 SET_BOOL_PROP(EclFlowProblem, UseVolumetricResidual, false);
+//SET_BOOL_PROP(EclFlowProblemSimple, EnableStorageCache, true);
+//SET_BOOL_PROP(EclFlowProblemSimple, EnableIntensiveQuantityCache, true);
 
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit

@@ -41,7 +41,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/NewtonIterationUtilities.cpp
   opm/autodiff/GridHelpers.cpp
   opm/autodiff/ImpesTPFAAD.cpp
-  opm/autodiff/LinearSolverAmgcl.cpp
+  #opm/autodiff/LinearSolverAmgcl.cpp
   opm/autodiff/moduleVersion.cpp
   opm/autodiff/multiPhaseUpwind.cpp
   opm/autodiff/SimulatorFullyImplicitBlackoilOutput.cpp

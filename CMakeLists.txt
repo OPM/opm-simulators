@@ -118,3 +118,12 @@ endif (NOT EIGEN3_FOUND)
 if (HAVE_OPM_TESTS)
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
 endif()
+
+opm_add_test(flow
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators"
+  SOURCES
+    examples/flow.cpp)
+install(TARGETS flow DESTINATION bin)

@@ -43,7 +43,6 @@ NEW_PROP_TAG(EnableAdaptiveTimeStepping);
 NEW_PROP_TAG(EnableTuning);
 NEW_PROP_TAG(AdjointResultsFile);
 NEW_PROP_TAG(NumWellAdjoint);
-
 SET_BOOL_PROP(EclFlowProblem, EnableTerminalOutput, true);
 SET_BOOL_PROP(EclFlowProblem, EnableAdaptiveTimeStepping, true);
 SET_BOOL_PROP(EclFlowProblem, EnableTuning, false);
@@ -356,11 +355,20 @@ public:
         if(numWellAdjoint==0){
             OPM_THROW(std::runtime_error,"Compilation do not support adjoint change  GET_PROP_VALUE(TypeTag, NumWellAdjoint)");
         }
-        static const int storagecache = GET_PROP_VALUE(TypeTag, EnableStorageCache);
+
+	/*
+	static const int storagecache = GET_PROP_VALUE(TypeTag, EnableStorageCache);
         if(storagecache){
             OPM_THROW(std::runtime_error,"Compilation/implementation do not support adjoint change  GET_PROP_VALUE(TypeTag, EnableStorageCache)");
         }
-        //ebosSimulator_.problem().setEnableStorageCache(false);
+        */
+	// model inherents from the discretization
+        ebosSimulator_.model().setEnableStorageCache(false);
+	// erase matrix to get update all threded elemCtx
+	// NB!!!!!! new is used in linearizer so this may be an error
+	ebosSimulator_.model().linearizer().init(ebosSimulator_);
+	//ElementContext elemCtx(ebosSimulator_);
+        //elemCtx.setEnableStorageCache(false);// Do not know if this work
         SimulatorReport adjoint_report;
         // Main simulation loop
 
