@@ -530,7 +530,7 @@ private:
 
         // editNNC is supposed to only reference non-neighboring connections and not
         // neighboring connections. Use all entries for scaling if there is an NNC.
-        for(auto nnc = editNNC.data().begin(), end = editNNC.data().end(); nnc != end;)
+        for (auto nnc = editNNC.data().begin(), end = editNNC.data().end(); nnc != end; )
         {
             auto c1 = nnc->cell1, c2 = nnc->cell2;
             auto low = globalToLocal[c1], high = globalToLocal[c2];
@@ -549,12 +549,12 @@ private:
                 else
                 {
                     std::ostringstream sstr;
-                    sstr << "Cannot edit NNC from " << nnc->cell1 <<" to "<<nnc->cell2
+                    sstr << "Cannot edit NNC from " << nnc->cell1 << " to " << nnc->cell2
                          << " as it does not exist";
                     Opm::OpmLog::warning(sstr.str());
                 }
                 ++nnc;
-            }while( nnc!= end && c1==nnc->cell1 && c2==nnc->cell2);
+            } while ( nnc!= end && c1==nnc->cell1 && c2==nnc->cell2 );
         }
     }
 
