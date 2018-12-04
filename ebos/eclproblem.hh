@@ -1121,14 +1121,13 @@ public:
     /*!
     * \brief Returns the polymer molecule weight for a given cell index
     */
+    // TODO: remove this function if not called
     Scalar polymerMolecularWeight(const unsigned elemIdx) const
     {
         if (polymerMoleWeight_.empty())
             return 0.0;
 
         return polymerMoleWeight_[elemIdx];
-        // TODO: not sure where this function will be called
-        // TODO: if not, it should be removed
     }
 
     /*!
@@ -1820,7 +1819,7 @@ private:
                  solventSaturation_[elemIdx] = eclWriter_->eclOutputModule().getSolventSaturation(elemIdx);
             if (enablePolymer)
                  polymerConcentration_[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
-            // TODO: something need to add the polymer molecular weight related to output
+            // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
 
         if (tracerModel().numTracers() > 0)
