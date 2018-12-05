@@ -254,10 +254,10 @@ namespace Opm {
             SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             // Store the initial previous.
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
-            WellState well_state0;
-            deserialize_well(well_state0);//
+            //WellState well_state0;
+            deserialize_well();//
             wellModel().beginTimeStep(timer.reportStepNum(), timer.simulationTimeElapsed());
-            wellModel().setRestartWellState(well_state0);
+            //wellModel().setRestartWellState(well_state0);
 
             // move to current time step
             ++timer;// get back to current step
@@ -299,10 +299,9 @@ namespace Opm {
             std::cout << "Printing pure residual with out well contribution backward mode" << std::endl;
             std::cout << ebosResid << std::endl;
             */
-            WellState well_state;
-            deserialize_well(well_state);
-
-            wellModel().setWellState(well_state);
+            //WellState well_state;
+            deserialize_well();
+            //wellModel().setWellState(well_state);
             //wellModel().beginTimeStep();
             double dt = timer.stepLengthTaken();
             //int
@@ -1524,22 +1523,22 @@ namespace Opm {
         void serialize_well(){
             //namespace fs = boost::filesystem;
             //fs::path output_dir = ebosSimulator_.vanguard().eclState().getIOConfig().getOutputDir();
-            WellState well_state_proper =  this->wellModel().wellState();//to avoid the const problem with serialize else have to make splitted
+            //WellState well_state_proper =  this->wellModel().wellState();//to avoid the const problem with serialize else have to make splitted
             //std::string filename =  well_state_proper.getWellFile(this->ebosSimulator(),this->ebosSimulator().time());
             std::string filename = this->iofilename();
             // could be changed to binary: for wells not for now
             std::ofstream ofs(filename.c_str());
             boost::archive::text_oarchive oa(ofs);
-            oa << well_state_proper;
+            oa << this->wellModel();
         }
 
-        void deserialize_well(WellState& well_state){
+        void deserialize_well(){
             //std::string filename =  well_state.getWellFile(ebosSimulator_, ebosSimulator_.time());
             std::string filename = this->iofilename();
             // could be changed to binary: for wells not for now
             std::ifstream ifs(filename.c_str());
             boost::archive::text_iarchive oa(ifs);
-            oa >> well_state;
+            oa >>  this->wellModel();
         }
         void deserializeReservoir(Scalar t){
             // intended only for adjoint simulation
