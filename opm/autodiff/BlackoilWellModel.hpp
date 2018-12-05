@@ -61,6 +61,16 @@
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
+#include <boost/archive/tmpdir.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
+#include <boost/serialization/array.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/utility.hpp>
+#include <boost/serialization/list.hpp>
+#include <boost/serialization/assume_abstract.hpp>
 
 namespace Opm {
 
@@ -281,6 +291,28 @@ namespace Opm {
             double gravity_;
             std::vector<double> depth_;
             bool initial_step_;
+            friend class  boost::serialization::access;
+            template<class Archive>
+            void serialize(Archive & ar, const unsigned int version){
+                //ar & wells_active_;
+                //ar & well_container_;
+                ar & well_state_;
+                ar & previous_well_state_;
+                //ar & param_;
+                //ar & has_solvent_;
+                //ar & has_polymer_;
+                //ar & pvt_region_idx_;
+                //ar & phase_usage_;
+                //ar & global_nc_;
+                //ar & number_of_cells_;
+                //ar & gravity_;
+                //ar & depth_;
+                //ar & initial_step_;
+                //ar & wellTestState_;
+                //ar & scaleAddRes_;
+            }
+
+
 
             std::unique_ptr<RateConverterType> rateConverter_;
             std::unique_ptr<VFPProperties> vfp_properties_;

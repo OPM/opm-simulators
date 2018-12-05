@@ -371,6 +371,36 @@ namespace Opm
 
         const int num_components_;
 
+        friend class  boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version){
+            //ar & well_ecl;
+            ar & current_step_;
+            ar & index_of_well_;
+            //ar & param_;
+            //ar & well_type_;
+            // ar & num_of_phases_;
+            ar & comp_frac_;
+            //ar & well_controls_;
+            //ar & num_of_perforation;
+            //ar & first_perf_;
+            //ar & well_index_;
+            //ar & perf_depth_;
+            //ar & ref_depth_;
+            //ar & well_efficency_factor_;
+            //ar & well_cells_;
+            //ar & saturation_table_number_;
+            //ar & perf_fep_radius_;
+            //ar & peft_lenght_;
+            //ar & bore_diameters_;
+            //ar & phase_usage_;
+            //ar  & vfp_properties_;
+            //ar & gravity_;
+           // ar & rateConverter_;
+           //ar & num_components_;
+        }
+
+
         const PhaseUsage& phaseUsage() const;
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
