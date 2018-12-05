@@ -73,6 +73,42 @@ function(add_test_compare_restarted_simulation)
 endfunction()
 
 ###########################################################################
+# TEST: add_test_compare_restarted_simulation_eclcompat
+###########################################################################
+
+# Input:
+#   - casename: basename (no extension)
+#
+# Details:
+#   - This test class compares the output from a restarted simulation
+#     to that of a non-restarted simulation.  Uses ECLIPSE-compatible
+#     restart files.
+function(add_test_compare_restarted_simulation_eclcompat)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL)
+  set(multiValueArgs TEST_ARGS)
+  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
+  set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+  set(OPM_EXTENDED_RESTART_FILE "false")
+  set(TEST_ARGS
+      ${OPM_TESTS_ROOT}/${PARAM_CASENAME}/${PARAM_FILENAME}
+      ${OPM_EXTENDED_RESTART_FILE}
+      ${PARAM_TEST_ARGS}
+  )
+
+  opm_add_test(compareECLCompatRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
+               EXE_NAME ${PARAM_SIMULATOR}
+               DRIVER_ARGS ${OPM_TESTS_ROOT}/${PARAM_CASENAME} ${RESULT_PATH}
+                           ${PROJECT_BINARY_DIR}/bin
+                           ${PARAM_FILENAME}
+                           ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
+                           ${COMPARE_ECL_COMMAND}
+                           ${OPM_PACK_COMMAND}
+                           0
+               TEST_ARGS ${TEST_ARGS})
+endfunction()
+
+###########################################################################
 # TEST: add_test_compare_parallel_simulation
 ###########################################################################
 
