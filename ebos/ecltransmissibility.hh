@@ -530,6 +530,7 @@ private:
 
         // editNNC is supposed to only reference non-neighboring connections and not
         // neighboring connections. Use all entries for scaling if there is an NNC.
+        // variable nnc incremented in loop body.
         for (auto nnc = editNNC.data().begin(), end = editNNC.data().end(); nnc != end; )
         {
             auto c1 = nnc->cell1, c2 = nnc->cell2;
@@ -539,22 +540,24 @@ private:
                 std::swap(low, high);
             }
             auto candidate = trans_.find(isId_(low, high));
-            do
+
+            if ( candidate == trans_.end() )
             {
-                if ( candidate != trans_.end() )
-                {
-                    // NNC exists
-                    candidate->second *= nnc->trans;
-                }
-                else
-                {
-                    std::ostringstream sstr;
-                    sstr << "Cannot edit NNC from " << nnc->cell1 << " to " << nnc->cell2
-                         << " as it does not exist";
-                    Opm::OpmLog::warning(sstr.str());
-                }
                 ++nnc;
-            } while ( nnc!= end && c1==nnc->cell1 && c2==nnc->cell2 );
+                std::ostringstream sstr;
+                sstr << "Cannot edit NNC from " << nnc->cell1 << " to " << nnc->cell2
+                     << " as it does not exist";
+                Opm::OpmLog::warning(sstr.str());
+            }
+            else
+            {
+                // NNC exists
+                while ( nnc!= end && c1==nnc->cell1 && c2==nnc->cell2 )
+                {
+                    candidate->second *= nnc->trans;
+                    ++nnc;
+                }
+            }
         }
     }
 
