@@ -2741,7 +2741,7 @@ namespace Opm
         // at (0,j) only if this well has a perforation at cell j.
 
         // TODO: we have some matrix type problem here.
-        /* for ( auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC )
+        for ( auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC )
         {
             const auto row_index = colC.index();
             auto& row = mat[row_index];
@@ -2754,13 +2754,13 @@ namespace Opm
                 while ( col != row.end() && col.index() < col_index ) ++col;
                 assert(col != row.end() && col.index() == col_index);
 
-                Dune::FieldMatrix<Scalar, numWellEq, numEq> tmp;
+                Dune::DynamicMatrix<Scalar> tmp;
+                Detail::multMatrix(invDuneD_[0][0],  (*colB), tmp);
                 typename Mat::block_type tmp1;
-                Dune::FMatrixHelp::multMatrix(invDuneD_[0][0],  (*colB), tmp);
                 Detail::multMatrixTransposed((*colC), tmp, tmp1);
                 (*col) -= tmp1;
             }
-        } */
+        }
     }
 
 

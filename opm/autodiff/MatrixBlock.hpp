@@ -329,6 +329,61 @@ namespace Detail
             }
         }
     }
+
+    //! calculates ret = A * B
+    template< class K>
+    static inline void multMatrix( const Dune::DynamicMatrix<K> &A,
+                                   const Dune::DynamicMatrix<K> &B,
+                                   Dune::DynamicMatrix<K> &ret )
+    {
+        typedef typename Dune::DynamicMatrix<K> :: size_type size_type;
+
+        const size_type m = A.rows();
+        const size_type n = A.cols();
+
+        assert(n == B.rows() );
+
+        const size_type p = B.cols();
+
+        ret.resize(m, p);
+
+        for( size_type i = 0; i < m; ++i )
+        {
+            for( size_type j = 0; j < p; ++j )
+            {
+                ret[ i ][ j ] = K( 0 );
+                for( size_type k = 0; k < n; ++k )
+                    ret[ i ][ j ] += A[ i ][ k ] * B[ k ][ j ];
+            }
+        }
+    }
+
+
+    //! calculates ret = A^T * B
+    template< class K, int m, int p >
+    static inline void multMatrixTransposed ( const Dune::DynamicMatrix<K> &A,
+                                              const Dune::DynamicMatrix<K> &B,
+                                              Dune::FieldMatrix< K, m, p> &ret )
+    {
+        typedef typename Dune::DynamicMatrix<K> :: size_type size_type;
+
+        // A is a tranpose matrix
+        const size_type n = A.rows();
+        assert(m == A.cols() );
+
+        assert(n == B.rows() );
+        assert(p == B.cols() );
+
+        for( size_type i = 0; i < m; ++i )
+        {
+            for( size_type j = 0; j < p; ++j )
+            {
+                ret[ i ][ j ] = K( 0 );
+                for( size_type k = 0; k < n; ++k )
+                    ret[ i ][ j ] += A[ k ][ i ] * B[ k ][ j ];
+            }
+        }
+    }
 } // namespace Detail
 } // namespace Opm
 
