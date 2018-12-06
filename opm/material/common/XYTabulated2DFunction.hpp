@@ -57,8 +57,8 @@ public:
     XYTabulated2DFunction(const std::vector<Scalar>& x_pos,
                           const std::vector<Scalar>& y_pos,
                           const std::vector<std::vector<Scalar> >& data,
-                          const bool x_extrapolate,
-                          const bool y_extrapolate)
+                          const bool x_extrapolate = false,
+                          const bool y_extrapolate = false)
        : xPos_(x_pos)
        , yPos_(y_pos)
        , samples_(data)

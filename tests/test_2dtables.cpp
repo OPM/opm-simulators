@@ -31,6 +31,7 @@
 
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/UniformTabulated2DFunction.hpp>
+#include <opm/material/common/XYTabulated2DFunction.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -132,6 +133,37 @@ createUniformXTabulatedFunction2(Fn& f)
     return tab;
 }
 
+
+template <class Fn>
+std::shared_ptr<Opm::XYTabulated2DFunction<Scalar> >
+createXYTabulated2DFunction(Fn& f)
+{
+    const Scalar xMin = -2.0;
+    const Scalar xMax = 3.0;
+    const Scalar m = 50;
+
+    const Scalar yMin = -1/2.0;
+    const Scalar yMax = 1/3.0;
+    const unsigned n = 40;
+
+    std::vector<Scalar> x_samples(m);
+    std::vector<Scalar> y_samples(n);
+    std::vector<std::vector<Scalar>> data(m, std::vector<Scalar>(n));
+
+    for (unsigned i = 0; i < m; ++i) {
+        x_samples[i] = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
+
+        for (unsigned j = 0; j < n; ++j) {
+            y_samples[j] = yMin + Scalar(j)/(n -1) * (yMax - yMin);
+            data[i][j] = f(x_samples[i], y_samples[j]);
+        }
+    }
+
+    auto tab = std::make_shared<Opm::XYTabulated2DFunction<Scalar>>(x_samples, y_samples, data, true, true);
+
+    return tab;
+}
+
 template <class Fn, class Table>
 bool compareTableWithAnalyticFn(const Table& table,
                                 Scalar xMin,
@@ -154,6 +186,37 @@ bool compareTableWithAnalyticFn(const Table& table,
             Scalar y = yMin + Scalar(j)/numY*(yMax - yMin);
             if (std::abs(table->eval(x, y) - f(x, y)) > tolerance) {
                 std::cerr << __FILE__ << ":" << __LINE__ << ": table->eval("<<x<<","<<y<<") != f("<<x<<","<<y<<"): " << table->eval(x,y) << " != " << f(x,y) << "\n";
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+template <class Fn, class Table>
+bool compareTableWithAnalyticFn2(const Table& table,
+                                 const Scalar xMin,
+                                 const Scalar xMax,
+                                 unsigned numX,
+                                 const Scalar yMin,
+                                 const Scalar yMax,
+                                 unsigned numY,
+
+                                 Fn& f,
+                                 Scalar tolerance = 1e-8)
+{
+    // make sure that the tabulated function evaluates to the same thing as the analytic
+    // one (modulo tolerance)
+    for (unsigned i = 1; i <= numX; ++i) {
+        Scalar x = xMin + Scalar(i)/numX*(xMax - xMin);
+
+        for (unsigned j = 0; j < numY; ++j) {
+            Scalar y = yMin + Scalar(j)/numY*(yMax - yMin);
+            Scalar result;
+            table->eval(x, y, result);
+            if (std::abs(result - f(x, y)) > tolerance) {
+                std::cerr << __FILE__ << ":" << __LINE__ << ": table->eval("<<x<<","<<y<<") != f("<<x<<","<<y<<"): " << result << " != " << f(x,y) << "\n";
                 return false;
             }
         }
@@ -357,6 +420,35 @@ inline int testAll( const typename TestType::Scalar tolerance = 1e-6 )
                                     TestType::testFn3,
                                     /*tolerance=*/1e-2))
         return 1;
+
+    {
+        using ScalarType = typename TestType::Scalar;
+
+        auto xytab = test.createXYTabulated2DFunction(TestType::testFn1);
+        const ScalarType xMin = -4.0;
+        const ScalarType xMax = 8.0;
+        const unsigned m = 250;
+
+        const ScalarType yMin = -2. / 2.0;
+        const ScalarType yMax = 3. / 3.0;
+        const unsigned n = 170;
+
+        // extrapolation and interpolation involved, the tolerance needs to be bigger
+        const ScalarType temp_tolerance = 1000. * tolerance;
+
+        if (!test.compareTableWithAnalyticFn2(xytab, xMin, xMax, m, yMin, yMax, n, TestType::testFn1, temp_tolerance))
+            return 1;
+
+        xytab = test.createXYTabulated2DFunction(TestType::testFn2);
+
+        if (!test.compareTableWithAnalyticFn2(xytab, xMin, xMax, m, yMin, yMax, n, TestType::testFn2, temp_tolerance))
+            return 1;
+
+        xytab = test.createXYTabulated2DFunction(TestType::testFn3);
+
+        if (!test.compareTableWithAnalyticFn2(xytab, xMin, xMax, m, yMin, yMax, n, TestType::testFn3, temp_tolerance))
+            return 1;
+    }
 
     // CSV output for debugging
 #if 0
