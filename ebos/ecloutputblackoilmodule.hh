@@ -217,7 +217,7 @@ public:
         }
 
         // Only provide restart on restart steps
-        if (!restartConfig.getWriteRestartFile(reportStepNum) || substep)
+        if (!restartConfig.getWriteRestartFile(reportStepNum, log) || substep)
             return;
 
         // always output saturation of active phases
