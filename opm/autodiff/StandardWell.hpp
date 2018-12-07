@@ -23,11 +23,11 @@
 #ifndef OPM_STANDARDWELL_HEADER_INCLUDED
 #define OPM_STANDARDWELL_HEADER_INCLUDED
 
-BEGIN_PROPERTIES;
+BEGIN_PROPERTIES
 
 NEW_PROP_TAG(NumWellAdjoint);
 
-END_PROPERTIES;
+END_PROPERTIES
 
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolverEbos.hpp>
@@ -451,7 +451,7 @@ namespace Opm
         template <class ValueType>
         ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const int thp_control_index) const;
 
-        double calculateThpFromBhp(const std::vector<double>& rates, const int thp_control_index, const double bhp) const;
+        double calculateThpFromBhp(const std::vector<double>& rates, const double bhp) const;
 
 
         // get the mobility for specific perforation

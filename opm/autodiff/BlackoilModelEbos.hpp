@@ -36,14 +36,14 @@
 #include <opm/autodiff/WellConnectionAuxiliaryModule.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 
-#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
+//#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/LinearSolverAmgcl.hpp>
 //#include <opm/autodiff/LinearSolverAmgclNew.hpp>
 
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
-#include <opm/core/linalg/LinearSolverUmfpack.hpp>
+//#include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -317,6 +317,7 @@ namespace Opm {
             wellModel().prepareTimeStep();
             //wellModel().calculateExplicitQuantities();
             wellModel().assemble(/*iterationIdx*/1, false, ebosSimulator_.timeStepSize());
+	    //wellModel().assembleWellEq(ebosSimulator_.timeStepSize());
 
             wellModel().apply(ebosResid);
             //wellModel().printMatrixes();
@@ -346,7 +347,7 @@ namespace Opm {
             wellModel().applyt(adjRhs);                 // add rhs from the schur complement of well equations
             //
             //NB we get the linerized version from the reservoir part to be modified
-            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
 //            std::cout << "********************************* " << std::endl;
 //            std::cout << "print all matrixes" << std::endl;
 //            Dune::writeMatrixMarket(ebosJac, std::cout);
@@ -356,11 +357,11 @@ namespace Opm {
 //            std::cout << "********************************* " << std::endl;
             std::unique_ptr<Mat> adj_matrix_for_preconditioner;
             if (param_.matrix_add_well_contributions_) {
-                wellModel().addWellContributions(ebosJac);
+	       wellModel().addWellContributions(ebosJac);
             }
             if ( param_.preconditioner_add_well_contributions_ &&
                  ! param_.matrix_add_well_contributions_ ) {
-                adj_matrix_for_preconditioner.reset(new Mat(ebosJac));
+	        adj_matrix_for_preconditioner.reset(new Mat(ebosJac));
                 wellModel().addWellContributions(*adj_matrix_for_preconditioner);
             }
 
@@ -368,80 +369,9 @@ namespace Opm {
             // set initial guess
             BVector x(nc);
             if (param_.use_amgcl_ || param_.use_umfpack_) {
-                if (!param_.matrix_add_well_contributions_) {
-                    // This should be handled by combining interacting options into a single one eventually.
-                    OPM_THROW(std::runtime_error, "Cannot run with amgcl or UMFPACK without also using 'matrix_add_well_contributions=true'.");
-                }
-
-                // Create matrix for external linear solvers.
-                const auto& ebosJacOrg = ebosSimulator_.model().linearizer().matrix();
-                auto ebosJacTrans = ebosJacOrg;
-                auto adjRhs_cp = adjRhs;
-                Dune::MatrixVector::transpose(ebosJacOrg, ebosJacTrans);
-                MatrixBlockType leftTrans = 0.0;
-                if(param_.use_amgcl_drs_){
-                    leftTrans=getBlockTransform(2);
-                }else{
-                    auto eqChange=getBlockTransform(2);
-                    auto cpr_trans = getBlockTransform(1);
-                    leftTrans= cpr_trans.rightmultiply(eqChange);
-                }
-                auto  rightTrans = leftTrans;
-                Dune::MatrixVector::transpose(leftTrans, rightTrans);
-                if(param_.use_amgcl_){
-                    multBlocksInMatrix(ebosJacTrans, rightTrans, false);
-                    //multBlocksVector(adjRhs_cp, leftTrans);
-                }
-                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJacTrans);
-                //CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(true);
-
-                // Copy right-hand side (blocked structure -> unblocked).
-                const int n = adjRhs.size();
-                const int np = numPhases();
-                const int sz = n * np;
-                std::vector<double> rhs(sz, 0.0);
-                for (int cell = 0; cell < n; ++cell) {
-                    for (int phase = 0; phase < np; ++phase) {
-                        rhs[np*cell + phase] = adjRhs_cp[cell][phase];
-                    }
-                }
-
-                std::vector<double> sol(sz, 0.0);
-                if (param_.use_amgcl_) {
-                    // // Call amgcl to solve system
-                    // const double tol = istlSolver().getParameters().linear_solver_reduction_;
-                    // const int maxiter = istlSolver().getParameters().linear_solver_maxiter_;
-                    // int    iters;
-                    // double error;
-                    // /*
-                    // LinearSolverAmgcl solver(np, param_.use_amgcl_drs_);
-                    // //LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
-                    // solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
-                    // */
-                    // solver_ =std::make_shared<LinearSolverAmgcl>(np, param_.use_amgcl_drs_);
-                    // solver_->init(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter);
-                    // // solver_->updatePre(sz, matrix.ptr, matrix.col, matrix.val, tol, maxiter);
-                    // solver_->solve(rhs,  sol, iters, error);
-                    // const_cast<int&>(linear_iters_last_solve_) = iters;
-                    // std::cout << "Linear iterations in adjoint solve " << iters << std::endl;
-                } else if (param_.use_umfpack_) {
-                    // Call UMFPACK to solve system
-                    const int nnz = matrix.ptr[sz];
-                    LinearSolverUmfpack solver;
-                    solver.solve(sz, nnz, matrix.ptr.data(), matrix.col.data(), matrix.val.data(), rhs.data(), sol.data());
-                    const_cast<int&>(linear_iters_last_solve_) = 0;
-                }
-
-                // Extract solution (unblocked structure -> blocked).
-                assert(sol.size() == x.size() * numPhases());
-                for (int cell = 0; cell < n; ++cell) {
-                    for (int phase = 0; phase < np; ++phase) {
-                        x[cell][phase] = sol[np*cell + phase];
-                    }
-                }
-                if(param_.use_amgcl_){
-                    multBlocksVector(x, rightTrans);
-                }
+	       OPM_THROW(std::runtime_error, "Cannot run with amgcl or umfpack");
+	       //InputMatrix = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
+	      //solveWithAMGCLorUMFPACK_Transpose();
             }else{
 
                 // Solve system.
@@ -477,7 +407,7 @@ namespace Opm {
             ebosSimulator_.problem().beginIteration();
             ebosSimulator_.model().linearizer().linearize(1);
             ebosSimulator_.problem().endIteration();
-            const auto& ebosJac1 = ebosSimulator_.model().linearizer().matrix();
+            const auto& ebosJac1 = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
 
 
             // prepare rhs for next step
@@ -493,7 +423,7 @@ namespace Opm {
             std::cout << std::endl;
             //std::cout << ebosJac << std::endl;
             */
-            std::cout << "Linear iterations in adjoint solve " << linear_iters_last_solve_ << std::endl;
+            std::cout << "Linear iterations in adjoint solve " << linearIterationsLastSolve() << std::endl;
             return adjres;
 
          }
@@ -662,42 +592,39 @@ namespace Opm {
             //assuem this alwasy is used in forward mode
             ebosSimulator_.model().linearizer().linearize(/*focustimeindex=*/ 0);
             ebosSimulator_.problem().endIteration();
-            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
-            // -------- Aquifer models ----------
-            try
-            {
-                // Modify the Jacobian and residuals according to the aquifer models
-                aquiferModel().assemble(timer, iterationIdx);
-            }
-            catch( ... )
-            {
-                OPM_THROW(Opm::NumericalIssue,"Error when assembling aquifer models");
-            }
+            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
+            // // -------- Aquifer models ----------
+            // try
+            // {
+            //     // Modify the Jacobian and residuals according to the aquifer models
+            //     aquiferModel().assemble(timer, iterationIdx);
+            // }
+            // catch( ... )
+            // {
+            //     OPM_THROW(Opm::NumericalIssue,"Error when assembling aquifer models");
+            // }
+            // // -------- Current time step length ----------
+            // const double dt = timer.currentStepLength();
+            // // -------- Well equations ----------
+            // try
+            // {
+            //     // assembles the well equations and applies the wells to
+            //     // the reservoir equations as a source term.
+            //     wellModel().assemble(iterationIdx, false, dt);
+            // }
+            // catch ( const Dune::FMatrixError& )
+            // {
+            //     OPM_THROW(Opm::NumericalIssue,"Error encounted when solving well equations");
+            // }
 
-            // -------- Current time step length ----------
-            const double dt = timer.currentStepLength();
-
-            // -------- Well equations ----------
-
-            try
-            {
-                // assembles the well equations and applies the wells to
-                // the reservoir equations as a source term.
-                wellModel().assemble(iterationIdx, false, dt);
-            }
-            catch ( const Dune::FMatrixError& )
-            {
-                OPM_THROW(Opm::NumericalIssue,"Error encounted when solving well equations");
-            }
-
-            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            // auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
 
             if (param_.matrix_add_well_contributions_) {
-                wellModel().addWellContributions(ebosJac.istlMatrix());
+                wellModel().addWellContributions(ebosJac);
             }
             if ( param_.preconditioner_add_well_contributions_ &&
                                   ! param_.matrix_add_well_contributions_ ) {
-                matrix_for_preconditioner_ .reset(new Mat(ebosJac.istlMatrix()));
+                matrix_for_preconditioner_ .reset(new Mat(ebosJac));
                 wellModel().addWellContributions(*matrix_for_preconditioner_);
             }
 
@@ -785,7 +712,7 @@ namespace Opm {
         /// Number of linear iterations used in last call to solveJacobianSystem().
         int linearIterationsLastSolve() const
         {
-            return linear_iters_last_solve_;
+	  return istlSolver().iterations();
         }
 
 
@@ -979,7 +906,7 @@ namespace Opm {
             // r = [r, r_well], where r is the residual and r_well the well residual.
             // r -= B^T * D^-1 r_well
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
+	  auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
             wellModel().apply(ebosResid);
@@ -994,134 +921,41 @@ namespace Opm {
             // set initial guess
             x = 0.0;
             if (param_.use_amgcl_ || param_.use_umfpack_) {
-                if (!param_.matrix_add_well_contributions_) {
-                    // This should be handled by combining interacting options into a single one eventually.
-                    OPM_THROW(std::runtime_error, "Cannot run with amgcl or UMFPACK without also using 'matrix_add_well_contributions=true'.");
-                }
-
-                // Create matrix for external linear solvers.
-                //const bool do_transpose=false;
-                const int np = numPhases();
-                MatrixBlockType leftTrans = 0.0;
-                if(param_.use_amgcl_drs_){
-                    leftTrans=getBlockTransform(2);
-                }else{
-                    auto eqChange=getBlockTransform(2);
-                    auto cprTrans = getBlockTransform(1);
-                    leftTrans= cprTrans.rightmultiply(eqChange);
-                }
-                bool print_matrix_system=false;
-                auto ebosJac_cp = ebosSimulator_.model().linearizer().matrix();
-                auto ebosResid_cp = ebosResid;
-                multBlocksInMatrix(ebosJac_cp, leftTrans,true);
-                multBlocksVector(ebosResid_cp, leftTrans);
-
-                if(print_matrix_system){
-                    std::ofstream filem("matrix.txt");
-                    Dune::writeMatrixMarket(ebosJac_cp, filem);
-                    std::ofstream fileb("rhs.txt");
-                    Dune::writeMatrixMarket(ebosResid_cp, fileb);
-                }
-                CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(ebosJac_cp);
-                //CRSMatrixHelper matrix = buildCRSMatrixNoBlocks(false);
-                //matrix.print();
-                // Copy right-hand side (blocked structure -> unblocked).
-                const int n = ebosResid.size();
-                //const int np = numPhases();
-                const int sz = n * np;
-                std::vector<double> rhs(sz, 0.0);
-                //std::ofstream file("rhs.txt");
-                //Dune::writeMatrixMarket(ebosResid, file);
-
-                for (int cell = 0; cell < n; ++cell) {
-                    //const auto& rhs = ebosResid[cell];
-                    //auto rhs_b = rhs;
-                    //trans.mv(rhs, rhs_b);
-                    for (int phase = 0; phase < np; ++phase) {
-                    //for (int phase = np-1; phase > -1; --phase) {
-                        rhs[np*cell + phase] = ebosResid_cp[cell][phase];
-                        //rhs[np*cell + phase] = ebosResid[cell][np - phase - 1];
-                    }
-                }
-
-                std::vector<double> sol(sz, 0.0);
-                if (param_.use_amgcl_) {
-                    // // Call amgcl to solve system
-                    // const double tol = istlSolver().getParameters().linear_solver_reduction_;
-                    // const int maxiter = istlSolver().getParameters().linear_solver_maxiter_;
-                    // int    iters;
-                    // double error;
-                    // auto rep  =  new DebugTimeReport("amgcl-timer");
-
-                    // if( (iteration < 1) || (timer.currentStepLength()  < (10.0*24.0*60.0*60.0)) ){
-                    //     solver_.reset();
-                    //     solver_ = std::make_shared<LinearSolverAmgclNew>(np, param_.use_amgcl_drs_);
-                    //     if(np>2){
-                    //         solver_->hackScalingFactors(sz, matrix.ptr, matrix.val,rhs);// scale equations
-                    //     }
-                    //     solver_->init(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter);
-                    // }else{
-                    //     if(np>2){
-                    //         solver_->hackScalingFactors(sz, matrix.ptr, matrix.val,rhs);// scale equations
-                    //     }
-                    //     solver_->updatePre(sz, matrix.ptr, matrix.col, matrix.val, tol, maxiter);
-                    // }
-                    // solver_->solve(rhs,  sol, iters, error);
-                    // delete rep;
-                    // /*
-                    // LinearSolverAmgcl solver(np,param_.use_amgcl_drs_);
-                    // //LinearSolverAmgcl::solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);
-                    // solver.solve(sz, matrix.ptr, matrix.col, matrix.val, rhs, tol, maxiter, sol, iters, error);*/
-                    // const_cast<int&>(linear_iters_last_solve_) = iters;
-                } else if (param_.use_umfpack_) {
-                    // Call UMFPACK to solve system
-                    const int nnz = matrix.ptr[sz];
-                    LinearSolverUmfpack solver;
-                    solver.solve(sz, nnz, matrix.ptr.data(), matrix.col.data(), matrix.val.data(), rhs.data(), sol.data());
-                    const_cast<int&>(linear_iters_last_solve_) = 0;
-                }
-
-                // Extract solution (unblocked structure -> blocked).
-                assert(sol.size() == x.size() * numPhases());
-                for (int cell = 0; cell < n; ++cell) {
-                    for (int phase = 0; phase < np; ++phase) {
-                        x[cell][phase] = sol[np*cell + phase];
-                    }
-                }
-                return;
-            }
-
-            // Use the default ISTLSolver to solve the system.
-	     const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac.istlMatrix();
-            // Solve system.
-            if( isParallel() )
-            {	      
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
-
-                auto ebosJacIgnoreOverlap = Mat(ebosJac.istlMatrix());
-                //remove ghost rows in local matrix
-                makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
-
-                //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
-                //to be certain that correct matrix is used for preconditioning.
-                Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel(),
-                             istlSolver().parallelInformation() );
-                assert( opA.comm() );
-                istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
-            }
-            else
-            {
-                //std::cout.precision(16);
-                //std::cout << x << std::endl;
-                //Dune::writeMatrixMarket(ebosJac, std::cout);
-                //wellModel().printMatrixes();
-                //std::cout << ebosResid << std::endl;
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
-                Operator opA(ebosJac.istlMatrix(), actual_mat_for_prec, wellModel());
-                istlSolver().solve( opA, x, ebosResid );
-            }
-            const_cast<int&>(linear_iters_last_solve_) = istlSolver().iterations();
-        }
+	      OPM_THROW(std::runtime_error, "Cannot run with amgcl or umfpack"); 
+	      //solveWithAMGCLorUMFPACK()
+            }else{
+	      // Use the default ISTLSolver to solve the system.
+	      const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac;
+	      // Solve system.
+	      if( isParallel() )
+		{	      
+		  typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
+		  
+		  auto ebosJacIgnoreOverlap = Mat(ebosJac);
+		  //remove ghost rows in local matrix
+		  makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
+		  
+		  //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
+		  //to be certain that correct matrix is used for preconditioning.
+		  Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel(),
+			       istlSolver().parallelInformation() );
+		  assert( opA.comm() );
+		  istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
+		}
+	      else
+		{
+		  //std::cout.precision(16);
+		  //std::cout << x << std::endl;
+		  //Dune::writeMatrixMarket(ebosJac, std::cout);
+		  //wellModel().printMatrixes();
+		  //std::cout << ebosResid << std::endl;
+		  typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
+		  Operator opA(ebosJac, actual_mat_for_prec, wellModel());
+		  istlSolver().solve( opA, x, ebosResid );
+		}
+	    }
+            //const_cast<int&>(linear_iters_last_solve_) = istlSolver().iterations();
+	}
 
         //=====================================================================
         // Implementation for ISTL-matrix based operator

@@ -851,26 +851,8 @@ namespace Opm
             oss <<  "wellstate_" << simName << "_time=" << t << "_rank=" << rank << ".ers";
             return oss.str();
         }
-     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive & ar, const unsigned int version)
-        {
-            ar & boost::serialization::base_object<BaseType>(*this);
-            ar & perfphaserates_;
-            ar & current_controls_;
-            ar & perfRateSolvent_;
-            ar & well_reservoir_rates_;
-            ar & well_dissolved_gas_rates_;
-            ar & well_vaporized_oil_rates_;
-            ar & is_new_well_;
-            ar & segrates_;
-            ar & segpress_;
-            ar & top_segment_index_;
-            ar & nseg_;
-        }
-
-
+    
+        
         std::vector<double>& productivityIndex() {
             return productivity_index_;
         }
@@ -888,6 +870,26 @@ namespace Opm
         }
 
     private:
+      friend class boost::serialization::access;
+      template<class Archive>
+      void serialize(Archive & ar, const unsigned int version)
+      {
+	    ar & boost::serialization::base_object<BaseType>(*this);
+	    ar & perfphaserates_;
+	    ar & current_controls_;
+	    ar & perfRateSolvent_;
+            ar & well_reservoir_rates_;
+            ar & well_dissolved_gas_rates_;
+            ar & well_vaporized_oil_rates_;
+            ar & effective_events_occurred_;
+            ar & segrates_;
+            ar & segpress_;
+            ar & top_segment_index_;
+            ar & nseg_;
+	    ar & productivity_index_;
+	    ar & well_potentials_;
+        }
+
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
         std::vector<double> perfRateSolvent_;

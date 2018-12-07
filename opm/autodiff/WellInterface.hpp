@@ -185,35 +185,35 @@ namespace Opm
         virtual void printMatrixes() const {};
 
         /// a struct to collect information about the convergence checking
-        struct ConvergenceReport {
-            struct ProblemWell {
-                std::string well_name;
-                std::string phase_name;
-            };
-            bool converged = true;
-            bool nan_residual_found = false;
-            std::vector<ProblemWell> nan_residual_wells;
-            // We consider Inf is large residual here
-            bool too_large_residual_found = false;
-            std::vector<ProblemWell> too_large_residual_wells;
+        // struct ConvergenceReport {
+        //     struct ProblemWell {
+        //         std::string well_name;
+        //         std::string phase_name;
+        //     };
+        //     bool converged = true;
+        //     bool nan_residual_found = false;
+        //     std::vector<ProblemWell> nan_residual_wells;
+        //     // We consider Inf is large residual here
+        //     bool too_large_residual_found = false;
+        //     std::vector<ProblemWell> too_large_residual_wells;
 
-            ConvergenceReport& operator+=(const ConvergenceReport& rhs) {
-                converged = converged && rhs.converged;
-                nan_residual_found = nan_residual_found || rhs.nan_residual_found;
-                if (rhs.nan_residual_found) {
-                    for (const ProblemWell& well : rhs.nan_residual_wells) {
-                        nan_residual_wells.push_back(well);
-                    }
-                }
-                too_large_residual_found = too_large_residual_found || rhs.too_large_residual_found;
-                if (rhs.too_large_residual_found) {
-                    for (const ProblemWell& well : rhs.too_large_residual_wells) {
-                        too_large_residual_wells.push_back(well);
-                    }
-                }
-                return *this;
-            }
-        };
+        //     ConvergenceReport& operator+=(const ConvergenceReport& rhs) {
+        //         converged = converged && rhs.converged;
+        //         nan_residual_found = nan_residual_found || rhs.nan_residual_found;
+        //         if (rhs.nan_residual_found) {
+        //             for (const ProblemWell& well : rhs.nan_residual_wells) {
+        //                 nan_residual_wells.push_back(well);
+        //             }
+        //         }
+        //         too_large_residual_found = too_large_residual_found || rhs.too_large_residual_found;
+        //         if (rhs.too_large_residual_found) {
+        //             for (const ProblemWell& well : rhs.too_large_residual_wells) {
+        //                 too_large_residual_wells.push_back(well);
+        //             }
+        //         }
+        //         return *this;
+        //     }
+        // };
 
 
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const = 0;

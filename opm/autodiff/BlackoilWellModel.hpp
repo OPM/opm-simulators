@@ -153,21 +153,21 @@ namespace Opm {
             // </ eWoms auxiliary module stuff>
             /////////////
 
-            template <class Restarter>
-            void deserialize(Restarter& res)
-            {
-                // TODO (?)
-            }
+            // template <class Restarter>
+            // void deserialize(Restarter& res)
+            // {
+            //     // TODO (?)
+            // }
 
-            /*!
-             * \brief This method writes the complete state of the well
-             *        to the harddisk.
-             */
-            template <class Restarter>
-            void serialize(Restarter& res)
-            {
-                // TODO (?)
-            }
+            // /*!
+            //  * \brief This method writes the complete state of the well
+            //  *        to the harddisk.
+            //  */
+            // template <class Restarter>
+            // void serialize(Restarter& res)
+            // {
+            //     // TODO (?)
+            // }
 
             void beginEpisode(const Opm::EclipseState& eclState,
                               const Opm::Schedule& schedule,
@@ -187,7 +187,8 @@ namespace Opm {
 
             void beginIteration()
             {
-                assemble(ebosSimulator_.model().newtonMethod().numIterations(),
+	      bool solve_well_equation = true;
+	      assemble(ebosSimulator_.model().newtonMethod().numIterations(), solve_well_equation,
                          ebosSimulator_.timeStepSize());
             }
 
@@ -221,8 +222,8 @@ namespace Opm {
 
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
-	    void assemble(const int iterationIdx,
-			const double dt);
+	    void assemble(const int iterationIdx,const bool solve_well_equation,
+	    		const double dt);
 
 
             void rhsAdjointRes(BVector& adjRes);
@@ -275,15 +276,9 @@ namespace Opm {
 
             // called at the beginning of a time step
             void beginTimeStep(const int timeStepIdx,const double simulationTime);
-            // called at the end of a time step
+
+	  // called at the end of a time step
             void timeStepSucceeded(const double& simulationTime);
-
-            // called at the beginning of a report step
-            void beginReportStep(const int time_step);
-
-            // called at the end of a report step
-            void endReportStep();
-
 
             const SimulatorReport& lastReport() const;
 
@@ -302,8 +297,7 @@ namespace Opm {
             void printMatrixes() const;
 
             AdjointResults adjointResults() const;
-
-            using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
+	  //using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
             const std::vector<WellInterfacePtr >& getWellContainer() const{return well_container_;}
 
             // called at the beginning of a report step
@@ -424,16 +418,12 @@ namespace Opm {
             { return ebosSimulator_.vanguard().schedule(); }
 
             
-            // called at the end of a time step
-            void timeStepSucceeded(const double& simulationTime);
-
             // called at the end of a report step
             void endReportStep();
 
             // using the solution x to recover the solution xw for wells and applying
             // xw to update Well State
-            void recoverWellSolutionAndUpdateWellState(const BVector& x);
-
+            
             void updateWellControls();
 
             void updateGroupControls();
