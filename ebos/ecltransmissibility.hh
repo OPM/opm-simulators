@@ -351,6 +351,7 @@ public:
 
         // potentially overwrite and/or modify  transmissibilities based on input from deck
         updateFromEclState_();
+        applyEditNNC_(elemMapper);
     }
 
     /*!
@@ -502,6 +503,62 @@ private:
         faceCenterInside = vanguard_.grid().faceCenterEcl(insideElemIdx,insideFaceIdx);
         faceCenterOutside = vanguard_.grid().faceCenterEcl(outsideElemIdx,outsideFaceIdx);
         faceAreaNormal = vanguard_.grid().faceAreaNormalEcl(faceIdx);
+    }
+
+    void applyEditNNC_(const ElementMapper& elementMapper)
+    {
+        const auto& editNNC = vanguard_.eclState().getInputEDITNNC();
+        if ( editNNC.empty() )
+        {
+            return;
+        }
+        // Create mapping from global to local index
+        const auto& cartMapper = vanguard_.cartesianIndexMapper();
+        const size_t cartesianSize = cartMapper.cartesianSize();
+        // reserve memory
+        std::vector<int> globalToLocal(cartesianSize, -1);
+
+        // loop over all elements (global grid) and store Cartesian index
+        auto elemIt = vanguard_.grid().leafGridView().template begin<0>();
+        const auto& elemEndIt = vanguard_.grid().leafGridView().template end<0>();
+
+        for (; elemIt != elemEndIt; ++elemIt) {
+            int elemIdx = elementMapper.index(*elemIt);
+            int cartElemIdx = vanguard_.cartesianIndexMapper().cartesianIndex(elemIdx);
+            globalToLocal[cartElemIdx] = elemIdx;
+        }
+
+        // editNNC is supposed to only reference non-neighboring connections and not
+        // neighboring connections. Use all entries for scaling if there is an NNC.
+        // variable nnc incremented in loop body.
+        for (auto nnc = editNNC.data().begin(), end = editNNC.data().end(); nnc != end; )
+        {
+            auto c1 = nnc->cell1, c2 = nnc->cell2;
+            auto low = globalToLocal[c1], high = globalToLocal[c2];
+            if ( low > high)
+            {
+                std::swap(low, high);
+            }
+            auto candidate = trans_.find(isId_(low, high));
+
+            if ( candidate == trans_.end() )
+            {
+                ++nnc;
+                std::ostringstream sstr;
+                sstr << "Cannot edit NNC from " << nnc->cell1 << " to " << nnc->cell2
+                     << " as it does not exist";
+                Opm::OpmLog::warning(sstr.str());
+            }
+            else
+            {
+                // NNC exists
+                while ( nnc!= end && c1==nnc->cell1 && c2==nnc->cell2 )
+                {
+                    candidate->second *= nnc->trans;
+                    ++nnc;
+                }
+            }
+        }
     }
 
     void extractPermeability_()
