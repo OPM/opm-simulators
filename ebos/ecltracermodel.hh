@@ -381,8 +381,8 @@ protected:
     bool linearSolve_(const TracerMatrix& M, TracerVector& x, TracerVector& b)
     {
 #if ! DUNE_VERSION_NEWER(DUNE_COMMON, 2,7)
-        Dune::FMatrixPrecision<LinearSolverScalar>::set_singular_limit(1.e-30);
-        Dune::FMatrixPrecision<LinearSolverScalar>::set_absolute_limit(1.e-30);
+        Dune::FMatrixPrecision<Scalar>::set_singular_limit(1.e-30);
+        Dune::FMatrixPrecision<Scalar>::set_absolute_limit(1.e-30);
 #endif
         x = 0.0;
         Scalar tolerance = 1e-2;
