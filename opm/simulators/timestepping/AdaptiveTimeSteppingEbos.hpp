@@ -334,12 +334,13 @@ namespace Opm {
                     substepTimer.setLastStepFailed(false);
 
                 }
-                else { // in case of no convergence (linearIterations < 0)
+                else { // in case of no convergence
                     substepTimer.setLastStepFailed(true);
 
                     failureReport_ += substepReport;
 
-                    // increase restart counter
+                    // If we have restarted (i.e. cut the timestep) too
+                    // many times, we have failed and throw an exception.
                     if (restarts >= solverRestartMax_) {
                         const auto msg = std::string("Solver failed to converge after cutting timestep ")
                             + std::to_string(restarts) + " times.";
@@ -349,10 +350,11 @@ namespace Opm {
                         OPM_THROW_NOLOG(Opm::NumericalIssue, msg);
                     }
 
+                    // The new, chopped timestep.
                     const double newTimeStep = restartFactor_ * dt;
-                    const double minimumChoppedTimestep = 0.25 * unit::day;
-                    if (newTimeStep > minimumChoppedTimestep) {
-                        // Chop the timestep.
+
+                    // Define utility function for chopping timestep.
+                    auto chopTimestep = [&]() {
                         substepTimer.provideTimeStepEstimate(newTimeStep);
                         if (solverVerbose_) {
                             std::string msg;
@@ -361,43 +363,49 @@ namespace Opm {
                             OpmLog::problem(msg);
                         }
                         ++restarts;
+                    };
+
+                    const double minimumChoppedTimestep = 0.25 * unit::day;
+                    if (newTimeStep > minimumChoppedTimestep) {
+                        chopTimestep();
                     } else {
                         // We are below the threshold, and will check if there are any
                         // wells we should close rather than chopping again.
                         std::set<std::string> failing_wells = consistentlyFailingWells(solver.model().stepReports());
                         if (failing_wells.empty()) {
                             // Found no wells to close, chop the timestep as above.
-                            substepTimer.provideTimeStepEstimate(newTimeStep);
-                            if (solverVerbose_) {
-                                std::string msg;
-                                msg = causeOfFailure + "\nTimestep chopped to "
-                                    + std::to_string(unit::convert::to(substepTimer.currentStepLength(), unit::day)) + " days\n";
-                                OpmLog::problem(msg);
-                            }
-                            ++restarts;
+                            chopTimestep();
                         } else {
                             // Close all consistently failing wells.
+                            int num_shut_wells = 0;
                             for (const auto& well : failing_wells) {
-                                solver.model().wellModel().forceShutWellByNameIfPredictionMode(well, substepTimer.simulationTimeElapsed());
-                            }
-                            substepTimer.provideTimeStepEstimate(dt);
-                            if (solverVerbose_) {
-                                std::string msg;
-                                msg = "\nProblematic well(s) were shut: ";
-                                for (const auto& well : failing_wells) {
-                                    msg += well;
-                                    msg += " ";
+                                bool was_shut = solver.model().wellModel().forceShutWellByNameIfPredictionMode(well, substepTimer.simulationTimeElapsed());
+                                if (was_shut) {
+                                    ++num_shut_wells;
                                 }
-                                msg += "(retrying timestep)\n";
-                                OpmLog::problem(msg);
+                            }
+                            if (num_shut_wells == 0) {
+                                // None of the problematic wells were prediction wells,
+                                // so none were shut. We must fall back to chopping again.
+                                chopTimestep();
+                            } else {
+                                substepTimer.provideTimeStepEstimate(dt);
+                                if (solverVerbose_) {
+                                    std::string msg;
+                                    msg = "\nProblematic well(s) were shut: ";
+                                    for (const auto& well : failing_wells) {
+                                        msg += well;
+                                        msg += " ";
+                                    }
+                                    msg += "(retrying timestep)\n";
+                                    OpmLog::problem(msg);
+                                }
                             }
                         }
-
                     }
                 }
                 ebosProblem.setNextTimeStepSize(substepTimer.currentStepLength());
             }
-
 
             // store estimated time step for next reportStep
             suggestedNextTimestep_ = substepTimer.currentStepLength();
