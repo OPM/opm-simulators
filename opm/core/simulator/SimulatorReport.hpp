@@ -21,7 +21,7 @@
 #define OPM_SIMULATORREPORT_HEADER_INCLUDED
 
 #include <iosfwd>
-
+#include <vector>
 namespace Opm
 {
 
@@ -41,7 +41,8 @@ namespace Opm
         unsigned int total_linearizations;
         unsigned int total_newton_iterations;
         unsigned int total_linear_iterations;
-
+        std::vector<double> time_steps;
+        std::vector<int> report_stepindx;
         bool converged;
 
         /// Default constructor initializing all times to 0.0.
@@ -59,6 +60,7 @@ namespace Opm
     private:
         // Whether to print statistics to std::cout
         bool verbose_;
+
     };
 
 } // namespace Opm

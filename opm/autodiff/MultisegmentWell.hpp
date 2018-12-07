@@ -145,6 +145,34 @@ namespace Opm
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state) override; // should be const?
 
+        // adjoint related
+        // Adjoint related transpose of the above
+        virtual void applyt(const BVector& x, BVector& Ax) const{
+            OPM_THROW(std::runtime_error,"Adjoint not implemted");
+        }
+        virtual void applyt(BVector& r) const {
+            OPM_THROW(std::runtime_error,"Adjoint not implemted");
+        }
+        // interface for explite quatites not in
+        virtual void rhsAdjointRes(BVector& adjRes) const {
+            OPM_THROW(std::runtime_error,"Adjoint not implemted");
+        }
+        virtual void rhsAdjointWell() {
+             OPM_THROW(std::runtime_error,"Adjoint not implemted");
+        }
+        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x, WellState& well_state) {
+            OPM_THROW(std::runtime_error,"Adjoint not implemted");
+        }
+        virtual void computeObj(Simulator& ebosSimulator,
+                                const double dt) {
+            OPM_THROW(std::runtime_error,"Adjoint not implemted");
+        }
+        virtual void printObjective(std::ostream& os) const {
+            OPM_THROW(std::runtime_error,"Adjoint not implemted");
+        }
+        virtual void addAdjointResult(AdjointResults& adjres) const {
+            OPM_THROW(std::runtime_error,"Adjoint not implemted");
+        }
         /// number of segments for this well
         /// int number_of_segments_;
         int numberOfSegments() const;

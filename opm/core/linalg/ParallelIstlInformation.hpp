@@ -21,7 +21,6 @@
 #ifndef OPM_PARALLELISTLINFORMTION_HEADER_INCLUDED
 #define OPM_PARALLELISTLINFORMTION_HEADER_INCLUDED
 
-
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <boost/any.hpp>

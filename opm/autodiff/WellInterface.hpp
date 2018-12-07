@@ -61,7 +61,48 @@
 
 namespace Opm
 {
+    // class to store and print adjoint contributions from all wells
+    // at a given time step
+    class AdjointResults
+    {
+    public:
+        void print(std::ostream& os){
+            os << "% Control step " << schedule_step << std::endl;
+            os << "% ";
+            for (auto s: well_names){
+                os << s << '\t';
+            }
+            os << std::endl;
+            os << "% ";
+            for (auto s: control_state){
+                os << s << '\t';
+            }
+            os << std::endl;
+            // for easy read in octave and matlab add control index as first number on all numerical lines
+            os << schedule_step << '\t';
+            for (auto s: control_indx){
+                os << s << '\t';
+            }
+            os << std::endl;
+            os << schedule_step << '\t';
+            for (auto s: objective){
+                os << s << '\t';
+            }
+            os << std::endl;
+            os << schedule_step << '\t';
+            for (auto s: derivative){
+                os << s << '\t';
+            }
+            os << std::endl;
 
+        }
+        std::vector<std::string> well_names;
+        std::vector<double> derivative;
+        std::vector<double> objective;
+        std::vector<std::string> control_state;
+        std::vector<int> control_indx;
+        int schedule_step;
+    };
 
     template<typename TypeTag>
     class WellInterface
@@ -140,6 +181,41 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const = 0;
 
+
+        virtual void printMatrixes() const {};
+
+        /// a struct to collect information about the convergence checking
+        struct ConvergenceReport {
+            struct ProblemWell {
+                std::string well_name;
+                std::string phase_name;
+            };
+            bool converged = true;
+            bool nan_residual_found = false;
+            std::vector<ProblemWell> nan_residual_wells;
+            // We consider Inf is large residual here
+            bool too_large_residual_found = false;
+            std::vector<ProblemWell> too_large_residual_wells;
+
+            ConvergenceReport& operator+=(const ConvergenceReport& rhs) {
+                converged = converged && rhs.converged;
+                nan_residual_found = nan_residual_found || rhs.nan_residual_found;
+                if (rhs.nan_residual_found) {
+                    for (const ProblemWell& well : rhs.nan_residual_wells) {
+                        nan_residual_wells.push_back(well);
+                    }
+                }
+                too_large_residual_found = too_large_residual_found || rhs.too_large_residual_found;
+                if (rhs.too_large_residual_found) {
+                    for (const ProblemWell& well : rhs.too_large_residual_wells) {
+                        too_large_residual_wells.push_back(well);
+                    }
+                }
+                return *this;
+            }
+        };
+
+
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const = 0;
 
         virtual void solveEqAndUpdateWellState(WellState& well_state) = 0;
@@ -158,16 +234,31 @@ namespace Opm
 
         void computeRepRadiusPerfLength(const Grid& grid, const std::vector<int>& cartesian_to_compressed);
 
+
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state) const = 0;
 
+         // adjoint related
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const = 0;
 
         /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const = 0;
+
+        // Adjoint related transpose of the above
+        virtual void applyt(const BVector& x, BVector& Ax) const = 0;
+        virtual void applyt(BVector& r) const = 0;
+        // interface for explite quatites not in
+        virtual void rhsAdjointRes(BVector& adjRes) const = 0;
+        virtual void rhsAdjointWell() = 0;
+        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x, WellState& well_state) = 0;
+        virtual void computeObj(Simulator& ebosSimulator,
+                                      const double dt) = 0;
+        virtual void printObjective(std::ostream& os) const = 0;
+        virtual void addAdjointResult(AdjointResults& adjres) const = 0;
+
 
         // TODO: before we decide to put more information under mutable, this function is not const
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
@@ -319,7 +410,39 @@ namespace Opm
 
         const int num_components_;
 
+
         std::vector<RateVector> connectionRates_;
+
+        friend class  boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version){
+            //ar & well_ecl;
+            ar & current_step_;
+            ar & index_of_well_;
+            //ar & param_;
+            //ar & well_type_;
+            // ar & num_of_phases_;
+            ar & comp_frac_;
+            //ar & well_controls_;
+            //ar & num_of_perforation;
+            //ar & first_perf_;
+            //ar & well_index_;
+            //ar & perf_depth_;
+            //ar & ref_depth_;
+            //ar & well_efficency_factor_;
+            //ar & well_cells_;
+            //ar & saturation_table_number_;
+            //ar & perf_fep_radius_;
+            //ar & peft_lenght_;
+            //ar & bore_diameters_;
+            //ar & phase_usage_;
+            //ar  & vfp_properties_;
+            //ar & gravity_;
+           // ar & rateConverter_;
+           //ar & num_components_;
+        }
+
+
 
         const PhaseUsage& phaseUsage() const;
 

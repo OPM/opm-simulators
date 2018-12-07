@@ -76,7 +76,7 @@ public:
                  const EvalWell& aqua,
                  const EvalWell& liquid,
                  const EvalWell& vapour,
-                 const double& thp) const {
+                 const EvalWell& thp) const {
 
         //Get the table
         const VFPInjTable* table = detail::getTable(m_tables, table_id);
@@ -90,11 +90,11 @@ public:
             //First, find the values to interpolate between
             //Value of FLO is negative in OPM for producers, but positive in VFP table
             auto flo_i = detail::findInterpData(flo.value(), table->getFloAxis());
-            auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
+            auto thp_i = detail::findInterpData(thp.value(), table->getTHPAxis()); // assume constant
 
             detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i);
 
-            bhp = bhp_val.dflo * flo;
+            bhp = bhp_val.dflo * flo + bhp_val.dthp * thp; // To get derivatives with respect to flow and targets.
             bhp.setValue(bhp_val.value); // thp is assumed constant i.e.
         }
         else {

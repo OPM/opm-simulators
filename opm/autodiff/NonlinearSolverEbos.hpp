@@ -157,6 +157,11 @@ namespace Opm {
 
             // Do model-specific once-per-step calculations.
             model_->prepareStep(timer);
+            if (timer.initialStep()) {
+                model_->adjoint_serialize();
+            }
+
+
 
             int iteration = 0;
 
@@ -198,6 +203,7 @@ namespace Opm {
 
             // Do model-specific post-step actions.
             model_->afterStep(timer);
+            model_->adjoint_serialize();
             report.converged = true;
 
             return report;

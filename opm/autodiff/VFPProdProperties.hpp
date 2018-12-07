@@ -81,7 +81,7 @@ public:
                  const EvalWell& aqua,
                  const EvalWell& liquid,
                  const EvalWell& vapour,
-                 const double& thp,
+                 const EvalWell& thp,
                  const double& alq) const {
 
         //Get the table
@@ -98,14 +98,14 @@ public:
             //First, find the values to interpolate between
             //Value of FLO is negative in OPM for producers, but positive in VFP table
             auto flo_i = detail::findInterpData(-flo.value(), table->getFloAxis());
-            auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
+            auto thp_i = detail::findInterpData( thp.value(), table->getTHPAxis());
             auto wfr_i = detail::findInterpData( wfr.value(), table->getWFRAxis());
             auto gfr_i = detail::findInterpData( gfr.value(), table->getGFRAxis());
             auto alq_i = detail::findInterpData( alq, table->getALQAxis()); //assume constant
 
             detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
-            bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo * flo);
+            bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo * flo) + (bhp_val.dthp * thp);
             bhp.setValue(bhp_val.value);
         }
         else {

@@ -46,6 +46,18 @@ namespace Opm
         timesteps_.clear();
         timesteps_.resize(num_psteps, stepsize);
         total_time_ = num_psteps*stepsize;
+        for ( size_t i = 0; i < num_psteps; ++i ) {
+            report_stepindx_[i] = i;
+        }
+    }
+    void SimulatorTimer::init(std::vector<double> time_steps,std::vector<int> report_stepindx){
+        timesteps_.clear();
+        timesteps_ = time_steps;
+        report_stepindx_ = report_stepindx;
+        total_time_ = 0;
+        for (auto& dt : timesteps_){
+            total_time_ += dt;
+       }
     }
 
     /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
@@ -53,8 +65,10 @@ namespace Opm
     {
         total_time_ = timeMap.getTotalTime();
         timesteps_.resize(timeMap.numTimesteps());
+        report_stepindx_.resize(timeMap.numTimesteps());
         for ( size_t i = 0; i < timeMap.numTimesteps(); ++i ) {
             timesteps_[i] = timeMap.getTimeStepLength(i);
+            report_stepindx_[i] = i;
         }
 
         setCurrentStepNum(report_step);
@@ -70,7 +84,7 @@ namespace Opm
     /// Total number of steps.
     int SimulatorTimer::numSteps() const
     {
-        return timesteps_.size();
+        return int(timesteps_.size());
     }
 
     /// Current step number.
@@ -78,7 +92,22 @@ namespace Opm
     {
         return current_step_;
     }
+    int SimulatorTimer::prevReportStepNum() const{
+        return report_stepindx_[current_step_-1];
+    }
 
+    int SimulatorTimer::reportStepNum() const
+    {
+       assert(current_step_ <= report_stepindx_.size());
+       int report_step = -100;
+       if(current_step_ == report_stepindx_.size()){
+           // we are at the end of the last time step
+            report_step =  int(report_stepindx_.size());
+       }else{
+            report_step = report_stepindx_[current_step_];
+       }
+       return report_step;
+    }
     /// Set current step number.
     void SimulatorTimer::setCurrentStepNum(int step)
     {
@@ -90,7 +119,7 @@ namespace Opm
     /// Current step length.
     double SimulatorTimer::currentStepLength() const
     {
-        assert(!done());
+        //assert(!done());
         return timesteps_[current_step_];
     }
 
@@ -103,7 +132,13 @@ namespace Opm
     /// time elapsed since the start of the simulation [s].
     double SimulatorTimer::simulationTimeElapsed() const
     {
-        return current_time_;
+        double ctime = 0.0;
+        if(std::abs(current_time_) < 1e-7){
+            ctime = 0.0;// to avoid rounding error for file names
+        }else{
+            ctime = current_time_;
+        }
+        return ctime;
     }
 
     boost::posix_time::ptime SimulatorTimer::startDateTime() const
@@ -139,10 +174,15 @@ namespace Opm
     /// Print a report with current and total time etc.
     void SimulatorTimer::report(std::ostream& os) const
     {
-        os << "\n\n---------------    Simulation step number " << currentStepNum() << "    ---------------"
-           << "\n      Current time (days)     " << Opm::unit::convert::to(simulationTimeElapsed(), Opm::unit::day)
-           << "\n      Current stepsize (days) " << Opm::unit::convert::to(currentStepLength(), Opm::unit::day)
-           << "\n      Total time (days)       " << Opm::unit::convert::to(totalTime(), Opm::unit::day)
+        os << "\n\n---------------    Simulation report step number " << reportStepNum() << "    ---------------";
+        os << "\n\n---------------    Simulation step number " << currentStepNum() <<           "    ---------------";
+        os   << "\n      Current time (days)     " << Opm::unit::convert::to(simulationTimeElapsed(), Opm::unit::day);
+        if(done()){
+           os << "\n      Current stepsize (days) " << " LAST STEP ";
+        }else{
+           os << "\n      Current stepsize (days) " << Opm::unit::convert::to(currentStepLength(), Opm::unit::day);
+        }
+        os   << "\n      Total time (days)       " << Opm::unit::convert::to(totalTime(), Opm::unit::day)
            << "\n" << std::endl;
     }
 
@@ -152,6 +192,14 @@ namespace Opm
         assert(!done());
         current_time_ += timesteps_[current_step_];
         ++current_step_;
+        return *this;
+    }
+     /// Previous step
+    SimulatorTimer& SimulatorTimer::operator--()
+    {
+        assert(! initialStep() );
+         --current_step_;
+        current_time_ -= timesteps_[current_step_];
         return *this;
     }
 
