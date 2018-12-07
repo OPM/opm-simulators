@@ -107,6 +107,8 @@ namespace Opm
 
         connectionRates_.resize(number_of_perforations_);
 
+        well_productivity_index_logger_counter_ = 0;
+
     }
 
     template<typename TypeTag>
@@ -1245,20 +1247,27 @@ namespace Opm
 
     template<typename TypeTag>
     void
-    WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index) const
+    WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index)
     {
 
         const auto& connection = well_ecl_->getConnections(current_step_)[perfIdx];
 
+        const bool new_well = well_ecl_->hasEvent(ScheduleEvents::NEW_WELL , current_step_);
+
         if (well_ecl_->getDrainageRadius(current_step_) < 0) {
-            OpmLog::warning("PRODUCTIVITY_INDEX_WARNING", "Negative drainage radius not supported. The productivity index is set to zero");
+            if (new_well && perfIdx == 0) {
+                OpmLog::warning("PRODUCTIVITY_INDEX_WARNING", "Negative drainage radius not supported. The productivity index is set to zero");
+            }
             productivity_index = 0.0;
             return;
         }
 
         if (connection.r0() > well_ecl_->getDrainageRadius(current_step_)) {
-            OpmLog::info("PRODUCTIVITY_INDEX_INFO", "The effective radius is larger then the well drainage radius for well " + name() +
-                         " They are set to equal in the well productivity index calculations");
+            if (new_well && well_productivity_index_logger_counter_ < 1) {
+                OpmLog::info("PRODUCTIVITY_INDEX_INFO", "The effective radius is larger than the well drainage radius for well " + name() +
+                             " They are set to equal in the well productivity index calculations");
+                well_productivity_index_logger_counter_++;
+            }
             return;
         }
 

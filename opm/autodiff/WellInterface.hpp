@@ -29,6 +29,8 @@
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/WellTestState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
+
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
@@ -391,7 +393,11 @@ namespace Opm
                                        WellState& well_state,
                                        wellhelpers::WellSwitchingLogger& logger);
 
-        void scaleProductivityIndex(const int perfIdx, double& productivity_index) const;
+        void scaleProductivityIndex(const int perfIdx, double& productivity_index);
+
+        // count the number of times an output log message is created in the productivity
+        // index calculations
+        int well_productivity_index_logger_counter_;
 
 
     };
@@ -438,6 +444,7 @@ namespace Opm
         bool can_obtain_bhp_with_thp_limit = true;
         // whether the well obey bhp limit when operated under thp limit
         bool obey_bhp_limit_with_thp_limit = true;
+
     };
 
 }
