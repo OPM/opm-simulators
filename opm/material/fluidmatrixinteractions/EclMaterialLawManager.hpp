@@ -203,7 +203,9 @@ public:
             MaterialLaw::capillaryPressures(pc, materialLawParams(elemIdx), fs);
 
             Scalar pcowAtSw = pc[oilPhaseIdx] - pc[waterPhaseIdx];
-            if (pcowAtSw > 0.0) {
+            const Scalar pcowAtSwThreshold = 1.0; //Pascal
+            // avoid divison by very small number
+            if (std::abs(pcowAtSw) > pcowAtSwThreshold) {
                 elemScaledEpsInfo.maxPcow *= pcow/pcowAtSw;
                 auto& elemEclEpsScalingPoints = oilWaterScaledEpsPointsDrainage(elemIdx);
                 elemEclEpsScalingPoints.init(elemScaledEpsInfo, *oilWaterEclEpsConfig_, Opm::EclOilWaterSystem);
