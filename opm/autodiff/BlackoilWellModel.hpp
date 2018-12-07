@@ -307,7 +307,7 @@ namespace Opm {
                 //ar & number_of_cells_;
                 //ar & gravity_;
                 //ar & depth_;
-                //ar & initial_step_;
+                ar & initial_step_;
                 //ar & wellTestState_;
                 //ar & scaleAddRes_;
             }

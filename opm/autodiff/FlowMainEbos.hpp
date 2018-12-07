@@ -56,7 +56,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
-BEGIN_PROPERTIES;
+BEGIN_PROPERTIES
 
 NEW_PROP_TAG(OutputMode);
 NEW_PROP_TAG(EnableDryRun);
@@ -73,7 +73,7 @@ SET_INT_PROP(EclFlowProblem, OutputInterval, 1);
 
 SET_BOOL_PROP(EclFlowProblem, UseAdjoint, false);
 
-END_PROPERTIES;
+END_PROPERTIES
 
 namespace Opm
 {

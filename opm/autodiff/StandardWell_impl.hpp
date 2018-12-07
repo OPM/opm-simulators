@@ -2498,6 +2498,8 @@ namespace Opm
                 const auto col_index = colB.index();
                 // Move col to index col_index
                 while ( col != row.end() && col.index() < col_index ) ++col;
+                // if the assert fails the auxModule systems are probably not called correctly
+                // the matrix element in reservoir matrix is not allocated
                 assert(col != row.end() && col.index() == col_index);
 
                 Dune::FieldMatrix<Scalar, numWellEq, numEq> tmp;

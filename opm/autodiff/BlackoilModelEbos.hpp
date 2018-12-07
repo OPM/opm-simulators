@@ -250,7 +250,8 @@ namespace Opm {
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
 
             this->prepareStep(timer);
-            this->deserializeReservoir( timer.simulationTimeElapsed() );
+            bool only_reservoir = true;
+            this->deserializeReservoir( timer.simulationTimeElapsed(), only_reservoir);
             SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             // Store the initial previous.
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
@@ -266,13 +267,15 @@ namespace Opm {
             ebosSimulator_.problem().beginIteration();
             ebosSimulator_.model().linearizer().linearize(/*focustimeindex=*/ 0);// should not be important since the linarization should not be used
             ebosSimulator_.problem().endIteration();
+
             wellModel().prepareTimeStep();
             wellModel().calculateExplicitQuantities();
             //wellModel().assemble(/*iterationIdx*/0, false, ebosSimulator_.timeStepSize());
             //timer.report(std::cout);
             this->prepareStep(timer);
             // std::cout << "Current time end " <<  timer.simulationTimeElapsed()  << std::endl;
-            this->deserializeReservoir( timer.simulationTimeElapsed() );
+            //only_reservoir=false;
+            this->deserializeReservoir( timer.simulationTimeElapsed(),only_reservoir );
             // seralizing may owerwrite prevois step since it was intended for restart ??
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
 
@@ -317,6 +320,7 @@ namespace Opm {
             std::cout << "Printing matrix residual in backward mode" << std::endl;
             std::cout << "Inf norm " << ebosResid.infinity_norm() << std::endl;
             std::cout << "Norm " << ebosResid.two_norm() << std::endl;
+            std::cout << "auxModules"<< ebosSimulator_.model().numAuxiliaryModules() << std::endl;
             // std::cout << "Printing well residual in backward mode" << std::endl;
             // const auto& well_container = wellModel().getWellContainer();
             // for (const auto& well : well_container) {
@@ -325,7 +329,8 @@ namespace Opm {
             //     auto reswell = well->getResWell();
             //     std::cout << "Norm "<< reswell.two_norm() << std::endl;
             // }
-            //wellModel().printResidual(std::cout);
+
+
 
             const int nc = UgGridHelpers::numCells(grid_);
             BVector lam(nc);// this should be the prevois adjoint vector
@@ -338,6 +343,13 @@ namespace Opm {
             //
             //NB we get the linerized version from the reservoir part to be modified
             auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+//            std::cout << "********************************* " << std::endl;
+//            std::cout << "print all matrixes" << std::endl;
+//            Dune::writeMatrixMarket(ebosJac, std::cout);
+//            std::cout << "*** Well Matrixes " << std::endl;
+//            wellModel().printMatrixes();
+//            //wellModel().printResidual(std::cout);
+//            std::cout << "********************************* " << std::endl;
             std::unique_ptr<Mat> adj_matrix_for_preconditioner;
             if (param_.matrix_add_well_contributions_) {
                 wellModel().addWellContributions(ebosJac);
@@ -448,11 +460,7 @@ namespace Opm {
             //std::cout << x << std::endl;
             wellModel().recoverWellAdjointAndUpdateWellAdjoint(x);// also update objective
 
-            /*
-            std::cout << "print all matrixes" << std::endl;
-            Dune::writeMatrixMarket(ebosJac, std::cout);
-            std::cout << "*** Well Matrixes " << std::endl;
-            wellModel().printMatrixes();*/
+
             //wellModel().printObjective(std::cout);
             AdjointResults adjres = wellModel().adjointResults();
             //prepere right hand side for next step
@@ -1540,9 +1548,9 @@ namespace Opm {
             boost::archive::text_iarchive oa(ifs);
             oa >>  this->wellModel();
         }
-        void deserializeReservoir(Scalar t){
+        void deserializeReservoir(Scalar t,bool only_reservoir){
             // intended only for adjoint simulation
-            ebosSimulator_.deserializeAll(t);
+            ebosSimulator_.deserializeAll(t,only_reservoir);
         }
 
         /// return the statistics if the nonlinearIteration() method failed
