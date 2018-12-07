@@ -392,11 +392,15 @@ protected:
         typedef Dune::BiCGSTABSolver<TracerVector> TracerSolver;
         typedef Dune::MatrixAdapter<TracerMatrix, TracerVector , TracerVector > TracerOperator;
         typedef Dune::SeqScalarProduct< TracerVector > TracerScalarProduct ;
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,6)
         typedef Dune::SeqILU< TracerMatrix, TracerVector, TracerVector  > TracerPreconditioner;
+#else
+        typedef Dune::SeqILUn< TracerMatrix, TracerVector, TracerVector  > TracerPreconditioner;
+#endif
 
         TracerOperator tracerOperator(M);
         TracerScalarProduct tracerScalarProduct;
-        TracerPreconditioner tracerPreconditioner(M, 1);
+        TracerPreconditioner tracerPreconditioner(M, 0, 1); // results in ILU0
 
         TracerSolver solver (tracerOperator, tracerScalarProduct,
                              tracerPreconditioner, tolerance, maxIter,
