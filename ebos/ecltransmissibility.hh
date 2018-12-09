@@ -93,6 +93,8 @@ class EclTransmissibility
 
 
 public:
+    using NNCdata = Opm::NNCdata;
+
     EclTransmissibility(const Vanguard& vanguard)
         : vanguard_(vanguard)
     {
@@ -369,7 +371,22 @@ public:
 
         // potentially overwrite and/or modify  transmissibilities based on input from deck
         updateFromEclState_();
-        applyEditNNC_(elemMapper);
+
+        // Create mapping from global to local index
+        const size_t cartesianSize = cartMapper.cartesianSize();
+        // reserve memory
+        std::vector<int> globalToLocal(cartesianSize, -1);
+
+        // loop over all elements (global grid) and store Cartesian index
+        elemIt = vanguard_.grid().leafGridView().template begin<0>();
+
+        for (; elemIt != elemEndIt; ++elemIt) {
+            int elemIdx = elemMapper.index(*elemIt);
+            int cartElemIdx = vanguard_.cartesianIndexMapper().cartesianIndex(elemIdx);
+            globalToLocal[cartElemIdx] = elemIdx;
+        }
+        applyNNCToGridTrans_(globalToLocal);
+        applyEditNNC_(elemMapper, globalToLocal);
 
         //remove very small non-neighbouring transmissibilities
         removeSmallNonCartesianTransmissibilities_();
@@ -569,27 +586,98 @@ private:
         faceAreaNormal = vanguard_.grid().faceAreaNormalEcl(faceIdx);
     }
 
-    void applyEditNNC_(const ElementMapper& elementMapper)
+    /// \brief Applies additional transmissibilities specified via NNC keyword.
+    ///
+    /// Applies only those NNC that are actually resembled by the grid. These may
+    /// NNCs due to faults or NNCs that are actually neighbours. In both case that
+    /// specified transmissibilities (scaled by EDITNNC) will be added to the already
+    /// existing models.
+    ///
+    /// \param cartesianToCompressed Vector containing the compressed index (or -1 for inactive
+    ///                              cells) at the cartesian index.
+    /// \return Two vector of NNCs (scaled with EDITNNC). The first one are the NNCs that have been applied
+    ///         and the second the NNCs not resembled by faces of the grid. NNCs specified for
+    ///         inactive cells are omitted in these vectors.
+    std::tuple<std::vector<NNCdata>, std::vector<NNCdata> >
+    applyNNCToGridTrans_(const std::vector<int>& cartesianToCompressed)
+    {
+        // First scale NNCs with EDITNNC.
+        std::vector<NNCdata> processed_nnc, unprocessed_nnc;
+        const auto& nnc = vanguard_.eclState().getInputNNC();
+        if ( ! nnc.hasNNC() )
+        {
+            return make_tuple(processed_nnc, unprocessed_nnc);
+        }
+        auto nnc_data = nnc.nncdata();
+        auto editnnc_data = vanguard_.eclState().getInputEDITNNC().data();
+        auto compare = [](const NNCdata& d1, const NNCdata& d2){
+            return ( d1.cell1 < d2.cell1 ) ||
+            ( d1.cell1 == d2.cell1 && d1.cell2 < d2.cell2 );
+        };
+        std::sort(nnc_data.begin(), nnc_data.end(), compare);
+        auto candidate = nnc_data.begin();
+        for ( const auto& edit: editnnc_data )
+        {
+            if ( candidate->cell1 != edit.cell1 || candidate->cell2 != edit.cell2 )
+            {
+                candidate = std::lower_bound(candidate, nnc_data.end(), NNCdata(edit.cell1, edit.cell2, 0), compare);
+            }
+            while ( candidate->cell1 == edit.cell1 && candidate->cell2 == edit.cell2 )
+            {
+                candidate->trans *= edit.trans;
+                ++candidate;
+            }
+        }
+
+        for (const auto& nnc_entry : nnc.nncdata())
+        {
+            auto c1 = nnc_entry.cell1, c2 = nnc_entry.cell2;
+            auto low = cartesianToCompressed[c1], high = cartesianToCompressed[c2];
+
+            if ( low > high)
+            {
+                std::swap(low, high);
+            }
+
+            if ( low == -1 && high == -1 )
+            {
+                // Silently discard as it is not between active cells
+                continue;
+            }
+
+            if ( low == -1 || high == -1)
+            {
+                OPM_THROW(std::logic_error, "NNC between active and inactive cells (" <<
+                          low << " -> " << high);
+            }
+
+            auto candidate = trans_.find(isId_(low, high));
+
+            if ( candidate == trans_.end() )
+            {
+                // This NNC is not resembled by the grid. Save it for later
+                // processing with local cell values
+                unprocessed_nnc.push_back({c1, c2, nnc_entry.trans});
+            }
+            else
+            {
+                // NNC is represented by the grid and might be a neighboring connection
+                // In this case the transmissibilty is added to the value already
+                // set or computed.
+                candidate->second += nnc_entry.trans;
+                processed_nnc.push_back({c1, c2, nnc_entry.trans});
+            }
+        }
+        return make_tuple(processed_nnc, unprocessed_nnc);
+    }
+
+    void applyEditNNC_(const ElementMapper& elementMapper,
+                       const std::vector<int>& globalToLocal)
     {
         const auto& editNNC = vanguard_.eclState().getInputEDITNNC();
         if ( editNNC.empty() )
         {
             return;
-        }
-        // Create mapping from global to local index
-        const auto& cartMapper = vanguard_.cartesianIndexMapper();
-        const size_t cartesianSize = cartMapper.cartesianSize();
-        // reserve memory
-        std::vector<int> globalToLocal(cartesianSize, -1);
-
-        // loop over all elements (global grid) and store Cartesian index
-        auto elemIt = vanguard_.grid().leafGridView().template begin<0>();
-        const auto& elemEndIt = vanguard_.grid().leafGridView().template end<0>();
-
-        for (; elemIt != elemEndIt; ++elemIt) {
-            int elemIdx = elementMapper.index(*elemIt);
-            int cartElemIdx = vanguard_.cartesianIndexMapper().cartesianIndex(elemIdx);
-            globalToLocal[cartElemIdx] = elemIdx;
         }
 
         // editNNC is supposed to only reference non-neighboring connections and not
