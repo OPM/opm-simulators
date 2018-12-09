@@ -30,6 +30,7 @@
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
+#include <opm/autodiff/moduleVersion.hpp>
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 #include <opm/autodiff/MissingFeatures.hpp>
@@ -83,12 +84,31 @@ namespace detail
 
         throw std::invalid_argument( "Cannot find input case " + casename );
     }
-}
 
+
+    // This function is an extreme special case, if the program has been invoked
+    // *exactly* as:
+    //
+    //    flow   --version
+    //
+    // the call is intercepted by this function which will print "flow $version"
+    // on stdout and exit(0).
+    void handleVersionCmdLine(int argc, char** argv) {
+        if (argc != 2)
+            return;
+
+        if (std::strcmp(argv[1], "--version") == 0) {
+            std::cout << "flow " << Opm::moduleVersionName() << std::endl;
+            std::exit(EXIT_SUCCESS);
+        }
+    }
+
+}
 
 // ----------------- Main program -----------------
 int main(int argc, char** argv)
 {
+    detail::handleVersionCmdLine(argc, argv);
     // MPI setup.
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argc, argv);
