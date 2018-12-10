@@ -302,6 +302,8 @@ SET_BOOL_PROP(EclBaseProblem, EnableEnergy, false);
 // disable thermal flux boundaries by default
 SET_BOOL_PROP(EclBaseProblem, EnableThermalFluxBoundaries, false);
 
+SET_BOOL_PROP(EclBaseProblem, EnableTracerModel, false);
+
 END_PROPERTIES
 
 namespace Ewoms {
@@ -400,6 +402,8 @@ public:
                              "Tell the output writer to use double precision. Useful for 'perfect' restarts");
         EWOMS_REGISTER_PARAM(TypeTag, unsigned, RestartWritingInterval,
                              "The frequencies of which time steps are serialized to disk");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTracerModel,
+                             "Transport tracers found in the deck.");
     }
 
     /*!
