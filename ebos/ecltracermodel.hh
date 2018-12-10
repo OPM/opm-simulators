@@ -35,6 +35,11 @@
 #include <vector>
 #include <iostream>
 
+BEGIN_PROPERTIES
+
+NEW_PROP_TAG(EnableTracerModel);
+
+END_PROPERTIES
 
 namespace Ewoms {
 
@@ -75,6 +80,7 @@ public:
         : simulator_(simulator)
     { }
 
+
     /*!
      * \brief Initialize all internal data structures needed by the tracer module
      */
@@ -84,6 +90,13 @@ public:
 
         if (!deck.hasKeyword("TRACERS"))
             return; // tracer treatment is supposed to be disabled
+
+        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableTracerModel))
+        {
+            std::cout << "Warning: Tracer model is disabled but the deck contatins the TRACERS keyword \n";
+            std::cout << "The tracer model must be activated by the enable-tracer-model=true "<< std::endl;
+            return; // Tracer transport must be enabled by the user
+        }
 
         if (!deck.hasKeyword("TRACER")){
             throw std::runtime_error("the deck does not contain the TRACER keyword");
