@@ -27,6 +27,7 @@
 #include <flow/flow_ebos_polymer.hpp>
 #include <flow/flow_ebos_energy.hpp>
 #include <flow/flow_ebos_oilwater_polymer.hpp>
+#include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
@@ -221,6 +222,14 @@ int main(int argc, char** argv)
                     std::cerr << "No valid configuration is found for polymer simulation, valid options include "
                               << "oilwater + polymer and blackoil + polymer" << std::endl;
                 return EXIT_FAILURE;
+            }
+
+            // Need to track the polymer molecular weight
+            // for the injectivity study
+            if ( phases.active( Opm::Phase::POLYMW ) ) {
+                // only oil water two phase for now
+                assert( phases.size() == 4);
+                return Opm::flowEbosOilWaterPolymerInjectivityMain(argc, argv);
             }
 
             if ( phases.size() == 3 ) { // oil water polymer case

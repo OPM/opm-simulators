@@ -36,9 +36,9 @@
 
 namespace Ewoms {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowOilWaterPolymerProblem, INHERITS_FROM(EclFlowProblem));
-SET_BOOL_PROP(EclFlowOilWaterPolymerProblem, EnablePolymer, true);
-SET_BOOL_PROP(EclFlowOilWaterPolymerProblem, EnablePolymerMW, true);
+NEW_TYPE_TAG(EclFlowOilWaterPolymerInjectivityProblem, INHERITS_FROM(EclFlowProblem));
+SET_BOOL_PROP(EclFlowOilWaterPolymerInjectivityProblem, EnablePolymer, true);
+SET_BOOL_PROP(EclFlowOilWaterPolymerInjectivityProblem, EnablePolymerMW, true);
 //! The indices required by the model
 // For this case, there will be two primary variables introduced for the polymer
 // polymer concentration and polymer molecular weight
@@ -50,7 +50,7 @@ SET_BOOL_PROP(EclFlowOilWaterPolymerProblem, EnablePolymerMW, true);
               0,
               0,
               2>); */
-SET_PROP(EclFlowOilWaterPolymerProblem, Indices)
+SET_PROP(EclFlowOilWaterPolymerInjectivityProblem, Indices)
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -69,12 +69,12 @@ public:
 }}
 
 namespace Opm {
-/* void flowEbosOilWaterPolymerInjectivitySetDeck(Deck& deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+/* void flowEbosOilWaterPolymerInjectivitySetDeck(Deck& deck, EclipseState& eclState)
 {
     typedef TTAG(EclFlowOilWaterPolymerProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
-    Vanguard::setExternalDeck(&deck, &eclState, &schedule, &summaryConfig);
+    Vanguard::setExternalDeck(&deck, &eclState);
 } */
 
 // ----------------- Main program -----------------
@@ -90,7 +90,7 @@ int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv)
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowOilWaterPolymerProblem)> mainfunc;
+    Opm::FlowMainEbos<TTAG(EclFlowOilWaterPolymerInjectivityProblem)> mainfunc;
 
     return mainfunc.execute(argc, argv);
 }
