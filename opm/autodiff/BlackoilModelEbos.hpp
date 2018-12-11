@@ -266,7 +266,15 @@ namespace Opm {
             {
                 auto convrep = getConvergence(timer, iteration,residual_norms);
                 report.converged = convrep.converged()  && iteration > nonlinear_solver.minIter();;
+                ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
                 convergence_reports_.back().report.push_back(std::move(convrep));
+
+                // Throw if any NaN or too large residual found.
+                if (severity == ConvergenceReport::Severity::NotANumber) {
+                    OPM_THROW(Opm::NumericalIssue, "NaN residual found!");
+                } else if (severity == ConvergenceReport::Severity::TooLarge) {
+                    OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
+                }
             }
 
              // checking whether the group targets are converged
@@ -917,15 +925,6 @@ namespace Opm {
             std::vector<Scalar> B_avg(numEq, 0.0);
             auto report = getReservoirConvergence(timer.currentStepLength(), iteration, B_avg, residual_norms);
             report += wellModel().getWellConvergence(B_avg);
-
-            // Throw if any NaN or too large residual found.
-            ConvergenceReport::Severity severity = report.severityOfWorstFailure();
-            if (severity == ConvergenceReport::Severity::NotANumber) {
-                OPM_THROW(Opm::NumericalIssue, "NaN residual found!");
-            } else if (severity == ConvergenceReport::Severity::TooLarge) {
-                OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
-            }
-
             return report;
         }
 
