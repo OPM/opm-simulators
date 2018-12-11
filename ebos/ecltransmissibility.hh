@@ -34,6 +34,8 @@
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
+
 
 #include <opm/grid/CpGrid.hpp>
 
@@ -90,7 +92,10 @@ class EclTransmissibility
 public:
     EclTransmissibility(const Vanguard& vanguard)
         : vanguard_(vanguard)
-    {}
+    {
+        const Opm::UnitSystem& unitSystem = vanguard_.deck().getActiveUnitSystem();
+        transmissibility_threshold_  = unitSystem.parse("Transmissibility").getSIScaling() * 1e-6;
+    }
 
     /*!
      * \brief Actually compute the transmissibilty over a face as a pre-compute step.
@@ -344,6 +349,9 @@ public:
                 trans *= transMult.getRegionMultiplier(insideCartElemIdx,
                                                        outsideCartElemIdx,
                                                        faceDir);
+
+                if (trans < transmissibility_threshold_)  //remove trans less than 1e-6 in given unit
+                    trans = 0.0;
 
                 trans_[isId_(elemIdx, outsideElemIdx)] = trans;
             }
@@ -752,6 +760,7 @@ private:
     }
 
     const Vanguard& vanguard_;
+    Scalar transmissibility_threshold_;
     std::vector<DimMatrix> permeability_;
     std::unordered_map<std::uint64_t, Scalar> trans_;
     std::map<std::pair<unsigned, unsigned>, Scalar> transBoundary_;
