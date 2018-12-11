@@ -37,6 +37,8 @@
 #include <limits>
 #include <sstream>
 #include <cassert>
+#include <algorithm>
+#include <iostream>
 
 namespace Opm {
 
@@ -201,31 +203,9 @@ private:
     template <class Evaluation>
     unsigned xSegmentIndex(const Evaluation& x) const
     {
-        assert(xExtrapolate_ || (xMin() <= x && x <= xMax()));
+        assert(xExtrapolate_ || appliesX(x) );
 
-        // we need at least two sampling points!
-        assert(numX() >= 2);
-
-        if (x <= xMin() || numX() == 2)
-            return 0;
-        else if (x >= xMax())
-                return numX() - 2;
-        else {
-            assert(numX() >= 3);
-
-            // bisection
-            unsigned lowerIdx = 0;
-            unsigned upperIdx = numX() - 1;
-            while (lowerIdx + 1 < upperIdx) {
-                unsigned pivotIdx = (lowerIdx + upperIdx) / 2;
-                if (x < xPos_[pivotIdx])
-                    upperIdx = pivotIdx;
-                else
-                    lowerIdx = pivotIdx;
-            }
-
-            return lowerIdx;
-        }
+        return segmentIndex(x, xPos_);
     }
 
     /*!
@@ -234,30 +214,27 @@ private:
     template <class Evaluation>
     unsigned ySegmentIndex(const Evaluation& y) const
     {
-        assert(yExtrapolate_ || (yMin() <= y && y <= yMax()));
+        assert(yExtrapolate_ || appliesY(y) );
 
-        // we need at least two sampling points!
-        assert(numY() >= 2);
+        return segmentIndex(y, yPos_);
+    }
 
-        if (y <= yMin() || numY() == 2)
+
+    template <class Evaluation>
+    static unsigned segmentIndex(const Evaluation& y, const std::vector<Scalar>& pos)
+    {
+
+        const unsigned num_pos = pos.size();
+        assert(num_pos >= 2);
+
+        if (y <= pos.front() || num_pos == 2)
             return 0;
-        else if (y >= yMax())
-                return numY() - 2;
+        else if (y >= pos.back())
+                return num_pos - 2;
         else {
-            assert(numY() >= 3);
+            assert(num_pos >= 3);
 
-            // bisection
-            unsigned lowerIdx = 0;
-            unsigned upperIdx = numY() - 1;
-            while (lowerIdx + 1 < upperIdx) {
-                const unsigned pivotIdx = (lowerIdx + upperIdx) / 2;
-                if (y < yPos_[pivotIdx])
-                    upperIdx = pivotIdx;
-                else
-                    lowerIdx = pivotIdx;
-            }
-
-            return lowerIdx;
+            return --std::lower_bound(pos.begin(), pos.end(), y) - pos.begin();
         }
     }
 
