@@ -137,7 +137,8 @@ public:
                                      const boost::any& parallelInformation = boost::any() )
         : A_( A ),  A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_()
     {
-        Dune::MatrixVector::transpose<matrix_type>(A_for_precond_, AT_precond_);
+       Dune::MatrixVector::transpose<matrix_type>(A_for_precond_, AT_precond_);
+  //      AT_precond_ = A_for_precond_.transpose();
 #if HAVE_MPI
         if( parallelInformation.type() == typeid(ParallelISTLInformation) )
         {

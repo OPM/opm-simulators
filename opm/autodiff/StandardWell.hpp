@@ -366,6 +366,15 @@ namespace Opm
         // the saturations in the well bore under surface conditions at the beginning of the time step
         std::vector<double> F0_;
 
+//        friend class  boost::serialization::access;
+//        template<class Archive>
+//        void serialize(Archive & ar, const unsigned int version){
+//             ar & F0_;
+
+//        }
+
+
+
         // the vectors used to describe the inflow performance relationship (IPR)
         // Q = IPR_A - BHP * IPR_B
         // TODO: it minght need to go to WellInterface, let us implement it in StandardWell first

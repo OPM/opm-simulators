@@ -2409,6 +2409,7 @@ namespace Opm
     {
         BVectorWell xw(1);
         recoverAdjointWell(x, xw);
+	std::cout << "Well adjoin " << xw[0] << std::endl;
         objectDerivative(x, xw);
         updateAdjointState(xw, well_state);
     }

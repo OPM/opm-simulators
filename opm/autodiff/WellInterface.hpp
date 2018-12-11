@@ -423,6 +423,7 @@ namespace Opm
             //ar & well_type_;
             // ar & num_of_phases_;
             ar & comp_frac_;
+            ar & connectionRates_;
             //ar & well_controls_;
             //ar & num_of_perforation;
             //ar & first_perf_;

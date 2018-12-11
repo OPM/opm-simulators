@@ -6,7 +6,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
 #include <dune/istl/scaledidmatrix.hh>
-
+#include <ewoms/linear/matrixblock.hh>
 //#include <dune/matrix-vector/axpy.hh>
 
 namespace Dune {
@@ -35,6 +35,19 @@ namespace Dune {
     struct TransposeHelper<Dune::FieldMatrix<T, n, m>> {
       typedef Dune::FieldMatrix<T, n, m> MatrixType;
       typedef Dune::FieldMatrix<T, m, n> TransposedType;
+
+      static void transpose(const MatrixType& a, TransposedType& aT) {
+        for (int row = 0; row < m; ++row)
+          for (int col = 0; col < n; ++col)
+            aT[row][col] = a[col][row];
+      }
+    };
+
+    //! Specialization for Dune::FieldMatrix
+    template <class T, int n, int m>
+    struct TransposeHelper<Ewoms::MatrixBlock<T, n, m>> {
+      typedef Ewoms::MatrixBlock<T, n, m> MatrixType;
+      typedef Ewoms::MatrixBlock<T, m, n> TransposedType;
 
       static void transpose(const MatrixType& a, TransposedType& aT) {
         for (int row = 0; row < m; ++row)

@@ -185,9 +185,9 @@ namespace Opm {
 
             void beginTimeStep();
 
-            void beginIteration()
+            void beginIteration(bool solve_well_equation=true)
             {
-	      bool solve_well_equation = true;
+          //bool solve_well_equation = true;
 	      assemble(ebosSimulator_.model().newtonMethod().numIterations(), solve_well_equation,
                          ebosSimulator_.timeStepSize());
             }
