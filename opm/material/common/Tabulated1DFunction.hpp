@@ -470,7 +470,7 @@ private:
     }
 
     template <class Evaluation>
-    Evaluation evalDerivative_(const Evaluation& x OPM_UNUSED, size_t segIdx) const
+    Evaluation evalDerivative_(const Evaluation& x, size_t segIdx) const
     {
         Scalar x0 = xValues_[segIdx];
         Scalar x1 = xValues_[segIdx + 1];
@@ -478,7 +478,9 @@ private:
         Scalar y0 = yValues_[segIdx];
         Scalar y1 = yValues_[segIdx + 1];
 
-        return (y1 - y0)/(x1 - x0);
+        Evaluation ret = blank(x);
+        ret = (y1 - y0)/(x1 - x0);
+        return ret;
     }
 
     // returns the monotonicity of a segment
