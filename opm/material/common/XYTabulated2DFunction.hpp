@@ -38,7 +38,6 @@
 #include <sstream>
 #include <cassert>
 #include <algorithm>
-#include <iostream>
 
 namespace Opm {
 
@@ -69,13 +68,13 @@ public:
     {
         // make sure the size is correct
         if (numX() != samples_.size()) {
-            throw std::runtime_error("numX() is not equal with the number of rows of the sample points");
+            throw std::runtime_error("numX() is not equal to the number of rows of the sample points");
         }
 
         for (unsigned ix = 0; ix < numX(); ++ix) {
             if (samples_[ix].size() != numY()) {
                 std::ostringstream oss;
-                oss << "the " << ix << "th row of the smaples_ has different number of data from numY() ";
+                oss << "the " << ix << "th row of the sample points has different number of data from numY() ";
                 throw std::runtime_error(oss.str());
             }
         }
@@ -227,11 +226,11 @@ private:
         const unsigned num_pos = pos.size();
         assert(num_pos >= 2);
 
-        if (y <= pos.front() || num_pos == 2)
+        if (y <= pos.front() || num_pos == 2) {
             return 0;
-        else if (y >= pos.back())
-                return num_pos - 2;
-        else {
+        } else if (y >= pos.back()) {
+            return num_pos - 2;
+        } else {
             assert(num_pos >= 3);
 
             return --std::lower_bound(pos.begin(), pos.end(), y) - pos.begin();
@@ -247,9 +246,6 @@ private:
     template <class Evaluation>
     Evaluation xToAlpha(const Evaluation& x, unsigned xSegmentIdx) const
     {
-        if ( xSegmentIdx == numX() -1 )
-            return blank(x);
-
         Scalar x1 = xPos_[xSegmentIdx];
         Scalar x2 = xPos_[xSegmentIdx + 1];
         return (x - x1)/(x2 - x1);
@@ -264,9 +260,6 @@ private:
     template <class Evaluation>
     Evaluation yToBeta(const Evaluation& y, unsigned ySegmentIdx) const
     {
-        if ( ySegmentIdx == numY() - 1)
-            return blank(y);
-
         Scalar y1 = yPos_[ySegmentIdx];
         Scalar y2 = yPos_[ySegmentIdx + 1];
         return (y - y1)/(y2 - y1);

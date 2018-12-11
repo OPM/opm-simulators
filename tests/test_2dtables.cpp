@@ -140,7 +140,7 @@ createXYTabulated2DFunction(Fn& f)
 {
     const Scalar xMin = -2.0;
     const Scalar xMax = 3.0;
-    const Scalar m = 50;
+    const unsigned m = 50;
 
     const Scalar yMin = -1/2.0;
     const Scalar yMax = 1/3.0;
