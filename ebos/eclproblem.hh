@@ -93,6 +93,8 @@
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <boost/date_time.hpp>
 
 #include <set>
@@ -1298,7 +1300,7 @@ public:
 
         if (enablePolymerMW)
             values[Indices::polymerMoleWeightIdx]= polymerMoleWeight_[globalDofIdx];
-	    
+
         values.checkDefined();
     }
 
@@ -1807,8 +1809,13 @@ private:
         if (enablePolymer)
             polymerConcentration_.resize(numElems,0.0);
 
-        if (enablePolymerMW)
+        if (enablePolymerMW) {
+            const std::string msg {"Support of the RESTART for polymer molecular weight "
+                                   "is not implemented yet. The polymer weight value will be "
+                                   "zero when RESTART begins"};
+            Opm::OpmLog::warning("NO_POLYMW_RESTART", msg);
             polymerMoleWeight_.resize(numElems, 0.0);
+        }
 
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
