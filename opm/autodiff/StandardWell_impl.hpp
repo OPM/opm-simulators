@@ -279,15 +279,14 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     computePerfRate(const IntensiveQuantities& intQuants,
-                    const std::vector<EvalWell>& mob_perfcells_dense,
-                    const double Tw, const EvalWell& bhp, const double& cdp,
-                    const bool& allow_cf, std::vector<EvalWell>& cq_s,
-                    double& perf_dis_gas_rate, double& perf_vap_oil_rate) const
+                    const std::vector<EvalWell>& mob,
+                    const EvalWell& bhp,
+                    const int perf,
+                    const bool allow_cf,
+                    std::vector<EvalWell>& cq_s,
+                    double& perf_dis_gas_rate,
+                    double& perf_vap_oil_rate) const
     {
-        std::vector<EvalWell> cmix_s(num_components_,0.0);
-        for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
-            cmix_s[componentIdx] = wellSurfaceVolumeFraction(componentIdx);
-        }
         const auto& fs = intQuants.fluidState();
         const EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
         const EvalWell rs = extendEval(fs.Rs());
@@ -306,7 +305,7 @@ namespace Opm
         }
 
         // Pressure drawdown (also used to determine direction of flow)
-        const EvalWell well_pressure = bhp + cdp;
+        const EvalWell well_pressure = bhp + perf_pressure_diffs_[perf];
         const EvalWell drawdown = pressure - well_pressure;
 
         // producing perforations
@@ -316,9 +315,10 @@ namespace Opm
                 return;
             }
 
+            const double Tw = well_index_[perf];
             // compute component volumetric rates at standard conditions
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
-                const EvalWell cq_p = - Tw * (mob_perfcells_dense[componentIdx] * drawdown);
+                const EvalWell cq_p = - Tw * (mob[componentIdx] * drawdown);
                 cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
             }
 
@@ -347,13 +347,20 @@ namespace Opm
             }
 
             // Using total mobilities
-            EvalWell total_mob_dense = mob_perfcells_dense[0];
+            EvalWell total_mob_dense = mob[0];
             for (int componentIdx = 1; componentIdx < num_components_; ++componentIdx) {
-                total_mob_dense += mob_perfcells_dense[componentIdx];
+                total_mob_dense += mob[componentIdx];
             }
 
             // injection perforations total volume rates
+            const double Tw = well_index_[perf];
             const EvalWell cqt_i = - Tw * (total_mob_dense * drawdown);
+
+            // surface volume fraction of fluids within wellbore
+            std::vector<EvalWell> cmix_s(num_components_, EvalWell{numWellEq + numEq});
+            for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
+                cmix_s[componentIdx] = wellSurfaceVolumeFraction(componentIdx);
+            }
 
             // compute volume ratio between connection at standard conditions
             EvalWell volumeRatio = 0.0;
@@ -470,12 +477,13 @@ namespace Opm
 
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
-            std::vector<EvalWell> cq_s(num_components_,0.0);
             std::vector<EvalWell> mob(num_components_, 0.0);
             getMobility(ebosSimulator, perf, mob);
+
+            std::vector<EvalWell> cq_s(num_components_, 0.0);
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            computePerfRate(intQuants, mob, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf,
+            computePerfRate(intQuants, mob, bhp, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate);
 
             // updating the solution gas rate and solution oil rate
@@ -2166,12 +2174,13 @@ namespace Opm
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             // flux for each perforation
-            std::vector<EvalWell> cq_s(num_components_, 0.0);
             std::vector<EvalWell> mob(num_components_, 0.0);
             getMobility(ebosSimulator, perf, mob);
+
+            std::vector<EvalWell> cq_s(num_components_, 0.0);
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            computePerfRate(intQuants, mob, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf,
+            computePerfRate(intQuants, mob, bhp, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate);
 
             for(int p = 0; p < np; ++p) {
@@ -2560,10 +2569,11 @@ namespace Opm
             // TODO: do we need to turn on crossflow here?
             const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebos_simulator);
             const EvalWell& bhp = getBhp();
+
             std::vector<EvalWell> cq_s(num_components_,0.0);
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            computePerfRate(int_quant, mob, well_index_[perf], bhp, perf_pressure_diffs_[perf], allow_cf,
+            computePerfRate(int_quant, mob, bhp, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate);
             // TODO: make area a member
             const double area = 2 * M_PI * perf_rep_radius_[perf] * perf_length_[perf];

@@ -66,7 +66,9 @@ namespace Opm
         static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq;
         // number of the well control equations
         static const int numWellControlEq = 1;
-        static const int numWellEq = numWellConservationEq + numWellControlEq;
+        // number of the well equations that will always be used
+        // based on the solution strategy, there might be other well equations be introduced
+        static const int numStaticWellEq = numWellConservationEq + numWellControlEq;
 
         // the positions of the primary variables for StandardWell
         // the first one is the weighted total rate (WQ_t), the second and the third ones are F_w and F_g,
@@ -85,7 +87,11 @@ namespace Opm
         // the index for Bhp in primary variables and also the index of well control equation
         // they both will be the last one in their respective system.
         // TODO: we should have indices for the well equations and well primary variables separately
-        static const int Bhp = numWellEq - numWellControlEq;
+        static const int Bhp = numStaticWellEq - numWellControlEq;
+
+        // total number of the welll equations and primary variables
+        // for StandardWell, there is no extra well equations will be used
+        static const int numWellEq = numStaticWellEq;
 
         using typename Base::Scalar;
 
@@ -109,7 +115,6 @@ namespace Opm
 
         // the matrix type for the diagonal matrix D
         typedef Dune::FieldMatrix<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
-
         typedef Dune::BCRSMatrix <DiagMatrixBlockWellType> DiagMatWell;
 
         // the matrix type for the non-diagonal matrix B and C^T
@@ -303,11 +308,11 @@ namespace Opm
         void computeWellConnectionPressures(const Simulator& ebosSimulator,
                                                     const WellState& well_state);
 
-        // TODO: to check whether all the paramters are required
         void computePerfRate(const IntensiveQuantities& intQuants,
-                             const std::vector<EvalWell>& mob_perfcells_dense,
-                             const double Tw, const EvalWell& bhp, const double& cdp,
-                             const bool& allow_cf, std::vector<EvalWell>& cq_s,
+                             const std::vector<EvalWell>& mob,
+                             const EvalWell& bhp,
+                             const int perf,
+                             const bool allow_cf, std::vector<EvalWell>& cq_s,
                              double& perf_dis_gas_rate, double& perf_vap_oil_rate) const;
 
         // TODO: maybe we should provide a light version of computePerfRate, which does not include the

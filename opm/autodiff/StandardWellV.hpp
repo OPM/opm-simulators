@@ -71,7 +71,9 @@ namespace Opm
         static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq;
         // number of the well control equations
         static const int numWellControlEq = 1;
-        int numWellEq = numWellConservationEq + numWellControlEq;
+        // number of the well equations that will always be used
+        // based on the solution strategy, there might be other well equations be introduced
+        static const int numStaticWellEq = numWellConservationEq + numWellControlEq;
 
         // the positions of the primary variables for StandardWell
         // the first one is the weighted total rate (WQ_t), the second and the third ones are F_w and F_g,
@@ -90,7 +92,11 @@ namespace Opm
         // the index for Bhp in primary variables and also the index of well control equation
         // they both will be the last one in their respective system.
         // TODO: we should have indices for the well equations and well primary variables separately
-        int Bhp = numWellEq - numWellControlEq;
+        static const int Bhp = numStaticWellEq - numWellControlEq;
+
+        // total number of the welll equations and primary variables
+        // there might be extra equations be used, numWellEq will be updated during the initialization
+        int numWellEq = numStaticWellEq;
 
         using typename Base::Scalar;
 
@@ -112,11 +118,13 @@ namespace Opm
         typedef Dune::DynamicVector<Scalar> VectorBlockWellType;
         typedef Dune::BlockVector<VectorBlockWellType> BVectorWell;
 
-        // the matrix type for the matrices
-        // since we will resize all the matrices individually, one single type for the three
-        // matrices will be plenty
-        typedef Dune::DynamicMatrix<Scalar> MatrixBlockWellType;
-        typedef Dune::BCRSMatrix <MatrixBlockWellType> MatWell;
+        // the matrix type for the diagonal matrix D
+        typedef Dune::DynamicMatrix<Scalar> DiagMatrixBlockWellType;
+        typedef Dune::BCRSMatrix <DiagMatrixBlockWellType> DiagMatWell;
+
+        // the matrix type for the non-diagonal matrix B and C^T
+        typedef Dune::DynamicMatrix<Scalar> OffDiagMatrixBlockWellType;
+        typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellType> OffDiagMatWell;
 
         typedef DenseAd::DynamicEvaluation<Scalar> EvalWell;
 
@@ -227,10 +235,10 @@ namespace Opm
         BVectorWell resWell_;
 
         // two off-diagonal matrices
-        MatWell duneB_;
-        MatWell duneC_;
+        OffDiagMatWell duneB_;
+        OffDiagMatWell duneC_;
         // diagonal matrix for the well
-        MatWell invDuneD_;
+        DiagMatWell invDuneD_;
 
         // several vector used in the matrix calculation
         mutable BVectorWell Bx_;
@@ -305,11 +313,11 @@ namespace Opm
         void computeWellConnectionPressures(const Simulator& ebosSimulator,
                                                     const WellState& well_state);
 
-        // TODO: to check whether all the paramters are required
         void computePerfRate(const IntensiveQuantities& intQuants,
-                             const std::vector<EvalWell>& mob_perfcells_dense, const int perf,
-                             const double Tw, const EvalWell& bhp, const double& cdp,
-                             const bool& allow_cf, std::vector<EvalWell>& cq_s,
+                             const std::vector<EvalWell>& mob,
+                             const EvalWell& bhp,
+                             const int perf,
+                             const bool allow_cf, std::vector<EvalWell>& cq_s,
                              double& perf_dis_gas_rate, double& perf_vap_oil_rate) const;
 
         // TODO: maybe we should provide a light version of computePerfRate, which does not include the
