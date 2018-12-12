@@ -288,8 +288,12 @@ namespace Opm {
             assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
             ebosSimulator_.model().newtonMethod().setIterationIndex(/*iterationIdx*/ 1);
             {
-	      bool solve_well_equation = true;
-	      wellModel().beginIteration(solve_well_equation);// well equation assembly
+              bool solve_well_equation = true;
+              wellModel().beginIteration(solve_well_equation);// well equation assembly
+              wellModel().updatePerforationIntensiveQuantities();
+              wellModel().prepareTimeStep();
+              wellModel().assembleWellEq(ebosSimulator_.timeStepSize());
+              wellModel().initPrimaryVariablesEvaluation();
 	      //ebosSimulator_problem().beginIteration();// well equation assembly
             }
             ebosSimulator_.model().linearizer().linearize(0);
