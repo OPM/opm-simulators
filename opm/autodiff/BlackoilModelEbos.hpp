@@ -290,10 +290,12 @@ namespace Opm {
             {
               bool solve_well_equation = true;
               wellModel().beginIteration(solve_well_equation);// well equation assembly
+              deserialize_well();
               wellModel().updatePerforationIntensiveQuantities();
               wellModel().prepareTimeStep();
-              wellModel().assembleWellEq(ebosSimulator_.timeStepSize());
               wellModel().initPrimaryVariablesEvaluation();
+              wellModel().assembleWellEq(ebosSimulator_.timeStepSize());
+
 	      //ebosSimulator_problem().beginIteration();// well equation assembly
             }
             ebosSimulator_.model().linearizer().linearize(0);
