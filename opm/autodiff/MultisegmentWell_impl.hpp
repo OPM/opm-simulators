@@ -1911,7 +1911,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWaterThroughput(const double dt, WellState &well_state) const
+    updateWaterThroughput(const double dt OPM_UNUSED, WellState& well_state OPM_UNUSED) const
     {
     }
 

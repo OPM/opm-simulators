@@ -357,7 +357,7 @@ namespace Opm
             const EvalWell cqt_i = - Tw * (total_mob_dense * drawdown);
 
             // surface volume fraction of fluids within wellbore
-            std::vector<EvalWell> cmix_s(num_components_, EvalWell{numWellEq + numEq});
+            std::vector<EvalWell> cmix_s(num_components_, 0.);
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 cmix_s[componentIdx] = wellSurfaceVolumeFraction(componentIdx);
             }
@@ -2807,7 +2807,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWaterThroughput(const double dt, WellState &well_state) const
+    updateWaterThroughput(const double dt OPM_UNUSED, WellState& well_state OPM_UNUSED) const
     {
     }
 }

@@ -94,7 +94,7 @@ namespace Opm
         // TODO: we should have indices for the well equations and well primary variables separately
         static const int Bhp = numStaticWellEq - numWellControlEq;
 
-        // total number of the welll equations and primary variables
+        // total number of the well equations and primary variables
         // there might be extra equations be used, numWellEq will be updated during the initialization
         int numWellEq = numStaticWellEq;
 
@@ -317,8 +317,10 @@ namespace Opm
                              const std::vector<EvalWell>& mob,
                              const EvalWell& bhp,
                              const int perf,
-                             const bool allow_cf, std::vector<EvalWell>& cq_s,
-                             double& perf_dis_gas_rate, double& perf_vap_oil_rate) const;
+                             const bool allow_cf,
+                             std::vector<EvalWell>& cq_s,
+                             double& perf_dis_gas_rate,
+                             double& perf_vap_oil_rate) const;
 
         // TODO: maybe we should provide a light version of computePerfRate, which does not include the
         // calculation of the derivatives

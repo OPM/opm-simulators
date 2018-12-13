@@ -775,7 +775,7 @@ namespace Opm {
                     assert(has_polymer_);
 
                     B_avg[contiPolymerMWEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    // the residual of the polymer molecular equatinon is scaled down  by a 100, since molecular weight
+                    // the residual of the polymer molecular equation is scaled down by a 100, since molecular weight
                     // can be much bigger than 1, and this equation shares the same tolerance with other mass balance equations
                     // TODO: there should be a more general way to determine the scaling-down coefficient
                     const auto R2 = ebosResid[cell_idx][contiPolymerMWEqIdx] / 100.;
