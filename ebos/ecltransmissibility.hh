@@ -640,11 +640,15 @@ private:
                     continue;
                 }
             }
+            auto first_candidate = candidate;
             while ( candidate != nnc_data.end() && candidate->cell1 == edit.cell1 && candidate->cell2 == edit.cell2 )
             {
                 candidate->trans *= edit.trans;
                 ++candidate;
             }
+            // start with first match in next iteration to catch case where next
+            // EDITNNC is for same pair.
+            candidate = first_candidate;
         }
 
         for (const auto& nnc_entry : nnc.nncdata())
