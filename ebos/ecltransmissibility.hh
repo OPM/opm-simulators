@@ -618,11 +618,29 @@ private:
         auto candidate = nnc_data.begin();
         for ( const auto& edit: editnnc_data )
         {
+            auto print_nnc_warning = [](int c1, int c2){
+                std::ostringstream sstr;
+                sstr << "Cannot edit NNC from " << c1 << " to " << c2
+                << " as it does not exist";
+                Opm::OpmLog::warning(sstr.str());
+            };
+            if ( candidate == nnc_data.end() )
+            {
+                // no more NNCs left
+                print_nnc_warning(edit.cell1, edit.cell2);
+                continue;
+            }
             if ( candidate->cell1 != edit.cell1 || candidate->cell2 != edit.cell2 )
             {
                 candidate = std::lower_bound(candidate, nnc_data.end(), NNCdata(edit.cell1, edit.cell2, 0), compare);
+                if ( candidate == nnc_data.end() )
+                {
+                    // no more NNCs left
+                    print_nnc_warning(edit.cell1, edit.cell2);
+                    continue;
+                }
             }
-            while ( candidate->cell1 == edit.cell1 && candidate->cell2 == edit.cell2 )
+            while ( candidate != nnc_data.end() && candidate->cell1 == edit.cell1 && candidate->cell2 == edit.cell2 )
             {
                 candidate->trans *= edit.trans;
                 ++candidate;
