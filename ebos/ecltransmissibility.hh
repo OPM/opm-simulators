@@ -89,6 +89,9 @@ class EclTransmissibility
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
     typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
 
+    static const unsigned elemIdxShift = 32; // bits
+
+
 public:
     EclTransmissibility(const Vanguard& vanguard)
         : vanguard_(vanguard)
@@ -350,9 +353,6 @@ public:
                                                        outsideCartElemIdx,
                                                        faceDir);
 
-                if (trans < transmissibility_threshold_)  //remove trans less than 1e-6 in given unit
-                    trans = 0.0;
-
                 trans_[isId_(elemIdx, outsideElemIdx)] = trans;
             }
         }
@@ -360,6 +360,9 @@ public:
         // potentially overwrite and/or modify  transmissibilities based on input from deck
         updateFromEclState_();
         applyEditNNC_(elemMapper);
+
+        //remove very small non-neighbouring transmissibilities
+        removeSmallNonCartesianTransmissibilities_();
     }
 
     /*!
@@ -401,6 +404,26 @@ public:
     { return thermalHalfTransBoundary_.at(std::make_pair(insideElemIdx, boundaryFaceIdx)); }
 
 private:
+
+    void removeSmallNonCartesianTransmissibilities_() {
+        const auto& cartMapper = vanguard_.cartesianIndexMapper();
+        const auto& cartDims = cartMapper.cartesianDimensions();
+        for ( auto&& trans: trans_ ){
+            if (trans.second < transmissibility_threshold_) {
+                const auto& id = trans.first;
+                const auto& elements = isIdReverse_(id);
+                int gc1 = std::min(cartMapper.cartesianIndex(elements.first), cartMapper.cartesianIndex(elements.second));
+                int gc2 = std::max(cartMapper.cartesianIndex(elements.first), cartMapper.cartesianIndex(elements.second));
+
+                // only adjust the NNCs
+                if (gc2 - gc1 == 1 || gc2 - gc1 == cartDims[0] || gc2 - gc1 == cartDims[0]*cartDims[1] )
+                    continue;
+
+                //remove transmissibilities less than the threshold (by default 1e-6 in the deck's unit system)
+                trans.second = 0.0;
+            }
+        }
+    }
 
     void updateFromEclState_(){
         const auto& gridView = vanguard_.gridView();
@@ -605,20 +628,27 @@ private:
                                    "(The PERM{X,Y,Z} keywords are missing)");
     }
 
-    std::uint64_t isId_(unsigned elemIdx1, unsigned elemIdx2) const
+    std::uint64_t isId_(std::uint32_t elemIdx1, std::uint32_t elemIdx2) const
     {
-        static const unsigned elemIdxShift = 32; // bits
-
-        unsigned elemAIdx = std::min(elemIdx1, elemIdx2);
+        std::uint32_t elemAIdx = std::min(elemIdx1, elemIdx2);
         std::uint64_t elemBIdx = std::max(elemIdx1, elemIdx2);
 
         return (elemBIdx<<elemIdxShift) + elemAIdx;
     }
 
-    std::uint64_t directionalIsId_(unsigned elemIdx1, unsigned elemIdx2) const
+    std::pair<std::uint32_t, std::uint32_t> isIdReverse_(const std::uint64_t& id) const
     {
-        static const unsigned elemIdxShift = 32; // bits
+        // Assigning an unsigned integer to a narrower type discards the most significant bits.
+        // See "The C programming language", section A.6.2.
+        // NOTE that the ordering of element A and B may have changed
+        std::uint32_t elemAIdx = id;
+        std::uint32_t elemBIdx = (id - elemAIdx) >> elemIdxShift;
 
+        return std::make_pair(elemAIdx, elemBIdx);
+    }
+
+    std::uint64_t directionalIsId_(std::uint32_t elemIdx1, std::uint32_t elemIdx2) const
+    {
         return (std::uint64_t(elemIdx1)<<elemIdxShift) + elemIdx2;
     }
 
