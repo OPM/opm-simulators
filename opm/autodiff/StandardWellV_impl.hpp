@@ -67,14 +67,14 @@ namespace Opm
         // counting/updating primary variable numbers
         if (this->has_polymermw && well_type_ == INJECTOR) {
             // adding a primary variable for water perforation rate per connection
-            numWellEq += number_of_perforations_;
+            numWellEq_ += number_of_perforations_;
             // adding a primary variable for skin pressure per connection
-            numWellEq += number_of_perforations_;
+            numWellEq_ += number_of_perforations_;
         }
 
-        // with the updated numWellEq, we can initialize the primary variables and matrices now
-        primary_variables_.resize(numWellEq, 0.0);
-        primary_variables_evaluation_.resize(numWellEq, {numWellEq + numEq, 0.0});
+        // with the updated numWellEq_, we can initialize the primary variables and matrices now
+        primary_variables_.resize(numWellEq_, 0.0);
+        primary_variables_evaluation_.resize(numWellEq_, EvalWell{numWellEq_ + numEq, 0.0});
 
         // setup sparsity pattern for the matrices
         //[A C^T    [x    =  [ res
@@ -89,7 +89,7 @@ namespace Opm
             row.insert(row.index());
         }
         // the block size is run-time determined now
-        invDuneD_[0][0].resize(numWellEq, numWellEq);
+        invDuneD_[0][0].resize(numWellEq_, numWellEq_);
 
         for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
             for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
@@ -101,7 +101,7 @@ namespace Opm
         for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
              // the block size is run-time determined now
-             duneB_[0][cell_idx].resize(numWellEq, numEq);
+             duneB_[0][cell_idx].resize(numWellEq_, numEq);
         }
 
         // make the C^T matrix
@@ -114,22 +114,22 @@ namespace Opm
 
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
-            duneC_[0][cell_idx].resize(numWellEq, numEq);
+            duneC_[0][cell_idx].resize(numWellEq_, numEq);
         }
 
         resWell_.resize(1);
         // the block size of resWell_ is also run-time determined now
-        resWell_[0].resize(numWellEq);
+        resWell_[0].resize(numWellEq_);
 
         // resize temporary class variables
         Bx_.resize( duneB_.N() );
         for (unsigned i = 0; i < duneB_.N(); ++i) {
-            Bx_[i].resize(numWellEq);
+            Bx_[i].resize(numWellEq_);
         }
 
         invDrw_.resize( invDuneD_.N() );
         for (unsigned i = 0; i < invDuneD_.N(); ++i) {
-            invDrw_[i].resize(numWellEq);
+            invDrw_[i].resize(numWellEq_);
         }
     }
 
@@ -141,9 +141,9 @@ namespace Opm
     void StandardWellV<TypeTag>::
     initPrimaryVariablesEvaluation() const
     {
-        for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
+        for (int eqIdx = 0; eqIdx < numWellEq_; ++eqIdx) {
             primary_variables_evaluation_[eqIdx] =
-                EvalWell::createVariable(numWellEq + numEq, primary_variables_[eqIdx], numEq + eqIdx);
+                EvalWell::createVariable(numWellEq_ + numEq, primary_variables_[eqIdx], numEq + eqIdx);
         }
     }
 
@@ -249,7 +249,7 @@ namespace Opm
         }
 
         // Oil fraction
-        EvalWell well_fraction(numWellEq + numEq, 1.0);
+        EvalWell well_fraction(numWellEq_ + numEq, 1.0);
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             well_fraction -= primary_variables_evaluation_[WFrac];
         }
@@ -273,7 +273,7 @@ namespace Opm
     wellSurfaceVolumeFraction(const int compIdx) const
     {
 
-        EvalWell sum_volume_fraction_scaled(numWellEq + numEq, 0.);
+        EvalWell sum_volume_fraction_scaled(numWellEq_ + numEq, 0.);
         for (int idx = 0; idx < num_components_; ++idx) {
             sum_volume_fraction_scaled += wellVolumeFractionScaled(idx);
         }
@@ -292,7 +292,7 @@ namespace Opm
     StandardWellV<TypeTag>::
     extendEval(const Eval& in) const
     {
-        EvalWell out(numWellEq + numEq, in.value());
+        EvalWell out(numWellEq_ + numEq, in.value());
         for(int eqIdx = 0; eqIdx < numEq;++eqIdx) {
             out.setDerivative(eqIdx, in.derivative(eqIdx));
         }
@@ -320,7 +320,7 @@ namespace Opm
         const EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
         const EvalWell rs = extendEval(fs.Rs());
         const EvalWell rv = extendEval(fs.Rv());
-        std::vector<EvalWell> b_perfcells_dense(num_components_, {numWellEq + numEq, 0.0});
+        std::vector<EvalWell> b_perfcells_dense(num_components_, EvalWell{numWellEq_ + numEq, 0.0});
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -392,13 +392,13 @@ namespace Opm
             const EvalWell cqt_i = - Tw * (total_mob_dense * drawdown);
 
             // surface volume fraction of fluids within wellbore
-            std::vector<EvalWell> cmix_s(num_components_, EvalWell{numWellEq + numEq});
+            std::vector<EvalWell> cmix_s(num_components_, EvalWell{numWellEq_ + numEq});
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 cmix_s[componentIdx] = wellSurfaceVolumeFraction(componentIdx);
             }
 
             // compute volume ratio between connection at standard conditions
-            EvalWell volumeRatio(numWellEq + numEq, 0.);
+            EvalWell volumeRatio(numWellEq_ + numEq, 0.);
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
                 volumeRatio += cmix_s[waterCompIdx] / b_perfcells_dense[waterCompIdx];
@@ -412,7 +412,7 @@ namespace Opm
                 const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                 // Incorporate RS/RV factors if both oil and gas active
-                const EvalWell d = EvalWell(numWellEq + numEq, 1.0) - rv * rs;
+                const EvalWell d = EvalWell(numWellEq_ + numEq, 1.0) - rv * rs;
 
                 if (d.value() == 0.0) {
                     OPM_THROW(Opm::NumericalIssue, "Zero d value obtained for well " << name() << " during flux calcuation"
@@ -513,10 +513,10 @@ namespace Opm
 
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
-            std::vector<EvalWell> mob(num_components_, {numWellEq + numEq, 0.});
+            std::vector<EvalWell> mob(num_components_, {numWellEq_ + numEq, 0.});
             getMobility(ebosSimulator, perf, mob);
 
-            std::vector<EvalWell> cq_s(num_components_, {numWellEq + numEq, 0.});
+            std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.});
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
             computePerfRate(intQuants, mob, bhp, perf, allow_cf,
@@ -547,7 +547,7 @@ namespace Opm
                 resWell_[0][componentIdx] -= cq_s_effective.value();
 
                 // assemble the jacobians
-                for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+                for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
                     // also need to consider the efficiency factor when manipulating the jacobians.
                     duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
                     invDuneD_[0][0][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx+numEq);
@@ -576,7 +576,7 @@ namespace Opm
 
                     const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
                     // convert to reservoar conditions
-                    EvalWell cq_r_thermal(numWellEq + numEq, 0.);
+                    EvalWell cq_r_thermal(numWellEq_ + numEq, 0.);
                     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
 
                         if(FluidSystem::waterPhaseIdx == phaseIdx)
@@ -635,7 +635,7 @@ namespace Opm
 
                 if (this->has_polymermw && well_type_ == INJECTOR) {
                     // the source term related to transport of molecular weight
-		            // TODO: should molecular weight be a Evalution type?
+                    // TODO: should molecular weight be a Evalution type?
                     EvalWell cq_s_polymw = cq_s_poly;
                     if (well_type_ == INJECTOR) {
                         const int wat_vel_index = Bhp + 1 + perf;
@@ -678,7 +678,7 @@ namespace Opm
         for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {
             EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
             resWell_loc += getQs(componentIdx) * well_efficiency_factor_;
-            for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+            for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
             resWell_[0][componentIdx] += resWell_loc.value();
@@ -708,11 +708,11 @@ namespace Opm
     StandardWellV<TypeTag>::
     assembleControlEq()
     {
-        EvalWell control_eq(numWellEq + numEq, 0.);
+        EvalWell control_eq(numWellEq_ + numEq, 0.);
         switch (well_controls_get_current_type(well_controls_)) {
             case THP:
             {
-                std::vector<EvalWell> rates(3, {numWellEq + numEq, 0.});
+                std::vector<EvalWell> rates(3, {numWellEq_ + numEq, 0.});
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     rates[ Water ] = getQs(flowPhaseToEbosCompIdx(Water));
                 }
@@ -741,7 +741,7 @@ namespace Opm
                     control_eq = getWQTotal() - target_rate;
                 } else if (well_type_ == PRODUCER) {
                     if (target_rate != 0.) {
-                        EvalWell rate_for_control(numWellEq + numEq, 0.);
+                        EvalWell rate_for_control(numWellEq_ + numEq, 0.);
                         const EvalWell& g_total = getWQTotal();
                         // a variable to check if we are producing any targeting fluids
                         double sum_fraction = 0.;
@@ -792,7 +792,7 @@ namespace Opm
                     }
                 } else {
                     const EvalWell& g_total = getWQTotal();
-                    EvalWell rate_for_control(numWellEq + numEq, 0.); // reservoir rate
+                    EvalWell rate_for_control(numWellEq_ + numEq, 0.); // reservoir rate
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
                         rate_for_control += g_total * wellVolumeFraction( flowPhaseToEbosCompIdx(phase) );
                     }
@@ -807,7 +807,7 @@ namespace Opm
         // using control_eq to update the matrix and residuals
         // TODO: we should use a different index system for the well equations
         resWell_[0][Bhp] = control_eq.value();
-        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+        for (int pv_idx = 0; pv_idx < numWellEq_; ++pv_idx) {
             invDuneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + numEq);
         }
     }
@@ -960,11 +960,7 @@ namespace Opm
 
                 const double relaxation_factor = 0.9;
                 const double dx_wat_vel = dwells[0][wat_vel_index];
-
-
                 primary_variables_[wat_vel_index] -= relaxation_factor * dx_wat_vel;
-
-
 
                 const double dx_pskin = dwells[0][pskin_index];
                 primary_variables_[pskin_index] -= relaxation_factor * dx_pskin;
@@ -1304,7 +1300,7 @@ namespace Opm
         std::fill(ipr_b_.begin(), ipr_b_.end(), 0.);
 
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
-            std::vector<EvalWell> mob(num_components_, {numWellEq + numEq, 0.0});
+            std::vector<EvalWell> mob(num_components_, {numWellEq_ + numEq, 0.0});
             // TODO: mabye we should store the mobility somewhere, so that we only need to calculate it one per iteration
             getMobility(ebos_simulator, perf, mob);
 
@@ -1464,7 +1460,7 @@ namespace Opm
                 // option 2: stick with the above IPR curve
                 // we use IPR here
                 std::vector<double> well_rates_bhp_limit;
-                computeWellRatesWithBhp(ebos_simulator, EvalWell(numWellEq + numEq, bhp_limit), well_rates_bhp_limit);
+                computeWellRatesWithBhp(ebos_simulator, EvalWell(numWellEq_ + numEq, bhp_limit), well_rates_bhp_limit);
 
                 const double thp = calculateThpFromBhp(well_rates_bhp_limit, bhp_limit);
                 const double thp_limit = this->getTHPConstraint();
@@ -1649,7 +1645,7 @@ namespace Opm
         initPrimaryVariablesEvaluation();
 
         std::vector<double> rates;
-        computeWellRatesWithBhp(ebos_simulator, EvalWell(numWellEq + numEq, bhp), rates);
+        computeWellRatesWithBhp(ebos_simulator, EvalWell(numWellEq_ + numEq, bhp), rates);
 
         // TODO: double checke the obtained rates
         // this is another places we might obtain negative rates
@@ -1973,8 +1969,8 @@ namespace Opm
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;
 
-        std::vector<double> res(numWellEq);
-        for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+        std::vector<double> res(numWellEq_);
+        for (int eq_idx = 0; eq_idx < numWellEq_; ++eq_idx) {
             // magnitude of the residual matters
             res[eq_idx] = std::abs(resWell_[0][eq_idx]);
         }
@@ -2010,7 +2006,7 @@ namespace Opm
         }
 
         // processing the residual of the well control equation
-        const double well_control_residual = res[numWellEq - 1];
+        const double well_control_residual = res[numWellEq_ - 1];
         // TODO: we should have better way to specify the control equation tolerance
         double control_tolerance = 0.;
         switch(well_controls_get_current_type(well_controls_)) {
@@ -2043,27 +2039,29 @@ namespace Opm
         if (this->has_polymermw && well_type_ == INJECTOR) {
             //  checking the convergence of the perforation rates
             const double wat_vel_tol = 1.e-8;
+            const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 const double wat_vel_residual = res[Bhp + 1 + perf];
                 if (std::isnan(wat_vel_residual)) {
-                    report.setWellFailed({type, CR::Severity::NotANumber, dummy_component, name()});
+                    report.setWellFailed({wat_vel_failure_type, CR::Severity::NotANumber, dummy_component, name()});
                 } else if (wat_vel_residual > maxResidualAllowed * 10.) {
-                    report.setWellFailed({type, CR::Severity::TooLarge, dummy_component, name()});
+                    report.setWellFailed({wat_vel_failure_type, CR::Severity::TooLarge, dummy_component, name()});
                 } else if (wat_vel_residual > wat_vel_tol) {
-                    report.setWellFailed({type, CR::Severity::Normal, dummy_component, name()});
+                    report.setWellFailed({wat_vel_failure_type, CR::Severity::Normal, dummy_component, name()});
                 }
             }
 
             // checking the convergence of the skin pressure
-            const double pskin_tol = 1000.; // 100 pascal
+            const double pskin_tol = 1000.; // 1000 pascal
+            const auto pskin_failure_type = CR::WellFailure::Type::Pressure;
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 const double pskin_residual = res[Bhp + 1 + perf + number_of_perforations_];
                 if (std::isnan(pskin_residual)) {
-                    report.setWellFailed({type, CR::Severity::NotANumber, dummy_component, name()});
+                    report.setWellFailed({pskin_failure_type, CR::Severity::NotANumber, dummy_component, name()});
                 } else if (pskin_residual > maxResidualAllowed * 10.) {
-                    report.setWellFailed({type, CR::Severity::TooLarge, dummy_component, name()});
+                    report.setWellFailed({pskin_failure_type, CR::Severity::TooLarge, dummy_component, name()});
                 } else if (pskin_residual > pskin_tol) {
-                    report.setWellFailed({type, CR::Severity::Normal, dummy_component, name()});
+                    report.setWellFailed({pskin_failure_type, CR::Severity::Normal, dummy_component, name()});
                 }
             }
         }
@@ -2139,7 +2137,7 @@ namespace Opm
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         BVectorWell dx_well(1);
-        dx_well[0].resize(numWellEq);
+        dx_well[0].resize(numWellEq_);
         invDuneD_.mv(resWell_, dx_well);
 
         updateWellState(dx_well, well_state);
@@ -2253,7 +2251,7 @@ namespace Opm
         if (!this->isOperable()) return;
 
         BVectorWell xw(1);
-        xw[0].resize(numWellEq);
+        xw[0].resize(numWellEq_);
 
         recoverSolutionWell(x, xw);
         updateWellState(xw, well_state);
@@ -2279,10 +2277,10 @@ namespace Opm
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             // flux for each perforation
-            std::vector<EvalWell> mob(num_components_, {numWellEq + numEq, 0.});
+            std::vector<EvalWell> mob(num_components_, {numWellEq_ + numEq, 0.});
             getMobility(ebosSimulator, perf, mob);
 
-            std::vector<EvalWell> cq_s(num_components_, {numWellEq + numEq, 0.});
+            std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.});
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
             computePerfRate(intQuants, mob, bhp, perf, allow_cf,
@@ -2367,7 +2365,7 @@ namespace Opm
 
             converged = std::abs(old_bhp - bhp) < bhp_tolerance;
 
-            computeWellRatesWithBhp(ebosSimulator, EvalWell(numWellEq + numEq, bhp), potentials);
+            computeWellRatesWithBhp(ebosSimulator, EvalWell(numWellEq_ + numEq, bhp), potentials);
 
             // checking whether the potentials have valid values
             for (const double value : potentials) {
@@ -2425,7 +2423,7 @@ namespace Opm
         if ( !wellHasTHPConstraints() ) {
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
 
-            computeWellRatesWithBhp(ebosSimulator, EvalWell(numWellEq + numEq, bhp), well_potentials);
+            computeWellRatesWithBhp(ebosSimulator, EvalWell(numWellEq_ + numEq, bhp), well_potentials);
         } else {
             // the well has a THP related constraint
             // checking whether a well is newly added, it only happens at the beginning of the report step
@@ -2437,7 +2435,7 @@ namespace Opm
                 }
             } else {
                 // We need to generate a reasonable rates to start the iteration process
-                computeWellRatesWithBhp(ebosSimulator, EvalWell(numWellEq + numEq, bhp), well_potentials);
+                computeWellRatesWithBhp(ebosSimulator, EvalWell(numWellEq_ + numEq, bhp), well_potentials);
                 for (double& value : well_potentials) {
                     // make the value a little safer in case the BHP limits are default ones
                     // TODO: a better way should be a better rescaling based on the investigation of the VFP table.
@@ -2543,12 +2541,12 @@ namespace Opm
         primary_variables_[Bhp] = well_state.bhp()[index_of_well_];
 
         // other primary variables related to polymer injectio
-	if (this->has_polymermw && well_type_ == INJECTOR) {
+    if (this->has_polymermw && well_type_ == INJECTOR) {
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 primary_variables_[Bhp + 1 + perf] = well_state.perfWaterVelocity()[first_perf_ + perf];
                 primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = well_state.perfSkinPressure()[first_perf_ + perf];
             }
-	}
+    }
     }
 
 
@@ -2685,7 +2683,7 @@ namespace Opm
             const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebos_simulator);
             const EvalWell& bhp = getBhp();
 
-            std::vector<EvalWell> cq_s(num_components_, {numWellEq + numEq, 0.});
+            std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.});
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
             computePerfRate(int_quant, mob, bhp, perf, allow_cf,
@@ -2927,16 +2925,16 @@ namespace Opm
     {
         if (!this->has_polymermw) {
             OPM_THROW(std::runtime_error, "Polymermw is not activated, "
-                                          "while injecting skin pressure is requested" << name());
+                                          "while injecting skin pressure is requested for well " << name());
         }
-         const int water_table_id = well_ecl_->getPolymerProperties(current_step_).m_skprwattable;
+        const int water_table_id = well_ecl_->getPolymerProperties(current_step_).m_skprwattable;
         if (water_table_id <= 0) {
             OPM_THROW(std::runtime_error, "Unused SKPRWAT table id used for well " << name());
         }
         const auto& water_table_func = PolymerModule::getSkprwatTable(water_table_id);
-         const EvalWell throughput_eval(numWellEq + numEq, throughput);
+        const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
         // the skin pressure when injecting water, which also means the polymer concentration is zero
-        EvalWell pskin_water(numWellEq + numEq, 0.0);
+        EvalWell pskin_water(numWellEq_ + numEq, 0.0);
         water_table_func.eval(throughput_eval, water_velocity, pskin_water);
         return pskin_water;
     }
@@ -2954,11 +2952,11 @@ namespace Opm
     {
         if (!this->has_polymermw) {
             OPM_THROW(std::runtime_error, "Polymermw is not activated, "
-                                          "while injecting skin pressure is requested" << name());
+                                          "while injecting skin pressure is requested for well " << name());
         }
         const double sign = water_velocity >= 0. ? 1.0 : -1.0;
         const EvalWell water_velocity_abs = Opm::abs(water_velocity);
-         if (poly_inj_conc == 0.) {
+        if (poly_inj_conc == 0.) {
             return sign * pskinwater(throughput, water_velocity_abs);
         }
         const int polymer_table_id = well_ecl_->getPolymerProperties(current_step_).m_skprpolytable;
@@ -2967,9 +2965,9 @@ namespace Opm
         }
         const auto& skprpolytable = PolymerModule::getSkprpolyTable(polymer_table_id);
         const double reference_concentration = skprpolytable.refConcentration;
-        const EvalWell throughput_eval(numWellEq + numEq, throughput);
+        const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
         // the skin pressure when injecting water, which also means the polymer concentration is zero
-        EvalWell pskin_poly(numWellEq + numEq, 0.0);
+        EvalWell pskin_poly(numWellEq_ + numEq, 0.0);
         skprpolytable.table_func.eval(throughput_eval, water_velocity_abs, pskin_poly);
         if (poly_inj_conc == reference_concentration) {
             return sign * pskin_poly;
@@ -2992,16 +2990,16 @@ namespace Opm
     {
         if (!this->has_polymermw) {
             OPM_THROW(std::runtime_error, "Polymermw is not activated, "
-                                          "while injecting polymer molecular weight is requested" << name());
+                                          "while injecting polymer molecular weight is requested for well " << name());
         }
         const int table_id = well_ecl_->getPolymerProperties(current_step_).m_plymwinjtable;
         const auto& table_func = PolymerModule::getPlymwinjTable(table_id);
-        const EvalWell throughput_eval(numWellEq + numEq, throughput);
-        EvalWell molecular_weight(numWellEq + numEq, 0.);
+        const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
+        EvalWell molecular_weight(numWellEq_ + numEq, 0.);
         if (wpolymer() == 0.) { // not injecting polymer
             return molecular_weight;
         }
-         table_func.eval(throughput_eval, Opm::abs(water_velocity), molecular_weight);
+        table_func.eval(throughput_eval, Opm::abs(water_velocity), molecular_weight);
         return molecular_weight;
     }
 
@@ -3053,7 +3051,7 @@ namespace Opm
         const double throughput = well_state.perfThroughput()[first_perf_ + perf];
         const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
 
-        EvalWell poly_conc(numWellEq + numEq, 0.0);
+        EvalWell poly_conc(numWellEq_ + numEq, 0.0);
         poly_conc.setValue(wpolymer());
 
         // equation for the skin pressure
@@ -3061,7 +3059,7 @@ namespace Opm
                                   - pskin(throughput, primary_variables_evaluation_[wat_vel_index], poly_conc);
 
         resWell_[0][pskin_index] = eq_pskin.value();
-        for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+        for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
             invDuneD_[0][0][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx+numEq);
             invDuneD_[0][0][pskin_index][pvIdx] = eq_pskin.derivative(pvIdx+numEq);
         }

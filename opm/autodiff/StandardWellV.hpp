@@ -94,10 +94,6 @@ namespace Opm
         // TODO: we should have indices for the well equations and well primary variables separately
         static const int Bhp = numStaticWellEq - numWellControlEq;
 
-        // total number of the well equations and primary variables
-        // there might be extra equations be used, numWellEq will be updated during the initialization
-        int numWellEq = numStaticWellEq;
-
         using typename Base::Scalar;
 
 
@@ -225,6 +221,10 @@ namespace Opm
         using Base::perf_rep_radius_;
         using Base::perf_length_;
         using Base::bore_diameters_;
+
+        // total number of the well equations and primary variables
+        // there might be extra equations be used, numWellEq will be updated during the initialization
+        int numWellEq_ = numStaticWellEq;
 
         // densities of the fluid in each perforation
         std::vector<double> perf_densities_;
@@ -421,17 +421,23 @@ namespace Opm
                                          const double simulation_time, const int report_step, const bool terminal_output,
                                          WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger) override;
 
-        EvalWell pskin(const double througput,
+        // calculate the skin pressure based on water velocity, throughput and polymer concentration.
+        // throughput is used to describe the formation damage during water/polymer injection.
+        // calculated skin pressure will be applied to the drawdown during perforation rate calculation
+        // to handle the effect from formation damage.
+        EvalWell pskin(const double throuhgput,
                        const EvalWell& water_velocity,
                        const EvalWell& poly_inj_conc) const;
 
-        EvalWell pskinwater(const double througput,
+        // calculate the skin pressure based on water velocity, throughput during water injection.
+        EvalWell pskinwater(const double throughput,
                             const EvalWell& water_velocity) const;
 
-        // return the injecting polymer molecular weight
+        // calculate the injecting polymer molecular weight based on the througput and water velocity
         EvalWell wpolymermw(const double throughput,
                             const EvalWell& water_velocity) const;
 
+        // handle the extra equations for polymer injectivity study
         void handleInjectivityRateAndEquations(const IntensiveQuantities& int_quants,
                                                const WellState& well_state,
                                                const int perf,

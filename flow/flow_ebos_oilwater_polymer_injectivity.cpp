@@ -42,14 +42,6 @@ SET_BOOL_PROP(EclFlowOilWaterPolymerInjectivityProblem, EnablePolymerMW, true);
 //! The indices required by the model
 // For this case, there will be two primary variables introduced for the polymer
 // polymer concentration and polymer molecular weight
-// TODO: probaby it can be better to refer to the implementation of flow_ebos_oilwater, or other two phase
-// simulators. Not sure why they make it more complicated.
-/* SET_TYPE_PROP(EclFlowOilWaterPolymerProblem, Indices,
-    Ewoms::BlackOilTwoPhaseIndices< 0,
-              2,
-              0,
-              0,
-              2>); */
 SET_PROP(EclFlowOilWaterPolymerInjectivityProblem, Indices)
 {
 private:
@@ -71,7 +63,7 @@ public:
 namespace Opm {
 /* void flowEbosOilWaterPolymerInjectivitySetDeck(Deck& deck, EclipseState& eclState)
 {
-    typedef TTAG(EclFlowOilWaterPolymerProblem) TypeTag;
+    typedef TTAG(EclFlowOilWaterPolymerInjectivityProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalDeck(&deck, &eclState);
