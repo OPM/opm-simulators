@@ -633,9 +633,8 @@ namespace Opm
                 }
                 connectionRates_[perf][contiPolymerEqIdx] = Base::restrictEval(cq_s_poly);
 
-                if (this->has_polymermw && well_type_ == INJECTOR) {
+                if (this->has_polymermw) {
                     // the source term related to transport of molecular weight
-                    // TODO: should molecular weight be a Evalution type?
                     EvalWell cq_s_polymw = cq_s_poly;
                     if (well_type_ == INJECTOR) {
                         const int wat_vel_index = Bhp + 1 + perf;
@@ -645,6 +644,16 @@ namespace Opm
                             const EvalWell molecular_weight = wpolymermw(throughput, water_velocity);
                             cq_s_polymw *= molecular_weight;
                         } else {
+                            // we do not consider the molecular weight from the polymer
+                            // going-back to the wellbore through injector
+                            cq_s_polymw *= 0.;
+                        }
+                    } else if (well_type_ == PRODUCER) {
+                        if (cq_s_polymw < 0.) {
+                            cq_s_polymw *= extendEval(intQuants.polymerMoleWeight() );
+                        } else {
+                            // we do not consider the molecular weight from the polymer
+                            // re-injecting back through producer
                             cq_s_polymw *= 0.;
                         }
                     }

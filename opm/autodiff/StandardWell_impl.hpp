@@ -598,6 +598,8 @@ namespace Opm
                         if (cq_s_polymw < 0.) {
                             cq_s_polymw *= extendEval(intQuants.polymerMoleWeight() );
                         } else {
+                            // we do not consider the molecular weight from the polymer
+                            // re-injecting back through producer
                             cq_s_polymw *= 0.;
                         }
                         connectionRates_[perf][this->contiPolymerMWEqIdx] = Base::restrictEval(cq_s_polymw);
