@@ -136,3 +136,13 @@ install(TARGETS flow DESTINATION bin)
 include(OpmBashCompletion)
 opm_add_bash_completion(flow)
 
+opm_add_test(flow_blackoil_adjoint
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators"
+  SOURCES
+    flow/flow_blackoil_adjoint.cpp)
+install(TARGETS flow_blackoil_adjoint DESTINATION bin)
+
+opm_add_bash_completion(flow_blackoil_adjoint)
