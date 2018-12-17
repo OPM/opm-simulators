@@ -2582,30 +2582,34 @@ namespace Opm
         const ValueType vapour = rates[Gas];
 
         const int vfp        = well_controls_iget_vfp(well_controls_, control_index);
-        const double& thp    = well_controls_iget_target(well_controls_, control_index);
+        const ValueType& thp = 0.0*rates[0] + well_controls_iget_target(well_controls_, control_index);
         const double& alq    = well_controls_iget_alq(well_controls_, control_index);
-
+       // if (numWellAdjoint > 0) {
+        //    OPM_THROW(std::runtime_error,"Adjoint not implemented");
+            //setControlDerivative(thp);
+        //}
         // pick the density in the top layer
         // TODO: it is possible it should be a Evaluation
         const double rho = perf_densities_[0];
-
+        ValueType bhp = 0.0*rates[0];
         if (well_type_ == INJECTOR) {
             const double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
 
             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
 
-            return vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
+            bhp = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
          }
          else if (well_type_ == PRODUCER) {
              const double vfp_ref_depth = vfp_properties_->getProd()->getTable(vfp)->getDatumDepth();
 
              const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
 
-             return vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
+             bhp =  vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
          }
          else {
              OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
          }
+        return bhp;
     }
 
 
