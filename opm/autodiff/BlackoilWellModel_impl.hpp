@@ -506,8 +506,16 @@ namespace Opm {
                 if ( wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL ) ) {
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
-                    if (well_state_.effectiveEventsOccurred(w) ) {
-                        wellTestState_.openWell(well_name);
+                    if (well_state_.effectiveEventsOccurred(w)) {
+                        if (wellTestState_.lastTestTime(well_name) == ebosSimulator_.time()) {
+                            // The well was shut this timestep, we are most likely retrying
+                            // a timestep without the well in question, after it caused
+                            // repeated timestep cuts. It should therefore not be opened,
+                            // even if it was new or received new targets this report step.
+                            well_state_.setEffectiveEventsOccurred(w, false);
+                        } else {
+                            wellTestState_.openWell(well_name);
+                        }
                     }
                 }
 
