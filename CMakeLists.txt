@@ -130,8 +130,16 @@ opm_add_test(flow
     flow/flow_ebos_polymer.cpp
     flow/flow_ebos_solvent.cpp
     flow/flow_ebos_energy.cpp
-    flow/flow_ebos_oilwater_polymer.cpp)
+    flow/flow_ebos_oilwater_polymer.cpp
+    flow/flow_ebos_oilwater_polymer_injectivity.cpp)
 install(TARGETS flow DESTINATION bin)
+
+add_test(NAME flow__version
+         COMMAND flow --version)
+set_tests_properties(flow__version PROPERTIES
+                     PASS_REGULAR_EXPRESSION "${${project}_LABEL}")
+
+
 
 include(OpmBashCompletion)
 opm_add_bash_completion(flow)

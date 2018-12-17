@@ -20,25 +20,24 @@
 */
 
 
-#ifndef OPM_STANDARDWELL_HEADER_INCLUDED
-#define OPM_STANDARDWELL_HEADER_INCLUDED
+#ifndef OPM_STANDARDWELLV_HEADER_INCLUDED
+#define OPM_STANDARDWELLV_HEADER_INCLUDED
 
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(NumWellAdjoint);
-
-END_PROPERTIES
 
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolverEbos.hpp>
 #include <opm/autodiff/RateConverter.hpp>
-#include <dune/istl/matrixmarket.hh>
+
+#include <opm/material/densead/DynamicEvaluation.hpp>
+
+#include <dune/common/dynvector.hh>
+#include <dune/common/dynmatrix.hh>
 
 namespace Opm
 {
 
     template<typename TypeTag>
-    class StandardWell: public WellInterface<TypeTag>
+    class StandardWellV: public WellInterface<TypeTag>
     {
 
     public:
@@ -95,11 +94,6 @@ namespace Opm
         // TODO: we should have indices for the well equations and well primary variables separately
         static const int Bhp = numStaticWellEq - numWellControlEq;
 
-        // total number of the well equations and primary variables
-        // for StandardWell, no extra well equations will be used.
-        static const int numWellEq = numStaticWellEq;
-
-
         using typename Base::Scalar;
 
 
@@ -107,11 +101,6 @@ namespace Opm
         using Base::Water;
         using Base::Oil;
         using Base::Gas;
-
-        // TODO: with flow_ebos，for a 2P deck, // TODO: for the 2p deck, numEq will be 3, a dummy phase is already added from the reservoir side.
-        // it will cause problem here without processing the dummy phase.
-        static const int numWellAdjoint = GET_PROP_VALUE(TypeTag, NumWellAdjoint);
-        static const int controlIndex = numEq + numWellEq;
 
         using typename Base::Mat;
         using typename Base::BVector;
@@ -122,39 +111,28 @@ namespace Opm
         // B  D ]   x_well]      res_well]
 
         // the vector type for the res_well and x_well
-        typedef Dune::FieldVector<Scalar, numWellEq> VectorBlockWellType;
+        typedef Dune::DynamicVector<Scalar> VectorBlockWellType;
         typedef Dune::BlockVector<VectorBlockWellType> BVectorWell;
 
-        // vector type or cntrl need for adjoint
-        typedef Dune::FieldVector<Scalar, 1> VectorBlockWellCtrlType;
-        typedef Dune::BlockVector<VectorBlockWellCtrlType> BVectorWellCtrl;
-
         // the matrix type for the diagonal matrix D
-        typedef Dune::FieldMatrix<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
-        typedef Dune::FieldMatrix<Scalar, numWellEq, 1 > DiagMatrixBlockWellAdjointType;
+        typedef Dune::DynamicMatrix<Scalar> DiagMatrixBlockWellType;
         typedef Dune::BCRSMatrix <DiagMatrixBlockWellType> DiagMatWell;
-        typedef Dune::BCRSMatrix <DiagMatrixBlockWellAdjointType> DiagMatWellCtrl;
 
         // the matrix type for the non-diagonal matrix B and C^T
-        typedef Dune::FieldMatrix<Scalar, numWellEq, numEq>  OffDiagMatrixBlockWellType;
+        typedef Dune::DynamicMatrix<Scalar> OffDiagMatrixBlockWellType;
         typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellType> OffDiagMatWell;
 
-        // for adjoint
-        typedef Dune::FieldMatrix<Scalar, 1, numEq>  OffDiagMatrixBlockWellAdjointType;
-        typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellAdjointType> OffDiagMatWellCtrl;
-
-        // added extra space in derivative to have control derivatives
-        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq+numWellAdjoint> EvalWell;
+        typedef DenseAd::DynamicEvaluation<Scalar> EvalWell;
 
         using Base::contiSolventEqIdx;
         using Base::contiPolymerEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
-        StandardWell(const Well* well, const int time_step, const Wells* wells,
-                     const ModelParameters& param,
-                     const RateConverterType& rate_converter,
-                     const int pvtRegionIdx,
-                     const int num_components);
+        StandardWellV(const Well* well, const int time_step, const Wells* wells,
+                      const ModelParameters& param,
+                      const RateConverterType& rate_converter,
+                      const int pvtRegionIdx,
+                      const int num_components);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
@@ -179,44 +157,10 @@ namespace Opm
         /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const override;
 
-        /// Ax = Atx - Bt Dt^-1 C x
-        virtual void applyt(const BVector& x, BVector& Ax) const;
-        /// r = r - Bt Dt^-1 Rw
-        virtual void applyt(BVector& r) const;
-
-        // adjoint right hand side of well equations
-        // this may at a later point depend on the adjont vectors for prevois step of
-        // reservoir and well equations
-        void rhsAdjointWell();//(const BVectorWell& lamda_w);
-
-        // add the contributions of the well to the righ has side of the reservoir
-        // adjoint equations
-        void rhsAdjointRes(BVector& adjRes) const;
-
-        // compute objective derivative contributions used for forming the right hand side
-        // and calculating the objective
-        void computeObj(Simulator& ebosSimulator,
-                        const double dt);
-
-
-        // update derivative contribution from this well
-        void objectDerivative(const BVector& lam_r ,const BVectorWell& lam_w);
-
-        // get the results NB only valid after compute objective Derivative
-        void addAdjointResult(AdjointResults& adjres) const;
-        // print object function
-        void printObjective(std::ostream& os) const;
-        // recover adjoint variables for wells and update well_state
-        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x,
-                                                             WellState& well_state);
-
-
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state) const override;
-
-
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
@@ -237,44 +181,6 @@ namespace Opm
         {
             return param_.matrix_add_well_contributions_;
         }
-
-
-        void printMatrixes() const{
-            std::cout << "duneB " << std::endl;
-            Dune::writeMatrixMarket(duneB_, std::cout);
-            std::cout << std::endl;
-            std::cout << "duneC " << std::endl;
-            Dune::writeMatrixMarket(duneC_, std::cout);
-            std::cout << std::endl;
-            std::cout << "duneD " << std::endl;
-            // diagonal matrix for the well
-            Dune::writeMatrixMarket(duneD_, std::cout);
-            std::cout << "invDuneD " << std::endl;
-            // diagonal matrix for the well
-            Dune::writeMatrixMarket(invDuneD_, std::cout);
-            //std::cout << std::endl;
-            // for adjoint
-            std::cout << "duneCA " << std::endl;
-            Dune::writeMatrixMarket(duneCA_, std::cout);
-            std::cout << std::endl;
-            //OffDiagMatWellAdjoint duneCA_;
-            std::cout << "duneDA " << std::endl;
-            Dune::writeMatrixMarket(duneDA_, std::cout);
-            std::cout << std::endl;
-            std::cout << "adjWell_ " << std::endl;
-            Dune::writeMatrixMarket(adjWell_, std::cout);
-            std::cout << "objder_adjres_ " << std::endl;
-            Dune::writeMatrixMarket(objder_adjres_, std::cout);
-            std::cout << "objder_adjwell_ " << std::endl;
-            Dune::writeMatrixMarket(objder_adjwell_, std::cout);
-            std::cout << "objder_adjctrl_ " << std::endl;
-            Dune::writeMatrixMarket(objder_adjctrl_, std::cout);
-            std::cout << "adjont_variables " << std::endl;
-            Dune::writeMatrixMarket(adjoint_variables_, std::cout);
-            std::cout << "Residual" << std::endl;
-            std::cout << resWell_ << std::endl;
-        }
-
 
     protected:
 
@@ -316,6 +222,10 @@ namespace Opm
         using Base::perf_length_;
         using Base::bore_diameters_;
 
+        // total number of the well equations and primary variables
+        // there might be extra equations be used, numWellEq will be updated during the initialization
+        int numWellEq_ = numStaticWellEq;
+
         // densities of the fluid in each perforation
         std::vector<double> perf_densities_;
         // pressure drop between different perforations
@@ -324,64 +234,25 @@ namespace Opm
         // residuals of the well equations
         BVectorWell resWell_;
 
-        // adjoint rhs of the well equations
-        BVectorWell adjWell_;
-
         // two off-diagonal matrices
         OffDiagMatWell duneB_;
         OffDiagMatWell duneC_;
-
         // diagonal matrix for the well
-        DiagMatWell duneD_;// not striktly neeed
         DiagMatWell invDuneD_;
-
-        // for adjoint
-        OffDiagMatWellCtrl duneCA_;
-        //OffDiagMatWellAdjoint duneCA_;
-        DiagMatWellCtrl duneDA_;
-
-        // quatities forobjective function
-        Scalar objval_;
-        mutable BVectorWellCtrl objder_;
-        // well, cells, res primary var
-        mutable BVector  objder_adjres_;
-        // ... well, well_primary variables
-        mutable BVectorWell  objder_adjwell_;
-        // ... well, control variables
-        mutable BVectorWellCtrl objder_adjctrl_;
-
-
 
         // several vector used in the matrix calculation
         mutable BVectorWell Bx_;
         mutable BVectorWell invDrw_;
 
-        // several vector used in the matrix calculation of transpose solve
-        mutable BVectorWell Ctx_;
-        mutable BVectorWell invDtadj_;
-
         // the values for the primary varibles
         // based on different solutioin strategies, the wells can have different primary variables
         mutable std::vector<double> primary_variables_;
-
-        // adjoint variables for well
-        mutable BVectorWell adjoint_variables_;
-        //mutable std::vector<double> adjoint_variables_;
 
         // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
         mutable std::vector<EvalWell> primary_variables_evaluation_;
 
         // the saturations in the well bore under surface conditions at the beginning of the time step
         std::vector<double> F0_;
-
-//        friend class  boost::serialization::access;
-//        template<class Archive>
-//        void serialize(Archive & ar, const unsigned int version){
-//             ar & F0_;
-
-//        }
-
-
 
         // the vectors used to describe the inflow performance relationship (IPR)
         // Q = IPR_A - BHP * IPR_B
@@ -407,15 +278,9 @@ namespace Opm
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
-        // recover well adoint variables
-        void recoverAdjointWell(const BVector& x, BVectorWell& xw) const;
-
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
                              WellState& well_state) const;
-
-        // updating the well_state based on well solution dwells
-        void updateAdjointState(const BVectorWell& dwells, WellState& well_state) const;
 
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.
@@ -468,10 +333,9 @@ namespace Opm
                                                         const std::vector<double>& initial_potential) const;
 
         template <class ValueType>
-        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const int thp_control_index) const;
+        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const int control_index) const;
 
         double calculateThpFromBhp(const std::vector<double>& rates, const double bhp) const;
-
 
         // get the mobility for specific perforation
         void getMobility(const Simulator& ebosSimulator,
@@ -493,7 +357,6 @@ namespace Opm
 
         // handle the non reasonable fractions due to numerical overshoot
         void processFractions() const;
-
 
         // updating the inflow based on the current reservoir condition
         void updateIPR(const Simulator& ebos_simulator) const;
@@ -557,21 +420,34 @@ namespace Opm
         virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
                                          const double simulation_time, const int report_step, const bool terminal_output,
                                          WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger) override;
-        // Helpers for adjoint.
-        void setControlDerivative(double&) const
-        {
-        }
-        void setControlDerivative(EvalWell& x) const
-        {
-            x.setDerivative(controlIndex, 1.0);
-        }
 
+        // calculate the skin pressure based on water velocity, throughput and polymer concentration.
+        // throughput is used to describe the formation damage during water/polymer injection.
+        // calculated skin pressure will be applied to the drawdown during perforation rate calculation
+        // to handle the effect from formation damage.
+        EvalWell pskin(const double throuhgput,
+                       const EvalWell& water_velocity,
+                       const EvalWell& poly_inj_conc) const;
+
+        // calculate the skin pressure based on water velocity, throughput during water injection.
+        EvalWell pskinwater(const double throughput,
+                            const EvalWell& water_velocity) const;
+
+        // calculate the injecting polymer molecular weight based on the througput and water velocity
+        EvalWell wpolymermw(const double throughput,
+                            const EvalWell& water_velocity) const;
+
+        // handle the extra equations for polymer injectivity study
+        void handleInjectivityRateAndEquations(const IntensiveQuantities& int_quants,
+                                               const WellState& well_state,
+                                               const int perf,
+                                               std::vector<EvalWell>& cq_s);
 
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
     };
 
 }
 
-#include "StandardWell_impl.hpp"
+#include "StandardWellV_impl.hpp"
 
-#endif // OPM_STANDARDWELL_HEADER_INCLUDED
+#endif // OPM_STANDARDWELLV_HEADER_INCLUDED

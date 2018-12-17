@@ -300,7 +300,7 @@ namespace Opm {
         if (has_polymer_)
         {
             const Grid& grid = ebosSimulator_.vanguard().grid();
-            if (PolymerModule::hasPlyshlog()) {
+            if (PolymerModule::hasPlyshlog() || GET_PROP_VALUE(TypeTag, EnablePolymerMW) ) {
                 computeRepRadiusPerfLength(grid);
             }
         }
@@ -384,11 +384,14 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    timeStepSucceeded(const double& simulationTime) {
+    timeStepSucceeded(const double& simulationTime, const double dt) {
         // TODO: when necessary
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
         for (const auto& well : well_container_) {
             well->calculateReservoirRates(well_state_);
+            if (GET_PROP_VALUE(TypeTag, EnablePolymerMW) && well->wellType() == INJECTOR) {
+                well->updateWaterThroughput(dt, well_state_);
+            }
         }
         updateWellTestState(simulationTime, wellTestState_);
 
@@ -522,8 +525,16 @@ namespace Opm {
                 if ( wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL ) ) {
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
-                    if (well_state_.effectiveEventsOccurred(w) ) {
-                        wellTestState_.openWell(well_name);
+                    if (well_state_.effectiveEventsOccurred(w)) {
+                        if (wellTestState_.lastTestTime(well_name) == ebosSimulator_.time()) {
+                            // The well was shut this timestep, we are most likely retrying
+                            // a timestep without the well in question, after it caused
+                            // repeated timestep cuts. It should therefore not be opened,
+                            // even if it was new or received new targets this report step.
+                            well_state_.setEffectiveEventsOccurred(w, false);
+                        } else {
+                            wellTestState_.openWell(well_name);
+                        }
                     }
                 }
 
@@ -553,8 +564,13 @@ namespace Opm {
                 const int pvtreg = pvt_region_idx_[well_cell_top];
 
                 if ( !well_ecl->isMultiSegment(time_step) || !param_.use_multisegment_well_) {
-                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
-                                                param_, *rateConverter_, pvtreg, numComponents() ) );
+                    if ( GET_PROP_VALUE(TypeTag, EnablePolymerMW) && well_ecl->isInjector(time_step) ) {
+                        well_container.emplace_back(new StandardWellV<TypeTag>(well_ecl, time_step, wells(),
+                                                    param_, *rateConverter_, pvtreg, numComponents() ) );
+                    } else {
+                        well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
+                                                    param_, *rateConverter_, pvtreg, numComponents() ) );
+                    }
                 } else {
                     /*
                     well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(),

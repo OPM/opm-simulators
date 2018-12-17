@@ -49,6 +49,7 @@
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/StandardWell.hpp>
+#include <opm/autodiff/StandardWellV.hpp>
 #include <opm/autodiff/MultisegmentWell.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
 #include<opm/autodiff/SimFIBODetails.hpp>
@@ -197,7 +198,7 @@ namespace Opm {
 
             void endTimeStep()
             {
-                timeStepSucceeded(ebosSimulator_.time());
+                timeStepSucceeded(ebosSimulator_.time(), ebosSimulator_.timeStepSize());
             }
 
             void endEpisode()
@@ -418,6 +419,14 @@ namespace Opm {
             { return ebosSimulator_.vanguard().schedule(); }
 
             
+            // compute the well fluxes and assemble them in to the reservoir equations as source terms
+            // and in the well equations.
+            void assemble(const int iterationIdx,
+                          const double dt);
+
+            // called at the end of a time step
+            void timeStepSucceeded(const double& simulationTime, const double dt);
+
             // called at the end of a report step
             void endReportStep();
 

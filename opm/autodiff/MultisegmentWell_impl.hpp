@@ -1904,4 +1904,15 @@ namespace Opm
         OpmLog::warning("NO_WELLTESTPHYSICAL_CHECKING_MS_WELLS", msg);
     }
 
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    updateWaterThroughput(const double dt OPM_UNUSED, WellState& well_state OPM_UNUSED) const
+    {
+    }
+
 }

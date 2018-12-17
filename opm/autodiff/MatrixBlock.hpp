@@ -32,7 +32,7 @@ namespace Dune
 namespace FMatrixHelp {
 //! invert 4x4 Matrix without changing the original matrix
 template <typename K>
-static inline K invertMatrix (const FieldMatrix<K,4,4> &matrix, FieldMatrix<K,4,4> &inverse)
+static inline K invertMatrix(const FieldMatrix<K,4,4>& matrix, FieldMatrix<K,4,4>& inverse)
 {
     inverse[0][0] = matrix[1][1] * matrix[2][2] * matrix[3][3] -
             matrix[1][1] * matrix[2][3] * matrix[3][2] -
@@ -146,7 +146,8 @@ static inline K invertMatrix (const FieldMatrix<K,4,4> &matrix, FieldMatrix<K,4,
             matrix[2][0] * matrix[0][1] * matrix[1][2] -
             matrix[2][0] * matrix[0][2] * matrix[1][1];
 
-    K det = matrix[0][0] * inverse[0][0] + matrix[0][1] * inverse[1][0] + matrix[0][2] * inverse[2][0] + matrix[0][3] * inverse[3][0];
+    K det = matrix[0][0] * inverse[0][0] + matrix[0][1] * inverse[1][0] +
+            matrix[0][2] * inverse[2][0] + matrix[0][3] * inverse[3][0];
 
     // return identity for singular or nearly singular matrices.
     if (std::abs(det) < 1e-40) {
@@ -166,7 +167,7 @@ namespace ISTLUtility {
 
 //! invert matrix by calling FMatrixHelp::invert
 template <typename K>
-static inline void invertMatrix (FieldMatrix<K,1,1> &matrix)
+static inline void invertMatrix(FieldMatrix<K,1,1>& matrix)
 {
     FieldMatrix<K,1,1> A ( matrix );
     FMatrixHelp::invertMatrix(A, matrix );
@@ -174,7 +175,7 @@ static inline void invertMatrix (FieldMatrix<K,1,1> &matrix)
 
 //! invert matrix by calling FMatrixHelp::invert
 template <typename K>
-static inline void invertMatrix (FieldMatrix<K,2,2> &matrix)
+static inline void invertMatrix(FieldMatrix<K,2,2>& matrix)
 {
     FieldMatrix<K,2,2> A ( matrix );
     FMatrixHelp::invertMatrix(A, matrix );
@@ -182,7 +183,7 @@ static inline void invertMatrix (FieldMatrix<K,2,2> &matrix)
 
 //! invert matrix by calling FMatrixHelp::invert
 template <typename K>
-static inline void invertMatrix (FieldMatrix<K,3,3> &matrix)
+static inline void invertMatrix(FieldMatrix<K,3,3>& matrix)
 {
     FieldMatrix<K,3,3> A ( matrix );
     FMatrixHelp::invertMatrix(A, matrix );
@@ -190,7 +191,7 @@ static inline void invertMatrix (FieldMatrix<K,3,3> &matrix)
 
 //! invert matrix by calling FMatrixHelp::invert
 template <typename K>
-static inline void invertMatrix (FieldMatrix<K,4,4> &matrix)
+static inline void invertMatrix(FieldMatrix<K,4,4>& matrix)
 {
     FieldMatrix<K,4,4> A ( matrix );
     FMatrixHelp::invertMatrix(A, matrix );
@@ -198,10 +199,20 @@ static inline void invertMatrix (FieldMatrix<K,4,4> &matrix)
 
 //! invert matrix by calling matrix.invert
 template <typename K, int n>
-static inline void invertMatrix (FieldMatrix<K,n,n> &matrix)
+static inline void invertMatrix(FieldMatrix<K,n,n>& matrix)
 {
 #if ! DUNE_VERSION_NEWER( DUNE_COMMON, 2, 7 )
     Dune::FMatrixPrecision<K>::set_singular_limit(1.e-20);
+#endif
+    matrix.invert();
+}
+
+//! invert matrix by calling matrix.invert
+template <typename K>
+static inline void invertMatrix(Dune::DynamicMatrix<K>& matrix)
+{
+#if ! DUNE_VERSION_NEWER( DUNE_COMMON, 2, 7 )
+    Dune::FMatrixPrecision<K>::set_singular_limit(1.e-30);
 #endif
     matrix.invert();
 }
@@ -228,17 +239,17 @@ public:
 
 template<class K, int n, int m>
 void
-print_row (std::ostream& s, const MatrixBlock<K,n,m>& A,
-           typename FieldMatrix<K,n,m>::size_type I,
-           typename FieldMatrix<K,n,m>::size_type J,
-           typename FieldMatrix<K,n,m>::size_type therow, int width,
-           int precision)
+print_row(std::ostream& s, const MatrixBlock<K,n,m>& A,
+          typename FieldMatrix<K,n,m>::size_type I,
+          typename FieldMatrix<K,n,m>::size_type J,
+          typename FieldMatrix<K,n,m>::size_type therow, int width,
+          int precision)
 {
     print_row(s, A.asBase(), I, J, therow, width, precision);
 }
 
 template<class K, int n, int m>
-K& firstmatrixelement (MatrixBlock<K,n,m>& A)
+K& firstmatrixelement(MatrixBlock<K,n,m>& A)
 {
    return firstmatrixelement( A.asBase() );
 }
@@ -303,11 +314,66 @@ namespace Detail
 {
     //! calculates ret = A^T * B
     template< class K, int m, int n, int p >
-    static inline void multMatrixTransposed ( const Dune::FieldMatrix< K, n, m > &A,
-                                              const Dune::FieldMatrix< K, n, p > &B,
-                                              Dune::FieldMatrix< K, m, p > &ret )
+    static inline void multMatrixTransposed(const Dune::FieldMatrix< K, n, m >& A,
+                                            const Dune::FieldMatrix< K, n, p >& B,
+                                            Dune::FieldMatrix< K, m, p >& ret)
     {
         typedef typename Dune::FieldMatrix< K, m, p > :: size_type size_type;
+
+        for( size_type i = 0; i < m; ++i )
+        {
+            for( size_type j = 0; j < p; ++j )
+            {
+                ret[ i ][ j ] = K( 0 );
+                for( size_type k = 0; k < n; ++k )
+                    ret[ i ][ j ] += A[ k ][ i ] * B[ k ][ j ];
+            }
+        }
+    }
+
+    //! calculates ret = A * B
+    template< class K>
+    static inline void multMatrix(const Dune::DynamicMatrix<K>& A,
+                                  const Dune::DynamicMatrix<K>& B,
+                                  Dune::DynamicMatrix<K>& ret )
+    {
+        typedef typename Dune::DynamicMatrix<K> :: size_type size_type;
+
+        const size_type m = A.rows();
+        const size_type n = A.cols();
+
+        assert(n == B.rows() );
+
+        const size_type p = B.cols();
+
+        ret.resize(m, p);
+
+        for( size_type i = 0; i < m; ++i )
+        {
+            for( size_type j = 0; j < p; ++j )
+            {
+                ret[ i ][ j ] = K( 0 );
+                for( size_type k = 0; k < n; ++k )
+                    ret[ i ][ j ] += A[ i ][ k ] * B[ k ][ j ];
+            }
+        }
+    }
+
+
+    //! calculates ret = A^T * B
+    template< class K, int m, int p >
+    static inline void multMatrixTransposed(const Dune::DynamicMatrix<K>& A,
+                                            const Dune::DynamicMatrix<K>& B,
+                                            Dune::FieldMatrix< K, m, p>& ret )
+    {
+        typedef typename Dune::DynamicMatrix<K> :: size_type size_type;
+
+        // A is a tranpose matrix
+        const size_type n = A.rows();
+        assert(m == A.cols() );
+
+        assert(n == B.rows() );
+        assert(p == B.cols() );
 
         for( size_type i = 0; i < m; ++i )
         {
