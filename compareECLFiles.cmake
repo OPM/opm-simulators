@@ -238,6 +238,11 @@ add_test_compareECLFiles(CASENAME polymer_oilwater
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
+add_test_compareECLFiles(CASENAME polymer_injectivity
+                         FILENAME 2D_POLYMER_INJECTIVITY
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME polymer_simple2D
                          FILENAME 2D_THREEPHASE_POLY_HETER
@@ -352,4 +357,5 @@ if(MPI_FOUND)
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${coarse_rel_tol_parallel})
+
 endif()

@@ -51,6 +51,7 @@ tests[spe1_metric_vfp1]="flow vfpprod_spe1 SPE1CASE1_METRIC_VFP1 spe1_metric_vfp
 tests[base_model_1]="flow model1 BASE_MODEL_1 base_model_1"
 tests[msw_model_1]="flow model1 MSW_MODEL_1 msw_model_1"
 tests[faults_model_1]="flow model1 FAULTS_MODEL_1 faults_model_1"
+tests[polymer_injectivity]="flow polymer_injectivity 2D_POLYMER_INJECTIVITY"
 
 changed_tests=""
 for test_name in ${!tests[*]}

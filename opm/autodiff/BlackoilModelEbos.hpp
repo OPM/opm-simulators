@@ -120,8 +120,10 @@ namespace Opm {
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
+        static const int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;
         static const int solventSaturationIdx = Indices::solventSaturationIdx;
         static const int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
+        static const int polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
         static const int temperatureIdx = Indices::temperatureIdx;
 
         typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
@@ -157,6 +159,7 @@ namespace Opm {
         , has_vapoil_(FluidSystem::enableVaporizedOil())
         , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
         , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
+        , has_polymermw_(GET_PROP_VALUE(TypeTag, EnablePolymerMW))
         , has_energy_(GET_PROP_VALUE(TypeTag, EnableEnergy))
         , param_( param )
         , well_model_ (well_model)
@@ -775,6 +778,19 @@ namespace Opm {
                     R_sum[ contiPolymerEqIdx ] += R2;
                     maxCoeff[ contiPolymerEqIdx ] = std::max( maxCoeff[ contiPolymerEqIdx ], std::abs( R2 ) / pvValue );
                 }
+
+                if (has_polymermw_) {
+                    assert(has_polymer_);
+
+                    B_avg[contiPolymerMWEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    // the residual of the polymer molecular equation is scaled down by a 100, since molecular weight
+                    // can be much bigger than 1, and this equation shares the same tolerance with other mass balance equations
+                    // TODO: there should be a more general way to determine the scaling-down coefficient
+                    const auto R2 = ebosResid[cell_idx][contiPolymerMWEqIdx] / 100.;
+                    R_sum[contiPolymerMWEqIdx] += R2;
+                    maxCoeff[contiPolymerMWEqIdx] = std::max( maxCoeff[contiPolymerMWEqIdx], std::abs( R2 ) / pvValue );
+                }
+
                 if (has_energy_ ) {
                     B_avg[ contiEnergyEqIdx ] += 1.0;
                     const auto R2 = ebosResid[cell_idx][contiEnergyEqIdx];
@@ -840,6 +856,10 @@ namespace Opm {
                 }
                 if (has_polymer_) {
                     compNames[polymerConcentrationIdx] = "Polymer";
+                }
+                if (has_polymermw_) {
+                    assert(has_polymer_);
+                    compNames[polymerMoleWeightIdx] = "MolecularWeightP";
                 }
                 if (has_energy_) {
                     compNames[temperatureIdx] = "Energy";
@@ -992,6 +1012,7 @@ namespace Opm {
         const bool has_vapoil_;
         const bool has_solvent_;
         const bool has_polymer_;
+        const bool has_polymermw_;
         const bool has_energy_;
 
         ModelParameters                 param_;
