@@ -265,6 +265,8 @@ namespace Opm
             Dune::writeMatrixMarket(objder_adjctrl_, std::cout);
             std::cout << "adjont_variables " << std::endl;
             Dune::writeMatrixMarket(adjoint_variables_, std::cout);
+            std::cout << "Residual" << std::endl;
+            std::cout << resWell_ << std::endl;
         }
 
 

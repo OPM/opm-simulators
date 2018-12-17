@@ -265,7 +265,18 @@ namespace Opm {
 
             ebosSimulator_.problem().beginTimeStep();
             ebosSimulator_.model().newtonMethod().setIterationIndex(0);
-            ebosSimulator_.problem().beginIteration(); //fails at this point
+            //ebosSimulator_.problem().beginIteration(); //fails at this point
+            {
+              //bool solve_well_equation = true;
+              //wellModel().beginIteration(solve_well_equation);// well equation assembly
+              //deserialize_well();
+              wellModel().updatePerforationIntensiveQuantities();
+              wellModel().prepareTimeStep();
+              wellModel().initPrimaryVariablesEvaluation();
+              wellModel().assembleWellEq(ebosSimulator_.timeStepSize());
+
+              //ebosSimulator_problem().beginIteration();// well equation assembly
+            }
             ebosSimulator_.model().linearizer().linearize(/*focustimeindex=*/ 0);// should not be important since the
 	                                                                         //linarization should not be used
             ebosSimulator_.problem().endIteration();//needed ??
@@ -282,14 +293,14 @@ namespace Opm {
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
 
-            deserialize_well();
+            //deserialize_well();
             double dt = timer.stepLengthTaken();
             //wellModel().prepareTimeStep();
             assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
             ebosSimulator_.model().newtonMethod().setIterationIndex(/*iterationIdx*/ 1);
             {
-              bool solve_well_equation = true;
-              wellModel().beginIteration(solve_well_equation);// well equation assembly
+              //bool solve_well_equation = true;
+              //wellModel().beginIteration(solve_well_equation);// well equation assembly
               deserialize_well();
               wellModel().updatePerforationIntensiveQuantities();
               wellModel().prepareTimeStep();
@@ -303,6 +314,7 @@ namespace Opm {
 	    // to get correct residual could asser small
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 	    wellModel().apply(ebosResid);
+
              //wellModel().recoverWellSolutionAndUpdateWellState(x);
             std::cout << "Printing matrix residual in backward mode" << std::endl;
             std::cout << "Inf norm " << ebosResid.infinity_norm() << std::endl;
@@ -311,6 +323,8 @@ namespace Opm {
             std::cout << "Printing well residual in backward mode" << std::endl;
             const auto& well_container = wellModel().getWellContainer();
 	    std::cout << "********************************* " << std::endl;
+            std::cout << "ebosResid" << std::endl;
+            std::cout << ebosResid << std::endl;
 	    //	    wellModel().printResidual(std::cout);
 //            for (const auto& well : well_container) {
 //                 std::cout << "********************************* " << std::endl;
