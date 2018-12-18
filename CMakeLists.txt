@@ -154,3 +154,14 @@ opm_add_test(flow_blackoil_adjoint
 install(TARGETS flow_blackoil_adjoint DESTINATION bin)
 
 opm_add_bash_completion(flow_blackoil_adjoint)
+
+if (HAVE_OPM_TESTS)
+	find_package(PythonInterp REQUIRED)
+	#install(FILES tests/runTest.py DESTINATION bin)
+	add_test(NAME test_MODEL_1D_DEBUG
+		COMMAND ${PYTHON_EXECUTABLE}
+		${PROJECT_SOURCE_DIR}/tests/runTestAdjoint.py
+		--simulator=${PROJECT_BINARY_DIR}/bin/flow_blackoil_adjoint
+		--outputdir=test --datadir=${CMAKE_SOURCE_DIR}/opm-tests/adjoint_tests
+		--case=MODEL_1D_DEBUG)
+endif()
