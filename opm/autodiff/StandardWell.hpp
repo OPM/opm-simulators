@@ -247,12 +247,10 @@ namespace Opm
             Dune::writeMatrixMarket(duneC_, std::cout);
             std::cout << std::endl;
             std::cout << "duneD " << std::endl;
-            // diagonal matrix for the well
             Dune::writeMatrixMarket(duneD_, std::cout);
             std::cout << "invDuneD " << std::endl;
             // diagonal matrix for the well
             Dune::writeMatrixMarket(invDuneD_, std::cout);
-            //std::cout << std::endl;
             // for adjoint
             std::cout << "duneCA " << std::endl;
             Dune::writeMatrixMarket(duneCA_, std::cout);
@@ -273,6 +271,12 @@ namespace Opm
             Dune::writeMatrixMarket(adjoint_variables_, std::cout);
             std::cout << "Residual" << std::endl;
             std::cout << resWell_ << std::endl;
+            std::cout << "pressure diffs_" << std::endl;
+
+            for(const auto &val : perf_pressure_diffs_){
+                std::cout << val;
+            }
+            std::cout << std::endl;
         }
 
 
