@@ -262,11 +262,11 @@ namespace Opm {
             SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             // Store the initial previous.
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
-            deserialize_well();//
+            deserialize_well(true);//
              ++timer;// get back to current step
             // only to update inensive quantity cache1020
-
             ebosSimulator_.problem().beginTimeStep();
+	    //deserialize_well(true);
             ebosSimulator_.model().newtonMethod().setIterationIndex(0);
             //ebosSimulator_.problem().beginIteration(); //fails at this point
             {
@@ -284,11 +284,12 @@ namespace Opm {
 	                                                                         //linarization should not be used
             ebosSimulator_.problem().endIteration();//needed ??
 
-
+            this->prepareStep(timer);// set correct time ??
             wellModel().beginTimeStep();
+            //deserialize_well(true);
             wellModel().calculateExplicitQuantities();
             wellModel().prepareTimeStep();
-	    this->prepareStep(timer);// set correct time ??
+            //this->prepareStep(timer);// set correct time ??
             this->deserializeReservoir( timer.simulationTimeElapsed(),only_reservoir );
             // seralizing may owerwrite prevois step since it was intended for restart ??
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
@@ -306,6 +307,7 @@ namespace Opm {
               //wellModel().beginIteration(solve_well_equation);// well equation assembly
               deserialize_well();
               wellModel().updatePerforationIntensiveQuantities();
+              //wellModel().calculateExplicitQuantities();
               wellModel().prepareTimeStep();
               wellModel().initPrimaryVariablesEvaluation();
               wellModel().assembleWellEq(ebosSimulator_.timeStepSize());
@@ -588,11 +590,12 @@ namespace Opm {
         /// \param[in] timer                  simulation timer
         void afterStep(const SimulatorTimerInterface& timer)
         {
-            ebosSimulator_.problem().endTimeStep();
 
+            ebosSimulator_.problem().endTimeStep();            
 	    // need to set time for output serialization
             double time = timer.simulationTimeElapsed()  + timer.currentStepLength();
             ebosSimulator_.setTime( time);
+            this->adjoint_serialize();
         }
 
         /// Assemble the residual and Jacobian of the nonlinear system.
@@ -1412,12 +1415,12 @@ namespace Opm {
         void ebosSerialize(){
             ebosSimulator_.serialize();
         }
-
+        // moved to after step
         void adjoint_serialize(){
             // may hav if here for adjoint run
             if(param_.use_adjoint_){
                 ebosSimulator_.serialize();
-                serialize_well();
+                serialize_well();// done in after step
             }
         }
 
@@ -1443,21 +1446,31 @@ namespace Opm {
             return full_path.string();
         }
 
-        void serialize_well(){
+        void serialize_well(bool pre=false){
             //namespace fs = boost::filesystem;
             //fs::path output_dir = ebosSimulator_.vanguard().eclState().getIOConfig().getOutputDir();
             //WellState well_state_proper =  this->wellModel().wellState();//to avoid the const problem with serialize else have to make splitted
             //std::string filename =  well_state_proper.getWellFile(this->ebosSimulator(),this->ebosSimulator().time());
             std::string filename = this->iofilename();
+	    if(pre){
+	      filename = filename + "_pre";
+	    }
+	      
+            wellModel().printMatrixes();
+            std::cout << "Serialize well " << filename << std::endl;
             // could be changed to binary: for wells not for now
             std::ofstream ofs(filename.c_str());
             boost::archive::text_oarchive oa(ofs);
             oa << this->wellModel();
         }
 
-        void deserialize_well(){
+        void deserialize_well(bool pre=false){
             //std::string filename =  well_state.getWellFile(ebosSimulator_, ebosSimulator_.time());
             std::string filename = this->iofilename();
+	    if(pre){
+	      filename = filename + "_pre";
+	    }
+            std::cout << "Deserialize well " << filename << std::endl;
             // could be changed to binary: for wells not for now
             std::ifstream ifs(filename.c_str());
             boost::archive::text_iarchive oa(ifs);
