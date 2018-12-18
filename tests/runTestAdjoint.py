@@ -25,19 +25,24 @@ def main(argv=None):
     
     datadir = "%s/%s" % (args.datadir,args.case)
     deckfile = "%s/inputfiles/%s.DATA" % (datadir,args.case)
+    adjoint_test_file = "%s/adjoint_results.txt" % (args.outputdir)
+    os.remove(adjoint_test_file);
     print "************************************************************"
     scommand= "%s --output-dir=%s %s %s  " % (args.simulator, args.outputdir, options, deckfile)
     print scommand 
     print "************************************************************"
     ok = os.system(scommand)
     adjoint_ref_file = "%s/adjoint_results.txt" % (datadir)
-    adjoint_test_file = "%s/adjoint_results.txt" % (args.outputdir)
+    
     adj_ref = numpy.genfromtxt(adjoint_ref_file,comments='%')
     adj_test = numpy.genfromtxt(adjoint_test_file,comments='%')
     diff=numpy.max(numpy.abs(adj_ref-adj_test))
     print "max difference %e" % diff
-    ok = diff < args.max_diff
-    return ok 
+    ok = (diff < args.max_diff) and ok==0
+    if ok:
+        return 0
+    else:
+        return 1
        
 if __name__ == "__main__":
     sys.exit(main())
