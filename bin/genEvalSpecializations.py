@@ -560,7 +560,11 @@ public:
     // negation (unary minus) operator
     Evaluation operator-() const
     {
+{% if numDerivs < 0 %}\
+        Evaluation result(*this);
+{% else %}\
         Evaluation result;
+{% endif %}\
 
         // set value and derivatives to negative
 {% if numDerivs <= 0 %}\
@@ -765,9 +769,7 @@ Evaluation<ValueType, numVars> operator+(const RhsValueType& a, const Evaluation
 template <class RhsValueType, class ValueType, int numVars>
 Evaluation<ValueType, numVars> operator-(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 {
-    Evaluation<ValueType, numVars> result(a);
-    result -= b;
-    return result;
+    return -(b - a);
 }
 
 template <class RhsValueType, class ValueType, int numVars>
