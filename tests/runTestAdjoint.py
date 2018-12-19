@@ -16,7 +16,7 @@ def main(argv=None):
     options = "--enable-adaptive-time-stepping=false \
     --solve-welleq-initially=true --use-adjoint=true \
     --linear-solver-reduction=1e-10 \
-    --tolerance-cnv=1e-2 \
+    --tolerance-cnv=1e-6 \
     --tolerance-cnv-relaxed=1e-5\
     --tolerance-mb=1e-6 \
     --tolerance-pressure-ms-wells=1000 \
