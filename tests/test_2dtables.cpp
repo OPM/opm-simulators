@@ -39,363 +39,362 @@
 #include <cmath>
 #include <iostream>
 
-
 template <class ScalarT>
 struct Test
 {
-typedef ScalarT  Scalar;
+    typedef ScalarT  Scalar;
 
-static Scalar testFn1(Scalar x, Scalar /* y */)
-{ return x; }
+    static Scalar testFn1(Scalar x, Scalar /* y */)
+    { return x; }
 
-static Scalar testFn2(Scalar /* x */, Scalar y)
-{ return y; }
+    static Scalar testFn2(Scalar /* x */, Scalar y)
+    { return y; }
 
-static Scalar testFn3(Scalar x, Scalar y)
-{ return x*y; }
+    static Scalar testFn3(Scalar x, Scalar y)
+    { return x*y; }
 
-template <class Fn>
-std::shared_ptr<Opm::UniformTabulated2DFunction<Scalar> >
-createUniformTabulatedFunction(Fn& f)
-{
-    Scalar xMin = -2.0;
-    Scalar xMax = 3.0;
-    unsigned m = 50;
+    template <class Fn>
+    std::shared_ptr<Opm::UniformTabulated2DFunction<Scalar> >
+    createUniformTabulatedFunction(Fn& f)
+    {
+        Scalar xMin = -2.0;
+        Scalar xMax = 3.0;
+        unsigned m = 50;
 
-    Scalar yMin = -1/2.0;
-    Scalar yMax = 1/3.0;
-    unsigned n = 40;
+        Scalar yMin = -1/2.0;
+        Scalar yMax = 1/3.0;
+        unsigned n = 40;
 
-    auto tab = std::make_shared<Opm::UniformTabulated2DFunction<Scalar>>(
-        xMin, xMax, m,
-        yMin, yMax, n);
-    for (unsigned i = 0; i < m; ++i) {
-        Scalar x = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
-        for (unsigned j = 0; j < n; ++j) {
-            Scalar y = yMin + Scalar(j)/(n - 1) * (yMax - yMin);
-            tab->setSamplePoint(i, j, f(x, y));
+        auto tab = std::make_shared<Opm::UniformTabulated2DFunction<Scalar>>(
+            xMin, xMax, m,
+            yMin, yMax, n);
+        for (unsigned i = 0; i < m; ++i) {
+            Scalar x = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
+            for (unsigned j = 0; j < n; ++j) {
+                Scalar y = yMin + Scalar(j)/(n - 1) * (yMax - yMin);
+                tab->setSamplePoint(i, j, f(x, y));
+            }
         }
+
+        return tab;
     }
 
-    return tab;
-}
+    template <class Fn>
+    std::shared_ptr<Opm::UniformXTabulated2DFunction<Scalar> >
+    createUniformXTabulatedFunction(Fn& f)
+    {
+        Scalar xMin = -2.0;
+        Scalar xMax = 3.0;
+        unsigned m = 50;
 
-template <class Fn>
-std::shared_ptr<Opm::UniformXTabulated2DFunction<Scalar> >
-createUniformXTabulatedFunction(Fn& f)
-{
-    Scalar xMin = -2.0;
-    Scalar xMax = 3.0;
-    unsigned m = 50;
+        Scalar yMin = -1/2.0;
+        Scalar yMax = 1/3.0;
+        unsigned n = 40;
 
-    Scalar yMin = -1/2.0;
-    Scalar yMax = 1/3.0;
-    unsigned n = 40;
-
-    auto tab = std::make_shared<Opm::UniformXTabulated2DFunction<Scalar>>();
-    for (unsigned i = 0; i < m; ++i) {
-        Scalar x = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
-        tab->appendXPos(x);
-        for (unsigned j = 0; j < n; ++j) {
-            Scalar y = yMin + Scalar(j)/(n -1) * (yMax - yMin);
-            tab->appendSamplePoint(i, y, f(x, y));
+        auto tab = std::make_shared<Opm::UniformXTabulated2DFunction<Scalar>>();
+        for (unsigned i = 0; i < m; ++i) {
+            Scalar x = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
+            tab->appendXPos(x);
+            for (unsigned j = 0; j < n; ++j) {
+                Scalar y = yMin + Scalar(j)/(n -1) * (yMax - yMin);
+                tab->appendSamplePoint(i, y, f(x, y));
+            }
         }
+
+        return tab;
     }
 
-    return tab;
-}
 
+    template <class Fn>
+    std::shared_ptr<Opm::UniformXTabulated2DFunction<Scalar> >
+    createUniformXTabulatedFunction2(Fn& f)
+    {
+        Scalar xMin = -2.0;
+        Scalar xMax = 3.0;
+        Scalar m = 50;
 
-template <class Fn>
-std::shared_ptr<Opm::UniformXTabulated2DFunction<Scalar> >
-createUniformXTabulatedFunction2(Fn& f)
-{
-    Scalar xMin = -2.0;
-    Scalar xMax = 3.0;
-    Scalar m = 50;
+        Scalar yMin = - 4.0;
+        Scalar yMax = 5.0;
 
-    Scalar yMin = - 4.0;
-    Scalar yMax = 5.0;
+        auto tab = std::make_shared<Opm::UniformXTabulated2DFunction<Scalar>>();
+        for (unsigned i = 0; i < m; ++i) {
+            Scalar x = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
+            tab->appendXPos(x);
 
-    auto tab = std::make_shared<Opm::UniformXTabulated2DFunction<Scalar>>();
-    for (unsigned i = 0; i < m; ++i) {
-        Scalar x = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
-        tab->appendXPos(x);
+            Scalar n = i + 10;
 
-        Scalar n = i + 10;
-
-        for (unsigned j = 0; j < n; ++j) {
-            Scalar y = yMin + Scalar(j)/(n -1) * (yMax - yMin);
-            tab->appendSamplePoint(i, y, f(x, y));
+            for (unsigned j = 0; j < n; ++j) {
+                Scalar y = yMin + Scalar(j)/(n -1) * (yMax - yMin);
+                tab->appendSamplePoint(i, y, f(x, y));
+            }
         }
+
+        return tab;
     }
 
-    return tab;
-}
 
+    template <class Fn>
+    std::shared_ptr<Opm::XYTabulated2DFunction<Scalar> >
+    createXYTabulated2DFunction(Fn& f)
+    {
+        const Scalar xMin = -2.0;
+        const Scalar xMax = 3.0;
+        const unsigned m = 50;
 
-template <class Fn>
-std::shared_ptr<Opm::XYTabulated2DFunction<Scalar> >
-createXYTabulated2DFunction(Fn& f)
-{
-    const Scalar xMin = -2.0;
-    const Scalar xMax = 3.0;
-    const unsigned m = 50;
+        const Scalar yMin = -1/2.0;
+        const Scalar yMax = 1/3.0;
+        const unsigned n = 40;
 
-    const Scalar yMin = -1/2.0;
-    const Scalar yMax = 1/3.0;
-    const unsigned n = 40;
+        std::vector<Scalar> x_samples(m);
+        std::vector<Scalar> y_samples(n);
+        std::vector<std::vector<Scalar>> data(m, std::vector<Scalar>(n));
 
-    std::vector<Scalar> x_samples(m);
-    std::vector<Scalar> y_samples(n);
-    std::vector<std::vector<Scalar>> data(m, std::vector<Scalar>(n));
+        for (unsigned i = 0; i < m; ++i) {
+            x_samples[i] = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
 
-    for (unsigned i = 0; i < m; ++i) {
-        x_samples[i] = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
-
-        for (unsigned j = 0; j < n; ++j) {
-            y_samples[j] = yMin + Scalar(j)/(n -1) * (yMax - yMin);
-            data[i][j] = f(x_samples[i], y_samples[j]);
+            for (unsigned j = 0; j < n; ++j) {
+                y_samples[j] = yMin + Scalar(j)/(n -1) * (yMax - yMin);
+                data[i][j] = f(x_samples[i], y_samples[j]);
+            }
         }
+
+        auto tab = std::make_shared<Opm::XYTabulated2DFunction<Scalar>>(x_samples, y_samples, data, true, true);
+
+        return tab;
     }
 
-    auto tab = std::make_shared<Opm::XYTabulated2DFunction<Scalar>>(x_samples, y_samples, data, true, true);
+    template <class Fn, class Table>
+    bool compareTableWithAnalyticFn(const Table& table,
+                                    Scalar xMin,
+                                    Scalar xMax,
+                                    unsigned numX,
 
-    return tab;
-}
+                                    Scalar yMin,
+                                    Scalar yMax,
+                                    unsigned numY,
 
-template <class Fn, class Table>
-bool compareTableWithAnalyticFn(const Table& table,
-                                Scalar xMin,
-                                Scalar xMax,
-                                unsigned numX,
+                                    Fn& f,
+                                    Scalar tolerance = 1e-8)
+    {
+        // make sure that the tabulated function evaluates to the same thing as the analytic
+        // one (modulo tolerance)
+        for (unsigned i = 1; i <= numX; ++i) {
+            Scalar x = xMin + Scalar(i)/numX*(xMax - xMin);
 
-                                Scalar yMin,
-                                Scalar yMax,
-                                unsigned numY,
+            for (unsigned j = 0; j < numY; ++j) {
+                Scalar y = yMin + Scalar(j)/numY*(yMax - yMin);
+                if (std::abs(table->eval(x, y) - f(x, y)) > tolerance) {
+                    std::cerr << __FILE__ << ":" << __LINE__ << ": table->eval("<<x<<","<<y<<") != f("<<x<<","<<y<<"): " << table->eval(x,y) << " != " << f(x,y) << "\n";
+                    return false;
+                }
+            }
+        }
 
-                                Fn& f,
-                                Scalar tolerance = 1e-8)
-{
-    // make sure that the tabulated function evaluates to the same thing as the analytic
-    // one (modulo tolerance)
-    for (unsigned i = 1; i <= numX; ++i) {
-        Scalar x = xMin + Scalar(i)/numX*(xMax - xMin);
+        return true;
+    }
 
-        for (unsigned j = 0; j < numY; ++j) {
-            Scalar y = yMin + Scalar(j)/numY*(yMax - yMin);
-            if (std::abs(table->eval(x, y) - f(x, y)) > tolerance) {
-                std::cerr << __FILE__ << ":" << __LINE__ << ": table->eval("<<x<<","<<y<<") != f("<<x<<","<<y<<"): " << table->eval(x,y) << " != " << f(x,y) << "\n";
+    template <class Fn, class Table>
+    bool compareTableWithAnalyticFn2(const Table& table,
+                                     const Scalar xMin,
+                                     const Scalar xMax,
+                                     unsigned numX,
+                                     const Scalar yMin,
+                                     const Scalar yMax,
+                                     unsigned numY,
+
+                                     Fn& f,
+                                     Scalar tolerance = 1e-8)
+    {
+        // make sure that the tabulated function evaluates to the same thing as the analytic
+        // one (modulo tolerance)
+        for (unsigned i = 1; i <= numX; ++i) {
+            Scalar x = xMin + Scalar(i)/numX*(xMax - xMin);
+
+            for (unsigned j = 0; j < numY; ++j) {
+                Scalar y = yMin + Scalar(j)/numY*(yMax - yMin);
+                Scalar result;
+                table->eval(x, y, result);
+                if (std::abs(result - f(x, y)) > tolerance) {
+                    std::cerr << __FILE__ << ":" << __LINE__ << ": table->eval("<<x<<","<<y<<") != f("<<x<<","<<y<<"): " << result << " != " << f(x,y) << "\n";
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    template <class UniformTablePtr, class UniformXTablePtr, class Fn>
+    bool compareTables(const UniformTablePtr uTable,
+                       const UniformXTablePtr uXTable,
+                       Fn& f,
+                       Scalar tolerance = 1e-8)
+    {
+        // make sure the uniform and the non-uniform tables exhibit the same dimensions
+        if (std::abs(uTable->xMin() - uXTable->xMin()) > tolerance) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->xMin() != uXTable->xMin(): " << uTable->xMin() << " != " << uXTable->xMin() << "\n";
+            return false;
+        }
+        if (std::abs(uTable->xMax() - uXTable->xMax()) > tolerance) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->xMax() != uXTable->xMax(): " << uTable->xMax() << " != " << uXTable->xMax() << "\n";
+            return false;
+        }
+        if (uTable->numX() != uXTable->numX()) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->numX() != uXTable->numX(): " << uTable->numX() << " != " << uXTable->numX() << "\n";
+            return false;
+        }
+
+        for (unsigned i = 0; i < uTable->numX(); ++i) {
+            if (std::abs(uTable->yMin() - uXTable->yMin(i)) > tolerance) {
+                std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->yMin() != uXTable->yMin("<<i<<"): " << uTable->yMin() << " != " << uXTable->yMin(i) << "\n";
+                return false;
+            }
+
+            if (std::abs(uTable->yMax() - uXTable->yMax(i)) > tolerance) {
+                std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->yMax() != uXTable->yMax("<<i<<"): " << uTable->yMax() << " != " << uXTable->yMax(i) << "\n";
+                return false;
+            }
+
+            if (uTable->numY() != uXTable->numY(i)) {
+                std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->numY() != uXTable->numY("<<i<<"): " << uTable->numY() << " != " << uXTable->numY(i) << "\n";
                 return false;
             }
         }
-    }
 
-    return true;
-}
-
-template <class Fn, class Table>
-bool compareTableWithAnalyticFn2(const Table& table,
-                                 const Scalar xMin,
-                                 const Scalar xMax,
-                                 unsigned numX,
-                                 const Scalar yMin,
-                                 const Scalar yMax,
-                                 unsigned numY,
-
-                                 Fn& f,
-                                 Scalar tolerance = 1e-8)
-{
-    // make sure that the tabulated function evaluates to the same thing as the analytic
-    // one (modulo tolerance)
-    for (unsigned i = 1; i <= numX; ++i) {
-        Scalar x = xMin + Scalar(i)/numX*(xMax - xMin);
-
-        for (unsigned j = 0; j < numY; ++j) {
-            Scalar y = yMin + Scalar(j)/numY*(yMax - yMin);
-            Scalar result;
-            table->eval(x, y, result);
-            if (std::abs(result - f(x, y)) > tolerance) {
-                std::cerr << __FILE__ << ":" << __LINE__ << ": table->eval("<<x<<","<<y<<") != f("<<x<<","<<y<<"): " << result << " != " << f(x,y) << "\n";
+        // make sure that the x and y values are identical
+        for (unsigned i = 0; i < uTable->numX(); ++i) {
+            if (std::abs(uTable->iToX(i) - uXTable->iToX(i)) > tolerance) {
+                std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->iToX("<<i<<") != uXTable->iToX("<<i<<"): " << uTable->iToX(i) << " != " << uXTable->iToX(i) << "\n";
                 return false;
             }
-        }
-    }
 
-    return true;
-}
-
-template <class UniformTablePtr, class UniformXTablePtr, class Fn>
-bool compareTables(const UniformTablePtr uTable,
-                   const UniformXTablePtr uXTable,
-                   Fn& f,
-                   Scalar tolerance = 1e-8)
-{
-    // make sure the uniform and the non-uniform tables exhibit the same dimensions
-    if (std::abs(uTable->xMin() - uXTable->xMin()) > tolerance) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->xMin() != uXTable->xMin(): " << uTable->xMin() << " != " << uXTable->xMin() << "\n";
-        return false;
-    }
-    if (std::abs(uTable->xMax() - uXTable->xMax()) > tolerance) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->xMax() != uXTable->xMax(): " << uTable->xMax() << " != " << uXTable->xMax() << "\n";
-        return false;
-    }
-    if (uTable->numX() != uXTable->numX()) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->numX() != uXTable->numX(): " << uTable->numX() << " != " << uXTable->numX() << "\n";
-        return false;
-    }
-
-    for (unsigned i = 0; i < uTable->numX(); ++i) {
-        if (std::abs(uTable->yMin() - uXTable->yMin(i)) > tolerance) {
-            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->yMin() != uXTable->yMin("<<i<<"): " << uTable->yMin() << " != " << uXTable->yMin(i) << "\n";
-            return false;
-        }
-
-        if (std::abs(uTable->yMax() - uXTable->yMax(i)) > tolerance) {
-            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->yMax() != uXTable->yMax("<<i<<"): " << uTable->yMax() << " != " << uXTable->yMax(i) << "\n";
-            return false;
-        }
-
-        if (uTable->numY() != uXTable->numY(i)) {
-            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->numY() != uXTable->numY("<<i<<"): " << uTable->numY() << " != " << uXTable->numY(i) << "\n";
-            return false;
-        }
-    }
-
-    // make sure that the x and y values are identical
-    for (unsigned i = 0; i < uTable->numX(); ++i) {
-        if (std::abs(uTable->iToX(i) - uXTable->iToX(i)) > tolerance) {
-            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->iToX("<<i<<") != uXTable->iToX("<<i<<"): " << uTable->iToX(i) << " != " << uXTable->iToX(i) << "\n";
-            return false;
-        }
-
-        for (unsigned j = 0; j < uTable->numY(); ++j) {
-            if (std::abs(uTable->jToY(j) - uXTable->jToY(i, j)) > tolerance) {
-                std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->jToY("<<j<<") != uXTable->jToY("<<i<<","<<j<<"): " << uTable->jToY(i) << " != " << uXTable->jToY(i, j) << "\n";
-                return false;
+            for (unsigned j = 0; j < uTable->numY(); ++j) {
+                if (std::abs(uTable->jToY(j) - uXTable->jToY(i, j)) > tolerance) {
+                    std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->jToY("<<j<<") != uXTable->jToY("<<i<<","<<j<<"): " << uTable->jToY(i) << " != " << uXTable->jToY(i, j) << "\n";
+                    return false;
+                }
             }
         }
-    }
 
-    // check that the appicable range is correct. Note that due to rounding errors it is
-    // undefined whether the table applies to the boundary of the tabulated domain or not
-    Scalar xMin = uTable->xMin();
-    Scalar yMin = uTable->yMin();
-    Scalar xMax = uTable->xMax();
-    Scalar yMax = uTable->yMax();
+        // check that the appicable range is correct. Note that due to rounding errors it is
+        // undefined whether the table applies to the boundary of the tabulated domain or not
+        Scalar xMin = uTable->xMin();
+        Scalar yMin = uTable->yMin();
+        Scalar xMax = uTable->xMax();
+        Scalar yMax = uTable->yMax();
 
-    Scalar x = xMin - tolerance;
-    Scalar y = yMin - tolerance;
-    if (uTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
-    if (uXTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uXTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
+        Scalar x = xMin - tolerance;
+        Scalar y = yMin - tolerance;
+        if (uTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
+        if (uXTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uXTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
 
-    x = xMin - tolerance;
-    y = yMin + tolerance;
-    if (uTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
-    if (uXTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uXTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
+        x = xMin - tolerance;
+        y = yMin + tolerance;
+        if (uTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
+        if (uXTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uXTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
 
-    x = xMin + tolerance;
-    y = yMin - tolerance;
-    if (uTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
-    if (uXTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uXTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
+        x = xMin + tolerance;
+        y = yMin - tolerance;
+        if (uTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
+        if (uXTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uXTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
 
-    x = xMin + tolerance;
-    y = yMin + tolerance;
-    if (!uTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": !uTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
-    if (!uXTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": !uXTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
+        x = xMin + tolerance;
+        y = yMin + tolerance;
+        if (!uTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": !uTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
+        if (!uXTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": !uXTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
 
-    x = xMax + tolerance;
-    y = yMax + tolerance;
-    if (uTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
-    if (uXTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uXTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
+        x = xMax + tolerance;
+        y = yMax + tolerance;
+        if (uTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
+        if (uXTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uXTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
 
-    x = xMax - tolerance;
-    y = yMax + tolerance;
-    if (uTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
-    if (uXTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uXTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
+        x = xMax - tolerance;
+        y = yMax + tolerance;
+        if (uTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
+        if (uXTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uXTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
 
-    x = xMax + tolerance;
-    y = yMax - tolerance;
-    if (uTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
-    if (uXTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": uXTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
+        x = xMax + tolerance;
+        y = yMax - tolerance;
+        if (uTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
+        if (uXTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": uXTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
 
-    x = xMax - tolerance;
-    y = yMax - tolerance;
-    if (!uTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": !uTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
-    if (!uXTable->applies(x, y)) {
-        std::cerr << __FILE__ << ":" << __LINE__ << ": !uXTable->applies("<<x<<","<<y<<")\n";
-        return false;
-    }
+        x = xMax - tolerance;
+        y = yMax - tolerance;
+        if (!uTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": !uTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
+        if (!uXTable->applies(x, y)) {
+            std::cerr << __FILE__ << ":" << __LINE__ << ": !uXTable->applies("<<x<<","<<y<<")\n";
+            return false;
+        }
 
-    // make sure that the function values at the sampling points are identical and that
-    // they correspond to the analytic function
-    unsigned m2 = uTable->numX()*5;
-    unsigned n2 = uTable->numY()*5;
-    if (!compareTableWithAnalyticFn(uTable,
-                                    xMin, xMax, m2,
-                                    yMin, yMax, n2,
-                                    f,
-                                    tolerance))
-        return false;
-    if (!compareTableWithAnalyticFn(uXTable,
-                                    xMin, xMax, m2,
-                                    yMin, yMax, n2,
-                                    f,
-                                    tolerance))
-        return false;
+        // make sure that the function values at the sampling points are identical and that
+        // they correspond to the analytic function
+        unsigned m2 = uTable->numX()*5;
+        unsigned n2 = uTable->numY()*5;
+        if (!compareTableWithAnalyticFn(uTable,
+                                        xMin, xMax, m2,
+                                        yMin, yMax, n2,
+                                        f,
+                                        tolerance))
+            return false;
+        if (!compareTableWithAnalyticFn(uXTable,
+                                        xMin, xMax, m2,
+                                        yMin, yMax, n2,
+                                        f,
+                                        tolerance))
+            return false;
 
-    return true;
-}
+        return true;
+    }
 };
 
 
 template <class TestType>
-inline int testAll( const typename TestType::Scalar tolerance = 1e-6 )
+inline int testAll(const typename TestType::Scalar tolerance = 1e-6)
 {
     TestType test;
     auto uniformTab = test.createUniformTabulatedFunction(TestType::testFn1);
@@ -415,10 +414,10 @@ inline int testAll( const typename TestType::Scalar tolerance = 1e-6 )
 
     uniformXTab = test.createUniformXTabulatedFunction2(TestType::testFn3);
     if (!test.compareTableWithAnalyticFn(uniformXTab,
-                                    -2.0, 3.0, 100,
-                                    -4.0, 5.0, 100,
-                                    TestType::testFn3,
-                                    /*tolerance=*/1e-2))
+                                         -2.0, 3.0, 100,
+                                         -4.0, 5.0, 100,
+                                         TestType::testFn3,
+                                         /*tolerance=*/1e-2))
         return 1;
 
     {
@@ -434,19 +433,19 @@ inline int testAll( const typename TestType::Scalar tolerance = 1e-6 )
         const unsigned n = 170;
 
         // extrapolation and interpolation involved, the tolerance needs to be bigger
-        const ScalarType temp_tolerance = 1000. * tolerance;
+        const ScalarType tmpTolerance = 1000. * tolerance;
 
-        if (!test.compareTableWithAnalyticFn2(xytab, xMin, xMax, m, yMin, yMax, n, TestType::testFn1, temp_tolerance))
+        if (!test.compareTableWithAnalyticFn2(xytab, xMin, xMax, m, yMin, yMax, n, TestType::testFn1, tmpTolerance))
             return 1;
 
         xytab = test.createXYTabulated2DFunction(TestType::testFn2);
 
-        if (!test.compareTableWithAnalyticFn2(xytab, xMin, xMax, m, yMin, yMax, n, TestType::testFn2, temp_tolerance))
+        if (!test.compareTableWithAnalyticFn2(xytab, xMin, xMax, m, yMin, yMax, n, TestType::testFn2, tmpTolerance))
             return 1;
 
         xytab = test.createXYTabulated2DFunction(TestType::testFn3);
 
-        if (!test.compareTableWithAnalyticFn2(xytab, xMin, xMax, m, yMin, yMax, n, TestType::testFn3, temp_tolerance))
+        if (!test.compareTableWithAnalyticFn2(xytab, xMin, xMax, m, yMin, yMax, n, TestType::testFn3, tmpTolerance))
             return 1;
     }
 

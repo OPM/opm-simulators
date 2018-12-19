@@ -42,91 +42,69 @@
 namespace Opm {
 
 /*!
- * \brief Implements a scalar function that depends on two variables, which are sampled
- *        in X and Y directions with sampling points, respectively.
- *        The table might be able to be extrapolated in certian directions.
+ * \brief Implements a function that depends on two variables.
+ *
+ * The function is sampled in regular intervals in both directions, i.e., the
+ * interpolation cells are rectangles. The table can be specified to be extrapolated in
+ * either direction.
  */
-
 template <class Scalar>
 class XYTabulated2DFunction
 {
-
 public:
     XYTabulated2DFunction()
     { }
 
-    XYTabulated2DFunction(const std::vector<Scalar>& x_pos,
-                          const std::vector<Scalar>& y_pos,
-                          const std::vector<std::vector<Scalar> >& data,
-                          const bool x_extrapolate = false,
-                          const bool y_extrapolate = false)
-       : xPos_(x_pos)
-       , yPos_(y_pos)
+    template <class DataContainer>
+    XYTabulated2DFunction(const std::vector<Scalar>& xPos,
+                          const std::vector<Scalar>& yPos,
+                          const DataContainer& data,
+                          const bool xExtrapolate = false,
+                          const bool yExtrapolate = false)
+       : xPos_(xPos)
+       , yPos_(yPos)
        , samples_(data)
-       , xExtrapolate_(x_extrapolate)
-       , yExtrapolate_(y_extrapolate)
+       , xExtrapolate_(xExtrapolate)
+       , yExtrapolate_(yExtrapolate)
     {
-        // make sure the size is correct
-        if (numX() != samples_.size()) {
-            throw std::runtime_error("numX() is not equal to the number of rows of the sample points");
+#ifndef NDEBUG
+        // in debug mode, ensure that the x and y positions arrays are strictly
+        // mononically increasing.
+        for (unsigned i = 0; i < xPos.size() - 1; ++ i) {
+            if (xPos[i + 1] <= xPos[i])
+                throw std::runtime_error("The array for the x-positions is not strictly increasing!");
         }
 
-        for (unsigned ix = 0; ix < numX(); ++ix) {
-            if (samples_[ix].size() != numY()) {
+        for (unsigned i = 0; i < yPos.size() - 1; ++ i) {
+            if (yPos[i + 1] <= yPos[i])
+                throw std::runtime_error("The array for the y-positions is not strictly increasing!");
+        }
+#endif
+
+        // make sure the size is correct
+        if (numX() != samples_.size())
+            throw std::runtime_error("numX() is not equal to the number of rows of the sampling points");
+
+        for (unsigned xIdx = 0; xIdx < numX(); ++xIdx) {
+            if (samples_[xIdx].size() != numY()) {
                 std::ostringstream oss;
-                oss << "the " << ix << "th row of the sample points has different number of data from numY() ";
+                oss << "The " << xIdx << "-th row of the sampling points has different size than numY() ";
                 throw std::runtime_error(oss.str());
             }
         }
     }
 
     /*!
-     * \brief Evaluate the function at a given (x,y) position.
-     *
-     * If this method is called for a value outside of the tabulated
-     * range, and extrapolation is not allowed in the corresponding direction,
-     * a \c Opm::NumericalIssue exception is thrown.
+     * \brief Returns the number of sampling points in X direction.
      */
-    template <typename DataType>
-    void eval(const DataType& x, const DataType& y, DataType& result) const
-    {
-        if ( (!xExtrapolate_ && !appliesX(x)) ||
-             (!yExtrapolate_ && !appliesY(y)) ) {
-            std::ostringstream oss;
-            oss << "Attempt to get undefined table value (" << x << ", " << y << ")";
-            throw NumericalIssue(oss.str());
-        };
+    size_t numX() const
+    { return xPos_.size(); }
 
-        // bi-linear interpolation: first, calculate the x and y indices in the lookup
-        // table ...
-        const unsigned i = xSegmentIndex(x);
-        const unsigned j = ySegmentIndex(y);
-
-        // bi-linear interpolation / extrapolation
-        const DataType alpha = xToAlpha(x, i);
-        const DataType beta = yToBeta(y, j);
-
-        const DataType s1 = valueAt(i, j) * (1.0 - beta) + valueAt(i, j + 1) * beta;
-        const DataType s2 = valueAt(i + 1, j) * (1.0 - beta) + valueAt(i + 1, j + 1) * beta;
-
-        Valgrind::CheckDefined(s1);
-        Valgrind::CheckDefined(s2);
-
-        // ... and combine them using the x position
-        result = s1 * (1.0 - alpha) + s2 * alpha;
-        Valgrind::CheckDefined(result);
-    }
-
-private:
-    // the sampling points in the x-drection
-    std::vector<Scalar> xPos_;
-    // the sampling points in the y-drection
-    std::vector<Scalar> yPos_;
-    // data at the sampling points
-    std::vector<std::vector<Scalar> > samples_;
-
-    bool xExtrapolate_ = false;
-    bool yExtrapolate_ = false;
+    /*!
+     * \brief Returns the number of sampling points in Y direction.
+     */
+    size_t numY() const
+    { return yPos_.size(); }
 
     /*!
      * \brief Returns the minimum of the X coordinate of the sampling points.
@@ -159,82 +137,125 @@ private:
     { return samples_[i][j]; }
 
     /*!
+     * \brief Returns true if a coordinate lies in the tabulated range
+     */
+    template <class Evaluation>
+    bool applies(const Evaluation& x, const Evaluation& y) const
+    { return appliesX(x) && appliesY(y); }
+
+    /*!
      * \brief Returns true if a coordinate lies in the tabulated range on the x direction
      */
     template <class Evaluation>
     bool appliesX(const Evaluation& x) const
-    {
-        if (x < xMin() || xMax() < x) {
-            return false;
-        } else {
-            return true;
-        }
-    }
+    { return xMin() <= x && x <= xMax(); }
 
     /*!
      * \brief Returns true if a coordinate lies in the tabulated range on the y direction
      */
     template <class Evaluation>
     bool appliesY(const Evaluation& y) const
+    { return yMin() <= y && y <= yMax(); }
+
+
+    /*!
+     * \brief Evaluate the function at a given (x,y) position.
+     *
+     * If this method is called for a value outside of the tabulated
+     * range, and extrapolation is not allowed in the corresponding direction,
+     * a \c Opm::NumericalIssue exception is thrown.
+     */
+    template <typename Evaluation>
+    void eval(const Evaluation& x, const Evaluation& y, Evaluation& result) const
     {
-        if (y < yMin() || yMax() < y) {
-            return false;
-        } else {
-            return true;
-        }
+        if ((!xExtrapolate_ && !appliesX(x)) || (!yExtrapolate_ && !appliesY(y))) {
+            std::ostringstream oss;
+            oss << "Attempt to get undefined table value (" << x << ", " << y << ")";
+            throw NumericalIssue(oss.str());
+        };
+
+        // bi-linear interpolation: first, calculate the x and y indices in the lookup
+        // table ...
+        const unsigned i = xSegmentIndex_(x);
+        const unsigned j = ySegmentIndex_(y);
+
+        // bi-linear interpolation / extrapolation
+        const Evaluation alpha = xToAlpha(x, i);
+        const Evaluation beta = yToBeta(y, j);
+
+        const Evaluation s1 = valueAt(i, j) * (1.0 - beta) + valueAt(i, j + 1) * beta;
+        const Evaluation s2 = valueAt(i + 1, j) * (1.0 - beta) + valueAt(i + 1, j + 1) * beta;
+
+        Valgrind::CheckDefined(s1);
+        Valgrind::CheckDefined(s2);
+
+        // ... and combine them using the x position
+        result = s1 * (1.0 - alpha) + s2 * alpha;
+        Valgrind::CheckDefined(result);
     }
 
-    /*!
-     * \brief Returns the number of sampling points in X direction.
-     */
-    size_t numX() const
-    { return xPos_.size(); }
+private:
+    // the sampling points in the x-drection
+    std::vector<Scalar> xPos_;
+    // the sampling points in the y-drection
+    std::vector<Scalar> yPos_;
+    // data at the sampling points
+    std::vector<std::vector<Scalar> > samples_;
 
-    /*!
-     * \brief Returns the number of sampling points in Y direction.
-     */
-    size_t numY() const
-    { return yPos_.size(); }
+    bool xExtrapolate_ = false;
+    bool yExtrapolate_ = false;
 
     /*!
      * \brief Return the interval index of a given position on the x-axis.
      */
     template <class Evaluation>
-    unsigned xSegmentIndex(const Evaluation& x) const
+    unsigned xSegmentIndex_(const Evaluation& x) const
     {
         assert(xExtrapolate_ || appliesX(x) );
 
-        return segmentIndex(x, xPos_);
+        return segmentIndex_(x, xPos_);
     }
 
     /*!
      * \brief Return the interval index of a given position on the y-axis.
      */
     template <class Evaluation>
-    unsigned ySegmentIndex(const Evaluation& y) const
+    unsigned ySegmentIndex_(const Evaluation& y) const
     {
         assert(yExtrapolate_ || appliesY(y) );
 
-        return segmentIndex(y, yPos_);
+        return segmentIndex_(y, yPos_);
     }
 
 
     template <class Evaluation>
-    static unsigned segmentIndex(const Evaluation& y, const std::vector<Scalar>& pos)
+    static unsigned segmentIndex_(const Evaluation& v, const std::vector<Scalar>& vPos)
     {
+        const unsigned n = vPos.size();
+        assert(n >= 2);
 
-        const unsigned num_pos = pos.size();
-        assert(num_pos >= 2);
-
-        if (y <= pos.front() || num_pos == 2) {
+        if (v <= vPos.front() || n == 2)
             return 0;
-        } else if (y >= pos.back()) {
-            return num_pos - 2;
-        } else {
-            assert(num_pos >= 3);
+        else if (v >= vPos.back())
+            return n - 2;
 
-            return --std::lower_bound(pos.begin(), pos.end(), y) - pos.begin();
+        assert(n > 2 && v > vPos.front() && v < vPos.back());
+
+        // bisection. this assumes that the vPos array is strictly mononically
+        // increasing.
+        size_t lowerIdx = 0;
+        size_t upperIdx = vPos.size() - 1;
+        while (lowerIdx + 1 < upperIdx) {
+            size_t pivotIdx = (lowerIdx + upperIdx) / 2;
+            if (v < vPos[pivotIdx])
+                upperIdx = pivotIdx;
+            else
+                lowerIdx = pivotIdx;
         }
+
+        assert(vPos[lowerIdx] <= v);
+        assert(v <= vPos[lowerIdx + 1]);
+        return lowerIdx;
     }
 
     /*!
