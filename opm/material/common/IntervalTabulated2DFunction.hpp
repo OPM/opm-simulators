@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::XYTabulated2DFunction.hpp
+ * \copydoc Opm::IntervalTabulated2DFunction
  */
-#ifndef OPM_XY_TABULATED_2D_FUNCTION_HPP
-#define OPM_XY_TABULATED_2D_FUNCTION_HPP
+#ifndef OPM_INTERVAL_TABULATED_2D_FUNCTION_HPP
+#define OPM_INTERVAL_TABULATED_2D_FUNCTION_HPP
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Exceptions.hpp>
@@ -45,27 +45,26 @@ namespace Opm {
  * \brief Implements a function that depends on two variables.
  *
  * The function is sampled in regular intervals in both directions, i.e., the
- * interpolation cells are rectangles. The table can be specified to be extrapolated in
- * either direction.
+ * interpolation cells are rectangles. The table can be extrapolated in either direction.
  */
 template <class Scalar>
-class XYTabulated2DFunction
+class IntervalTabulated2DFunction
 {
 public:
-    XYTabulated2DFunction()
+    IntervalTabulated2DFunction()
     { }
 
     template <class DataContainer>
-    XYTabulated2DFunction(const std::vector<Scalar>& xPos,
-                          const std::vector<Scalar>& yPos,
-                          const DataContainer& data,
-                          const bool xExtrapolate = false,
-                          const bool yExtrapolate = false)
-       : xPos_(xPos)
-       , yPos_(yPos)
-       , samples_(data)
-       , xExtrapolate_(xExtrapolate)
-       , yExtrapolate_(yExtrapolate)
+    IntervalTabulated2DFunction(const std::vector<Scalar>& xPos,
+                                const std::vector<Scalar>& yPos,
+                                const DataContainer& data,
+                                const bool xExtrapolate = false,
+                                const bool yExtrapolate = false)
+        : xPos_(xPos)
+        , yPos_(yPos)
+        , samples_(data)
+        , xExtrapolate_(xExtrapolate)
+        , yExtrapolate_(yExtrapolate)
     {
 #ifndef NDEBUG
         // in debug mode, ensure that the x and y positions arrays are strictly
@@ -166,7 +165,7 @@ public:
      * a \c Opm::NumericalIssue exception is thrown.
      */
     template <typename Evaluation>
-    void eval(const Evaluation& x, const Evaluation& y, Evaluation& result) const
+    Evaluation eval(const Evaluation& x, const Evaluation& y) const
     {
         if ((!xExtrapolate_ && !appliesX(x)) || (!yExtrapolate_ && !appliesY(y))) {
             std::ostringstream oss;
@@ -190,8 +189,7 @@ public:
         Valgrind::CheckDefined(s2);
 
         // ... and combine them using the x position
-        result = s1 * (1.0 - alpha) + s2 * alpha;
-        Valgrind::CheckDefined(result);
+        return s1*(1.0 - alpha) + s2*alpha;
     }
 
 private:
