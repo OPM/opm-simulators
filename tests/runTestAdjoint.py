@@ -26,7 +26,8 @@ def main(argv=None):
     datadir = "%s/%s" % (args.datadir,args.case)
     deckfile = "%s/inputfiles/%s.DATA" % (datadir,args.case)
     adjoint_test_file = "%s/adjoint_results.txt" % (args.outputdir)
-    os.remove(adjoint_test_file);
+    if os.path.exists(adjoint_test_file):
+        os.remove(adjoint_test_file)
     print "************************************************************"
     scommand= "%s --output-dir=%s %s %s  " % (args.simulator, args.outputdir, options, deckfile)
     print scommand 
