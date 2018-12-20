@@ -161,9 +161,9 @@ namespace Opm {
                 model_->adjoint_serialize();
             }
 	    //Hopefully this is when wells is fully initialized
-	    if(param_.use_adjoint_){
+	    //if(param_.use_adjoint_){
 	      model_->serialize_well(true);
-	    }
+	      //}
 
 
             int iteration = 0;
