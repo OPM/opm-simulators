@@ -1456,7 +1456,7 @@ namespace Opm {
 	      filename = filename + "_pre";
 	    }
 	      
-            wellModel().printMatrixes();
+            //wellModel().printMatrixes();
             std::cout << "Serialize well " << filename << std::endl;
             // could be changed to binary: for wells not for now
             std::ofstream ofs(filename.c_str());
