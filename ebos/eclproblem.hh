@@ -744,6 +744,16 @@ public:
     }
 
     /*!
+     * \brief Return if the storage term of the first iteration is identical to the storage
+     *        term for the solution of the previous time step.
+     *
+     * For quite technical reasons, the storage term cannot be recycled if either DRSDT
+     * or DRVDT are active in ebos.
+     */
+    bool recycleFirstIterationStorage() const
+    { return !drsdtActive_() && !drvdtActive_(); }
+
+    /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
      */
     void beginIteration()
@@ -1364,26 +1374,36 @@ public:
      * \brief Returns the maximum value of the gas dissolution factor at the current time
      *        for a given degree of freedom.
      */
-    Scalar maxGasDissolutionFactor(unsigned globalDofIdx) const
+    Scalar maxGasDissolutionFactor(unsigned timeIdx, unsigned globalDofIdx) const
     {
         int pvtRegionIdx = pvtRegionIndex(globalDofIdx);
         if (!drsdtActive_() || maxDRs_[pvtRegionIdx] < 0.0)
             return std::numeric_limits<Scalar>::max()/2;
 
-        return lastRs_[globalDofIdx] + maxDRs_[pvtRegionIdx];
+        // this is a bit hacky because it assumes that a time discretization with only
+        // two time indices is used.
+        if (timeIdx == 0)
+            return lastRs_[globalDofIdx] + maxDRs_[pvtRegionIdx];
+        else
+            return lastRs_[globalDofIdx];
     }
 
     /*!
      * \brief Returns the maximum value of the oil vaporization factor at the current
      *        time for a given degree of freedom.
      */
-    Scalar maxOilVaporizationFactor(unsigned globalDofIdx) const
+    Scalar maxOilVaporizationFactor(unsigned timeIdx, unsigned globalDofIdx) const
     {
         int pvtRegionIdx = pvtRegionIndex(globalDofIdx);
         if (!drvdtActive_() || maxDRv_[pvtRegionIdx] < 0.0)
             return std::numeric_limits<Scalar>::max()/2;
 
-        return lastRv_[globalDofIdx] + maxDRv_[pvtRegionIdx];
+        // this is a bit hacky because it assumes that a time discretization with only
+        // two time indices is used.
+        if (timeIdx == 0)
+            return lastRv_[globalDofIdx] + maxDRv_[pvtRegionIdx];
+        else
+            return lastRv_[globalDofIdx];
     }
 
     /*!
