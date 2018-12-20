@@ -574,11 +574,11 @@ private:
 
             if ( candidate == trans_.end() )
             {
-                ++nnc;
                 std::ostringstream sstr;
-                sstr << "Cannot edit NNC from " << nnc->cell1 << " to " << nnc->cell2
+                sstr << "Cannot edit NNC from " << c1 << " to " << c2
                      << " as it does not exist";
                 Opm::OpmLog::warning(sstr.str());
+                ++nnc;
             }
             else
             {
