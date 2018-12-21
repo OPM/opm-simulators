@@ -91,6 +91,7 @@ class EclOutputBlackOilModule
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
+    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
 
     typedef std::vector<Scalar> ScalarBuffer;
 
@@ -216,6 +217,9 @@ public:
             }
         }
 
+        // always allocate memory for temperature
+        temperature_.resize(bufferSize, 0.0);
+
         // Only provide restart on restart steps
         if (!restartConfig.getWriteRestartFile(reportStepNum, log) || substep)
             return;
@@ -229,7 +233,6 @@ public:
         }
         // and oil pressure
         oilPressure_.resize(bufferSize, 0.0);
-        temperature_.resize(bufferSize, 0.0);
 
         if (FluidSystem::enableDissolvedGas())
             rs_.resize(bufferSize, 0.0);
@@ -384,7 +387,7 @@ public:
                 Opm::Valgrind::CheckDefined(oilPressure_[globalDofIdx]);
             }
 
-            if (temperature_.size() > 0) {
+            if (enableEnergy) {
                 temperature_[globalDofIdx] = Opm::getValue(fs.temperature(oilPhaseIdx));
                 Opm::Valgrind::CheckDefined(temperature_[globalDofIdx]);
             }
@@ -732,7 +735,7 @@ public:
             sol.insert("PRESSURE", Opm::UnitSystem::measure::pressure, std::move(oilPressure_), Opm::data::TargetType::RESTART_SOLUTION);
         }
 
-        if (temperature_.size() > 0) {
+        if (enableEnergy) {
             sol.insert("TEMP", Opm::UnitSystem::measure::temperature, std::move(temperature_), Opm::data::TargetType::RESTART_SOLUTION);
         }
 
@@ -960,7 +963,7 @@ public:
 
         if (oilPressure_.size() > 0 && sol.has("PRESSURE"))
             oilPressure_[elemIdx] = sol.data("PRESSURE")[globalDofIndex];
-        if (temperature_.size() > 0 && sol.has("TEMP"))
+        if (enableEnergy && sol.has("TEMP"))
             temperature_[elemIdx] = sol.data("TEMP")[globalDofIndex];
         if (rs_.size() > 0 && sol.has("RS"))
             rs_[elemIdx] = sol.data("RS")[globalDofIndex];
@@ -1018,7 +1021,7 @@ public:
             }
         }
 
-        if (temperature_.size() > 0)
+        if (enableEnergy)
             fs.setTemperature(temperature_[elemIdx]);
         if (rs_.size() > 0)
            fs.setRs(rs_[elemIdx]);
