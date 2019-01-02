@@ -1,3 +1,5 @@
+#include <opm/grid/utility/cartesianToCompressed.hpp>
+
 namespace Opm {
 
 
@@ -92,13 +94,23 @@ namespace Opm {
 
         assert( aquifersData.size() == aquifer_connection.size() );
 
+        // generate the mapping from Cartesian coordinates to the index in the actual grid
+        const auto& ugrid = simulator_.vanguard().grid();
+        const auto& gridView = simulator_.gridView();
+        const int number_of_cells = gridView.size(0);
+
+        cartesian_to_compressed_ = cartesianToCompressed(number_of_cells,
+                                                         Opm::UgGridHelpers::globalCell(ugrid));
 
         for (size_t i = 0; i < aquifersData.size(); ++i)
         {
             aquifers_.push_back(
-                                  AquiferCarterTracy<TypeTag> (aquifersData.at(i), aquifer_connection.at(i), this->simulator_)
+               AquiferCarterTracy<TypeTag> (aquifersData.at(i),
+                    aquifer_connection.at(i), cartesian_to_compressed_, this->simulator_)
                                );
         }
+
+
     }
 
     template<typename TypeTag>
