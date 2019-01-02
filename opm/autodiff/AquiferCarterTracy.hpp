@@ -295,10 +295,10 @@ namespace Opm
                 cellToConnectionIdx_.resize(ebos_simulator_.gridView().size(/*codim=*/0), -1);
                 for (size_t idx = 0; idx < cell_idx_.size(); ++idx)
                 {
-                    cellToConnectionIdx_[cell_idx_[idx]] = idx;
-
                     const int cell_index = cartesian_to_compressed_.at(cell_idx_[idx]);
-                    auto cellFacesRange = cell2Faces[cell_index];
+                    cellToConnectionIdx_[cell_index] = idx;
+
+                    const auto cellFacesRange = cell2Faces[cell_index];
                     for(auto cellFaceIter = cellFacesRange.begin(); cellFaceIter != cellFacesRange.end(); ++cellFaceIter)
                     {
                         // The index of the face in the compressed grid
