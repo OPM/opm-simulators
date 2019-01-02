@@ -269,7 +269,8 @@ add_test_compareECLFiles(CASENAME msw_model_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR model1)
+                         DIR model1
+                         TEST_ARGS --use-multisegment-well=true)
 
 add_test_compareECLFiles(CASENAME base_model_1
                          FILENAME BASE_MODEL_1
