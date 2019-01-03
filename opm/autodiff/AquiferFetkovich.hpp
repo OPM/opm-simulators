@@ -33,6 +33,7 @@ along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <vector>
 #include <algorithm>
+#include <unordered_map>
 
 namespace Opm
 {
@@ -64,9 +65,11 @@ namespace Opm
 
     AquiferFetkovich( const Aquifetp::AQUFETP_data& aqufetp_data,
       const Aquancon::AquanconOutput& connection,
+      const std::unordered_map<int, int>& cartesian_to_compressed,
       const Simulator& ebosSimulator)
       : ebos_simulator_ (ebosSimulator)
       , aqufetp_data_ (aqufetp_data)
+      , cartesian_to_compressed_(cartesian_to_compressed)
       , connection_ (connection)
       {}
 
@@ -125,6 +128,7 @@ namespace Opm
         }
       private:
         const Simulator& ebos_simulator_;
+        const std::unordered_map<int, int>& cartesian_to_compressed_;
 
         // Grid variables
         std::vector<size_t> cell_idx_;
@@ -263,9 +267,9 @@ namespace Opm
             cellToConnectionIdx_.resize(ebos_simulator_.gridView().size(/*codim=*/0), -1);
             for (size_t idx = 0; idx < cell_idx_.size(); ++idx)
             {
-              cellToConnectionIdx_[cell_idx_[idx]] = idx;
-
-              auto cellFacesRange = cell2Faces[cell_idx_.at(idx)];
+              const int cell_index = cartesian_to_compressed_.at(cell_idx_[idx]);
+              cellToConnectionIdx_[cell_index] = idx;
+              const auto cellFacesRange = cell2Faces[cell_index];
               for(auto cellFaceIter = cellFacesRange.begin(); cellFaceIter != cellFacesRange.end(); ++cellFaceIter)
               {
                 // The index of the face in the compressed grid

@@ -151,10 +151,17 @@ namespace Opm {
       std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
 
       assert( aquifersData.size() == aquifer_connection.size() );
+      const auto& ugrid = simulator_.vanguard().grid();
+      const auto& gridView = simulator_.gridView();
+      const int number_of_cells = gridView.size(0);
+
+      cartesian_to_compressed_ = cartesianToCompressed(number_of_cells,
+                                                       Opm::UgGridHelpers::globalCell(ugrid));
+
       for (size_t i = 0; i < aquifersData.size(); ++i)
       {
         aquifers_Fetkovich.push_back(
-          AquiferFetkovich<TypeTag> (aquifersData.at(i), aquifer_connection.at(i), this->simulator_)
+          AquiferFetkovich<TypeTag> (aquifersData.at(i), aquifer_connection.at(i),cartesian_to_compressed_, this->simulator_)
         );
       }
     }
