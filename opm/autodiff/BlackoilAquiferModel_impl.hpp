@@ -124,6 +124,10 @@ namespace Opm {
       std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
 
       assert( aquifersData.size() == aquifer_connection.size() );
+      const auto& ugrid = simulator_.vanguard().grid();
+      const auto& gridView = simulator_.gridView();
+      const int number_of_cells = gridView.size(0);
+
       cartesian_to_compressed_ = cartesianToCompressed(number_of_cells,
                                                        Opm::UgGridHelpers::globalCell(ugrid));
 
