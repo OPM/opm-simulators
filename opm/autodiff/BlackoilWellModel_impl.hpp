@@ -540,8 +540,9 @@ namespace Opm {
                     }
                 }
 
-                // Use the pvtRegionIdx from the top cell
-                const int well_cell_top = wells()->well_cells[wells()->well_connpos[w]];
+                // Use the pvtRegionIdx from the top cell, or cell 0 if there are no perforations.
+                const bool has_perf = wells()->well_connpos[w] < wells()->well_connpos[w + 1];
+                const int well_cell_top = has_perf ? (wells()->well_cells[wells()->well_connpos[w]]) : 0;
                 const int pvtreg = pvt_region_idx_[well_cell_top];
 
                 if ( !well_ecl->isMultiSegment(time_step) || !param_.use_multisegment_well_) {
