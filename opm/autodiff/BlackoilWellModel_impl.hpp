@@ -1536,22 +1536,26 @@ namespace Opm {
 
                         well_controls_iset_distr(ctrl, rctrl, & distr[0]);
 
-                        // for the WCONHIST wells, we need to calculate the rates
-                        const WellMap::const_iterator i = wmap.find(wells()->name[*rp]);
+                        // for the WCONHIST wells, we need to calculate the RESV rates since it can not be specified directly
+                        if (is_producer) {
+                            const WellMap::const_iterator i = wmap.find(wells()->name[*rp]);
 
-                        if (i == wmap.end()) {
-                            OPM_THROW(std::runtime_error, "Failed to find the well " << wells()->name[*rp] << " in wmap.");
+                            if (i == wmap.end()) {
+                                OPM_THROW(std::runtime_error, "Failed to find the well " << wells()->name[*rp] << " in wmap.");
+                            }
+                            const auto* wp = i->second;
+                            const WellProductionProperties& production_properties = wp->getProductionProperties(step);
+                            // historical phase rates
+                            std::vector<double> hrates(np);
+                            SimFIBODetails::historyRates(phase_usage_, production_properties, hrates);
+
+                            std::vector<double> hrates_resv(np);
+                            rateConverter_->calcReservoirVoidageRates(fipreg, pvtreg, hrates, hrates_resv);
+
+                            const double target = -std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
+
+                            well_controls_iset_target(ctrl, rctrl, target);
                         }
-                        // not handling injector for now
-                        const auto* wp = i->second;
-                        const WellProductionProperties& production_properties = wp->getProductionProperties(step);
-                        // historical phase rates
-                        std::vector<double> hrates(np);
-                        SimFIBODetails::historyRates(phase_usage_, production_properties, hrates);
-
-                        const double target = - std::inner_product(distr.begin(), distr.end(),
-                                                                   hrates.begin(), 0.0);
-                        well_controls_iset_target(ctrl, rctrl, target);
                     }
                 }
             }
