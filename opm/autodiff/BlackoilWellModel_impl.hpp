@@ -663,7 +663,7 @@ namespace Opm {
         // Set the well primary variables based on the value of well solutions
         initPrimaryVariablesEvaluation();
 
-        if ( (param_.solve_welleq_initially_ && iterationIdx == 0) || solve_well_equation) {
+        if ( (param_.solve_welleq_initially_ && iterationIdx == 0) && solve_well_equation) {
             // solve the well equations as a pre-processing step
             last_report_ = solveWellEq(dt);
 
