@@ -40,7 +40,6 @@
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Unused.hpp>
 
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -628,10 +627,9 @@ inline void testAll()
     static constexpr int waterCompIdx = FluidSystem::waterCompIdx;
 
     Opm::Parser parser;
-    Opm::ParseContext parseContext;
 
-    auto deck = parser.parseString(deckString1, parseContext);
-    Opm::EclipseState eclState(deck, parseContext);
+    auto deck = parser.parseString(deckString1);
+    Opm::EclipseState eclState(deck);
 
     FluidSystem::initFromDeck(deck, eclState);
 
