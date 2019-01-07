@@ -1489,11 +1489,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeRESV(const std::size_t step)
     {
-        typedef SimFIBODetails::WellMap WellMap;
 
-        const WellMap& wmap = SimFIBODetails::mapWells(wells_ecl_);
-
-        const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells(), step, wmap);
+        const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells());
 
         int global_number_resv_wells = resv_wells.size();
         global_number_resv_wells = ebosSimulator_.gridView().comm().sum(global_number_resv_wells);
@@ -1503,6 +1500,8 @@ namespace Opm {
         }
 
         if (! resv_wells.empty()) {
+            typedef SimFIBODetails::WellMap WellMap;
+            const WellMap& wmap = SimFIBODetails::mapWells(wells_ecl_);
 
             for (std::vector<int>::const_iterator
                      rp = resv_wells.begin(), e = resv_wells.end();
@@ -1529,7 +1528,7 @@ namespace Opm {
                             // original distr contains 0 and 1 to indicate phases under control
                             const double* old_distr = well_controls_get_current_distr(ctrl);
 
-                            for (size_t p = 0; p < np; ++p) {
+                            for (int p = 0; p < np; ++p) {
                                 distr[p] *= old_distr[p];
                             }
                         }
