@@ -2731,7 +2731,6 @@ namespace Opm
         // However, when group control is involved, change of the rates might impacts other wells
         // so iterations on a higher level will be required. Some investigation might be needed when
         // we face problems under THP control.
-        assert(false);
         assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
 
         const ValueType aqua = rates[Water];
