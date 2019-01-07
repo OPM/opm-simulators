@@ -129,6 +129,7 @@ public:
         const auto& cartMapper = vanguard_.cartesianIndexMapper();
         const auto& eclState = vanguard_.eclState();
         const auto& eclGrid = eclState.getInputGrid();
+        const auto& cartDims = cartMapper.cartesianDimensions();
         auto& transMult = eclState.getTransMult();
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
@@ -323,7 +324,16 @@ public:
 
                 // apply the full face transmissibility multipliers
                 // for the inside ...
-                applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
+
+                // The MULTZ needs special case if the option is ALL
+                // Then the smallest multiplier is applied.
+                // Default is to apply the top and bottom multiplier
+                bool useSmallestMultiplier = eclGrid.getMultzOption() == Opm::PinchMode::ModeEnum::ALL;
+                if (useSmallestMultiplier) {
+                    applyAllZMultipliers_(trans, insideFaceIdx, insideCartElemIdx, outsideCartElemIdx, transMult, cartDims);
+                } else {
+                    applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
+                }
                 // ... and outside elements
                 applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
 
@@ -423,6 +433,29 @@ private:
                 trans.second = 0.0;
             }
         }
+    }
+
+    void applyAllZMultipliers_(Scalar& trans, unsigned insideFaceIdx, unsigned insideCartElemIdx, unsigned outsideCartElemIdx,
+                               const Opm::TransMult& transMult, const std::array<int, dimWorld>& cartDims){
+
+        if (insideFaceIdx > 3) { //TOP or BOTTOM
+            Scalar mult = 1e20;
+            unsigned cartElemIdx = insideCartElemIdx;
+            // pick the smallest multiplier while looking down the pillar untill reaching the other end of the connection
+            // for the inbetween cells we apply it from both sides
+            while (cartElemIdx != outsideCartElemIdx) {
+                if (insideFaceIdx == 4 || cartElemIdx !=insideCartElemIdx  )
+                    mult = std::min(mult, transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZMinus));
+                if (insideFaceIdx == 5 || cartElemIdx !=insideCartElemIdx)
+                    mult = std::min(mult, transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZPlus));
+
+                cartElemIdx += cartDims[0]*cartDims[1];
+            }
+            trans *= mult;
+        } else {
+            applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
+        }
+
     }
 
     void updateFromEclState_(){
