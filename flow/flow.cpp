@@ -211,6 +211,13 @@ int main(int argc, char** argv)
         }
         const auto& phases = Opm::Runspec(*deck).phases();
 
+        if (errorGuard) {
+            errorGuard.dump();
+            errorGuard.clear();
+
+            throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
+        }
+
         // run the actual simulator
         //
         // TODO: make sure that no illegal combinations like thermal and twophase are
