@@ -33,6 +33,7 @@
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
+#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -211,6 +212,7 @@ public:
         tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
         tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
         Opm::ParseContext parseContext(tmp);
+        Opm::ErrorGuard errorGuard;
 
         const std::string ignoredKeywords = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
         if (ignoredKeywords.size() > 0) {
@@ -231,8 +233,8 @@ public:
                 std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
 
             Opm::Parser parser;
-            internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName , parseContext)));
-            internalEclState_.reset(new Opm::EclipseState(*internalDeck_, parseContext));
+            internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName , parseContext, errorGuard)));
+            internalEclState_.reset(new Opm::EclipseState(*internalDeck_, parseContext, errorGuard));
 
             deck_ = &(*internalDeck_);
             eclState_ = &(*internalEclState_);
@@ -249,7 +251,7 @@ public:
             // create the schedule object. Note that if eclState is supposed to represent
             // the internalized version of the deck, this constitutes a layering
             // violation.
-            internalEclSchedule_.reset(new Opm::Schedule(*deck_, *eclState_, parseContext));
+            internalEclSchedule_.reset(new Opm::Schedule(*deck_, *eclState_, parseContext, errorGuard));
             eclSchedule_ = &(*internalEclSchedule_);
         }
         else
@@ -262,12 +264,20 @@ public:
             internalEclSummaryConfig_.reset(new Opm::SummaryConfig(*deck_,
                                                                    *eclSchedule_,
                                                                    eclState_->getTableManager(),
-                                                                   parseContext));
+                                                                   parseContext,
+                                                                   errorGuard));
 
             eclSummaryConfig_ = &(*internalEclSummaryConfig_);
         }
         else
             eclSummaryConfig_ = externalEclSummaryConfig_;
+
+        if (errorGuard) {
+            errorGuard.dump();
+            errorGuard.clear();
+
+            throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
+        }
 
         // Possibly override IOConfig setting for how often RESTART files should get
         // written to disk (every N report step)
