@@ -35,7 +35,10 @@
 
 BEGIN_PROPERTIES
 
-NEW_PROP_TAG(NewtonSumTolerance);
+NEW_PROP_TAG(EclNewtonSumTolerance);
+NEW_PROP_TAG(EclNewtonStrictIterations);
+NEW_PROP_TAG(EclNewtonRelaxedVolumeFraction);
+NEW_PROP_TAG(EclNewtonRelaxedTolerance);
 
 END_PROPERTIES
 
@@ -75,8 +78,12 @@ public:
     EclNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {
         errorPvFraction_ = 1.0;
-        sumTolerance_ = EWOMS_GET_PARAM(TypeTag, Scalar, NewtonSumTolerance);
-        relaxedTolerance_ = 1e9;
+        relaxedMaxPvFraction_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonRelaxedVolumeFraction);
+
+        sumTolerance_ = 0.0; // this gets determined in the error calculation proceedure
+        relaxedTolerance_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonRelaxedTolerance);
+
+        numStrictIterations_ = EWOMS_GET_PARAM(TypeTag, int, EclNewtonStrictIterations);
     }
 
     /*!
@@ -86,10 +93,21 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, NewtonSumTolerance,
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclNewtonSumTolerance,
                              "The maximum error tolerated by the Newton"
                              "method for considering a solution to be "
                              "converged");
+        EWOMS_REGISTER_PARAM(TypeTag, int, EclNewtonStrictIterations,
+                             "The number of Newton iterations where the"
+                             " volumetric error is considered.");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclNewtonRelaxedVolumeFraction,
+                             "The fraction of the pore volume of the reservoir "
+                             "where the volumetric error may be voilated during "
+                             "strict Newton iterations.");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclNewtonRelaxedTolerance,
+                             "The maximum error which the volumetric residual "
+                             "may exhibit if it is in a 'relaxed' "
+                             "region during a strict iteration.");
     }
 
     /*!
@@ -98,9 +116,9 @@ public:
      */
     bool converged() const
     {
-        if (errorPvFraction_ < 0.03)
+        if (errorPvFraction_ < relaxedMaxPvFraction_)
             return (this->error_ < relaxedTolerance_ && errorSum_ < sumTolerance_) ;
-        else if (this->numIterations() > 8)
+        else if (this->numIterations() > numStrictIterations_)
             return (this->error_ < relaxedTolerance_ && errorSum_ < sumTolerance_) ;
 
         return this->error_ <= this->tolerance() && errorSum_ <= sumTolerance_;
@@ -180,7 +198,7 @@ public:
         // reservoir that exhibits 1 m^3 of pore volume. A reservoir with a total pore
         // volume of 10^3 m^3 will tolerate 10 times as much.
         sumTolerance_ =
-            EWOMS_GET_PARAM(TypeTag, Scalar, NewtonSumTolerance)
+            EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonSumTolerance)
             * std::cbrt(sumPv);
 
         // make sure that the error never grows beyond the maximum
@@ -203,8 +221,11 @@ private:
     Scalar errorSum_;
 
     Scalar relaxedTolerance_;
+    Scalar relaxedMaxPvFraction_;
 
     Scalar sumTolerance_;
+
+    int numStrictIterations_;
 };
 } // namespace Ewoms
 

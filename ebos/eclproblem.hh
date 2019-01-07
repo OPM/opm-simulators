@@ -236,13 +236,27 @@ SET_SCALAR_PROP(EclBaseProblem, EndTime, 1e100);
 // not millions of trillions of years, that is...)
 SET_SCALAR_PROP(EclBaseProblem, InitialTimeStepSize, 1e100);
 
-// set the tolerated amount of "incorrect" mass to ~1e-4 kg of oil per time step for a
-// reservoir that exhibits a pore volume of 1 m^3. larger reservoirs will tolerate larger
-// residuals.
-SET_SCALAR_PROP(EclBaseProblem, NewtonSumTolerance, 1e-4);
-
-// the default for the volumetric error for oil per second is 10^-2 kg/(m^3 * s).
+// the default for the allowed volumetric error for oil per second
 SET_SCALAR_PROP(EclBaseProblem, NewtonRawTolerance, 1e-2);
+
+// the tolerated amount of "incorrect" amount of oil per time step for the complete
+// reservoi. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
+// will tolerate larger residuals.
+SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumTolerance, 1e-3);
+
+// set number of Newton iterations where the volumetric residual is considered for
+// convergence
+SET_INT_PROP(EclBaseProblem, EclNewtonStrictIterations, 4);
+
+// set fraction of the pore volume where the volumetric residual may be violated during
+// strict Newton iterations
+SET_SCALAR_PROP(EclBaseProblem, EclNewtonRelaxedVolumeFraction, 0.03);
+
+// the maximum volumetric error of a cell in the relaxed region
+SET_SCALAR_PROP(EclBaseProblem, EclNewtonRelaxedTolerance, 1e9);
+
+// Ignore the maximum error mass for early termination of the newton method.
+SET_SCALAR_PROP(EclBaseProblem, NewtonMaxError, 10e9);
 
 // set the maximum number of Newton iterations to 14 because the likelyhood that a time
 // step succeeds at more than 14 Newton iteration is rather small
