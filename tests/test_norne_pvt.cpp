@@ -32,6 +32,7 @@
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
+#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
@@ -273,11 +274,12 @@ void verify_norne_oil_pvt_region2(const Opm::Deck& deck, const Opm::EclipseState
 
 BOOST_AUTO_TEST_CASE( Test_Norne_PVT) {
     Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
+    Opm::ErrorGuard errorGuard;
     Opm::Parser parser;
 
-    auto deck = parser.parseFile("norne_pvt.data", parseContext);
+    auto deck = parser.parseFile("norne_pvt.data", parseContext, errorGuard);
 
-    Opm::EclipseState eclState(deck, parseContext);
+    Opm::EclipseState eclState(deck, parseContext, errorGuard);
 
     verify_norne_oil_pvt_region1( deck, eclState );
     verify_norne_oil_pvt_region2( deck, eclState );
