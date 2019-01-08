@@ -159,7 +159,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/core/wells/WellCollection.hpp
   opm/core/wells/WellsGroup.hpp
   opm/core/wells/WellsManager.hpp
-  opm/core/wells/DynamicListEconLimited.hpp
   opm/core/wells/WellsManager_impl.hpp
   opm/simulators/ParallelFileMerger.hpp
   opm/simulators/WellSwitchingLogger.hpp

@@ -180,10 +180,6 @@ namespace Opm {
         wells_ecl_ = schedule().getWells(timeStepIdx);
 
         // Create wells and well state.
-        // Pass empty dynamicListEconLimited class
-        // The closing of wells due to limites is
-        // handled by the wellTestState class
-        DynamicListEconLimited dynamic_list_econ_limited;
         wells_manager_.reset( new WellsManager (eclState,
                                                 schedule(),
                                                 timeStepIdx,
@@ -193,7 +189,6 @@ namespace Opm {
                                                 Opm::UgGridHelpers::dimensions(grid),
                                                 Opm::UgGridHelpers::cell2Faces(grid),
                                                 Opm::UgGridHelpers::beginFaceCentroids(grid),
-                                                dynamic_list_econ_limited,
                                                 grid.comm().size() > 1,
                                                 defunct_well_names) );
 
@@ -432,8 +427,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     initFromRestartFile(const RestartValue& restartValues)
     {
-        // gives a dummy dynamic_list_econ_limited
-        DynamicListEconLimited dummyListEconLimited;
         const auto& defunctWellNames = ebosSimulator_.vanguard().defunctWellNames();
         WellsManager wellsmanager(eclState(),
                                   schedule(),
@@ -448,7 +441,6 @@ namespace Opm {
                                   Opm::UgGridHelpers::dimensions(grid()),
                                   Opm::UgGridHelpers::cell2Faces(grid()),
                                   Opm::UgGridHelpers::beginFaceCentroids(grid()),
-                                  dummyListEconLimited,
                                   grid().comm().size() > 1,
                                   defunctWellNames);
 
