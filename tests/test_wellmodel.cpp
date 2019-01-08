@@ -29,7 +29,6 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
@@ -69,15 +68,14 @@ struct SetupTest {
 
     SetupTest ()
     {
-        Opm::ParseContext parse_context;
         Opm::Parser parser;
-        auto deck = parser.parseFile("TESTWELLMODEL.DATA", parse_context);
-        ecl_state.reset(new Opm::EclipseState(deck , parse_context) );
+        auto deck = parser.parseFile("TESTWELLMODEL.DATA");
+        ecl_state.reset(new Opm::EclipseState(deck) );
         {
           const Opm::TableManager table ( deck );
           const Opm::Eclipse3DProperties eclipseProperties ( deck , table, ecl_state->getInputGrid());
           const Opm::Runspec runspec (deck);
-          schedule.reset( new Opm::Schedule(deck, ecl_state->getInputGrid(), eclipseProperties, runspec, parse_context ));
+          schedule.reset( new Opm::Schedule(deck, ecl_state->getInputGrid(), eclipseProperties, runspec));
         }
 
         // Create grid.
