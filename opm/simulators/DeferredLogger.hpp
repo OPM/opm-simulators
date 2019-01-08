@@ -28,6 +28,10 @@
 
 namespace Opm
 {
+    /** This class implements a deferred logger:
+     * 1) messages can be pushed back to a vector
+     * 2) a call to logMessages adds the messages to OpmLog backends
+     * */
 
     class DeferredLogger
     {
