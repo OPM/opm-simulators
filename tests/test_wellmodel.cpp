@@ -38,7 +38,6 @@
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/wells.h>
-#include <opm/core/wells/DynamicListEconLimited.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/grid/GridHelpers.hpp>
@@ -89,9 +88,6 @@ struct SetupTest {
         std::vector<int> compressed_to_cartesianIdx;
         Opm::createGlobalCellArray(grid, compressed_to_cartesianIdx);
 
-        // dummy_dynamic_list_econ_lmited
-        const Opm::DynamicListEconLimited dummy_dynamic_list;
-
         current_timestep = 0;
 
         // Create wells.
@@ -104,7 +100,6 @@ struct SetupTest {
                                                   Opm::UgGridHelpers::dimensions(grid),
                                                   Opm::UgGridHelpers::cell2Faces(grid),
                                                   Opm::UgGridHelpers::beginFaceCentroids(grid),
-                                                  dummy_dynamic_list,
                                                   false,
                                                   std::unordered_set<std::string>() ) );
 
