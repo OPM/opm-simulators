@@ -1944,14 +1944,17 @@ private:
             //////
             // set saturations
             //////
-            dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
-                                        waterSaturationData[cartesianDofIdx]);
-            dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
-                                        gasSaturationData[cartesianDofIdx]);
-            dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
-                                        1.0
-                                        - waterSaturationData[cartesianDofIdx]
-                                        - gasSaturationData[cartesianDofIdx]);
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
+                dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
+                                            waterSaturationData[cartesianDofIdx]);
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
+                dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
+                                            gasSaturationData[cartesianDofIdx]);
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
+                dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
+                                            1.0
+                                            - waterSaturationData[cartesianDofIdx]
+                                            - gasSaturationData[cartesianDofIdx]);
 
             //////
             // set phase pressures
@@ -1965,19 +1968,22 @@ private:
             MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
             Opm::Valgrind::CheckDefined(oilPressure);
             Opm::Valgrind::CheckDefined(pc);
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
                 dofFluidState.setPressure(phaseIdx, oilPressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
+            }
 
             if (FluidSystem::enableDissolvedGas())
                 dofFluidState.setRs(rsData[cartesianDofIdx]);
-            else
+            else if (Indices::gasEnabled && Indices::oilEnabled)
                 dofFluidState.setRs(0.0);
 
             if (FluidSystem::enableVaporizedOil())
                 dofFluidState.setRv(rvData[cartesianDofIdx]);
-            else
+            else if (Indices::gasEnabled && Indices::oilEnabled)
                 dofFluidState.setRv(0.0);
-
         }
     }
 
