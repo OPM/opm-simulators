@@ -18,7 +18,7 @@
 */
 
 
-#include "opm/simulators/DeferredLogger.hpp"
+#include <opm/simulators/DeferredLogger.hpp>
 
 namespace Opm
 {

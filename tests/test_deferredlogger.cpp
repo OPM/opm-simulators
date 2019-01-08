@@ -62,7 +62,8 @@ BOOST_AUTO_TEST_CASE(deferredlogger)
         + Log::prefixMessage(Log::MessageType::Debug, "debug 1") + "\n"
         + Log::prefixMessage(Log::MessageType::Note, "note 1") + "\n"
         + Log::prefixMessage(Log::MessageType::Note, "note 2") + "\n"
-        + Log::prefixMessage(Log::MessageType::Note, "note 3") + "\n";
+        + Log::prefixMessage(Log::MessageType::Note, "note 3") + "\n"
+        + Log::prefixMessage(Log::MessageType::Note, "Message limit reached for message tag: tagme") + "\n";
 
     std::ostringstream log_stream;
     initLogger(log_stream);
@@ -77,6 +78,11 @@ BOOST_AUTO_TEST_CASE(deferredlogger)
     deferredlogger.note("note 1");
     deferredlogger.note("tagme", "note 2");
     deferredlogger.note("tagme", "note 3");
+    deferredlogger.note("tagme", "note 3");
+    deferredlogger.note("tagme", "note 3");
+    deferredlogger.note("tagme", "note 3");
+    deferredlogger.note("tagme", "note 3");
+    deferredlogger.note("tagme", "note 3");
 
     deferredlogger.logMessages();
 
@@ -87,7 +93,7 @@ BOOST_AUTO_TEST_CASE(deferredlogger)
     BOOST_CHECK_EQUAL( 1 , counter->numMessages(Log::MessageType::Problem) );
     BOOST_CHECK_EQUAL( 1 , counter->numMessages(Log::MessageType::Bug) );
     BOOST_CHECK_EQUAL( 1 , counter->numMessages(Log::MessageType::Debug) );
-    BOOST_CHECK_EQUAL( 3 , counter->numMessages(Log::MessageType::Note) );
+    BOOST_CHECK_EQUAL( 8 , counter->numMessages(Log::MessageType::Note) );
 
     BOOST_CHECK_EQUAL(log_stream.str(), expected);
 
