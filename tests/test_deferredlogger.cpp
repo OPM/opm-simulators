@@ -62,17 +62,17 @@ BOOST_AUTO_TEST_CASE(deferredlogger)
 
     std::ostringstream log_stream;
     initLogger(log_stream);
-    auto logger = Opm::DeferredLogger();
-    logger.info("info 1");
-    logger.warning("warning 1");
-    logger.error("error 1");
-    logger.error("error 2");
-    logger.problem("problem 1");
-    logger.bug("bug 1");
-    logger.debug("debug 1");
-    logger.note("note 1");
+    auto deferredlogger = Opm::DeferredLogger();
+    deferredlogger.info("info 1");
+    deferredlogger.warning("warning 1");
+    deferredlogger.error("error 1");
+    deferredlogger.error("error 2");
+    deferredlogger.problem("problem 1");
+    deferredlogger.bug("bug 1");
+    deferredlogger.debug("debug 1");
+    deferredlogger.note("note 1");
 
-    logger.logMessages();
+    deferredlogger.logMessages();
 
     auto counter = OpmLog::getBackend<CounterLog>("COUNTER");
     BOOST_CHECK_EQUAL( 1 , counter->numMessages(Log::MessageType::Warning) );
