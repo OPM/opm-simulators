@@ -40,6 +40,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/wells/well_controls.c
   opm/core/wells/wells.c
   opm/simulators/WellSwitchingLogger.cpp
+  opm/simulators/DeferredLogger.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
@@ -57,6 +58,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_multmatrixtransposed.cpp
   tests/test_wellmodel.cpp
   tests/test_wellswitchlogger.cpp
+  tests/test_deferredlogger.cpp
   tests/test_timer.cpp
   tests/test_invert.cpp
   tests/test_wells.cpp
