@@ -47,7 +47,6 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -224,10 +223,9 @@ inline void testAll()
     static const Scalar tolerance = std::numeric_limits<Scalar>::epsilon()*1e3;
 
     Opm::Parser parser;
-    Opm::ParseContext parseContext;
 
-    auto deck = parser.parseString(deckString1, parseContext);
-    Opm::EclipseState eclState(deck, parseContext);
+    auto deck = parser.parseString(deckString1);
+    Opm::EclipseState eclState(deck);
 
     const auto& pvtwKeyword = deck.getKeyword("PVTW");
     size_t numPvtRegions = pvtwKeyword.size();

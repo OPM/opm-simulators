@@ -37,7 +37,6 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -428,14 +427,13 @@ inline void testAll()
                                          /*storeEnthalpy=*/false> FluidState;
 
     Opm::Parser parser;
-    Opm::ParseContext parseContext;
 
     {
         typedef Opm::EclMaterialLawManager<MaterialTraits> MaterialLawManager;
         typedef typename MaterialLawManager::MaterialLaw MaterialLaw;
 
-        const auto deck = parser.parseString(fam1DeckString, parseContext);
-        const Opm::EclipseState eclState(deck, parseContext);
+        const auto deck = parser.parseString(fam1DeckString);
+        const Opm::EclipseState eclState(deck);
         const auto& eclGrid = eclState.getInputGrid();
 
         size_t n = eclGrid.getCartesianSize();
@@ -454,8 +452,8 @@ inline void testAll()
             throw std::logic_error("Discrepancy between the deck and the EclMaterialLawManager");
 
         {
-            const auto fam2Deck = parser.parseString(fam2DeckString, parseContext);
-            const Opm::EclipseState fam2EclState(fam2Deck, parseContext);
+            const auto fam2Deck = parser.parseString(fam2DeckString);
+            const Opm::EclipseState fam2EclState(fam2Deck);
 
             Opm::EclMaterialLawManager<MaterialTraits> fam2MaterialLawManager;
             fam2MaterialLawManager.initFromDeck(fam2Deck, fam2EclState, compressedToCartesianIdx);
@@ -466,8 +464,8 @@ inline void testAll()
             if (fam2MaterialLawManager.enableHysteresis())
                 throw std::logic_error("Discrepancy between the deck and the EclMaterialLawManager");
 
-            const auto hysterDeck = parser.parseString(hysterDeckString, parseContext);
-            const Opm::EclipseState hysterEclState(hysterDeck, parseContext);
+            const auto hysterDeck = parser.parseString(hysterDeckString);
+            const Opm::EclipseState hysterEclState(hysterDeck);
 
             Opm::EclMaterialLawManager<MaterialTraits> hysterMaterialLawManager;
             hysterMaterialLawManager.initFromDeck(hysterDeck, hysterEclState, compressedToCartesianIdx);
@@ -558,14 +556,14 @@ inline void testAll()
 
         // Gas oil
         {
-            const auto fam1Deck = parser.parseString(fam1DeckStringGasOil, parseContext);
-            const Opm::EclipseState fam1EclState(fam1Deck, parseContext);
+            const auto fam1Deck = parser.parseString(fam1DeckStringGasOil);
+            const Opm::EclipseState fam1EclState(fam1Deck);
 
             MaterialLawManager fam1materialLawManager;
             fam1materialLawManager.initFromDeck(fam1Deck, fam1EclState, compressedToCartesianIdx);
 
-            const auto fam2Deck = parser.parseString(fam2DeckStringGasOil, parseContext);
-            const Opm::EclipseState fam2EclState(fam2Deck, parseContext);
+            const auto fam2Deck = parser.parseString(fam2DeckStringGasOil);
+            const Opm::EclipseState fam2EclState(fam2Deck);
 
             Opm::EclMaterialLawManager<MaterialTraits> fam2MaterialLawManager;
             fam2MaterialLawManager.initFromDeck(fam2Deck, fam2EclState, compressedToCartesianIdx);
