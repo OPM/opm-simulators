@@ -47,7 +47,6 @@ NEW_PROP_TAG(MaxStrictIter);
 NEW_PROP_TAG(SolveWelleqInitially);
 NEW_PROP_TAG(UpdateEquationsScaling);
 NEW_PROP_TAG(UseUpdateStabilization);
-NEW_PROP_TAG(MatrixAddWellContributions);
 
 // parameters for multisegment wells
 NEW_PROP_TAG(TolerancePressureMsWells);
@@ -70,7 +69,6 @@ SET_INT_PROP(FlowModelParameters, MaxStrictIter, 8);
 SET_BOOL_PROP(FlowModelParameters, SolveWelleqInitially, true);
 SET_BOOL_PROP(FlowModelParameters, UpdateEquationsScaling, false);
 SET_BOOL_PROP(FlowModelParameters, UseUpdateStabilization, true);
-SET_BOOL_PROP(FlowModelParameters, MatrixAddWellContributions, false);
 SET_SCALAR_PROP(FlowModelParameters, TolerancePressureMsWells, 0.01 *1e5);
 SET_SCALAR_PROP(FlowModelParameters, MaxPressureChangeMsWells, 2.0 *1e5);
 SET_BOOL_PROP(FlowModelParameters, UseInnerIterationsMsWells, true);
@@ -150,9 +148,6 @@ namespace Opm
         /// The file name of the deck
         std::string deck_file_name_;
 
-        // Whether to add influences of wells between cells to the matrix and preconditioner matrix
-        bool matrix_add_well_contributions_;
-
         /// Construct from user parameters or defaults.
         BlackoilModelParametersEbos()
         {
@@ -175,7 +170,6 @@ namespace Opm
             solve_welleq_initially_ = EWOMS_GET_PARAM(TypeTag, bool, SolveWelleqInitially);
             update_equations_scaling_ = EWOMS_GET_PARAM(TypeTag, bool, UpdateEquationsScaling);
             use_update_stabilization_ = EWOMS_GET_PARAM(TypeTag, bool, UseUpdateStabilization);
-            matrix_add_well_contributions_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
 
             deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         }
@@ -201,7 +195,6 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, SolveWelleqInitially, "Fully solve the well equations before each iteration of the reservoir model");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UpdateEquationsScaling, "Update scaling factors for mass balance equations during the run");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseUpdateStabilization, "Try to detect and correct oscillations or stagnation during the Newton method");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, MatrixAddWellContributions, "Explicitly specify the influences of wells between cells in the Jacobian and preconditioner matrices");
         }
     };
 } // namespace Opm

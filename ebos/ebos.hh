@@ -54,7 +54,6 @@ SET_BOOL_PROP(EbosTypeTag, EnableExperiments, true);
 SET_TYPE_PROP(EbosTypeTag, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
 
 // set some properties that are only required by the well model
-SET_BOOL_PROP(EbosTypeTag, MatrixAddWellContributions, true);
 SET_BOOL_PROP(EbosTypeTag, EnableTerminalOutput, false);
 // flow's well model only works with surface volumes
 SET_BOOL_PROP(EbosTypeTag, BlackoilConserveSurfaceVolume, true);
@@ -125,7 +124,6 @@ public:
         EWOMS_HIDE_PARAM(TypeTag, SolveWelleqInitially);
         EWOMS_HIDE_PARAM(TypeTag, UpdateEquationsScaling);
         EWOMS_HIDE_PARAM(TypeTag, UseUpdateStabilization);
-        EWOMS_HIDE_PARAM(TypeTag, MatrixAddWellContributions);
         EWOMS_HIDE_PARAM(TypeTag, EnableTerminalOutput);
     }
 

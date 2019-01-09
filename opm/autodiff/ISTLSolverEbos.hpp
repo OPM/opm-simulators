@@ -233,47 +233,34 @@ protected:
 
         void scaleSystem()
         {
-            const bool matrix_cont_added = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-	    
-            if (matrix_cont_added) {
-                bool form_cpr = true;
-                if (parameters_.system_strategy_ == "quasiimpes") {
-                    weights_ = getQuasiImpesWeights();
-                } else if (parameters_.system_strategy_ == "trueimpes") {
-                    weights_ = getStorageWeights();
-                } else if (parameters_.system_strategy_ == "simple") {
-                    BlockVector bvec(1.0);
-                    weights_ = getSimpleWeights(bvec);
-                } else if (parameters_.system_strategy_ == "original") {
-                    BlockVector bvec(0.0);
-                    bvec[pressureEqnIndex] = 1;
-                    weights_ = getSimpleWeights(bvec);
-                } else {
-                    if (parameters_.system_strategy_ != "none") {
-                        OpmLog::warning("unknown_system_strategy", "Unknown linear solver system strategy: '" + parameters_.system_strategy_ + "', applying 'none' strategy.");
-                    }
-                    form_cpr = false;
-                }
-                if (parameters_.scale_linear_system_) {
-                    // also scale weights
-                    this->scaleEquationsAndVariables(weights_);
-                }
-                if (form_cpr && !(parameters_.cpr_use_drs_)) {
-                    scaleMatrixAndRhs(weights_);
-                }
-                if (weights_.size() == 0) {
-                    // if weights are not set cpr_use_drs_=false;
-                    parameters_.cpr_use_drs_ = false;
-                }
+            bool form_cpr = true;
+            if (parameters_.system_strategy_ == "quasiimpes") {
+                weights_ = getQuasiImpesWeights();
+            } else if (parameters_.system_strategy_ == "trueimpes") {
+                weights_ = getStorageWeights();
+            } else if (parameters_.system_strategy_ == "simple") {
+                BlockVector bvec(1.0);
+                weights_ = getSimpleWeights(bvec);
+            } else if (parameters_.system_strategy_ == "original") {
+                BlockVector bvec(0.0);
+                bvec[pressureEqnIndex] = 1;
+                weights_ = getSimpleWeights(bvec);
             } else {
-                if (parameters_.use_cpr_ && parameters_.cpr_use_drs_) {
-                   OpmLog::warning("DRS_DISABLE", "Disabling DRS as matrix does not contain well contributions");
+                if (parameters_.system_strategy_ != "none") {
+                    OpmLog::warning("unknown_system_strategy", "Unknown linear solver system strategy: '" + parameters_.system_strategy_ + "', applying 'none' strategy.");
                 }
+                form_cpr = false;
+            }
+            if (parameters_.scale_linear_system_) {
+                // also scale weights
+                this->scaleEquationsAndVariables(weights_);
+            }
+            if (form_cpr && !(parameters_.cpr_use_drs_)) {
+                scaleMatrixAndRhs(weights_);
+            }
+            if (weights_.size() == 0) {
+                // if weights are not set cpr_use_drs_=false;
                 parameters_.cpr_use_drs_ = false;
-                if (parameters_.scale_linear_system_) {
-                    // also scale weights
-                    this->scaleEquationsAndVariables(weights_);
-                }
             }
         }
 

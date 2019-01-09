@@ -2103,26 +2103,7 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
-        if (!this->isOperable()) return;
-
-        if ( param_.matrix_add_well_contributions_ )
-        {
-            // Contributions are already in the matrix itself
-            return;
-        }
-        assert( Bx_.size() == duneB_.N() );
-        assert( invDrw_.size() == invDuneD_.N() );
-
-        // Bx_ = duneB_ * x
-        duneB_.mv(x, Bx_);
-        // invDBx = invDuneD_ * Bx_
-        // TODO: with this, we modified the content of the invDrw_.
-        // Is it necessary to do this to save some memory?
-        BVectorWell& invDBx = invDrw_;
-        invDuneD_.mv(Bx_, invDBx);
-
-        // Ax = Ax - duneC_^T * invDBx
-        duneC_.mmtv(invDBx,Ax);
+        // nothing needs to be done here
     }
 
 

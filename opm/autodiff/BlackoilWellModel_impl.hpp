@@ -76,10 +76,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     addNeighbors(std::vector<NeighborSet>& neighbors) const
     {
-        if (!param_.matrix_add_well_contributions_) {
-            return;
-        }
-
         // Create cartesian to compressed mapping
         int last_time_step = schedule().getTimeMap().size() - 1;
         const auto& schedule_wells = schedule().getWells();
@@ -121,16 +117,6 @@ namespace Opm {
     {
         if (!localWellsActive())
             return;
-
-        if (!param_.matrix_add_well_contributions_) {
-            // if the well contributions are not supposed to be included explicitly in
-            // the matrix, we only apply the vector part of the Schur complement here.
-            for (const auto& well: well_container_) {
-                // r = r - duneC_^T * invDuneD_ * resWell_
-                well->apply(res);
-            }
-            return;
-        }
 
         for (const auto& well: well_container_) {
             well->addWellContributions(mat.istlMatrix());

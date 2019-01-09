@@ -181,12 +181,6 @@ namespace Opm
 
         virtual void  addWellContributions(Mat& mat) const override;
 
-        /// \brief Wether the Jacobian will also have well contributions in it.
-        virtual bool jacobianContainsWellContributions() const override
-        {
-            return param_.matrix_add_well_contributions_;
-        }
-
     protected:
 
         // protected functions from the Base class

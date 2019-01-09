@@ -374,6 +374,8 @@ namespace Opm {
             ebosSimulator_.model().linearizer().linearizeDomain();
             ebosSimulator_.problem().endIteration();
 
+            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
+            wellModel().addWellContributions(ebosJac.istlMatrix());
             return wellModel().lastReport();
         }
 
