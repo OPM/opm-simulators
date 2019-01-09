@@ -23,11 +23,9 @@
 #include <opm/autodiff/MatrixBlock.hpp>
 #include <opm/autodiff/BlackoilAmg.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
-#include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/MPIUtilities.hpp>
 #include <opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp>
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
-#include <opm/autodiff/AutoDiffHelpers.hpp>
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
@@ -68,7 +66,7 @@ namespace Opm
     ///                       vector block. It is used to guide the AMG coarsening.
     ///                       Default is zero.
     template <class TypeTag>
-    class ISTLSolverEbos : public NewtonIterationBlackoilInterface
+    class ISTLSolverEbos
     {
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
         typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
@@ -82,11 +80,9 @@ namespace Opm
     public:
         typedef Dune::AssembledLinearOperator< Matrix, Vector, Vector > AssembledLinearOperatorType;
 
-        typedef NewtonIterationBlackoilInterface :: SolutionVector  SolutionVector;
-
         static void registerParameters()
         {
-            NewtonIterationBlackoilInterleavedParameters::registerParameters<TypeTag>();
+            FlowLinearSolverParameters::registerParameters<TypeTag>();
         }
 
         /// Construct a system solver.
@@ -100,15 +96,8 @@ namespace Opm
             parameters_.template init<TypeTag>();
         }
 
-        const NewtonIterationBlackoilInterleavedParameters& parameters() const
+        const FlowLinearSolverParameters& parameters() const
         { return parameters_; }
-
-        // dummy method that is not implemented for this class
-        SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual&) const
-        {
-            OPM_THROW(std::logic_error,"This method is not implemented");
-            return SolutionVector();
-        }
 
         /// Solve the system of linear equations Ax = b, with A being the
         /// combined derivative matrix of the residual and b
@@ -396,7 +385,7 @@ namespace Opm
         boost::any parallelInformation_;
         bool isIORank_;
 
-        NewtonIterationBlackoilInterleavedParameters parameters_;
+        FlowLinearSolverParameters parameters_;
     }; // end ISTLSolver
 
 } // namespace Opm

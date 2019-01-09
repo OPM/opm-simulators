@@ -488,6 +488,7 @@ namespace Opm
         switch (prod_mode) {
         case ProductionSpecification::ORAT:
         case ProductionSpecification::WRAT:
+        case ProductionSpecification::GRAT:
         case ProductionSpecification::LRAT:
         case ProductionSpecification::RESV:
         {

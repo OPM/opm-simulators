@@ -144,13 +144,11 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
-foreach(SIM flow flow_legacy)
-  add_test_compareECLFiles(CASENAME spe1
-                           FILENAME SPE1CASE2
-                           SIMULATOR ${SIM}
-                           ABS_TOL ${abs_tol}
-                           REL_TOL ${coarse_rel_tol})
-endforeach()
+add_test_compareECLFiles(CASENAME spe1
+                         FILENAME SPE1CASE2
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol})
 
 add_test_compareECLFiles(CASENAME spe1_2p
                          FILENAME SPE1CASE2_2P
@@ -159,25 +157,12 @@ add_test_compareECLFiles(CASENAME spe1_2p
                          REL_TOL ${rel_tol}
                          DIR spe1)
 
-add_test_compareECLFiles(CASENAME spe1_2p
-                         FILENAME SPE1CASE2_2P
-                         SIMULATOR flow_legacy
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         DIR spe1)
-
 add_test_compareECLFiles(CASENAME spe1_oilgas
                          FILENAME SPE1CASE2_OILGAS
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
                          DIR spe1)
-
-add_test_compareECLFiles(CASENAME spe1
-                         FILENAME SPE1CASE1
-                         SIMULATOR flow_sequential
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME spe1
                          FILENAME SPE1CASE1
@@ -221,20 +206,11 @@ add_test_compareECLFiles(CASENAME spe3
                          REL_TOL ${coarse_rel_tol}
                          TEST_ARGS --tolerance-wells=1e-6 --flow-newton-max-iterations=20)
 
-add_test_compareECLFiles(CASENAME spe3
-                         FILENAME SPE3CASE1
-                         SIMULATOR flow_legacy
+add_test_compareECLFiles(CASENAME spe9
+                         FILENAME SPE9_CP_SHORT
+                         SIMULATOR flow 
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS tolerance_wells=1e-6 max_iter=20)
-
-foreach(SIM flow flow_legacy)
-  add_test_compareECLFiles(CASENAME spe9
-                           FILENAME SPE9_CP_SHORT
-                           SIMULATOR ${SIM}
-                           ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol})
-endforeach()
+                         REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME spe9group
                          FILENAME SPE9_CP_GROUP
@@ -262,6 +238,11 @@ add_test_compareECLFiles(CASENAME polymer_oilwater
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
+add_test_compareECLFiles(CASENAME polymer_injectivity
+                         FILENAME 2D_POLYMER_INJECTIVITY
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME polymer_simple2D
                          FILENAME 2D_THREEPHASE_POLY_HETER
@@ -288,7 +269,8 @@ add_test_compareECLFiles(CASENAME msw_model_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR model1)
+                         DIR model1
+                         TEST_ARGS --use-multisegment-well=true)
 
 add_test_compareECLFiles(CASENAME base_model_1
                          FILENAME BASE_MODEL_1
@@ -310,18 +292,16 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh ""
 # Cruder tolerances for the restarted tests
 set(abs_tol_restart 2e-1)
 set(rel_tol_restart 4e-5)
-foreach(sim flow flow_legacy)
-  add_test_compare_restarted_simulation(CASENAME spe1
-                                        FILENAME SPE1CASE2_ACTNUM
-                                        SIMULATOR ${sim}
-                                        ABS_TOL ${abs_tol_restart}
-                                        REL_TOL ${rel_tol_restart})
-  add_test_compare_restarted_simulation(CASENAME spe9
-                                        FILENAME SPE9_CP_SHORT
-                                        SIMULATOR ${sim}
-                                        ABS_TOL ${abs_tol_restart}
-                                        REL_TOL ${rel_tol_restart})
-endforeach()
+add_test_compare_restarted_simulation(CASENAME spe1
+                                      FILENAME SPE1CASE2_ACTNUM
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart})
+add_test_compare_restarted_simulation(CASENAME spe9
+                                      FILENAME SPE9_CP_SHORT
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart})
 
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
@@ -336,15 +316,13 @@ add_test_compareECLFiles(CASENAME norne
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
 
-foreach(sim flow flow_legacy)
-  add_test_compareECLFiles(CASENAME norne
-                           FILENAME NORNE_ATW2013
-                           SIMULATOR ${sim}
-                           ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol}
-                           PREFIX compareECLInitFiles
-                           DIR_PREFIX /init)
-endforeach()
+add_test_compareECLFiles(CASENAME norne
+                         FILENAME NORNE_ATW2013
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         PREFIX compareECLInitFiles
+                         DIR_PREFIX /init)
 
 # Parallel tests
 if(MPI_FOUND)
@@ -380,4 +358,5 @@ if(MPI_FOUND)
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${coarse_rel_tol_parallel})
+
 endif()

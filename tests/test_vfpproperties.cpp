@@ -35,7 +35,6 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/core/wells.h>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -592,8 +591,7 @@ VFPPROD \n\
 
     auto units = Opm::UnitSystem::newFIELD();
     Opm::Parser parser;
-    Opm::ParseContext parse_mode;
-    auto deck = parser.parseString(table_str, parse_mode);
+    auto deck = parser.parseString(table_str);
 
     BOOST_REQUIRE(deck.hasKeyword("VFPPROD"));
     BOOST_CHECK_EQUAL(deck.count("VFPPROD"), 1);
@@ -651,10 +649,9 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     auto units = Opm::UnitSystem::newMETRIC();
 
     Opm::Parser parser;
-    Opm::ParseContext parse_mode;
     boost::filesystem::path file("VFPPROD2");
 
-    auto deck = parser.parseFile(file.string(), parse_mode);
+    auto deck = parser.parseFile(file.string());
     Opm::checkDeck(deck, parser);
 
     BOOST_REQUIRE(deck.hasKeyword("VFPPROD"));

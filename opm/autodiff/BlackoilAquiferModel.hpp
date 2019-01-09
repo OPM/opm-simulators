@@ -71,6 +71,9 @@ namespace Opm {
 
             Simulator& simulator_;
 
+            // map from logically cartesian cell indices to compressed ones
+            std::unordered_map<int, int> cartesian_to_compressed_;
+
             // This initialization function is used to connect the parser objects with the ones needed by AquiferCarterTracy
             void init();
 

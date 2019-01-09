@@ -27,9 +27,11 @@
 #include <flow/flow_ebos_polymer.hpp>
 #include <flow/flow_ebos_energy.hpp>
 #include <flow/flow_ebos_oilwater_polymer.hpp>
+#include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
+#include <opm/autodiff/moduleVersion.hpp>
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 #include <opm/autodiff/MissingFeatures.hpp>
@@ -38,6 +40,8 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
+#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 
@@ -83,12 +87,31 @@ namespace detail
 
         throw std::invalid_argument( "Cannot find input case " + casename );
     }
-}
 
+
+    // This function is an extreme special case, if the program has been invoked
+    // *exactly* as:
+    //
+    //    flow   --version
+    //
+    // the call is intercepted by this function which will print "flow $version"
+    // on stdout and exit(0).
+    void handleVersionCmdLine(int argc, char** argv) {
+        if (argc != 2)
+            return;
+
+        if (std::strcmp(argv[1], "--version") == 0) {
+            std::cout << "flow " << Opm::moduleVersionName() << std::endl;
+            std::exit(EXIT_SUCCESS);
+        }
+    }
+
+}
 
 // ----------------- Main program -----------------
 int main(int argc, char** argv)
 {
+    detail::handleVersionCmdLine(argc, argv);
     // MPI setup.
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argc, argv);
@@ -157,8 +180,9 @@ int main(int argc, char** argv)
         tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN));
         tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN));
         Opm::ParseContext parseContext(tmp);
+        Opm::ErrorGuard errorGuard;
 
-        std::shared_ptr<Opm::Deck> deck = std::make_shared< Opm::Deck >( parser.parseFile(deckFilename , parseContext) );
+        std::shared_ptr<Opm::Deck> deck = std::make_shared< Opm::Deck >( parser.parseFile(deckFilename , parseContext, errorGuard) );
         if ( outputCout ) {
             Opm::checkDeck(*deck, parser);
             Opm::MissingFeatures::checkKeywords(*deck);
@@ -166,7 +190,13 @@ int main(int argc, char** argv)
         Opm::Runspec runspec( *deck );
         const auto& phases = runspec.phases();
 
-        std::shared_ptr<Opm::EclipseState> eclipseState = std::make_shared< Opm::EclipseState > ( *deck, parseContext );
+        std::shared_ptr<Opm::EclipseState> eclipseState = std::make_shared< Opm::EclipseState > ( *deck, parseContext, errorGuard );
+
+        // run the actual simulator
+        //
+        // TODO: make sure that no illegal combinations like thermal and twophase are
+        //       requested.
+
         // Twophase cases
         if( phases.size() == 2 ) {
             // oil-gas
@@ -197,6 +227,14 @@ int main(int argc, char** argv)
                 return EXIT_FAILURE;
             }
 
+            // Need to track the polymer molecular weight
+            // for the injectivity study
+            if ( phases.active( Opm::Phase::POLYMW ) ) {
+                // only oil water two phase for now
+                assert( phases.size() == 4);
+                return Opm::flowEbosOilWaterPolymerInjectivityMain(argc, argv);
+            }
+
             if ( phases.size() == 3 ) { // oil water polymer case
                 Opm::flowEbosOilWaterPolymerSetDeck(*deck, *eclipseState);
                 return Opm::flowEbosOilWaterPolymerMain(argc, argv);
@@ -211,7 +249,7 @@ int main(int argc, char** argv)
             return Opm::flowEbosSolventMain(argc, argv);
         }
         // Energy case
-        else if ( phases.active( Opm::Phase::ENERGY ) ) {
+        else if (eclipseState->getSimulationConfig().isThermal()) {
             Opm::flowEbosEnergySetDeck(*deck, *eclipseState);
             return Opm::flowEbosEnergyMain(argc, argv);
         }
