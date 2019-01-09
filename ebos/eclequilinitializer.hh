@@ -107,7 +107,6 @@ public:
 
         unsigned numElems = vanguard.grid().size(0);
         unsigned numCartesianElems = vanguard.cartesianSize();
-        typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
         EQUIL::DeckDependent::InitialStateComputer<TypeTag> initialState(materialLawManager,
                                                                          eclState,

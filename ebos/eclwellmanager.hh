@@ -101,7 +101,7 @@ public:
      *
      * I.e., well positions, names etc...
      */
-    void init(const Opm::EclipseState& eclState,
+    void init(const Opm::EclipseState& eclState OPM_UNUSED,
               const Opm::Schedule& deckSchedule)
     {
         // create the wells which intersect with the current process' grid
@@ -609,7 +609,7 @@ public:
     }
 
 protected:
-    bool wellTopologyChanged_(const Opm::EclipseState& eclState,
+    bool wellTopologyChanged_(const Opm::EclipseState& eclState OPM_UNUSED,
                               const Opm::Schedule& schedule,
                               unsigned reportStepIdx) const
     {

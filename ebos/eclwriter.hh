@@ -384,7 +384,6 @@ private:
         }
 
         const auto& globalGridView = globalGrid_.leafGridView();
-        typedef typename Grid::LeafGridView GridView;
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
         ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
@@ -450,7 +449,6 @@ private:
         int ny = eclState().getInputGrid().getNY();
 
         const auto& globalGridView = globalGrid_.leafGridView();
-        typedef typename Grid::LeafGridView GridView;
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
         ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());

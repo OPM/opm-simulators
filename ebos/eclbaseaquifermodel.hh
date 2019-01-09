@@ -86,10 +86,10 @@ public:
      * \brief Add the water which enters or leaves the reservoir due to aquifiers.
      */
     template <class Context>
-    void addToSource(RateVector& rate,
-                     const Context& context,
-                     unsigned spaceIdx,
-                     unsigned timeIdx) const
+    void addToSource(RateVector& rate OPM_UNUSED,
+                     const Context& context OPM_UNUSED,
+                     unsigned spaceIdx OPM_UNUSED,
+                     unsigned timeIdx OPM_UNUSED) const
     { }
 
     /*!
@@ -122,7 +122,7 @@ public:
      *        format.
      */
     template <class Restarter>
-    void serialize(Restarter& res)
+    void serialize(Restarter& res OPM_UNUSED)
     { }
 
     /*!
@@ -130,7 +130,7 @@ public:
      *        format.
      */
     template <class Restarter>
-    void deserialize(Restarter& res)
+    void deserialize(Restarter& res OPM_UNUSED)
     { }
 
 protected:

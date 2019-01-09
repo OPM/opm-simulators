@@ -713,9 +713,9 @@ phaseSaturations(const Grid& grid,
                                          /*storeSaturation=*/true,
                                          /*storeDensity=*/false,
                                          /*storeViscosity=*/false,
-                                         /*storeEnthalpy=*/false> SatOnlyFluidState;
+                                         /*storeEnthalpy=*/false> MySatOnlyFluidState;
 
-    SatOnlyFluidState fluidState;
+    MySatOnlyFluidState fluidState;
     typedef typename MaterialLawManager::MaterialLaw MaterialLaw;
 
     const bool water = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
@@ -1129,7 +1129,7 @@ private:
     }
 
     template <class RMap, class MaterialLawManager>
-    void calcPressSatRsRv(const Opm::EclipseState& eclState,
+    void calcPressSatRsRv(const Opm::EclipseState& eclState OPM_UNUSED,
                           const RMap& reg,
                           const std::vector< Opm::EquilRecord >& rec,
                           MaterialLawManager& materialLawManager,
