@@ -102,11 +102,25 @@ namespace Opm
                       wells->sat_table_id + perf_index_end,
                       saturation_table_number_.begin() );
         }
+
         well_efficiency_factor_ = 1.0;
+
+        connectionRates_.resize(number_of_perforations_);
+
+        well_productivity_index_logger_counter_ = 0;
 
     }
 
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updatePerforatedCell(std::vector<bool>& is_cell_perforated)
+    {
 
+        for (int perf_idx = 0; perf_idx<number_of_perforations_; ++perf_idx) {
+            is_cell_perforated[well_cells_[perf_idx]] = true;
+        }
+    }
 
 
 
@@ -364,18 +378,48 @@ namespace Opm
 
 
 
+
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
     wellHasTHPConstraints() const
     {
+        return getTHPControlIndex() >= 0;
+    }
+
+
+
+
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::
+    getTHPConstraint() const
+    {
+        const int thp_control_index = getTHPControlIndex();
+
+        if (thp_control_index < 0) {
+            OPM_THROW(std::runtime_error, " there is no THP constraint/limit for well " << name()
+                                          << ", while we are requesting it ");
+        }
+
+        return well_controls_iget_target(well_controls_, thp_control_index);
+    }
+
+
+
+
+    template<typename TypeTag>
+    int
+    WellInterface<TypeTag>::
+    getTHPControlIndex() const
+    {
         const int nwc = well_controls_get_num(well_controls_);
         for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
             if (well_controls_iget_type(well_controls_, ctrl_index) == THP) {
-                return true;
+                return ctrl_index;
             }
         }
-        return false;
+        return -1;
     }
 
 
@@ -385,8 +429,9 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateWellControl(WellState& well_state,
-                      wellhelpers::WellSwitchingLogger& logger) const
+    updateWellControl(/* const */ Simulator& ebos_simulator,
+                      WellState& well_state,
+                      wellhelpers::WellSwitchingLogger& logger) /* const */
     {
         const int np = number_of_phases_;
         const int w = index_of_well_;
@@ -414,8 +459,25 @@ namespace Opm
             if (wellhelpers::constraintBroken(
                     well_state.bhp(), well_state.thp(), well_state.wellRates(),
                     w, np, well_type_, wc, ctrl_index)) {
-                // ctrl_index will be the index of the broken constraint after the loop.
-                break;
+
+                // if the well can not work under THP / BHP control, we should not switch to THP / BHP control
+                const bool cannot_switch_to_bhp = well_controls_iget_type(wc, ctrl_index) == BHP && !operability_status_.isOperableUnderBHPLimit();
+                const bool cannot_switch_to_thp = well_controls_iget_type(wc, ctrl_index) == THP && !operability_status_.isOperableUnderTHPLimit();
+                const bool cannot_switch = cannot_switch_to_bhp || cannot_switch_to_thp;
+                if ( !cannot_switch ) {
+
+                    // ctrl_index will be the index of the broken constraint after the loop.
+                    break;
+                } else {
+                    // before we figure out to handle it, we give some debug information here
+                    if ( well_controls_iget_type(wc, ctrl_index) == BHP && !operability_status_.isOperableUnderBHPLimit() ) {
+                        OpmLog::debug("well " + name() + " breaks the BHP limit, while it is not operable under BHP limit");
+                    }
+
+                    if ( well_controls_iget_type(wc, ctrl_index) == THP && !operability_status_.isOperableUnderTHPLimit() ) {
+                        OpmLog::debug("well " + name() + " breaks the THP limit, while it is not operable under THP limit");
+                    }
+                }
             }
         }
 
@@ -437,9 +499,34 @@ namespace Opm
         }
 
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
-            updateWellStateWithTarget(well_state);
+            updateWellStateWithTarget(ebos_simulator, well_state);
             updatePrimaryVariables(well_state);
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    underPredictionMode() const
+    {
+        bool under_prediction_mode = false;
+
+        switch( well_type_ ) {
+        case PRODUCER:
+            under_prediction_mode = well_ecl_->getProductionProperties(current_step_).predictionMode;
+            break;
+        case INJECTOR:
+            under_prediction_mode = well_ecl_->getInjectionProperties(current_step_).predictionMode;
+            break;
+        default:
+            OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name());
+        }
+
+        return under_prediction_mode;
     }
 
 
@@ -651,10 +738,43 @@ namespace Opm
             return;
         }
 
+        // Based on current understanding, only under prediction mode, we need to shut well due to various
+        // reasons or limits. With more knowlage or testing cases later, this might need to be corrected.
+        if (!underPredictionMode() ) {
+            return;
+        }
+
+        // updating well test state based on physical (THP/BHP) limits.
+        updateWellTestStatePhysical(well_state, simulationTime, writeMessageToOPMLog, wellTestState);
+
         // updating well test state based on Economic limits.
         updateWellTestStateEconomic(well_state, simulationTime, writeMessageToOPMLog, wellTestState);
 
         // TODO: well can be shut/closed due to other reasons
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updateWellTestStatePhysical(const WellState& well_state,
+                                const double simulation_time,
+                                const bool write_message_to_opmlog,
+                                WellTestState& well_test_state) const
+    {
+        if (!isOperable()) {
+            well_test_state.addClosedWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
+            if (write_message_to_opmlog) {
+                // TODO: considering auto shut in?
+                const std::string msg = "well " + name()
+                             + std::string(" will be shut as it can not operate under current reservoir condition");
+                OpmLog::info(msg);
+            }
+        }
+
     }
 
 
@@ -805,12 +925,19 @@ namespace Opm
     WellInterface<TypeTag>::
     wellTesting(Simulator& simulator, const std::vector<double>& B_avg,
                 const double simulation_time, const int report_step, const bool terminal_output,
-                const WellTestConfig::Reason testing_reason, const WellState& well_state,
-                WellTestState& well_test_state)
+                const WellTestConfig::Reason testing_reason,
+                /* const */ WellState& well_state,
+                WellTestState& well_test_state,
+                wellhelpers::WellSwitchingLogger& logger)
     {
+        if (testing_reason == WellTestConfig::Reason::PHYSICAL) {
+            wellTestingPhysical(simulator, B_avg, simulation_time, report_step,
+                                terminal_output, well_state, well_test_state, logger);
+        }
+
         if (testing_reason == WellTestConfig::Reason::ECONOMIC) {
             wellTestingEconomic(simulator, B_avg, simulation_time, report_step,
-                                terminal_output, well_state, well_test_state);
+                                terminal_output, well_state, well_test_state, logger);
         }
     }
 
@@ -823,8 +950,10 @@ namespace Opm
     WellInterface<TypeTag>::
     wellTestingEconomic(Simulator& simulator, const std::vector<double>& B_avg,
                         const double simulation_time, const int report_step, const bool terminal_output,
-                        const WellState& well_state, WellTestState& welltest_state)
+                        const WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger)
     {
+        OpmLog::debug(" well " + name() + " is being tested for economic limits");
+
         WellState well_state_copy = well_state;
 
         updatePrimaryVariables(well_state_copy);
@@ -839,7 +968,7 @@ namespace Opm
         // untill the number of closed completions do not increase anymore.
         while (testWell) {
             const size_t original_number_closed_completions = welltest_state_temp.sizeCompletions();
-            solveWellForTesting(simulator, well_state_copy, B_avg, terminal_output);
+            solveWellForTesting(simulator, well_state_copy, B_avg, terminal_output, logger);
             updateWellTestState(well_state_copy, simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp);
             closeCompletions(welltest_state_temp);
 
@@ -979,6 +1108,84 @@ namespace Opm
 
 
 
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::isVFPActive() const
+    {
+        // since the well_controls only handles the VFP number when THP constraint/target is there.
+        // we need to get the table number through the parser, in case THP constraint/target is not there.
+        // When THP control/limit is not active, if available VFP table is provided, we will still need to
+        // update THP value. However, it will only used for output purpose.
+
+        if (well_type_ == PRODUCER) { // producer
+            const int table_id = well_ecl_->getProductionProperties(current_step_).VFPTableNumber;
+            if (table_id <= 0) {
+                return false;
+            } else {
+                if (vfp_properties_->getProd()->hasTable(table_id)) {
+                    return true;
+                } else {
+                    OPM_THROW(std::runtime_error, "VFPPROD table " << std::to_string(table_id) << " is specfied,"
+                              << " for well " << name() << ", while we could not access it during simulation");
+                }
+            }
+
+        } else { // injector
+            const int table_id = well_ecl_->getInjectionProperties(current_step_).VFPTableNumber;
+            if (table_id <= 0) {
+                return false;
+            } else {
+                if (vfp_properties_->getInj()->hasTable(table_id)) {
+                    return true;
+                } else {
+                    OPM_THROW(std::runtime_error, "VFPINJ table " << std::to_string(table_id) << " is specfied,"
+                              << " for well " << name() << ", while we could not access it during simulation");
+                }
+            }
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    solveWellEqUntilConverged(Simulator& ebosSimulator,
+                              const std::vector<double>& B_avg,
+                              WellState& well_state,
+                              wellhelpers::WellSwitchingLogger& logger)
+    {
+        const int max_iter = param_.max_welleq_iter_;
+        int it = 0;
+        const double dt = 1.0; //not used for the well tests
+        bool converged;
+        WellState well_state0 = well_state;
+        do {
+            assembleWellEq(ebosSimulator, dt, well_state);
+
+            auto report = getWellConvergence(B_avg);
+            converged = report.converged();
+            if (converged) {
+                break;
+            }
+
+            ++it;
+            solveEqAndUpdateWellState(well_state);
+
+            updateWellControl(ebosSimulator, well_state, logger);
+            initPrimaryVariablesEvaluation();
+        } while (it < max_iter);
+
+        return converged;
+    }
+
+
+
+
+
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::calculateReservoirRates(WellState& well_state) const
@@ -1016,37 +1223,23 @@ namespace Opm
 
     template<typename TypeTag>
     void
-    WellInterface<TypeTag>::solveWellForTesting(Simulator& ebosSimulator, WellState& well_state, const std::vector<double>& B_avg, bool terminal_output)
+    WellInterface<TypeTag>::
+    solveWellForTesting(Simulator& ebosSimulator, WellState& well_state,
+                        const std::vector<double>& B_avg, bool terminal_output,
+                        wellhelpers::WellSwitchingLogger& logger)
     {
-        const int max_iter = param_.max_welleq_iter_;
-        int it = 0;
-        const double dt = 1.0; //not used for the well tests
-        bool converged;
-        WellState well_state0 = well_state;
-        do {
-            assembleWellEq(ebosSimulator, dt, well_state);
-
-            auto report = getWellConvergence(B_avg);
-            converged = report.converged();
-            if (converged) {
-                break;
-            }
-
-            ++it;
-            solveEqAndUpdateWellState(well_state);
-
-            wellhelpers::WellSwitchingLogger logger;
-            updateWellControl(well_state, logger);
-            initPrimaryVariablesEvaluation();
-        } while (it < max_iter);
-
+        // keep a copy of the original well state
+        const WellState well_state0 = well_state;
+        const bool converged = solveWellEqUntilConverged(ebosSimulator, B_avg, well_state, logger);
         if (converged) {
             if ( terminal_output ) {
-                OpmLog::debug("WellTest: Well equation for well " + name() +  " solution gets converged with " + std::to_string(it) + " iterations");
+                OpmLog::debug("WellTest: Well equation for well " + name() +  " solution gets converged");
             }
         } else {
             if ( terminal_output ) {
-                OpmLog::debug("WellTest: Well equation for well" +name() + " solution failed in getting converged with " + std::to_string(it) + " iterations");
+                const int max_iter = param_.max_welleq_iter_;
+                OpmLog::debug("WellTest: Well equation for well" +name() + " solution failed in getting converged with "
+                              + std::to_string(max_iter) + " iterations");
             }
             well_state = well_state0;
         }
@@ -1054,20 +1247,27 @@ namespace Opm
 
     template<typename TypeTag>
     void
-    WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index) const
+    WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index)
     {
 
         const auto& connection = well_ecl_->getConnections(current_step_)[perfIdx];
 
+        const bool new_well = well_ecl_->hasEvent(ScheduleEvents::NEW_WELL , current_step_);
+
         if (well_ecl_->getDrainageRadius(current_step_) < 0) {
-            OpmLog::warning("PRODUCTIVITY_INDEX_WARNING", "Negative drainage radius not supported. The productivity index is set to zero");
+            if (new_well && perfIdx == 0) {
+                OpmLog::warning("PRODUCTIVITY_INDEX_WARNING", "Negative drainage radius not supported. The productivity index is set to zero");
+            }
             productivity_index = 0.0;
             return;
         }
 
         if (connection.r0() > well_ecl_->getDrainageRadius(current_step_)) {
-            OpmLog::info("PRODUCTIVITY_INDEX_INFO", "The effective radius is larger then the well drainage radius for well " + name() +
-                         " They are set to equal in the well productivity index calculations");
+            if (new_well && well_productivity_index_logger_counter_ < 1) {
+                OpmLog::info("PRODUCTIVITY_INDEX_INFO", "The effective radius is larger than the well drainage radius for well " + name() +
+                             " They are set to equal in the well productivity index calculations");
+                well_productivity_index_logger_counter_++;
+            }
             return;
         }
 
@@ -1081,6 +1281,44 @@ namespace Opm
         productivity_index *=
         (std::log(connection.r0() / connection.rw()) + connection.skinFactor()) /
         (std::log(well_ecl_->getDrainageRadius(current_step_) / connection.rw()) + connection.skinFactor());
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::addCellRates(RateVector& rates, int cellIdx) const
+    {
+        for (int perfIdx = 0; perfIdx < number_of_perforations_; ++perfIdx) {
+            if (cells()[perfIdx] == cellIdx) {
+                for (int i = 0; i < RateVector::dimension; ++i) {
+                    rates[i] += connectionRates_[perfIdx][i];
+                }
+            }
+        }
+    }
+
+    template<typename TypeTag>
+    typename WellInterface<TypeTag>::Scalar
+    WellInterface<TypeTag>::volumetricSurfaceRateForConnection(int cellIdx, int phaseIdx) const {
+        for (int perfIdx = 0; perfIdx < number_of_perforations_; ++perfIdx) {
+            if (cells()[perfIdx] == cellIdx) {
+                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                return connectionRates_[perfIdx][activeCompIdx].value();
+            }
+        }
+        OPM_THROW(std::invalid_argument, "The well with name " + name()
+                  + " does not perforate cell " + std::to_string(cellIdx));
+        return 0.0;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    isOperable() const {
+        return operability_status_.isOperable();
     }
 
 

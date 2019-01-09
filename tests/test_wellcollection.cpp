@@ -25,7 +25,6 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
@@ -38,15 +37,14 @@ using namespace Opm;
 BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     Parser parser;
     std::string scheduleFile("wells_group.data");
-    ParseContext parseContext;
-    Deck deck = parser.parseFile(scheduleFile, parseContext);
-    EclipseState eclipseState(deck, parseContext);
+    Deck deck = parser.parseFile(scheduleFile);
+    EclipseState eclipseState(deck);
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Runspec runspec(deck);
-    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
+    const Schedule sched(deck, grid, eclipseProperties, runspec);
 
 
     WellCollection collection;
@@ -78,15 +76,14 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
 BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     Parser parser;
     std::string scheduleFile("wells_group.data");
-    ParseContext parseContext;
-    Deck deck = parser.parseFile(scheduleFile, parseContext);
-    EclipseState eclipseState(deck, parseContext);
+    Deck deck = parser.parseFile(scheduleFile);
+    EclipseState eclipseState(deck);
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Runspec runspec(deck);
-    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
+    const Schedule sched(deck, grid, eclipseProperties, runspec);
 
     size_t timestep = 2;
     WellCollection collection;

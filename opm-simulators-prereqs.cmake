@@ -31,8 +31,6 @@ set (opm-simulators_DEPS
   "LAPACK REQUIRED"
   # Look for MPI support
   "MPI"
-  # PETSc numerical backend
-  "PETSc"
   # Tim Davis' SuiteSparse archive
   "SuiteSparse COMPONENTS umfpack"
   # SuperLU direct solver
@@ -42,8 +40,6 @@ set (opm-simulators_DEPS
   "opm-material REQUIRED"
   "opm-grid REQUIRED"
   "ewoms REQUIRED"
-  # Eigen
-  "Eigen3 3.2.0"
   )
 
 find_package_deps(opm-simulators)

@@ -37,20 +37,17 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/WellTestState.hpp>
 
 #include <opm/core/wells.h>
-#include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
-#include <opm/autodiff/WellHelpers.hpp>
-#include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/StandardWell.hpp>
+#include <opm/autodiff/StandardWellV.hpp>
 #include <opm/autodiff/MultisegmentWell.hpp>
-#include <opm/autodiff/Compat.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
 #include<opm/autodiff/SimFIBODetails.hpp>
 #include<dune/common/fmatrix.hh>
@@ -86,7 +83,7 @@ namespace Opm {
             typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
             typedef typename GET_PROP_TYPE(TypeTag, RateVector)          RateVector;
             typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector)      GlobalEqVector;
-            typedef typename GET_PROP_TYPE(TypeTag, JacobianMatrix)      JacobianMatrix;
+            typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
 
             typedef typename Ewoms::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
@@ -105,7 +102,7 @@ namespace Opm {
 #else
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
 #endif
-            typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
+            typedef typename SparseMatrixAdapter::IstlMatrix Mat;
 
             typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
@@ -129,7 +126,7 @@ namespace Opm {
             void applyInitial()
             {}
 
-            void linearize(JacobianMatrix& mat , GlobalEqVector& res);
+            void linearize(SparseMatrixAdapter& mat , GlobalEqVector& res);
 
             void postSolve(GlobalEqVector& deltaX)
             {
@@ -183,7 +180,7 @@ namespace Opm {
 
             void endTimeStep()
             {
-                timeStepSucceeded(ebosSimulator_.time());
+                timeStepSucceeded(ebosSimulator_.time(), ebosSimulator_.timeStepSize());
             }
 
             void endEpisode()
@@ -196,6 +193,10 @@ namespace Opm {
                                          const Context& context,
                                          unsigned spaceIdx,
                                          unsigned timeIdx) const;
+
+
+            using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag> >;
+            WellInterfacePtr well(const std::string& wellName) const;
 
             void initFromRestartFile(const RestartValue& restartValues);
 
@@ -238,6 +239,13 @@ namespace Opm {
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
 
+            /// Return true if any well has a THP constraint.
+            bool hasTHPConstraints() const;
+
+            /// Shut down any single well, but only if it is in prediction mode.
+            /// Returns true if the well was actually found and shut.
+            bool forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
+
         protected:
 
             void extractLegacyPressure_(std::vector<double>& cellPressure) const
@@ -273,12 +281,13 @@ namespace Opm {
 
             bool wells_active_;
 
-            using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
             // a vector of all the wells.
             std::vector<WellInterfacePtr > well_container_;
 
             // map from logically cartesian cell indices to compressed ones
             std::vector<int> cartesian_to_compressed_;
+
+            std::vector<bool> is_cell_perforated_;
 
             // create the well container
             std::vector<WellInterfacePtr > createWellContainer(const int time_step);
@@ -328,7 +337,7 @@ namespace Opm {
                           const double dt);
 
             // called at the end of a time step
-            void timeStepSucceeded(const double& simulationTime);
+            void timeStepSucceeded(const double& simulationTime, const double dt);
 
             // called at the end of a report step
             void endReportStep();
@@ -411,6 +420,11 @@ namespace Opm {
             void updatePerforationIntensiveQuantities();
 
             void wellTesting(const int timeStepIdx, const double simulationTime);
+
+            // convert well data from opm-common to well state from opm-core
+            void wellsToState( const data::Wells& wells,
+                               PhaseUsage phases,
+                               WellStateFullyImplicitBlackoil& state );
 
         };
 

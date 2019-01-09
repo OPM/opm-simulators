@@ -33,7 +33,6 @@
 #include <opm/core/wells/WellsGroup.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/GroupTree.hpp>
 
@@ -45,15 +44,14 @@ using namespace Opm;
 
 BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
     std::string scheduleFile("wells_group.data");
-    ParseContext parseContext;
     Parser parser;
-    Deck deck =  parser.parseFile(scheduleFile, parseContext);
-    EclipseState eclipseState(deck , parseContext);
+    Deck deck =  parser.parseFile(scheduleFile);
+    EclipseState eclipseState(deck);
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
-    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
+    const Schedule sched(deck, grid, eclipseProperties, runspec);
 
    PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
@@ -84,16 +82,15 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
 
 BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
     Parser parser;
-    ParseContext parseContext;
     std::string scheduleFile("wells_group.data");
-    Deck deck =  parser.parseFile(scheduleFile, parseContext);
-    EclipseState eclipseState(deck , parseContext);
+    Deck deck =  parser.parseFile(scheduleFile);
+    EclipseState eclipseState(deck);
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
-    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
+    const Schedule sched(deck, grid, eclipseProperties, runspec);
 
 
     const auto& nodes = sched.getGroupTree(2);
@@ -122,16 +119,15 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
 
 BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     Parser parser;
-    ParseContext parseContext;
     std::string scheduleFile("wells_group.data");
-    Deck deck =  parser.parseFile(scheduleFile, parseContext);
-    EclipseState eclipseState(deck , parseContext);
+    Deck deck =  parser.parseFile(scheduleFile);
+    EclipseState eclipseState(deck);
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
-    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
+    const Schedule sched(deck, grid, eclipseProperties, runspec);
 
 
     const auto& nodes = sched.getGroupTree(2);

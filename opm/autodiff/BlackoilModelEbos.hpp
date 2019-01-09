@@ -35,7 +35,6 @@
 #include <opm/autodiff/BlackoilAquiferModel.hpp>
 #include <opm/autodiff/WellConnectionAuxiliaryModule.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
-#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
@@ -102,13 +101,13 @@ namespace Opm {
     {
     public:
         // ---------  Types and enums  ---------
-        typedef BlackoilState ReservoirState;
         typedef WellStateFullyImplicitBlackoil WellState;
         typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 
         typedef typename GET_PROP_TYPE(TypeTag, Simulator)         Simulator;
         typedef typename GET_PROP_TYPE(TypeTag, Grid)              Grid;
         typedef typename GET_PROP_TYPE(TypeTag, ElementContext)    ElementContext;
+        typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
         typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
         typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)  PrimaryVariables ;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)       FluidSystem;
@@ -121,13 +120,15 @@ namespace Opm {
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
+        static const int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;
         static const int solventSaturationIdx = Indices::solventSaturationIdx;
         static const int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
+        static const int polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
         static const int temperatureIdx = Indices::temperatureIdx;
 
         typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
-        typedef Dune::FieldMatrix<Scalar, numEq, numEq >        MatrixBlockType;
-        typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
+        typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
+        typedef typename SparseMatrixAdapter::IstlMatrix Mat;
         typedef Dune::BlockVector<VectorBlockType>      BVector;
 
         typedef ISTLSolverEbos<TypeTag> ISTLSolverType;
@@ -148,7 +149,7 @@ namespace Opm {
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters& param,
                           BlackoilWellModel<TypeTag>& well_model,
-                          const NewtonIterationBlackoilInterface& linsolver,
+                          const ISTLSolverType& linsolver,
                           const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
         , grid_(ebosSimulator_.vanguard().grid())
@@ -158,6 +159,7 @@ namespace Opm {
         , has_vapoil_(FluidSystem::enableVaporizedOil())
         , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
         , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
+        , has_polymermw_(GET_PROP_VALUE(TypeTag, EnablePolymerMW))
         , has_energy_(GET_PROP_VALUE(TypeTag, EnableEnergy))
         , param_( param )
         , well_model_ (well_model)
@@ -173,6 +175,7 @@ namespace Opm {
             {
                 OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
             }
+            convergence_reports_.reserve(300); // Often insufficient, but avoids frequent moves.
         }
 
         bool isParallel() const
@@ -242,6 +245,8 @@ namespace Opm {
                 residual_norms_history_.clear();
                 current_relaxation_ = 1.0;
                 dx_old_ = 0.0;
+                convergence_reports_.push_back({timer.reportStepNum(), timer.currentStepNum(), {}});
+                convergence_reports_.back().report.reserve(11);
             }
 
             report.total_linearizations = 1;
@@ -261,7 +266,19 @@ namespace Opm {
             perfTimer.reset();
             perfTimer.start();
             // the step is not considered converged until at least minIter iterations is done
-            report.converged = getConvergence(timer, iteration,residual_norms) && iteration > nonlinear_solver.minIter();
+            {
+                auto convrep = getConvergence(timer, iteration,residual_norms);
+                report.converged = convrep.converged()  && iteration > nonlinear_solver.minIter();;
+                ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
+                convergence_reports_.back().report.push_back(std::move(convrep));
+
+                // Throw if any NaN or too large residual found.
+                if (severity == ConvergenceReport::Severity::NotANumber) {
+                    OPM_THROW(Opm::NumericalIssue, "NaN residual found!");
+                } else if (severity == ConvergenceReport::Severity::TooLarge) {
+                    OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
+                }
+            }
 
              // checking whether the group targets are converged
              if (wellModel().wellCollection().groupControlActive()) {
@@ -358,13 +375,13 @@ namespace Opm {
             ebosSimulator_.model().linearizer().linearize();
             ebosSimulator_.problem().endIteration();
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
             if (param_.matrix_add_well_contributions_) {
-                wellModel().addWellContributions(ebosJac);
+                wellModel().addWellContributions(ebosJac.istlMatrix());
             }
             if ( param_.preconditioner_add_well_contributions_ &&
                                   ! param_.matrix_add_well_contributions_ ) {
-                matrix_for_preconditioner_ .reset(new Mat(ebosJac));
+                matrix_for_preconditioner_ .reset(new Mat(ebosJac.istlMatrix()));
                 wellModel().addWellContributions(*matrix_for_preconditioner_);
             }
 
@@ -494,7 +511,7 @@ namespace Opm {
             // r = [r, r_well], where r is the residual and r_well the well residual.
             // r -= B^T * D^-1 r_well
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
             wellModel().apply(ebosResid);
@@ -502,13 +519,13 @@ namespace Opm {
             // set initial guess
             x = 0.0;
 
-            const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac;
+            const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac.istlMatrix();
             // Solve system.
             if( isParallel() )
             {	      
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
 
-                auto ebosJacIgnoreOverlap = Mat(ebosJac);
+                auto ebosJacIgnoreOverlap = Mat(ebosJac.istlMatrix());
                 //remove ghost rows in local matrix
                 makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
 
@@ -522,7 +539,7 @@ namespace Opm {
             else
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
-                Operator opA(ebosJac, actual_mat_for_prec, wellModel());
+                Operator opA(ebosJac.istlMatrix(), actual_mat_for_prec, wellModel());
                 istlSolver().solve( opA, x, ebosResid );
             }
         }
@@ -761,6 +778,19 @@ namespace Opm {
                     R_sum[ contiPolymerEqIdx ] += R2;
                     maxCoeff[ contiPolymerEqIdx ] = std::max( maxCoeff[ contiPolymerEqIdx ], std::abs( R2 ) / pvValue );
                 }
+
+                if (has_polymermw_) {
+                    assert(has_polymer_);
+
+                    B_avg[contiPolymerMWEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    // the residual of the polymer molecular equation is scaled down by a 100, since molecular weight
+                    // can be much bigger than 1, and this equation shares the same tolerance with other mass balance equations
+                    // TODO: there should be a more general way to determine the scaling-down coefficient
+                    const auto R2 = ebosResid[cell_idx][contiPolymerMWEqIdx] / 100.;
+                    R_sum[contiPolymerMWEqIdx] += R2;
+                    maxCoeff[contiPolymerMWEqIdx] = std::max( maxCoeff[contiPolymerMWEqIdx], std::abs( R2 ) / pvValue );
+                }
+
                 if (has_energy_ ) {
                     B_avg[ contiEnergyEqIdx ] += 1.0;
                     const auto R2 = ebosResid[cell_idx][contiEnergyEqIdx];
@@ -780,91 +810,107 @@ namespace Opm {
             return pvSumLocal;
         }
 
-        /// Compute convergence based on total mass balance (tol_mb) and maximum
-        /// residual mass balance (tol_cnv).
-        /// \param[in]   timer       simulation timer
-        /// \param[in]   dt          timestep length
-        /// \param[in]   iteration   current iteration number
-        bool getConvergence(const SimulatorTimerInterface& timer, const int iteration, std::vector<double>& residual_norms)
+        ConvergenceReport getReservoirConvergence(const double dt,
+                                                  const int iteration,
+                                                  std::vector<Scalar>& B_avg,
+                                                  std::vector<Scalar>& residual_norms)
         {
             typedef std::vector< Scalar > Vector;
 
-            const double dt = timer.currentStepLength();
-            const double tol_mb    = param_.tolerance_mb_;
-            const double tol_cnv   = param_.tolerance_cnv_;
-            const double tol_cnv_relaxed = param_.tolerance_cnv_relaxed_;
+            const double tol_mb  = param_.tolerance_mb_;
+            const double tol_cnv = (iteration < param_.max_strict_iter_) ? param_.tolerance_cnv_ : param_.tolerance_cnv_relaxed_;
 
             const int numComp = numEq;
-
             Vector R_sum(numComp, 0.0 );
             Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
-            Vector B_avg(numComp, 0.0 );
             const double pvSumLocal = localConvergenceData(R_sum, maxCoeff, B_avg);
 
             // compute global sum and max of quantities
             const double pvSum = convergenceReduction(grid_.comm(), pvSumLocal,
                                                       R_sum, maxCoeff, B_avg);
 
-            Vector CNV(numComp);
-            Vector mass_balance_residual(numComp);
-
-            bool converged_MB = true;
-            bool converged_CNV = true;
             // Finish computation
+            std::vector<Scalar> CNV(numComp);
+            std::vector<Scalar> mass_balance_residual(numComp);
             for ( int compIdx = 0; compIdx < numComp; ++compIdx )
             {
                 CNV[compIdx]                    = B_avg[compIdx] * dt * maxCoeff[compIdx];
                 mass_balance_residual[compIdx]  = std::abs(B_avg[compIdx]*R_sum[compIdx]) * dt / pvSum;
-                converged_MB                    = converged_MB && (mass_balance_residual[compIdx] < tol_mb);
-                if (iteration < param_.max_strict_iter_)
-                    converged_CNV = converged_CNV && (CNV[compIdx] < tol_cnv);
-                else
-                    converged_CNV = converged_CNV && (CNV[compIdx] < tol_cnv_relaxed);
-
                 residual_norms.push_back(CNV[compIdx]);
             }
 
-            const auto report_well = wellModel().getWellConvergence(B_avg);
-            const bool converged_well = report_well.converged();
+            // Setup component names, only the first time the function is run.
+            static std::vector<std::string> compNames;
+            if (compNames.empty()) {
+                compNames.resize(numComp);
+                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
+                    const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
+                    const unsigned compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
+                    compNames[compIdx] = FluidSystem::componentName(canonicalCompIdx);
+                }
+                if (has_solvent_) {
+                    compNames[solventSaturationIdx] = "Solvent";
+                }
+                if (has_polymer_) {
+                    compNames[polymerConcentrationIdx] = "Polymer";
+                }
+                if (has_polymermw_) {
+                    assert(has_polymer_);
+                    compNames[polymerMoleWeightIdx] = "MolecularWeightP";
+                }
+                if (has_energy_) {
+                    compNames[temperatureIdx] = "Energy";
+                }
+            }
 
-            bool converged = converged_MB && converged_well;
+            // Create convergence report.
+            ConvergenceReport report;
+            using CR = ConvergenceReport;
+            for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
+                CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
+                                                        CR::ReservoirFailure::Type::Cnv };
+                double tol[2] = { tol_mb, tol_cnv };
+                for (int ii : {0, 1}) {
+                    if (std::isnan(res[ii])) {
+                        report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
+                        if ( terminal_output_ ) {
+                            OpmLog::debug("NaN residual for " + compNames[compIdx] + " equation.");
+                        }
+                    } else if (res[ii] > maxResidualAllowed()) {
+                        report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
+                        if ( terminal_output_ ) {
+                            OpmLog::debug("Too large residual for " + compNames[compIdx] + " equation.");
+                        }
+                    } else if (res[ii] < 0.0) {
+                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
+                        if ( terminal_output_ ) {
+                            OpmLog::debug("Negative residual for " + compNames[compIdx] + " equation.");
+                        }
+                    } else if (res[ii] > tol[ii]) {
+                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
+                    }
+                }
+            }
 
-            converged = converged && converged_CNV;
-
+            // Output of residuals.
             if ( terminal_output_ )
             {
                 // Only rank 0 does print to std::cout
                 if (iteration == 0) {
                     std::string msg = "Iter";
-
-                    std::vector< std::string > key( numComp );
-                    for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                        if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                            continue;
-                        }
-
-                        const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-                        const std::string& compName = FluidSystem::componentName(canonicalCompIdx);
-                        const unsigned compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
-                        key[ compIdx ] = std::toupper( compName.front() );
-                    }
-                    if (has_solvent_) {
-                        key[ solventSaturationIdx ] = "S";
-                    }
-
-                    if (has_polymer_) {
-                        key[ polymerConcentrationIdx ] = "P";
-                    }
-
-                    if (has_energy_) {
-                        key[ temperatureIdx ] = "E";
-                    }
-
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                        msg += "    MB(" + key[ compIdx ] + ")  ";
+                        msg += "    MB(";
+                        msg += compNames[compIdx][0];
+                        msg += ")  ";
                     }
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                        msg += "    CNV(" + key[ compIdx ] + ") ";
+                        msg += "    CNV(";
+                        msg += compNames[compIdx][0];
+                        msg += ") ";
                     }
                     OpmLog::debug(msg);
                 }
@@ -883,29 +929,23 @@ namespace Opm {
                 OpmLog::debug(ss.str());
             }
 
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
-                    continue;
+            return report;
+        }
 
-                const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-                const std::string& compName = FluidSystem::componentName(canonicalCompIdx);
-                const unsigned compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
-
-                if (std::isnan(mass_balance_residual[compIdx])
-                    || std::isnan(CNV[compIdx])) {
-                    OPM_THROW(Opm::NumericalIssue, "NaN residual for " << compName << " equation");
-                }
-                if (mass_balance_residual[compIdx] > maxResidualAllowed()
-                    || CNV[compIdx] > maxResidualAllowed()) {
-                    OPM_THROW(Opm::NumericalIssue, "Too large residual for " << compName << " equation");
-                }
-                if (mass_balance_residual[compIdx] < 0
-                    || CNV[compIdx] < 0) {
-                    OPM_THROW(Opm::NumericalIssue, "Negative residual for " << compName << " equation");
-                }
-            }
-
-            return converged;
+        /// Compute convergence based on total mass balance (tol_mb) and maximum
+        /// residual mass balance (tol_cnv).
+        /// \param[in]   timer       simulation timer
+        /// \param[in]   iteration   current iteration number
+        /// \param[out]  residual_norms   CNV residuals by phase
+        ConvergenceReport getConvergence(const SimulatorTimerInterface& timer,
+                                         const int iteration,
+                                         std::vector<double>& residual_norms)
+        {
+            // Get convergence reports for reservoir and wells.
+            std::vector<Scalar> B_avg(numEq, 0.0);
+            auto report = getReservoirConvergence(timer.currentStepLength(), iteration, B_avg, residual_norms);
+            report += wellModel().getWellConvergence(B_avg);
+            return report;
         }
 
 
@@ -943,6 +983,18 @@ namespace Opm {
         const SimulatorReport& failureReport() const
         { return failureReport_; }
 
+        struct StepReport
+        {
+            int report_step;
+            int current_step;
+            std::vector<ConvergenceReport> report;
+        };
+
+        const std::vector<StepReport>& stepReports() const
+        {
+            return convergence_reports_;
+        }
+
     protected:
         const ISTLSolverType& istlSolver() const
         {
@@ -960,6 +1012,7 @@ namespace Opm {
         const bool has_vapoil_;
         const bool has_solvent_;
         const bool has_polymer_;
+        const bool has_polymermw_;
         const bool has_energy_;
 
         ModelParameters                 param_;
@@ -979,6 +1032,8 @@ namespace Opm {
 
         std::unique_ptr<Mat> matrix_for_preconditioner_;        
         std::vector<std::pair<int,std::vector<int>>> overlapRowAndColumns_;
+
+        std::vector<StepReport> convergence_reports_;
     public:
         /// return the StandardWells object
         BlackoilWellModel<TypeTag>&

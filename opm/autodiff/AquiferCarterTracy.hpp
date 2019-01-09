@@ -32,6 +32,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <unordered_map>
 
 namespace Opm
 {
@@ -64,9 +65,11 @@ namespace Opm
 
             AquiferCarterTracy( const AquiferCT::AQUCT_data& aquct_data,
                                 const Aquancon::AquanconOutput& connection,
+                                const std::unordered_map<int, int>& cartesian_to_compressed,
                                 const Simulator& ebosSimulator)
             : ebos_simulator_ (ebosSimulator)
             , aquct_data_ (aquct_data)
+            , cartesian_to_compressed_(cartesian_to_compressed)
             , connection_(connection)
             {}
 
@@ -149,6 +152,7 @@ namespace Opm
 
             Eval W_flux_;
 
+            const std::unordered_map<int, int>& cartesian_to_compressed_;
 
             Scalar gravity_() const
             { return ebos_simulator_.problem().gravity()[2]; }
@@ -213,7 +217,7 @@ namespace Opm
                 b = beta_ / (Tc_ * ( PItd - td*PItdprime));
             }
 
-            // This function implements Eq 5.7 of the EclipseTechnicalDescription       
+            // This function implements Eq 5.7 of the EclipseTechnicalDescription
             inline void calculateInflowRate(int idx, const Simulator& simulator)
             {
                 Scalar a, b;
@@ -230,9 +234,34 @@ namespace Opm
                         * aquct_data_.r_o * aquct_data_.r_o;
                 // We calculate the time constant
                 Tc_ = mu_w_ * aquct_data_.phi_aq
-                      * aquct_data_.C_t 
+                      * aquct_data_.C_t
                       * aquct_data_.r_o * aquct_data_.r_o
                       / ( aquct_data_.k_a * aquct_data_.c1 );
+            }
+
+            template<class faceCellType, class ugridType>
+            inline const double getFaceArea(const faceCellType& faceCells, const ugridType& ugrid,
+                                            const int faceIdx, const int idx,
+                                            const Aquancon::AquanconOutput& connection) const
+            {
+                // Check now if the face is outside of the reservoir, or if it adjoins an inactive cell
+                // Do not make the connection if the product of the two cellIdx > 0. This is because the
+                // face is within the reservoir/not connected to boundary. (We still have yet to check for inactive cell adjoining)
+                double faceArea = 0.;
+                const auto cellNeighbour0 = faceCells(faceIdx,0);
+                const auto cellNeighbour1 = faceCells(faceIdx,1);
+                const auto defaultFaceArea = Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
+                const auto calculatedFaceArea = (!connection.influx_coeff.at(idx))?
+                                                defaultFaceArea :
+                                                *(connection.influx_coeff.at(idx));
+                faceArea = (cellNeighbour0 * cellNeighbour1 > 0)? 0. : calculatedFaceArea;
+                if (cellNeighbour1 == 0){
+                    faceArea = (cellNeighbour0 < 0)? faceArea : 0.;
+                }
+                else if (cellNeighbour0 == 0){
+                    faceArea = (cellNeighbour1 < 0)? faceArea : 0.;
+                }
+                return faceArea;
             }
 
             // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer
@@ -246,7 +275,7 @@ namespace Opm
                 auto globalCellIdx = ugrid.globalCell();
 
                 assert( cell_idx_ == connection.global_index);
-                assert( (cell_idx_.size() == connection.influx_coeff.size()) );
+                assert( (cell_idx_.size() <= connection.influx_coeff.size()) );
                 assert( (connection.influx_coeff.size() == connection.influx_multiplier.size()) );
                 assert( (connection.influx_multiplier.size() == connection.reservoir_face_dir.size()) );
 
@@ -254,10 +283,9 @@ namespace Opm
                 cell_depth_.resize(cell_idx_.size(), aquct_data_.d0);
                 alphai_.resize(cell_idx_.size(), 1.0);
                 faceArea_connected_.resize(cell_idx_.size(),0.0);
-                Scalar faceArea;
 
                 auto cell2Faces = Opm::UgGridHelpers::cell2Faces(ugrid);
-                auto faceCells  = Opm::AutoDiffGrid::faceCells(ugrid);
+                auto faceCells  = Opm::UgGridHelpers::faceCells(ugrid);
 
                 // Translate the C face tag into the enum used by opm-parser's TransMult class
                 Opm::FaceDir::DirEnum faceDirection;
@@ -267,9 +295,10 @@ namespace Opm
                 cellToConnectionIdx_.resize(ebos_simulator_.gridView().size(/*codim=*/0), -1);
                 for (size_t idx = 0; idx < cell_idx_.size(); ++idx)
                 {
-                    cellToConnectionIdx_[cell_idx_[idx]] = idx;
+                    const int cell_index = cartesian_to_compressed_.at(cell_idx_[idx]);
+                    cellToConnectionIdx_[cell_index] = idx;
 
-                    auto cellFacesRange = cell2Faces[cell_idx_.at(idx)];
+                    const auto cellFacesRange = cell2Faces[cell_index];
                     for(auto cellFaceIter = cellFacesRange.begin(); cellFaceIter != cellFacesRange.end(); ++cellFaceIter)
                     {
                         // The index of the face in the compressed grid
@@ -297,11 +326,7 @@ namespace Opm
 
                         if (faceDirection == connection.reservoir_face_dir.at(idx))
                         {
-                            // Check now if the face is outside of the reservoir, or if it adjoins an inactive cell
-                            // Do not make the connection if the product of the two cellIdx > 0. This is because the
-                            // face is within the reservoir/not connected to boundary. (We still have yet to check for inactive cell adjoining)
-                            faceArea = (faceCells(faceIdx,0)*faceCells(faceIdx,1) > 0)? 0. : Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
-                            faceArea_connected_.at(idx) = faceArea;
+                            faceArea_connected_.at(idx) = getFaceArea(faceCells, ugrid, faceIdx, idx, connection);
                             denom_face_areas += ( connection.influx_multiplier.at(idx) * faceArea_connected_.at(idx) );
                         }
                     }
@@ -309,9 +334,13 @@ namespace Opm
                     cell_depth_.at(idx) = cellCenter[2];
                 }
 
+                const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
+
                 for (size_t idx = 0; idx < cell_idx_.size(); ++idx)
                 {
-                    alphai_.at(idx) = ( connection.influx_multiplier.at(idx) * faceArea_connected_.at(idx) )/denom_face_areas;
+                    alphai_.at(idx) = (denom_face_areas < eps_sqrt)? // Prevent no connection NaNs due to division by zero
+                                      0.
+                                    : ( connection.influx_multiplier.at(idx) * faceArea_connected_.at(idx) )/denom_face_areas;
                 }
             }
 
@@ -319,16 +348,16 @@ namespace Opm
             {
 
                 int pvttableIdx = aquct_data_.pvttableID - 1;
-                
+
                 rhow_.resize(cell_idx_.size(),0.);
-                
-                if (aquct_data_.p0 < 1.0)
+
+                if (!aquct_data_.p0)
                 {
                    pa0_ = calculateReservoirEquilibrium();
                 }
                 else
                 {
-                   pa0_ = aquct_data_.p0;
+                   pa0_ = *(aquct_data_.p0);
                 }
 
                 // use the thermodynamic state of the first active cell as a

@@ -86,7 +86,7 @@ public:
 
         //Get the table
         const VFPProdTable* table = detail::getTable(m_tables, table_id);
-        EvalWell bhp = 0.0;
+        EvalWell bhp = 0.0 * aqua;
 
         //Find interpolation variables
         EvalWell flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
@@ -159,13 +159,41 @@ public:
     const VFPProdTable* getTable(const int table_id) const;
 
     /**
+     * Check whether there is table associated with ID
+     */
+    bool hasTable(const int table_id) const;
+
+    /**
      * Returns true if no vfp tables are in the current map
      */
     bool empty() const {
         return m_tables.empty();
     }
 
+
+    /**
+     * Calculate the Bhp value from the THP target/constraint value
+     * based on inflow performance relationship and VFP curves
+     */
+     double
+     calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
+                               const std::vector<double>& ipr_b,
+                               const double bhp_limit,
+                               const double thp_table_id,
+                               const double thp_limit,
+                               const double alq,
+                               const double dp) const;
+
 protected:
+    // calculate a group bhp values with a group of flo rate values
+    std::vector<double> bhpwithflo(const std::vector<double>& flos,
+                                   const int table_id,
+                                   const double wfr,
+                                   const double gfr,
+                                   const double thp,
+                                   const double alq,
+                                   const double dp) const;
+
     // Map which connects the table number with the table itself
     std::map<int, const VFPProdTable*> m_tables;
 };

@@ -20,19 +20,24 @@
 */
 
 
-#ifndef OPM_STANDARDWELL_HEADER_INCLUDED
-#define OPM_STANDARDWELL_HEADER_INCLUDED
+#ifndef OPM_STANDARDWELLV_HEADER_INCLUDED
+#define OPM_STANDARDWELLV_HEADER_INCLUDED
 
 
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolverEbos.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 
+#include <opm/material/densead/DynamicEvaluation.hpp>
+
+#include <dune/common/dynvector.hh>
+#include <dune/common/dynmatrix.hh>
+
 namespace Opm
 {
 
     template<typename TypeTag>
-    class StandardWell: public WellInterface<TypeTag>
+    class StandardWellV: public WellInterface<TypeTag>
     {
 
     public:
@@ -89,10 +94,6 @@ namespace Opm
         // TODO: we should have indices for the well equations and well primary variables separately
         static const int Bhp = numStaticWellEq - numWellControlEq;
 
-        // total number of the well equations and primary variables
-        // for StandardWell, no extra well equations will be used.
-        static const int numWellEq = numStaticWellEq;
-
         using typename Base::Scalar;
 
 
@@ -110,28 +111,28 @@ namespace Opm
         // B  D ]   x_well]      res_well]
 
         // the vector type for the res_well and x_well
-        typedef Dune::FieldVector<Scalar, numWellEq> VectorBlockWellType;
+        typedef Dune::DynamicVector<Scalar> VectorBlockWellType;
         typedef Dune::BlockVector<VectorBlockWellType> BVectorWell;
 
         // the matrix type for the diagonal matrix D
-        typedef Dune::FieldMatrix<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
+        typedef Dune::DynamicMatrix<Scalar> DiagMatrixBlockWellType;
         typedef Dune::BCRSMatrix <DiagMatrixBlockWellType> DiagMatWell;
 
         // the matrix type for the non-diagonal matrix B and C^T
-        typedef Dune::FieldMatrix<Scalar, numWellEq, numEq>  OffDiagMatrixBlockWellType;
+        typedef Dune::DynamicMatrix<Scalar> OffDiagMatrixBlockWellType;
         typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellType> OffDiagMatWell;
 
-        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
+        typedef DenseAd::DynamicEvaluation<Scalar> EvalWell;
 
         using Base::contiSolventEqIdx;
         using Base::contiPolymerEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
-        StandardWell(const Well* well, const int time_step, const Wells* wells,
-                     const ModelParameters& param,
-                     const RateConverterType& rate_converter,
-                     const int pvtRegionIdx,
-                     const int num_components);
+        StandardWellV(const Well* well, const int time_step, const Wells* wells,
+                      const ModelParameters& param,
+                      const RateConverterType& rate_converter,
+                      const int pvtRegionIdx,
+                      const int num_components);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
@@ -220,6 +221,10 @@ namespace Opm
         using Base::perf_rep_radius_;
         using Base::perf_length_;
         using Base::bore_diameters_;
+
+        // total number of the well equations and primary variables
+        // there might be extra equations be used, numWellEq will be updated during the initialization
+        int numWellEq_ = numStaticWellEq;
 
         // densities of the fluid in each perforation
         std::vector<double> perf_densities_;
@@ -416,11 +421,33 @@ namespace Opm
                                          const double simulation_time, const int report_step, const bool terminal_output,
                                          WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger) override;
 
+        // calculate the skin pressure based on water velocity, throughput and polymer concentration.
+        // throughput is used to describe the formation damage during water/polymer injection.
+        // calculated skin pressure will be applied to the drawdown during perforation rate calculation
+        // to handle the effect from formation damage.
+        EvalWell pskin(const double throuhgput,
+                       const EvalWell& water_velocity,
+                       const EvalWell& poly_inj_conc) const;
+
+        // calculate the skin pressure based on water velocity, throughput during water injection.
+        EvalWell pskinwater(const double throughput,
+                            const EvalWell& water_velocity) const;
+
+        // calculate the injecting polymer molecular weight based on the througput and water velocity
+        EvalWell wpolymermw(const double throughput,
+                            const EvalWell& water_velocity) const;
+
+        // handle the extra equations for polymer injectivity study
+        void handleInjectivityRateAndEquations(const IntensiveQuantities& int_quants,
+                                               const WellState& well_state,
+                                               const int perf,
+                                               std::vector<EvalWell>& cq_s);
+
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
     };
 
 }
 
-#include "StandardWell_impl.hpp"
+#include "StandardWellV_impl.hpp"
 
-#endif // OPM_STANDARDWELL_HEADER_INCLUDED
+#endif // OPM_STANDARDWELLV_HEADER_INCLUDED

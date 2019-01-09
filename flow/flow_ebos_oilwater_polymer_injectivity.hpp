@@ -1,6 +1,4 @@
 /*
-  Copyright 2015 SINTEF ICT, Applied Mathematics.
-
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -16,17 +14,15 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef FLOW_EBOS_OILWATER_POLYMER_INJECTIVITY_HPP
+#define FLOW_EBOS_OILWATER_POLYMER_INJECTIVITY_HPP
 
-#ifndef OPM_MPIUTILITIES_HEADER_INCLUDED
-#define OPM_MPIUTILITIES_HEADER_INCLUDED
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
-#include <boost/any.hpp>
+namespace Opm {
+  // void flowEbosOilWaterPolymerInjectivitySetDeck(Deck& deck, EclipseState& eclState);
+  int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv);
+}
 
-namespace Opm
-{
-    /// Return true if this is a serial run, or rank zero on an MPI run.
-    bool isIORank(const boost::any& parallel_info);
-
-} // namespace Opm
-
-#endif // OPM_MPIUTILITIES_HEADER_INCLUDED
+#endif // FLOW_EBOS_OILWATER_POLYMER_INJECTIVITY_HPP

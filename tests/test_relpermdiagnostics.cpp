@@ -37,7 +37,6 @@
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 BOOST_AUTO_TEST_SUITE ()
@@ -46,10 +45,9 @@ BOOST_AUTO_TEST_CASE(diagnosis)
 {
     using namespace Opm;
     Parser parser;
-    Opm::ParseContext parseContext;
 
-    Opm::Deck deck = parser.parseFile("../tests/relpermDiagnostics.DATA", parseContext);
-    EclipseState eclState(deck, parseContext);
+    Opm::Deck deck = parser.parseFile("../tests/relpermDiagnostics.DATA");
+    EclipseState eclState(deck);
     GridManager gm(eclState.getInputGrid());
     const UnstructuredGrid& grid = *gm.c_grid();
     std::shared_ptr<CounterLog> counterLog = std::make_shared<CounterLog>(Log::DefaultMessageTypes);

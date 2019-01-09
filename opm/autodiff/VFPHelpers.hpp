@@ -21,6 +21,7 @@
 #ifndef OPM_AUTODIFF_VFPHELPERS_HPP_
 #define OPM_AUTODIFF_VFPHELPERS_HPP_
 
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <cmath>
 #include <opm/common/ErrorMacros.hpp>
@@ -37,19 +38,33 @@ namespace detail {
 
 
 /**
- * Returns zero if input value is NaN
+ * Returns zero if input value is NaN of INF
  */
-inline double zeroIfNan(const double& value) {
-    return (std::isnan(value)) ? 0.0 : value;
+inline double zeroIfNanInf(const double& value) {
+    const bool nan_or_inf = std::isnan(value) || std::isinf(value);
+
+    if (nan_or_inf) {
+        OpmLog::warning("NAN_OR_INF_VFP", "NAN or INF value encountered during VFP calculation, the value is set to zero");
+    }
+
+    return nan_or_inf ? 0.0 : value;
 }
 
 
 /**
- * Returns zero if input value is NaN
+ * Returns zero if input value is NaN or INF
  */
 template <class EvalWell>
-inline EvalWell zeroIfNan(const EvalWell& value) {
-    return (std::isnan(value.value())) ? 0.0 : value;
+inline EvalWell zeroIfNanInf(const EvalWell& value) {
+    const bool nan_or_inf = std::isnan(value.value()) || std::isinf(value.value());
+
+    if (nan_or_inf) {
+        OpmLog::warning("NAN_OR_INF_VFP_EVAL", "NAN or INF Evalution encountered during VFP calculation, the Evalution is set to zero");
+    }
+
+    using Toolbox = MathToolbox<EvalWell>;
+
+    return nan_or_inf ? Toolbox::createBlank(value) : value;
 }
 
 
@@ -120,14 +135,14 @@ static T getWFR(const T& aqua, const T& liquid, const T& vapour,
         case VFPProdTable::WFR_WOR: {
             //Water-oil ratio = water / oil
             T wor = aqua / liquid;
-            return zeroIfNan(wor);
+            return zeroIfNanInf(wor);
         }
         case VFPProdTable::WFR_WCT:
             //Water cut = water / (water + oil)
-            return zeroIfNan(aqua / (aqua + liquid));
+            return zeroIfNanInf(aqua / (aqua + liquid));
         case VFPProdTable::WFR_WGR:
             //Water-gas ratio = water / gas
-            return zeroIfNan(aqua / vapour);
+            return zeroIfNanInf(aqua / vapour);
         case VFPProdTable::WFR_INVALID: //Intentional fall-through
         default:
             OPM_THROW(std::logic_error, "Invalid WFR_TYPE: '" << type << "'");
@@ -149,13 +164,13 @@ static T getGFR(const T& aqua, const T& liquid, const T& vapour,
     switch(type) {
         case VFPProdTable::GFR_GOR:
             // Gas-oil ratio = gas / oil
-            return zeroIfNan(vapour / liquid);
+            return zeroIfNanInf(vapour / liquid);
         case VFPProdTable::GFR_GLR:
             // Gas-liquid ratio = gas / (oil + water)
-            return zeroIfNan(vapour / (liquid + aqua));
+            return zeroIfNanInf(vapour / (liquid + aqua));
         case VFPProdTable::GFR_OGR:
             // Oil-gas ratio = oil / gas
-            return zeroIfNan(liquid / vapour);
+            return zeroIfNanInf(liquid / vapour);
         case VFPProdTable::GFR_INVALID: //Intentional fall-through
         default:
             OPM_THROW(std::logic_error, "Invalid GFR_TYPE: '" << type << "'");
@@ -537,11 +552,20 @@ template <typename T>
 const T* getTable(const std::map<int, T*> tables, int table_id) {
     auto entry = tables.find(table_id);
     if (entry == tables.end()) {
-        OPM_THROW(std::invalid_argument, "Nonexistent table " << table_id << " referenced.");
+        OPM_THROW(std::invalid_argument, "Nonexistent VFP table " << table_id << " referenced.");
     }
     else {
         return entry->second;
     }
+}
+
+/**
+ * Check whether we have a table with the table number
+ */
+template <typename T>
+bool hasTable(const std::map<int, T*> tables, int table_id) {
+    const auto entry = tables.find(table_id);
+    return (entry != tables.end() );
 }
 
 
@@ -742,8 +766,93 @@ inline double findTHP(
 
 
 
+// a data type use to do the intersection calculation to get the intial bhp under THP control
+struct RateBhpPair {
+    double rate;
+    double bhp;
+};
 
 
+// looking for a intersection point a line segment and a line, they are both defined with two points
+// it is copied from #include <opm/polymer/Point2D.hpp>, which should be removed since it is only required by the lagacy polymer
+inline bool findIntersection(const std::array<RateBhpPair, 2>& line_segment, const std::array<RateBhpPair, 2>& line, double& bhp) {
+    const double x1 = line_segment[0].rate;
+    const double y1 = line_segment[0].bhp;
+    const double x2 = line_segment[1].rate;
+    const double y2 = line_segment[1].bhp;
+
+    const double x3 = line[0].rate;
+    const double y3 = line[0].bhp;
+    const double x4 = line[1].rate;
+    const double y4 = line[1].bhp;
+
+    const double d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+
+    if (d == 0.) {
+        return false;
+    }
+
+    const double x = ((x3 - x4) * (x1 * y2 - y1 * x2) - (x1 - x2) * (x3 * y4 - y3 * x4)) / d;
+    const double y = ((y3 - y4) * (x1 * y2 - y1 * x2) - (y1 - y2) * (x3 * y4 - y3 * x4)) / d;
+
+    if (x >= std::min(x1,x2) && x <= std::max(x1,x2)) {
+        bhp = y;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+// calculating the BHP from thp through the intersection of VFP curves and inflow performance relationship
+inline bool findIntersectionForBhp(const std::vector<RateBhpPair>& ratebhp_samples,
+                                   const std::array<RateBhpPair, 2>& ratebhp_twopoints_ipr,
+                                   double& obtained_bhp)
+{
+    // there possibly two intersection point, then we choose the one corresponding with the bigger rate
+
+    const double bhp1 = ratebhp_twopoints_ipr[0].bhp;
+    const double rate1 = ratebhp_twopoints_ipr[0].rate;
+
+    const double bhp2 = ratebhp_twopoints_ipr[1].bhp;
+    const double rate2 = ratebhp_twopoints_ipr[1].rate;
+
+    assert(rate1 != rate2);
+
+    const double line_slope = (bhp2 - bhp1) / (rate2 - rate1);
+
+    // line equation will be
+    // bhp - bhp1 - line_slope * (flo_rate - flo_rate1) = 0
+    auto flambda = [&](const double flo_rate, const double bhp) {
+        return bhp - bhp1 - line_slope * (flo_rate - rate1);
+    };
+
+    int number_intersection_found = 0;
+    int index_segment = 0; // the intersection segment that intersection happens
+    const size_t num_samples = ratebhp_samples.size();
+    for (size_t i = 0; i < num_samples - 1; ++i) {
+        const double temp1 = flambda(ratebhp_samples[i].rate, ratebhp_samples[i].bhp);
+        const double temp2 = flambda(ratebhp_samples[i+1].rate, ratebhp_samples[i+1].bhp);
+        if (temp1 * temp2 <= 0.) { // intersection happens
+            // in theory there should be maximum two intersection points
+            // while considering the situation == 0. here, we might find more
+            // we always use the last one, which is the one corresponds to the biggest rate,
+            // which we assume is the more stable one
+            ++number_intersection_found;
+            index_segment = i;
+        }
+    }
+
+    if (number_intersection_found == 0) { // there is not intersection point
+        return false;
+    }
+
+    // then we pick the segment from the VFP curve to do the line intersection calculation
+    const std::array<RateBhpPair, 2> line_segment{ ratebhp_samples[index_segment], ratebhp_samples[index_segment + 1] };
+
+    const bool intersection_found = findIntersection(line_segment, ratebhp_twopoints_ipr, obtained_bhp);
+
+    return intersection_found;
+}
 
 
 } // namespace detail

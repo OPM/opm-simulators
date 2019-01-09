@@ -23,13 +23,11 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
-#include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/grid/GridManager.hpp>
 
@@ -39,24 +37,21 @@ using namespace Opm;
 BOOST_AUTO_TEST_CASE(TestStoppedWells)
 {
     const std::string filename = "wells_stopped.data";
-    Opm::ParseContext parseContext;
     Opm::Parser parser;
-    Opm::Deck deck(parser.parseFile(filename , parseContext));
-    Opm::EclipseState eclipseState(deck , parseContext);
+    Opm::Deck deck(parser.parseFile(filename));
+    Opm::EclipseState eclipseState(deck);
     Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
-    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
+    const Schedule sched(deck, grid, eclipseProperties, runspec);
 
 
     double target_surfacerate_inj;
     double target_surfacerate_prod;
 
     const std::vector<double> pressure = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-    BlackoilState state( pressure.size() , 0 , 3);
-    state.pressure() = pressure;
 
     // Both wells are open in the first schedule step
     {
@@ -71,7 +66,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
     target_surfacerate_prod = well_controls_iget_target(ctrls1 , 0);
 
     WellState wellstate;
-    wellstate.init(wells, state);
+    wellstate.init(wells, pressure);
     const std::vector<double> wellrates = wellstate.wellRates();
     BOOST_CHECK_EQUAL (target_surfacerate_inj, wellrates[2]); // Gas injector
     BOOST_CHECK_EQUAL (target_surfacerate_prod, wellrates[4]); // Oil target rate
@@ -88,7 +83,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
     BOOST_CHECK(well_controls_well_is_open(ctrls1));
 
     WellState wellstate;
-    wellstate.init(wells, state);
+    wellstate.init(wells, pressure);
 
     const std::vector<double> wellrates = wellstate.wellRates();
     BOOST_CHECK_EQUAL (0, wellrates[2]); // Gas injector

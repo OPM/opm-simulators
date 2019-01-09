@@ -80,7 +80,7 @@ public:
 
         //Get the table
         const VFPInjTable* table = detail::getTable(m_tables, table_id);
-        EvalWell bhp = 0.0;
+        EvalWell bhp = 0.0 * aqua;
 
         //Find interpolation variables
         EvalWell flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
@@ -108,6 +108,11 @@ public:
      * the table does not exist
      */
     const VFPInjTable* getTable(const int table_id) const;
+
+    /**
+     * Check whether there is table associated with ID
+     */
+    bool hasTable(const int table_id) const;
 
     /**
      * Returns true if no vfp tables are in the current map

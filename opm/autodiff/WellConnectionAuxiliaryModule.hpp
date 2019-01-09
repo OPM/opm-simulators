@@ -36,7 +36,7 @@ class WellConnectionAuxiliaryModule
     : public Ewoms::BaseAuxiliaryModule<TypeTag>
 {
     typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, JacobianMatrix) JacobianMatrix;
+    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
 
 public:
 
@@ -116,7 +116,7 @@ public:
     void applyInitial()
     {}
 
-    void linearize(JacobianMatrix& , GlobalEqVector&)
+    void linearize(SparseMatrixAdapter& , GlobalEqVector&)
     {
         // Linearization is done in StandardDenseWells
     }

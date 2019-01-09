@@ -33,7 +33,6 @@ namespace Opm
     {
     public:
         typedef WellInterface<TypeTag> Base;
-        typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
 
         using typename Base::WellState;
         using typename Base::Simulator;
@@ -117,9 +116,9 @@ namespace Opm
                                     const double dt,
                                     WellState& well_state) override;
 
-        /// updating the well state based the control mode specified with current
-        // TODO: later will check wheter we need current
-        virtual void updateWellStateWithTarget(WellState& well_state) const override;
+        /// updating the well state based the current control mode
+        virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                               WellState& well_state) const override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const override;
@@ -152,17 +151,6 @@ namespace Opm
 
         int numberOfPerforations() const;
 
-        void addCellRates(RateVector& rates, int cellIdx) const override
-        {
-            for (int perfIdx = 0; perfIdx < number_of_perforations_; ++perfIdx) {
-                if (Base::cells()[perfIdx] == cellIdx) {
-                    for (int i = 0; i < RateVector::dimension; ++i) {
-                        rates[i] += connectionRates_[perfIdx][i];
-                    }
-                }
-            }
-        }
-
     protected:
         int number_segments_;
 
@@ -194,6 +182,7 @@ namespace Opm
         using Base::well_controls_;
         using Base::perf_depth_;
         using Base::num_components_;
+        using Base::connectionRates_;
 
         // protected functions from the Base class
         using Base::phaseUsage;
@@ -263,8 +252,6 @@ namespace Opm
         std::vector<EvalWell> segment_mass_rates_;
 
         std::vector<double> segment_depth_diffs_;
-
-        std::vector<RateVector> connectionRates_;
 
         void initMatrixAndVectors(const int num_cells) const;
 
@@ -343,6 +330,11 @@ namespace Opm
         // handling the overshooting and undershooting of the fractions
         void processFractions(const int seg) const;
 
+        // checking the operability of the well based on current reservoir condition
+        // it is not implemented for multisegment well yet
+        virtual void checkWellOperability(const Simulator& ebos_simulator,
+                                          const WellState& well_state) override;
+
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;
 
         bool frictionalPressureLossConsidered() const;
@@ -357,6 +349,13 @@ namespace Opm
         void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                             const double dt,
                                             WellState& well_state);
+
+        virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
+                                         const double simulation_time, const int report_step,
+                                         const bool terminal_output,
+                                         WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger) override;
+
+        virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
     };
 
 }

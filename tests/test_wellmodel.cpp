@@ -29,27 +29,22 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
-#include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/wells.h>
-#include <opm/core/wells/DynamicListEconLimited.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-#include <opm/autodiff/GridHelpers.hpp>
+#include <opm/grid/GridHelpers.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
 #include <opm/autodiff/createGlobalCellArray.hpp>
 #include <opm/autodiff/GridInit.hpp>
-
-#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
 #include <ebos/eclproblem.hh>
 #include <ewoms/common/start.hh>
@@ -72,15 +67,14 @@ struct SetupTest {
 
     SetupTest ()
     {
-        Opm::ParseContext parse_context;
         Opm::Parser parser;
-        auto deck = parser.parseFile("TESTWELLMODEL.DATA", parse_context);
-        ecl_state.reset(new Opm::EclipseState(deck , parse_context) );
+        auto deck = parser.parseFile("TESTWELLMODEL.DATA");
+        ecl_state.reset(new Opm::EclipseState(deck) );
         {
           const Opm::TableManager table ( deck );
           const Opm::Eclipse3DProperties eclipseProperties ( deck , table, ecl_state->getInputGrid());
           const Opm::Runspec runspec (deck);
-          schedule.reset( new Opm::Schedule(deck, ecl_state->getInputGrid(), eclipseProperties, runspec, parse_context ));
+          schedule.reset( new Opm::Schedule(deck, ecl_state->getInputGrid(), eclipseProperties, runspec));
         }
 
         // Create grid.
@@ -94,9 +88,6 @@ struct SetupTest {
         std::vector<int> compressed_to_cartesianIdx;
         Opm::createGlobalCellArray(grid, compressed_to_cartesianIdx);
 
-        // dummy_dynamic_list_econ_lmited
-        const Opm::DynamicListEconLimited dummy_dynamic_list;
-
         current_timestep = 0;
 
         // Create wells.
@@ -109,7 +100,6 @@ struct SetupTest {
                                                   Opm::UgGridHelpers::dimensions(grid),
                                                   Opm::UgGridHelpers::cell2Faces(grid),
                                                   Opm::UgGridHelpers::beginFaceCentroids(grid),
-                                                  dummy_dynamic_list,
                                                   false,
                                                   std::unordered_set<std::string>() ) );
 
