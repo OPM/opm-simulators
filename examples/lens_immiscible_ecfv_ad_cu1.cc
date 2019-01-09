@@ -38,7 +38,9 @@
 
 #include <ewoms/common/start.hh>
 
+// fake forward declaration to prevent esoteric compiler warning
 int mainCU1(int argc, char **argv);
+
 int mainCU1(int argc, char **argv)
 {
     typedef TTAG(LensProblemEcfvAd) ProblemTypeTag;
