@@ -137,7 +137,7 @@ private:
     /*!
      * \brief Initialize the parameters for the solid energy law using using HEATCR and friends.
      */
-    void initHeatcr_(const Opm::Deck& deck,
+    void initHeatcr_(const Opm::Deck& deck OPM_UNUSED,
                      const Opm::EclipseState& eclState,
                      const std::vector<int>& compressedToCartesianElemIdx)
     {
@@ -173,7 +173,7 @@ private:
     /*!
      * \brief Initialize the parameters for the solid energy law using using SPECROCK and friends.
      */
-    void initSpecrock_(const Opm::Deck& deck,
+    void initSpecrock_(const Opm::Deck& deck OPM_UNUSED,
                        const Opm::EclipseState& eclState,
                        const std::vector<int>& compressedToCartesianElemIdx)
     {
@@ -215,9 +215,9 @@ private:
     /*!
      * \brief Specify the solid energy law by setting heat capacity of rock to 0
      */
-    void initNullRockEnergy_(const Opm::Deck& deck,
-                      const Opm::EclipseState& eclState,
-                      const std::vector<int>& compressedToCartesianElemIdx)
+    void initNullRockEnergy_(const Opm::Deck& deck OPM_UNUSED,
+                             const Opm::EclipseState& eclState OPM_UNUSED,
+                             const std::vector<int>& compressedToCartesianElemIdx OPM_UNUSED)
     {
         solidEnergyApproach_ = SolidEnergyLawParams::nullApproach;
 
@@ -228,7 +228,7 @@ private:
     /*!
      * \brief Initialize the parameters for the thermal conduction law using THCONR and friends.
      */
-    void initThconr_(const Opm::Deck& deck,
+    void initThconr_(const Opm::Deck& deck OPM_UNUSED,
                      const Opm::EclipseState& eclState,
                      const std::vector<int>& compressedToCartesianElemIdx)
     {
@@ -260,7 +260,7 @@ private:
     /*!
      * \brief Initialize the parameters for the thermal conduction law using THCROCK and friends.
      */
-    void initThc_(const Opm::Deck& deck,
+    void initThc_(const Opm::Deck& deck OPM_UNUSED,
                   const Opm::EclipseState& eclState,
                   const std::vector<int>& compressedToCartesianElemIdx)
     {
@@ -298,9 +298,9 @@ private:
     /*!
      * \brief Disable thermal conductivity
      */
-    void initNullCond_(const Opm::Deck& deck,
-                       const Opm::EclipseState& eclState,
-                       const std::vector<int>& compressedToCartesianElemIdx)
+    void initNullCond_(const Opm::Deck& deck OPM_UNUSED,
+                       const Opm::EclipseState& eclState OPM_UNUSED,
+                       const std::vector<int>& compressedToCartesianElemIdx OPM_UNUSED)
     {
         thermalConductivityApproach_ = ThermalConductionLawParams::nullApproach;
 
