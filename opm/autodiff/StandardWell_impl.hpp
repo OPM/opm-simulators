@@ -18,8 +18,11 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
+#define OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
 
-
+#include "StandardWell.hpp"
+#include <opm/objective/ObjectiveFunctions.hpp>
 namespace Opm
 {
 
@@ -43,7 +46,12 @@ namespace Opm
 
         duneB_.setBuildMode( OffDiagMatWell::row_wise );
         duneC_.setBuildMode( OffDiagMatWell::row_wise );
+        duneCA_.setBuildMode( OffDiagMatWellCtrl::row_wise );
+        duneDA_.setBuildMode( DiagMatWellCtrl::row_wise );
+        duneD_.setBuildMode( DiagMatWell::row_wise );
         invDuneD_.setBuildMode( DiagMatWell::row_wise );
+        //duneCA_.setBuildMode( DiagMatWell::row_wise );
+        //duneDA_.setBuildMode( DiagMatWell::row_wise );
     }
 
 
@@ -69,14 +77,29 @@ namespace Opm
         // setup sparsity pattern for the matrices
         //[A C^T    [x    =  [ res
         // B D] x_well]      res_well]
+        // full derivaives
+        //[A    C^T    CA^T ]
+        // B      D        DA]
         // set the size of the matrices
         invDuneD_.setSize(1, 1, 1);
+        duneD_.setSize(1, 1, 1);
         duneB_.setSize(1, num_cells, number_of_perforations_);
         duneC_.setSize(1, num_cells, number_of_perforations_);
+        //
+        if(numWellAdjoint>0){
+            duneCA_.setSize(1, num_cells, number_of_perforations_);
+            duneDA_.setSize(1, 1, 1);
+        }
 
         for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
             // Add nonzeros for diagonal
             row.insert(row.index());
+        }
+        if(numWellAdjoint>0){// only need for adjoint runs
+            for (auto row=duneD_.createbegin(), end = duneD_.createend(); row!=end; ++row) {
+                // Add nonzeros for diagonal
+                row.insert(row.index());
+            }
         }
 
         for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
@@ -93,12 +116,38 @@ namespace Opm
                 row.insert(cell_idx);
             }
         }
+        if(numWellAdjoint>0){
+            // for adjoint
+            for (auto row = duneCA_.createbegin(), end = duneCA_.createend(); row!=end; ++row) {
+                for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
+                    const int cell_idx = well_cells_[perf];
+                    row.insert(cell_idx);
+                }
+            }
+        }
+
+        if(numWellAdjoint>0){
+            // make the C^T matrix
+            for (auto row=duneDA_.createbegin(), end = duneDA_.createend(); row!=end; ++row) {
+                // Add nonzeros for diagonal
+                row.insert(row.index());
+            }
+        }
+
 
         resWell_.resize(1);
-
         // resize temporary class variables
         Bx_.resize( duneB_.N() );
         invDrw_.resize( invDuneD_.N() );
+        if(numWellAdjoint>0){
+            adjWell_.resize(1);
+            Ctx_.resize( duneC_.M());
+            invDtadj_.resize( invDuneD_.N());
+            objder_.resize(1);
+            objder_adjres_.resize(num_cells);
+            objder_adjwell_.resize(1);// on block pr well
+            objder_adjctrl_.resize(1);// one block pr well
+        }
     }
 
 
@@ -171,7 +220,6 @@ namespace Opm
             } else {
                 comp_frac = comp_frac_[legacyCompIdx];
             }
-
             return comp_frac * primary_variables_evaluation_[WQTotal];
         } else { // producers
             return primary_variables_evaluation_[WQTotal] * wellVolumeFractionScaled(comp_idx);
@@ -287,6 +335,7 @@ namespace Opm
                     double& perf_dis_gas_rate,
                     double& perf_vap_oil_rate) const
     {
+
         const auto& fs = intQuants.fluidState();
         const EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
         const EvalWell rs = extendEval(fs.Rs());
@@ -345,6 +394,10 @@ namespace Opm
             if (!allow_cf && well_type_ == PRODUCER) {
                 return;
             }
+            // cmix_s should only be used for  injecting perforations
+
+
+
 
             // Using total mobilities
             EvalWell total_mob_dense = mob[0];
@@ -355,6 +408,9 @@ namespace Opm
             // injection perforations total volume rates
             const double Tw = well_index_[perf];
             const EvalWell cqt_i = - Tw * (total_mob_dense * drawdown);
+            // NB NB !!!!cmix_s should normally have now derivatives for injectors since it is given
+            // best would probably be to use mix in density calculations
+
 
             // surface volume fraction of fluids within wellbore
             std::vector<EvalWell> cmix_s(num_components_, 0.);
@@ -366,6 +422,7 @@ namespace Opm
             EvalWell volumeRatio = 0.0;
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+
                 volumeRatio += cmix_s[waterCompIdx] / b_perfcells_dense[waterCompIdx];
             }
 
@@ -407,7 +464,11 @@ namespace Opm
             EvalWell cqt_is = cqt_i/volumeRatio;
             //std::cout << "volrat " << volumeRatio << " " << volrat_perf_[perf] << std::endl;
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
-                cq_s[componentIdx] = cmix_s[componentIdx] * cqt_is; // * b_perfcells_dense[phase];
+                // for injecting perforations the composition should not have derivatives
+                EvalWell cmix_s_abs=cmix_s[componentIdx];
+                //cmix_s_abs.clearDerivatives();
+                cq_s[componentIdx] = cmix_s_abs* cqt_is; // * b_perfcells_dense[phase];
+                //cq_s[componentIdx] = cmix_s_abs[componentIdx]* cqt_is; // * b_perfcells_dense[phase];
             }
 
             // calculating the perforation solution gas rate and solution oil rates
@@ -435,8 +496,110 @@ namespace Opm
         }
     }
 
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    printObjective(std::ostream& os) const
+    {
+        os << "Well name :" << this->name() << std::endl;
+        os << "Well type :" << this->wellType() << std::endl;
+        WellControls *ctrl = this->wellControls();
+        os << "Current control " << well_controls_get_current_type(ctrl) << std::endl;
+        const double* drst = well_controls_get_current_distr(ctrl);
+        os << "Current control " << drst[0] <<  " "  << drst[1] <<  "  "  << drst[2] <<  "  " << std::endl;
+        os << "objective value " << objval_ << std::endl;
+        os << "objective derivative " << objder_ << std::endl;
 
+    }
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    addAdjointResult(AdjointResults& adjres) const{
+        adjres.well_names.push_back( this->name() );
+        adjres.derivative.push_back(objder_[0]);
+        adjres.objective.push_back(objval_);
+        WellControls *ctrl = this->wellControls();
+        const double* drst = well_controls_get_current_distr(ctrl);
+        std::stringstream control_state;
+        control_state <<  "Current control " << well_controls_get_current_type(ctrl) << "  " <<
+                drst[0] << " "  << drst[1] <<  "  "  << drst[2]  ;
+        adjres.control_state.push_back(control_state.str());
+        int cont_indx = well_controls_get_current_type(ctrl);
+        // hack to have some idea of state
+        for(int i=0; i < 3;i++){
+            if(drst[i]>0.5){
+                cont_indx += i*10;
+            }
+        }
+        adjres.control_indx.push_back(cont_indx);
+        //adjres.schedule_step.push_back()
 
+    }
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    computeObj(Simulator& ebosSimulator,
+                   const double dt)
+    {        
+        const EvalWell& bhp = getBhp();
+        // add vol * dF/dt + Q to the well equations;
+        std::vector<EvalWell> q;
+        for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
+            q.push_back(getQs(componentIdx) * well_efficiency_factor_);
+        }
+
+        // calculate objective function related to the well
+        const double t = ebosSimulator.time();
+        const EvalWell obj = Opm::Objectives::TotalWaterRate::objective(q, t, dt);
+
+        // pick out the well value and derivative
+        for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+            objder_adjwell_[0][pvIdx] = obj.derivative(pvIdx+numEq);
+        }
+        objder_adjctrl_[0][0] = obj.derivative(controlIndex);
+        objval_= obj.value();
+        objder_adjres_ = 0.0;
+    }
+
+    // NB functionallyto for adding contribution from previous step is not taken
+     // this is local
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    rhsAdjointWell(){ //const BVectorWell& lambda_w){
+        // rhs_w = dobj/dwell + C^T*lam_r
+        adjWell_=0.0;
+        // NB! this shoould only have the explict terms in the well equations
+        //duneC_.mtv(lam_r, adjWell_);// for prevois step duneC_ is assumed to be zero for linarization for prevois step
+        adjWell_-= objder_adjwell_;
+    }
+
+    // this is called outside in loop and accomulate terms
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    //rhsAdjointRes(const BVector& lambda_r, BVector& adjRes) const{
+    rhsAdjointRes(BVector& adjRes) const{
+        // rhs_r +=  dobj/dres + D^T*lam_w
+        // NB! this shoould only have the explict terms in the well equations
+        //duneD_.mtv(lam_w, adjRes); // for prevois step
+        // contribution to rhs from derivative of objective function with respect to
+        // the reservoir  at present zero
+        adjRes -= objder_adjres_;
+
+    }
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::objectDerivative(const BVector& lam_r, const BVectorWell & lam_w)
+    {
+        // obj/dctrl = obj/ctrl + CA^T*lamda_r+DA^t*lamda_w
+        objder_ = objder_adjctrl_;
+        duneCA_.umv(lam_r, objder_);
+        //objder_ += objder_adjctrl_;
+        duneDA_.umtv(lam_w, objder_);
+    }
 
 
     template<typename TypeTag>
@@ -452,8 +615,15 @@ namespace Opm
         if (!this->isOperable()) return;
 
         // clear all entries
+
         duneB_ = 0.0;
         duneC_ = 0.0;
+        if(numWellAdjoint>0){
+            duneDA_ = 0.0;
+            duneCA_ = 0.0;
+            duneD_ = 0.0;
+        }
+
         invDuneD_ = 0.0;
         resWell_ = 0.0;
 
@@ -510,6 +680,10 @@ namespace Opm
                     // also need to consider the efficiency factor when manipulating the jacobians.
                     duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
                     invDuneD_[0][0][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx+numEq);
+                }
+                if(numWellAdjoint>0){// NB we should probably also have a runtime switch here
+                    duneDA_[0][0][componentIdx][0] -= cq_s_effective.derivative(controlIndex);
+                    duneCA_[0][cell_idx][0][componentIdx] -= cq_s_effective.derivative(controlIndex);
                 }
 
                 for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
@@ -607,6 +781,7 @@ namespace Opm
                 }
             }
 
+
             // Store the perforation pressure for later usage.
             well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[index_of_well_] + perf_pressure_diffs_[perf];
 
@@ -636,11 +811,17 @@ namespace Opm
             for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
+            if(numWellAdjoint>0){//
+                duneDA_[0][0][componentIdx][0] += resWell_loc.derivative(controlIndex);
+            }
             resWell_[0][componentIdx] += resWell_loc.value();
         }
 
         assembleControlEq();
 
+        if(numWellAdjoint>0){
+            duneD_= invDuneD_;
+        }
         // do the local inversion of D.
         try
         {
@@ -683,13 +864,19 @@ namespace Opm
             }
             case BHP:
             {
-                const double target_bhp = well_controls_get_current_target(well_controls_);
+                EvalWell target_bhp = well_controls_get_current_target(well_controls_);
+                if (numWellAdjoint > 0) {
+                    target_bhp.setDerivative(controlIndex, 1.0);
+                }
                 control_eq = getBhp() - target_bhp;
                 break;
             }
             case SURFACE_RATE:
             {
-                const double target_rate = well_controls_get_current_target(well_controls_); // surface rate target
+                EvalWell target_rate = well_controls_get_current_target(well_controls_); // surface rate target
+                if (numWellAdjoint > 0) {
+                    target_rate.setDerivative(controlIndex, 1.0);
+                }
                 if (well_type_ == INJECTOR) {
                     // only handles single phase injection now
                     assert(well_ecl_->getInjectionProperties(current_step_).injectorType != WellInjector::MULTI);
@@ -734,7 +921,10 @@ namespace Opm
             }
             case RESERVOIR_RATE:
             {
-                const double target_rate = well_controls_get_current_target(well_controls_); // reservoir rate target
+                EvalWell target_rate = well_controls_get_current_target(well_controls_); // surface rate target
+                if (numWellAdjoint > 0) {
+                    target_rate.setDerivative(controlIndex, 1.0);
+                }
                 if (well_type_ == INJECTOR) {
                     // only handles single phase injection now
                     assert(well_ecl_->getInjectionProperties(current_step_).injectorType != WellInjector::MULTI);
@@ -764,6 +954,9 @@ namespace Opm
         resWell_[0][Bhp] = control_eq.value();
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
             invDuneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + numEq);
+        }
+        if (numWellAdjoint > 0) {
+            duneDA_[0][0][Bhp][0] = control_eq.derivative(controlIndex);
         }
     }
 
@@ -836,7 +1029,24 @@ namespace Opm
     }
 
 
-
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateAdjointState(const BVectorWell& adjval, WellState& well_state) const
+    {
+        //NB need to be checked
+        //objectDerivative(adjval);//
+        well_state.adjointVariables().resize(numEq);
+        adjoint_variables_.resize(1);
+        for(int i=0; i <numEq; ++i){
+            adjoint_variables_[0][i]=adjval[0][i];
+            well_state.adjointVariables()[i]=adjval[0][i];
+        }
+        // do all for objective contributions
+        well_state.objVal() = objval_;
+        well_state.objDer().resize(1);
+        well_state.objDer()[0] = objder_[0][0];
+    }
 
 
     template<typename TypeTag>
@@ -1658,9 +1868,10 @@ namespace Opm
         // Compute the average pressure in each well block
         for (int perf = 0; perf < nperf; ++perf) {
             const int cell_idx = well_cells_[perf];
-            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));// This code will not run if intensive quantity cache is disabled
             const auto& fs = intQuants.fluidState();
-
+            //bool has_cached= Ewoms::GET_PROP_VALUE(TypeTag,EnableIntensiveQuantityCache));
+            //static_assert(::Ewoms::Properties::GET_PROP_VALUE(TypeTag,EnableIntensiveQuantityCache));
             // TODO: this is another place to show why WellState need to be a vector of WellState.
             // TODO: to check why should be perf - 1
             const double p_above = perf == 0 ? well_state.bhp()[w] : well_state.perfPress()[first_perf_ + perf - 1];
@@ -1683,7 +1894,7 @@ namespace Opm
                     const double oilrate = std::abs(well_state.wellRates()[oilpos_well]); //in order to handle negative rates in producers
                     rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     if (oilrate > 0) {
-                        const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - well_state.solventWellRate(w);
+                        const double gasrate = std::abs(well_state.wellRates()[gaspos_well])- well_state.solventWellRate(w);
                         double rv = 0.0;
                         if (gasrate > 0) {
                             rv = oilrate / gasrate;
@@ -2104,6 +2315,40 @@ namespace Opm
     }
 
 
+//  Matrix format
+//         A    C^t
+//         B      D
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    applyt(const BVector& x, BVector& Atx) const
+    {
+        if ( param_.matrix_add_well_contributions_ )
+        {
+            // Contributions are already in the matrix itself
+            return;
+        }
+
+        assert( Bx_.size() == duneB_.N() );
+        assert( invDrw_.size() == invDuneD_.N() );
+
+        // Bx_ = duneC * x
+        duneC_.mv(x, Ctx_);
+        // invDBx = invDuneD_ * Bx_
+        // TODO: with this, we modified the content of the invDrw_.
+        // Is it necessary to do this to save some memory?
+        BVectorWell& invDtCx = invDtadj_;
+        invDuneD_.mtv(Ctx_, invDtCx);
+
+        // NB this to not flow article
+        // A^tx = A^t x - duneB_* invDBx
+        duneB_.mmtv(invDtCx,Atx);
+    }
+
 
 
     template<typename TypeTag>
@@ -2121,7 +2366,18 @@ namespace Opm
         duneC_.mmtv(invDrw_, r);
     }
 
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    applyt(BVector& r) const
+    {
+        assert( invDrw_.size() == invDuneD_.N() );
 
+        // invDrw_ = invDuneDt_ * resWell_
+        invDuneD_.mtv(adjWell_, invDtadj_);
+        // r = r - duneB_^T * invDtrw_
+        duneB_.mmtv(invDtadj_, r);
+    }
 
 
 
@@ -2138,7 +2394,17 @@ namespace Opm
         // xw = D^-1 * resWell
         invDuneD_.mv(resWell, xw);
     }
-
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    recoverAdjointWell(const BVector& x, BVectorWell& xw) const
+    {
+        BVectorWell adjWell = adjWell_;
+        // resWell = resWell - Ct * x
+        duneC_.mmv(x, adjWell);
+        // xw = Dt^-1 * resWell
+        invDuneD_.mtv(adjWell, xw);
+    }
 
 
 
@@ -2156,7 +2422,17 @@ namespace Opm
         updateWellState(xw, well_state);
     }
 
-
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    recoverWellAdjointAndUpdateAdjointState(const BVector& x, WellState& well_state)
+    {
+        BVectorWell xw(1);
+        recoverAdjointWell(x, xw);
+	std::cout << "Well adjoin " << xw[0] << std::endl;
+        objectDerivative(x, xw);
+        updateAdjointState(xw, well_state);
+    }
 
 
 
@@ -2392,10 +2668,11 @@ namespace Opm
                 primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / total_well_rate;
             }
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]] - well_state.solventWellRate(well_index)) / total_well_rate ;
+                primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]] - well_state.solventWellRate(well_index) ) / total_well_rate ;
             }
             if (has_solvent) {
                 primary_variables_[SFrac] = scalingFactor(pu.phase_pos[Gas]) * well_state.solventWellRate(well_index) / total_well_rate ;
+                //primary_variables_[GFrac] -= primary_variables_[SFrac];
             }
         } else { // total_well_rate == 0
             if (well_type_ == INJECTOR) {
@@ -2442,30 +2719,31 @@ namespace Opm
 
 
 
-
-
     template<typename TypeTag>
     template<class ValueType>
     ValueType
     StandardWell<TypeTag>::
     calculateBhpFromThp(const std::vector<ValueType>& rates,
-                        const int control_index) const
+                        const int thp_control_index) const
     {
         // TODO: when well is under THP control, the BHP is dependent on the rates,
         // the well rates is also dependent on the BHP, so it might need to do some iteration.
         // However, when group control is involved, change of the rates might impacts other wells
         // so iterations on a higher level will be required. Some investigation might be needed when
         // we face problems under THP control.
-
         assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
 
         const ValueType aqua = rates[Water];
         const ValueType liquid = rates[Oil];
         const ValueType vapour = rates[Gas];
 
-        const int vfp        = well_controls_iget_vfp(well_controls_, control_index);
-        const double& thp    = well_controls_iget_target(well_controls_, control_index);
-        const double& alq    = well_controls_iget_alq(well_controls_, control_index);
+        const int vfp        = well_controls_iget_vfp(well_controls_, thp_control_index);
+        ValueType thp        = well_controls_iget_target(well_controls_, thp_control_index);
+        const double& alq    = well_controls_iget_alq(well_controls_, thp_control_index);
+
+        if (numWellAdjoint > 0) {
+            setControlDerivative(thp);
+        }
 
         // pick the density in the top layer
         // TODO: it is possible it should be a Evaluation
@@ -2624,6 +2902,8 @@ namespace Opm
                 const auto col_index = colB.index();
                 // Move col to index col_index
                 while ( col != row.end() && col.index() < col_index ) ++col;
+                // if the assert fails the auxModule systems are probably not called correctly
+                // the matrix element in reservoir matrix is not allocated
                 assert(col != row.end() && col.index() == col_index);
 
                 Dune::FieldMatrix<Scalar, numWellEq, numEq> tmp;
@@ -2813,3 +3093,5 @@ namespace Opm
     {
     }
 }
+
+#endif

@@ -40,12 +40,15 @@ BEGIN_PROPERTIES
 NEW_PROP_TAG(EnableTerminalOutput);
 NEW_PROP_TAG(EnableAdaptiveTimeStepping);
 NEW_PROP_TAG(EnableTuning);
-
+NEW_PROP_TAG(AdjointResultsFile);
+NEW_PROP_TAG(NumWellAdjoint);
 SET_BOOL_PROP(EclFlowProblem, EnableTerminalOutput, true);
 SET_BOOL_PROP(EclFlowProblem, EnableAdaptiveTimeStepping, true);
 SET_BOOL_PROP(EclFlowProblem, EnableTuning, false);
-
+SET_STRING_PROP(EclFlowProblem, AdjointResultsFile, "adjoint_results.txt");
+SET_INT_PROP(EclFlowProblem,NumWellAdjoint,0);
 END_PROPERTIES
+
 
 namespace Opm {
 
@@ -124,6 +127,8 @@ public:
                              "Use adaptive time stepping between report steps");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTuning,
                              "Honor some aspects of the TUNING keyword.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, AdjointResultsFile,
+                             "Output file name for storing adjoints");
     }
 
     /// Run the simulation.
@@ -309,7 +314,103 @@ public:
         report.total_time = totalTimer.secsSinceStart();
         report.converged = true;
 
+        if(adaptiveTimeStepping){
+            report.time_steps = adaptiveTimeStepping->getAllTimeStepsTaken();
+            report.report_stepindx = adaptiveTimeStepping->getAllGlobalstepIndx();
+        }else{
+            report.time_steps = timer.getTimeSteps();
+            auto num_steps = timer.reportStepNum();
+            report.report_stepindx.resize(num_steps);
+            for(int i=0;i<num_steps;i++){
+                report.report_stepindx[i] = i;
+            }
+        }
         return report;
+    }
+
+    SimulatorReport runAdjoint(SimulatorTimer& timer)
+                       // ReservoirState& state)
+    {
+        static const int numWellAdjoint = GET_PROP_VALUE(TypeTag, NumWellAdjoint);
+        if(numWellAdjoint==0){
+            OPM_THROW(std::runtime_error,"Compilation do not support adjoint change  GET_PROP_VALUE(TypeTag, NumWellAdjoint)");
+        }
+        if (modelParam_.matrix_add_well_contributions_ ||
+             modelParam_.preconditioner_add_well_contributions_)
+        {
+            ebosSimulator_.model().clearAuxiliaryModules();
+            wellAuxMod_.reset(new WellConnectionAuxiliaryModule<TypeTag>(schedule(), grid()));
+            ebosSimulator_.model().addAuxiliaryModule(wellAuxMod_.get());
+        }
+	/*
+	static const int storagecache = GET_PROP_VALUE(TypeTag, EnableStorageCache);
+        if(storagecache){
+            OPM_THROW(std::runtime_error,"Compilation/implementation do not support adjoint change  GET_PROP_VALUE(TypeTag, EnableStorageCache)");
+        }
+        */
+	// model inherents from the discretization
+        ebosSimulator_.model().setEnableStorageCache(false);
+	// erase matrix to get update all threded elemCtx
+	// NB!!!!!! new is used in linearizer so this may be an error
+	ebosSimulator_.model().linearizer().init(ebosSimulator_);
+	//ElementContext elemCtx(ebosSimulator_);
+        //elemCtx.setEnableStorageCache(false);// Do not know if this work
+        SimulatorReport adjoint_report;
+        // Main simulation loop
+
+	//WellModel well_model(ebosSimulator_, modelParam_, terminalOutput_);
+        //AquiferModel aquifer_model(ebosSimulator_);
+
+        //if (output_writer_.isRestart()) {
+         //   well_model.setRestartWellState(prev_well_state); // Neccessary for perfect restarts ??
+        //}
+        //SET_BOOL_PROP(EclBaseProblem, EnableStorageCache, false)
+        //ebosSimulator_.problem().setEnableStorageCache(false);
+        //ElementContext elemCtx(ebosSimulator_);
+        //elemCtx.setEnableStorageCache(false);// Do not know if this work
+         typedef double Scalar;
+         static const int numEq = BlackoilIndices::numEq;
+        // static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
+        // static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
+        // static const int solventSaturationIdx = Indices::solventSaturationIdx;
+        // static const int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
+
+        typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
+        typedef Dune::BlockVector<VectorBlockType>      BVector;
+        const int nc = UgGridHelpers::numCells(grid());
+        BVector rhs(nc);
+        BVector rhs_next(nc);
+        std::cout << "Start Adjoint iteration" << std::endl;
+        std::list<AdjointResults> adjoint_res;
+        // we are after ebd step
+        rhs = 0.0;
+        rhs_next = 0.0;
+        while (!timer.initialStep()) {
+            // hopefulle the -1 is ok we ar pressent at end of the timestep we nned
+            // the prevois eclipse state
+            // we are before we move back
+            //well_model.beginReportStep(timer.prevReportStepNum());// this should really be clean to make a better initialization for backward simulation
+            timer.report(std::cout);
+            //WellState prev_well_state// assume we can read all of this inside;
+            //output_writer_.initFromRestartFile(phaseUsage_, grid(), state, prev_well_state, extra);
+            auto solver = createSolver(wellModel_());
+            AdjointResults adjres = solver->model().adjointIteration(timer, rhs, rhs_next);// state, well_state);
+            adjoint_res.push_front(adjres);
+            rhs=rhs_next;
+            --timer;
+        }
+        namespace fs = boost::filesystem;
+        fs::path filename(EWOMS_GET_PARAM(TypeTag, std::string, AdjointResultsFile));
+        std::string output_dir_name = ebosSimulator_.vanguard().eclState().getIOConfig().getOutputDir();
+        fs::path output_dir(output_dir_name);
+        fs::path adjoint_output = output_dir / filename;
+        std::ofstream ofile(adjoint_output.string());
+        for (auto& adjres: adjoint_res){
+            adjres.print(std::cout);
+            adjres.print(ofile);
+        }
+
+        return adjoint_report;
     }
 
     /** \brief Returns the simulator report for the failed substeps of the simulation.

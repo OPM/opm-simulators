@@ -49,6 +49,9 @@ namespace Opm
         /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
         void init(const TimeMap& timeMap, size_t report_step = 0);
 
+        // init form given steps
+        void init(std::vector<double> time_steps,std::vector<int> report_stepindx);
+
         /// Whether the current step is the first step.
         bool initialStep() const;
 
@@ -61,6 +64,12 @@ namespace Opm
         /// is timestep number zero.
         int currentStepNum() const;
 
+        // get current report step which is the same give the index to the
+        // state of the well configuration
+        int reportStepNum() const;
+
+        // get the previos report step number
+        int prevReportStepNum() const;
         /// Set current step number.
         void setCurrentStepNum(int step);
 
@@ -104,6 +113,9 @@ namespace Opm
         /// advance time by currentStepLength
         SimulatorTimer& operator++();
 
+        /// propagate backwards in current run
+        SimulatorTimer& operator--();
+
         /// advance time by currentStepLength
         void advance() { this->operator++(); }
 
@@ -117,14 +129,28 @@ namespace Opm
         /// return copy of object
         virtual std::unique_ptr< SimulatorTimerInterface > clone() const;
 
+//        std::ostream& write(std::ostream& stream ) const{
+//            stream << "Current Timestep " << current_step_ << std::endl;
+//            stream <<" Current time " << current_time_ << std::endl;
+//            stream <<" Total time "    <<  total_time_ << std::endl;
+//            stream << " Time step dt " <<  timesteps_[current_step_] << std::endl;
+//            return stream;
+//        }
+
+        std::vector<double> getTimeSteps(){return timesteps_;}
+
     private:
         std::vector<double> timesteps_;
+        std::vector<int> report_stepindx_;
         int current_step_;
         double current_time_;
         double total_time_;
         boost::gregorian::date start_date_;
     };
-
+//    std::ostream &operator<<(std::ostream &os, SimulatorTimer const &m) {
+//       // since `write` is public, we can call it without any problem.
+//       return m.write(os);
+//    }
 
 } // namespace Opm
 

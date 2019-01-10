@@ -182,6 +182,22 @@ namespace Opm
             return param_.matrix_add_well_contributions_;
         }
 
+        void applyt(const BVector& x, BVector& Ax) const{ OPM_THROW(std::runtime_error,"Adjoint not implemented"); };
+
+        void applyt(BVector& r) const { OPM_THROW(std::runtime_error,"Adjoint not implemented"); }
+        // interface for explite quatites not in
+        void rhsAdjointRes(BVector& adjRes) const { OPM_THROW(std::runtime_error,"Adjoint not implemented"); }
+
+        virtual void rhsAdjointWell() { OPM_THROW(std::runtime_error,"Adjoint not implemented"); }
+
+        virtual void recoverWellAdjointAndUpdateAdjointState(const BVector& x, WellState& well_state) { OPM_THROW(std::runtime_error,"Adjoint not implemented"); }
+
+        virtual void computeObj(Simulator& ebosSimulator,
+                                      const double dt) { OPM_THROW(std::runtime_error,"Adjoint not implemented"); }
+        virtual void printObjective(std::ostream& os) const { OPM_THROW(std::runtime_error,"Adjoint not implemented"); }
+
+        virtual void addAdjointResult(AdjointResults& adjres) const { OPM_THROW(std::runtime_error,"Adjoint not implemented"); }
+
     protected:
 
         // protected functions from the Base class

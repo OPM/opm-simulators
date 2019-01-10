@@ -36,8 +36,14 @@
 #include <opm/autodiff/WellConnectionAuxiliaryModule.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 
+//#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
+#include <opm/autodiff/LinearSolverAmgcl.hpp>
+//#include <opm/autodiff/LinearSolverAmgclNew.hpp>
+
+
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
+//#include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -66,6 +72,15 @@
 #include <algorithm>
 //#include <fstream>
 
+//writing matrix
+#include <dune/istl/matrixmarket.hh>
+#include <ewoms/linear/matrixmarket_ewoms.hh>
+#include <opm/autodiff/MatrixAdapterUtilities.hpp>
+#include <opm/autodiff/transpose.hh>
+
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
 
 BEGIN_PROPERTIES
 
@@ -75,6 +90,8 @@ SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
 // default in flow is to formulate the equations in surface volumes
 SET_BOOL_PROP(EclFlowProblem, BlackoilConserveSurfaceVolume, true);
 SET_BOOL_PROP(EclFlowProblem, UseVolumetricResidual, false);
+//SET_BOOL_PROP(EclFlowProblemSimple, EnableStorageCache, true);
+//SET_BOOL_PROP(EclFlowProblemSimple, EnableIntensiveQuantityCache, true);
 
 SET_TYPE_PROP(EclFlowProblem, EclAquiferModel, Opm::BlackoilAquiferModel<TypeTag>);
 
@@ -125,6 +142,7 @@ namespace Opm {
         static const int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
         static const int polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
         static const int temperatureIdx = Indices::temperatureIdx;
+        static const int pressureSwitchIdx = Indices::pressureSwitchIdx;
 
         typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
         typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
@@ -218,8 +236,207 @@ namespace Opm {
                 //updateEquationsScaling();
             }
         }
+        /// Called once per nonlinear iteration.
+        /// This model will perform a Newton-Raphson update, changing reservoir_state
+        /// and well_state. It will also use the nonlinear_solver to do relaxation of
+        /// updates if necessary.
+        /// \param[in] iteration              should be 0 for the first call of a new timestep
+        /// \param[in] timer                  simulation timer
+        /// \param[in] nonlinear_solver       nonlinear solver used (for oscillation/relaxation control)
+        /// \param[in, out] reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        AdjointResults adjointIteration(SimulatorTimerInterface& timer,const BVector& rhs,BVector& rhs_next)// WellState& well_state)
+        {
+            if(!param_.use_adjoint_){
+                OPM_THROW(std::runtime_error,"Forward simulation was not done with adjoint output enabled");
+            }
+            //SimulatorReport report;
+            // get to the start of the time step
+            --timer;
+            // for safety clear all intensive quantity cache
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+            this->prepareStep(timer); //only to set corrrect time for serialization
+            bool only_reservoir = true;
+            this->deserializeReservoir( timer.simulationTimeElapsed(), only_reservoir);
+            SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
+            // Store the initial previous.
+            ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
+            deserialize_well(true);//
+             ++timer;// get back to current step
+            // only to update inensive quantity cache1020
+            ebosSimulator_.problem().beginTimeStep();
+	    //deserialize_well(true);
+            ebosSimulator_.model().newtonMethod().setIterationIndex(0);
+            //ebosSimulator_.problem().beginIteration(); //fails at this point
+            {
+              //bool solve_well_equation = true;
+              //wellModel().beginIteration(solve_well_equation);// well equation assembly
+              //deserialize_well();
+              wellModel().updatePerforationIntensiveQuantities();
+              wellModel().prepareTimeStep();
+              wellModel().initPrimaryVariablesEvaluation();
+              wellModel().assembleWellEq(ebosSimulator_.timeStepSize());
+
+              //ebosSimulator_problem().beginIteration();// well equation assembly
+            }
+            ebosSimulator_.model().linearizer().linearize(/*focustimeindex=*/ 0);// should not be important since the
+	                                                                         //linarization should not be used
+            ebosSimulator_.problem().endIteration();//needed ??
+
+            this->prepareStep(timer);// set correct time ??
+            wellModel().beginTimeStep();
+            //deserialize_well(true);
+            wellModel().calculateExplicitQuantities();
+            wellModel().prepareTimeStep();
+            //this->prepareStep(timer);// set correct time ??
+            this->deserializeReservoir( timer.simulationTimeElapsed(),only_reservoir );
+            // seralizing may owerwrite prevois step since it was intended for restart ??
+            ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
+
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+
+            //deserialize_well();
+            double dt = timer.stepLengthTaken();
+            //wellModel().prepareTimeStep();
+            assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
+            ebosSimulator_.model().newtonMethod().setIterationIndex(/*iterationIdx*/ 1);
+            {
+              //bool solve_well_equation = true;
+              //wellModel().beginIteration(solve_well_equation);// well equation assembly
+              deserialize_well();
+              wellModel().updatePerforationIntensiveQuantities();
+              //wellModel().calculateExplicitQuantities();
+              wellModel().prepareTimeStep();
+              wellModel().initPrimaryVariablesEvaluation();
+              wellModel().assembleWellEq(ebosSimulator_.timeStepSize());
+
+	      //ebosSimulator_problem().beginIteration();// well equation assembly
+            }
+            ebosSimulator_.model().linearizer().linearize(0);
+            ebosSimulator_.problem().endIteration();
+	    // to get correct residual could asser small
+            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+	    wellModel().apply(ebosResid);
+
+             //wellModel().recoverWellSolutionAndUpdateWellState(x);
+            std::cout << "Printing matrix residual in backward mode" << std::endl;
+            std::cout << "Inf norm " << ebosResid.infinity_norm() << std::endl;
+            std::cout << "Norm " << ebosResid.two_norm() << std::endl;
+            std::cout << "auxModules"<< ebosSimulator_.model().numAuxiliaryModules() << std::endl;
+            std::cout << "Printing well residual in backward mode" << std::endl;
+            const auto& well_container = wellModel().getWellContainer();
+	    std::cout << "********************************* " << std::endl;
+            std::cout << "ebosResid" << std::endl;
+            std::cout << ebosResid << std::endl;
+	    //	    wellModel().printResidual(std::cout);
+//            for (const auto& well : well_container) {
+//                 std::cout << "********************************* " << std::endl;
+//                 std::cout << "Print residual for " << well->name() << std::endl;
+//                 auto reswell = well->getResWell();
+//                 std::cout << "Norm "<< reswell.two_norm() << std::endl;
+//            }
+
+            const int nc = UgGridHelpers::numCells(grid_);
+            BVector lam(nc);
+            BVector adjRhs = rhs;           
+            wellModel().computeObj(dt);                 //prepare all values needed in the wellModels
+            wellModel().rhsAdjointRes(adjRhs);          //calculated reservoir right hand side based on the well contributions
+            wellModel().applyt(adjRhs);                 // add rhs from the schur complement of well equations
+
+            std::cout << "******* adjoint rhs *****" << std::endl;
+            std::cout << adjRhs << std::endl;
+            std::cout << "***************" << std::endl;
+ 
+            //NB we get the linerized version from the reservoir part to be modified
+            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
+
+            std::unique_ptr<Mat> adj_matrix_for_preconditioner;
+            if (param_.matrix_add_well_contributions_) {
+	       wellModel().addWellContributions(ebosJac);
+            }
+            if ( param_.preconditioner_add_well_contributions_ &&
+                 ! param_.matrix_add_well_contributions_ ) {
+	        adj_matrix_for_preconditioner.reset(new Mat(ebosJac));
+                wellModel().addWellContributions(*adj_matrix_for_preconditioner);
+            }
+
+            // then all well tings has to be done
+            // set initial guess
+            BVector x(nc);
+            if (param_.use_amgcl_ || param_.use_umfpack_) {
+	       OPM_THROW(std::runtime_error, "Cannot run with amgcl or umfpack");
+	       //InputMatrix = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
+	      //solveWithAMGCLorUMFPACK_Transpose();
+            }else{
+
+                // Solve system.
+                const Mat& actual_mat_for_prec = adj_matrix_for_preconditioner ? *adj_matrix_for_preconditioner.get() : ebosJac;
+                if( isParallel() )
+                {
+                    typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, true > Operator;
+                    Operator opAt(ebosJac,  actual_mat_for_prec, wellModel(), istlSolver().parallelInformation() );
+                    assert( opAt.comm() );
+                    istlSolver().solve( opAt, x, adjRhs, *(opAt.comm()) );
+                }
+                else
+                {
+                    typedef WellModelTransposeMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, Grid, false > Operator;
+                    Operator opAt(ebosJac,  actual_mat_for_prec, wellModel());
+                    istlSolver().solve( opAt, x, adjRhs );
+                }
+            }
+            
+	    std::cout << "******* lamda_r *****" << std::endl;
+            std::cout << x << std::endl;
+
+            wellModel().recoverWellAdjointAndUpdateWellAdjoint(x);// also update objective
+            std::cout << "********************************* " << std::endl;
+            std::cout << "print all matrixes" << std::endl;
+            Dune::writeMatrixMarket(ebosJac, std::cout);
+            std::cout << "*** Well Matrixes " << std::endl;
+            wellModel().printMatrixes();	    
+            wellModel().printObjective(std::cout);
+            std::cout << "********************************* " << std::endl;
+
+            AdjointResults adjres = wellModel().adjointResults();
+            //prepere right hand side for next step
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+            // NB need to avoid storag cache to calculate prevois storage term correctly
+            //int iterationIdx = 1;
+            // calculate derivative of the reservoir equation with respect state0
+            ebosSimulator_.model().newtonMethod().setIterationIndex(/*iterationIdx*/ 1);
+            {
+                bool solve_well_equation = false;
+                wellModel().beginIteration(solve_well_equation);
+                //wellModel().initPrimaryVariablesEvaluation();
+            // ebosSimulator_.problem().beginIteration();
+            }
+            ebosSimulator_.model().linearizer().linearize(1);
+            ebosSimulator_.problem().endIteration();
+            const auto& ebosJac1 = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
 
 
+            // prepare rhs for next step
+            //BVector rhs_next(nc);
+            ebosJac1.mtv(x, rhs_next);
+            rhs_next *= -1.0;           
+            // should also add explicite contributions rom wells to
+            // reservoir and well
+
+            //auto& ebosResid1 = ebosSimulator_.model().linearizer().residual();
+            std::cout << "Printing jacobian residual 1" << std::endl;
+            std::cout << "*******ebosJac1 " << std::endl;
+            Dune::writeMatrixMarket(ebosJac1, std::cout);
+            std::cout << "************rhs_next************* " << std::endl;
+            std::cout << rhs_next << std::endl;
+
+            std::cout << "Linear iterations in adjoint solve " << linearIterationsLastSolve() << std::endl;
+            return adjres;
+
+         }
         /// Called once per nonlinear iteration.
         /// This model will perform a Newton-Raphson update, changing reservoir_state
         /// and well_state. It will also use the nonlinear_solver to do relaxation of
@@ -298,9 +515,10 @@ namespace Opm {
                 // Compute the nonlinear update.
                 const int nc = UgGridHelpers::numCells(grid_);
                 BVector x(nc);
+                //std::cout << "print all matrixes" << std::endl;
 
                 try {
-                    solveJacobianSystem(x);
+                    solveJacobianSystem(x,iteration,timer);
                     report.linear_solve_time += perfTimer.stop();
                     report.total_linear_iterations += linearIterationsLastSolve();
                 }
@@ -343,7 +561,20 @@ namespace Opm {
 
                 report.update_time += perfTimer.stop();
             }
-
+//            else{
+//                const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+//                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+//                std::cout << "Printing pure residual in forward mode" << std::endl;
+//                std::cout << ebosResid << std::endl;
+//                // apply well residual to the residual.
+//                wellModel().apply(ebosResid);
+//                std::cout << "Printing pure residual in forward mode with well contributions" << std::endl;
+//                std::cout << ebosResid << std::endl;
+//                std::cout << "solution 1" << std::endl;
+//                std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+//                std::cout << "solution 0" << std::endl;
+//                std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
+//            }
             return report;
         }
 
@@ -357,9 +588,14 @@ namespace Opm {
         /// Called once after each time step.
         /// In this class, this function does nothing.
         /// \param[in] timer                  simulation timer
-        void afterStep(const SimulatorTimerInterface& OPM_UNUSED timer)
+        void afterStep(const SimulatorTimerInterface& timer)
         {
-            ebosSimulator_.problem().endTimeStep();
+
+            ebosSimulator_.problem().endTimeStep();            
+	    // need to set time for output serialization
+            double time = timer.simulationTimeElapsed()  + timer.currentStepLength();
+            ebosSimulator_.setTime( time);
+            this->adjoint_serialize();
         }
 
         /// Assemble the residual and Jacobian of the nonlinear system.
@@ -372,16 +608,42 @@ namespace Opm {
             // -------- Mass balance equations --------
             ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
             ebosSimulator_.problem().beginIteration();
-            ebosSimulator_.model().linearizer().linearize();
+            //assuem this alwasy is used in forward mode
+            ebosSimulator_.model().linearizer().linearize(/*focustimeindex=*/ 0);
             ebosSimulator_.problem().endIteration();
+            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
+            // // -------- Aquifer models ----------
+            // try
+            // {
+            //     // Modify the Jacobian and residuals according to the aquifer models
+            //     aquiferModel().assemble(timer, iterationIdx);
+            // }
+            // catch( ... )
+            // {
+            //     OPM_THROW(Opm::NumericalIssue,"Error when assembling aquifer models");
+            // }
+            // // -------- Current time step length ----------
+            // const double dt = timer.currentStepLength();
+            // // -------- Well equations ----------
+            // try
+            // {
+            //     // assembles the well equations and applies the wells to
+            //     // the reservoir equations as a source term.
+            //     wellModel().assemble(iterationIdx, false, dt);
+            // }
+            // catch ( const Dune::FMatrixError& )
+            // {
+            //     OPM_THROW(Opm::NumericalIssue,"Error encounted when solving well equations");
+            // }
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
+            // auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+
             if (param_.matrix_add_well_contributions_) {
-                wellModel().addWellContributions(ebosJac.istlMatrix());
+                wellModel().addWellContributions(ebosJac);
             }
             if ( param_.preconditioner_add_well_contributions_ &&
                                   ! param_.matrix_add_well_contributions_ ) {
-                matrix_for_preconditioner_ .reset(new Mat(ebosJac.istlMatrix()));
+                matrix_for_preconditioner_ .reset(new Mat(ebosJac));
                 wellModel().addWellContributions(*matrix_for_preconditioner_);
             }
 
@@ -469,7 +731,159 @@ namespace Opm {
         /// Number of linear iterations used in last call to solveJacobianSystem().
         int linearIterationsLastSolve() const
         {
-            return istlSolver().iterations();
+	  return istlSolver().iterations();
+        }
+
+
+
+        /// A struct to hold the data for a CRS matrix.
+        /// (The name is not CRSMatrix to avoid confusing with the C struct of that name.)
+        struct CRSMatrixHelper
+        {
+            CRSMatrixHelper()
+            {
+            }
+            CRSMatrixHelper(const int sz, const int nnz)
+                : ptr(sz + 1, -1)
+                , col(nnz, -1)
+                , val(nnz, 0.0)
+            {
+            }
+            void print(){
+                {
+                    std::ofstream file("ptr.txt");
+                    for(auto x: ptr){
+                        file << x << std::endl;
+                    }
+                }
+                {
+                    std::ofstream file("col.txt");
+                    for(auto x: col){
+                        file << x << std::endl;
+                    }
+                }
+                {
+                    std::ofstream file("val.txt");
+                    for(auto x: val){
+                        file << x << std::endl;
+                    }
+                }
+            }
+            std::vector<int>    ptr;
+            std::vector<int>    col;
+            std::vector<double> val;
+        };
+
+        void multBlocksInMatrix(Mat& ebosJac,const MatrixBlockType& trans,bool left=true) const {
+            const int n = ebosJac.N();
+            const int np = numPhases();
+            for (int row_index = 0; row_index < n; ++row_index) {
+                auto& row = ebosJac[row_index];
+                auto* dataptr = row.getptr();
+                //auto* indexptr = row.getindexptr();
+                for (int elem = 0; elem < row.N(); ++elem) {
+                    auto& block = dataptr[elem];
+                    if(left){
+                        block = block.leftmultiply(trans);
+                    }else{
+                        block = block.rightmultiply(trans);
+                    }
+                }
+            }
+        }
+        void multBlocksVector(BVector& ebosResid_cp,const MatrixBlockType& leftTrans) const{
+            for( auto& bvec: ebosResid_cp){
+                auto bvec_new=bvec;
+                leftTrans.mv(bvec, bvec_new);
+                bvec=bvec_new;
+            }
+        }
+        /// Build a CRS matrix (not block-structured) from
+        /// the block structured system matrix.
+        CRSMatrixHelper buildCRSMatrixNoBlocks(const Mat& ebosJac)  const
+        //CRSMatrixHelper buildCRSMatrixNoBlocks(bool do_transpose)  const
+        {
+        /*
+            const auto& ebosJacOrg = ebosSimulator_.model().linearizer().matrix();
+            auto ebosJac = ebosJacOrg;
+            if(do_transpose){
+                Dune::MatrixVector::transpose(ebosJacOrg, ebosJac);
+            }
+        */
+            //std::ofstream file("matrix.txt");
+            //Dune::writeMatrixMarket(ebosJac, file)
+#if 1
+            const int n = ebosJac.N();
+            const int np = numPhases();
+            const int sz = n * np;
+            const int nnz = ebosJac.nonzeroes() * np * np;
+            CRSMatrixHelper A(sz, nnz);
+            A.ptr[0] = 0;
+            int index = 0;
+            for (int row_index = 0; row_index < n; ++row_index) {
+                const auto& row = ebosJac[row_index];
+                const auto* dataptr = row.getptr();
+                const auto* indexptr = row.getindexptr();
+                //for (int brow = np-1; brow > -1; --brow) {
+                for (int brow = 0; brow < np; ++brow) {
+                    A.ptr[row_index*np + brow + 1] = A.ptr[row_index*np + brow] + row.N() * np;
+                    for (int elem = 0; elem < row.N(); ++elem) {
+                        const int istlcol = indexptr[elem];
+                        const auto& block = dataptr[elem];
+                        for (int bcol = 0; bcol < np; ++bcol) {                            
+                            A.val[index] = block[brow][bcol];
+                            //A.val[index] = block[np - brow - 1][bcol];
+                            A.col[index] = np*istlcol + bcol;
+                            ++index;
+                        }
+                    }
+                }
+            }
+            return A;
+#else
+            // This variant builds a matrix A with fewer elements, by ignoring
+            // explicit zeros in the non-zero blocks. Experiment not very
+            // successful: amgcl (CPR) even failed on SPE9 with this.
+            // Also, this code is slow, probably due to the push_back, in spite
+            // of the reserve() calls.
+            //
+            // Code retained for future experimentation.
+            const int n = ebosJac.N();
+            const int np = numPhases();
+            const int sz = n * np;
+            const int nnz_max = ebosJac.nonzeroes() * np * np;
+            CRSMatrixHelper A;
+            A.ptr.resize(sz + 1, -1);
+            A.ptr[0] = 0;
+            A.col.reserve(nnz_max);
+            A.val.reserve(nnz_max);
+            int index = 0;
+            for (int row_index = 0; row_index < n; ++row_index) {
+                const auto& row = ebosJac[row_index];
+                const auto* dataptr = row.getptr();
+                const auto* indexptr = row.getindexptr();
+                for (int brow = 0; brow < np; ++brow) {
+                    for (int elem = 0; elem < row.N(); ++elem) {
+                        const int istlcol = indexptr[elem];
+                        const auto& block = dataptr[elem];
+                        for (int bcol = 0; bcol < np; ++bcol) {
+                             if(form_pressure){
+                                const double val = block[brow][bcol];
+                             }else{
+                                const double val = block[np - brow - 1][bcol];
+                             }
+                            if (val != 0.0) {
+                                A.val.push_back(val);
+                                A.col.push_back(np*istlcol + bcol);
+                                ++index;
+                            }
+                        }
+                    }
+                    A.ptr[row_index*np + brow + 1] = index;
+                }
+            }
+            return A;
+#endif
         }
 
         /// Zero out off-diagonal blocks on rows corresponding to overlap cells
@@ -500,7 +914,7 @@ namespace Opm {
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
-        void solveJacobianSystem(BVector& x) const
+        void solveJacobianSystem(BVector& x,const int iteration,const SimulatorTimerInterface& timer) const
         {
             // J = [A, B; C, D], where A is the reservoir equations, B and C the interaction of well
             // with the reservoir and D is the wells itself.
@@ -511,38 +925,56 @@ namespace Opm {
             // r = [r, r_well], where r is the residual and r_well the well residual.
             // r -= B^T * D^-1 r_well
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
+	  auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
             wellModel().apply(ebosResid);
 
+//            std::cout << "Printing pure residual in forward mode" << std::endl;
+//            std::cout << ebosResid << std::endl;
+//            std::cout << "solution 1" << std::endl;
+//            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+//            std::cout << "solution 0" << std::endl;
+//            std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
+
             // set initial guess
             x = 0.0;
-
-            const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac.istlMatrix();
-            // Solve system.
-            if( isParallel() )
-            {	      
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
-
-                auto ebosJacIgnoreOverlap = Mat(ebosJac.istlMatrix());
-                //remove ghost rows in local matrix
-                makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
-
-                //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
-                //to be certain that correct matrix is used for preconditioning.
-                Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel(),
-                             istlSolver().parallelInformation() );
-                assert( opA.comm() );
-                istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
-            }
-            else
-            {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
-                Operator opA(ebosJac.istlMatrix(), actual_mat_for_prec, wellModel());
-                istlSolver().solve( opA, x, ebosResid );
-            }
-        }
+            if (param_.use_amgcl_ || param_.use_umfpack_) {
+	      OPM_THROW(std::runtime_error, "Cannot run with amgcl or umfpack"); 
+	      //solveWithAMGCLorUMFPACK()
+            }else{
+	      // Use the default ISTLSolver to solve the system.
+	      const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac;
+	      // Solve system.
+	      if( isParallel() )
+		{	      
+		  typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
+		  
+		  auto ebosJacIgnoreOverlap = Mat(ebosJac);
+		  //remove ghost rows in local matrix
+		  makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
+		  
+		  //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
+		  //to be certain that correct matrix is used for preconditioning.
+		  Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel(),
+			       istlSolver().parallelInformation() );
+		  assert( opA.comm() );
+		  istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
+		}
+	      else
+		{
+		  //std::cout.precision(16);
+		  //std::cout << x << std::endl;
+		  //Dune::writeMatrixMarket(ebosJac, std::cout);
+		  //wellModel().printMatrixes();
+		  //std::cout << ebosResid << std::endl;
+		  typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
+		  Operator opA(ebosJac, actual_mat_for_prec, wellModel());
+		  istlSolver().solve( opA, x, ebosResid );
+		}
+	    }
+            //const_cast<int&>(linear_iters_last_solve_) = istlSolver().iterations();
+	}
 
         //=====================================================================
         // Implementation for ISTL-matrix based operator
@@ -553,6 +985,7 @@ namespace Opm {
 
            Adapts a matrix to the assembled linear operator interface
          */
+
         template<class M, class X, class Y, class WellModel, bool overlapping >
         class WellModelMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
         {
@@ -979,6 +1412,75 @@ namespace Opm {
         Simulator& ebosSimulator()
         { return ebosSimulator_; }
 
+        void ebosSerialize(){
+            ebosSimulator_.serialize();
+        }
+        // moved to after step
+        void adjoint_serialize(){
+            // may hav if here for adjoint run
+            if(param_.use_adjoint_){
+                ebosSimulator_.serialize();
+                serialize_well();// done in after step
+            }
+        }
+
+        std::string iofilename(){
+            namespace fs = boost::filesystem;
+            std::string output_dir_name = ebosSimulator_.vanguard().eclState().getIOConfig().getOutputDir();
+            //std::string filename =  well_state_proper.getWellFile(this->ebosSimulator(),this->ebosSimulator().time());
+            double t = this->ebosSimulator().time();
+            int rank = ebosSimulator_.gridView().comm().rank();
+            std::string simName = ebosSimulator_.problem().name();
+            std::ostringstream oss;
+            oss <<  "wellstate_" << simName << "_time=" << t << "_rank=" << rank << ".ers";
+            std::string filename = oss.str();
+            fs::path output_dir(output_dir_name);
+            fs::path subdir("ebos_restart");
+            output_dir = output_dir / subdir;
+            // creat subdir for adjoint temp files if not existing
+            if(!(fs::exists(output_dir))){
+                    fs::create_directory(output_dir);
+             }
+            fs::path output_file(filename);
+            fs::path full_path = output_dir / output_file;
+            return full_path.string();
+        }
+
+        void serialize_well(bool pre=false){
+            //namespace fs = boost::filesystem;
+            //fs::path output_dir = ebosSimulator_.vanguard().eclState().getIOConfig().getOutputDir();
+            //WellState well_state_proper =  this->wellModel().wellState();//to avoid the const problem with serialize else have to make splitted
+            //std::string filename =  well_state_proper.getWellFile(this->ebosSimulator(),this->ebosSimulator().time());
+            std::string filename = this->iofilename();
+	    if(pre){
+	      filename = filename + "_pre";
+	    }
+	      
+            //wellModel().printMatrixes();
+            std::cout << "Serialize well " << filename << std::endl;
+            // could be changed to binary: for wells not for now
+            std::ofstream ofs(filename.c_str());
+            boost::archive::text_oarchive oa(ofs);
+            oa << this->wellModel();
+        }
+
+        void deserialize_well(bool pre=false){
+            //std::string filename =  well_state.getWellFile(ebosSimulator_, ebosSimulator_.time());
+            std::string filename = this->iofilename();
+	    if(pre){
+	      filename = filename + "_pre";
+	    }
+            std::cout << "Deserialize well " << filename << std::endl;
+            // could be changed to binary: for wells not for now
+            std::ifstream ifs(filename.c_str());
+            boost::archive::text_iarchive oa(ifs);
+            oa >>  this->wellModel();
+        }
+        void deserializeReservoir(Scalar t,bool only_reservoir){
+            // intended only for adjoint simulation
+            ebosSimulator_.deserializeAll(t,only_reservoir);
+        }
+
         /// return the statistics if the nonlinearIteration() method failed
         const SimulatorReport& failureReport() const
         { return failureReport_; }
@@ -1001,7 +1503,43 @@ namespace Opm {
             assert( istlSolver_ );
             return *istlSolver_;
         }
-
+        MatrixBlockType getBlockTransform(int meth_trans) const{
+            int np = numPhases();
+            MatrixBlockType leftTrans=0.0;
+            switch(meth_trans)
+            {
+            case 1 :
+                //cpr
+                for (int row = 0; row < np; ++row) {
+                    for (int col = 0; col < np; ++col) {
+                        if(row==0){
+                            leftTrans[row][col]=1.0;
+                        }else{
+                            if(row==col){
+                                leftTrans[row][col]=1.0;
+                            }
+                        }
+                    }
+                }
+                break;
+                //permute equations
+            case 2 :
+                for (int row = 0; row < 2; ++row) {
+                    for (int col = 0; col < 2; ++col) {
+                        if(row!=col){
+                            leftTrans[row][col]=1.0;
+                        }
+                    }
+                }
+                if(np==3){
+                    leftTrans[2][2]=1.0;
+                }
+               break;
+            default:
+                OPM_THROW(std::logic_error,"return zero tranformation matrix");
+            }
+            return leftTrans;
+        }
         // ---------  Data members  ---------
 
         Simulator& ebosSimulator_;
@@ -1053,7 +1591,6 @@ namespace Opm {
         }
 
     private:
-
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
         double drMaxRel() const { return param_.dr_max_rel_; }
@@ -1061,6 +1598,10 @@ namespace Opm {
 
     public:
         std::vector<bool> wasSwitched_;
+        // mutable std::shared_ptr<LinearSolverAmgclNew> solver_;
+
+
+
     };
 } // namespace Opm
 

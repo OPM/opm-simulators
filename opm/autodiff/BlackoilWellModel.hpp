@@ -24,7 +24,9 @@
 #ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 
+
 #include <ebos/eclproblem.hh>
+#include <ewoms/common/propertysystem.hh>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
@@ -58,11 +60,24 @@
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
+
 BEGIN_PROPERTIES
 
 NEW_PROP_TAG(EnableTerminalOutput);
 
 END_PROPERTIES
+
+#include <boost/archive/tmpdir.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
+#include <boost/serialization/array.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/utility.hpp>
+#include <boost/serialization/list.hpp>
+#include <boost/serialization/assume_abstract.hpp>
+
 
 namespace Opm {
 
@@ -133,25 +148,26 @@ namespace Opm {
                 recoverWellSolutionAndUpdateWellState(deltaX);
             }
 
+
             /////////////
             // </ eWoms auxiliary module stuff>
             /////////////
 
-            template <class Restarter>
-            void deserialize(Restarter& res)
-            {
-                // TODO (?)
-            }
+            // template <class Restarter>
+            // void deserialize(Restarter& res)
+            // {
+            //     // TODO (?)
+            // }
 
-            /*!
-             * \brief This method writes the complete state of the well
-             *        to the harddisk.
-             */
-            template <class Restarter>
-            void serialize(Restarter& res)
-            {
-                // TODO (?)
-            }
+            // /*!
+            //  * \brief This method writes the complete state of the well
+            //  *        to the harddisk.
+            //  */
+            // template <class Restarter>
+            // void serialize(Restarter& res)
+            // {
+            //     // TODO (?)
+            // }
 
             void beginEpisode(const Opm::EclipseState& eclState,
                               const Opm::Schedule& schedule,
@@ -169,9 +185,10 @@ namespace Opm {
 
             void beginTimeStep();
 
-            void beginIteration()
+            void beginIteration(bool solve_well_equation=true)
             {
-                assemble(ebosSimulator_.model().newtonMethod().numIterations(),
+          //bool solve_well_equation = true;
+	      assemble(ebosSimulator_.model().newtonMethod().numIterations(), solve_well_equation,
                          ebosSimulator_.timeStepSize());
             }
 
@@ -203,14 +220,37 @@ namespace Opm {
             Opm::data::Wells wellData() const
             { return well_state_.report(phase_usage_, Opm::UgGridHelpers::globalCell(grid())); }
 
+            // compute the well fluxes and assemble them in to the reservoir equations as source terms
+            // and in the well equations.
+	    void assemble(const int iterationIdx,const bool solve_well_equation,
+	    		const double dt);
+
+
+            void rhsAdjointRes(BVector& adjRes);
+            void computeObj(double dt);
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;
 
             // subtract B*inv(D)*C * x from A*x
             void apply(const BVector& x, BVector& Ax) const;
 
+            // substract Binv(D)rw from r;
+            void applyt( BVector& r) const;
+
+            // subtract B*inv(D)*C * x from A*x
+            void applyt(const BVector& x, BVector& Ax) const;
+
             // apply well model with scaling of alpha
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
+
+
+
+            void printObjective(std::ostream& os) const;
+
+            // using the solution x to recover the solution xw for wells and applying
+            // xw to update Well State
+            void recoverWellAdjointAndUpdateWellAdjoint(const BVector& x);
+            void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
             // Check if well equations is converged.
             ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg) const;
@@ -222,10 +262,23 @@ namespace Opm {
 
             // return the internal well state, ignore the passed one.
             // Used by the legacy code to make it compatible with the legacy well models.
-            const WellState& wellState(const WellState& well_state OPM_UNUSED) const;
+            const WellState& wellState(const WellState& well_state) const;
 
             // return the internal well state
             const WellState& wellState() const;
+
+
+            // only use this for restart.
+            void setRestartWellState(const WellState& well_state);
+
+            // only use this for restart.
+            void setWellState(const WellState& well_state);
+
+            // called at the beginning of a time step
+            void beginTimeStep(const int timeStepIdx,const double simulationTime);
+
+	  // called at the end of a time step
+            void timeStepSucceeded(const double& simulationTime);
 
             const SimulatorReport& lastReport() const;
 
@@ -235,6 +288,17 @@ namespace Opm {
                     well->addWellContributions(mat);
                 }
             }
+            // moved due to adjoint
+            void prepareTimeStep();
+            /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
+            /// at the beginning of the time step and no derivatives are included in these quantities
+            void calculateExplicitQuantities() const;
+
+            void printMatrixes() const;
+
+            AdjointResults adjointResults() const;
+	  //using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
+            const std::vector<WellInterfacePtr >& getWellContainer() const{return well_container_;}
 
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
@@ -246,7 +310,7 @@ namespace Opm {
             /// Returns true if the well was actually found and shut.
             bool forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
 
-        protected:
+        //protected:
 
             void extractLegacyPressure_(std::vector<double>& cellPressure) const
             {
@@ -309,6 +373,28 @@ namespace Opm {
             double gravity_;
             std::vector<double> depth_;
             bool initial_step_;
+            friend class  boost::serialization::access;
+            template<class Archive>
+            void serialize(Archive & ar, const unsigned int version){
+                //ar & wells_active_;
+                //ar & well_container_;
+                ar & well_state_;
+                ar & previous_well_state_;
+                //ar & param_;
+                //ar & has_solvent_;
+                //ar & has_polymer_;
+                //ar & pvt_region_idx_;
+                //ar & phase_usage_;
+                //ar & global_nc_;
+                //ar & number_of_cells_;
+                //ar & gravity_;
+                //ar & depth_;
+                ar & initial_step_;
+                //ar & wellTestState_;
+                //ar & scaleAddRes_;
+            }
+
+
 
             std::unique_ptr<RateConverterType> rateConverter_;
             std::unique_ptr<VFPProperties<VFPInjProperties,VFPProdProperties>> vfp_properties_;
@@ -331,6 +417,7 @@ namespace Opm {
             const Schedule& schedule() const
             { return ebosSimulator_.vanguard().schedule(); }
 
+            
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
             void assemble(const int iterationIdx,
@@ -344,8 +431,7 @@ namespace Opm {
 
             // using the solution x to recover the solution xw for wells and applying
             // xw to update Well State
-            void recoverWellSolutionAndUpdateWellState(const BVector& x);
-
+            
             void updateWellControls();
 
             void updateGroupControls();
@@ -375,9 +461,6 @@ namespace Opm {
             // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
             // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
             // twice at the beginning of the time step
-            /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
-            /// at the beginning of the time step and no derivatives are included in these quantities
-            void calculateExplicitQuantities() const;
 
             SimulatorReport solveWellEq(const double dt);
 
@@ -396,7 +479,7 @@ namespace Opm {
 
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
-            void prepareTimeStep();
+
 
             void prepareGroupControl();
 

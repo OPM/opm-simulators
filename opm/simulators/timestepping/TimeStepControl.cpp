@@ -134,6 +134,9 @@ namespace Opm
         // store new error
         const double error = relChange.relativeChange();
         errors_[ 2 ] = error;
+        if((errors_[2]<1e-15) || (errors_[1] <1e-15)){
+            return 1e99;
+        }
 
         if( error > tol_ )
         {
