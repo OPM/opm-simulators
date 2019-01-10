@@ -306,3 +306,25 @@ BOOST_AUTO_TEST_CASE(WellSTOPOK) {
     BOOST_CHECK(well_controls_well_is_stopped(ctrls0)); // The first well is closed
     BOOST_CHECK(well_controls_well_is_open(ctrls1));  // The second well is open
 }
+
+BOOST_AUTO_TEST_CASE(removeWellWithNoPerforation) {
+    const std::string filename = "wells_no_perforation.data";
+    Opm::Parser parser;
+    Opm::Deck deck(parser.parseFile(filename));
+    Opm::EclipseState eclipseState(deck);
+    Opm::GridManager gridManager(eclipseState.getInputGrid());
+    const auto& inputGrid = eclipseState.getInputGrid();
+    const Opm::TableManager table ( deck );
+    const Opm::Eclipse3DProperties eclipseProperties ( deck , table, inputGrid);
+    const Opm::Runspec runspec (deck);
+    Opm::Schedule sched(deck, inputGrid, eclipseProperties, runspec);
+
+    const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(*gridManager.c_grid(), inputGrid);
+    sched.filterConnections(eclipseGrid);
+
+    Opm::WellsManager wellsManager0(eclipseState, sched, 0, *gridManager.c_grid());
+    BOOST_CHECK_EQUAL( wellsManager0.c_wells()->number_of_wells, 1);
+
+    Opm::WellsManager wellsManager5(eclipseState, sched, 5, *gridManager.c_grid());
+    BOOST_CHECK_EQUAL( wellsManager5.c_wells()->number_of_wells, 1);
+}

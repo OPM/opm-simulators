@@ -150,24 +150,22 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
 
             for(const auto& completion : well->getConnections(timeStep)) {
                 if (completion.state() == WellCompletion::OPEN) {
-                    int i = completion.getI();
-                    int j = completion.getJ();
-                    int k = completion.getK();
+                    const int i = completion.getI();
+                    const int j = completion.getJ();
+                    const int k = completion.getK();
 
                     const int* cpgdim = cart_dims;
-                    int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
-                    std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
+                    const int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
+                    const std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
                     if (cgit == cartesian_to_compressed.end()) {
-                        OPM_MESSAGE("****Warning: Cell with i,j,k indices " << i << ' ' << j << ' '
-                                    << k << " not found in grid. The completion will be igored (well = "
-                                    << well->name() << ')');
+                        const std::string msg = ("Cell with i,j,k indices " + std::to_string(i) + " " + std::to_string(j)
+                                    + " " + std::to_string(k)  +  " not found in grid (well = " +  well->name() + ").");
+                        OPM_THROW(std::runtime_error, msg);
                     }
                     else
                     {
-                        int cell = cgit->second;
-
                         PerfData pd;
-                        pd.cell = cell;
+                        pd.cell = cgit->second;
                         pd.well_index = completion.CF() * completion.wellPi();
                         pd.satnumid = completion.satTableId();
 
@@ -179,6 +177,15 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                     }
                 }
             }
+        }
+
+        if (wellperf_data[active_well_index].empty()) {
+            const std::string msg = " there is no perforations associated with the well "
+                                  + well->name() + ", the well is ignored for the report step "
+                                  + std::to_string(timeStep);
+            OpmLog::warning(msg);
+            wells_on_proc[wellIter - wells.begin()] = 0;
+            continue;
         }
         {   // WELSPECS handling
             well_names_to_index[well->name()] = active_well_index;
