@@ -1204,7 +1204,7 @@ namespace Opm
 
         for (int p = 0; p < np; ++p) {
             well_state.wellReservoirRates()[well_rate_index + p] = voidage_rates[p];
-        }    
+        }
     }
 
     template<typename TypeTag>

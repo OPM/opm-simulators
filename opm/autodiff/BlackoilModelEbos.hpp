@@ -475,27 +475,27 @@ namespace Opm {
         /// Zero out off-diagonal blocks on rows corresponding to overlap cells
         /// Diagonal blocks on ovelap rows are set to diag(1e100).
         void makeOverlapRowsInvalid(Mat& ebosJacIgnoreOverlap) const
-        {	  	  
+        {
             //value to set on diagonal
             MatrixBlockType diag_block(0.0);
-            for (int eq = 0; eq < numEq; ++eq)	    
+            for (int eq = 0; eq < numEq; ++eq)
                 diag_block[eq][eq] = 1.0e100;
-	  	  
+
             //loop over precalculated overlap rows and columns
             for (auto row = overlapRowAndColumns_.begin(); row != overlapRowAndColumns_.end(); row++ )
             {
-                int lcell = row->first; 
+                int lcell = row->first;
                 //diagonal block set to large value diagonal
                 ebosJacIgnoreOverlap[lcell][lcell] = diag_block;
 
-                //loop over off diagonal blocks in overlap row	      
+                //loop over off diagonal blocks in overlap row
                 for (auto col = row->second.begin(); col != row->second.end(); ++col)
                 {
                     int ncell = *col;
                     //zero out block
                     ebosJacIgnoreOverlap[lcell][ncell] = 0.0;
                 }
-            }    	  
+            }
         }
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
@@ -522,7 +522,7 @@ namespace Opm {
             const Mat& actual_mat_for_prec = matrix_for_preconditioner_ ? *matrix_for_preconditioner_.get() : ebosJac.istlMatrix();
             // Solve system.
             if( isParallel() )
-            {	      
+            {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
 
                 auto ebosJacIgnoreOverlap = Mat(ebosJac.istlMatrix());
@@ -966,7 +966,7 @@ namespace Opm {
         /// Should not be called
         std::vector<std::vector<double> >
         computeFluidInPlace(const std::vector<int>& /*fipnum*/) const
-        {            
+        {
             //assert(true)
             //return an empty vector
             std::vector<std::vector<double> > regionValues(0, std::vector<double>(0,0.0));
@@ -1030,7 +1030,7 @@ namespace Opm {
         double current_relaxation_;
         BVector dx_old_;
 
-        std::unique_ptr<Mat> matrix_for_preconditioner_;        
+        std::unique_ptr<Mat> matrix_for_preconditioner_;
         std::vector<std::pair<int,std::vector<int>>> overlapRowAndColumns_;
 
         std::vector<StepReport> convergence_reports_;
