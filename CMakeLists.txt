@@ -133,6 +133,15 @@ opm_add_test(flow
     flow/flow_ebos_oilwater_polymer_injectivity.cpp)
 install(TARGETS flow DESTINATION bin)
 
+opm_add_test(flow_blackoil
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators"
+  SOURCES
+    flow/flow_blackoil.cpp)
+install(TARGETS flow_blackoil DESTINATION bin)
+
 add_test(NAME flow__version
          COMMAND flow --version)
 set_tests_properties(flow__version PROPERTIES
