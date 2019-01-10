@@ -96,6 +96,7 @@ list (APPEND TEST_DATA_FILES
   tests/wells_stopped.data
   tests/relpermDiagnostics.DATA
   tests/norne_pvt.data
+  tests/wells_no_perforation.data
   )
 
 
