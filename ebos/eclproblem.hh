@@ -60,6 +60,7 @@
 #include "ecldummygradientcalculator.hh"
 #include "eclfluxmodule.hh"
 #include "eclbaseaquifermodel.hh"
+#include "eclnewtonmethod.hh"
 #include "ecltracermodel.hh"
 #include "vtkecltracermodule.hh"
 
@@ -235,14 +236,35 @@ SET_SCALAR_PROP(EclBaseProblem, EndTime, 1e100);
 // not millions of trillions of years, that is...)
 SET_SCALAR_PROP(EclBaseProblem, InitialTimeStepSize, 1e100);
 
-// increase the default raw tolerance for the newton solver to 10^-4 because this is what
-// everone else seems to be doing...
-SET_SCALAR_PROP(EclBaseProblem, NewtonRawTolerance, 1e-4);
+// the default for the allowed volumetric error for oil per second
+SET_SCALAR_PROP(EclBaseProblem, NewtonRawTolerance, 1e-2);
 
-// reduce the maximum allowed Newton error to 0.1 kg/(m^3 s). The rationale is that if
-// the error is above that limit, the time step is unlikely to succeed anyway and we can
-// thus abort the futile attempt early.
-SET_SCALAR_PROP(EclBaseProblem, NewtonMaxError, 0.1);
+// the tolerated amount of "incorrect" amount of oil per time step for the complete
+// reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
+// will tolerate larger residuals.
+SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumTolerance, 1e-4);
+
+// set the exponent for the volume scaling of the sum tolerance: larger reservoirs can
+// tolerate a higher amount of mass lost per time step than smaller ones! since this is
+// not linear, we use the cube root of the overall pore volume by default, i.e., the
+// value specified by the NewtonSumTolerance parameter is the "incorrect" mass per
+// timestep for an reservoir that exhibits 1 m^3 of pore volume. A reservoir with a total
+// pore volume of 10^3 m^3 will tolerate 10 times as much.
+SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumToleranceExponent, 1.0/3.0);
+
+// set number of Newton iterations where the volumetric residual is considered for
+// convergence
+SET_INT_PROP(EclBaseProblem, EclNewtonStrictIterations, 8);
+
+// set fraction of the pore volume where the volumetric residual may be violated during
+// strict Newton iterations
+SET_SCALAR_PROP(EclBaseProblem, EclNewtonRelaxedVolumeFraction, 0.03);
+
+// the maximum volumetric error of a cell in the relaxed region
+SET_SCALAR_PROP(EclBaseProblem, EclNewtonRelaxedTolerance, 1e9);
+
+// Ignore the maximum error mass for early termination of the newton method.
+SET_SCALAR_PROP(EclBaseProblem, NewtonMaxError, 10e9);
 
 // set the maximum number of Newton iterations to 14 because the likelyhood that a time
 // step succeeds at more than 14 Newton iteration is rather small
@@ -280,6 +302,10 @@ SET_TYPE_PROP(EclBaseProblem, FluxModule, Ewoms::EclTransFluxModule<TypeTag>);
 
 // Use the dummy gradient calculator in order not to do unnecessary work.
 SET_TYPE_PROP(EclBaseProblem, GradientCalculator, Ewoms::EclDummyGradientCalculator<TypeTag>);
+
+// Use a custom Newton-Raphson method class for ebos in order to attain more
+// sophisticated update and error computation mechanisms
+SET_TYPE_PROP(EclBaseProblem, NewtonMethod, Ewoms::EclNewtonMethod<TypeTag>);
 
 // The frequency of writing restart (*.ers) files. This is the number of time steps
 // between writing restart files
