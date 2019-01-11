@@ -244,6 +244,14 @@ SET_SCALAR_PROP(EclBaseProblem, NewtonRawTolerance, 1e-2);
 // will tolerate larger residuals.
 SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumTolerance, 1e-4);
 
+// set the exponent for the volume scaling of the sum tolerance: larger reservoirs can
+// tolerate a higher amount of mass lost per time step than smaller ones! since this is
+// not linear, we use the cube root of the overall pore volume by default, i.e., the
+// value specified by the NewtonSumTolerance parameter is the "incorrect" mass per
+// timestep for an reservoir that exhibits 1 m^3 of pore volume. A reservoir with a total
+// pore volume of 10^3 m^3 will tolerate 10 times as much.
+SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumToleranceExponent, 1.0/3.0);
+
 // set number of Newton iterations where the volumetric residual is considered for
 // convergence
 SET_INT_PROP(EclBaseProblem, EclNewtonStrictIterations, 8);

@@ -38,6 +38,7 @@ BEGIN_PROPERTIES
 NEW_PROP_TAG(EclNewtonSumTolerance);
 NEW_PROP_TAG(EclNewtonStrictIterations);
 NEW_PROP_TAG(EclNewtonRelaxedVolumeFraction);
+NEW_PROP_TAG(EclNewtonSumToleranceExponent);
 NEW_PROP_TAG(EclNewtonRelaxedTolerance);
 
 END_PROPERTIES
@@ -104,6 +105,9 @@ public:
                              "The fraction of the pore volume of the reservoir "
                              "where the volumetric error may be voilated during "
                              "strict Newton iterations.");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclNewtonSumToleranceExponent,
+                             "The the exponent used to scale the sum tolerance by "
+                             "the total pore volume of the reservoir.");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclNewtonRelaxedTolerance,
                              "The maximum error which the volumetric residual "
                              "may exhibit if it is in a 'relaxed' "
@@ -191,15 +195,11 @@ public:
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
             errorSum_ = std::max(std::abs(componentSumError[eqIdx]), errorSum_);
 
-        // update the sum tolerance: larger reservoirs can tolerate a higher amount of
-        // mass lost per time step than smaller ones! since this is not linear, we use
-        // the cube root of the overall pore volume, i.e., the value specified by the
-        // NewtonSumTolerance parameter is the "incorrect" mass per timestep for an
-        // reservoir that exhibits 1 m^3 of pore volume. A reservoir with a total pore
-        // volume of 10^3 m^3 will tolerate 10 times as much.
-        sumTolerance_ =
-            EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonSumTolerance)
-            * std::cbrt(sumPv);
+        // scale the tolerance for the total error with the pore volume. by default, the
+        // exponent is 1/3, i.e., cubic root.
+        Scalar x = EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonSumTolerance);
+        Scalar y = EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonSumToleranceExponent);
+        sumTolerance_ = x*std::pow(sumPv, y);
 
         // make sure that the error never grows beyond the maximum
         // allowed one
