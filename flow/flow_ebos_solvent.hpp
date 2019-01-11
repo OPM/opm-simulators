@@ -19,10 +19,12 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 
 namespace Opm {
-void flowEbosSolventSetDeck(Deck &deck, EclipseState& eclState);
+void flowEbosSolventSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
 int flowEbosSolventMain(int argc, char** argv);
 }
 
