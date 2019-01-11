@@ -40,10 +40,12 @@ BEGIN_PROPERTIES
 NEW_PROP_TAG(EnableTerminalOutput);
 NEW_PROP_TAG(EnableAdaptiveTimeStepping);
 NEW_PROP_TAG(EnableTuning);
+NEW_PROP_TAG(EclStrictParsing);
 
 SET_BOOL_PROP(EclFlowProblem, EnableTerminalOutput, true);
 SET_BOOL_PROP(EclFlowProblem, EnableAdaptiveTimeStepping, true);
 SET_BOOL_PROP(EclFlowProblem, EnableTuning, false);
+SET_BOOL_PROP(EclFlowProblem, EclStrictParsing, false);
 
 END_PROPERTIES
 
@@ -124,6 +126,8 @@ public:
                              "Use adaptive time stepping between report steps");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTuning,
                              "Honor some aspects of the TUNING keyword.");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EclStrictParsing,
+                             "Handle input in strict mode - will terminate if any errors are found");
     }
 
     /// Run the simulation.

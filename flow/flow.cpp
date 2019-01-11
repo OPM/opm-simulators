@@ -183,11 +183,14 @@ int main(int argc, char** argv)
             Opm::ParseContext parseContext;
             Opm::ErrorGuard errorGuard;
 
-            parseContext.update(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
-            parseContext.update(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
-            parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
-            parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
-
+            if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
+                parseContext.update( Opm::InputError::DELAYED_EXIT1);
+            else {
+                parseContext.update(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
+                parseContext.update(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
+                parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
+                parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
+            }
 
             deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
             if ( outputCout ) {
