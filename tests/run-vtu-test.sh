@@ -21,7 +21,7 @@ validateResults() {
 
     for REFERENCE_RESULT in ${MY_DIR}/../tests/referencesolutions/$SIM_NAME*; do
         echo "Comparing with \"$REFERENCE_RESULT\"... "
-        if python "${MY_DIR}/fuzzycomparevtu.py" "$REFERENCE_RESULT" "$OUTPUT_FILE"; then
+        if python2 "${MY_DIR}/fuzzycomparevtu.py" "$REFERENCE_RESULT" "$OUTPUT_FILE"; then
             # SUCCESS!!!!!!
             echo "Result file '$OUTPUT_FILE' and reference '$REFERENCE_RESULT' are identical" 
             return 0
@@ -68,9 +68,8 @@ if test "$#" -lt 2; then
 fi
 
 # find the binary in the its folder
-TEST_BINARY=$(find -type f -executable -name "$TEST_NAME")
-NUM_BINARIES=$(echo "$TEST_BINARY" | wc -w)
-
+TEST_BINARY=$(find . -type f -perm -0111 -name "$TEST_NAME")
+NUM_BINARIES=$(echo "$TEST_BINARY" | wc -w | tr -d '[:space:]')
 
 if test "$NUM_BINARIES" != "1"; then
     echo "No binary file found or binary file is non-unique (is: $TEST_BINARY)"
