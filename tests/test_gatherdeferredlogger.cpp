@@ -78,7 +78,7 @@ void initLogger(std::ostringstream& log_stream) {
 
 
 
-BOOST_AUTO_TEST_CASE(AllHaveFailure)
+BOOST_AUTO_TEST_CASE(NoMessages)
 {
     auto cc = Dune::MPIHelper::getCollectiveCommunication();
 
@@ -86,7 +86,70 @@ BOOST_AUTO_TEST_CASE(AllHaveFailure)
     initLogger(log_stream);
 
     Opm::DeferredLogger local_deferredlogger;
-    local_deferredlogger.info("info from rank" + std::to_string(cc.rank()));
+
+    Opm::DeferredLogger global_deferredlogger = gatherDeferredLogger(local_deferredlogger);
+
+    if (cc.rank()==0) {
+
+        global_deferredlogger.logMessages();
+
+        auto counter = OpmLog::getBackend<CounterLog>("COUNTER");
+        BOOST_CHECK_EQUAL( 0 , counter->numMessages(Log::MessageType::Info) );
+
+        std::string expected;
+        BOOST_CHECK_EQUAL(log_stream.str(), expected);
+        std::cerr<<""<<log_stream.str();
+    }
+}
+
+BOOST_AUTO_TEST_CASE(VariableNumberOfMessages)
+{
+    auto cc = Dune::MPIHelper::getCollectiveCommunication();
+
+    std::ostringstream log_stream;
+    initLogger(log_stream);
+
+    Opm::DeferredLogger local_deferredlogger;
+    if (cc.rank()==1) {
+        local_deferredlogger.info("info from rank " + std::to_string(cc.rank()));
+        local_deferredlogger.warning("warning from rank " + std::to_string(cc.rank()));
+    } else if (cc.rank()==2) {
+        local_deferredlogger.bug("tagme", "bug from rank " + std::to_string(cc.rank()));
+        local_deferredlogger.bug("tagme", "bug from rank " + std::to_string(cc.rank()));
+        local_deferredlogger.bug("tagme", "bug from rank " + std::to_string(cc.rank()));
+        local_deferredlogger.bug("tagme", "bug from rank " + std::to_string(cc.rank()));
+    }
+
+    Opm::DeferredLogger global_deferredlogger = gatherDeferredLogger(local_deferredlogger);
+
+    if (cc.rank()==0) {
+
+        global_deferredlogger.logMessages();
+
+        auto counter = OpmLog::getBackend<CounterLog>("COUNTER");
+        BOOST_CHECK_EQUAL( 1 , counter->numMessages(Log::MessageType::Info) );
+        BOOST_CHECK_EQUAL( 1 , counter->numMessages(Log::MessageType::Warning) );
+        BOOST_CHECK_EQUAL( 4 , counter->numMessages(Log::MessageType::Bug) );
+
+        const std::string expected = Log::prefixMessage(Log::MessageType::Info, "info from rank 1") + "\n"
+            + Log::prefixMessage(Log::MessageType::Warning, "warning from rank 1") + "\n"
+            + Log::prefixMessage(Log::MessageType::Bug, "bug from rank 2") + "\n"
+            + Log::prefixMessage(Log::MessageType::Bug, "bug from rank 2") + "\n"
+            + Log::prefixMessage(Log::MessageType::Bug, "Message limit reached for message tag: tagme") + "\n";
+        BOOST_CHECK_EQUAL(log_stream.str(), expected);
+        std::cerr<<""<<log_stream.str();
+    }
+}
+
+BOOST_AUTO_TEST_CASE(AllHaveOneMessage)
+{
+    auto cc = Dune::MPIHelper::getCollectiveCommunication();
+
+    std::ostringstream log_stream;
+    initLogger(log_stream);
+
+    Opm::DeferredLogger local_deferredlogger;
+    local_deferredlogger.info("info from rank " + std::to_string(cc.rank()));
 
     Opm::DeferredLogger global_deferredlogger = gatherDeferredLogger(local_deferredlogger);
 
@@ -99,7 +162,7 @@ BOOST_AUTO_TEST_CASE(AllHaveFailure)
 
         std::string expected;
         for (int i=0; i<cc.size(); i++) {
-            expected += Log::prefixMessage(Log::MessageType::Info, "info from rank"+std::to_string(i)) + "\n";
+            expected += Log::prefixMessage(Log::MessageType::Info, "info from rank "+std::to_string(i)) + "\n";
         }
         BOOST_CHECK_EQUAL(log_stream.str(), expected);
         std::cerr<<""<<log_stream.str();

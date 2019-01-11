@@ -34,6 +34,9 @@ namespace
     void packMessages(const std::vector<Opm::DeferredLogger::Message>& local_messages, std::vector<char>& buf, int& offset)
     {
 
+        int messagesize = local_messages.size();
+        MPI_Pack(&messagesize, 1, MPI_UNSIGNED, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
+
         for (const auto lm : local_messages) {
             MPI_Pack(&lm.flag, 1, MPI_INT64_T, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
             int tagsize = lm.tag.size();
@@ -80,9 +83,15 @@ namespace
     {
         std::vector<Opm::DeferredLogger::Message> messages;
         const int num_processes = displ.size() - 1;
+        auto* data = const_cast<char*>(recv_buffer.data());
         for (int process = 0; process < num_processes; ++process) {
             int offset = displ[process];
-            messages.push_back(unpackSingleMessage(recv_buffer, offset));
+            // unpack number of messages
+            unsigned int messagesize;
+            MPI_Unpack(data, recv_buffer.size(), &offset, &messagesize, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
+            for (unsigned int i=0; i<messagesize; i++) {
+                messages.push_back(unpackSingleMessage(recv_buffer, offset));
+            }
             assert(offset == displ[process + 1]);
         }
         return messages;
@@ -98,7 +107,7 @@ namespace Opm
     Opm::DeferredLogger gatherDeferredLogger(const Opm::DeferredLogger& local_deferredlogger)
     {
         // Pack local messages.
-        int message_size = 0;
+        int message_size = sizeof(unsigned int);// to store the number of messages
         for (const auto lm : local_deferredlogger.messages_) {
             message_size += sizeof(lm.flag);
             message_size += sizeof(unsigned int);// to store the length of tag
