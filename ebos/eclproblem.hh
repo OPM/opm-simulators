@@ -240,13 +240,13 @@ SET_SCALAR_PROP(EclBaseProblem, InitialTimeStepSize, 1e100);
 SET_SCALAR_PROP(EclBaseProblem, NewtonRawTolerance, 1e-2);
 
 // the tolerated amount of "incorrect" amount of oil per time step for the complete
-// reservoi. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
+// reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
 // will tolerate larger residuals.
-SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumTolerance, 1e-3);
+SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumTolerance, 1e-4);
 
 // set number of Newton iterations where the volumetric residual is considered for
 // convergence
-SET_INT_PROP(EclBaseProblem, EclNewtonStrictIterations, 4);
+SET_INT_PROP(EclBaseProblem, EclNewtonStrictIterations, 8);
 
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
