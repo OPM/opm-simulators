@@ -19,8 +19,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include <flow/flow_tag.hpp>
-
+#include "flow/flow_tag.hpp"
+#include <opm/linearsolvers/csrsolverbackend.hh>
+//#include <ewoms/linear/superlubackend.hh>
 
 BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
@@ -60,9 +61,12 @@ namespace Ewoms {
     };
     //NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
     SET_TYPE_PROP(EclFlowProblemSimple, IntensiveQuantities, Ewoms::BlackOilIntensiveQuantities<TypeTag>);
-    SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
-    
-    //SET_TAG_PROP(EclFlowProblem, FluidState, Opm::BlackOilFluidState);  
+    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
+    //SET_TAG_PROP(EclFlowProblemSimple, LinearSolverSplice, ParallelBiCGStabLinearSolver);
+    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::ParallelBiCGStabSolverBackend<TypeTag>);//not work
+    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::SuperLUBackend<TypeTag>)//not work
+    //SET_TAG_PROP(EclFlowProblem, FluidState, Opm::BlackOilFluidState);
+    SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::CSRSolverBackend<TypeTag>);
     SET_BOOL_PROP(EclFlowProblemSimple, EnableStorageCache, true);
     SET_BOOL_PROP(EclFlowProblemSimple, EnableIntensiveQuantityCache, true);
     

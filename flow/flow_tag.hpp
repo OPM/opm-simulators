@@ -46,28 +46,27 @@
 #endif
 
 
-
-
-
 BEGIN_PROPERTIES
 
 // this is a dummy type tag that is used to setup the parameters before the actual
 // simulator.
-NEW_TYPE_TAG(FlowEarlyBird, INHERITS_FROM(EclFlowProblemSimple));
+NEW_TYPE_TAG(FlowEarlyBird, INHERITS_FROM(EclFlowProblem));
 
 END_PROPERTIES
 
 
+
+
 namespace Opm {
-  template <class TagType>
+  template <class TypeTag>
   void flowEbosSetDeck(Deck &deck, EclipseState& eclState)
   {
-    typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
     Vanguard::setExternalDeck(&deck, &eclState);
   }
   
 // ----------------- Main program -----------------
-  template <class TagType>
+  template <class TypeTag>
   int flowEbosMain(int argc, char** argv)
   {
     // we always want to use the default locale, and thus spare us the trouble
@@ -79,7 +78,7 @@ namespace Opm {
 #else
     Dune::MPIHelper::instance(argc, argv);
 #endif
-    Opm::FlowMainEbos<TagType> mainfunc;
+    Opm::FlowMainEbos<TypeTag> mainfunc;
     return mainfunc.execute(argc, argv);
   }
 
@@ -121,7 +120,7 @@ namespace detail
 
 
 // ----------------- Main program -----------------
-template<TagType>
+template<class TypeTag>
 int mainFlow(int argc, char** argv)
 {
     // MPI setup.
@@ -151,7 +150,7 @@ int mainFlow(int argc, char** argv)
     typedef GET_PROP_TYPE(PreTypeTag, Problem) PreProblem;
 
     PreProblem::setBriefDescription("Simple Flow, an advanced reservoir simulator for ECL-decks provided by the Open Porous Media project.");
-
+    
     int status = Opm::FlowMainEbos<PreTypeTag>::setupParameters_(argc, argv);
     if (status != 0)
         // if setupParameters_ returns a value smaller than 0, there was no error, but
