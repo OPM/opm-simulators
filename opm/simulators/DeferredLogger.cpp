@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+//#include <opm/simulators/gatherDeferredLogger.hpp>
 
 #include <opm/simulators/DeferredLogger.hpp>
 
