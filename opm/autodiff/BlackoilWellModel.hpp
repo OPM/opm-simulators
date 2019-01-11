@@ -39,7 +39,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/WellTestState.hpp>
 
 #include <opm/core/wells.h>
-#include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>

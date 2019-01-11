@@ -156,25 +156,25 @@ install(TARGETS flow_blackoil_adjoint DESTINATION bin)
 opm_add_bash_completion(flow_blackoil_adjoint)
 
 if (HAVE_OPM_TESTS)
-	find_package(PythonInterp REQUIRED)
+	find_package(PythonInterp 2.7 REQUIRED)
 	#install(FILES tests/runTest.py DESTINATION bin)
 	add_test(NAME test_MODEL_1D_DEBUG
 		COMMAND ${PYTHON_EXECUTABLE}
 		${PROJECT_SOURCE_DIR}/tests/runTestAdjoint.py
 		--simulator=${PROJECT_BINARY_DIR}/bin/flow_blackoil_adjoint
-		--outputdir=test_1d_debug --datadir=${CMAKE_SOURCE_DIR}/opm-tests/adjoint_tests
+		--outputdir=test_1d_debug --datadir=${OPM_TESTS_ROOT}/adjoint_tests
 		--case=MODEL_1D_DEBUG)
 	  add_test(NAME test_MODEL_2D_DEBUG_3
 		COMMAND ${PYTHON_EXECUTABLE}
 		${PROJECT_SOURCE_DIR}/tests/runTestAdjoint.py
 		--simulator=${PROJECT_BINARY_DIR}/bin/flow_blackoil_adjoint
-		--outputdir=test_2d_debug_3 --datadir=${CMAKE_SOURCE_DIR}/opm-tests/adjoint_tests
+		--outputdir=test_2d_debug_3 --datadir=${OPM_TESTS_ROOT}/adjoint_tests
 		--case=MODEL_2D_DEBUG_3)
 	  add_test(NAME test_MODEL_3D_DEBUG_1
 		COMMAND ${PYTHON_EXECUTABLE}
 		${PROJECT_SOURCE_DIR}/tests/runTestAdjoint.py
 		--simulator=${PROJECT_BINARY_DIR}/bin/flow_blackoil_adjoint
-		--outputdir=test_3d_debug_1 --datadir=${CMAKE_SOURCE_DIR}/opm-tests/adjoint_tests
+		--outputdir=test_3d_debug_1 --datadir=${OPM_TESTS_ROOT}/adjoint_tests
 		--case=MODEL_3D_DEBUG_1)
 	  
 endif()

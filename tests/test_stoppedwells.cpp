@@ -23,7 +23,6 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 #include <opm/core/wells/WellsManager.hpp>
@@ -38,16 +37,15 @@ using namespace Opm;
 BOOST_AUTO_TEST_CASE(TestStoppedWells)
 {
     const std::string filename = "wells_stopped.data";
-    Opm::ParseContext parseContext;
     Opm::Parser parser;
-    Opm::Deck deck(parser.parseFile(filename , parseContext));
-    Opm::EclipseState eclipseState(deck , parseContext);
+    Opm::Deck deck(parser.parseFile(filename));
+    Opm::EclipseState eclipseState(deck);
     Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
-    const Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
+    const Schedule sched(deck, grid, eclipseProperties, runspec);
 
 
     double target_surfacerate_inj;

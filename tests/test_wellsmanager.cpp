@@ -25,7 +25,6 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
@@ -176,16 +175,15 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
     const std::string filename = "wells_manager_data.data";
     Opm::Parser parser;
-    Opm::ParseContext parseContext;
-    Opm::Deck deck = parser.parseFile(filename, parseContext);
+    Opm::Deck deck = parser.parseFile(filename);
 
-    Opm::EclipseState eclipseState(deck, parseContext);
+    Opm::EclipseState eclipseState(deck);
     Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
-    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
+    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec);
 
  
     {
@@ -218,16 +216,15 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
 BOOST_AUTO_TEST_CASE(WellsEqual) {
     const std::string filename = "wells_manager_data.data";
-    Opm::ParseContext parseContext;
     Opm::Parser parser;
-    Opm::Deck deck(parser.parseFile(filename, parseContext));
-    Opm::EclipseState eclipseState(deck, parseContext);
+    Opm::Deck deck(parser.parseFile(filename));
+    Opm::EclipseState eclipseState(deck);
     Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
-    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
+    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec);
 
 
     Opm::WellsManager wellsManager0(eclipseState, sched, 0, *vanguard.c_grid());
@@ -239,16 +236,15 @@ BOOST_AUTO_TEST_CASE(WellsEqual) {
 
 BOOST_AUTO_TEST_CASE(ControlsEqual) {
     const std::string filename = "wells_manager_data.data";
-    Opm::ParseContext parseContext;
     Opm::Parser parser;
-    Opm::Deck deck(parser.parseFile(filename, parseContext));
-    Opm::EclipseState eclipseState(deck, parseContext);
+    Opm::Deck deck(parser.parseFile(filename));
+    Opm::EclipseState eclipseState(deck);
     Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
-    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
+    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec);
 
 
 
@@ -268,16 +264,15 @@ BOOST_AUTO_TEST_CASE(ControlsEqual) {
 
 BOOST_AUTO_TEST_CASE(WellShutOK) {
     const std::string filename = "wells_manager_data.data";
-    Opm::ParseContext parseContext;
     Opm::Parser parser;
-    Opm::Deck deck(parser.parseFile(filename, parseContext));
-    Opm::EclipseState eclipseState(deck, parseContext);
+    Opm::Deck deck(parser.parseFile(filename));
+    Opm::EclipseState eclipseState(deck);
     Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
-    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
+    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec);
 
 
     Opm::WellsManager wellsManager2(eclipseState, sched, 2, *vanguard.c_grid());
@@ -290,16 +285,15 @@ BOOST_AUTO_TEST_CASE(WellShutOK) {
 
 BOOST_AUTO_TEST_CASE(WellSTOPOK) {
     const std::string filename = "wells_manager_data_wellSTOP.data";
-    Opm::ParseContext parseContext;
     Opm::Parser parser;
-    Opm::Deck deck(parser.parseFile(filename, parseContext));
-    Opm::EclipseState eclipseState(deck, parseContext);
+    Opm::Deck deck(parser.parseFile(filename));
+    Opm::EclipseState eclipseState(deck);
     Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const Opm::TableManager table ( deck );
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
-    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec, parseContext );
+    const Opm::Schedule sched(deck, grid, eclipseProperties, runspec);
 
 
 

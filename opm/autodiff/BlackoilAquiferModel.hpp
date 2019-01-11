@@ -27,9 +27,11 @@
 #include <ebos/eclbaseaquifermodel.hh>
 
 #include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/autodiff/AquiferCarterTracy.hpp>
+#include <opm/autodiff/AquiferFetkovich.hpp>
 #include <opm/material/densead/Math.hpp>
 
 namespace Opm {
@@ -63,21 +65,22 @@ namespace Opm {
             typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
             typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
 
-            typedef AquiferCarterTracy<TypeTag> AquiferType;
-
-            // TODO: declaring this as mutable is a hack which should be fixed in the
-            // long term
-            mutable std::vector<AquiferType> aquifers_;
+            typedef AquiferCarterTracy<TypeTag> AquiferCarterTracy_object;
+            typedef AquiferFetkovich<TypeTag> AquiferFetkovich_object;
 
             Simulator& simulator_;
 
-            // map from logically cartesian cell indices to compressed ones
             std::unordered_map<int, int> cartesian_to_compressed_;
+            mutable  std::vector<AquiferCarterTracy_object> aquifers_CarterTracy;
+            mutable  std::vector<AquiferFetkovich_object> aquifers_Fetkovich;
 
             // This initialization function is used to connect the parser objects with the ones needed by AquiferCarterTracy
             void init();
 
             bool aquiferActive() const;
+            bool aquiferCarterTracyActive() const;
+            bool aquiferFetkovichActive() const;
+
         };
 
 

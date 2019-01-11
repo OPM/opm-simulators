@@ -242,8 +242,9 @@ int main(int argc, char** argv)
       tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN));
       tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN));
       Opm::ParseContext parseContext(tmp);
+      Opm::ErrorGuard errorGuard;
 
-      std::shared_ptr<Opm::Deck> deck = std::make_shared< Opm::Deck >( parser.parseFile(deckFilename , parseContext) );
+      std::shared_ptr<Opm::Deck> deck = std::make_shared< Opm::Deck >( parser.parseFile(deckFilename , parseContext, errorGuard) );
       if ( outputCout ) {
 	Opm::checkDeck(*deck, parser);
 	Opm::MissingFeatures::checkKeywords(*deck);
@@ -251,7 +252,7 @@ int main(int argc, char** argv)
       Opm::Runspec runspec( *deck );
       const auto& phases = runspec.phases();
 
-      std::shared_ptr<Opm::EclipseState> eclipseState = std::make_shared< Opm::EclipseState > ( *deck, parseContext );
+      std::shared_ptr<Opm::EclipseState> eclipseState = std::make_shared< Opm::EclipseState > ( *deck, parseContext, errorGuard );
       if( phases.size() == 3 ) {
         Opm::flowEbosBlackoilSetDeck(*deck, *eclipseState);
         return Opm::flowEbosBlackoilMain(argc, argv);

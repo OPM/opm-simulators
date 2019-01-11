@@ -26,7 +26,6 @@
 
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/wells/WellsGroup.hpp>
-#include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/GroupTree.hpp>
 
 #include <opm/grid/utility/CompressedPropertyAccess.hpp>
@@ -93,7 +92,6 @@ namespace Opm
                      int dimensions,
                      const F2C& f2c,
                      FC begin_face_centroids,
-                     const DynamicListEconLimited& list_econ_limited,
                      bool is_parallel_run=false,
                      const std::unordered_set<std::string>& deactivated_wells = std::unordered_set<std::string> ());
 
@@ -164,7 +162,6 @@ namespace Opm
                   int dimensions,
                   const C2F& cell_to_faces,
                   FC begin_face_centroids,
-                  const DynamicListEconLimited& list_econ_limited,
                   const std::unordered_set<std::string>& deactivated_wells);
         // Disable copying and assignment.
         WellsManager(const WellsManager& other);
@@ -172,8 +169,7 @@ namespace Opm
         static void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed );
         void setupWellControls(std::vector<const Well*>& wells, size_t timeStep,
                                std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,
-                               const std::vector<int>& wells_on_proc,
-                               const DynamicListEconLimited& list_econ_limited);
+                               const std::vector<int>& wells_on_proc);
 
         template<class C2F, class FC, class NTG>
         void createWellsFromSpecs( std::vector<const Well*>& wells, size_t timeStep,
@@ -190,8 +186,7 @@ namespace Opm
                                    const double* permeability,
                                    const NTG& ntg,
                                    std::vector<int>& wells_on_proc,
-                                   const std::unordered_set<std::string>& deactivated_wells,
-                                   const DynamicListEconLimited& list_econ_limited);
+                                   const std::unordered_set<std::string>& deactivated_wells);
 
         void setupGuideRates(std::vector<const Well*>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index);
 

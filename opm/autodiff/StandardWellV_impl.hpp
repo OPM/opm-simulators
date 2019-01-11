@@ -2948,7 +2948,7 @@ namespace Opm
         const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
         // the skin pressure when injecting water, which also means the polymer concentration is zero
         EvalWell pskin_water(numWellEq_ + numEq, 0.0);
-        water_table_func.eval(throughput_eval, water_velocity, pskin_water);
+        pskin_water = water_table_func.eval(throughput_eval, water_velocity);
         return pskin_water;
     }
 
@@ -2981,7 +2981,7 @@ namespace Opm
         const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
         // the skin pressure when injecting water, which also means the polymer concentration is zero
         EvalWell pskin_poly(numWellEq_ + numEq, 0.0);
-        skprpolytable.table_func.eval(throughput_eval, water_velocity_abs, pskin_poly);
+        pskin_poly = skprpolytable.table_func.eval(throughput_eval, water_velocity_abs);
         if (poly_inj_conc == reference_concentration) {
             return sign * pskin_poly;
         }
@@ -3012,7 +3012,7 @@ namespace Opm
         if (wpolymer() == 0.) { // not injecting polymer
             return molecular_weight;
         }
-        table_func.eval(throughput_eval, Opm::abs(water_velocity), molecular_weight);
+        molecular_weight = table_func.eval(throughput_eval, Opm::abs(water_velocity));
         return molecular_weight;
     }
 

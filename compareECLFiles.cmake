@@ -199,6 +199,13 @@ add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          REL_TOL ${rel_tol}
                          DIR aquifer-oilwater)
 
+add_test_compareECLFiles(CASENAME fetkovich_2d
+                         FILENAME 2D_FETKOVICHAQUIFER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR aquifer-fetkovich)
+
 add_test_compareECLFiles(CASENAME spe3
                          FILENAME SPE3CASE1
                          SIMULATOR flow
@@ -208,7 +215,7 @@ add_test_compareECLFiles(CASENAME spe3
 
 add_test_compareECLFiles(CASENAME spe9
                          FILENAME SPE9_CP_SHORT
-                         SIMULATOR flow 
+                         SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
