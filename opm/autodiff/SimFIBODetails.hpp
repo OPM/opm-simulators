@@ -69,42 +69,14 @@ namespace Opm
             return (0 <= resv_control(wells.ctrls[w]));
         }
 
-        inline bool
-        is_resv(const WellMap&     wmap,
-                const std::string& name,
-                const std::size_t  step)
-        {
-            bool match = false;
-
-            WellMap::const_iterator i = wmap.find(name);
-
-            if (i != wmap.end()) {
-                const Well* wp = i->second;
-
-                match = (wp->isProducer(step) &&
-                         wp->getProductionProperties(step)
-                         .hasProductionControl(WellProducer::RESV))
-                    ||  (wp->isInjector(step) &&
-                         wp->getInjectionProperties(step)
-                         .hasInjectionControl(WellInjector::RESV));
-            }
-
-            return match;
-        }
-
         inline std::vector<int>
-        resvWells(const Wells*      wells,
-                  const std::size_t step,
-                  const WellMap&    wmap)
+        resvWells(const Wells*      wells)
         {
             std::vector<int> resv_wells;
             if( wells )
             {
                 for (int w = 0, nw = wells->number_of_wells; w < nw; ++w) {
-                    if (is_resv(*wells, w) ||
-                        ((wells->name[w] != 0) &&
-                         is_resv(wmap, wells->name[w], step)))
-                    {
+                    if ( is_resv(*wells, w) ) {
                         resv_wells.push_back(w);
                     }
                 }
