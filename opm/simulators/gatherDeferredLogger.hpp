@@ -23,8 +23,6 @@
 
 #include <opm/simulators/DeferredLogger.hpp>
 
-#include <vector>
-
 namespace Opm
 {
 

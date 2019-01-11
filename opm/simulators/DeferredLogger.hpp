@@ -26,10 +26,6 @@
 #include <string>
 #include <vector>
 
-namespace Opm {
-    class DeferredLogger;
-}
-
 namespace Opm
 {
     /** This class implements a deferred logger:

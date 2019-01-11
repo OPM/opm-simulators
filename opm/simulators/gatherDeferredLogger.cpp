@@ -38,10 +38,14 @@ namespace
             MPI_Pack(&lm.flag, 1, MPI_INT64_T, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
             int tagsize = lm.tag.size();
             MPI_Pack(&tagsize, 1, MPI_UNSIGNED, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
-            MPI_Pack(lm.tag.c_str(), lm.tag.size(), MPI_CHAR, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
+            if (tagsize>0) {
+                MPI_Pack(lm.tag.c_str(), lm.tag.size(), MPI_CHAR, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
+            }
             int textsize = lm.text.size();
             MPI_Pack(&textsize, 1, MPI_UNSIGNED, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
-            MPI_Pack(lm.text.c_str(), lm.text.size(), MPI_CHAR, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
+            if (textsize>0) {
+                MPI_Pack(lm.text.c_str(), lm.text.size(), MPI_CHAR, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
+            }
         }
     }
 
@@ -52,22 +56,22 @@ namespace
         MPI_Unpack(data, recv_buffer.size(), &offset, &flag, 1, MPI_INT64_T, MPI_COMM_WORLD);
 
         // unpack tag
-        unsigned int tag_length;
-        MPI_Unpack(data, recv_buffer.size(), &offset, &tag_length, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
+        unsigned int tagsize;
+        MPI_Unpack(data, recv_buffer.size(), &offset, &tagsize, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
         std::string tag;
-        if (tag_length>0) {
-            std::vector<char> tagchars(tag_length);
-            MPI_Unpack(data, recv_buffer.size(), &offset, tagchars.data(), tag_length, MPI_CHAR, MPI_COMM_WORLD);
-            tag = std::string(tagchars.data());
+        if (tagsize>0) {
+            std::vector<char> tagchars(tagsize);
+            MPI_Unpack(data, recv_buffer.size(), &offset, tagchars.data(), tagsize, MPI_CHAR, MPI_COMM_WORLD);
+            tag = std::string(tagchars.data(), tagsize);
         }
         // unpack text
-        unsigned int text_length;
-        MPI_Unpack(data, recv_buffer.size(), &offset, &text_length, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
+        unsigned int textsize;
+        MPI_Unpack(data, recv_buffer.size(), &offset, &textsize, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
         std::string text;
-        if (text_length>0) {
-            std::vector<char> textchars(text_length);
-            MPI_Unpack(data, recv_buffer.size(), &offset, textchars.data(), text_length, MPI_CHAR, MPI_COMM_WORLD);
-            text = std::string (textchars.data());
+        if (textsize>0) {
+            std::vector<char> textchars(textsize);
+            MPI_Unpack(data, recv_buffer.size(), &offset, textchars.data(), textsize, MPI_CHAR, MPI_COMM_WORLD);
+            text = std::string (textchars.data(), textsize);
         }
         return Opm::DeferredLogger::Message({flag, tag, text});
     }
