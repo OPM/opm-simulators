@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(NoMessages)
 
     Opm::DeferredLogger global_deferredlogger = gatherDeferredLogger(local_deferredlogger);
 
-    if (cc.rank()==0) {
+    if (cc.rank() == 0) {
 
         global_deferredlogger.logMessages();
 
@@ -98,7 +98,6 @@ BOOST_AUTO_TEST_CASE(NoMessages)
 
         std::string expected;
         BOOST_CHECK_EQUAL(log_stream.str(), expected);
-        std::cerr<<""<<log_stream.str();
     }
 }
 
@@ -110,10 +109,10 @@ BOOST_AUTO_TEST_CASE(VariableNumberOfMessages)
     initLogger(log_stream);
 
     Opm::DeferredLogger local_deferredlogger;
-    if (cc.rank()==1) {
+    if (cc.rank() == 1) {
         local_deferredlogger.info("info from rank " + std::to_string(cc.rank()));
         local_deferredlogger.warning("warning from rank " + std::to_string(cc.rank()));
-    } else if (cc.rank()==2) {
+    } else if (cc.rank() == 2) {
         local_deferredlogger.bug("tagme", "bug from rank " + std::to_string(cc.rank()));
         local_deferredlogger.bug("tagme", "bug from rank " + std::to_string(cc.rank()));
         local_deferredlogger.bug("tagme", "bug from rank " + std::to_string(cc.rank()));
@@ -122,7 +121,7 @@ BOOST_AUTO_TEST_CASE(VariableNumberOfMessages)
 
     Opm::DeferredLogger global_deferredlogger = gatherDeferredLogger(local_deferredlogger);
 
-    if (cc.rank()==0) {
+    if (cc.rank() == 0) {
 
         global_deferredlogger.logMessages();
 
@@ -137,7 +136,6 @@ BOOST_AUTO_TEST_CASE(VariableNumberOfMessages)
             + Log::prefixMessage(Log::MessageType::Bug, "bug from rank 2") + "\n"
             + Log::prefixMessage(Log::MessageType::Bug, "Message limit reached for message tag: tagme") + "\n";
         BOOST_CHECK_EQUAL(log_stream.str(), expected);
-        std::cerr<<""<<log_stream.str();
     }
 }
 
@@ -153,7 +151,7 @@ BOOST_AUTO_TEST_CASE(AllHaveOneMessage)
 
     Opm::DeferredLogger global_deferredlogger = gatherDeferredLogger(local_deferredlogger);
 
-    if (cc.rank()==0) {
+    if (cc.rank() == 0) {
 
         global_deferredlogger.logMessages();
 
@@ -165,7 +163,6 @@ BOOST_AUTO_TEST_CASE(AllHaveOneMessage)
             expected += Log::prefixMessage(Log::MessageType::Info, "info from rank "+std::to_string(i)) + "\n";
         }
         BOOST_CHECK_EQUAL(log_stream.str(), expected);
-        std::cerr<<""<<log_stream.str();
     }
 }
 
