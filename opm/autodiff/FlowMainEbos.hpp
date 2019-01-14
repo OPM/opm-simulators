@@ -58,12 +58,14 @@ NEW_PROP_TAG(OutputMode);
 NEW_PROP_TAG(EnableDryRun);
 NEW_PROP_TAG(OutputInterval);
 NEW_PROP_TAG(UseAmg);
+NEW_PROP_TAG(EnableLoggingFalloutWarning);
 
 SET_STRING_PROP(EclFlowProblem, OutputMode, "all");
 
 // TODO: enumeration parameters. we use strings for now.
 SET_STRING_PROP(EclFlowProblem, EnableDryRun, "auto");
-
+// Do not merge parallel output files or warn about them
+SET_BOOL_PROP(EclFlowProblem, EnableLoggingFalloutWarning, false);
 SET_INT_PROP(EclFlowProblem, OutputInterval, 1);
 
 END_PROPERTIES
@@ -106,6 +108,9 @@ namespace Opm
                                  "Specify if the simulation ought to be actually run, or just pretended to be");
             EWOMS_REGISTER_PARAM(TypeTag, int, OutputInterval,
                                  "Specify the number of report steps between two consecutive writes of restart data");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, EnableLoggingFalloutWarning,
+                                 "Developer option to see whether logging was on non-root processors. In that case it will be appended to the *.DBG or *.PRT files");
+
             Simulator::registerParameters();
 
             ISTLSolverType::registerParameters();
@@ -422,10 +427,11 @@ namespace Opm
             const std::string& output_dir = eclState().getIOConfig().getOutputDir();
             fs::path output_path(output_dir);
             fs::path deck_filename(EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName));
-            std::string basename = boost::to_upper_copy(deck_filename.stem().string());
+            std::string basename = boost::to_upper_copy(fs::path(deck_filename).stem().string());
             std::for_each(fs::directory_iterator(output_path),
                           fs::directory_iterator(),
-                          detail::ParallelFileMerger(output_path, basename));
+                          detail::ParallelFileMerger(output_path, basename,
+                                                     EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning));
         }
 
         void setupEbosSimulator()
