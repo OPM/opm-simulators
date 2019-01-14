@@ -321,11 +321,8 @@ namespace Opm
             std::ostringstream debugFileStream;
             std::ostringstream logFileStream;
 
-            if (boost::to_upper_copy(path(fpath.extension()).string()) == ".DATA") {
-                baseName = path(fpath.stem()).string();
-            } else {
-                baseName = path(fpath.filename()).string();
-            }
+            // Strip extension if any
+            baseName = boost::to_upper_copy(path(fpath.stem()).string());
 
             const std::string& output_dir = eclState().getIOConfig().getOutputDir();
             logFileStream << output_dir << "/" << baseName;
@@ -425,9 +422,10 @@ namespace Opm
             const std::string& output_dir = eclState().getIOConfig().getOutputDir();
             fs::path output_path(output_dir);
             fs::path deck_filename(EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName));
+            std::string basename = boost::to_upper_copy(deck_filename.stem().string());
             std::for_each(fs::directory_iterator(output_path),
                           fs::directory_iterator(),
-                          detail::ParallelFileMerger(output_path, deck_filename.stem().string()));
+                          detail::ParallelFileMerger(output_path, basename));
         }
 
         void setupEbosSimulator()
