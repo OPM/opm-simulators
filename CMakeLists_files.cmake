@@ -47,6 +47,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/gatherConvergenceReport.cpp
   opm/core/linalg/LinearSolverInterface.cpp
   opm/core/linalg/LinearSolverUmfpack.cpp
+  opm/core/linalg/LinearSolverAmgcl.cpp
   opm/core/linalg/call_umfpack.c
   opm/core/linalg/sparse_sys.c
   )
@@ -177,9 +178,13 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/SimulatorTimer.hpp
   opm/simulators/timestepping/SimulatorTimerInterface.hpp
   opm/simulators/timestepping/gatherConvergenceReport.hpp
-  opm/linearsolvers/csrsolverbackend.hh
+  opm/linearsolvers/crssolverbackend.hh
+  opm/linearsolvers/amgclsolverbackend.hh
+  opm/linearsolvers/amgclprmsolverbackend.hh
   opm/core/linalg/LinearSolverInterface.hpp
   opm/core/linalg/LinearSolverUmfpack.hpp
+  opm/core/linalg/LinearSolverAmgcl.hpp
+  opm/core/linalg/LinearSolverAmgclPrm.hpp
   opm/core/linalg/sparse_sys.h
   opm/core/linalg/call_umfpack.h
   flow/flow_tag.hpp

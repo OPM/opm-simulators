@@ -20,7 +20,7 @@
 */
 #include "config.h"
 #include "flow/flow_tag.hpp"
-#include <opm/linearsolvers/crssolverbackend.hh>
+#include <opm/linearsolvers/amgclsolverbackend.hh>
 //#include <ewoms/linear/superlubackend.hh>
 
 BEGIN_PROPERTIES
@@ -66,7 +66,7 @@ namespace Ewoms {
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::ParallelBiCGStabSolverBackend<TypeTag>);//not work
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::SuperLUBackend<TypeTag>)//not work
     //SET_TAG_PROP(EclFlowProblem, FluidState, Opm::BlackOilFluidState);
-    SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::CRSSolverBackend<TypeTag>);
+    SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::AMGCLSolverBackend<TypeTag>);
     SET_BOOL_PROP(EclFlowProblemSimple, EnableStorageCache, true);
     SET_BOOL_PROP(EclFlowProblemSimple, EnableIntensiveQuantityCache, true);
     

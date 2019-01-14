@@ -151,6 +151,17 @@ opm_add_test(flow_blackoil_direct
     flow/flow_blackoil_direct.cpp)
 install(TARGETS flow_blackoil_direct DESTINATION bin)
 
+opm_add_test(flow_blackoil_amgcl
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators"
+  SOURCES
+    flow/flow_blackoil_amgcl.cpp)
+install(TARGETS flow_blackoil_amgcl DESTINATION bin)
+
+
+
 add_test(NAME flow__version
          COMMAND flow --version)
 set_tests_properties(flow__version PROPERTIES
