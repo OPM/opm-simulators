@@ -36,12 +36,14 @@ SET_BOOL_PROP(EclFlowSolventProblem, EnableSolvent, true);
 }}
 
 namespace Opm {
-void flowEbosSolventSetDeck(Deck &deck, EclipseState& eclState)
+void flowEbosSolventSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
     typedef TTAG(EclFlowSolventProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalDeck(&deck, &eclState);
+    Vanguard::setExternalSchedule(&schedule);
+    Vanguard::setExternalSummaryConfig(&summaryConfig);
 }
 
 

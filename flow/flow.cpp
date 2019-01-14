@@ -44,6 +44,9 @@
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -171,26 +174,42 @@ int main(int argc, char** argv)
             std::cout << "Reading deck file '" << deckFilename << "'\n";
             std::cout.flush();
         }
-        Opm::Parser parser;
-        typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
-        typedef std::vector<ParseModePair> ParseModePairs;
-        ParseModePairs tmp;
-        tmp.push_back(ParseModePair(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE));
-        tmp.push_back(ParseModePair(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN));
-        tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN));
-        tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN));
-        Opm::ParseContext parseContext(tmp);
-        Opm::ErrorGuard errorGuard;
+        std::shared_ptr<Opm::Deck> deck;
+        std::shared_ptr<Opm::EclipseState> eclipseState;
+        std::shared_ptr<Opm::Schedule> schedule;
+        std::shared_ptr<Opm::SummaryConfig> summaryConfig;
+        {
+            Opm::Parser parser;
+            Opm::ParseContext parseContext;
+            Opm::ErrorGuard errorGuard;
 
-        std::shared_ptr<Opm::Deck> deck = std::make_shared< Opm::Deck >( parser.parseFile(deckFilename , parseContext, errorGuard) );
-        if ( outputCout ) {
-            Opm::checkDeck(*deck, parser);
-            Opm::MissingFeatures::checkKeywords(*deck);
+            if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
+                parseContext.update( Opm::InputError::DELAYED_EXIT1);
+            else {
+                parseContext.update(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
+                parseContext.update(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
+                parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
+                parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
+            }
+
+            deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
+            if ( outputCout ) {
+                Opm::checkDeck(*deck, parser);
+                Opm::MissingFeatures::checkKeywords(*deck);
+            }
+
+            eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
+            schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
+            summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
+
+            if (errorGuard) {
+                errorGuard.dump();
+                errorGuard.clear();
+
+                throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
+            }
         }
-        Opm::Runspec runspec( *deck );
-        const auto& phases = runspec.phases();
-
-        std::shared_ptr<Opm::EclipseState> eclipseState = std::make_shared< Opm::EclipseState > ( *deck, parseContext, errorGuard );
+        const auto& phases = Opm::Runspec(*deck).phases();
 
         // run the actual simulator
         //
@@ -202,13 +221,13 @@ int main(int argc, char** argv)
             // oil-gas
             if (phases.active( Opm::Phase::GAS ))
             {
-                Opm::flowEbosGasOilSetDeck(*deck, *eclipseState);
+                Opm::flowEbosGasOilSetDeck(*deck, *eclipseState, *schedule, *summaryConfig);
                 return Opm::flowEbosGasOilMain(argc, argv);
             }
             // oil-water
             else if ( phases.active( Opm::Phase::WATER ) )
             {
-                Opm::flowEbosOilWaterSetDeck(*deck, *eclipseState);
+                Opm::flowEbosOilWaterSetDeck(*deck, *eclipseState, *schedule, *summaryConfig);
                 return Opm::flowEbosOilWaterMain(argc, argv);
             }
             else {
@@ -236,26 +255,26 @@ int main(int argc, char** argv)
             }
 
             if ( phases.size() == 3 ) { // oil water polymer case
-                Opm::flowEbosOilWaterPolymerSetDeck(*deck, *eclipseState);
+                Opm::flowEbosOilWaterPolymerSetDeck(*deck, *eclipseState, *schedule, *summaryConfig);
                 return Opm::flowEbosOilWaterPolymerMain(argc, argv);
             } else {
-                Opm::flowEbosPolymerSetDeck(*deck, *eclipseState);
+                Opm::flowEbosPolymerSetDeck(*deck, *eclipseState, *schedule, *summaryConfig);
                 return Opm::flowEbosPolymerMain(argc, argv);
             }
         }
         // Solvent case
         else if ( phases.active( Opm::Phase::SOLVENT ) ) {
-            Opm::flowEbosSolventSetDeck(*deck, *eclipseState);
+            Opm::flowEbosSolventSetDeck(*deck, *eclipseState, *schedule, *summaryConfig);
             return Opm::flowEbosSolventMain(argc, argv);
         }
         // Energy case
         else if (eclipseState->getSimulationConfig().isThermal()) {
-            Opm::flowEbosEnergySetDeck(*deck, *eclipseState);
+            Opm::flowEbosEnergySetDeck(*deck, *eclipseState, *schedule, *summaryConfig);
             return Opm::flowEbosEnergyMain(argc, argv);
         }
         // Blackoil case
         else if( phases.size() == 3 ) {
-            Opm::flowEbosBlackoilSetDeck(*deck, *eclipseState);
+            Opm::flowEbosBlackoilSetDeck(*deck, *eclipseState, *schedule, *summaryConfig);
             return Opm::flowEbosBlackoilMain(argc, argv);
         }
         else
