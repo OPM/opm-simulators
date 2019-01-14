@@ -25,6 +25,7 @@
 #if HAVE_MPI
 
 #include <cassert>
+#include <cstdint>
 #include <numeric>
 #include <mpi.h>
 
@@ -38,16 +39,16 @@ namespace
         MPI_Pack(&messagesize, 1, MPI_UNSIGNED, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
 
         for (const auto lm : local_messages) {
-            MPI_Pack(&lm.flag, 1, MPI_INT64_T, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
+            MPI_Pack(static_cast<void*>(const_cast<std::int64_t*>(&lm.flag)), 1, MPI_INT64_T, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
             int tagsize = lm.tag.size();
             MPI_Pack(&tagsize, 1, MPI_UNSIGNED, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
             if (tagsize>0) {
-                MPI_Pack(lm.tag.c_str(), lm.tag.size(), MPI_CHAR, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
+                MPI_Pack(const_cast<char*>(lm.tag.c_str()), lm.tag.size(), MPI_CHAR, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
             }
             int textsize = lm.text.size();
             MPI_Pack(&textsize, 1, MPI_UNSIGNED, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
             if (textsize>0) {
-                MPI_Pack(lm.text.c_str(), lm.text.size(), MPI_CHAR, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
+                MPI_Pack(const_cast<char*>(lm.text.c_str()), lm.text.size(), MPI_CHAR, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
             }
         }
     }
