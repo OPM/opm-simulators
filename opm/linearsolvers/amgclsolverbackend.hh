@@ -118,8 +118,15 @@ namespace Ewoms {
             AMGCLSolverBackend(Simulator& simulator OPM_UNUSED)
             {
                 matrixAddWellContribution_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-                std::ifstream file("amgcl_setup.json");
-                boost::property_tree::json_parser::read_json(file, prm_);
+                std::string file_name("amgcl_setup.json");
+                std::ifstream file(file_name);
+                if (file.is_open()) {
+                    boost::property_tree::json_parser::read_json(file, prm_);
+                }else {
+                    // show message:
+                    std::cout << "Error opening file " <<  file_name <<std::endl;
+                    OPM_THROW(std::runtime_error,"Error opening file");
+                }
                 prm_.put("solver_type","cpr_drs");
                 np_ = FluidSystem::numPhases;
                 prm_.put("block_size", np_);
