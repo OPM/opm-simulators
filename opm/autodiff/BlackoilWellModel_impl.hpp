@@ -122,12 +122,13 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     hasTHPConstraints() const
     {
+        int local_result = false;
         for (const auto& well : well_container_) {
             if (well->wellHasTHPConstraints()) {
-                return true;
+                local_result=true;
             }
         }
-        return false;
+        return grid().comm().max(local_result);
     }
 
 
