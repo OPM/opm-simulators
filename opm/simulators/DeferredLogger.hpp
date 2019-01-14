@@ -36,6 +36,14 @@ namespace Opm
     class DeferredLogger
     {
     public:
+
+        struct Message
+        {
+            int64_t flag;
+            std::string tag;
+            std::string text;
+        };
+
         void info(const std::string& tag, const std::string& message);
         void warning(const std::string& tag, const std::string& message);
         void error(const std::string& tag, const std::string& message);
@@ -55,13 +63,8 @@ namespace Opm
         void logMessages();
 
     private:
-        struct Message
-        {
-            int64_t flag;
-            std::string tag;
-            std::string text;
-        };
         std::vector<Message> messages_;
+        friend Opm::DeferredLogger gatherDeferredLogger(const Opm::DeferredLogger& local_deferredlogger);
     };
 
 } // namespace Opm

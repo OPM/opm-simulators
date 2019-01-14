@@ -116,6 +116,18 @@ opm_add_test(test_gatherconvergencereport
     5 ${CMAKE_BINARY_DIR}
 )
 
+opm_add_test(test_gatherdeferredlogger
+  DEPENDS "opmsimulators"
+  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  SOURCES
+    tests/test_gatherdeferredlogger.cpp
+  CONDITION
+    MPI_FOUND
+  DRIVER_ARGS
+    5 ${CMAKE_BINARY_DIR}
+)
+
+
 opm_add_test(flow
   ONLY_COMPILE
   ALWAYS_ENABLE

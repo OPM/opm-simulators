@@ -45,6 +45,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
   opm/simulators/timestepping/gatherConvergenceReport.cpp
+  opm/simulators/gatherDeferredLogger.cpp
   )
 
 # originally generated with the command:
@@ -174,4 +175,5 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/SimulatorTimer.hpp
   opm/simulators/timestepping/SimulatorTimerInterface.hpp
   opm/simulators/timestepping/gatherConvergenceReport.hpp
+  opm/simulators/gatherDeferredLogger.hpp
   )
