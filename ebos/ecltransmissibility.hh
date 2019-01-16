@@ -586,18 +586,20 @@ private:
         faceAreaNormal = vanguard_.grid().faceAreaNormalEcl(faceIdx);
     }
 
-    /// \brief Applies additional transmissibilities specified via NNC keyword.
-    ///
-    /// Applies only those NNC that are actually resembled by the grid. These may
-    /// NNCs due to faults or NNCs that are actually neighbours. In both case that
-    /// specified transmissibilities (scaled by EDITNNC) will be added to the already
-    /// existing models.
-    ///
-    /// \param cartesianToCompressed Vector containing the compressed index (or -1 for inactive
-    ///                              cells) at the cartesian index.
-    /// \return Two vector of NNCs (scaled with EDITNNC). The first one are the NNCs that have been applied
-    ///         and the second the NNCs not resembled by faces of the grid. NNCs specified for
-    ///         inactive cells are omitted in these vectors.
+    /*
+     * \brief Applies additional transmissibilities specified via NNC keyword.
+     *
+     * Applies only those NNC that are actually represented by the grid. These may
+     * NNCs due to faults or NNCs that are actually neighbours. In both cases that
+     * specified transmissibilities (scaled by EDITNNC) will be added to the already
+     * existing models.
+     *
+     * \param cartesianToCompressed Vector containing the compressed index (or -1 for inactive
+     *                              cells) as the element at the cartesian index.
+     * \return Two vector of NNCs (scaled by EDITNNC). The first one are the NNCs that have been applied
+     *         and the second the NNCs not resembled by faces of the grid. NNCs specified for
+     *         inactive cells are omitted in these vectors.
+     */
     std::tuple<std::vector<NncData>, std::vector<NncData> >
     applyNncToGridTrans_(const std::vector<int>& cartesianToCompressed)
     {
