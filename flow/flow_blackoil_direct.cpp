@@ -44,6 +44,7 @@ SET_PROP(EclFlowProblemSimple, FluidState)
 //typedef Opm::BlackOilFluidSystemSimple<Scalar> type;
        typedef Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  Indices::numPhases > type;
 };
+SET_BOOL_PROP(EclFlowProblemSimple,MatrixAddWellContributions,true);
 END_PROPERTIES
 
 namespace Ewoms {
