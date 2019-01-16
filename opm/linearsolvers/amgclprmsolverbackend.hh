@@ -24,10 +24,14 @@
  * \file
  * \copydoc Ewoms::Linear::SuperLUBackend
  */
-#ifndef EWOMS_AMGPRMCLSOLVER_BACKEND_HH
+#ifndef EWOMS_AMGCLPRMSOLVER_BACKEND_HH
 #define EWOMS_AMGCLPRMSOLVER_BACKEND_HH
 
 //#include <ewoms/linear/istlsparsematrixbackend.hh>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/optional.hpp>
+#include <iostream>
 #include <ewoms/common/parametersystem.hh>
 #include <opm/material/common/Unused.hpp>
 #include <dune/common/fmatrix.hh>
@@ -44,10 +48,13 @@ NEW_PROP_TAG(GlobalEqVector);
 NEW_PROP_TAG(EclWellModel);
 NEW_PROP_TAG(Simulator);
 NEW_PROP_TAG(LinearSolverVerbosity);
+NEW_PROP_TAG(AmgclDrs);
+NEW_PROP_TAG(AmgclSetupFile);
 NEW_PROP_TAG(LinearSolverBackend);
 NEW_TYPE_TAG(AMGCLPRMSolver);
 NEW_PROP_TAG(MatrixAddWellContributions);
-
+NEW_PROP_TAG(LinearSolverReduction);
+NEW_PROP_TAG(LinearSolverMaxIter);
 END_PROPERTIES
 
 namespace Ewoms {
@@ -114,8 +121,37 @@ namespace Ewoms {
             AMGCLPRMSolverBackend(Simulator& simulator OPM_UNUSED)
             {
                 matrixAddWellContribution_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-                std::ifstream file("amgcl_setup.json");
-                boost::property_tree::json_parser::read_json(file, prm_);
+                std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, AmgclSetupFile);
+                //std::string file_name("amgcl_setup.json");
+                std::ifstream file(fileName);
+                if (file.is_open()) {
+                    boost::property_tree::json_parser::read_json(file, prm_);
+                }else {
+                    // show message:
+                    std::cout << "Error opening file " <<  fileName <<std::endl;
+                    OPM_THROW(std::runtime_error,"Error opening file");
+                }
+                
+                bool use_drs = EWOMS_GET_PARAM(TypeTag, bool, AmgclDrs);
+                if(use_drs){
+                    prm_.put("solver_type","cpr_drs");
+                }else{
+                   prm_.put("solver_type","cpr");
+                }
+                np_ = FluidSystem::numPhases;
+                prm_.put("block_size", np_);
+                prm_.put("precond.block_size", np_);
+                prm_.put("precond.active_rows", 0);
+                double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
+                int maxiter = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
+                int verb_int = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
+                if(verb_int>0){
+                  prm_.put("verbose", true);
+                }else{
+                  prm_.put("verbose", false);
+                }
+                prm_.put("solver.tol", tolerance);
+                prm_.put("solver.maxiter", maxiter);
 
             }
 
@@ -123,8 +159,15 @@ namespace Ewoms {
             {
                 EWOMS_REGISTER_PARAM(TypeTag, bool, MatrixAddWellContributions, "Explicitly specify the influences of wells between cells in the Jacobian and preconditioner matrices");
                 //FlowLinearSolverParameters::registerParameters<TypeTag>();
-                //EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverVerbosity,
-                //                     "The verbosity level of the linear solver");
+                EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverVerbosity,
+                                     "The verbosity level of the linear solver");
+                EWOMS_REGISTER_PARAM(TypeTag, bool, AmgclDrs,
+                                     "Use amgcl_drs solver");
+                EWOMS_REGISTER_PARAM(TypeTag, std::string, AmgclSetupFile,
+                                     "Setup jeson file for amgcl");
+                EWOMS_REGISTER_PARAM(TypeTag, double, LinearSolverReduction, "The minimum reduction of the residual which the linear solver must achieve");
+                EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverMaxIter, "The maximum number of iterations of the linear solver");
+                
             }
 
             /*!
@@ -143,9 +186,8 @@ namespace Ewoms {
                     //OPM_THROW(std::runtime_error,
                     //          "Cannot run with amgcl or UMFPACK without also using 'matrix_add_well_contributions=true'.");
                 }
-                const int np = numPhases();
-                MatrixBlockType leftTrans = 0.0;
-                bool use_drs = (solver_type == "amgcl_drs");
+                MatrixBlockType leftTrans(0.0);
+                bool use_drs = (prm_.get<std::string>("solver_type") == "amgcl_drs");
                 if(use_drs){
                     leftTrans=getBlockTransform(2);
                 }else{
@@ -168,18 +210,13 @@ namespace Ewoms {
                     */
                 }                
                 // should this be done with move??  
-                np_ = FluidSystem::numPhases;
+                
                 n_ = M.N();
                 sz_ = np_*n_;
                 //bool do_transpose = false;
                 M_ = buildAMGCLPRMMatrixNoBlocks(M_cp);//, do_transpose);
                 b_.resize(sz_, 0.0);
-                
-                for (int cell = 0; cell < n_; ++cell) {
-                    for (int phase = 0; phase < np_; ++phase) {
-                        b_[np_*cell + phase] = b_cp[cell][phase];
-                    }
-                }
+
                 int    iters;
                 double error;
                 auto rep  =  new DebugTimeReport("amgcl-timer_setup");
@@ -199,16 +236,24 @@ namespace Ewoms {
                     solver_->updatePre(sz, M_.ptr, M_.col, M_.val);
                 }
                 //
-                delete rep;                  
+                delete rep;
+                
+                for (int cell = 0; cell < n_; ++cell) {
+                    for (int phase = 0; phase < np_; ++phase) {
+                        b_[np_*cell + phase] = b_cp[cell][phase];
+                    }
+                }
             }
 
             bool solve(Vector& sol)
             {
                 std::vector<double> x(sz_, 0.0);
+                const int nnz = M_.ptr[sz_];
                 double error;
                 auto rep  =  new DebugTimeReport("amgcl-timer_solve");
-                solver_->solve(b_,  x, iters, error);
+                solver_->solve(b_,  x, iters_, error);
                 delete rep;
+                solver.solve(sz_, M_.ptr, M_.col, M_.val, b_, x, iters_, error);
                 for (int cell = 0; cell < n_; ++cell) {
                     for (int phase = 0; phase < np_; ++phase) {
                          sol[cell][phase] = x[np_*cell + phase];
@@ -220,8 +265,8 @@ namespace Ewoms {
             int iterations () const { return iters_; }
         private:
             static MatrixBlockType getBlockTransform(int meth_trans){
-                int np = numPhases();
-                MatrixBlockType leftTrans=0.0;
+                int np = FluidSystem::numPhases;
+                MatrixBlockType leftTrans(0.0);
                 switch(meth_trans)
                     {
                     case 1 :
@@ -257,9 +302,9 @@ namespace Ewoms {
                 return leftTrans;
             }
             
-            static multBlocksInMatrix(Matrix& ebosJac,const MatrixBlockType& trans,bool left=true){
+            static void multBlocksInMatrix(Matrix& ebosJac,const MatrixBlockType& trans,bool left=true){
                 const int n = ebosJac.N();
-                const int np = numPhases();
+                const int np = FluidSystem::numPhases;
                 for (int row_index = 0; row_index < n; ++row_index) {
                     auto& row = ebosJac[row_index];
                     auto* dataptr = row.getptr();
@@ -274,7 +319,7 @@ namespace Ewoms {
                     }
                 }
             }
-            static multBlocksVector(BVector& ebosResid_cp,const MatrixBlockType& leftTrans){
+            static void multBlocksVector(Vector& ebosResid_cp,const MatrixBlockType& leftTrans){
                 for( auto& bvec: ebosResid_cp){
                     auto bvec_new=bvec;
                     leftTrans.mv(bvec, bvec_new);
@@ -326,16 +371,18 @@ namespace Ewoms {
             int sz_;
             int np_;
             int n_;
-            int iter_;
+            int iters_;
+            boost::property_tree::ptree prm_;
+            std::string solver_type_;
             
         };
 
 
         // BEGIN_PROPERTIES
 
-        // //SET_INT_PROP(AMGCLSolver, LinearSolverVerbosity, 0);
-        // SET_TYPE_PROP(AMGCLSolver, LinearSolverBackend,
-        //               Ewoms::Linear::AMGCLSolverBackend<TypeTag>);
+        // //SET_INT_PROP(AMGCLPRMSolver, LinearSolverVerbosity, 0);
+        // SET_TYPE_PROP(AMGCLPRMSolver, LinearSolverBackend,
+        //               Ewoms::Linear::AMGCLPRMSolverBackend<TypeTag>);
 
         // END_PROPERTIES
      }
