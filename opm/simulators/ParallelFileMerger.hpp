@@ -82,7 +82,7 @@ public:
                 if ( show_fallout_ ){
                     appendFile(*logStream_, file, rank);
                 }else{
-                    fs::remove(filename);
+                    fs::remove(file);
                 }
             }
             else
@@ -91,9 +91,8 @@ public:
                 {
                     if ( show_fallout_ ){
                         appendFile(*debugStream_, file, rank);
-                    }else
-                    {
-                        fs::remove(filename);
+                    }else{
+                        fs::remove(file);
                     }
                 }
                 else
