@@ -80,7 +80,7 @@ namespace Opm
     {
         //const int block_size = 2;
         const double b_gas = 100.0;
-	int block_size = prm_.get<int>("block_size");
+    	int block_size = prm_.get<int>("block_size");
         const int n = sz / block_size;
         assert(n*block_size == sz);
         for (int blockrow = 0; blockrow < n; ++blockrow) {
@@ -102,7 +102,10 @@ namespace Opm
                   double& error)
     {
         boost::property_tree::ptree prm = prm_;
-	bool use_cpr_drs = (prm.get<std::string>("solver_type") == "cpr_drs");  
+	bool use_cpr_drs = (prm.get<std::string>("solver_type") == "cpr_drs");
+	prm.erase("solver_type");
+	prm.erase("block_size");
+	prm.erase("verbose");
         if(use_cpr_drs){
 	  //prm.put("precond.eps_dd", dd);
           //  prm.put("precond.eps_ps", ps);
@@ -119,7 +122,9 @@ namespace Opm
             delete x;
             auto y = new DebugTimeReport("solution");
             std::tie(iters, error) = solve(rhs, sol);
-            std::cout << solve << std::endl;
+	    if(prm_.get<bool>("verbose")){
+	      std::cout << solve << std::endl;
+	    }
             delete y;
         }else{
             using Backend = amgcl::backend::builtin<double>;
@@ -135,7 +140,9 @@ namespace Opm
             delete x;
             auto y = new DebugTimeReport("solution");
             std::tie(iters, error) = solve(rhs, sol);
-            std::cout << solve << std::endl;
+	    if(prm_.get<bool>("verbose")){
+	      std::cout << solve << std::endl;
+	    }
             delete y;
         }
     }
@@ -151,8 +158,8 @@ namespace Opm
                                   double& error)
     {
       int block_size = prm_.get<int>("block_size");
-        if(block_size>2){
-            hackScalingFactors(sz, ptr, const_cast<std::vector<double>&>(val), const_cast<std::vector<double>&>(rhs));
+      if(block_size>2){
+	hackScalingFactors(sz, ptr, const_cast<std::vector<double>&>(val), const_cast<std::vector<double>&>(rhs));
         }
         DebugTimeReport rep("amgcl-timer");
         // solveRegular(sz, ptr, col, val, rhs, tolerance, maxiter, sol, iters, error);
