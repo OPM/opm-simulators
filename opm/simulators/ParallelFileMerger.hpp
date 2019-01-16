@@ -55,7 +55,6 @@ public:
           fileWarningRegex_(deckname+"\\.(\\d+)\\.[^.]+"),
           show_fallout_(show_fallout)
     {
-        std::cout<<"show_fallout="<<show_fallout_<<" "<<deckname<<std::endl;
         if ( show_fallout_ )
         {
             auto debugPath = output_dir;
