@@ -192,9 +192,9 @@ namespace Ewoms {
                 pressure_scale_ = 1;
                 MatrixBlockType rightTrans=getPressureTransform(pressure_scale_);                
                 if(use_drs){
-                     leftTrans=getBlockTransform(2);
-                     //MatrixBlockType leftTrans = =getBlockTransform(3);
-                     //leftTrans = eqscale.leftmultiply();
+                    leftTrans=getBlockTransform(2);
+                    MatrixBlockType scale_eq =getBlockTransform(3);
+                    //leftTrans = leftTrans.leftmultiply(scale_eq);
                 }else{
                      auto eqChange=getBlockTransform(2);
                      auto cprTrans = getBlockTransform(1);
@@ -205,10 +205,9 @@ namespace Ewoms {
                 // right transforme to scale pressure
                 multBlocksInMatrix(M_cp, rightTrans, false);
                 // make system by manipulating equations
-                //scaleCPRSystem(M_cp, b_cp, use_drs);
-                
-                multBlocksInMatrix(M_cp, leftTrans, true);
-                multBlocksVector(b_cp, leftTrans);
+                scaleCPRSystem(M_cp, b_cp, leftTrans);
+                //multBlocksInMatrix(M_cp, leftTrans, true);
+                //multBlocksVector(b_cp, leftTrans);
                 
                 
                 if(printMatrixSystem_){
@@ -272,7 +271,7 @@ namespace Ewoms {
                     for (int col = 0; col < np; ++col) {
                         if(row==col){
                             if(row==0){
-                                leftTrans[row][col]=1.0/pressure_scale;                                
+                                leftTrans[row][col]=pressure_scale;                                
                             }else{
                                 leftTrans[row][col]=1.0;
                             }
@@ -358,9 +357,9 @@ namespace Ewoms {
                     bvec=bvec_new;
                 }
             }
-            static void scaleCPRSystem(Matrix& M_cp,Vector& b_cp){
-
-
+            static void scaleCPRSystem(Matrix& M_cp,Vector& b_cp,const MatrixBlockType& leftTrans){
+                multBlocksInMatrix(M_cp, leftTrans, true);
+                multBlocksVector(b_cp, leftTrans);
             }
             /*
             static std::vector<double> getQuasiImpesWeights(const Matrix &M){               
