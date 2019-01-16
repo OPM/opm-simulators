@@ -91,9 +91,9 @@ class EclTransmissibility
 
     static const unsigned elemIdxShift = 32; // bits
 
+    using NncData = Opm::NNCdata;
 
 public:
-    using NNCdata = Opm::NNCdata;
 
     EclTransmissibility(const Vanguard& vanguard)
         : vanguard_(vanguard)
@@ -386,7 +386,7 @@ public:
             globalToLocal[cartElemIdx] = elemIdx;
         }
         applyEditNNCToGridTrans_(elemMapper, globalToLocal);
-        applyNNCToGridTrans_(globalToLocal);
+        applyNncToGridTrans_(globalToLocal);
 
         //remove very small non-neighbouring transmissibilities
         removeSmallNonCartesianTransmissibilities_();
@@ -598,62 +598,62 @@ private:
     /// \return Two vector of NNCs (scaled with EDITNNC). The first one are the NNCs that have been applied
     ///         and the second the NNCs not resembled by faces of the grid. NNCs specified for
     ///         inactive cells are omitted in these vectors.
-    std::tuple<std::vector<NNCdata>, std::vector<NNCdata> >
-    applyNNCToGridTrans_(const std::vector<int>& cartesianToCompressed)
+    std::tuple<std::vector<NncData>, std::vector<NncData> >
+    applyNncToGridTrans_(const std::vector<int>& cartesianToCompressed)
     {
         // First scale NNCs with EDITNNC.
-        std::vector<NNCdata> processed_nnc, unprocessed_nnc;
+        std::vector<NncData> processedNnc, unprocessedNnc;
         const auto& nnc = vanguard_.eclState().getInputNNC();
         if ( ! nnc.hasNNC() )
         {
-            return make_tuple(processed_nnc, unprocessed_nnc);
+            return make_tuple(processedNnc, unprocessedNnc);
         }
-        auto nnc_data = nnc.nncdata();
-        auto editnnc_data = vanguard_.eclState().getInputEDITNNC().data();
-        auto compare = [](const NNCdata& d1, const NNCdata& d2){
+        auto nncData = nnc.nncdata();
+        auto editnncData = vanguard_.eclState().getInputEDITNNC().data();
+        auto nncLess = [](const NncData& d1, const NncData& d2){
             return ( d1.cell1 < d2.cell1 ) ||
             ( d1.cell1 == d2.cell1 && d1.cell2 < d2.cell2 );
         };
-        std::sort(nnc_data.begin(), nnc_data.end(), compare);
-        auto candidate = nnc_data.begin();
-        for ( const auto& edit: editnnc_data )
+        std::sort(nncData.begin(), nncData.end(), nncLess);
+        auto candidate = nncData.begin();
+        for ( const auto& edit: editnncData )
         {
-            auto print_nnc_warning = [](int c1, int c2){
+            auto printNncWarning = [](int c1, int c2){
                 std::ostringstream sstr;
                 sstr << "Cannot edit NNC from " << c1 << " to " << c2
                 << " as it does not exist";
                 Opm::OpmLog::warning(sstr.str());
             };
-            if ( candidate == nnc_data.end() )
+            if ( candidate == nncData.end() )
             {
                 // no more NNCs left
-                print_nnc_warning(edit.cell1, edit.cell2);
+                printNncWarning(edit.cell1, edit.cell2);
                 continue;
             }
             if ( candidate->cell1 != edit.cell1 || candidate->cell2 != edit.cell2 )
             {
-                candidate = std::lower_bound(candidate, nnc_data.end(), NNCdata(edit.cell1, edit.cell2, 0), compare);
-                if ( candidate == nnc_data.end() )
+                candidate = std::lower_bound(candidate, nncData.end(), NncData(edit.cell1, edit.cell2, 0), nncLess);
+                if ( candidate == nncData.end() )
                 {
                     // no more NNCs left
-                    print_nnc_warning(edit.cell1, edit.cell2);
+                    printNncWarning(edit.cell1, edit.cell2);
                     continue;
                 }
             }
-            auto first_candidate = candidate;
-            while ( candidate != nnc_data.end() && candidate->cell1 == edit.cell1 && candidate->cell2 == edit.cell2 )
+            auto firstCandidate = candidate;
+            while ( candidate != nncData.end() && candidate->cell1 == edit.cell1 && candidate->cell2 == edit.cell2 )
             {
                 candidate->trans *= edit.trans;
                 ++candidate;
             }
             // start with first match in next iteration to catch case where next
             // EDITNNC is for same pair.
-            candidate = first_candidate;
+            candidate = firstCandidate;
         }
 
-        for (const auto& nnc_entry : nnc.nncdata())
+        for (const auto& nncEntry : nnc.nncdata())
         {
-            auto c1 = nnc_entry.cell1, c2 = nnc_entry.cell2;
+            auto c1 = nncEntry.cell1, c2 = nncEntry.cell2;
             auto low = cartesianToCompressed[c1], high = cartesianToCompressed[c2];
 
             if ( low > high)
@@ -679,18 +679,18 @@ private:
             {
                 // This NNC is not resembled by the grid. Save it for later
                 // processing with local cell values
-                unprocessed_nnc.push_back({c1, c2, nnc_entry.trans});
+                unprocessedNnc.push_back({c1, c2, nncEntry.trans});
             }
             else
             {
                 // NNC is represented by the grid and might be a neighboring connection
                 // In this case the transmissibilty is added to the value already
                 // set or computed.
-                candidate->second += nnc_entry.trans;
-                processed_nnc.push_back({c1, c2, nnc_entry.trans});
+                candidate->second += nncEntry.trans;
+                processedNnc.push_back({c1, c2, nncEntry.trans});
             }
         }
-        return make_tuple(processed_nnc, unprocessed_nnc);
+        return make_tuple(processedNnc, unprocessedNnc);
     }
 
     /// \brief Multiplies the grid transmissibilities according to EDITNNC.
