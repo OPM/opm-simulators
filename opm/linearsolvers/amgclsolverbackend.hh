@@ -48,10 +48,13 @@ NEW_PROP_TAG(GlobalEqVector);
 NEW_PROP_TAG(EclWellModel);
 NEW_PROP_TAG(Simulator);
 NEW_PROP_TAG(LinearSolverVerbosity);
+NEW_PROP_TAG(AmgclDrs);
+NEW_PROP_TAG(AmgclSetupFile);
 NEW_PROP_TAG(LinearSolverBackend);
 NEW_TYPE_TAG(AMGCLSolver);
 NEW_PROP_TAG(MatrixAddWellContributions);
-
+NEW_PROP_TAG(LinearSolverReduction);
+NEW_PROP_TAG(LinearSolverMaxIter);
 END_PROPERTIES
 
 namespace Ewoms {
@@ -118,18 +121,38 @@ namespace Ewoms {
             AMGCLSolverBackend(Simulator& simulator OPM_UNUSED)
             {
                 matrixAddWellContribution_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-                std::string file_name("amgcl_setup.json");
-                std::ifstream file(file_name);
+                std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, AmgclSetupFile);
+                //std::string file_name("amgcl_setup.json");
+                std::ifstream file(fileName);
                 if (file.is_open()) {
                     boost::property_tree::json_parser::read_json(file, prm_);
                 }else {
                     // show message:
-                    std::cout << "Error opening file " <<  file_name <<std::endl;
+                    std::cout << "Error opening file " <<  fileName <<std::endl;
                     OPM_THROW(std::runtime_error,"Error opening file");
                 }
-                prm_.put("solver_type","cpr_drs");
+                
+                bool use_drs = EWOMS_GET_PARAM(TypeTag, bool, AmgclDrs);
+                if(use_drs){
+                    prm_.put("solver_type","cpr_drs");
+                    
+                }else{
+                   prm_.put("solver_type","cpr");
+                }
                 np_ = FluidSystem::numPhases;
                 prm_.put("block_size", np_);
+                //prm_.put("precond.block_size", np_);
+                //prm_.put("precond.active_rows", 0);
+                double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
+                int maxiter = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
+                int verb_int = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
+                if(verb_int>0){
+                  prm_.put("verbose", true);
+                }else{
+                  prm_.put("verbose", false);
+                }
+                prm_.put("solver.tol", tolerance);
+                prm_.put("solver.maxiter", maxiter);
 
             }
 
@@ -137,8 +160,15 @@ namespace Ewoms {
             {
                 EWOMS_REGISTER_PARAM(TypeTag, bool, MatrixAddWellContributions, "Explicitly specify the influences of wells between cells in the Jacobian and preconditioner matrices");
                 //FlowLinearSolverParameters::registerParameters<TypeTag>();
-                //EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverVerbosity,
-                //                     "The verbosity level of the linear solver");
+                EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverVerbosity,
+                                     "The verbosity level of the linear solver");
+                EWOMS_REGISTER_PARAM(TypeTag, bool, AmgclDrs,
+                                     "Use amgcl_drs solver");
+                EWOMS_REGISTER_PARAM(TypeTag, std::string, AmgclSetupFile,
+                                     "Setup jeson file for amgcl");
+                EWOMS_REGISTER_PARAM(TypeTag, double, LinearSolverReduction, "The minimum reduction of the residual which the linear solver must achieve");
+                EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverMaxIter, "The maximum number of iterations of the linear solver");
+                
             }
 
             /*!
@@ -159,17 +189,27 @@ namespace Ewoms {
                 }
                 MatrixBlockType leftTrans(0.0);
                 bool use_drs = (prm_.get<std::string>("solver_type") == "amgcl_drs");
+                pressure_scale_ = 1;
+                MatrixBlockType rightTrans=getPressureTransform(pressure_scale_);                
                 if(use_drs){
-                    leftTrans=getBlockTransform(2);
+                     leftTrans=getBlockTransform(2);
+                     //MatrixBlockType leftTrans = =getBlockTransform(3);
+                     //leftTrans = eqscale.leftmultiply();
                 }else{
-                    auto eqChange=getBlockTransform(2);
-                    auto cprTrans = getBlockTransform(1);
-                    leftTrans= cprTrans.rightmultiply(eqChange);
+                     auto eqChange=getBlockTransform(2);
+                     auto cprTrans = getBlockTransform(1);
+                     leftTrans= cprTrans.rightmultiply(eqChange);
                 }
                 auto M_cp = M;// = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
                 auto b_cp = b;
+                // right transforme to scale pressure
+                multBlocksInMatrix(M_cp, rightTrans, false);
+                // make system by manipulating equations
+                //scaleCPRSystem(M_cp, b_cp, use_drs);
+                
                 multBlocksInMatrix(M_cp, leftTrans, true);
                 multBlocksVector(b_cp, leftTrans);
+                
                 
                 if(printMatrixSystem_){
                     // used for testing matixes outside flow
@@ -180,14 +220,21 @@ namespace Ewoms {
                     Dune::writeMatrixMarket(b, fileb);
                     */
                 }                
-                // should this be done with move??  
-                
+                // should this be done with move??
+                // if(use_drs){
+                //     if(prm.get<std::string>("strategy") == "quasimpes"){
+                //         std::vector<double> drs_weights = getQuasiImpesWeights(M_cp);
+                //         prm.put("precond.weights", drs_weights.data());
+                //         prm.put("precond.weights_size", drs_weights.size());
+                //     }
+                // }
                 n_ = M.N();
                 sz_ = np_*n_;
+                // set active rows
+                prm_.put("precond.active_rows", sz_);
                 //bool do_transpose = false;
                 M_ = buildAMGCLMatrixNoBlocks(M_cp);//, do_transpose);
-                b_.resize(sz_, 0.0);
-                
+                b_.resize(sz_, 0.0);                
                 for (int cell = 0; cell < n_; ++cell) {
                     for (int phase = 0; phase < np_; ++phase) {
                         b_[np_*cell + phase] = b_cp[cell][phase];
@@ -205,7 +252,12 @@ namespace Ewoms {
                 solver.solve(sz_, M_.ptr, M_.col, M_.val, b_, x, iters_, error);
                 for (int cell = 0; cell < n_; ++cell) {
                     for (int phase = 0; phase < np_; ++phase) {
-                         sol[cell][phase] = x[np_*cell + phase];
+                        if(phase==0){
+                            // have transformed pressure variable
+                            sol[cell][phase] = x[np_*cell + phase]*pressure_scale_;
+                        }else{
+                            sol[cell][phase] = x[np_*cell + phase];
+                        }
                     }
                 }
                 return true;
@@ -213,6 +265,23 @@ namespace Ewoms {
 
             int iterations () const { return iters_; }
         private:
+            static MatrixBlockType getPressureTransform(double pressure_scale){
+                int np = FluidSystem::numPhases;
+                MatrixBlockType leftTrans(0.0);
+                for (int row = 0; row < np; ++row) {
+                    for (int col = 0; col < np; ++col) {
+                        if(row==col){
+                            if(row==0){
+                                leftTrans[row][col]=1.0/pressure_scale;                                
+                            }else{
+                                leftTrans[row][col]=1.0;
+                            }
+                        }
+                    }
+                }
+                return leftTrans;
+            }
+                
             static MatrixBlockType getBlockTransform(int meth_trans){
                 int np = FluidSystem::numPhases;
                 MatrixBlockType leftTrans(0.0);
@@ -245,6 +314,19 @@ namespace Ewoms {
                             leftTrans[2][2]=1.0;
                         }
                         break;
+                    case 3 :
+                        //cpr
+                        for (int row = 0; row < np; ++row) {
+                            for (int col = 0; col < np; ++col) {
+                                if(row==col){
+                                    if(row==3){
+                                        leftTrans[row][col]=1.0/100;
+                                    }else{
+                                        leftTrans[row][col]=1.0;
+                                    }
+                                }
+                            }
+                        }    
                     default:
                         OPM_THROW(std::logic_error,"return zero tranformation matrix");
                     }
@@ -268,6 +350,7 @@ namespace Ewoms {
                     }
                 }
             }
+            
             static void multBlocksVector(Vector& ebosResid_cp,const MatrixBlockType& leftTrans){
                 for( auto& bvec: ebosResid_cp){
                     auto bvec_new=bvec;
@@ -275,6 +358,132 @@ namespace Ewoms {
                     bvec=bvec_new;
                 }
             }
+            static void scaleCPRSystem(Matrix& M_cp,Vector& b_cp){
+
+
+            }
+            /*
+            static std::vector<double> getQuasiImpesWeights(const Matrix &M){               
+                std::vector<double> weights(np_*sz_);
+                BlockVector rhs(0.0);
+                rhs[0] = 1;
+                int index = 0;
+                const auto endi = A.end();
+                for (const auto i=A.begin(); i!=endi; ++i){
+                    const auto endj = (*i).end();
+                    MatrixBlockType diag_block;
+                    for (const auto j=(*i).begin(); j!=endj; ++j){
+                        if(i.index() == j.index()){
+                            diag_block = (*j);
+                            break;
+                        }                        
+                    }
+                    auto bweights = diag_block.inv()*rhs;
+                    for(int bind=0; bind < np_;++bind){
+                        weights[index] =bweights[bind];
+                        ++index;
+                    }
+                }
+                return weights;
+            }
+
+            static std::vector<double> getSimpleWeights(){               
+                std::vector<double> weights(np_*sz_);
+                for(int i=0; i< sz_; ++i){
+                    for(int j=0; j< np_; ++j){
+                        if(j==3){
+                            weights[i*np_+j] = 1;
+                        }else{
+                            weights[i*np_+j] = 1/100;
+                        }
+                    }
+                }
+                return weights;
+            }
+            
+            static std::vector<double> getStorageWeights(){
+                BlockVector rhs(0.0);
+                rhs[0] = 1.0;
+                    
+                auto model& simulator_.model();
+                std::vector<double> weights(np_*sz_);
+                int index = 0;
+                // iterate the element context ie. cells
+                {    
+                    Dune::FieldVector<LhsEval, numEq>& storage;
+                    model.computeStorage(storage,elemCtx, dofIdx, timeIdx);
+                    BlockMatrix block;
+                    int offset = 0;
+                    for(int ii=0; ii< np_; ++ii){
+                        for(int jj=0; jj< np_; ++jj){
+                            const auto& vec = storage[ii].derivative();
+                            block[ii][jj] = vec[jj];
+                        }
+                    }
+                    auto bweights = diag_block.inv()*rhs;
+                    for(int bind=0; bind < np_;++bind){
+                        weights[index] =bweights[bind];
+                        ++index;
+                    }
+                }
+                return weights;
+     
+                
+                
+            }
+            
+            static void multBlocksInMatrix(Matrix& A,Vector& b){
+                BlockVector rhs(0.0);
+                rhs[0] = 1;
+                const auto endi = A.end();
+                for (const auto i=A.begin(); i!=endi; ++i){
+                    const auto endj = (*i).end();
+                    
+                    BlockVector weights;
+                    switch (strategy){
+                    case "quasiimpes" :
+                        MatrixBlockType diag_block;
+                        for (const auto j=(*i).begin(); j!=endj; ++j){
+                            if(i.index() == j.index()){
+                                diag_block = (*j);
+                                break;
+                            }                        
+                        }
+                        weights = diag_block.inv()*rhs;
+                    case "impes" :
+                        
+                        
+                    default :
+                        for(int ii=0; ii< np_; ++ii){
+                            if(ii==3){//gas
+                                weights[ii] = 1/100;
+                            }else{
+                                weights[ii] = 1;
+                            }
+                            
+                        }                        
+                    }
+                        
+                    for (auto j=(*i).begin(); j!=endj; ++j){
+                        auto block& = (*j);
+                        for(int jj=0;jj < np_;++jj){
+                            for(int ii=0;ii < np_;++ii){
+                                if(jj==0){
+                                    block[0][ii] *=weights[jj];
+                                    b[0] *=weights[jj];
+                                }else{
+                                    block[0][ii] += block[jj][ii]*weights[jj];
+                                    b[0] += b[jj]*weights[jj];
+                                }
+                            }
+                        }
+                    }
+                    
+                    }
+                }
+
+            */
+            
             static AMGCLMatrixHelper buildAMGCLMatrixNoBlocks(const Matrix& ebosJac) 
             {
                 /*
@@ -321,6 +530,7 @@ namespace Ewoms {
             int np_;
             int n_;
             int iters_;
+            double pressure_scale_;
             boost::property_tree::ptree prm_;
             std::string solver_type_;
             
