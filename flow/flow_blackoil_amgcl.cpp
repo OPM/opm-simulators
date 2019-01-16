@@ -44,6 +44,12 @@ SET_PROP(EclFlowProblemSimple, FluidState)
 //typedef Opm::BlackOilFluidSystemSimple<Scalar> type;
        typedef Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  Indices::numPhases > type;
 };
+SET_BOOL_PROP(EclFlowProblemSimple,AmgclDrs,true);
+SET_STRING_PROP(EclFlowProblemSimple,AmgclSetupFile,"amgcl_setup.json");
+SET_BOOL_PROP(EclFlowProblemSimple,MatrixAddWellContributions,true);
+SET_INT_PROP(EclFlowProblemSimple,LinearSolverVerbosity,1);
+SET_SCALAR_PROP(EclFlowProblemSimple, LinearSolverReduction, 1e-2);
+SET_INT_PROP(EclFlowProblemSimple, LinearSolverMaxIter, 200);
 END_PROPERTIES
 
 namespace Ewoms {
