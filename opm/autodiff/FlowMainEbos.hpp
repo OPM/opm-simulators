@@ -449,7 +449,7 @@ namespace Opm
             std::for_each(fs::directory_iterator(output_path),
                           fs::directory_iterator(),
                           detail::ParallelFileMerger(output_path, basename,
-                                                     EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning));
+                                                     EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning)));
         }
 
         void setupEbosSimulator()
