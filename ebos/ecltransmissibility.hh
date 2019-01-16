@@ -655,8 +655,10 @@ private:
 
         for (const auto& nncEntry : nnc.nncdata())
         {
-            auto c1 = nncEntry.cell1, c2 = nncEntry.cell2;
-            auto low = cartesianToCompressed[c1], high = cartesianToCompressed[c2];
+            auto c1 = nncEntry.cell1;
+            auto c2 = nncEntry.cell2;
+            auto low = cartesianToCompressed[c1];
+            auto high = cartesianToCompressed[c2];
 
             if ( low > high)
             {
