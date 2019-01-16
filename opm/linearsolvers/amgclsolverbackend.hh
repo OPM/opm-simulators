@@ -42,6 +42,7 @@ BEGIN_PROPERTIES
 
 // forward declaration of the required property tags
 NEW_PROP_TAG(Scalar);
+NEW_PROP_TAG(Evaluation);
 NEW_PROP_TAG(NumEq);
 NEW_PROP_TAG(SparseMatrixAdapter);
 NEW_PROP_TAG(GlobalEqVector);
@@ -104,6 +105,7 @@ namespace Ewoms {
         template <class TypeTag>
         class AMGCLSolverBackend
         {
+            typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
             typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)       FluidSystem;
             typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
             typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
@@ -112,13 +114,18 @@ namespace Ewoms {
             typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
             typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
             typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
+            typedef typename Vector::BlockVector BlockVector;
+            typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
             //typedef typename SparseMatrixAdapter::block_type Matrix;
             //    static_assert(std::is_same<SparseMatrixAdapter, IstlSparseMatrixAdapter<MatrixBlock>::value,
             //              "The AMGCLSolver linear solver backend requires the IstlSparseMatrixAdapter");
-
+            typedef typename GridView::template Codim<0>::Entity Element;
+            typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+            
         public:
             typedef Dune::AssembledLinearOperator< Matrix, Vector, Vector > AssembledLinearOperatorType;
-            AMGCLSolverBackend(Simulator& simulator OPM_UNUSED)
+            AMGCLSolverBackend(Simulator& simulator):
+                simulator_(simulator)
             {
                 matrixAddWellContribution_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
                 std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, AmgclSetupFile);
@@ -189,12 +196,12 @@ namespace Ewoms {
                 }
                 MatrixBlockType leftTrans(0.0);
                 bool use_drs = (prm_.get<std::string>("solver_type") == "amgcl_drs");
-                pressure_scale_ = 1;
+                pressure_scale_ = 50e5;
                 MatrixBlockType rightTrans=getPressureTransform(pressure_scale_);                
                 if(use_drs){
                     leftTrans=getBlockTransform(2);
                     MatrixBlockType scale_eq =getBlockTransform(3);
-                    //leftTrans = leftTrans.leftmultiply(scale_eq);
+                    leftTrans = leftTrans.leftmultiply(scale_eq);
                 }else{
                      auto eqChange=getBlockTransform(2);
                      auto cprTrans = getBlockTransform(1);
@@ -318,8 +325,8 @@ namespace Ewoms {
                         for (int row = 0; row < np; ++row) {
                             for (int col = 0; col < np; ++col) {
                                 if(row==col){
-                                    if(row==3){
-                                        leftTrans[row][col]=1.0/100;
+                                    if(row==2){
+                                        leftTrans[row][col]=1.0/100.0;
                                     }else{
                                         leftTrans[row][col]=1.0;
                                     }
@@ -361,14 +368,14 @@ namespace Ewoms {
                 multBlocksInMatrix(M_cp, leftTrans, true);
                 multBlocksVector(b_cp, leftTrans);
             }
-            /*
-            static std::vector<double> getQuasiImpesWeights(const Matrix &M){               
-                std::vector<double> weights(np_*sz_);
+           
+            std::vector<double> getQuasiImpesWeights(const Matrix &M){               
+                std::vector<double> weights(sz_);
                 BlockVector rhs(0.0);
                 rhs[0] = 1;
                 int index = 0;
-                const auto endi = A.end();
-                for (const auto i=A.begin(); i!=endi; ++i){
+                const auto endi = M.end();
+                for (const auto i=M.begin(); i!=endi; ++i){
                     const auto endj = (*i).end();
                     MatrixBlockType diag_block;
                     for (const auto j=(*i).begin(); j!=endj; ++j){
@@ -377,7 +384,7 @@ namespace Ewoms {
                             break;
                         }                        
                     }
-                    auto bweights = diag_block.inv()*rhs;
+                    auto bweights = diag_block.invert()*rhs;
                     for(int bind=0; bind < np_;++bind){
                         weights[index] =bweights[bind];
                         ++index;
@@ -386,9 +393,9 @@ namespace Ewoms {
                 return weights;
             }
 
-            static std::vector<double> getSimpleWeights(){               
-                std::vector<double> weights(np_*sz_);
-                for(int i=0; i< sz_; ++i){
+            std::vector<double> getSimpleWeights(){               
+                std::vector<double> weights(sz_);
+                for(int i=0; i< n_; ++i){
                     for(int j=0; j< np_; ++j){
                         if(j==3){
                             weights[i*np_+j] = 1;
@@ -400,18 +407,23 @@ namespace Ewoms {
                 return weights;
             }
             
-            static std::vector<double> getStorageWeights(){
+            std::vector<double> getStorageWeights(){
                 BlockVector rhs(0.0);
-                rhs[0] = 1.0;
-                    
-                auto model& simulator_.model();
-                std::vector<double> weights(np_*sz_);
+                rhs[0] = 1.0;                    
+                //auto model& simulator_.model();
+                std::vector<double> weights(sz_);
                 int index = 0;
-                // iterate the element context ie. cells
-                {    
-                    Dune::FieldVector<LhsEval, numEq>& storage;
-                    model.computeStorage(storage,elemCtx, dofIdx, timeIdx);
-                    BlockMatrix block;
+                ElementContext elemCtx(simulator_);
+                const auto& vanguard = simulator_.vanguard();
+                auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+                const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+                for (; elemIt != elemEndIt; ++elemIt) {
+                    const Element& elem = *elemIt;
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                    Dune::FieldVector<Evaluation, FluidSystem::NumPhases>& storage;
+                    simulator_.model().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
+                    MatrixBlockType block;
                     int offset = 0;
                     for(int ii=0; ii< np_; ++ii){
                         for(int jj=0; jj< np_; ++jj){
@@ -419,19 +431,43 @@ namespace Ewoms {
                             block[ii][jj] = vec[jj];
                         }
                     }
-                    auto bweights = diag_block.inv()*rhs;
+                    auto bweights = block.invert()*rhs;
+                    for(int bind=0; bind < np_;++bind){
+                        weights[index] =bweights[bind];
+                        ++index;
+                    }
+                }
+                return weights;                                
+            }
+            std::vector<double> quasiImpesWeights(Matrix& A){
+                std::vector<double> weights(sz_);
+                BlockVector rhs(0.0);
+                rhs[0] = 1;
+                const auto endi = A.end();
+                int index = 0;
+                for (const auto i=A.begin(); i!=endi; ++i){
+                    const auto endj = (*i).end();
+                    
+                    BlockVector bweights;
+                    std::string strategy = prm_.get<std::string>("strategy");
+                    
+                    MatrixBlockType diag_block;
+                    for (const auto j=(*i).begin(); j!=endj; ++j){
+                        if(i.index() == j.index()){
+                            diag_block = (*j);
+                            break;
+                        }                        
+                    }
+                    bweights = diag_block.invert()*rhs;
                     for(int bind=0; bind < np_;++bind){
                         weights[index] =bweights[bind];
                         ++index;
                     }
                 }
                 return weights;
-     
-                
-                
             }
             
-            static void multBlocksInMatrix(Matrix& A,Vector& b){
+            void quasiImpesBlocksInMatrix(Matrix& A,Vector& b){
                 BlockVector rhs(0.0);
                 rhs[0] = 1;
                 const auto endi = A.end();
@@ -439,32 +475,19 @@ namespace Ewoms {
                     const auto endj = (*i).end();
                     
                     BlockVector weights;
-                    switch (strategy){
-                    case "quasiimpes" :
-                        MatrixBlockType diag_block;
-                        for (const auto j=(*i).begin(); j!=endj; ++j){
-                            if(i.index() == j.index()){
-                                diag_block = (*j);
-                                break;
-                            }                        
-                        }
-                        weights = diag_block.inv()*rhs;
-                    case "impes" :
-                        
-                        
-                    default :
-                        for(int ii=0; ii< np_; ++ii){
-                            if(ii==3){//gas
-                                weights[ii] = 1/100;
-                            }else{
-                                weights[ii] = 1;
-                            }
-                            
+                    std::string strategy = prm_.get<std::string>("strategy");
+                    
+                    MatrixBlockType diag_block;
+                    for (const auto j=(*i).begin(); j!=endj; ++j){
+                        if(i.index() == j.index()){
+                            diag_block = (*j);
+                            break;
                         }                        
                     }
+                    weights = diag_block.invert()*rhs;
                         
                     for (auto j=(*i).begin(); j!=endj; ++j){
-                        auto block& = (*j);
+                        auto & block = (*j);
                         for(int jj=0;jj < np_;++jj){
                             for(int ii=0;ii < np_;++ii){
                                 if(jj==0){
@@ -478,10 +501,10 @@ namespace Ewoms {
                         }
                     }
                     
-                    }
                 }
+            }
 
-            */
+        
             
             static AMGCLMatrixHelper buildAMGCLMatrixNoBlocks(const Matrix& ebosJac) 
             {
@@ -521,6 +544,7 @@ namespace Ewoms {
                 return A;
             }
 
+            Simulator& simulator_;
             bool matrixAddWellContribution_;
             bool printMatrixSystem_;
             AMGCLMatrixHelper M_;
