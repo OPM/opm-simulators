@@ -124,6 +124,8 @@ namespace Opm
             std::tie(iters, error) = solve(rhs, sol);
 	    if(prm_.get<bool>("verbose")){
 	      std::cout << solve << std::endl;
+	      std::cout << " Amgcl cpr drs iterations "<< iters << std::endl;
+	      std::cout << " Amgcl cpr drs error "<< error << std::endl;
 	    }
             delete y;
         }else{
@@ -142,6 +144,8 @@ namespace Opm
             std::tie(iters, error) = solve(rhs, sol);
 	    if(prm_.get<bool>("verbose")){
 	      std::cout << solve << std::endl;
+	      std::cout << " Amgcl cpr iterations "<< iters << std::endl;
+	      std::cout << " Amgcl cpr error "<< error << std::endl;
 	    }
             delete y;
         }
@@ -158,9 +162,9 @@ namespace Opm
                                   double& error)
     {
       int block_size = prm_.get<int>("block_size");
-      if(block_size>2){
-	hackScalingFactors(sz, ptr, const_cast<std::vector<double>&>(val), const_cast<std::vector<double>&>(rhs));
-        }
+      //if(block_size>2){
+      //	hackScalingFactors(sz, ptr, const_cast<std::vector<double>&>(val), const_cast<std::vector<double>&>(rhs));
+      //  }
         DebugTimeReport rep("amgcl-timer");
         // solveRegular(sz, ptr, col, val, rhs, tolerance, maxiter, sol, iters, error);
         solveCPR(sz, ptr, col, val, rhs, sol, iters, error);
