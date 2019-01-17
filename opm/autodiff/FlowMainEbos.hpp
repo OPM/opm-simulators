@@ -59,12 +59,14 @@ NEW_PROP_TAG(OutputMode);
 NEW_PROP_TAG(EnableDryRun);
 NEW_PROP_TAG(OutputInterval);
 NEW_PROP_TAG(UseAmg);
+NEW_PROP_TAG(EnableLoggingFalloutWarning);
 
 SET_STRING_PROP(EclFlowProblem, OutputMode, "all");
 
 // TODO: enumeration parameters. we use strings for now.
 SET_STRING_PROP(EclFlowProblem, EnableDryRun, "auto");
-
+// Do not merge parallel output files or warn about them
+SET_BOOL_PROP(EclFlowProblem, EnableLoggingFalloutWarning, false);
 SET_INT_PROP(EclFlowProblem, OutputInterval, 1);
 
 END_PROPERTIES
@@ -106,6 +108,9 @@ namespace Opm
                                  "Specify if the simulation ought to be actually run, or just pretended to be");
             EWOMS_REGISTER_PARAM(TypeTag, int, OutputInterval,
                                  "Specify the number of report steps between two consecutive writes of restart data");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, EnableLoggingFalloutWarning,
+                                 "Developer option to see whether logging was on non-root processors. In that case it will be appended to the *.DBG or *.PRT files");
+
             Simulator::registerParameters();
 
             // register the parameters inherited from ebos
@@ -310,10 +315,15 @@ namespace Opm
             std::ostringstream debugFileStream;
             std::ostringstream logFileStream;
 
-            if (boost::to_upper_copy(path(fpath.extension()).string()) == ".DATA") {
-                baseName = path(fpath.stem()).string();
-            } else {
-                baseName = path(fpath.filename()).string();
+            // Strip extension "." or ".DATA"
+            std::string extension = boost::to_upper_copy(fpath.extension().string());
+            if ( extension == ".DATA" || extension == "." )
+            {
+                baseName = boost::to_upper_copy(fpath.stem().string());
+            }
+            else
+            {
+                baseName = boost::to_upper_copy(fpath.filename().string());
             }
 
             const std::string& output_dir = eclState().getIOConfig().getOutputDir();
@@ -414,9 +424,21 @@ namespace Opm
             const std::string& output_dir = eclState().getIOConfig().getOutputDir();
             fs::path output_path(output_dir);
             fs::path deck_filename(EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName));
+            std::string basename;
+            // Strip extension "." and ".DATA"
+            std::string extension = boost::to_upper_copy(deck_filename.extension().string());
+            if ( extension == ".DATA" || extension == "." )
+            {
+                basename = boost::to_upper_copy(deck_filename.stem().string());
+            }
+            else
+            {
+                basename = boost::to_upper_copy(deck_filename.filename().string());
+            }
             std::for_each(fs::directory_iterator(output_path),
                           fs::directory_iterator(),
-                          detail::ParallelFileMerger(output_path, deck_filename.stem().string()));
+                          detail::ParallelFileMerger(output_path, basename,
+                                                     EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning)));
         }
 
         void setupEbosSimulator()

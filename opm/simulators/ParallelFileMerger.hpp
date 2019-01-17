@@ -48,19 +48,24 @@ public:
     /// \param output_dir The output directory to use for reading/Writing.
     /// \param deckanme The name of the deck.
     ParallelFileMerger(const fs::path& output_dir,
-                       const std::string& deckname)
+                       const std::string& deckname,
+                       bool show_fallout = false)
         : debugFileRegex_(deckname+"\\.\\d+\\.DBG"),
           logFileRegex_(deckname+"\\.\\d+\\.PRT"),
-          fileWarningRegex_(deckname+"\\.(\\d+)\\.[^.]+")
+          fileWarningRegex_(deckname+"\\.(\\d+)\\.[^.]+"),
+          show_fallout_(show_fallout)
     {
-        auto debugPath = output_dir;
-        debugPath /= (deckname + ".DBG");
-        debugStream_.reset(new fs::ofstream(debugPath,
-                                            std::ofstream::app));
-        auto logPath = output_dir;
-        logPath /= ( deckname + ".PRT");
-        logStream_.reset(new fs::ofstream(logPath,
-                                          std::ofstream::app));
+        if ( show_fallout_ )
+        {
+            auto debugPath = output_dir;
+            debugPath /= (deckname + ".DBG");
+            debugStream_.reset(new fs::ofstream(debugPath,
+                                                std::ofstream::app));
+            auto logPath = output_dir;
+            logPath /= ( deckname + ".PRT");
+            logStream_.reset(new fs::ofstream(logPath,
+                                              std::ofstream::app));
+        }
     }
 
     void operator()(const fs::path& file)
@@ -74,20 +79,30 @@ public:
 
             if( boost::regex_match(filename, logFileRegex_) )
             {
-                appendFile(*logStream_, file, rank);
+                if ( show_fallout_ ){
+                    appendFile(*logStream_, file, rank);
+                }else{
+                    fs::remove(file);
+                }
             }
             else
             {
                 if (boost::regex_match(filename, debugFileRegex_)  )
                 {
-                    appendFile(*debugStream_, file, rank);
+                    if ( show_fallout_ ){
+                        appendFile(*debugStream_, file, rank);
+                    }else{
+                        fs::remove(file);
+                    }
                 }
                 else
                 {
-                    std::cerr << "WARNING: Unrecognized file with name "
-                              << filename
-                              << " that might stem from a  parallel run."
-                              << std::endl;
+                    if ( show_fallout_ ){
+                        std::cerr << "WARNING: Unrecognized file with name "
+                                  << filename
+                                  << " that might stem from a  parallel run."
+                                  << std::endl;
+                    }
                 }
             }
         }
@@ -129,6 +144,8 @@ private:
     std::unique_ptr<fs::ofstream> debugStream_;
     /// \brief Stream to *.PRT file
     std::unique_ptr<fs::ofstream> logStream_;
+    /// \brief Whether to show any logging fallout
+    bool show_fallout_;
 };
 } // end namespace detail
 } // end namespace OPM
