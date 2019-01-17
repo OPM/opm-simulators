@@ -8,5 +8,6 @@ if test -n "$(git diff)"; then
     echo "proposing the branch for merging."
     exit 1
 else
+    echo "The generated source files have not been manually edited."
     exit 0
 fi
