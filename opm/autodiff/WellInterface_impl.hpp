@@ -433,6 +433,7 @@ namespace Opm
                       WellState& well_state,
                       Opm::DeferredLogger& deferredLogger) /* const */
     {
+        auto cc = Dune::MPIHelper::getCollectiveCommunication();
         const int np = number_of_phases_;
         const int w = index_of_well_;
 
@@ -499,9 +500,9 @@ namespace Opm
             std::ostringstream ss;
             ss << "    Switching control mode for well " << name()
                << " from " << modestring[from]
-               << " to " <<  modestring[to];
+               << " to " <<  modestring[to]
+               << " on rank " << cc.rank();
             deferredLogger.info(ss.str());
-            //logger.wellSwitched(name()
         }
 
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
