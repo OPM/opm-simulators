@@ -718,6 +718,10 @@ public:
             refDepth_ = dofPos[2];
     }
 
+    int numConnections() const {
+        return dofVariables_.size();
+    }
+
     /*!
      * \brief Finalize the specification of the borehole.
      */

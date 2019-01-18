@@ -555,6 +555,19 @@ public:
             wellOut.rates.set( rt::wat, ebosWell->surfaceRate(waterPhaseIdx) );
             wellOut.rates.set( rt::oil, ebosWell->surfaceRate(oilPhaseIdx) );
             wellOut.rates.set( rt::gas, ebosWell->surfaceRate(gasPhaseIdx) );
+
+            const int numConnections = ebosWell->numConnections();
+            wellOut.connections.resize(numConnections);
+
+            for( int i = 0; i < numConnections; ++i ) {
+                auto& connection = wellOut.connections[ i ];
+                connection.index = 0;
+                connection.pressure = 0.0;
+                connection.reservoir_rate = 0.0;
+                connection.rates.set( rt::wat, 0.0 );
+                connection.rates.set( rt::oil, 0.0 );
+                connection.rates.set( rt::gas, 0.0 );
+            }
         }
 
         return wellDat;
