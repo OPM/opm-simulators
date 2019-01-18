@@ -45,7 +45,7 @@
 #include <opm/autodiff/RateConverter.hpp>
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
-#include <opm/simulators/WellSwitchingLogger.hpp>
+#include <opm/simulators/DeferredLogger.hpp>
 
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
@@ -183,7 +183,7 @@ namespace Opm
 
         void updateWellControl(/* const */ Simulator& ebos_simulator,
                                WellState& well_state,
-                               wellhelpers::WellSwitchingLogger& logger) /* const */;
+                               Opm::DeferredLogger& deferredLogger) /* const */;
 
         virtual void updatePrimaryVariables(const WellState& well_state) const = 0;
 
@@ -226,10 +226,10 @@ namespace Opm
         // TODO: theoretically, it should be a const function
         // Simulator is not const is because that assembleWellEq is non-const Simulator
         void wellTesting(Simulator& simulator, const std::vector<double>& B_avg,
-                         const double simulation_time, const int report_step,  const bool terminal_output,
+                         const double simulation_time, const int report_step,
                          const WellTestConfig::Reason testing_reason,
                          /* const */ WellState& well_state, WellTestState& welltest_state,
-                         wellhelpers::WellSwitchingLogger& logger);
+                         Opm::DeferredLogger& deferredLogger);
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
@@ -374,12 +374,12 @@ namespace Opm
         OperabilityStatus operability_status_;
 
         void wellTestingEconomic(Simulator& simulator, const std::vector<double>& B_avg,
-                                 const double simulation_time, const int report_step, const bool terminal_output,
-                                 const WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger);
+                                 const double simulation_time, const int report_step,
+                                 const WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferredLogger);
 
         virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
-                                 const double simulation_time, const int report_step, const bool terminal_output,
-                                         WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger) = 0;
+                                 const double simulation_time, const int report_step,
+                                         WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferredLogger) = 0;
 
         void updateWellTestStateEconomic(const WellState& well_state,
                                          const double simulation_time,
@@ -392,13 +392,13 @@ namespace Opm
                                          WellTestState& well_test_state) const;
 
         void  solveWellForTesting(Simulator& ebosSimulator, WellState& well_state,
-                                  const std::vector<double>& B_avg, bool terminal_output,
-                                  wellhelpers::WellSwitchingLogger& logger);
+                                  const std::vector<double>& B_avg,
+                                  Opm::DeferredLogger& deferredLogger);
 
         bool solveWellEqUntilConverged(Simulator& ebosSimulator,
                                        const std::vector<double>& B_avg,
                                        WellState& well_state,
-                                       wellhelpers::WellSwitchingLogger& logger);
+                                       Opm::DeferredLogger& deferredLogger);
 
         void scaleProductivityIndex(const int perfIdx, double& productivity_index);
 
@@ -453,6 +453,7 @@ namespace Opm
         bool obey_bhp_limit_with_thp_limit = true;
 
     };
+    const std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
 
 }
 

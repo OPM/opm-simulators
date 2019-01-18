@@ -2747,8 +2747,8 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     wellTestingPhysical(Simulator& ebos_simulator, const std::vector<double>& B_avg,
-                        const double simulation_time, const int report_step, const bool terminal_output,
-                        WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger)
+                        const double simulation_time, const int report_step,
+                        WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferredLogger)
     {
         OpmLog::debug(" well " + name() + " is being tested for physical limits");
 
@@ -2783,7 +2783,7 @@ namespace Opm
         updatePrimaryVariables(well_state_copy);
         initPrimaryVariablesEvaluation();
 
-        const bool converged = this->solveWellEqUntilConverged(ebos_simulator, B_avg, well_state_copy, logger);
+        const bool converged = this->solveWellEqUntilConverged(ebos_simulator, B_avg, well_state_copy, deferredLogger);
 
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well testing for physical reason";

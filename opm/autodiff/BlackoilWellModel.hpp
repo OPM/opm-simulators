@@ -56,7 +56,7 @@
 
 #include <opm/material/densead/Math.hpp>
 
-#include <opm/simulators/WellSwitchingLogger.hpp>
+#include <opm/simulators/DeferredLogger.hpp>
 
 BEGIN_PROPERTIES
 

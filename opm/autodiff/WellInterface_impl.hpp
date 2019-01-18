@@ -431,7 +431,7 @@ namespace Opm
     WellInterface<TypeTag>::
     updateWellControl(/* const */ Simulator& ebos_simulator,
                       WellState& well_state,
-                      wellhelpers::WellSwitchingLogger& logger) /* const */
+                      Opm::DeferredLogger& deferredLogger) /* const */
     {
         const int np = number_of_phases_;
         const int w = index_of_well_;
@@ -493,9 +493,15 @@ namespace Opm
 
         // checking whether control changed
         if (updated_control_index != old_control_index) {
-            logger.wellSwitched(name(),
-                                well_controls_iget_type(wc, old_control_index),
-                                well_controls_iget_type(wc, updated_control_index));
+
+            auto from = well_controls_iget_type(wc, old_control_index);
+            auto to  = well_controls_iget_type(wc, updated_control_index);
+            std::ostringstream ss;
+            ss << "    Switching control mode for well " << name()
+               << " from " << modestring[from]
+               << " to " <<  modestring[to];
+            deferredLogger.info(ss.str());
+            //logger.wellSwitched(name()
         }
 
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
@@ -924,20 +930,20 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     wellTesting(Simulator& simulator, const std::vector<double>& B_avg,
-                const double simulation_time, const int report_step, const bool terminal_output,
+                const double simulation_time, const int report_step,
                 const WellTestConfig::Reason testing_reason,
                 /* const */ WellState& well_state,
                 WellTestState& well_test_state,
-                wellhelpers::WellSwitchingLogger& logger)
+                Opm::DeferredLogger& deferredLogger)
     {
         if (testing_reason == WellTestConfig::Reason::PHYSICAL) {
             wellTestingPhysical(simulator, B_avg, simulation_time, report_step,
-                                terminal_output, well_state, well_test_state, logger);
+                                well_state, well_test_state, deferredLogger);
         }
 
         if (testing_reason == WellTestConfig::Reason::ECONOMIC) {
             wellTestingEconomic(simulator, B_avg, simulation_time, report_step,
-                                terminal_output, well_state, well_test_state, logger);
+                                well_state, well_test_state, deferredLogger);
         }
     }
 
@@ -949,8 +955,8 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     wellTestingEconomic(Simulator& simulator, const std::vector<double>& B_avg,
-                        const double simulation_time, const int report_step, const bool terminal_output,
-                        const WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger)
+                        const double simulation_time, const int report_step,
+                        const WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferredLogger)
     {
         OpmLog::debug(" well " + name() + " is being tested for economic limits");
 
@@ -968,7 +974,7 @@ namespace Opm
         // untill the number of closed completions do not increase anymore.
         while (testWell) {
             const size_t original_number_closed_completions = welltest_state_temp.sizeCompletions();
-            solveWellForTesting(simulator, well_state_copy, B_avg, terminal_output, logger);
+            solveWellForTesting(simulator, well_state_copy, B_avg, deferredLogger);
             updateWellTestState(well_state_copy, simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp);
             closeCompletions(welltest_state_temp);
 
@@ -1156,7 +1162,7 @@ namespace Opm
     solveWellEqUntilConverged(Simulator& ebosSimulator,
                               const std::vector<double>& B_avg,
                               WellState& well_state,
-                              wellhelpers::WellSwitchingLogger& logger)
+                              Opm::DeferredLogger& deferredLogger)
     {
         const int max_iter = param_.max_welleq_iter_;
         int it = 0;
@@ -1175,7 +1181,7 @@ namespace Opm
             ++it;
             solveEqAndUpdateWellState(well_state);
 
-            updateWellControl(ebosSimulator, well_state, logger);
+            updateWellControl(ebosSimulator, well_state, deferredLogger);
             initPrimaryVariablesEvaluation();
         } while (it < max_iter);
 
@@ -1225,22 +1231,18 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     solveWellForTesting(Simulator& ebosSimulator, WellState& well_state,
-                        const std::vector<double>& B_avg, bool terminal_output,
-                        wellhelpers::WellSwitchingLogger& logger)
+                        const std::vector<double>& B_avg,
+                        Opm::DeferredLogger& deferredLogger)
     {
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
-        const bool converged = solveWellEqUntilConverged(ebosSimulator, B_avg, well_state, logger);
+        const bool converged = solveWellEqUntilConverged(ebosSimulator, B_avg, well_state, deferredLogger);
         if (converged) {
-            if ( terminal_output ) {
-                OpmLog::debug("WellTest: Well equation for well " + name() +  " solution gets converged");
-            }
+            OpmLog::debug("WellTest: Well equation for well " + name() +  " solution gets converged");
         } else {
-            if ( terminal_output ) {
-                const int max_iter = param_.max_welleq_iter_;
-                OpmLog::debug("WellTest: Well equation for well" +name() + " solution failed in getting converged with "
-                              + std::to_string(max_iter) + " iterations");
-            }
+            const int max_iter = param_.max_welleq_iter_;
+            OpmLog::debug("WellTest: Well equation for well" +name() + " solution failed in getting converged with "
+                          + std::to_string(max_iter) + " iterations");
             well_state = well_state0;
         }
     }
