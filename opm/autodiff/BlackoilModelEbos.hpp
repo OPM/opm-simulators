@@ -481,7 +481,13 @@ namespace Opm {
             x = 0.0;
 
             auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
-            ebosSolver.prepare(ebosJac, ebosResid);
+            ebosSolver.prepare(ebosJac);
+            ebosSolver.setResidual(ebosResid);
+            // actually, the error needs to be calculated after setResidual in order to
+            // account for parallelization properly. since the residual of ECFV
+            // discretizations does not need to be synchronized across processes to be
+            // consistent, this is not relevant for OPM-flow...
+            ebosSolver.setJacobian(ebosJac);
             ebosSolver.solve(x);
        }
 
