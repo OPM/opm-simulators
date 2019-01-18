@@ -500,8 +500,10 @@ namespace Opm
             std::ostringstream ss;
             ss << "    Switching control mode for well " << name()
                << " from " << modestring[from]
-               << " to " <<  modestring[to]
-               << " on rank " << cc.rank();
+               << " to " <<  modestring[to];
+            if (cc.size()>1) {
+               ss << " on rank " << cc.rank();
+            }
             deferredLogger.info(ss.str());
         }
 
