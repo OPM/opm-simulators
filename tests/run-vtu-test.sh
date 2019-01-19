@@ -4,15 +4,15 @@
 #
 # Usage:
 #
-# runTest.sh REFERENCE_RESULT_FILE TEST_RESULT_FILE TEST_BINARY TEST_ARGS
+# runTest.sh TEST_TYPE [TEST_ARGS]
 #
 MY_DIR="$(dirname "$0")"
 
 usage() {
     echo "Usage:"
     echo
-    echo "runTest.sh TEST_TYPE TEST_BINARY [TEST_ARGS]"
-    echo "where TEST_TYPE can either be --plain, --simulation or --parallel-simulation=\$NUM_CORES (is '$TEST_TYPE')."
+    echo "runTest.sh TEST_TYPE [TEST_ARGS]"
+    echo "where TEST_TYPE can either be --plain, --simulation, --spe1 or --parallel-simulation=\$NUM_CORES (is '$TEST_TYPE')."
 };
 
 validateResults() {
@@ -67,23 +67,25 @@ if test "$#" -lt 2; then
     exit 1
 fi
 
-# find the binary in the its folder
-TEST_BINARY=$(find . -type f -perm -0111 -name "$TEST_NAME")
-NUM_BINARIES=$(echo "$TEST_BINARY" | wc -w | tr -d '[:space:]')
+if test "$TEST_TYPE" != "--spe1"; then
+    # find the binary in the its folder
+    TEST_BINARY=$(find . -type f -perm -0111 -name "$TEST_NAME")
+    NUM_BINARIES=$(echo "$TEST_BINARY" | wc -w | tr -d '[:space:]')
 
-if test "$NUM_BINARIES" != "1"; then
-    echo "No binary file found or binary file is non-unique (is: $TEST_BINARY)"
-    echo
-    usage
-    exit 1
-fi
+    if test "$NUM_BINARIES" != "1"; then
+        echo "No binary file found or binary file is non-unique (is: $TEST_BINARY)"
+        echo
+        usage
+        exit 1
+    fi
 
-# make sure the binary is of the test is present
-if ! test -x "$TEST_BINARY"; then
-    echo "$TEST_NAME does not exist or is not executable"
-    echo
-    usage
+    # make sure the binary is of the test is present
+    if ! test -x "$TEST_BINARY"; then
+        echo "$TEST_NAME does not exist or is not executable"
+        echo
+        usage
     exit 1
+    fi
 fi
 
 #run the test
@@ -160,6 +162,69 @@ case "$TEST_TYPE" in
             validateResults "$TEST_RESULT" "$REF_FILE"
         done
         exit 0
+        ;;
+
+    "--spe1")
+        echo "Running the ebos simulator for SPE1CASE1"
+
+        EBOS_COMMAND=$(find . -type f -perm -0111 -name "ebos")
+
+        NUM_BINARIES=$(echo "$EBOS_COMMAND" | wc -w | tr -d '[:space:]')
+        if test "$NUM_BINARIES" != "1"; then
+            echo "No ebos executable found (is: $EBOS_COMMAND)"
+            echo
+            usage
+            exit 1
+        fi
+
+        COMPARE_ECL_COMMAND="$2"
+        if ! test -x "$COMPARE_ECL_COMMAND"; then
+            echo "Cannot run ebos test: No valid comparison program for ECL data files specified."
+            exit 1
+        fi
+
+        #########
+        # Run the simulator
+        if ! "$EBOS_COMMAND" "data/SPE1CASE1" ; then
+            exit 1
+        fi
+        #########
+
+        #########
+        # compare the results
+        EXIT_CODE=0
+
+        ABS_TOL=100.0
+        REL_TOL=0.1
+
+        echo
+        echo "Comparing produced .SMRY file with reference."
+        "${COMPARE_ECL_COMMAND}" -t SMRY "SPE1CASE1.UNSMRY" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1.UNSMRY" "$ABS_TOL" "$REL_TOL"
+        if test "$?" -ne 0; then
+            EXIT_CODE=1
+            "${COMPARE_ECL_COMMAND}" -a -t SMRY "SPE1CASE1.UNSMRY" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1.UNSMRY" "$ABS_TOL" "$REL_TOL"
+        fi
+
+        echo
+        echo "Comparing produced .UNRST file with reference."
+        echo " ... currently DISABLED because the compareECL utility crashes for the files produced by ebos!"
+        #"${COMPARE_ECL_COMMAND}" -t RST "SPE1CASE1.UNRST" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1.UNRST" "${ABS_TOL}" "${REL_TOL}"
+        #if test "$?" -ne 0; then
+        #    EXIT_CODE=1
+        #    "${COMPARE_ECL_COMMAND}" -a -t RST "SPE1CASE1.UNRST" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1.UNRST" "$ABS_TOL" "$REL_TOL"
+        #fi
+
+        echo
+        echo "Comparing produced .INIT file with reference."
+        "${COMPARE_ECL_COMMAND}" -t INIT "SPE1CASE1" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1" "${ABS_TOL}" "${REL_TOL}"
+        if test "$?" -ne 0; then
+            EXIT_CODE=1
+            "${COMPARE_ECL_COMMAND}" -a -t INIT "SPE1CASE1" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1" "$ABS_TOL" "$REL_TOL"
+        fi
+
+        # TODO: compare the EGRID files (seems to be currently supported by compareECL)
+        
+        exit "$EXIT_CODE"
         ;;
 
     "--restart")
