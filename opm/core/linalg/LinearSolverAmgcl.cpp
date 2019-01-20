@@ -73,24 +73,24 @@ namespace Opm
   }
 
 
-    void LinearSolverAmgcl::hackScalingFactors(const int sz,
-                            const std::vector<int>& ptr,
-                            std::vector<double>& val,
-                            std::vector<double>& rhs)
-    {
-        //const int block_size = 2;
-        const double b_gas = 100.0;
-    	int block_size = prm_.get<int>("block_size");
-        const int n = sz / block_size;
-        assert(n*block_size == sz);
-        for (int blockrow = 0; blockrow < n; ++blockrow) {
-            const int gasrow = block_size*blockrow + 2;
-            for (int jj = ptr[gasrow]; jj < ptr[gasrow + 1]; ++jj) {
-                val[jj] /= b_gas;
-            }
-            rhs[gasrow] /= b_gas;
-        }
-    }
+    // void LinearSolverAmgcl::hackScalingFactors(const int sz,
+    //                         const std::vector<int>& ptr,
+    //                         std::vector<double>& val,
+    //                         std::vector<double>& rhs)
+    // {
+    //     //const int block_size = 2;
+    //     const double b_gas = 100.0;
+    // 	int block_size = prm_.get<int>("block_size");
+    //     const int n = sz / block_size;
+    //     assert(n*block_size == sz);
+    //     for (int blockrow = 0; blockrow < n; ++blockrow) {
+    //         const int gasrow = block_size*blockrow + 2;
+    //         for (int jj = ptr[gasrow]; jj < ptr[gasrow + 1]; ++jj) {
+    //             val[jj] /= b_gas;
+    //         }
+    //         rhs[gasrow] /= b_gas;
+    //     }
+    // }
 
     void LinearSolverAmgcl::solveCPR(const int sz,
                   const std::vector<int>& ptr,
@@ -102,11 +102,12 @@ namespace Opm
                   double& error)
     {
         boost::property_tree::ptree prm = prm_;
-	bool use_cpr_drs = (prm.get<std::string>("solver_type") == "cpr_drs");
+	bool use_drs = prm.get<bool>("use_drs");
 	prm.erase("solver_type");
+	prm.erase("use_drs");
 	prm.erase("block_size");
 	prm.erase("verbose");
-        if(use_cpr_drs){
+        if(use_drs){
 	  //prm.put("precond.eps_dd", dd);
           //  prm.put("precond.eps_ps", ps);
             using Backend = amgcl::backend::builtin<double>;

@@ -49,7 +49,7 @@ NEW_PROP_TAG(GlobalEqVector);
 NEW_PROP_TAG(EclWellModel);
 NEW_PROP_TAG(Simulator);
 NEW_PROP_TAG(LinearSolverVerbosity);
-NEW_PROP_TAG(AmgclDrs);
+NEW_PROP_TAG(AmgclSolverStrategy);
 NEW_PROP_TAG(AmgclSetupFile);
 NEW_PROP_TAG(LinearSolverBackend);
 NEW_TYPE_TAG(AMGCLSolver);
@@ -59,8 +59,8 @@ NEW_PROP_TAG(LinearSolverMaxIter);
 END_PROPERTIES
 
 namespace Ewoms {
-     namespace Linear {
-         struct AMGCLMatrixHelper
+    namespace Linear {
+        struct AMGCLMatrixHelper
         {
             AMGCLMatrixHelper()
             {
@@ -114,7 +114,7 @@ namespace Ewoms {
             typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
             typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
             typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
-            typedef typename Vector::BlockVector BlockVector;
+            typedef typename Vector::block_type BlockVector;
             typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
             //typedef typename SparseMatrixAdapter::block_type Matrix;
             //    static_assert(std::is_same<SparseMatrixAdapter, IstlSparseMatrixAdapter<MatrixBlock>::value,
@@ -125,7 +125,9 @@ namespace Ewoms {
         public:
             typedef Dune::AssembledLinearOperator< Matrix, Vector, Vector > AssembledLinearOperatorType;
             AMGCLSolverBackend(Simulator& simulator):
-                simulator_(simulator)
+                simulator_(simulator),
+                solver_type_("amgcl_drs"),
+                np_(FluidSystem::numPhases)
             {
                 matrixAddWellContribution_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
                 std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, AmgclSetupFile);
@@ -139,24 +141,19 @@ namespace Ewoms {
                     OPM_THROW(std::runtime_error,"Error opening file");
                 }
                 
-                bool use_drs = EWOMS_GET_PARAM(TypeTag, bool, AmgclDrs);
-                if(use_drs){
-                    prm_.put("solver_type","cpr_drs");
-                    
-                }else{
-                   prm_.put("solver_type","cpr");
-                }
+                solver_type_ = EWOMS_GET_PARAM(TypeTag, std::string, AmgclSolverStrategy);
+                prm_.put("solver_type",solver_type_);
                 np_ = FluidSystem::numPhases;
                 prm_.put("block_size", np_);
-                //prm_.put("precond.block_size", np_);
-                //prm_.put("precond.active_rows", 0);
+                
                 double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
                 int maxiter = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
                 int verb_int = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
                 if(verb_int>0){
-                  prm_.put("verbose", true);
+                    prm_.put("verbose", true);
+                    std::cout << "Solve system using :" << solver_type_ << std::endl;
                 }else{
-                  prm_.put("verbose", false);
+                    prm_.put("verbose", false);
                 }
                 prm_.put("solver.tol", tolerance);
                 prm_.put("solver.maxiter", maxiter);
@@ -169,8 +166,8 @@ namespace Ewoms {
                 //FlowLinearSolverParameters::registerParameters<TypeTag>();
                 EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverVerbosity,
                                      "The verbosity level of the linear solver");
-                EWOMS_REGISTER_PARAM(TypeTag, bool, AmgclDrs,
-                                     "Use amgcl_drs solver");
+                EWOMS_REGISTER_PARAM(TypeTag, std::string, AmgclSolverStrategy,
+                                     "Solver Strategy for amgcl");
                 EWOMS_REGISTER_PARAM(TypeTag, std::string, AmgclSetupFile,
                                      "Setup jeson file for amgcl");
                 EWOMS_REGISTER_PARAM(TypeTag, double, LinearSolverReduction, "The minimum reduction of the residual which the linear solver must achieve");
@@ -182,7 +179,7 @@ namespace Ewoms {
              * \brief Causes the solve() method to discared the structure of the linear system of
              *        equations the next time it is called.
              *
-             * Since the SuperLU backend does not create any internal matrices, this is a no-op.
+             * Since the SuperLU backend does not create any internal matrices, this is a no-op.linearsolvers
              */
             void eraseMatrix()
             { }
@@ -194,50 +191,98 @@ namespace Ewoms {
                     //OPM_THROW(std::runtime_error,
                     //          "Cannot run with amgcl or UMFPACK without also using 'matrix_add_well_contributions=true'.");
                 }
-                MatrixBlockType leftTrans(0.0);
-                bool use_drs = (prm_.get<std::string>("solver_type") == "amgcl_drs");
-                pressure_scale_ = 50e5;
-                MatrixBlockType rightTrans=getPressureTransform(pressure_scale_);                
-                if(use_drs){
+                auto M_cp = M;// = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
+                auto b_cp = b;
+                
+                double pressure_scale = 50e5;
+                rightTrans_ =getPressureTransform(pressure_scale);
+                multBlocksInMatrix(M_cp, rightTrans_, false); 
+                if( solver_type_ == "simple_drs"){
+                    MatrixBlockType leftTrans(0.0);
+                    //leftTrans = getBlockTransform(3);
                     leftTrans=getBlockTransform(2);
                     MatrixBlockType scale_eq =getBlockTransform(3);
                     leftTrans = leftTrans.leftmultiply(scale_eq);
-                }else{
-                     auto eqChange=getBlockTransform(2);
-                     auto cprTrans = getBlockTransform(1);
-                     leftTrans= cprTrans.rightmultiply(eqChange);
+                    //leftTrans = scale_eq;
+                    scaleCPRSystem(M_cp, b_cp, leftTrans);
+                    prm_.put<bool>("use_drs",true);                    
                 }
-                auto M_cp = M;// = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
-                auto b_cp = b;
-                // right transforme to scale pressure
-                multBlocksInMatrix(M_cp, rightTrans, false);
-                // make system by manipulating equations
-                scaleCPRSystem(M_cp, b_cp, leftTrans);
-                //multBlocksInMatrix(M_cp, leftTrans, true);
-                //multBlocksVector(b_cp, leftTrans);
-                
-                
+                // else if( solver_type_== "amgcl_quasiimpes" ){
+                //     leftTrans=getBlockTransform(2);
+                //     MatrixBlockType scale_eq =getBlockTransform(3);
+                //     leftTrans = leftTrans.leftmultiply(scale_eq);
+                //     prm_.put<bool>("use_drs",false);
+                //     scaleCPRSystem(M_cp, b_cp, leftTrans);
+                // }
+                // else if (solver_type_ == "new_amgcl_quasiimpes"){
+                //     leftTrans=getBlockTransform(2);
+                //     auto scale_eq = getBlockTransform(3);
+                //     //auto cprTrans = getBlockTransform(1);
+                //     leftTrans = leftTrans.leftmultiply(scale_eq);
+                //     prm_.put<bool>("use_drs",true);
+                //     scaleCPRSystem(M_cp, b_cp, leftTrans);                    
+                //     // set up quasi impes weights
+                //     std::vector<double> weights = getQuasiImpesWeights(M_cp);
+                //     prm_.put("precond.weights", weights.data());
+                //     prm_.put("precond.weights_size", weights.size());                    
+                // }
+                // else if (solver_type_ == "amgcl_trueimpes") {
+                //     //leftTrans=getBlockTransform(2);
+                //     prm_.put<bool>("use_drs",true);
+                //     // scaleCPRSystem(M_cp, b_cp, leftTrans);
+                //     // set up quasi impes weights
+                //     multBlocksInMatrix(M_cp, rightTrans, false);
+                //     std::vector<double> weights = getStorageWeights();
+                //     prm_.put("precond.weights", weights.data());
+                //     prm_.put("precond.weights_size", weights.size());                    
+                // }
+                // else if (solver_type_ == "amgcl_trueimpes_pressure"){
+                //     prm_.put<bool>("use_drs",true);                    
+                //     trueImpesBlocksInMatrix(M_cp,b_cp);
+                //     multBlocksInMatrix(M_cp, rightTrans, false);
+                //     std::vector<double> fak_weights(sz_,0.0);
+                //     for(int i=0; i < n_; ++i){
+                //         fak_weights[i*np_] = 1;
+                //     }
+                //     prm_.put("precond.weights", fak_weights.data());
+                //     prm_.put("precond.weights_size", fak_weights.size());
+                //     prm_.put("precond.eps_dd", 1e8);
+                //     prm_.put("precond.eps_ps", 1e8); 
+                //}
+                // else if (solver_type_ == "amgcl_quasiimpes_pressure"){
+                //     // form quasi impes pressure equation
+                //     // fake drs to get correct behavoir
+                //     prm_.put<bool>("use_drs",true);
+                //     quasiImpesBlocksInMatrix(M_cp, b_cp);
+                //     std::vector<double> fak_weights(sz_,0.0);
+                //     for(int i=0; i < n_; ++i){
+                //         fak_weights[i*np_] = 1;
+                //     }
+                //     prm_.put("precond.weights", fak_weights.data());
+                //     prm_.put("precond.weights_size", fak_weights.size());
+                //     prm_.put("precond.eps_dd", 1e8);
+                //     prm_.put("precond.eps_ps", 1e8);   
+                // }
+                else{
+                    std::cout << "Solver type set to :" << solver_type_ << std::endl;
+                    std::cout << "Use amgcl on original system quasi impes" << std::endl;
+                    prm_.put<bool>("use_drs",false);
+                }
+                                       
                 if(printMatrixSystem_){
                     // used for testing matixes outside flow
                     /*
-                    std::ofstream filem("matrix.txt");
-                    Dune::writeMatrixMarket(M, filem);
-                    std::ofstream fileb("rhs.txt");
-                    Dune::writeMatrixMarket(b, fileb);
+                      std::ofstream filem("matrix.txt");
+                      Dune::writeMatrixMarket(M, filem);
+                      std::ofstream fileb("rhs.txt");
+                      Dune::writeMatrixMarket(b, fileb);
                     */
                 }                
-                // should this be done with move??
-                // if(use_drs){
-                //     if(prm.get<std::string>("strategy") == "quasimpes"){
-                //         std::vector<double> drs_weights = getQuasiImpesWeights(M_cp);
-                //         prm.put("precond.weights", drs_weights.data());
-                //         prm.put("precond.weights_size", drs_weights.size());
-                //     }
-                // }
                 n_ = M.N();
                 sz_ = np_*n_;
                 // set active rows
-                prm_.put("precond.active_rows", sz_);
+                prm_.put("precond.block_size", np_);
+                prm_.put("precond.active_rows", 0);
                 //bool do_transpose = false;
                 M_ = buildAMGCLMatrixNoBlocks(M_cp);//, do_transpose);
                 b_.resize(sz_, 0.0);                
@@ -254,20 +299,20 @@ namespace Ewoms {
                 const int nnz = M_.ptr[sz_];
                 Opm::LinearSolverAmgcl solver(prm_);
                 double error;
-                //solver.solve(sz_, M_.ptr.data(), M_.col.data(), M_.val.data(), b_.data(), x.data(), iters_, error);
                 solver.solve(sz_, M_.ptr, M_.col, M_.val, b_, x, iters_, error);
                 for (int cell = 0; cell < n_; ++cell) {
                     for (int phase = 0; phase < np_; ++phase) {
                         if(phase==0){
                             // have transformed pressure variable
-                            sol[cell][phase] = x[np_*cell + phase]*pressure_scale_;
+                            sol[cell][phase] = x[np_*cell + phase];
                         }else{
                             sol[cell][phase] = x[np_*cell + phase];
                         }
                     }
                 }
+                multBlocksVector(sol, rightTrans_);
                 return true;
-             }
+            }
 
             int iterations () const { return iters_; }
         private:
@@ -332,7 +377,8 @@ namespace Ewoms {
                                     }
                                 }
                             }
-                        }    
+                        }
+                        break;
                     default:
                         OPM_THROW(std::logic_error,"return zero tranformation matrix");
                     }
@@ -375,18 +421,20 @@ namespace Ewoms {
                 rhs[0] = 1;
                 int index = 0;
                 const auto endi = M.end();
-                for (const auto i=M.begin(); i!=endi; ++i){
+                for (auto i=M.begin(); i!=endi; ++i){
                     const auto endj = (*i).end();
                     MatrixBlockType diag_block;
-                    for (const auto j=(*i).begin(); j!=endj; ++j){
+                    for (auto j=(*i).begin(); j!=endj; ++j){
                         if(i.index() == j.index()){
                             diag_block = (*j);
                             break;
                         }                        
                     }
-                    auto bweights = diag_block.invert()*rhs;
+                    //auto bweights = rhs;//diag_block.invert()*rhs;
+                    BlockVector bweights;
+                    diag_block.solve(bweights, rhs);
                     for(int bind=0; bind < np_;++bind){
-                        weights[index] =bweights[bind];
+                        weights[index] = bweights[bind];
                         ++index;
                     }
                 }
@@ -407,38 +455,44 @@ namespace Ewoms {
                 return weights;
             }
             
-            std::vector<double> getStorageWeights(){
-                BlockVector rhs(0.0);
-                rhs[0] = 1.0;                    
-                //auto model& simulator_.model();
-                std::vector<double> weights(sz_);
-                int index = 0;
-                ElementContext elemCtx(simulator_);
-                const auto& vanguard = simulator_.vanguard();
-                auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-                const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-                for (; elemIt != elemEndIt; ++elemIt) {
-                    const Element& elem = *elemIt;
-                    elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                    Dune::FieldVector<Evaluation, FluidSystem::NumPhases>& storage;
-                    simulator_.model().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
-                    MatrixBlockType block;
-                    int offset = 0;
-                    for(int ii=0; ii< np_; ++ii){
-                        for(int jj=0; jj< np_; ++jj){
-                            const auto& vec = storage[ii].derivative();
-                            block[ii][jj] = vec[jj];
-                        }
-                    }
-                    auto bweights = block.invert()*rhs;
-                    for(int bind=0; bind < np_;++bind){
-                        weights[index] =bweights[bind];
-                        ++index;
-                    }
-                }
-                return weights;                                
-            }
+            // std::vector<double> getStorageWeights(){
+            //     BlockVector rhs(0.0);
+            //     rhs[0] = 1.0;                    
+            //     //auto model& simulator_.model();
+            //     std::vector<double> weights(sz_);
+            //     // int index = 0;
+            //     //  ElementContext elemCtx(simulator_);
+            //     //  const auto& vanguard = simulator_.vanguard();
+            //     //  auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+            //     //  const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+            //     //  for (; elemIt != elemEndIt; ++elemIt) {
+            //     //      const Element& elem = *elemIt;
+            //     //      elemCtx.updatePrimaryStencil(elem);
+            //     //      elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            //     //      Dune::FieldVector<Evaluation, FluidSystem::numPhases> storage;
+            //     //
+            //     for(int cell=0; cell < n_;++cell){   
+            //         EqVector& cachedStorage(cell, /*timeIdx=*/0);
+            //         //simulator_.model().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
+            //         MatrixBlockType block;
+            //         int offset = 0;
+            //         for(int ii=0; ii< np_; ++ii){
+            //             for(int jj=0; jj< np_; ++jj){
+            //                 const auto& vec = storage[ii].derivative();
+            //                 block[ii][jj] = vec[jj];
+            //             }
+            //         }
+            //         //auto bweights = block.invert()*rhs;
+            //         //auto bweights = rhs;//diag_block.invert()*rhs;
+            //         BlockVector bweights;
+            //         block.solve(bweights, rhs);
+            //         for(int bind=0; bind < np_;++bind){
+            //             weights[index] =bweights[bind];
+            //             ++index;
+            //         }
+            //     }
+            //     return weights;                                
+            // }
             std::vector<double> quasiImpesWeights(Matrix& A){
                 std::vector<double> weights(sz_);
                 BlockVector rhs(0.0);
@@ -448,7 +502,7 @@ namespace Ewoms {
                 for (const auto i=A.begin(); i!=endi; ++i){
                     const auto endj = (*i).end();
                     
-                    BlockVector bweights;
+                    
                     std::string strategy = prm_.get<std::string>("strategy");
                     
                     MatrixBlockType diag_block;
@@ -458,7 +512,10 @@ namespace Ewoms {
                             break;
                         }                        
                     }
-                    bweights = diag_block.invert()*rhs;
+                    //bweights = diag_block.invert()*rhs;
+                    //auto bweights = rhs;//diag_block.invert()*rhs;
+                    BlockVector bweights;
+                    diag_block.solve(bweights, rhs);
                     for(int bind=0; bind < np_;++bind){
                         weights[index] =bweights[bind];
                         ++index;
@@ -471,39 +528,95 @@ namespace Ewoms {
                 BlockVector rhs(0.0);
                 rhs[0] = 1;
                 const auto endi = A.end();
-                for (const auto i=A.begin(); i!=endi; ++i){
+                for (auto i=A.begin(); i!=endi; ++i){
                     const auto endj = (*i).end();
                     
-                    BlockVector weights;
+                    
                     std::string strategy = prm_.get<std::string>("strategy");
                     
                     MatrixBlockType diag_block;
-                    for (const auto j=(*i).begin(); j!=endj; ++j){
+                    for (auto j=(*i).begin(); j!=endj; ++j){
                         if(i.index() == j.index()){
                             diag_block = (*j);
                             break;
                         }                        
                     }
-                    weights = diag_block.invert()*rhs;
-                        
+                    //weights = diag_block.invert()*rhs;
+                    //auto weights = rhs;//diag_block.invert()*rhs;
+                    BlockVector weights;
+                    diag_block.solve(weights, rhs);
+                    
                     for (auto j=(*i).begin(); j!=endj; ++j){
                         auto & block = (*j);
                         for(int jj=0;jj < np_;++jj){
                             for(int ii=0;ii < np_;++ii){
                                 if(jj==0){
                                     block[0][ii] *=weights[jj];
-                                    b[0] *=weights[jj];
                                 }else{
                                     block[0][ii] += block[jj][ii]*weights[jj];
-                                    b[0] += b[jj]*weights[jj];
                                 }
-                            }
+                            }                           
                         }
                     }
-                    
+                    auto & bb = b[i.index()];
+                    for(int jj=0;jj < np_;++jj){
+                        if(jj==0){
+                            bb[jj] *= weights[jj];
+                        }
+                        else{
+                          bb[00] += bb[jj]*weights[jj];  
+                        }
+                    }
                 }
             }
 
+            // void trueImpesBlocksInMatrix(Matrix& M,Vector& b){
+            //     BlockVector rhs(0.0);
+            //     rhs[0] = 1.0;                    
+            //     //auto model& simulator_.model();
+            //     std::vector<double> weights(sz_);
+            //     int index = 0;
+            //     ElementContext elemCtx(simulator_);
+            //     const auto& vanguard = simulator_.vanguard();
+            //     auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+            //     const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+            //     int row_index = 0;
+            //     for (; elemIt != elemEndIt; ++elemIt) {
+            //         const Element& elem = *elemIt;
+            //         elemCtx.updatePrimaryStencil(elem);
+            //         elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            //         Dune::FieldVector<Evaluation, FluidSystem::NumPhases>& storage;
+            //         simulator_.model().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
+            //         MatrixBlockType block;
+            //         int offset = 0;
+            //         for(int ii=0; ii< np_; ++ii){
+            //             for(int jj=0; jj< np_; ++jj){
+            //                 const auto& vec = storage[ii].derivative();
+            //                 block[ii][jj] = vec[jj];
+            //             }
+            //         }
+            //         //auto bweights = block.invert()*rhs;
+            //         //auto bweights = rhs;//diag_block.invert()*rhs;
+            //         BlockVector bweights;
+            //         block.solve(bweights, rhs);
+            //         // assume iteration and row indexes correspond
+            //         auto& row = M[row_index];
+            //         auto& bv = b[row_index];
+            //         auto* dataptr = row.getptr();
+            //         for (int elem = 0; elem < row.N(); ++elem) {
+            //             auto& block = dataptr[elem];
+            //             for(int j=0; j< np_; ++j){
+            //                 for(int i=1; i< np_; ++i){
+            //                     block[0][j] += block[i][j]; 
+            //                 }
+            //             }                        
+            //         }
+            //         for(int i = 1 ; i < np_ ; ++i){
+            //             bv[0] += bv[i]; 
+            //         }
+            //         ++row_index;
+            //     }
+            // }
         
             
             static AMGCLMatrixHelper buildAMGCLMatrixNoBlocks(const Matrix& ebosJac) 
@@ -513,7 +626,7 @@ namespace Ewoms {
                   auto ebosJac = ebosJacOrg;
                   if(do_transpose){
                   Dune::MatrixVector::transpose(ebosJacOrg, ebosJac);
-              }
+                  }
                 */
                 const int n = ebosJac.N();
                 const int np = FluidSystem::numPhases;
@@ -553,9 +666,10 @@ namespace Ewoms {
             int np_;
             int n_;
             int iters_;
-            double pressure_scale_;
+            //double pressure_scale_;
             boost::property_tree::ptree prm_;
             std::string solver_type_;
+            MatrixBlockType rightTrans_;
             
         };
 
@@ -567,7 +681,7 @@ namespace Ewoms {
         //               Ewoms::Linear::AMGCLSolverBackend<TypeTag>);
 
         // END_PROPERTIES
-     }
+    }
 }
 #endif 
 
