@@ -37,7 +37,7 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
 #include <opm/core/linalg/LinearSolverAmgcl.hpp>
-//#include <ewoms/linear/matrixmarket_ewoms.hh>
+#include <ewoms/linear/matrixmarket_ewoms.hh>
 BEGIN_PROPERTIES
 
 // forward declaration of the required property tags
@@ -149,6 +149,7 @@ namespace Ewoms {
                 double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
                 int maxiter = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
                 int verb_int = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
+                printMatrixSystem_ = (verb_int>5);
                 if(verb_int>0){
                     prm_.put("verbose", true);
                     std::cout << "Solve system using :" << solver_type_ << std::endl;
@@ -186,6 +187,8 @@ namespace Ewoms {
 
             void prepare(const Matrix& M, Vector& b)
             {
+                n_ = M.N();
+                sz_ = np_*n_;// assumes block size and number of phases is equal
                 if (not(matrixAddWellContribution_)) {
                     std::cout << "AMGCLSolverBackend:: only partyally solving the system" << std::endl;
                     //OPM_THROW(std::runtime_error,
@@ -196,51 +199,66 @@ namespace Ewoms {
                 
                 double pressure_scale = 50e5;
                 rightTrans_ =getPressureTransform(pressure_scale);
-                multBlocksInMatrix(M_cp, rightTrans_, false); 
-                if( solver_type_ == "simple_drs"){
-                    MatrixBlockType leftTrans(0.0);
+                multBlocksInMatrix(M_cp, rightTrans_, false);
+                MatrixBlockType leftTrans(0.0);
+                if( solver_type_ == "amgcl_quasimpes"){
                     //leftTrans = getBlockTransform(3);
-                    leftTrans=getBlockTransform(2);
-                    MatrixBlockType scale_eq =getBlockTransform(3);
-                    leftTrans = leftTrans.leftmultiply(scale_eq);
+                    leftTrans=getBlockTransform(3);
+                    //MatrixBlockType scale_eq =getBlockTransform(3);
+                    //leftTrans = leftTrans.leftmultiply(scale_eq);
                     //leftTrans = scale_eq;
                     scaleCPRSystem(M_cp, b_cp, leftTrans);
                     prm_.put<bool>("use_drs",true);                    
                 }
-                // else if( solver_type_== "amgcl_quasiimpes" ){
-                //     leftTrans=getBlockTransform(2);
-                //     MatrixBlockType scale_eq =getBlockTransform(3);
-                //     leftTrans = leftTrans.leftmultiply(scale_eq);
-                //     prm_.put<bool>("use_drs",false);
-                //     scaleCPRSystem(M_cp, b_cp, leftTrans);
-                // }
-                // else if (solver_type_ == "new_amgcl_quasiimpes"){
-                //     leftTrans=getBlockTransform(2);
-                //     auto scale_eq = getBlockTransform(3);
-                //     //auto cprTrans = getBlockTransform(1);
-                //     leftTrans = leftTrans.leftmultiply(scale_eq);
-                //     prm_.put<bool>("use_drs",true);
-                //     scaleCPRSystem(M_cp, b_cp, leftTrans);                    
-                //     // set up quasi impes weights
-                //     std::vector<double> weights = getQuasiImpesWeights(M_cp);
-                //     prm_.put("precond.weights", weights.data());
-                //     prm_.put("precond.weights_size", weights.size());                    
-                // }
+                else if ( solver_type_ == "working_hack_drs"){
+                    leftTrans=getBlockTransform(1);
+                    MatrixBlockType eqChange=getBlockTransform(2);
+                    MatrixBlockType scaleEq =getBlockTransform(3);
+                    leftTrans = leftTrans.rightmultiply(eqChange);
+                    leftTrans = leftTrans.leftmultiply(scaleEq);
+                    //leftTrans = scale_eq;
+                    scaleCPRSystem(M_cp, b_cp, leftTrans);
+                    prm_.put<bool>("use_drs",true);
+                }
+                else if ( solver_type_ == "working_hack"){
+                    leftTrans=getBlockTransform(1);
+                    MatrixBlockType eqChange=getBlockTransform(2);
+                    MatrixBlockType scaleEq =getBlockTransform(3);
+                    leftTrans = leftTrans.rightmultiply(eqChange);
+                    leftTrans = leftTrans.leftmultiply(scaleEq);
+                    //leftTrans = scale_eq;
+                    scaleCPRSystem(M_cp, b_cp, leftTrans);
+                    prm_.put<bool>("use_drs",false);
+                }                
+                else if (solver_type_ == "new_amgcl_quasiimpes"){
+                    leftTrans=getBlockTransform(3);
+                    //auto scale_eq = getBlockTransform(3);
+                    //auto cprTrans = getBlockTransform(1);
+                    //leftTrans = leftTrans.leftmultiply(scale_eq);
+                    prm_.put<bool>("use_drs",true);
+                    scaleCPRSystem(M_cp, b_cp, leftTrans);                    
+                    // set up quasi impes weights
+                    // avoid local scope for vertor
+                    weights_ = getQuasiImpesWeights(M_cp);
+                    prm_.put("precond.weights", weights_.data());
+                    prm_.put("precond.weights_size", weights_.size());                    
+                }
                 // else if (solver_type_ == "amgcl_trueimpes") {
                 //     //leftTrans=getBlockTransform(2);
                 //     prm_.put<bool>("use_drs",true);
                 //     // scaleCPRSystem(M_cp, b_cp, leftTrans);
                 //     // set up quasi impes weights
-                //     multBlocksInMatrix(M_cp, rightTrans, false);
-                //     std::vector<double> weights = getStorageWeights();
-                //     prm_.put("precond.weights", weights.data());
-                //     prm_.put("precond.weights_size", weights.size());                    
+                //     multBlocksInMatrix(M_cp, rightTrans_, false);
+                //     weights_ = getStorageWeights();
+                //     prm_.put("precond.weights", weights_.data());
+                //     prm_.put("precond.weights_size", weights_.size());                    
                 // }
                 // else if (solver_type_ == "amgcl_trueimpes_pressure"){
                 //     prm_.put<bool>("use_drs",true);                    
                 //     trueImpesBlocksInMatrix(M_cp,b_cp);
-                //     multBlocksInMatrix(M_cp, rightTrans, false);
-                //     std::vector<double> fak_weights(sz_,0.0);
+                //     multBlocksInMatrix(M_cp, rightTrans_, false);
+                //     weights_ = std::vector<double>(sz_,0.0);
+                //     std::vector<double>& fak_weights = weights_;
                 //     for(int i=0; i < n_; ++i){
                 //         fak_weights[i*np_] = 1;
                 //     }
@@ -248,41 +266,47 @@ namespace Ewoms {
                 //     prm_.put("precond.weights_size", fak_weights.size());
                 //     prm_.put("precond.eps_dd", 1e8);
                 //     prm_.put("precond.eps_ps", 1e8); 
-                //}
-                // else if (solver_type_ == "amgcl_quasiimpes_pressure"){
-                //     // form quasi impes pressure equation
-                //     // fake drs to get correct behavoir
-                //     prm_.put<bool>("use_drs",true);
-                //     quasiImpesBlocksInMatrix(M_cp, b_cp);
-                //     std::vector<double> fak_weights(sz_,0.0);
-                //     for(int i=0; i < n_; ++i){
-                //         fak_weights[i*np_] = 1;
-                //     }
-                //     prm_.put("precond.weights", fak_weights.data());
-                //     prm_.put("precond.weights_size", fak_weights.size());
-                //     prm_.put("precond.eps_dd", 1e8);
-                //     prm_.put("precond.eps_ps", 1e8);   
                 // }
+                else if (solver_type_ == "amgcl_quasiimpes_pressure"){
+                    // form quasi impes pressure equation
+                    // fake drs to get correct behavoir
+                    prm_.put<bool>("use_drs",true);
+                    quasiImpesBlocksInMatrix(M_cp, b_cp);
+                    //std::vector<double> fak_weights(sz_,0.0);
+                    weights_ = std::vector<double>(sz_,0.0);
+                    std::vector<double>& fak_weights = weights_;
+                    for(int i=0; i < n_; ++i){
+                        fak_weights[i*np_] = 1;
+                    }
+                    prm_.put("precond.weights", fak_weights.data());
+                    prm_.put("precond.weights_size", fak_weights.size());
+                    prm_.put("precond.eps_dd", 1e8);
+                    prm_.put("precond.eps_ps", 1e8);   
+                }
                 else{
                     std::cout << "Solver type set to :" << solver_type_ << std::endl;
                     std::cout << "Use amgcl on original system quasi impes" << std::endl;
-                    prm_.put<bool>("use_drs",false);
+                    prm_.put("use_drs",false);
                 }
                                        
                 if(printMatrixSystem_){
-                    // used for testing matixes outside flow
-                    /*
-                      std::ofstream filem("matrix.txt");
-                      Dune::writeMatrixMarket(M, filem);
-                      std::ofstream fileb("rhs.txt");
-                      Dune::writeMatrixMarket(b, fileb);
-                    */
+                    std::cout << "Matrix rightTrans" << std::endl;
+                    Dune::writeMatrixMarket(rightTrans_, std::cout);
+                    std::cout << "Matrix leftTrans" << std::endl;
+                    Dune::writeMatrixMarket(leftTrans, std::cout);  
+                    std::ofstream filem("matrix.txt");
+                    Dune::writeMatrixMarket(M, filem);
+                    std::ofstream fileb("rhs.txt");
+                    Dune::writeMatrixMarket(b, fileb);
+                    std::ofstream filew("weights");
+                    for(auto w: weights_){
+                        filew << w << std::endl; 
+                    }
                 }                
-                n_ = M.N();
-                sz_ = np_*n_;
+                
                 // set active rows
                 prm_.put("precond.block_size", np_);
-                prm_.put("precond.active_rows", 0);
+                prm_.put("precond.active_rows", sz_);
                 //bool do_transpose = false;
                 M_ = buildAMGCLMatrixNoBlocks(M_cp);//, do_transpose);
                 b_.resize(sz_, 0.0);                
@@ -503,8 +527,6 @@ namespace Ewoms {
                     const auto endj = (*i).end();
                     
                     
-                    std::string strategy = prm_.get<std::string>("strategy");
-                    
                     MatrixBlockType diag_block;
                     for (const auto j=(*i).begin(); j!=endj; ++j){
                         if(i.index() == j.index()){
@@ -530,10 +552,6 @@ namespace Ewoms {
                 const auto endi = A.end();
                 for (auto i=A.begin(); i!=endi; ++i){
                     const auto endj = (*i).end();
-                    
-                    
-                    std::string strategy = prm_.get<std::string>("strategy");
-                    
                     MatrixBlockType diag_block;
                     for (auto j=(*i).begin(); j!=endj; ++j){
                         if(i.index() == j.index()){
@@ -669,6 +687,7 @@ namespace Ewoms {
             //double pressure_scale_;
             boost::property_tree::ptree prm_;
             std::string solver_type_;
+            std::vector<double> weights_;
             MatrixBlockType rightTrans_;
             
         };
