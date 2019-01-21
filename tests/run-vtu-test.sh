@@ -207,12 +207,11 @@ case "$TEST_TYPE" in
 
         echo
         echo "Comparing produced .UNRST file with reference."
-        echo " ... currently DISABLED because the compareECL utility crashes for the files produced by ebos!"
-        #"${COMPARE_ECL_COMMAND}" -t RST "SPE1CASE1.UNRST" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1.UNRST" "${ABS_TOL}" "${REL_TOL}"
-        #if test "$?" -ne 0; then
-        #    EXIT_CODE=1
-        #    "${COMPARE_ECL_COMMAND}" -a -t RST "SPE1CASE1.UNRST" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1.UNRST" "$ABS_TOL" "$REL_TOL"
-        #fi
+        "${COMPARE_ECL_COMMAND}" -t UNRST "SPE1CASE1" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1" "${ABS_TOL}" "${REL_TOL}"
+        if test "$?" -ne 0; then
+            EXIT_CODE=1
+            "${COMPARE_ECL_COMMAND}" -a -t UNRST "SPE1CASE1" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1" "$ABS_TOL" "$REL_TOL"
+        fi
 
         echo
         echo "Comparing produced .INIT file with reference."
