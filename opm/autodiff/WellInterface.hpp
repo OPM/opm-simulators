@@ -183,7 +183,7 @@ namespace Opm
 
         void updateWellControl(/* const */ Simulator& ebos_simulator,
                                WellState& well_state,
-                               Opm::DeferredLogger& deferredLogger) /* const */;
+                               Opm::DeferredLogger& deferred_logger) /* const */;
 
         virtual void updatePrimaryVariables(const WellState& well_state) const = 0;
 
@@ -229,7 +229,7 @@ namespace Opm
                          const double simulation_time, const int report_step,
                          const WellTestConfig::Reason testing_reason,
                          /* const */ WellState& well_state, WellTestState& welltest_state,
-                         Opm::DeferredLogger& deferredLogger);
+                         Opm::DeferredLogger& deferred_logger);
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
@@ -375,11 +375,11 @@ namespace Opm
 
         void wellTestingEconomic(Simulator& simulator, const std::vector<double>& B_avg,
                                  const double simulation_time, const int report_step,
-                                 const WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferredLogger);
+                                 const WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger);
 
         virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
                                  const double simulation_time, const int report_step,
-                                         WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferredLogger) = 0;
+                                         WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger) = 0;
 
         void updateWellTestStateEconomic(const WellState& well_state,
                                          const double simulation_time,
@@ -393,12 +393,12 @@ namespace Opm
 
         void  solveWellForTesting(Simulator& ebosSimulator, WellState& well_state,
                                   const std::vector<double>& B_avg,
-                                  Opm::DeferredLogger& deferredLogger);
+                                  Opm::DeferredLogger& deferred_logger);
 
         bool solveWellEqUntilConverged(Simulator& ebosSimulator,
                                        const std::vector<double>& B_avg,
                                        WellState& well_state,
-                                       Opm::DeferredLogger& deferredLogger);
+                                       Opm::DeferredLogger& deferred_logger);
 
         void scaleProductivityIndex(const int perfIdx, double& productivity_index);
 

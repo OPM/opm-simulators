@@ -939,10 +939,9 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControls()
     {
-        // Even if there no wells active locally, we cannot
-        // return as the Destructor of the DeferredLogger
-        // uses global communication. For no well active globally
-        // we simply return.
+        // Even if there are no wells active locally, we cannot
+        // return as the DeferredLogger uses global communication.
+        // For no well active globally we simply return.
         if( !wellsActive() ) return ;
 
         Opm::DeferredLogger local_deferredLogger;
