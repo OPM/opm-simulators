@@ -321,7 +321,7 @@ namespace Opm {
         // no wells needing testing, otherwise we will have locking.
         std::vector< Scalar > B_avg(numComponents(), Scalar() );
         computeAverageFormationFactor(B_avg);
-        wellhelpers::WellSwitchingLogger logger;
+        Opm::DeferredLogger local_deferredLogger;
 
         const auto& wellsForTesting = wellTestState_.updateWell(wtest_config, simulationTime);
         for (const auto& testWell : wellsForTesting) {
@@ -339,8 +339,12 @@ namespace Opm {
 
             const WellTestConfig::Reason testing_reason = testWell.second;
 
-            well->wellTesting(ebosSimulator_, B_avg, simulationTime, timeStepIdx, terminal_output_,
-                              testing_reason, well_state_, wellTestState_, logger);
+            well->wellTesting(ebosSimulator_, B_avg, simulationTime, timeStepIdx,
+                              testing_reason, well_state_, wellTestState_, local_deferredLogger);
+        }
+        Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+        if (terminal_output_) {
+            global_deferredLogger.logMessages();
         }
     }
 
@@ -936,16 +940,20 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControls()
     {
-        // Even if there no wells active locally, we cannot
-        // return as the Destructor of the WellSwitchingLogger
-        // uses global communication. For no well active globally
-        // we simply return.
+        // Even if there are no wells active locally, we cannot
+        // return as the DeferredLogger uses global communication.
+        // For no well active globally we simply return.
         if( !wellsActive() ) return ;
 
-        wellhelpers::WellSwitchingLogger logger;
+        Opm::DeferredLogger local_deferredLogger;
 
         for (const auto& well : well_container_) {
-            well->updateWellControl(ebosSimulator_, well_state_, logger);
+            well->updateWellControl(ebosSimulator_, well_state_, local_deferredLogger);
+        }
+
+        Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+        if (terminal_output_) {
+            global_deferredLogger.logMessages();
         }
 
         updateGroupControls();

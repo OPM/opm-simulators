@@ -39,7 +39,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/wells/WellsManager.cpp
   opm/core/wells/well_controls.c
   opm/core/wells/wells.c
-  opm/simulators/WellSwitchingLogger.cpp
   opm/simulators/DeferredLogger.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
@@ -58,7 +57,6 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
   tests/test_wellmodel.cpp
-  tests/test_wellswitchlogger.cpp
   tests/test_deferredlogger.cpp
   tests/test_timer.cpp
   tests/test_invert.cpp
@@ -165,7 +163,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/core/wells/WellsManager.hpp
   opm/core/wells/WellsManager_impl.hpp
   opm/simulators/ParallelFileMerger.hpp
-  opm/simulators/WellSwitchingLogger.hpp
   opm/simulators/DeferredLogger.hpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
   opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp

@@ -418,8 +418,8 @@ namespace Opm
                                            const BVectorWell& dwells);
 
         virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
-                                         const double simulation_time, const int report_step, const bool terminal_output,
-                                         WellState& well_state, WellTestState& welltest_state, wellhelpers::WellSwitchingLogger& logger) override;
+                                         const double simulation_time, const int report_step,
+                                         WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger) override;
 
         // calculate the skin pressure based on water velocity, throughput and polymer concentration.
         // throughput is used to describe the formation damage during water/polymer injection.
