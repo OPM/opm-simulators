@@ -68,8 +68,8 @@ namespace Opm
       const std::unordered_map<int, int>& cartesian_to_compressed,
       const Simulator& ebosSimulator)
       : ebos_simulator_ (ebosSimulator)
-      , aqufetp_data_ (aqufetp_data)
       , cartesian_to_compressed_(cartesian_to_compressed)
+      , aqufetp_data_ (aqufetp_data)
       , connection_ (connection)
       {}
 
