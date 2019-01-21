@@ -1256,6 +1256,17 @@ private:
             fip[FipDataType::GasInPlaceInGasPhase] = Opm::unit::convert::to(fip[FipDataType::GasInPlaceInGasPhase], 1000*Opm::unit::cubic(Opm::unit::feet));
             fip[FipDataType::PoreVolume] = Opm::unit::convert::to(fip[FipDataType::PoreVolume], Opm::unit::stb);
         }
+        else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
+            Scalar scc = Opm::unit::cubic(Opm::prefix::centi * Opm::unit::meter); //standard cubic cm.
+            fip[FipDataType::WaterInPlace] = Opm::unit::convert::to(fip[FipDataType::WaterInPlace], scc);
+            fip[FipDataType::OilInPlace] = Opm::unit::convert::to(fip[FipDataType::OilInPlace], scc);
+            fip[FipDataType::OilInPlaceInLiquidPhase] = Opm::unit::convert::to(fip[FipDataType::OilInPlaceInLiquidPhase], scc);
+            fip[FipDataType::OilInPlaceInGasPhase] = Opm::unit::convert::to(fip[FipDataType::OilInPlaceInGasPhase], scc);
+            fip[FipDataType::GasInPlace] = Opm::unit::convert::to(fip[FipDataType::GasInPlace], scc);
+            fip[FipDataType::GasInPlaceInLiquidPhase] = Opm::unit::convert::to(fip[FipDataType::GasInPlaceInLiquidPhase], scc);
+            fip[FipDataType::GasInPlaceInGasPhase] = Opm::unit::convert::to(fip[FipDataType::GasInPlaceInGasPhase], scc);
+            fip[FipDataType::PoreVolume] = Opm::unit::convert::to(fip[FipDataType::PoreVolume], scc);
+        }
         else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
             // nothing to do
         }
@@ -1272,6 +1283,10 @@ private:
         }
         else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
             pav = Opm::unit::convert::to(pav, Opm::unit::barsa);
+        }
+        else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
+            pav = Opm::unit::convert::to(pav, Opm::unit::atm);
+
         }
         else {
             throw std::runtime_error("Unsupported unit type for fluid in place output.");
