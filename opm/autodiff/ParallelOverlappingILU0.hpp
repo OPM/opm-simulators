@@ -156,6 +156,7 @@ namespace Opm
     struct Reorderer
     {
         virtual std::size_t operator[](std::size_t i) const = 0;
+        virtual ~Reorderer() {}
     };
 
     struct NoReorderer : public Reorderer
