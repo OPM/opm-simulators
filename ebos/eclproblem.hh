@@ -1868,6 +1868,9 @@ private:
             elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
             eclWriter_->eclOutputModule().initHysteresisParams(this->simulator(), elemIdx);
             eclWriter_->eclOutputModule().assignToFluidState(elemFluidState, elemIdx);
+
+            processRestartSaturations_(elemFluidState);
+
             lastRs_[elemIdx] = elemFluidState.Rs();
             lastRv_[elemIdx] = elemFluidState.Rv();
             if (enableSolvent)
@@ -1892,6 +1895,30 @@ private:
         if (tracerModel().numTracers() > 0)
             std::cout << "Warning: Restart is not implemented for the tracer model, it will initialize with initial tracer concentration" << std::endl;
 
+    }
+
+    void processRestartSaturations_(InitialFluidState& elemFluidState) {
+        // each phase needs to be above certain value to be claimed to be existing
+        // this is used to recover some RESTART running with the defaulted single-precision format
+        const Scalar smallSaturationTolerance = 1.e-6;
+        Scalar sumSaturation = 0.;
+        for (size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (FluidSystem::phaseIsActive(phaseIdx)) {
+                if (elemFluidState.saturation(phaseIdx) < smallSaturationTolerance)
+                    elemFluidState.setSaturation(phaseIdx, 0.);
+
+                sumSaturation += elemFluidState.saturation(phaseIdx);
+            }
+        }
+
+        assert(sumSaturation > 0.);
+
+        for (size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (FluidSystem::phaseIsActive(phaseIdx)) {
+                const Scalar saturation = elemFluidState.saturation(phaseIdx) / sumSaturation;
+                elemFluidState.setSaturation(phaseIdx, saturation);
+            }
+        }
     }
 
     void readExplicitInitialCondition_()
