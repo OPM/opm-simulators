@@ -203,39 +203,34 @@ namespace Ewoms {
                 multBlocksInMatrix(M_cp, rightTrans_, false);
                 MatrixBlockType leftTrans(0.0);
                 if( solver_type_ == "amgcl_quasiimpes"){
-                    //leftTrans = getBlockTransform(3);
-                    leftTrans=getBlockTransform(3);
-                    //MatrixBlockType scale_eq =getBlockTransform(3);
-                    //leftTrans = leftTrans.leftmultiply(scale_eq);
-                    //leftTrans = scale_eq;
+                    //leftTrans=getBlockTransform(3);
+                    leftTrans=getBlockTransform(4);
                     scaleCPRSystem(M_cp, b_cp, leftTrans);
                     prm_.put<bool>("use_drs",true);                    
                 }
                 else if ( solver_type_ == "working_hack_drs"){
-                    leftTrans=getBlockTransform(1);
-                    MatrixBlockType eqChange=getBlockTransform(2);
-                    MatrixBlockType scaleEq =getBlockTransform(3);
-                    leftTrans = leftTrans.rightmultiply(eqChange);
-                    leftTrans = leftTrans.leftmultiply(scaleEq);
-                    //leftTrans = scale_eq;
+                    // leftTrans=getBlockTransform(1);
+                    // MatrixBlockType eqChange=getBlockTransform(2);
+                    // MatrixBlockType scaleEq =getBlockTransform(3);
+                    // leftTrans = leftTrans.rightmultiply(eqChange);
+                    // leftTrans = leftTrans.leftmultiply(scaleEq);
+                    leftTrans=getBlockTransform(4);
                     scaleCPRSystem(M_cp, b_cp, leftTrans);
                     prm_.put<bool>("use_drs",true);
                 }
                 else if ( solver_type_ == "working_hack"){
-                    leftTrans=getBlockTransform(1);
-                    MatrixBlockType eqChange=getBlockTransform(2);
-                    MatrixBlockType scaleEq =getBlockTransform(3);
-                    leftTrans = leftTrans.rightmultiply(eqChange);
-                    leftTrans = leftTrans.leftmultiply(scaleEq);
-                    //leftTrans = scale_eq;
+                    // leftTrans=getBlockTransform(1);
+                    // MatrixBlockType eqChange=getBlockTransform(2);
+                    // MatrixBlockType scaleEq =getBlockTransform(3);
+                    // leftTrans = leftTrans.rightmultiply(eqChange);
+                    // leftTrans = leftTrans.leftmultiply(scaleEq);
+                    leftTrans=getBlockTransform(4);
                     scaleCPRSystem(M_cp, b_cp, leftTrans);
                     prm_.put<bool>("use_drs",false);
                 }                
                 else if (solver_type_ == "new_amgcl_quasiimpes"){
-                    leftTrans=getBlockTransform(3);
-                    //auto scale_eq = getBlockTransform(3);
-                    //auto cprTrans = getBlockTransform(1);
-                    //leftTrans = leftTrans.leftmultiply(scale_eq);
+                    //leftTrans=getBlockTransform(3);
+                    leftTrans=getBlockTransform(4);
                     prm_.put<bool>("use_drs",true);
                     scaleCPRSystem(M_cp, b_cp, leftTrans);                    
                     // set up quasi impes weights
@@ -246,15 +241,22 @@ namespace Ewoms {
                     prm_.put("precond.eps_dd", -1e8);
                     prm_.put("precond.eps_ps", -1e8);
                 }
-                 else if (solver_type_ == "amgcl_trueimpes") {
-                     //leftTrans=getBlockTransform(2);
-                     prm_.put<bool>("use_drs",true);
-                     weights_ = getStorageWeights();
-                     prm_.put("precond.weights", weights_.data());
-                     prm_.put("precond.weights_size", weights_.size());
-                     prm_.put("precond.eps_dd", -1e8);
-                     prm_.put("precond.eps_ps", -1e8);
-                 }
+                else if (solver_type_ == "amgcl_trueimpes") {
+                    //leftTrans=getBlockTransform(2);
+                    prm_.put<bool>("use_drs",true);
+                    weights_ = getStorageWeights();
+                    leftTrans=getBlockTransform(4);
+                    scaleCPRSystem(M_cp, b_cp, leftTrans);
+                    auto leftTinv = leftTrans.transpose();
+                    leftTinv.invert();
+                    auto bweights = toVector(weights_);
+                    multBlocksVector(bweights, leftTinv);
+                    weights_ = toStdVector(bweights);    
+                    prm_.put("precond.weights", weights_.data());
+                    prm_.put("precond.weights_size", weights_.size());
+                    prm_.put("precond.eps_dd", -1e8);
+                    prm_.put("precond.eps_ps", -1e8);
+                }
                 // else if (solver_type_ == "amgcl_trueimpes_pressure"){
                 //     prm_.put<bool>("use_drs",true);                    
                 //     trueImpesBlocksInMatrix(M_cp,b_cp);
@@ -382,7 +384,7 @@ namespace Ewoms {
                 MatrixBlockType leftTrans(0.0);
                 switch(meth_trans)
                     {
-                    case 1 :
+                    case 1 : {
                         //cpr
                         for (int row = 0; row < np; ++row) {
                             for (int col = 0; col < np; ++col) {
@@ -395,9 +397,9 @@ namespace Ewoms {
                                 }
                             }
                         }
-                        break;
+                    } break;
                         //permute equations
-                    case 2 :
+                    case 2 : {
                         for (int row = 0; row < 2; ++row) {
                             for (int col = 0; col < 2; ++col) {
                                 if(row!=col){
@@ -408,8 +410,8 @@ namespace Ewoms {
                         if(np==3){
                             leftTrans[2][2]=1.0;
                         }
-                        break;
-                    case 3 :
+                    } break;
+                    case 3 :{
                         //cpr
                         for (int row = 0; row < np; ++row) {
                             for (int col = 0; col < np; ++col) {
@@ -422,7 +424,14 @@ namespace Ewoms {
                                 }
                             }
                         }
-                        break;
+                    } break;
+                    case 4 :{ // hack which seems to avoid pivot
+                        leftTrans=getBlockTransform(1);                                                                            
+                        MatrixBlockType eqChange=getBlockTransform(2);                                                             
+                        MatrixBlockType scaleEq =getBlockTransform(3);                                                             
+                        leftTrans = leftTrans.rightmultiply(eqChange);                                                             
+                        leftTrans = leftTrans.leftmultiply(scaleEq);
+                    }break;
                     default:
                         OPM_THROW(std::logic_error,"return zero tranformation matrix");
                     }
@@ -445,6 +454,30 @@ namespace Ewoms {
                         }
                     }
                 }
+            }
+
+            Vector toVector(const std::vector<double>& weights){
+                Vector bweights(sz_);
+                int ind = 0;
+                for(int i=0; i < n_; ++i){
+                    for(int j=0; j < np_; ++j){
+                        bweights[i][j] = weights[ind];
+                        ++ind;
+                    }                   
+                }
+                return bweights;
+            }
+            
+            std::vector<double> toStdVector(const Vector& bweights){
+                std::vector<double> weights(sz_,0.0);
+                int ind = 0;
+                for(int i=0; i < n_; ++i){
+                    for(int j=0; j < np_; ++j){
+                        weights[ind] = bweights[i][j]; 
+                            ++ind;
+                    }                   
+                }
+                return weights;
             }
             
             static void multBlocksVector(Vector& ebosResid_cp,const MatrixBlockType& leftTrans){
