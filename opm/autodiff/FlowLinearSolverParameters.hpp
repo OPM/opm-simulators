@@ -57,6 +57,7 @@ NEW_PROP_TAG(LinearSolverRequireFullSparsityPattern);
 NEW_PROP_TAG(LinearSolverIgnoreConvergenceFailure);
 NEW_PROP_TAG(UseAmg);
 NEW_PROP_TAG(UseCpr);
+NEW_PROP_TAG(SystemStrategy);
 NEW_PROP_TAG(LinearSolverBackend);
 NEW_PROP_TAG(PreconditionerAddWellContributions);
 
@@ -76,7 +77,7 @@ SET_BOOL_PROP(FlowIstlSolverParams, UseAmg, false);
 SET_BOOL_PROP(FlowIstlSolverParams, UseCpr, false);
 SET_TYPE_PROP(FlowIstlSolverParams, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
 SET_BOOL_PROP(FlowIstlSolverParams, PreconditionerAddWellContributions, false);
-
+SET_STRING_PROP(FlowIstlSolverParams, SystemStrategy, "original");
 
 
 END_PROPERTIES
@@ -160,6 +161,7 @@ namespace Opm
         bool   ignoreConvergenceFailure_;
         bool   linear_solver_use_amg_;
         bool   use_cpr_;
+        std::string system_strategy_;
 
         template <class TypeTag>
         void init()
@@ -179,6 +181,7 @@ namespace Opm
             ignoreConvergenceFailure_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure);
             linear_solver_use_amg_ = EWOMS_GET_PARAM(TypeTag, bool, UseAmg);
             use_cpr_ = EWOMS_GET_PARAM(TypeTag, bool, UseCpr);
+	    system_strategy_ = EWOMS_GET_PARAM(TypeTag, std::string, SystemStrategy);
         }
 
         template <class TypeTag>
@@ -198,6 +201,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseAmg, "Use AMG as the linear solver's preconditioner");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseCpr, "Use CPR as the linear solver's preconditioner");
+	    EWOMS_REGISTER_PARAM(TypeTag, std::string, SystemStrategy, "Strategy for reformulating and scale linear system");
 
         }
 
