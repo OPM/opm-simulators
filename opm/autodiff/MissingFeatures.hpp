@@ -20,7 +20,11 @@
 #ifndef OPM_MISSINGFEATURES_HEADER_INCLUDED
 #define OPM_MISSINGFEATURES_HEADER_INCLUDED
 
+
 namespace Opm {
+
+class ErrorGuard;
+class ParseContext;
 
 namespace MissingFeatures {
 
@@ -34,10 +38,14 @@ namespace MissingFeatures {
     void addSupported(std::multimap<std::string, PartiallySupported<T> >& map, T itemValue);
 
     template <typename T>
-    void checkOptions(const DeckKeyword& keyword, std::multimap<std::string , PartiallySupported<T> >& map);
+    void checkOptions(const DeckKeyword& keyword, std::multimap<std::string , PartiallySupported<T> >& map, const ParseContext& parseContext, ErrorGuard& errorGuard);
+
+    void checkKeywords(const Deck& deck, const ParseContext& parseContext, ErrorGuard& errorGuard);
+
+    template<typename T>
+    void checkKeywords(const Deck& deck, const ParseContext& parseContext, T&& errorGuard);
 
     void checkKeywords(const Deck& deck);
-
 }
 
 }
