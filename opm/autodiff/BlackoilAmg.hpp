@@ -98,22 +98,22 @@ scaleMatrixQuasiImpes(const Operator& op, const Communication& comm,
     using Block = typename Matrix::block_type;
     std::unique_ptr<Matrix> matrix(new Matrix(op.getmat()));
 
-    for ( auto& row : *matrix )
-    {
-        for ( auto& block : row )
-        {
-            for ( std::size_t i = 0; i < Block::rows; i++ )
-            {
-                if ( i != pressureIndex )
-                {
-                    for(std::size_t j=0; j < Block::cols; j++)
-                    {
-                        block[pressureIndex][j] += block[i][j];
-                    }
-                }
-            }
-        }
-    }
+    // for ( auto& row : *matrix )
+    // {
+    //     for ( auto& block : row )
+    //     {
+    //         for ( std::size_t i = 0; i < Block::rows; i++ )
+    //         {
+    //             if ( i != pressureIndex )
+    //             {
+    //                 for(std::size_t j=0; j < Block::cols; j++)
+    //                 {
+    //                     block[pressureIndex][j] += block[i][j];
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
     return std::make_tuple(std::move(matrix), createOperator(op, *matrix, comm));
 }
 
@@ -126,18 +126,18 @@ scaleMatrixQuasiImpes(const Operator& op, const Communication& comm,
 template<class Vector>
 void scaleVectorQuasiImpes(Vector& vector, std::size_t pressureIndex)
 {
-    using Block = typename Vector::block_type;
+    // using Block = typename Vector::block_type;
 
-    for ( auto& block: vector)
-    {
-        for ( std::size_t i = 0; i < Block::dimension; i++ )
-        {
-            if ( i != pressureIndex )
-            {
-                block[pressureIndex] += block[i];
-            }
-        }
-    }
+    // for ( auto& block: vector)
+    // {
+    //     for ( std::size_t i = 0; i < Block::dimension; i++ )
+    //     {
+    //         if ( i != pressureIndex )
+    //         {
+    //             block[pressureIndex] += block[i];
+    //         }
+    //     }
+    // }
 }
 
 //! \brief TMP to create the scalar pendant to a real block matrix, vector, smoother, etc.

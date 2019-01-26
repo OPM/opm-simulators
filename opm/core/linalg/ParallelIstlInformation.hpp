@@ -21,7 +21,6 @@
 #ifndef OPM_PARALLELISTLINFORMTION_HEADER_INCLUDED
 #define OPM_PARALLELISTLINFORMTION_HEADER_INCLUDED
 
-
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <boost/any.hpp>
@@ -34,7 +33,7 @@
 #include <type_traits>
 #include <vector>
 
-#if HAVE_MPI //&& HAVE_DUNE_ISTL
+#if HAVE_MPI && HAVE_DUNE_ISTL
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <mpi.h>

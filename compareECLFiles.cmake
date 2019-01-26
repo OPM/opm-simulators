@@ -285,6 +285,37 @@ add_test_compareECLFiles(CASENAME faults_model_1
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model1)
+		       # test for non default solvers black oil solv
+		       foreach(solver flow_blackoil_direct)# flow_blackoil_amgcl )
+			 add_test_compareECLFiles(CASENAME spe1
+                         FILENAME SPE1CASE2
+                         SIMULATOR solver
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol})
+
+		       add_test_compareECLFiles(CASENAME spe1
+                         FILENAME SPE1CASE1
+                         SIMULATOR solver
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
+
+		       add_test_compareECLFiles(CASENAME spe3
+                         FILENAME SPE3CASE1
+                         SIMULATOR solver
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol}
+                         TEST_ARGS --tolerance-wells=1e-6 --flow-newton-max-iterations=20)
+
+  
+		       add_test_compareECLFiles(CASENAME spe9
+                         FILENAME SPE9_CP_SHORT
+                         SIMULATOR solver 
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
+		       
+		       endforeach(solver)		       
+		       
+		       
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")

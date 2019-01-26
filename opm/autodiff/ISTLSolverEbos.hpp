@@ -34,6 +34,7 @@
 
 #include <ewoms/common/parametersystem.hh>
 #include <ewoms/common/propertysystem.hh>
+#include <ewoms/linear/matrixmarket_ewoms.hh>
 
 #include <dune/istl/scalarproducts.hh>
 #include <dune/istl/operators.hh>
@@ -68,11 +69,11 @@ namespace Opm
 
    Adapts a matrix to the assembled linear operator interface
  */
-template<class M, class X, class Y, class WellModel, bool overlapping >
+  template<class M, class X, class Y, class WellModel, bool overlapping,class TypeTag >
 class WellModelMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
 {
   typedef Dune::AssembledLinearOperator<M,X,Y> BaseType;
-
+  typedef typename GET_PROP_TYPE(TypeTag, Grid)   Grid;
 public:
   typedef M matrix_type;
   typedef X domain_type;
@@ -170,6 +171,7 @@ protected:
     template <class TypeTag>
     class ISTLSolverEbos
     {
+         typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
         typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
         typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
@@ -178,6 +180,15 @@ protected:
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
         typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
 
+      typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
+      typedef typename Vector::block_type BlockVector;
+      typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+      typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+      typedef typename GridView::template Codim<0>::Entity Element;
+      typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+
+
+      
         enum { pressureIndex = Indices::pressureSwitchIdx };
         static const int numEq = Indices::numEq;
 
@@ -209,10 +220,46 @@ protected:
         }
 
         void prepare(const Matrix& M, Vector& b) {
-            matrix_ = &M;
+	    matrix_.reset(new Matrix(M));
             rhs_ = &b;
+	    bool matrix_cont_added = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+	    if(matrix_cont_added){
+	      Vector weights;
+	      bool scale = true;
+	      if(parameters_.system_strategy_ == "quasiimpes"){
+		weights = getQuasiImpesWeights();
+	      }else if(parameters_.system_strategy_ == "trueimpes"){
+		weights = getStorageWeights();
+	      }else if(parameters_.system_strategy_ == "simple"){
+		BlockVector bvec(1.0);
+		weights = getSimpleWeights(bvec);
+	      }else if(parameters_.system_strategy_ == "original"){
+		BlockVector bvec(0.0);
+		bvec[pressureIndex] = 1;
+		weights = getSimpleWeights(bvec);
+	      }else{
+		scale = false;
+	      }
+	      // {
+	      // 	std::ofstream filem("matrix_istl_pre.txt");
+	      // 	Dune::writeMatrixMarket(*matrix_, filem);
+	      // 	std::ofstream fileb("rhs_istl_pre.txt");
+	      // 	Dune::writeMatrixMarket(*rhs_, fileb);
+	      // 	std::ofstream filew("weights_istl.txt");
+	      // 	Dune::writeMatrixMarket(weights, filew);
+	      // }
+	      if(scale){
+		scaleMatrixAndRhs(weights);
+	      }
+	      // {
+	      // 	std::ofstream filem("matrix_istl.txt");
+	      // 	Dune::writeMatrixMarket(*matrix_, filem);
+	      // 	std::ofstream fileb("rhs_istl.txt");
+	      // 	Dune::writeMatrixMarket(*rhs_, fileb);
+	      // }
+	    }
         }
-
+      
         bool solve(Vector& x) {
             // Solve system.
 
@@ -220,7 +267,7 @@ protected:
 
             if( isParallel() )
             {
-                typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
+	      typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true ,TypeTag> Operator;
 
                 auto ebosJacIgnoreOverlap = Matrix(*matrix_);
                 //remove ghost rows in local matrix
@@ -235,7 +282,7 @@ protected:
             }
             else
             {
-                typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false > Operator;
+	      typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false, TypeTag > Operator;
                 Operator opA(*matrix_, *matrix_, wellModel);
                 solve( opA, x, *rhs_ );
             }
@@ -530,7 +577,12 @@ protected:
     protected:
 
         bool isParallel() const {
+#ifdef HAVE_MPI	  
             return parallelInformation_.type() == typeid(ParallelISTLInformation);
+#else
+	    return false;
+#endif
+	    
         }
 
         /// Zero out off-diagonal blocks on rows corresponding to overlap cells
@@ -559,13 +611,133 @@ protected:
                 }
             }
         }
+       // weights to make approxiate pressure equations
+      Vector getStorageWeights(){
+	Vector weights(rhs_->size()); 
+	BlockVector rhs(0.0);
+	rhs[pressureIndex] = 1.0;
+	int index = 0;
+	ElementContext elemCtx(simulator_);
+	const auto& vanguard = simulator_.vanguard();
+	auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+	const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+	for (; elemIt != elemEndIt; ++elemIt) {
+	  const Element& elem = *elemIt;
+	  elemCtx.updatePrimaryStencil(elem);
+	  elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+	  Dune::FieldVector<Evaluation, numEq> storage;
+	  unsigned threadId = ThreadManager::threadId();
+	  simulator_.model().localLinearizer(threadId).localResidual().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
+	  Scalar extrusionFactor =
+	    elemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
+	  Scalar scvVolume =
+	    elemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
+	  Scalar storage_scale = scvVolume / elemCtx.simulator().timeStepSize();
+	  MatrixBlockType block;
+	  int offset = 0;
+	  double pressure_scale = 50e5;
+	  for(int ii=0; ii< numEq; ++ii){
+	    for(int jj=0; jj< numEq; ++jj){
+	      //const auto& vec = storage[ii].derivative(jj);
+	      block[ii][jj] = storage[ii].derivative(jj)/storage_scale;
+	      if(jj==0){
+		block[ii][jj] *=pressure_scale;
+	      }
+	    }
+	  }
+	  BlockVector bweights;
+	  MatrixBlockType block_transpose = block.transpose();
+	  block_transpose.solve(bweights, rhs);
+	  weights[index] = bweights;
+	  ++index;
+	}
+	return weights;
+      }
+      
+      Vector getQuasiImpesWeights(){
+	Matrix& A = *matrix_;
+	Vector weights(rhs_->size());
+	BlockVector rhs(0.0);
+	rhs[pressureIndex] = 1;
+	const auto endi = A.end();
+	int index = 0;
+	for (auto i=A.begin(); i!=endi; ++i){
+	  const auto endj = (*i).end();                                        
+	  MatrixBlockType diag_block(0.0);
+	  for (auto j=(*i).begin(); j!=endj; ++j){
+	    if(i.index() == j.index()){
+	      diag_block = (*j);
+	      break;
+	    }                        
+	  }                    
+	  BlockVector bweights;
+	  auto diag_block_transpose = diag_block.transpose();
+	  diag_block_transpose.solve(bweights, rhs);
+	  weights[i.index()] = bweights;
+	}
+	return weights;
+      }
+      
+      Vector getSimpleWeights(const BlockVector& rhs){
+	Vector weights(rhs_->size(),0);
+	for(auto& bw: weights){
+	  bw = rhs;
+	}
+	return weights;
+      }
+
+      void scaleMatrixAndRhs(const Vector& weights){
+	static_assert(pressureIndex == 0, "Current support that pressure equation should be first");
+	//using Matrix = typename Operator::matrix_type;
+	using Block = typename Matrix::block_type;
+	//Vector& rhs = *rhs_;
+	//Matrix& A = *matrix_;
+	//int index = 0;
+	//for ( auto& row : *matrix_ ){
+	const auto endi = matrix_->end();
+	for (auto i=matrix_->begin(); i!=endi; ++i){
+	  
+	  //const auto& bweights = weights[row.index()];
+	  const BlockVector& bweights = weights[i.index()];
+	  BlockVector& brhs = (*rhs_)[i.index()];
+	  //++index;
+	  //for ( auto& block : row ){
+	  const auto endj = (*i).end();                                        
+	  for (auto j=(*i).begin(); j!=endj; ++j){    
+	    // assume it is something on all rows
+	    // the blew logic depend on pressureIndex=0
+	    Block& block = (*j);
+	    for ( std::size_t ii = 0; ii < block.rows; ii++ ){
+	      if ( ii == 0 ){
+		for(std::size_t jj=0; jj < block.cols; jj++){
+		  block[0][jj] *= bweights[ii];//*block[ii][jj];
+		}
+	      } else {
+		for(std::size_t jj=0; jj < block.cols; jj++){
+		  block[0][jj] += bweights[ii]*block[ii][jj];
+		}
+	      }
+	    }
+	    
+	  }
+	  for(std::size_t ii=0; ii < brhs.size(); ii++){
+	    if ( ii == 0 ){
+	      brhs[0] *= bweights[ii];//*brhs[ii];
+	    }else{
+	      brhs[0] += bweights[ii]*brhs[ii];
+	    }
+	  }	      
+	}
+      }
+
+      
 
         const Simulator& simulator_;
         mutable int iterations_;
         mutable bool converged_;
         boost::any parallelInformation_;
         bool isIORank_;
-        const Matrix *matrix_;
+        std::unique_ptr<Matrix> matrix_;
         Vector *rhs_;
         std::unique_ptr<Matrix> matrix_for_preconditioner_;
 

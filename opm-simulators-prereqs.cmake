@@ -36,6 +36,7 @@ set (opm-simulators_DEPS
   # SuperLU direct solver
   "SuperLU"
   # OPM dependency
+  # "amgcl REQUIRED"
   "opm-common REQUIRED"
   "opm-material REQUIRED"
   "opm-grid REQUIRED"
