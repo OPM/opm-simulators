@@ -253,7 +253,8 @@ protected:
                                     /*isPeriodic=*/false,
                                     /*flipNormals=*/false,
                                     /*clipZ=*/false,
-                                    porv);
+                                    porv,
+                                    this->eclState().getInputNNC());
 
         // we use separate grid objects: one for the calculation of the initial condition
         // via EQUIL and one for the actual simulation. The reason is that the EQUIL code

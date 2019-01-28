@@ -275,6 +275,14 @@ public:
                 unsigned insideFaceIdx  = intersection.indexInInside();
                 unsigned outsideFaceIdx = intersection.indexInOutside();
 
+                if (insideFaceIdx == -1) {
+                    // NNC. Set zero transmissibility, as it will be
+                    // *added to* by applyNncToGridTrans_() later.
+                    assert(outsideFaceIdx == -1);
+                    trans_[isId_(elemIdx, outsideElemIdx)] = 0.0;
+                    continue;
+                }
+
                 DimVector faceCenterInside;
                 DimVector faceCenterOutside;
                 DimVector faceAreaNormal;
