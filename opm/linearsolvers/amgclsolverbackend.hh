@@ -431,7 +431,7 @@ namespace Ewoms {
                         MatrixBlockType scaleEq =getBlockTransform(3);                                                             
                         leftTrans = leftTrans.rightmultiply(eqChange);                                                             
                         leftTrans = leftTrans.leftmultiply(scaleEq);
-                    }break;
+                    } break;
                     default:
                         OPM_THROW(std::logic_error,"return zero tranformation matrix");
                     }
