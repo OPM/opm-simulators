@@ -223,6 +223,7 @@ protected:
 	    matrix_.reset(new Matrix(M));
             rhs_ = &b;
 	    bool matrix_cont_added = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+	    
 	    if(matrix_cont_added){
 	      Vector weights;
 	      bool scale = true;
@@ -240,23 +241,27 @@ protected:
 	      }else{
 		scale = false;
 	      }
-	      // {
-	      // 	std::ofstream filem("matrix_istl_pre.txt");
-	      // 	Dune::writeMatrixMarket(*matrix_, filem);
-	      // 	std::ofstream fileb("rhs_istl_pre.txt");
-	      // 	Dune::writeMatrixMarket(*rhs_, fileb);
-	      // 	std::ofstream filew("weights_istl.txt");
-	      // 	Dune::writeMatrixMarket(weights, filew);
-	      // }
+	      if(parameters_.linear_solver_verbosity_ > 5) {
+	      	std::ofstream filem("matrix_istl_pre.txt");
+	      	Dune::writeMatrixMarket(*matrix_, filem);
+	      	std::ofstream fileb("rhs_istl_pre.txt");
+	      	Dune::writeMatrixMarket(*rhs_, fileb);
+	      	std::ofstream filew("weights_istl.txt");
+	      	Dune::writeMatrixMarket(weights, filew);
+	      }
 	      if(scale){
 		scaleMatrixAndRhs(weights);
 	      }
-	      // {
-	      // 	std::ofstream filem("matrix_istl.txt");
-	      // 	Dune::writeMatrixMarket(*matrix_, filem);
-	      // 	std::ofstream fileb("rhs_istl.txt");
-	      // 	Dune::writeMatrixMarket(*rhs_, fileb);
-	      // }
+	      bool scale_variables = false;
+	      if(parameters_.scale_linear_system_){
+		this->scaleEquationsAndVariables();
+	      }
+	      if(parameters_.linear_solver_verbosity_ > 5) { 
+	      	std::ofstream filem("matrix_istl.txt");
+	      	Dune::writeMatrixMarket(*matrix_, filem);
+	      	std::ofstream fileb("rhs_istl.txt");
+	      	Dune::writeMatrixMarket(*rhs_, fileb);
+	      }
 	    }
         }
       
@@ -286,7 +291,10 @@ protected:
                 Operator opA(*matrix_, *matrix_, wellModel);
                 solve( opA, x, *rhs_ );
             }
-
+	    if(parameters_.scale_linear_system_){
+	      scaleSolution(x);
+	    }
+	    
             return converged_;
 
         }
@@ -648,10 +656,48 @@ protected:
 	  BlockVector bweights;
 	  MatrixBlockType block_transpose = block.transpose();
 	  block_transpose.solve(bweights, rhs);
+	  bweights /=1000; // given normal desnistyies this scales weights to about 1
 	  weights[index] = bweights;
 	  ++index;
 	}
 	return weights;
+      }
+
+      void scaleEquationsAndVariables(){
+	// loop over primary variables
+	const auto& sol = simulator_.model().solution(0);
+	const auto endi = matrix_->end();
+	int index = 0;
+	for (auto i=matrix_->begin(); i!=endi; ++i){
+	  const auto endj = (*i).end();
+	  BlockVector& brhs = (*rhs_)[i.index()];
+	  for (auto j=(*i).begin(); j!=endj; ++j){
+	    MatrixBlockType& block = *j;
+	    const auto& priVars = sol[i.index()];
+	    for ( std::size_t ii = 0; ii < block.rows; ii++ ){	        
+	      for(std::size_t jj=0; jj < block.cols; jj++){
+		//double var_scale = getVarscale(jj, priVars.primaryVarsMeaning))
+		double var_scale = simulator_.model().primaryVarWeight(i.index(),jj);
+        block[ii][jj] /=var_scale;
+        block[ii][jj] *= simulator_.model().eqWeight(i.index(), ii);
+	      }
+	    }
+	  }
+	  for(std::size_t ii=0; ii < brhs.size(); ii++){
+	    brhs[ii] *= simulator_.model().eqWeight(i.index(), ii);
+	  }	  
+	}                        
+      }
+      void scaleSolution(Vector& x){
+	const auto& sol = simulator_.model().solution(0);
+	for(std::size_t i=0; i < x.size(); ++i){
+	  const auto& primVar = sol[i];
+	  auto& bx = x[i];
+	  for(std::size_t jj=0; jj < bx.size(); jj++){
+	    double var_scale = simulator_.model().primaryVarWeight(i,jj);
+        bx[jj] /= var_scale;
+	  }	  
+	}
       }
       
       Vector getQuasiImpesWeights(){
@@ -673,6 +719,9 @@ protected:
 	  BlockVector bweights;
 	  auto diag_block_transpose = diag_block.transpose();
 	  diag_block_transpose.solve(bweights, rhs);
+	  double abs_max =
+	    *std::max_element(bweights.begin(), bweights.end(), [](double a, double b){ return std::abs(a) < std::abs(b); } );
+	  bweights /= std::abs(abs_max);
 	  weights[i.index()] = bweights;
 	}
 	return weights;
@@ -729,9 +778,36 @@ protected:
 	  }	      
 	}
       }
-
       
-
+      static void multBlocksInMatrix(Matrix& ebosJac,const MatrixBlockType& trans,bool left=true){
+	const int n = ebosJac.N();
+	//const int np = FluidSystem::numPhases;
+	for (int row_index = 0; row_index < n; ++row_index) {
+	  auto& row = ebosJac[row_index];
+	  auto* dataptr = row.getptr();
+	  //auto* indexptr = row.getindexptr();
+	  for (int elem = 0; elem < row.N(); ++elem) {
+	    auto& block = dataptr[elem];
+	    if(left){
+	      block = block.leftmultiply(trans);
+	    }else{
+	      block = block.rightmultiply(trans);
+	    }
+	  }
+	}
+      }      
+      
+      static void multBlocksVector(Vector& ebosResid_cp,const MatrixBlockType& leftTrans){
+	for( auto& bvec: ebosResid_cp){
+	  auto bvec_new=bvec;
+	  leftTrans.mv(bvec, bvec_new);
+	  bvec=bvec_new;
+	}
+      }
+      static void scaleCPRSystem(Matrix& M_cp,Vector& b_cp,const MatrixBlockType& leftTrans){
+	multBlocksInMatrix(M_cp, leftTrans, true);
+	multBlocksVector(b_cp, leftTrans);
+      }
         const Simulator& simulator_;
         mutable int iterations_;
         mutable bool converged_;
@@ -743,6 +819,7 @@ protected:
 
         std::vector<std::pair<int,std::vector<int>>> overlapRowAndColumns_;
         FlowLinearSolverParameters parameters_;
+	bool scale_variables_;
     }; // end ISTLSolver
 
 } // namespace Opm
