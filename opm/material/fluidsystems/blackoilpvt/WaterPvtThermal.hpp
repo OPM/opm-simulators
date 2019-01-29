@@ -87,7 +87,7 @@ public:
         const auto& tables = eclState.getTableManager();
 
         enableThermalDensity_ = deck.hasKeyword("WATDENT");
-        enableThermalViscosity_ = deck.hasKeyword("VISCREF");
+        enableThermalViscosity_ = deck.hasKeyword("WATVISCT");
         enableInternalEnergy_ = deck.hasKeyword("SPECHEAT");
 
         unsigned numRegions = isothermalPvt_->numRegions();
@@ -107,10 +107,16 @@ public:
         }
 
         if (enableThermalViscosity_) {
-            const auto& viscrefKeyword = deck.getKeyword("VISCREF");
 
+            if (!deck.hasKeyword("VISCREF"))
+                throw std::runtime_error("VISCREF is required when WATVISCT is present");
+
+            const auto& viscrefKeyword = deck.getKeyword("VISCREF");
             const auto& watvisctTables = tables.getWatvisctTables();
 
+            const auto& pvtwKeyword = deck.getKeyword("PVTW");
+
+            assert(pvtwKeyword.size() == numRegions);
             assert(watvisctTables.size() == numRegions);
             assert(viscrefKeyword.size() == numRegions);
 
@@ -121,6 +127,14 @@ public:
 
                 const auto& viscrefRecord = viscrefKeyword.getRecord(regionIdx);
                 viscrefPress_[regionIdx] = viscrefRecord.getItem("REFERENCE_PRESSURE").getSIDouble(0);
+            }
+
+            for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
+                auto pvtwRecord = pvtwKeyword.getRecord(regionIdx);
+                pvtwViscosity_[regionIdx] =
+                        pvtwRecord.getItem("WATER_VISCOSITY").getSIDouble(0);
+                pvtwViscosibility_[regionIdx] =
+                        pvtwRecord.getItem("WATER_VISCOSIBILITY").getSIDouble(0);
             }
         }
 
