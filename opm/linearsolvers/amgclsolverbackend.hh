@@ -257,10 +257,10 @@ namespace Ewoms {
                     prm_.put("precond.eps_dd", -1e8);
                     prm_.put("precond.eps_ps", -1e8);
                 }
-                // else if (solver_type_ == "amgcl_trueimpes_pressure"){
+                else if (solver_type_ == "amgcl_trueimpes_pressure"){
                 //     prm_.put<bool>("use_drs",true);                    
-                //     trueImpesBlocksInMatrix(M_cp,b_cp);
-                //     multBlocksInMatrix(M_cp, rightTrans_, false);
+                // trueImpesBlocksInMatrix(M_cp,b_cp);
+                // multBlocksInMatrix(M_cp, rightTrans_, false);
                 //     weights_ = std::vector<double>(sz_,0.0);
                 //     std::vector<double>& fak_weights = weights_;
                 //     for(int i=0; i < n_; ++i){
@@ -271,22 +271,22 @@ namespace Ewoms {
                 //     prm_.put("precond.eps_dd", -1e8);
                 //     prm_.put("precond.eps_ps", -1e8); 
                 // }
-                else if (solver_type_ == "amgcl_quasiimpes_pressure"){
-                    // form quasi impes pressure equation
-                    // fake drs to get correct behavoir
-                    prm_.put<bool>("use_drs",true);
-                    quasiImpesBlocksInMatrix(M_cp, b_cp);
-                    //std::vector<double> fak_weights(sz_,0.0);
-                    weights_ = std::vector<double>(sz_,0.0);
-                    std::vector<double>& fak_weights = weights_;
-                    for(int i=0; i < n_; ++i){
-                        fak_weights[i*np_] = 1;
-                    }
-                    prm_.put("precond.weights", fak_weights.data());
-                    prm_.put("precond.weights_size", fak_weights.size());
-                    prm_.put("precond.eps_dd", -1e8);
-                    prm_.put("precond.eps_ps", -1e8);   
-                }
+                // else if (solver_type_ == "amgcl_quasiimpes_pressure"){
+                //     // form quasi impes pressure equation
+                //     // fake drs to get correct behavoir
+                //     prm_.put<bool>("use_drs",true);
+                //     quasiImpesBlocksInMatrix(M_cp, b_cp);
+                //     //std::vector<double> fak_weights(sz_,0.0);
+                //     weights_ = std::vector<double>(sz_,0.0);
+                //     std::vector<double>& fak_weights = weights_;
+                //     for(int i=0; i < n_; ++i){
+                //         fak_weights[i*np_] = 1;
+                //     }
+                //     prm_.put("precond.weights", fak_weights.data());
+                //     prm_.put("precond.weights_size", fak_weights.size());
+                //     prm_.put("precond.eps_dd", -1e8);
+                //     prm_.put("precond.eps_ps", -1e8);   
+                // }
                 else{
                     std::cout << "Solver type set to :" << solver_type_ << std::endl;
                     std::cout << "Use amgcl on original system quasi impes" << std::endl;

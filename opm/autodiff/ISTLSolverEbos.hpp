@@ -226,7 +226,7 @@ protected:
 	    
 	    if(matrix_cont_added){
 	      Vector weights;
-	      bool scale = true;
+	      bool form_cpr = true;
 	      if(parameters_.system_strategy_ == "quasiimpes"){
 		weights = getQuasiImpesWeights();
 	      }else if(parameters_.system_strategy_ == "trueimpes"){
@@ -239,7 +239,7 @@ protected:
 		bvec[pressureIndex] = 1;
 		weights = getSimpleWeights(bvec);
 	      }else{
-		scale = false;
+		form_cpr = false;
 	      }
 	      if(parameters_.linear_solver_verbosity_ > 5) {
 	      	std::ofstream filem("matrix_istl_pre.txt");
@@ -249,13 +249,14 @@ protected:
 	      	std::ofstream filew("weights_istl.txt");
 	      	Dune::writeMatrixMarket(weights, filew);
 	      }
-	      if(scale){
+	      if(parameters_.scale_linear_system_){
+		weights = this->scaleEquationsAndVariables(weights);
+	      }
+	      if(form_cpr){
 		scaleMatrixAndRhs(weights);
 	      }
-	      bool scale_variables = false;
-	      if(parameters_.scale_linear_system_){
-		this->scaleEquationsAndVariables();
-	      }
+	      
+	      
 	      if(parameters_.linear_solver_verbosity_ > 5) { 
 	      	std::ofstream filem("matrix_istl.txt");
 	      	Dune::writeMatrixMarket(*matrix_, filem);
@@ -663,7 +664,7 @@ protected:
 	return weights;
       }
 
-      void scaleEquationsAndVariables(){
+      void scaleEquationsAndVariables(Vector& weights){
 	// loop over primary variables
 	const auto& sol = simulator_.model().solution(0);
 	const auto endi = matrix_->end();
@@ -671,6 +672,7 @@ protected:
 	for (auto i=matrix_->begin(); i!=endi; ++i){
 	  const auto endj = (*i).end();
 	  BlockVector& brhs = (*rhs_)[i.index()];
+	  BlockVector& bw = weights[i.index()];
 	  for (auto j=(*i).begin(); j!=endj; ++j){
 	    MatrixBlockType& block = *j;
 	    const auto& priVars = sol[i.index()];
@@ -685,7 +687,11 @@ protected:
 	  }
 	  for(std::size_t ii=0; ii < brhs.size(); ii++){
 	    brhs[ii] *= simulator_.model().eqWeight(i.index(), ii);
-	  }	  
+	    bw[ii]  /= simulator_.model().eqWeight(i.index(), ii);
+	  }
+	  double abs_max =
+	    *std::max_element(bw.begin(), bw.end(), [](double a, double b){ return std::abs(a) < std::abs(b); } );
+	  bw /= abs_max;
 	}                        
       }
       void scaleSolution(Vector& x){
@@ -695,7 +701,7 @@ protected:
 	  auto& bx = x[i];
 	  for(std::size_t jj=0; jj < bx.size(); jj++){
 	    double var_scale = simulator_.model().primaryVarWeight(i,jj);
-        bx[jj] /= var_scale;
+            bx[jj] /= var_scale;
 	  }	  
 	}
       }
