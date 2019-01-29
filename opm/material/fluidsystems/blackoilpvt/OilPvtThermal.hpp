@@ -87,14 +87,17 @@ public:
         const auto& tables = eclState.getTableManager();
 
         enableThermalDensity_ = deck.hasKeyword("OILDENT");
-        enableThermalViscosity_ = deck.hasKeyword("VISCREF");
+        enableThermalViscosity_ = deck.hasKeyword("OILVISCT");
         enableInternalEnergy_ = deck.hasKeyword("SPECHEAT");
 
         unsigned numRegions = isothermalPvt_->numRegions();
         setNumRegions(numRegions);
 
         // viscosity
-        if (deck.hasKeyword("VISCREF")) {
+        if (deck.hasKeyword("OILVISCT")) {
+            if (!deck.hasKeyword("VISCREF"))
+                throw std::runtime_error("VISCREF is required when OILVISCT is present");
+
             const auto& oilvisctTables = tables.getOilvisctTables();
             const auto& viscrefKeyword = deck.getKeyword("VISCREF");
 
