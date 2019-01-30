@@ -208,14 +208,18 @@ protected:
             matrix_for_preconditioner_.reset();
         }
 
-        void prepare(const SparseMatrixAdapter& M) {
+        void prepare(const SparseMatrixAdapter& M, const Vector& b) {
         }
 
         void setResidual(Vector& b) {
             rhs_ = &b;
         }
 
-        void setJacobian(const SparseMatrixAdapter& M) {
+        void getResidual(Vector& b) const {
+            b = *rhs_;
+        }
+
+        void setMatrix(const SparseMatrixAdapter& M) {
             matrix_ = &M.istlMatrix();
         }
 
