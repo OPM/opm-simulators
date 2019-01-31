@@ -1306,6 +1306,7 @@ public:
             unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
             values.setThermalFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
         }
+
     }
 
     /*!
@@ -2051,6 +2052,21 @@ private:
                 dofFluidState.setRv(rvData[cartesianDofIdx]);
             else if (Indices::gasEnabled && Indices::oilEnabled)
                 dofFluidState.setRv(0.0);
+
+            //////
+            // set invB_
+            //////
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
+                const auto& b = FluidSystem::inverseFormationVolumeFactor(dofFluidState, phaseIdx, pvtRegionIndex(dofIdx));
+                dofFluidState.setInvB(phaseIdx, b);
+
+                const auto& rho = FluidSystem::density(dofFluidState, phaseIdx, pvtRegionIndex(dofIdx));
+                dofFluidState.setDensity(phaseIdx, rho);
+
+            }
         }
     }
 
