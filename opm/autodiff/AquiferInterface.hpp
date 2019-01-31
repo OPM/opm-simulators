@@ -67,9 +67,9 @@ namespace Opm
     AquiferInterface( const Aquancon::AquanconOutput& connection,
                       const std::unordered_map<int, int>& cartesian_to_compressed,
                       const Simulator& ebosSimulator)
-                    : ebos_simulator_(ebosSimulator)
+                    : connection_(connection)
+                    , ebos_simulator_(ebosSimulator)
                     , cartesian_to_compressed_(cartesian_to_compressed)
-                    , connection_(connection)
     {}
 
     // Deconstructor
