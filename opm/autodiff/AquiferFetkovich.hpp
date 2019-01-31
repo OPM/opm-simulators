@@ -46,10 +46,10 @@ namespace Opm
     using Base::waterCompIdx;
     using Base::waterPhaseIdx;
 
-    AquiferFetkovich( const Aquifetp::AQUFETP_data& aqufetp_data,
-                      const Aquancon::AquanconOutput& connection,
+    AquiferFetkovich( const Aquancon::AquanconOutput& connection,
                       const std::unordered_map<int, int>& cartesian_to_compressed,
-                      const Simulator& ebosSimulator)
+                      const Simulator& ebosSimulator,
+                      const Aquifetp::AQUFETP_data& aqufetp_data)
     : Base(connection, cartesian_to_compressed, ebosSimulator)
     , aqufetp_data_(aqufetp_data)
     {}

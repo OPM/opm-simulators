@@ -44,10 +44,10 @@ namespace Opm
 
           using Base::waterCompIdx;
           using Base::waterPhaseIdx;
-            AquiferCarterTracy( const AquiferCT::AQUCT_data& aquct_data,
-                                const Aquancon::AquanconOutput& connection,
+            AquiferCarterTracy( const Aquancon::AquanconOutput& connection,
                                 const std::unordered_map<int, int>& cartesian_to_compressed,
-                                const Simulator& ebosSimulator)
+                                const Simulator& ebosSimulator,
+                                const AquiferCT::AQUCT_data& aquct_data)
             : Base(connection, cartesian_to_compressed, ebosSimulator)
             , aquct_data_(aquct_data)
             {}

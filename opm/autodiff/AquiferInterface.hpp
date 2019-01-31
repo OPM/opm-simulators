@@ -187,8 +187,8 @@ namespace Opm
     virtual void endTimeStep() = 0;
 
   protected:
-    const Simulator& ebos_simulator_;
     const Aquancon::AquanconOutput connection_;
+    const Simulator& ebos_simulator_;
     const std::unordered_map<int, int> cartesian_to_compressed_;
 
     // Grid variables
