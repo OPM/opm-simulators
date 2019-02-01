@@ -91,15 +91,13 @@ class EclTransmissibility
 
     static const unsigned elemIdxShift = 32; // bits
 
-    using NncData = Opm::NNCdata;
-
 public:
 
     EclTransmissibility(const Vanguard& vanguard)
         : vanguard_(vanguard)
     {
         const Opm::UnitSystem& unitSystem = vanguard_.deck().getActiveUnitSystem();
-        transmissibility_threshold_  = unitSystem.parse("Transmissibility").getSIScaling() * 1e-6;
+        transmissibilityThreshold_  = unitSystem.parse("Transmissibility").getSIScaling() * 1e-6;
     }
 
     /*!
@@ -331,11 +329,10 @@ public:
                 // Then the smallest multiplier is applied.
                 // Default is to apply the top and bottom multiplier
                 bool useSmallestMultiplier = eclGrid.getMultzOption() == Opm::PinchMode::ModeEnum::ALL;
-                if (useSmallestMultiplier) {
+                if (useSmallestMultiplier)
                     applyAllZMultipliers_(trans, insideFaceIdx, insideCartElemIdx, outsideCartElemIdx, transMult, cartDims);
-                } else {
+                else
                     applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
-                }
                 // ... and outside elements
                 applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
 
@@ -385,7 +382,7 @@ public:
             int cartElemIdx = vanguard_.cartesianIndexMapper().cartesianIndex(elemIdx);
             globalToLocal[cartElemIdx] = elemIdx;
         }
-        applyEditNNCToGridTrans_(elemMapper, globalToLocal);
+        applyEditNncToGridTrans_(elemMapper, globalToLocal);
         applyNncToGridTrans_(globalToLocal);
 
         //remove very small non-neighbouring transmissibilities
@@ -432,18 +429,19 @@ public:
 
 private:
 
-    void removeSmallNonCartesianTransmissibilities_() {
+    void removeSmallNonCartesianTransmissibilities_()
+    {
         const auto& cartMapper = vanguard_.cartesianIndexMapper();
         const auto& cartDims = cartMapper.cartesianDimensions();
-        for ( auto&& trans: trans_ ){
-            if (trans.second < transmissibility_threshold_) {
+        for (auto&& trans: trans_) {
+            if (trans.second < transmissibilityThreshold_) {
                 const auto& id = trans.first;
                 const auto& elements = isIdReverse_(id);
                 int gc1 = std::min(cartMapper.cartesianIndex(elements.first), cartMapper.cartesianIndex(elements.second));
                 int gc2 = std::max(cartMapper.cartesianIndex(elements.first), cartMapper.cartesianIndex(elements.second));
 
                 // only adjust the NNCs
-                if (gc2 - gc1 == 1 || gc2 - gc1 == cartDims[0] || gc2 - gc1 == cartDims[0]*cartDims[1] )
+                if (gc2 - gc1 == 1 || gc2 - gc1 == cartDims[0] || gc2 - gc1 == cartDims[0]*cartDims[1])
                     continue;
 
                 //remove transmissibilities less than the threshold (by default 1e-6 in the deck's unit system)
@@ -452,16 +450,20 @@ private:
         }
     }
 
-    void applyAllZMultipliers_(Scalar& trans, unsigned insideFaceIdx, unsigned insideCartElemIdx, unsigned outsideCartElemIdx,
-                               const Opm::TransMult& transMult, const std::array<int, dimWorld>& cartDims){
-
-        if (insideFaceIdx > 3) { //TOP or BOTTOM
+    void applyAllZMultipliers_(Scalar& trans,
+                               unsigned insideFaceIdx,
+                               unsigned insideCartElemIdx,
+                               unsigned outsideCartElemIdx,
+                               const Opm::TransMult& transMult,
+                               const std::array<int, dimWorld>& cartDims)
+    {
+        if (insideFaceIdx > 3) { // top or or bottom
             Scalar mult = 1e20;
             unsigned cartElemIdx = insideCartElemIdx;
             // pick the smallest multiplier while looking down the pillar untill reaching the other end of the connection
             // for the inbetween cells we apply it from both sides
             while (cartElemIdx != outsideCartElemIdx) {
-                if (insideFaceIdx == 4 || cartElemIdx !=insideCartElemIdx  )
+                if (insideFaceIdx == 4 || cartElemIdx !=insideCartElemIdx )
                     mult = std::min(mult, transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZMinus));
                 if (insideFaceIdx == 5 || cartElemIdx !=insideCartElemIdx)
                     mult = std::min(mult, transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZPlus));
@@ -469,13 +471,13 @@ private:
                 cartElemIdx += cartDims[0]*cartDims[1];
             }
             trans *= mult;
-        } else {
-            applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
         }
-
+        else
+            applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
     }
 
-    void updateFromEclState_(){
+    void updateFromEclState_()
+    {
         const auto& gridView = vanguard_.gridView();
         const auto& cartMapper = vanguard_.cartesianIndexMapper();
         const auto& cartDims = cartMapper.cartesianDimensions();
@@ -517,31 +519,28 @@ private:
                 int gc2 = std::max(cartMapper.cartesianIndex(c1), cartMapper.cartesianIndex(c2));
 
                 if (gc2 - gc1 == 1) {
-                    if (inputTranx.deckAssigned()) {
+                    if (inputTranx.deckAssigned())
                         // set simulator internal transmissibilities to values from inputTranx
                         trans_[isId] = inputTranx.iget(gc1);
-                    } else {
+                    else
                         // Scale transmissibilities with scale factor from inputTranx
                         trans_[isId] *= inputTranx.iget(gc1);
-                    }
                 }
                 else if (gc2 - gc1 == cartDims[0]) {
-                    if (inputTrany.deckAssigned()) {
+                    if (inputTrany.deckAssigned())
                         // set simulator internal transmissibilities to values from inputTrany
                         trans_[isId] = inputTrany.iget(gc1);
-                    } else {
+                    else
                         // Scale transmissibilities with scale factor from inputTrany
                         trans_[isId] *= inputTrany.iget(gc1);
-                    }
                 }
                 else if (gc2 - gc1 == cartDims[0]*cartDims[1]) {
-                    if (inputTranz.deckAssigned()) {
+                    if (inputTranz.deckAssigned())
                         // set simulator internal transmissibilities to values from inputTranz
                         trans_[isId] = inputTranz.iget(gc1);
-                    } else {
+                    else
                         // Scale transmissibilities with scale factor from inputTranz
                         trans_[isId] *= inputTranz.iget(gc1);
-                    }
                 }
                 //else.. We don't support modification of NNC at the moment.
             }
@@ -550,15 +549,15 @@ private:
 
 
     template <class Intersection>
-    void computeFaceProperties( const Intersection& intersection,
-                                const int insideElemIdx,
-                                const int insideFaceIdx,
-                                const int outsideElemIdx,
-                                const int outsideFaceIdx,
-                                DimVector& faceCenterInside,
-                                DimVector& faceCenterOutside,
-                                DimVector& faceAreaNormal,
-                                /*isCpGrid=*/std::false_type) const
+    void computeFaceProperties(const Intersection& intersection,
+                               const int insideElemIdx,
+                               const int insideFaceIdx,
+                               const int outsideElemIdx,
+                               const int outsideFaceIdx,
+                               DimVector& faceCenterInside,
+                               DimVector& faceCenterOutside,
+                               DimVector& faceAreaNormal,
+                               /*isCpGrid=*/std::false_type) const
     {
         // default implementation for DUNE grids
         const auto& geometry = intersection.geometry();
@@ -570,19 +569,19 @@ private:
     }
 
     template <class Intersection>
-    void computeFaceProperties( const Intersection& intersection,
-                                const int insideElemIdx,
-                                const int insideFaceIdx,
-                                const int outsideElemIdx,
-                                const int outsideFaceIdx,
-                                DimVector& faceCenterInside,
-                                DimVector& faceCenterOutside,
-                                DimVector& faceAreaNormal,
-                                /*isCpGrid=*/std::true_type) const
+    void computeFaceProperties(const Intersection& intersection,
+                               const int insideElemIdx,
+                               const int insideFaceIdx,
+                               const int outsideElemIdx,
+                               const int outsideFaceIdx,
+                               DimVector& faceCenterInside,
+                               DimVector& faceCenterOutside,
+                               DimVector& faceAreaNormal,
+                               /*isCpGrid=*/std::true_type) const
     {
         int faceIdx = intersection.id();
-        faceCenterInside = vanguard_.grid().faceCenterEcl(insideElemIdx,insideFaceIdx);
-        faceCenterOutside = vanguard_.grid().faceCenterEcl(outsideElemIdx,outsideFaceIdx);
+        faceCenterInside = vanguard_.grid().faceCenterEcl(insideElemIdx, insideFaceIdx);
+        faceCenterOutside = vanguard_.grid().faceCenterEcl(outsideElemIdx, outsideFaceIdx);
         faceAreaNormal = vanguard_.grid().faceAreaNormalEcl(faceIdx);
     }
 
@@ -600,50 +599,53 @@ private:
      *         and the second the NNCs not resembled by faces of the grid. NNCs specified for
      *         inactive cells are omitted in these vectors.
      */
-    std::tuple<std::vector<NncData>, std::vector<NncData> >
+    std::tuple<std::vector<Opm::NNCdata>, std::vector<Opm::NNCdata> >
     applyNncToGridTrans_(const std::vector<int>& cartesianToCompressed)
     {
         // First scale NNCs with EDITNNC.
-        std::vector<NncData> processedNnc, unprocessedNnc;
+        std::vector<Opm::NNCdata> unprocessedNnc;
+        std::vector<Opm::NNCdata> processedNnc;
         const auto& nnc = vanguard_.eclState().getInputNNC();
-        if ( ! nnc.hasNNC() )
-        {
+        if (!nnc.hasNNC())
             return make_tuple(processedNnc, unprocessedNnc);
-        }
+
         auto nncData = nnc.nncdata();
         auto editnncData = vanguard_.eclState().getInputEDITNNC().data();
-        auto nncLess = [](const NncData& d1, const NncData& d2){
-            return ( d1.cell1 < d2.cell1 ) ||
-            ( d1.cell1 == d2.cell1 && d1.cell2 < d2.cell2 );
-        };
+        auto nncLess =
+            [](const Opm::NNCdata& d1, const Opm::NNCdata& d2)
+            {
+                return
+                    (d1.cell1 < d2.cell1)
+                    || (d1.cell1 == d2.cell1 && d1.cell2 < d2.cell2);
+            };
         std::sort(nncData.begin(), nncData.end(), nncLess);
         auto candidate = nncData.begin();
-        for ( const auto& edit: editnncData )
-        {
-            auto printNncWarning = [](int c1, int c2){
-                std::ostringstream sstr;
-                sstr << "Cannot edit NNC from " << c1 << " to " << c2
-                << " as it does not exist";
-                Opm::OpmLog::warning(sstr.str());
-            };
-            if ( candidate == nncData.end() )
-            {
+        for (const auto& edit: editnncData) {
+            auto printNncWarning =
+                [](int c1, int c2)
+                {
+                    std::ostringstream sstr;
+                    sstr << "Cannot edit NNC from " << c1 << " to " << c2
+                         << " as it does not exist";
+                    Opm::OpmLog::warning(sstr.str());
+                };
+            if (candidate == nncData.end()) {
                 // no more NNCs left
                 printNncWarning(edit.cell1, edit.cell2);
                 continue;
             }
-            if ( candidate->cell1 != edit.cell1 || candidate->cell2 != edit.cell2 )
-            {
-                candidate = std::lower_bound(candidate, nncData.end(), NncData(edit.cell1, edit.cell2, 0), nncLess);
-                if ( candidate == nncData.end() )
-                {
+            if (candidate->cell1 != edit.cell1 || candidate->cell2 != edit.cell2) {
+                candidate = std::lower_bound(candidate, nncData.end(), Opm::NNCdata(edit.cell1, edit.cell2, 0), nncLess);
+                if (candidate == nncData.end()) {
                     // no more NNCs left
                     printNncWarning(edit.cell1, edit.cell2);
                     continue;
                 }
             }
             auto firstCandidate = candidate;
-            while ( candidate != nncData.end() && candidate->cell1 == edit.cell1 && candidate->cell2 == edit.cell2 )
+            while (candidate != nncData.end()
+                   && candidate->cell1 == edit.cell1
+                   && candidate->cell2 == edit.cell2)
             {
                 candidate->trans *= edit.trans;
                 ++candidate;
@@ -653,40 +655,30 @@ private:
             candidate = firstCandidate;
         }
 
-        for (const auto& nncEntry : nnc.nncdata())
-        {
+        for (const auto& nncEntry : nnc.nncdata()) {
             auto c1 = nncEntry.cell1;
             auto c2 = nncEntry.cell2;
             auto low = cartesianToCompressed[c1];
             auto high = cartesianToCompressed[c2];
 
-            if ( low > high)
-            {
+            if (low > high)
                 std::swap(low, high);
-            }
 
-            if ( low == -1 && high == -1 )
-            {
+            if (low == -1 && high == -1)
                 // Silently discard as it is not between active cells
                 continue;
-            }
 
-            if ( low == -1 || high == -1)
-            {
+            if (low == -1 || high == -1)
                 OPM_THROW(std::logic_error, "NNC between active and inactive cells (" <<
                           low << " -> " << high);
-            }
 
             auto candidate = trans_.find(isId_(low, high));
 
-            if ( candidate == trans_.end() )
-            {
+            if (candidate == trans_.end())
                 // This NNC is not resembled by the grid. Save it for later
                 // processing with local cell values
                 unprocessedNnc.push_back({c1, c2, nncEntry.trans});
-            }
-            else
-            {
+            else {
                 // NNC is represented by the grid and might be a neighboring connection
                 // In this case the transmissibilty is added to the value already
                 // set or computed.
@@ -698,41 +690,37 @@ private:
     }
 
     /// \brief Multiplies the grid transmissibilities according to EDITNNC.
-    void applyEditNNCToGridTrans_(const ElementMapper& elementMapper,
+    void applyEditNncToGridTrans_(const ElementMapper& elementMapper,
                                   const std::vector<int>& globalToLocal)
     {
-        const auto& editNNC = vanguard_.eclState().getInputEDITNNC();
-        if ( editNNC.empty() )
-        {
+        const auto& editNnc = vanguard_.eclState().getInputEDITNNC();
+        if (editNnc.empty())
             return;
-        }
 
-        // editNNC is supposed to only reference non-neighboring connections and not
+        // editNnc is supposed to only reference non-neighboring connections and not
         // neighboring connections. Use all entries for scaling if there is an NNC.
         // variable nnc incremented in loop body.
-        for (auto nnc = editNNC.data().begin(), end = editNNC.data().end(); nnc != end; )
-        {
-            auto c1 = nnc->cell1, c2 = nnc->cell2;
-            auto low = globalToLocal[c1], high = globalToLocal[c2];
-            if ( low > high)
-            {
+        auto nnc = editNnc.data().begin();
+        auto end = editNnc.data().end();
+        while (nnc != end) {
+            auto c1 = nnc->cell1;
+            auto c2 = nnc->cell2;
+            auto low = globalToLocal[c1];
+            auto high = globalToLocal[c2];
+            if (low > high)
                 std::swap(low, high);
-            }
-            auto candidate = trans_.find(isId_(low, high));
 
-            if ( candidate == trans_.end() )
-            {
+            auto candidate = trans_.find(isId_(low, high));
+            if (candidate == trans_.end()) {
                 std::ostringstream sstr;
                 sstr << "Cannot edit NNC from " << c1 << " to " << c2
                      << " as it does not exist";
                 Opm::OpmLog::warning(sstr.str());
                 ++nnc;
             }
-            else
-            {
+            else {
                 // NNC exists
-                while ( nnc!= end && c1==nnc->cell1 && c2==nnc->cell2 )
-                {
+                while (nnc!= end && c1==nnc->cell1 && c2==nnc->cell2) {
                     candidate->second *= nnc->trans;
                     ++nnc;
                 }
@@ -831,7 +819,9 @@ private:
         return x;
     }
 
-    void applyMultipliers_(Scalar& trans, unsigned faceIdx, unsigned cartElemIdx,
+    void applyMultipliers_(Scalar& trans,
+                           unsigned faceIdx,
+                           unsigned cartElemIdx,
                            const Opm::TransMult& transMult) const
     {
         // apply multiplyer for the transmissibility of the face. (the
@@ -861,7 +851,9 @@ private:
         }
     }
 
-    void applyNtg_(Scalar& trans, unsigned faceIdx, unsigned cartElemIdx,
+    void applyNtg_(Scalar& trans,
+                   unsigned faceIdx,
+                   unsigned cartElemIdx,
                    const std::vector<double>& ntg) const
     {
         // apply multiplyer for the transmissibility of the face. (the
@@ -886,9 +878,8 @@ private:
         }
     }
 
-    void minPvFillNtg_(std::vector<double>& averageNtg) const {
-
-
+    void minPvFillNtg_(std::vector<double>& averageNtg) const
+    {
         // compute volume weighted arithmetic average of NTG for
         // cells merged as an result of minpv.
         const auto& eclState = vanguard_.eclState();
@@ -911,8 +902,7 @@ private:
         const auto& cartDims = cartMapper.cartesianDimensions();
         assert(dimWorld > 1);
         const size_t nxny = cartDims[0] * cartDims[1];
-        for (size_t cartesianCellIdx = 0; cartesianCellIdx < ntg.size(); ++cartesianCellIdx)
-        {
+        for (size_t cartesianCellIdx = 0; cartesianCellIdx < ntg.size(); ++cartesianCellIdx) {
             // use the original ntg values for the inactive cells
             if (!actnum[cartesianCellIdx])
                 continue;
@@ -923,22 +913,23 @@ private:
             double ntgCellVolume = ntg[cartesianCellIdx] * cellVolume;
             double totalCellVolume = cellVolume;
             int cartesianCellIdxAbove = cartesianCellIdx - nxny;
-            while ( cartesianCellIdxAbove >= 0 &&
-                 actnum[cartesianCellIdxAbove] > 0 &&
-                 porv[cartesianCellIdxAbove] < eclGrid.getMinpvVector()[cartesianCellIdxAbove] ) {
-
+            while (cartesianCellIdxAbove >= 0 &&
+                   actnum[cartesianCellIdxAbove] > 0 &&
+                   porv[cartesianCellIdxAbove] < eclGrid.getMinpvVector()[cartesianCellIdxAbove])
+            {
                 // Volume weighted arithmetic average of NTG
                 const double cellAboveVolume = eclGrid.getCellVolume(cartesianCellIdxAbove);
                 totalCellVolume += cellAboveVolume;
                 ntgCellVolume += ntg[cartesianCellIdxAbove]*cellAboveVolume;
                 cartesianCellIdxAbove -= nxny;
             }
+
             averageNtg[cartesianCellIdx] = ntgCellVolume / totalCellVolume;
         }
     }
 
     const Vanguard& vanguard_;
-    Scalar transmissibility_threshold_;
+    Scalar transmissibilityThreshold_;
     std::vector<DimMatrix> permeability_;
     std::unordered_map<std::uint64_t, Scalar> trans_;
     std::map<std::pair<unsigned, unsigned>, Scalar> transBoundary_;
