@@ -115,7 +115,7 @@ public:
         globalGrid_ = simulator_.vanguard().grid();
         globalGrid_.switchToGlobalView();
         eclIO_.reset(new Opm::EclipseIO(simulator_.vanguard().eclState(),
-                                        Opm::UgGridHelpers::createEclipseGrid( globalGrid_ , simulator_.vanguard().eclState().getInputGrid() ),
+                                        Opm::UgGridHelpers::createEclipseGrid(globalGrid_, simulator_.vanguard().eclState().getInputGrid()),
                                         simulator_.vanguard().schedule(),
                                         simulator_.vanguard().summaryConfig()));
 
@@ -323,18 +323,18 @@ public:
         bool enableHysteresis = simulator_.problem().materialLawManager()->enableHysteresis();
         bool enableSwatinit = simulator_.vanguard().eclState().get3DProperties().hasDeckDoubleGridProperty("SWATINIT");
         std::vector<Opm::RestartKey> solutionKeys{
-            {"PRESSURE" , Opm::UnitSystem::measure::pressure},
-            {"SWAT" ,     Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
-            {"SGAS" ,     Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
-            {"TEMP" ,     Opm::UnitSystem::measure::temperature, enableEnergy},
-            {"RS" ,       Opm::UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
-            {"RV" ,       Opm::UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
-            {"SOMAX",     Opm::UnitSystem::measure::identity, simulator_.problem().vapparsActive()},
-            {"PCSWM_OW",  Opm::UnitSystem::measure::identity, enableHysteresis},
-            {"KRNSW_OW",  Opm::UnitSystem::measure::identity, enableHysteresis},
-            {"PCSWM_GO",  Opm::UnitSystem::measure::identity, enableHysteresis},
-            {"KRNSW_GO",  Opm::UnitSystem::measure::identity, enableHysteresis},
-            {"PPCW",      Opm::UnitSystem::measure::pressure, enableSwatinit}
+            {"PRESSURE", Opm::UnitSystem::measure::pressure},
+            {"SWAT", Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
+            {"SGAS", Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
+            {"TEMP" , Opm::UnitSystem::measure::temperature, enableEnergy},
+            {"RS", Opm::UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
+            {"RV", Opm::UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
+            {"SOMAX", Opm::UnitSystem::measure::identity, simulator_.problem().vapparsActive()},
+            {"PCSWM_OW", Opm::UnitSystem::measure::identity, enableHysteresis},
+            {"KRNSW_OW", Opm::UnitSystem::measure::identity, enableHysteresis},
+            {"PCSWM_GO", Opm::UnitSystem::measure::identity, enableHysteresis},
+            {"KRNSW_GO", Opm::UnitSystem::measure::identity, enableHysteresis},
+            {"PPCW", Opm::UnitSystem::measure::pressure, enableSwatinit}
         };
 
         const auto& inputThpres = eclState().getSimulationConfig().getThresholdPressure();
@@ -373,9 +373,9 @@ private:
         const auto& cartDims = cartMapper.cartesianDimensions();
         const int globalSize = cartDims[0]*cartDims[1]*cartDims[2];
 
-        Opm::data::CellData tranx = {Opm::UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), Opm::data::TargetType::INIT};
-        Opm::data::CellData trany = {Opm::UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), Opm::data::TargetType::INIT};
-        Opm::data::CellData tranz = {Opm::UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), Opm::data::TargetType::INIT};
+        Opm::data::CellData tranx = {Opm::UnitSystem::measure::transmissibility, std::vector<double>(globalSize), Opm::data::TargetType::INIT};
+        Opm::data::CellData trany = {Opm::UnitSystem::measure::transmissibility, std::vector<double>(globalSize), Opm::data::TargetType::INIT};
+        Opm::data::CellData tranz = {Opm::UnitSystem::measure::transmissibility, std::vector<double>(globalSize), Opm::data::TargetType::INIT};
 
         for (size_t i = 0; i < tranx.data.size(); ++i) {
             tranx.data[0] = 0.0;
@@ -438,7 +438,7 @@ private:
         }
 
         return {{"TRANX", tranx},
-                {"TRANY", trany} ,
+                {"TRANY", trany},
                 {"TRANZ", tranz}};
     }
 
