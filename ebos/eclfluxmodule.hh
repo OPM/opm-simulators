@@ -434,7 +434,8 @@ protected:
                 if (enableSolvent && phaseIdx == gasPhaseIdx) {
                         asImp_().setSolventVolumeFlux( pressureDifference_[phaseIdx]*up.solventMobility()*(-trans/faceArea));
                 }
-            } else {
+            }
+            else {
                 // compute the phase mobility using the material law parameters of the
                 // interior element. TODO: this could probably be done more efficiently
                 const auto& matParams =

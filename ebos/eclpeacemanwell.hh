@@ -487,7 +487,8 @@ public:
         matrix.setBlock(wellGlobalDofIdx, wellGlobalDofIdx, diagBlock);
     }
 
-    Scalar volumetricSurfaceRateForConnection(int globalDofIdx, int phaseIdx) const {
+    Scalar volumetricSurfaceRateForConnection(int globalDofIdx, int phaseIdx) const
+    {
         const DofVariables& dofVars = *dofVariables_.at(globalDofIdx);
         std::array<Scalar, numPhases> volumetricReservoirRates;
         computeVolumetricDofRates_(volumetricReservoirRates, actualBottomHolePressure_, dofVars);
@@ -718,9 +719,8 @@ public:
             refDepth_ = dofPos[2];
     }
 
-    int numConnections() const {
-        return dofVariables_.size();
-    }
+    int numConnections() const
+    { return dofVariables_.size(); }
 
     /*!
      * \brief Finalize the specification of the borehole.

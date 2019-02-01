@@ -363,7 +363,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { numComponents = FluidSystem::numComponents };
     enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
     enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
-    enum { enablePolymerMW = GET_PROP_VALUE(TypeTag, EnablePolymerMW) };
+    enum { enablePolymerMolarWeight = GET_PROP_VALUE(TypeTag, EnablePolymerMW) };
 
     enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
@@ -593,7 +593,8 @@ public:
             simulator.setTimeStepSize(0.0);
 
             readEclRestartSolution_();
-        } else {
+        }
+        else {
             readInitialCondition_();
             // Set the start time of the simulation
             simulator.setStartTime( timeMap.getStartTime(/*timeStepIdx=*/0) );
@@ -1335,7 +1336,7 @@ public:
         if (enablePolymer)
             values[Indices::polymerConcentrationIdx] = polymerConcentration_[globalDofIdx];
 
-        if (enablePolymerMW)
+        if (enablePolymerMolarWeight)
             values[Indices::polymerMoleWeightIdx]= polymerMoleWeight_[globalDofIdx];
 
         values.checkDefined();
@@ -1346,7 +1347,6 @@ public:
      */
     void initialSolutionApplied()
     {
-
         if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
             // initialize the wells. Note that this needs to be done after initializing the
             // intrinsic permeabilities and the after applying the initial solution because
@@ -1819,7 +1819,6 @@ private:
 
     }
 
-
     void readEquilInitialCondition_()
     {
         // initial condition corresponds to hydrostatic conditions.
@@ -1856,7 +1855,7 @@ private:
         if (enablePolymer)
             polymerConcentration_.resize(numElems,0.0);
 
-        if (enablePolymerMW) {
+        if (enablePolymerMolarWeight) {
             const std::string msg {"Support of the RESTART for polymer molecular weight "
                                    "is not implemented yet. The polymer weight value will be "
                                    "zero when RESTART begins"};
@@ -1898,7 +1897,8 @@ private:
 
     }
 
-    void processRestartSaturations_(InitialFluidState& elemFluidState) {
+    void processRestartSaturations_(InitialFluidState& elemFluidState)
+    {
         // each phase needs to be above certain value to be claimed to be existing
         // this is used to recover some RESTART running with the defaulted single-precision format
         const Scalar smallSaturationTolerance = 1.e-6;
@@ -2098,7 +2098,7 @@ private:
             }
         }
 
-        if (enablePolymerMW) {
+        if (enablePolymerMolarWeight) {
             const std::vector<double>& polyMoleWeightData = eclState.get3DProperties().getDoubleGridProperty("SPOLYMW").getData();
             polymerMoleWeight_.resize(numDof,0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
