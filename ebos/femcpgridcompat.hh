@@ -37,67 +37,54 @@
 #include <dune/fem/misc/compatibility.hh>
 #include <dune/fem/io/streams/streams.hh>
 
-namespace Dune
-{
+namespace Dune {
+namespace cpgrid {
+template <int codim>
+class Entity;
 
-  namespace cpgrid
-  {
-    template <int codim>
-    class Entity;
+template <int codim>
+class EntityPointer;
+}
 
-    template <int codim>
-    class EntityPointer;
-  }
-
-#if DUNE_VERSION_NEWER( DUNE_FEM, 2, 6 )
-  template <int dim, int cdim>
-  auto referenceElement(const Dune::cpgrid::Geometry<dim, cdim>& geo)
-      -> decltype(referenceElement<double, dim>(geo.type()))
-  {
-      return referenceElement<double, dim>(geo.type());
-  }
+#if DUNE_VERSION_NEWER(DUNE_FEM, 2, 6)
+template <int dim, int cdim>
+auto referenceElement(const Dune::cpgrid::Geometry<dim, cdim>& geo)
+    -> decltype(referenceElement<double, dim>(geo.type()))
+{ return referenceElement<double, dim>(geo.type()); }
 #endif
 
-  // specialization of dune-fem compatiblity functions for CpGrid, since CpGrid does not use the interface classes.
-  namespace Fem
-  {
+// specialization of dune-fem compatiblity functions for CpGrid, since CpGrid does not use the interface classes.
+namespace Fem {
 
-    ////////////////////////////////////////////////////////////
-    //
-    //  make_entity for CpGrid entities
-    //
-    ////////////////////////////////////////////////////////////
-    template <int codim>
-    inline Dune::cpgrid::Entity< codim > make_entity ( const Dune::cpgrid::EntityPointer< codim >& entityPointer )
-    {
-      return *entityPointer;
-    }
+////////////////////////////////////////////////////////////
+//
+//  make_entity for CpGrid entities
+//
+////////////////////////////////////////////////////////////
+template <int codim>
+inline Dune::cpgrid::Entity<codim> make_entity(const Dune::cpgrid::EntityPointer<codim>& entityPointer)
+{ return *entityPointer; }
 
-    template <int codim>
-    inline Dune::cpgrid::Entity<codim> make_entity ( Dune::cpgrid::Entity<codim> entity )
-    {
-      return std::move( entity );
-    }
+template <int codim>
+inline Dune::cpgrid::Entity<codim> make_entity(Dune::cpgrid::Entity<codim> entity)
+{ return std::move(entity); }
 
-    ////////////////////////////////////////////////////////////
-    //
-    //  GridEntityAccess for CpGrid entities
-    //
-    ////////////////////////////////////////////////////////////
-    template< int codim >
-    struct GridEntityAccess< Dune::cpgrid::Entity< codim > >
-    {
+////////////////////////////////////////////////////////////
+//
+//  GridEntityAccess for CpGrid entities
+//
+////////////////////////////////////////////////////////////
+template<int codim>
+struct GridEntityAccess<Dune::cpgrid::Entity<codim> >
+{
+    typedef Dune::cpgrid::Entity<codim> EntityType;
+    typedef EntityType GridEntityType;
 
-      typedef Dune::cpgrid::Entity< codim >   EntityType;
-      typedef EntityType                      GridEntityType;
+    static const GridEntityType& gridEntity(const EntityType& entity)
+    { return entity; }
+};
 
-      static const GridEntityType& gridEntity ( const EntityType& entity )
-      {
-        return entity;
-      }
-    };
-
-  } // namespace Fem
+} // namespace Fem
 
 } // end namespace Dune
 
