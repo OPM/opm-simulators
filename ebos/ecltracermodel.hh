@@ -27,10 +27,13 @@
  */
 #ifndef EWOMS_ECL_TRACER_MODEL_HH
 #define EWOMS_ECL_TRACER_MODEL_HH
+
 #include "tracervdtable.hh"
+
 #include <dune/istl/operators.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/preconditioners.hh>
+
 #include <string>
 #include <vector>
 #include <iostream>
@@ -46,7 +49,9 @@ namespace Ewoms {
 /*!
  * \ingroup EclBlackOilSimulator
  *
- * \brief A class which handles tracers as specified in ecl deck
+ * \brief A class which handles tracers as specified in by ECL
+ *
+ * TODO: MPI parallelism.
  */
 template <class TypeTag>
 class EclTracerModel
@@ -73,7 +78,7 @@ class EclTracerModel
     typedef typename GridView::template Codim<0>::Iterator ElementIterator;
 
     typedef Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, 1, 1>> TracerMatrix;
-    typedef Dune::BlockVector< Dune::FieldVector<Scalar,1>> TracerVector;
+    typedef Dune::BlockVector<Dune::FieldVector<Scalar,1>> TracerVector;
 
 public:
     EclTracerModel(Simulator& simulator)
@@ -91,32 +96,30 @@ public:
         if (!deck.hasKeyword("TRACERS"))
             return; // tracer treatment is supposed to be disabled
 
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableTracerModel))
-        {
+        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableTracerModel)) {
             std::cout << "Warning: Tracer model is disabled but the deck contatins the TRACERS keyword \n";
-            std::cout << "The tracer model must be activated by the enable-tracer-model=true "<< std::endl;
+            std::cout << "The tracer model must be activated using --enable-tracer-model=true "<< std::endl;
             return; // Tracer transport must be enabled by the user
         }
 
-        if (!deck.hasKeyword("TRACER")){
+        if (!deck.hasKeyword("TRACER"))
             throw std::runtime_error("the deck does not contain the TRACER keyword");
-        }
+
         if (simulator_.gridView().comm().size() > 1) {
             tracerNames_.resize(0);
             std::cout << "Warning: Tracer model is not compatible with mpi run"  << std::endl;
             return;
         }
 
-        //how many tracers?
+        // retrieve the number of tracers from the deck
         const int numTracers = deck.getKeyword("TRACER").size();
         tracerNames_.resize(numTracers);
         tracerConcentration_.resize(numTracers);
-        wTracer_.resize(numTracers,0.0);
         storageOfTimeIndex1_.resize(numTracers);
-        size_t numAllDof =  simulator_.model().numTotalDof();
 
         // the phase where the tracer is
         tracerPhaseIdx_.resize(numTracers);
+        size_t numGridDof =  simulator_.model().numGridDof();
         for (int tracerIdx = 0;  tracerIdx < numTracers; ++tracerIdx) {
             const auto& tracerRecord = deck.getKeyword("TRACER").getRecord(tracerIdx);
             tracerNames_[tracerIdx] = tracerRecord.getItem("NAME").template get<std::string>(0);
@@ -131,8 +134,8 @@ public:
                 throw std::invalid_argument("Tracer: invalid fluid name "
                                             +fluidName+" for "+tracerNames_[tracerIdx]);
 
-            tracerConcentration_[tracerIdx].resize(numAllDof);
-            storageOfTimeIndex1_[tracerIdx].resize(numAllDof);
+            tracerConcentration_[tracerIdx].resize(numGridDof);
+            storageOfTimeIndex1_[tracerIdx].resize(numGridDof);
             std::string tmp = "TVDPF" +tracerNames_[tracerIdx];
 
 
@@ -148,7 +151,7 @@ public:
                     throw std::runtime_error("Uninitialized tracer concentration (TBLKF) for tracer "
                                              + tracerName(tracerIdx));
                 }
-                for (size_t globalDofIdx = 0; globalDofIdx < numAllDof; ++globalDofIdx){
+                for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
                     int cartDofIdx = cartMapper.cartesianIndex(globalDofIdx);
                     tracerConcentration_[tracerIdx][globalDofIdx] = tblkData[cartDofIdx];
                 }
@@ -159,7 +162,7 @@ public:
                 const auto& eclGrid = simulator_.vanguard().eclState().getInputGrid();
                 const auto& cartMapper = simulator_.vanguard().cartesianIndexMapper();
 
-                for (size_t globalDofIdx = 0; globalDofIdx < numAllDof; ++globalDofIdx){
+                for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
                     int cartDofIdx = cartMapper.cartesianIndex(globalDofIdx);
                     const auto& center = eclGrid.getCellCenter(cartDofIdx);
                     tracerConcentration_[tracerIdx][globalDofIdx]
@@ -173,30 +176,27 @@ public:
 
         }
 
-        //initialize tracerConcentration
-        tracerConcentration0_ = tracerConcentration_;
+        // initial tracer concentration
+        tracerConcentrationInitial_ = tracerConcentration_;
 
+        // residual of tracers
+        tracerResidual_.resize(numGridDof);
 
-        //tracerResidual
-        tracerResidual_.resize(numAllDof);
-        // allocate raw matrix
-        tracerMatrix_ = new TracerMatrix(numAllDof, numAllDof, TracerMatrix::random);
+        // allocate matrix for storing the Jacobian of the tracer residual
+        tracerMatrix_ = new TracerMatrix(numGridDof, numGridDof, TracerMatrix::random);
+
+        // find the sparsity pattern of the tracer matrix
+        typedef std::set<unsigned> NeighborSet;
+        std::vector<NeighborSet> neighbors(numGridDof);
 
         Stencil stencil(simulator_.gridView(), simulator_.model().dofMapper() );
-
-        // for the main model, find out the global indices of the neighboring degrees of
-        // freedom of each primary degree of freedom
-        typedef std::set<unsigned> NeighborSet;
-        std::vector<NeighborSet> neighbors(numAllDof);
-
         ElementIterator elemIt = simulator_.gridView().template begin<0>();
         const ElementIterator elemEndIt = simulator_.gridView().template end<0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& elem = *elemIt;
             stencil.update(elem);
 
-            for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx)
-            {
+            for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
                 unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
 
                 for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
@@ -207,14 +207,14 @@ public:
         }
 
         // allocate space for the rows of the matrix
-        for (unsigned dofIdx = 0; dofIdx < numAllDof; ++ dofIdx)
+        for (unsigned dofIdx = 0; dofIdx < numGridDof; ++ dofIdx)
             tracerMatrix_->setrowsize(dofIdx, neighbors[dofIdx].size());
         tracerMatrix_->endrowsizes();
 
         // fill the rows with indices. each degree of freedom talks to
         // all of its neighbors. (it also talks to itself since
         // degrees of freedom are sometimes quite egocentric.)
-        for (unsigned dofIdx = 0; dofIdx < numAllDof; ++ dofIdx) {
+        for (unsigned dofIdx = 0; dofIdx < numGridDof; ++ dofIdx) {
             typename NeighborSet::iterator nIt = neighbors[dofIdx].begin();
             typename NeighborSet::iterator nEndIt = neighbors[dofIdx].end();
             for (; nIt != nEndIt; ++nIt)
@@ -224,7 +224,7 @@ public:
 
         const int sizeCartGrid = simulator_.vanguard().cartesianSize();
         cartToGlobal_.resize(sizeCartGrid);
-        for (unsigned i = 0; i < numAllDof; ++i) {
+        for (unsigned i = 0; i < numGridDof; ++i) {
             int cartIdx = simulator_.vanguard().cartesianIndex(i);
             cartToGlobal_[cartIdx] = i;
         }
@@ -240,7 +240,7 @@ public:
     /*!
      * \brief Return the tracer name
      */
-    const std::string& tracerName(int tracerIdx) const    
+    const std::string& tracerName(int tracerIdx) const
     {
         if (numTracers()==0)
             throw std::logic_error("This method should never be called when there are no tracers in the model");
@@ -251,7 +251,8 @@ public:
     /*!
      * \brief Return the tracer concentration for tracer index and global DofIdx
      */
-    Scalar tracerConcentration(int tracerIdx, int globalDofIdx) const {
+    Scalar tracerConcentration(int tracerIdx, int globalDofIdx) const
+    {
         if (numTracers()==0)
             return 0.0;
 
@@ -260,14 +261,10 @@ public:
 
     void beginTimeStep()
     {
-
         if (numTracers()==0)
             return;
 
-        tracerConcentration0_ = tracerConcentration_;
-
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableStorageCache))
-            return;
+        tracerConcentrationInitial_ = tracerConcentration_;
 
         // compute storageCache
         ElementContext elemCtx(simulator_);
@@ -313,9 +310,7 @@ public:
      */
     template <class Restarter>
     void serialize(Restarter& res OPM_UNUSED)
-    {
-        /* not implemented */
-    }
+    { /* not implemented */ }
 
     /*!
      * \brief This method restores the complete state of the tracer
@@ -325,9 +320,7 @@ public:
      */
     template <class Restarter>
     void deserialize(Restarter& res OPM_UNUSED)
-    {
-        /* not implemented */
-    }
+    { /* not implemented */ }
 
 protected:
     // evaluate storage term for all tracers in a single cell
@@ -342,15 +335,16 @@ protected:
 
         const auto& intQuants = elemCtx.intensiveQuantities(scvIdx, timeIdx);
         const auto& fs = intQuants.fluidState();
-        Scalar phaseVolume = Opm::decay<Scalar>(fs.saturation(tracerPhaseIdx_[tracerIdx]))
-                *Opm::decay<Scalar>(fs.invB(tracerPhaseIdx_[tracerIdx]))
-                *Opm::decay<Scalar>(intQuants.porosity());
+        Scalar phaseVolume =
+            Opm::decay<Scalar>(fs.saturation(tracerPhaseIdx_[tracerIdx]))
+            *Opm::decay<Scalar>(fs.invB(tracerPhaseIdx_[tracerIdx]))
+            *Opm::decay<Scalar>(intQuants.porosity());
 
         // avoid singular matrix if no water is present.
         phaseVolume = Opm::max(phaseVolume, 1e-10);
 
         if (std::is_same<LhsEval, Scalar>::value)
-            tracerStorage = phaseVolume * tracerConcentration0_[tracerIdx][globalDofIdx];
+            tracerStorage = phaseVolume * tracerConcentrationInitial_[tracerIdx][globalDofIdx];
         else
             tracerStorage =
                     phaseVolume
@@ -431,8 +425,8 @@ protected:
         (*tracerMatrix_) = 0.0;
         tracerResidual_ = 0.0;
 
-        size_t numAllDof =  simulator_.model().numTotalDof();
-        std::vector<double> volumes(numAllDof, 0.0);
+        size_t numGridDof =  simulator_.model().numGridDof();
+        std::vector<double> volumes(numGridDof, 0.0);
         ElementContext elemCtx(simulator_);
         auto elemIt = simulator_.gridView().template begin</*codim=*/0>();
         auto elemEndIt = simulator_.gridView().template end</*codim=*/0>();
@@ -476,6 +470,7 @@ protected:
             }
 
         }
+
         // Wells
         const int episodeIdx = simulator_.episodeIndex();
         const auto& wells = simulator_.vanguard().schedule().getWells(episodeIdx);
@@ -486,15 +481,15 @@ protected:
 
             const double wtracer = well->getTracerProperties(episodeIdx).getConcentration(tracerNames_[tracerIdx]);
             std::array<int, 3> cartesianCoordinate;
-            for( auto& connection : well->getConnections(episodeIdx)) {
+            for (auto& connection : well->getConnections(episodeIdx)) {
 
                 if (connection.state() == Opm::WellCompletion::SHUT)
                     continue;
 
-                cartesianCoordinate[ 0 ] = connection.getI();
-                cartesianCoordinate[ 1 ] = connection.getJ();
-                cartesianCoordinate[ 2 ] = connection.getK();
-                const size_t cartIdx = simulator_.vanguard().cartesianIndex( cartesianCoordinate );
+                cartesianCoordinate[0] = connection.getI();
+                cartesianCoordinate[1] = connection.getJ();
+                cartesianCoordinate[2] = connection.getK();
+                const size_t cartIdx = simulator_.vanguard().cartesianIndex(cartesianCoordinate);
                 const int I = cartToGlobal_[cartIdx];
                 Scalar rate = simulator_.problem().wellModel().well(well->name())->volumetricSurfaceRateForConnection(I, tracerPhaseIdx_[tracerIdx]);
                 if (rate > 0)
@@ -510,10 +505,9 @@ protected:
     std::vector<std::string> tracerNames_;
     std::vector<int> tracerPhaseIdx_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentration_;
-    std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentration0_;
+    std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentrationInitial_;
     TracerMatrix *tracerMatrix_;
     TracerVector tracerResidual_;
-    std::vector<Scalar> wTracer_;
     std::vector<int> cartToGlobal_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> storageOfTimeIndex1_;
 
