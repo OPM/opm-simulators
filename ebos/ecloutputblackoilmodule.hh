@@ -842,10 +842,10 @@ public:
 
         // tracers
         const auto& tracerModel = simulator_.problem().tracerModel();
-        if (tracerConcentrations_.size()>0) {
+        if (tracerConcentrations_.size() > 0) {
             for (int tracerIdx = 0; tracerIdx<tracerModel.numTracers(); tracerIdx++){
                 std::string tmp = tracerModel.tracerName(tracerIdx) + "F";
-                sol.insert (tmp, Opm::UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx]), Opm::data::TargetType::RESTART_SOLUTION);
+                sol.insert(tmp, Opm::UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx]), Opm::data::TargetType::RESTART_SOLUTION);
             }
         }
     }
@@ -1029,8 +1029,8 @@ public:
            fs.setRv(rv_[elemIdx]);
     }
 
-    void initHysteresisParams(Simulator& simulator, unsigned elemIdx) const {
-
+    void initHysteresisParams(Simulator& simulator, unsigned elemIdx) const
+    {
         if (soMax_.size() > 0)
             simulator.problem().setMaxOilSaturation(elemIdx, soMax_[elemIdx]);
 
@@ -1059,23 +1059,24 @@ public:
 
     }
 
-    Scalar getSolventSaturation(unsigned elemIdx) const {
+    Scalar getSolventSaturation(unsigned elemIdx) const
+    {
         if (sSol_.size() > 0)
             return sSol_[elemIdx];
 
         return 0;
     }
 
-    Scalar getPolymerConcentration(unsigned elemIdx) const {
+    Scalar getPolymerConcentration(unsigned elemIdx) const
+    {
         if (cPolymer_.size() > 0)
             return cPolymer_[elemIdx];
 
         return 0;
     }
 
-    const std::map<std::pair<std::string, int>, double>& getBlockData() {
-        return blockData_;
-    }
+    const std::map<std::pair<std::string, int>, double>& getBlockData()
+    { return blockData_; }
 
 private:
 
