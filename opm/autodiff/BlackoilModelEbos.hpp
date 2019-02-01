@@ -69,7 +69,7 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowNonLinearSolver, FlowIstlSolver, FlowModelParameters, FlowTimeSteppingParameters));
+NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowNonLinearSolver, FlowModelParameters, FlowTimeSteppingParameters));
 SET_STRING_PROP(EclFlowProblem, OutputDir, "");
 SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
 // default in flow is to formulate the equations in surface volumes
@@ -481,13 +481,13 @@ namespace Opm {
             x = 0.0;
 
             auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
-            ebosSolver.prepare(ebosJac);
+            ebosSolver.prepare(ebosJac, ebosResid);
             ebosSolver.setResidual(ebosResid);
             // actually, the error needs to be calculated after setResidual in order to
             // account for parallelization properly. since the residual of ECFV
             // discretizations does not need to be synchronized across processes to be
             // consistent, this is not relevant for OPM-flow...
-            ebosSolver.setJacobian(ebosJac);
+            ebosSolver.setMatrix(ebosJac);
             ebosSolver.solve(x);
        }
 
