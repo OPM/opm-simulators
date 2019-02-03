@@ -348,7 +348,7 @@ namespace Opm {
 
             void updateWellControls();
 
-            void updateGroupControls();
+            void updateGroupControls(Opm::DeferredLogger& deferred_logger);
 
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables();
@@ -379,7 +379,7 @@ namespace Opm {
             /// at the beginning of the time step and no derivatives are included in these quantities
             void calculateExplicitQuantities() const;
 
-            SimulatorReport solveWellEq(const double dt);
+            SimulatorReport solveWellEq(const double dt, Opm::DeferredLogger& deferred_logger);
 
             void initPrimaryVariablesEvaluation() const;
 
@@ -392,11 +392,11 @@ namespace Opm {
 
             void resetWellControlFromState() const;
 
-            void assembleWellEq(const double dt);
+            void assembleWellEq(const double dt, Opm::DeferredLogger& deferred_logger);
 
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
-            void prepareTimeStep();
+            void prepareTimeStep(Opm::DeferredLogger& deferred_logger);
 
             void prepareGroupControl();
 

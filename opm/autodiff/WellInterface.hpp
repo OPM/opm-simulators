@@ -150,13 +150,15 @@ namespace Opm
 
         virtual void assembleWellEq(const Simulator& ebosSimulator,
                                     const double dt,
-                                    WellState& well_state) = 0;
+                                    WellState& well_state,
+                                    Opm::DeferredLogger& deferred_logger
+                                    ) = 0;
 
         void updateWellTestState(const WellState& well_state,
                                  const double& simulationTime,
                                  const bool& writeMessageToOPMLog,
-                                 WellTestState& wellTestState
-                                 ) const;
+                                 WellTestState& wellTestState,
+                                 Opm::DeferredLogger& deferred_logger) const;
 
         void setWellEfficiencyFactor(const double efficiency_factor);
 
@@ -176,10 +178,12 @@ namespace Opm
         // TODO: before we decide to put more information under mutable, this function is not const
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,
-                                           std::vector<double>& well_potentials) = 0;
+                                           std::vector<double>& well_potentials,
+                                           Opm::DeferredLogger& deferred_logger) = 0;
 
         virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
-                                               WellState& well_state) const = 0;
+                                               WellState& well_state,
+                                               Opm::DeferredLogger& deferred_logger) const = 0;
 
         void updateWellControl(/* const */ Simulator& ebos_simulator,
                                WellState& well_state,
@@ -233,7 +237,7 @@ namespace Opm
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
-        virtual void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state) = 0;
+        virtual void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state, Opm::DeferredLogger& deferred_logger) = 0;
 
         // whether the well is operable
         bool isOperable() const;
@@ -339,7 +343,8 @@ namespace Opm
         double wpolymer() const;
 
         bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                                 const WellState& well_state) const;
+                                 const WellState& well_state,
+                                 Opm::DeferredLogger& deferred_logger) const;
 
         double getTHPConstraint() const;
 
@@ -362,7 +367,8 @@ namespace Opm
                                               const WellState& well_state) const;
 
         RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                                             const WellState& well_state) const;
+                                             const WellState& well_state,
+                                             Opm::DeferredLogger& deferred_logger) const;
 
         double scalingFactor(const int comp_idx) const;
 
@@ -384,12 +390,14 @@ namespace Opm
         void updateWellTestStateEconomic(const WellState& well_state,
                                          const double simulation_time,
                                          const bool write_message_to_opmlog,
-                                         WellTestState& well_test_state) const;
+                                         WellTestState& well_test_state,
+                                         Opm::DeferredLogger& deferred_logger) const;
 
         void updateWellTestStatePhysical(const WellState& well_state,
                                          const double simulation_time,
                                          const bool write_message_to_opmlog,
-                                         WellTestState& well_test_state) const;
+                                         WellTestState& well_test_state,
+                                         Opm::DeferredLogger& deferred_logger) const;
 
         void  solveWellForTesting(Simulator& ebosSimulator, WellState& well_state,
                                   const std::vector<double>& B_avg,
@@ -400,7 +408,7 @@ namespace Opm
                                        WellState& well_state,
                                        Opm::DeferredLogger& deferred_logger);
 
-        void scaleProductivityIndex(const int perfIdx, double& productivity_index);
+        void scaleProductivityIndex(const int perfIdx, double& productivity_index, Opm::DeferredLogger& deferred_logger);
 
         // count the number of times an output log message is created in the productivity
         // index calculations

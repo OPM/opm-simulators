@@ -444,10 +444,11 @@ namespace Opm
     StandardWell<TypeTag>::
     assembleWellEq(const Simulator& ebosSimulator,
                    const double dt,
-                   WellState& well_state)
+                   WellState& well_state,
+                   Opm::DeferredLogger& deferred_logger)
     {
 
-        checkWellOperability(ebosSimulator, well_state);
+        checkWellOperability(ebosSimulator, well_state, deferred_logger);
 
         if (!this->isOperable()) return;
 
@@ -621,7 +622,7 @@ namespace Opm
                     const unsigned int compIdx = flowPhaseToEbosCompIdx(p);
                     const double drawdown = well_state.perfPress()[first_perf_ + perf] - intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx).value();
                     double productivity_index = cq_s[compIdx].value() / drawdown;
-                    scaleProductivityIndex(perf, productivity_index);
+                    scaleProductivityIndex(perf, productivity_index, deferred_logger);
                     well_state.productivityIndex()[np*index_of_well_ + p] += productivity_index;
                 }
             }
@@ -639,7 +640,7 @@ namespace Opm
             resWell_[0][componentIdx] += resWell_loc.value();
         }
 
-        assembleControlEq();
+        assembleControlEq(deferred_logger);
 
         // do the local inversion of D.
         try
@@ -661,7 +662,7 @@ namespace Opm
     template <typename TypeTag>
     void
     StandardWell<TypeTag>::
-    assembleControlEq()
+    assembleControlEq(Opm::DeferredLogger& deferred_logger)
     {
         EvalWell control_eq(0.0);
         switch (well_controls_get_current_type(well_controls_)) {
@@ -716,7 +717,7 @@ namespace Opm
                             const std::string msg = " Setting all rates to be zero for well " + name()
                                                   + " due to un-solvable situation. There is non-zero target for the phase "
                                                   + " that does not exist in the wellbore for the situation";
-                            OpmLog::warning("NON_SOLVABLE_WELL_SOLUTION", msg);
+                            deferred_logger.warning("NON_SOLVABLE_WELL_SOLUTION", msg);
 
                             control_eq = getWQTotal() - target_rate;
                         }
@@ -1111,7 +1112,8 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     updateWellStateWithTarget(const Simulator& ebos_simulator,
-                              WellState& well_state) const
+                              WellState& well_state,
+                              Opm::DeferredLogger& deferred_logger) const
     {
         // number of phases
         const int np = number_of_phases_;
@@ -1140,7 +1142,7 @@ namespace Opm
             } else { // go to BHP limit
                 assert(this->operability_status_.isOperableUnderBHPLimit() );
 
-                OpmLog::info("well " + name() + " can not work with THP target, switching to BHP control");
+                deferred_logger.info("well " + name() + " can not work with THP target, switching to BHP control");
 
                 well_state.bhp()[well_index] = mostStrictBhpFromBhpLimits();
             }
@@ -1217,7 +1219,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateIPR(const Simulator& ebos_simulator) const
+    updateIPR(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) const
     {
         // TODO: not handling solvent related here for now
 
@@ -1260,7 +1262,7 @@ namespace Opm
             // it should not be negative anyway. If it is negative, we might need to re-formulate
             // to taking into consideration the crossflow here.
             if (pressure_diff <= 0.) {
-                OpmLog::warning("NON_POSITIVE_DRAWDOWN_IPR",
+                deferred_logger.warning("NON_POSITIVE_DRAWDOWN_IPR",
                                 "non-positive drawdown found when updateIPR for well " + name());
             }
 
@@ -1314,7 +1316,9 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     checkWellOperability(const Simulator& ebos_simulator,
-                         const WellState& well_state)
+                         const WellState& well_state,
+                         Opm::DeferredLogger& deferred_logger
+                         )
     {
         // focusing on PRODUCER for now
         if (well_type_ == INJECTOR) {
@@ -1327,14 +1331,14 @@ namespace Opm
 
         const bool old_well_operable = this->operability_status_.isOperable();
 
-        updateWellOperability(ebos_simulator, well_state);
+        updateWellOperability(ebos_simulator, well_state, deferred_logger);
 
         const bool well_operable = this->operability_status_.isOperable();
 
         if (!well_operable && old_well_operable) {
-            OpmLog::info(" well " + name() + " gets SHUT during iteration ");
+            deferred_logger.info(" well " + name() + " gets SHUT during iteration ");
         } else if (well_operable && !old_well_operable) {
-            OpmLog::info(" well " + name() + " gets REVIVED during iteration ");
+            deferred_logger.info(" well " + name() + " gets REVIVED during iteration ");
         }
     }
 
@@ -1346,18 +1350,20 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     updateWellOperability(const Simulator& ebos_simulator,
-                          const WellState& well_state)
+                          const WellState& well_state,
+                          Opm::DeferredLogger& deferred_logger
+                          )
     {
         this->operability_status_.reset();
 
-        updateIPR(ebos_simulator);
+        updateIPR(ebos_simulator, deferred_logger);
 
         // checking the BHP limit related
         checkOperabilityUnderBHPLimitProducer(ebos_simulator);
 
         // checking whether the well can operate under the THP constraints.
         if (this->wellHasTHPConstraints()) {
-            checkOperabilityUnderTHPLimitProducer(ebos_simulator);
+            checkOperabilityUnderTHPLimitProducer(ebos_simulator, deferred_logger);
         }
     }
 
@@ -1421,7 +1427,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator)
+    checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger)
     {
         const double obtain_bhp =  calculateBHPWithTHPTargetIPR();
 
@@ -1437,12 +1443,12 @@ namespace Opm
                                         + " bars is SMALLER than thp limit "
                                         + std::to_string(unit::convert::to(thp_limit, unit::barsa))
                                         + " bars as a producer for well " + name();
-                OpmLog::debug(msg);
+                deferred_logger.debug(msg);
             }
         } else {
             this->operability_status_.can_obtain_bhp_with_thp_limit = false;
             const double thp_limit = this->getTHPConstraint();
-            OpmLog::debug(" COULD NOT find bhp value under thp_limit "
+            deferred_logger.debug(" COULD NOT find bhp value under thp_limit "
                           + std::to_string(unit::convert::to(thp_limit, unit::barsa))
                           + " bars for well " + name() + ", the well might need to be closed ");
             this->operability_status_.obey_bhp_limit_with_thp_limit = false;
@@ -1492,7 +1498,9 @@ namespace Opm
     bool
     StandardWell<TypeTag>::
     canProduceInjectWithCurrentBhp(const Simulator& ebos_simulator,
-                                   const WellState& well_state)
+                                   const WellState& well_state,
+                                   Opm::DeferredLogger& deferred_logger
+                                   )
     {
         const double bhp = well_state.bhp()[index_of_well_];
         std::vector<double> well_rates;
@@ -1513,7 +1521,7 @@ namespace Opm
         }
 
         if (!can_produce_inject) {
-            OpmLog::debug(" well " + name() + " CANNOT produce or inejct ");
+            deferred_logger.debug(" well " + name() + " CANNOT produce or inejct ");
         }
 
         return can_produce_inject;
@@ -2303,7 +2311,8 @@ namespace Opm
     StandardWell<TypeTag>::
     computeWellPotentials(const Simulator& ebosSimulator,
                           const WellState& well_state,
-                          std::vector<double>& well_potentials) // const
+                          std::vector<double>& well_potentials,
+                          Opm::DeferredLogger& deferred_logger) // const
     {
         updatePrimaryVariables(well_state);
         computeWellConnectionPressures(ebosSimulator, well_state);
@@ -2748,9 +2757,10 @@ namespace Opm
     StandardWell<TypeTag>::
     wellTestingPhysical(Simulator& ebos_simulator, const std::vector<double>& B_avg,
                         const double simulation_time, const int report_step,
-                        WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger)
+                        WellState& well_state, WellTestState& welltest_state,
+                        Opm::DeferredLogger& deferred_logger)
     {
-        OpmLog::debug(" well " + name() + " is being tested for physical limits");
+        deferred_logger.debug(" well " + name() + " is being tested for physical limits");
 
         // some most difficult things are the explicit quantities, since there is no information
         // in the WellState to do a decent initialization
@@ -2769,15 +2779,15 @@ namespace Opm
         // we should be able to provide a better initialization
         calculateExplicitQuantities(ebos_simulator, well_state_copy);
 
-        updateWellOperability(ebos_simulator, well_state_copy);
+        updateWellOperability(ebos_simulator, well_state_copy, deferred_logger);
 
         if ( !this->isOperable() ) {
             const std::string msg = " well " + name() + " is not operable during well testing for physical reason";
-            OpmLog::debug(msg);
+            deferred_logger.debug(msg);
             return;
         }
 
-        updateWellStateWithTarget(ebos_simulator, well_state_copy);
+        updateWellStateWithTarget(ebos_simulator, well_state_copy, deferred_logger);
 
         calculateExplicitQuantities(ebos_simulator, well_state_copy);
         updatePrimaryVariables(well_state_copy);
@@ -2787,18 +2797,18 @@ namespace Opm
 
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well testing for physical reason";
-            OpmLog::debug(msg);
+            deferred_logger.debug(msg);
             return;
         }
 
         if (this->isOperable() ) {
             welltest_state.openWell(name() );
             const std::string msg = " well " + name() + " is re-opened through well testing for physical reason";
-            OpmLog::info(msg);
+            deferred_logger.info(msg);
             well_state = well_state_copy;
         } else {
             const std::string msg = " well " + name() + " is not operable during well testing for physical reason";
-            OpmLog::debug(msg);
+            deferred_logger.debug(msg);
         }
     }
 

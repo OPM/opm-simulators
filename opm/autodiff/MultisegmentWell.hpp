@@ -114,11 +114,13 @@ namespace Opm
 
         virtual void assembleWellEq(const Simulator& ebosSimulator,
                                     const double dt,
-                                    WellState& well_state) override;
+                                    WellState& well_state,
+                                    Opm::DeferredLogger& deferred_logger) override;
 
         /// updating the well state based the current control mode
         virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
-                                               WellState& well_state) const override;
+                                               WellState& well_state,
+                                               Opm::DeferredLogger& deferred_logger) const override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const override;
@@ -136,7 +138,8 @@ namespace Opm
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,
-                                           std::vector<double>& well_potentials) override;
+                                           std::vector<double>& well_potentials,
+                                           Opm::DeferredLogger& deferred_logger) override;
 
         virtual void updatePrimaryVariables(const WellState& well_state) const override;
 
@@ -333,7 +336,8 @@ namespace Opm
         // checking the operability of the well based on current reservoir condition
         // it is not implemented for multisegment well yet
         virtual void checkWellOperability(const Simulator& ebos_simulator,
-                                          const WellState& well_state) override;
+                                          const WellState& well_state,
+                                          Opm::DeferredLogger& deferred_logger) override;
 
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;
 

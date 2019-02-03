@@ -311,36 +311,35 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::wellTesting(const int timeStepIdx, const double simulationTime) {
-        const auto& wtest_config = schedule().wtestConfig(timeStepIdx);
-        if (wtest_config.size() == 0) { // there is no WTEST request
-            return;
-        }
-
-        // average B factors are required for the convergence checking of well equations
-        // Note: this must be done on all processes, even those with
-        // no wells needing testing, otherwise we will have locking.
-        std::vector< Scalar > B_avg(numComponents(), Scalar() );
-        computeAverageFormationFactor(B_avg);
         Opm::DeferredLogger local_deferredLogger;
+        const auto& wtest_config = schedule().wtestConfig(timeStepIdx);
+        if (wtest_config.size() != 0) { // there is a WTEST request
 
-        const auto& wellsForTesting = wellTestState_.updateWell(wtest_config, simulationTime);
-        for (const auto& testWell : wellsForTesting) {
-            const std::string& well_name = testWell.first;
+            // average B factors are required for the convergence checking of well equations
+            // Note: this must be done on all processes, even those with
+            // no wells needing testing, otherwise we will have locking.
+            std::vector< Scalar > B_avg(numComponents(), Scalar() );
+            computeAverageFormationFactor(B_avg);
 
-            // this is the well we will test
-            WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx);
+            const auto& wellsForTesting = wellTestState_.updateWell(wtest_config, simulationTime);
+            for (const auto& testWell : wellsForTesting) {
+                const std::string& well_name = testWell.first;
 
-            // some preparation before the well can be used
-            well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
-            const WellNode& well_node = wellCollection().findWellNode(well_name);
-            const double well_efficiency_factor = well_node.getAccumulativeEfficiencyFactor();
-            well->setWellEfficiencyFactor(well_efficiency_factor);
-            well->setVFPProperties(vfp_properties_.get());
+                // this is the well we will test
+                WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx);
 
-            const WellTestConfig::Reason testing_reason = testWell.second;
+                // some preparation before the well can be used
+                well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
+                const WellNode& well_node = wellCollection().findWellNode(well_name);
+                const double well_efficiency_factor = well_node.getAccumulativeEfficiencyFactor();
+                well->setWellEfficiencyFactor(well_efficiency_factor);
+                well->setVFPProperties(vfp_properties_.get());
 
-            well->wellTesting(ebosSimulator_, B_avg, simulationTime, timeStepIdx,
-                              testing_reason, well_state_, wellTestState_, local_deferredLogger);
+                const WellTestConfig::Reason testing_reason = testWell.second;
+
+                well->wellTesting(ebosSimulator_, B_avg, simulationTime, timeStepIdx,
+                                  testing_reason, well_state_, wellTestState_, local_deferredLogger);
+            }
         }
         Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
@@ -366,6 +365,8 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     timeStepSucceeded(const double& simulationTime, const double dt) {
+
+        Opm::DeferredLogger local_deferredLogger;
         // TODO: when necessary
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
         for (const auto& well : well_container_) {
@@ -386,9 +387,15 @@ namespace Opm {
         catch ( std::runtime_error& e )
         {
             const std::string msg = "A zero well potential is returned for output purposes. ";
-            OpmLog::warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
+            local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
         }
         previous_well_state_ = well_state_;
+
+        Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+        if (terminal_output_) {
+            global_deferredLogger.logMessages();
+        }
+
     }
 
 
@@ -621,18 +628,19 @@ namespace Opm {
              const double dt)
     {
 
-
         last_report_ = SimulatorReport();
 
         if ( ! wellsActive() ) {
             return;
         }
 
+        Opm::DeferredLogger local_deferredLogger;
+
         updatePerforationIntensiveQuantities();
 
         if (iterationIdx == 0) {
             calculateExplicitQuantities();
-            prepareTimeStep();
+            prepareTimeStep(local_deferredLogger);
         }
 
         updateWellControls();
@@ -641,20 +649,26 @@ namespace Opm {
 
         if (param_.solve_welleq_initially_ && iterationIdx == 0) {
             // solve the well equations as a pre-processing step
-            last_report_ = solveWellEq(dt);
+            last_report_ = solveWellEq(dt, local_deferredLogger);
 
             if (initial_step_) {
                 // update the explicit quantities to get the initial fluid distribution in the well correct.
                 calculateExplicitQuantities();
-                prepareTimeStep();
-                last_report_ = solveWellEq(dt);
+                prepareTimeStep(local_deferredLogger);
+                last_report_ = solveWellEq(dt, local_deferredLogger);
                 initial_step_ = false;
             }
             // TODO: should we update the explicit related here again, or even prepareTimeStep().
             // basically, this is a more updated state from the solveWellEq based on fixed
             // reservoir state, will tihs be a better place to inialize the explict information?
         }
-        assembleWellEq(dt);
+        assembleWellEq(dt, local_deferredLogger);
+
+        Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+        if (terminal_output_) {
+            global_deferredLogger.logMessages();
+        }
+
 
         last_report_.converged = true;
     }
@@ -666,10 +680,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assembleWellEq(const double dt)
+    assembleWellEq(const double dt, Opm::DeferredLogger& deferred_logger)
     {
         for (auto& well : well_container_) {
-            well->assembleWellEq(ebosSimulator_, dt, well_state_);
+            well->assembleWellEq(ebosSimulator_, dt, well_state_, deferred_logger);
         }
     }
 
@@ -817,7 +831,7 @@ namespace Opm {
     template<typename TypeTag>
     SimulatorReport
     BlackoilWellModel<TypeTag>::
-    solveWellEq(const double dt)
+    solveWellEq(const double dt, Opm::DeferredLogger& deferred_logger)
     {
         WellState well_state0 = well_state_;
 
@@ -830,7 +844,7 @@ namespace Opm {
         int it  = 0;
         bool converged;
         do {
-            assembleWellEq(dt);
+            assembleWellEq(dt, deferred_logger);
 
             const auto report = getWellConvergence(B_avg);
             converged = report.converged();
@@ -862,12 +876,12 @@ namespace Opm {
         } while (it < max_iter);
 
         if (converged) {
-            if ( terminal_output_ ) {
-                OpmLog::debug("Well equation solution gets converged with " + std::to_string(it) + " iterations");
+            if (terminal_output_) {
+                deferred_logger.debug("Well equation solution gets converged with " + std::to_string(it) + " iterations");
             }
         } else {
-            if ( terminal_output_ ) {
-                OpmLog::debug("Well equation solution failed in getting converged with " + std::to_string(it) + " iterations");
+            if (terminal_output_) {
+                deferred_logger.debug("Well equation solution failed in getting converged with " + std::to_string(it) + " iterations");
             }
 
             well_state_ = well_state0;
@@ -905,11 +919,13 @@ namespace Opm {
         ConvergenceReport report = gatherConvergenceReport(local_report);
 
         // Log debug messages for NaN or too large residuals.
-        for (const auto& f : report.wellFailures()) {
-            if (f.severity() == ConvergenceReport::Severity::NotANumber) {
-                OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
-            } else if (f.severity() == ConvergenceReport::Severity::TooLarge) {
-                OpmLog::debug("Too large residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
+        if (terminal_output_) {
+            for (const auto& f : report.wellFailures()) {
+                if (f.severity() == ConvergenceReport::Severity::NotANumber) {
+                        OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
+                } else if (f.severity() == ConvergenceReport::Severity::TooLarge) {
+                        OpmLog::debug("Too large residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
+                }
             }
         }
 
@@ -951,12 +967,13 @@ namespace Opm {
             well->updateWellControl(ebosSimulator_, well_state_, local_deferredLogger);
         }
 
+        updateGroupControls(local_deferredLogger);
+
         Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
 
-        updateGroupControls();
     }
 
 
@@ -968,8 +985,13 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const
     {
+        Opm::DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
-            well->updateWellTestState(well_state_, simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState);
+            well->updateWellTestState(well_state_, simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
+        }
+        Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+        if (terminal_output_) {
+            global_deferredLogger.logMessages();
         }
     }
 
@@ -980,6 +1002,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeWellPotentials(std::vector<double>& well_potentials)
     {
+        Opm::DeferredLogger local_deferredLogger;
         // number of wells and phases
         const int nw = numWells();
         const int np = numPhases();
@@ -998,7 +1021,7 @@ namespace Opm {
             if (needed_for_output || wellCollection().requireWellPotentials())
             {
                 std::vector<double> potentials;
-                well->computeWellPotentials(ebosSimulator_, well_state_, potentials);
+                well->computeWellPotentials(ebosSimulator_, well_state_, potentials, local_deferredLogger);
 
                 // putting the sucessfully calculated potentials to the well_potentials
                 for (int p = 0; p < np; ++p) {
@@ -1010,6 +1033,11 @@ namespace Opm {
         // Store it in the well state
         well_state_.wellPotentials() = well_potentials;
 
+        Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+        if (terminal_output_) {
+            global_deferredLogger.logMessages();
+        }
+
     }
 
 
@@ -1019,7 +1047,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    prepareTimeStep()
+    prepareTimeStep(Opm::DeferredLogger& deferred_logger)
     {
 
         if ( wellCollection().havingVREPGroups() ) {
@@ -1037,7 +1065,7 @@ namespace Opm {
         prepareGroupControl();
 
         for (const auto& well : well_container_) {
-            well->checkWellOperability(ebosSimulator_, well_state_);
+            well->checkWellOperability(ebosSimulator_, well_state_, deferred_logger);
         }
 
         // since the controls are all updated, we should update well_state accordingly
@@ -1050,7 +1078,7 @@ namespace Opm {
             if (!well->isOperable() ) continue;
 
             if (well_state_.effectiveEventsOccurred(w) ) {
-                well->updateWellStateWithTarget(ebosSimulator_, well_state_);
+                well->updateWellStateWithTarget(ebosSimulator_, well_state_, deferred_logger);
             }
 
             // there is no new well control change input within a report step,
@@ -1275,7 +1303,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateGroupControls()
+    updateGroupControls(Opm::DeferredLogger& deferred_logger)
     {
 
         if (wellCollection().groupControlActive()) {
@@ -1302,7 +1330,7 @@ namespace Opm {
 
             // TODO: we should only do the well is involved in the update group targets
             for (auto& well : well_container_) {
-                well->updateWellStateWithTarget(ebosSimulator_, well_state_);
+                well->updateWellStateWithTarget(ebosSimulator_, well_state_, deferred_logger);
                 well->updatePrimaryVariables(well_state_);
             }
         }
