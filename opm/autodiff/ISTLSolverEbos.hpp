@@ -251,13 +251,16 @@ protected:
 	      }
 	      if(parameters_.scale_linear_system_){
 		// also scale weights
-		this->scaleEquationsAndVariables(weights_);
+		this->scaleEquationsAndVariables(weights_,form_cpr);
 	      }
-	      if(form_cpr){
+	      if(form_cpr && not(parameters_.cpr_use_drs_)){
 		scaleMatrixAndRhs(weights_);
 	      }
 	      
-	      
+	      if(weights_.size() == 0){
+		// if weights are not set cpr_use_drs_=false;
+		parameters_.cpr_use_drs_ = false;
+	      }
 	      if(parameters_.linear_solver_verbosity_ > 5) { 
 	      	std::ofstream filem("matrix_istl.txt");
 	      	Dune::writeMatrixMarket(*matrix_, filem);
@@ -673,7 +676,7 @@ protected:
 	for (auto i=matrix_->begin(); i!=endi; ++i){
 	  const auto endj = (*i).end();
 	  BlockVector& brhs = (*rhs_)[i.index()];
-	  BlockVector& bw = weights[i.index()];
+	  
 	  for (auto j=(*i).begin(); j!=endj; ++j){
 	    MatrixBlockType& block = *j;
 	    const auto& priVars = sol[i.index()];
@@ -681,14 +684,19 @@ protected:
 	      for(std::size_t jj=0; jj < block.cols; jj++){
 		//double var_scale = getVarscale(jj, priVars.primaryVarsMeaning))
 		double var_scale = simulator_.model().primaryVarWeight(i.index(),jj);
-        block[ii][jj] /=var_scale;
-        block[ii][jj] *= simulator_.model().eqWeight(i.index(), ii);
+		block[ii][jj] /=var_scale;
+		block[ii][jj] *= simulator_.model().eqWeight(i.index(), ii);
 	      }
 	    }
 	  }
 	  for(std::size_t ii=0; ii < brhs.size(); ii++){
 	    brhs[ii] *= simulator_.model().eqWeight(i.index(), ii);
-	    bw[ii]  /= simulator_.model().eqWeight(i.index(), ii);
+	  }
+	  if(weights_.size() == matrix_->N()){
+	    BlockVector& bw = weights[i.index()];
+	    for(std::size_t ii=0; ii < brhs.size(); ii++){
+	      bw[ii]  /= simulator_.model().eqWeight(i.index(), ii);
+	    }
 	  }
 	  double abs_max =
 	    *std::max_element(bw.begin(), bw.end(), [](double a, double b){ return std::abs(a) < std::abs(b); } );
