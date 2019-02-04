@@ -251,7 +251,7 @@ protected:
 	      }
 	      if(parameters_.scale_linear_system_){
 		// also scale weights
-		this->scaleEquationsAndVariables(weights_,form_cpr);
+		this->scaleEquationsAndVariables(weights_);
 	      }
 	      if(form_cpr && not(parameters_.cpr_use_drs_)){
 		scaleMatrixAndRhs(weights_);
@@ -697,10 +697,11 @@ protected:
 	    for(std::size_t ii=0; ii < brhs.size(); ii++){
 	      bw[ii]  /= simulator_.model().eqWeight(i.index(), ii);
 	    }
+	    double abs_max =
+	      *std::max_element(bw.begin(), bw.end(), [](double a, double b){ return std::abs(a) < std::abs(b); } );
+	    bw /= abs_max;
 	  }
-	  double abs_max =
-	    *std::max_element(bw.begin(), bw.end(), [](double a, double b){ return std::abs(a) < std::abs(b); } );
-	  bw /= abs_max;
+	  
 	}                        
       }
       void scaleSolution(Vector& x){
