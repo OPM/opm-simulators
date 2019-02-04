@@ -116,7 +116,7 @@ namespace Ewoms {
             typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
             typedef typename Vector::block_type BlockVector;
             typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-             typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+            typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
             //typedef typename SparseMatrixAdapter::block_type Matrix;
             //    static_assert(std::is_same<SparseMatrixAdapter, IstlSparseMatrixAdapter<MatrixBlock>::value,
             //              "The AMGCLSolver linear solver backend requires the IstlSparseMatrixAdapter");
@@ -257,7 +257,7 @@ namespace Ewoms {
                     prm_.put("precond.eps_dd", -1e8);
                     prm_.put("precond.eps_ps", -1e8);
                 }
-                else if (solver_type_ == "amgcl_trueimpes_pressure"){
+                //else if (solver_type_ == "amgcl_trueimpes_pressure"){
                 //     prm_.put<bool>("use_drs",true);                    
                 // trueImpesBlocksInMatrix(M_cp,b_cp);
                 // multBlocksInMatrix(M_cp, rightTrans_, false);
@@ -313,16 +313,16 @@ namespace Ewoms {
                         }
                     }
                     {
-                       const auto& sol = simulator_.model().solution(0);
-                       std::ofstream file("solution.txt");
-                       // Dune::writeMatrixMarket(sol, file);
-                       for(int i=0; i < n_; ++i){
-                           const auto& priVars = sol[i];
-                           for (unsigned eqIdx = 0; eqIdx < np_; ++eqIdx){
-                                       file << priVars[eqIdx] << " ";
-                           }
-                           file << priVars.primaryVarsMeaning() << std::endl;
-                       }
+                        const auto& sol = simulator_.model().solution(0);
+                        std::ofstream file("solution.txt");
+                        // Dune::writeMatrixMarket(sol, file);
+                        for(int i=0; i < n_; ++i){
+                            const auto& priVars = sol[i];
+                            for (unsigned eqIdx = 0; eqIdx < np_; ++eqIdx){
+                                file << priVars[eqIdx] << " ";
+                            }
+                            file << priVars.primaryVarsMeaning() << std::endl;
+                        }
                     }
                 }                
                 
@@ -474,7 +474,7 @@ namespace Ewoms {
                 for(int i=0; i < n_; ++i){
                     for(int j=0; j < np_; ++j){
                         weights[ind] = bweights[i][j]; 
-                            ++ind;
+                        ++ind;
                     }                   
                 }
                 return weights;
@@ -533,53 +533,53 @@ namespace Ewoms {
                 return weights;
             }
             
-             std::vector<double> getStorageWeights(){
-                 BlockVector rhs(0.0);
-                 rhs[0] = 1.0;
-                 //auto model& simulator_.model();
-                 std::vector<double> weights(sz_);
-                 int index = 0;
-                 ElementContext elemCtx(simulator_);
-                 const auto& vanguard = simulator_.vanguard();
-                 auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-                 const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-                 for (; elemIt != elemEndIt; ++elemIt) {
-                     const Element& elem = *elemIt;
-                     elemCtx.updatePrimaryStencil(elem);
-                     elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                     Dune::FieldVector<Evaluation, FluidSystem::numPhases> storage;
-                     //for(int cell=0; cell < n_;++cell){
-                     //EqVector& cachedStorage(cell, /*timeIdx=*/0);
-                     unsigned threadId = ThreadManager::threadId();
-                     simulator_.model().localLinearizer(threadId).localResidual().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
-                     Scalar extrusionFactor =
-                         elemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
-                     Scalar scvVolume =
+            std::vector<double> getStorageWeights(){
+                BlockVector rhs(0.0);
+                rhs[0] = 1.0;
+                //auto model& simulator_.model();
+                std::vector<double> weights(sz_);
+                int index = 0;
+                ElementContext elemCtx(simulator_);
+                const auto& vanguard = simulator_.vanguard();
+                auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+                const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+                for (; elemIt != elemEndIt; ++elemIt) {
+                    const Element& elem = *elemIt;
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                    Dune::FieldVector<Evaluation, FluidSystem::numPhases> storage;
+                    //for(int cell=0; cell < n_;++cell){
+                    //EqVector& cachedStorage(cell, /*timeIdx=*/0);
+                    unsigned threadId = ThreadManager::threadId();
+                    simulator_.model().localLinearizer(threadId).localResidual().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
+                    Scalar extrusionFactor =
+                        elemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
+                    Scalar scvVolume =
                         elemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
-                     Scalar storage_scale = scvVolume / elemCtx.simulator().timeStepSize();
-                     MatrixBlockType block;
-                     int offset = 0;
-                     for(int ii=0; ii< np_; ++ii){
-                         for(int jj=0; jj< np_; ++jj){
-                             //const auto& vec = storage[ii].derivative(jj);
-                             block[ii][jj] = storage[ii].derivative(jj)/storage_scale;
-                             if(jj==0){
-                                   block[ii][jj] *=pressure_scale_;
-                              }
-                         }
-                     }
-                     //auto bweights = block.invert()*rhs;
-                     //auto bweights = rhs;//diag_block.invert()*rhs;
-                     BlockVector bweights;
-                     MatrixBlockType block_transpose = block.transpose();
-                     block_transpose.solve(bweights, rhs);
-                     for(int bind=0; bind < np_;++bind){
-                         weights[index] =bweights[bind];
-                         ++index;
-                     }
-                 }
-                 return weights;
-             }
+                    Scalar storage_scale = scvVolume / elemCtx.simulator().timeStepSize();
+                    MatrixBlockType block;
+                    int offset = 0;
+                    for(int ii=0; ii< np_; ++ii){
+                        for(int jj=0; jj< np_; ++jj){
+                            //const auto& vec = storage[ii].derivative(jj);
+                            block[ii][jj] = storage[ii].derivative(jj)/storage_scale;
+                            if(jj==0){
+                                block[ii][jj] *=pressure_scale_;
+                            }
+                        }
+                    }
+                    //auto bweights = block.invert()*rhs;
+                    //auto bweights = rhs;//diag_block.invert()*rhs;
+                    BlockVector bweights;
+                    MatrixBlockType block_transpose = block.transpose();
+                    block_transpose.solve(bweights, rhs);
+                    for(int bind=0; bind < np_;++bind){
+                        weights[index] =bweights[bind];
+                        ++index;
+                    }
+                }
+                return weights;
+            }
             std::vector<double> quasiImpesWeights(Matrix& A){
                 std::vector<double> weights(sz_);
                 BlockVector rhs(0.0);
@@ -645,7 +645,7 @@ namespace Ewoms {
                             bb[jj] *= weights[jj];
                         }
                         else{
-                          bb[00] += bb[jj]*weights[jj];  
+                            bb[00] += bb[jj]*weights[jj];  
                         }
                     }
                 }

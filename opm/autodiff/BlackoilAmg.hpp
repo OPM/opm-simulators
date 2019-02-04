@@ -21,6 +21,7 @@
 
 #include <ewoms/linear/matrixblock.hh>
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
+#include <opm/autodiff/FlowLinearSolverParameters.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
 #include <dune/istl/paamg/twolevelmethod.hh>
 #include <dune/istl/paamg/aggregates.hh>
@@ -89,32 +90,36 @@ Dune::OverlappingSchwarzOperator<M,X,Y,T> createOperator(const Dune::Overlapping
 //! \param comm The communication objecte describing the data distribution.
 //! \param pressureIndex The index of the pressure in the matrix block
 //! \retun A pair of the scaled matrix and the associated operator-
-template<class Operator, class Communication>
+template<class Operator, class Communication,class Vector>
 std::tuple<std::unique_ptr<typename Operator::matrix_type>, Operator>
-scaleMatrixQuasiImpes(const Operator& op, const Communication& comm,
-                      std::size_t pressureIndex)
+scaleMatrixDRS(const Operator& op, const Communication& comm,
+	       std::size_t pressureIndex,const Vector& weights, const Opm::CPRParameter& param)
 {
     using Matrix = typename Operator::matrix_type;
     using Block = typename Matrix::block_type;
+    using BlockVector = typename Vector::block_type;
     std::unique_ptr<Matrix> matrix(new Matrix(op.getmat()));
-
-    // for ( auto& row : *matrix )
-    // {
-    //     for ( auto& block : row )
-    //     {
-    //         for ( std::size_t i = 0; i < Block::rows; i++ )
-    //         {
-    //             if ( i != pressureIndex )
-    //             {
-    //                 for(std::size_t j=0; j < Block::cols; j++)
-    //                 {
-    //                     block[pressureIndex][j] += block[i][j];
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-    return std::make_tuple(std::move(matrix), createOperator(op, *matrix, comm));
+    if(param.cpr_use_drs_){
+      const auto endi = matrix->end();
+      for (auto i=matrix->begin(); i!=endi; ++i){
+	const BlockVector& bw = weights[i.index()];
+	const auto endj = (*i).end();
+	  for (auto j=(*i).begin(); j!=endj; ++j){  
+	    {
+	      BlockVector bvec(0.0);
+	      Block& block = *j;
+	      for ( std::size_t ii = 0; ii < Block::rows; ii++ ){
+		  for(std::size_t jj=0; jj < Block::cols; jj++){
+		    bvec[jj] += bw[ii]*block[ii][jj];
+		    //block[pressureIndex][j] += block[i][j];
+		  }		  
+	      }
+	      block[pressureIndex] = bvec; 
+	    }
+	  }
+      }
+      return std::make_tuple(std::move(matrix), createOperator(op, *matrix, comm));
+    }
 }
 
 //! \brief Applies diagonal scaling to the discretization Matrix (Scheichl, 2003)
@@ -124,20 +129,21 @@ scaleMatrixQuasiImpes(const Operator& op, const Communication& comm,
 //! \param vector The vector to scale
 //! \param pressureIndex The index of the pressure in the matrix block
 template<class Vector>
-void scaleVectorQuasiImpes(Vector& vector, std::size_t pressureIndex)
+void scaleVectorDRS(Vector& vector, std::size_t pressureIndex, const Opm::CPRParameter& param, const Vector& weights)
 {
-    // using Block = typename Vector::block_type;
-
-    // for ( auto& block: vector)
-    // {
-    //     for ( std::size_t i = 0; i < Block::dimension; i++ )
-    //     {
-    //         if ( i != pressureIndex )
-    //         {
-    //             block[pressureIndex] += block[i];
-    //         }
-    //     }
-    // }
+    using Block = typename Vector::block_type;
+    if(param.cpr_use_drs_){
+      for(std::size_t j=0; j < vector.size(); ++j){
+	double val(0.0);
+	Block& block = vector[j];
+	const Block& bw = weights[j];
+	for ( std::size_t i = 0; i < Block::dimension; i++ ){
+	  val += bw[i]*block[i];
+	  //block[pressureIndex] += block[i];
+	}
+	block[pressureIndex] = val;
+      }
+    }
 }
 
 //! \brief TMP to create the scalar pendant to a real block matrix, vector, smoother, etc.
@@ -400,7 +406,7 @@ private:
             }
             // Linear solver parameters
             const double tolerance = param_->cpr_solver_tol_;
-            const int maxit        = param_->cpr_max_ell_iter_;
+            const int maxit        = param_->cpr_max_iter_;
             const int verbosity    = ( param_->cpr_solver_verbose_ &&
                                        comm_.communicator().rank()==0 ) ? 1 : 0;
             if ( param_->cpr_use_bicgstab_ )
@@ -873,7 +879,7 @@ private:
  * \brief An algebraic twolevel or multigrid approach for solving blackoil (supports CPR with and without AMG)
  *
  * This preconditioner first decouples the component used for coarsening using a simple scaling
- * approach (e.g. Scheichl, Masson 2013,\see scaleMatrixQuasiImpes). Then it constructs the first
+ * approach (e.g. Scheichl, Masson 2013,\see scaleMatrixDRS). Then it constructs the first
  * coarse level system, either by simply extracting the coupling between the components at COMPONENT_INDEX
  * in the matrix blocks or by extracting them and applying aggregation to them directly. This coarse level
  * can be solved either by AMG or by ILU. The preconditioner is configured using CPRParameter.
@@ -944,11 +950,13 @@ public:
      * \param comm The information about the parallelization.
      */
     BlackoilAmg(const CPRParameter& param,
+		const typename TwoLevelMethod::FineDomainType& weights,
                 const Operator& fineOperator, const Criterion& criterion,
                 const SmootherArgs& smargs, const Communication& comm)
         : param_(param),
-          scaledMatrixOperator_(Detail::scaleMatrixQuasiImpes(fineOperator, comm,
-                                                              COMPONENT_INDEX)),
+	  weights_(weights),
+          scaledMatrixOperator_(Detail::scaleMatrixDRS(fineOperator, comm,
+						       COMPONENT_INDEX, weights, param)),
           smoother_(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
                                                         smargs, comm)),
           levelTransferPolicy_(criterion, comm, param.cpr_pressure_aggregation_),
@@ -973,16 +981,18 @@ public:
                const typename TwoLevelMethod::FineRangeType& d)
     {
         auto scaledD = d;
-        Detail::scaleVectorQuasiImpes(scaledD, COMPONENT_INDEX);
+        Detail::scaleVectorDRS(scaledD, COMPONENT_INDEX, param_, weights_);
         twoLevelMethod_.apply(v, scaledD);
     }
 private:
     const CPRParameter& param_;
+    const typename TwoLevelMethod::FineDomainType& weights_;
     std::tuple<std::unique_ptr<Matrix>, Operator> scaledMatrixOperator_;
     std::shared_ptr<Smoother> smoother_;
     LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;
     TwoLevelMethod twoLevelMethod_;
+  //BlockVector weights_;
 };
 
 namespace ISTLUtility

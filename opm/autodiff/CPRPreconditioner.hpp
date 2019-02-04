@@ -183,11 +183,12 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
     return EllipticPreconditionerPointer(new ParallelPreconditioner(Ae, comm, relax, milu));
 }
 
-template < class C, class Op, class P, class S, std::size_t index >
+template < class C, class Op, class P, class S, std::size_t index,class Vector>
 inline void
 createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
                                std::unique_ptr< BlackoilAmg<Op,S,C,P,index> >& amgPtr,
-                               const CPRParameter& params)
+                               const CPRParameter& params,
+			       const Vector& weights)
 {
     using AMG = BlackoilAmg<Op,S,C,P,index>;
     // TODO: revise choice of parameters
@@ -207,7 +208,7 @@ createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
     smootherArgs.relaxationFactor = relax;
     setILUParameters(smootherArgs, params);
 
-    amgPtr.reset( new AMG( params, opA, criterion, smootherArgs, comm ) );
+    amgPtr.reset( new AMG( params, weights, opA, criterion, smootherArgs, comm ) );
 }
 
 template < class C, class Op, class P, class AMG >

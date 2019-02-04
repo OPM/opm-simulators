@@ -225,19 +225,19 @@ protected:
 	    bool matrix_cont_added = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
 	    
 	    if(matrix_cont_added){
-	      Vector weights;
+	      //Vector weights;
 	      bool form_cpr = true;
 	      if(parameters_.system_strategy_ == "quasiimpes"){
-		weights = getQuasiImpesWeights();
+		weights_ = getQuasiImpesWeights();
 	      }else if(parameters_.system_strategy_ == "trueimpes"){
-		weights = getStorageWeights();
+		weights_ = getStorageWeights();
 	      }else if(parameters_.system_strategy_ == "simple"){
 		BlockVector bvec(1.0);
-		weights = getSimpleWeights(bvec);
+		weights_ = getSimpleWeights(bvec);
 	      }else if(parameters_.system_strategy_ == "original"){
 		BlockVector bvec(0.0);
 		bvec[pressureIndex] = 1;
-		weights = getSimpleWeights(bvec);
+		weights_ = getSimpleWeights(bvec);
 	      }else{
 		form_cpr = false;
 	      }
@@ -247,13 +247,14 @@ protected:
 	      	std::ofstream fileb("rhs_istl_pre.txt");
 	      	Dune::writeMatrixMarket(*rhs_, fileb);
 	      	std::ofstream filew("weights_istl.txt");
-	      	Dune::writeMatrixMarket(weights, filew);
+	      	Dune::writeMatrixMarket(weights_, filew);
 	      }
 	      if(parameters_.scale_linear_system_){
-		weights = this->scaleEquationsAndVariables(weights);
+		// also scale weights
+		this->scaleEquationsAndVariables(weights_);
 	      }
 	      if(form_cpr){
-		scaleMatrixAndRhs(weights);
+		scaleMatrixAndRhs(weights_);
 	      }
 	      
 	      
@@ -457,7 +458,7 @@ protected:
                             const MILU_VARIANT milu ) const
         {
             ISTLUtility::template createAMGPreconditionerPointer<C>( *opA, relax,
-                                                                     comm, amg, parameters_ );
+                                                                     comm, amg, parameters_, weights_ );
         }
 
 
@@ -825,6 +826,7 @@ protected:
 
         std::vector<std::pair<int,std::vector<int>>> overlapRowAndColumns_;
         FlowLinearSolverParameters parameters_;
+        Vector weights_;
 	bool scale_variables_;
     }; // end ISTLSolver
 
