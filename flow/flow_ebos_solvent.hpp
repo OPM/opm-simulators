@@ -24,7 +24,7 @@
 
 
 namespace Opm {
-void flowEbosSolventSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
+void flowEbosSolventSetDeck(double setupTime, Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
 int flowEbosSolventMain(int argc, char** argv);
 }
 

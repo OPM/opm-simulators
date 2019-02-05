@@ -23,7 +23,7 @@
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 namespace Opm {
-void flowEbosOilWaterSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
+void flowEbosOilWaterSetDeck(double setupTime, Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
 int flowEbosOilWaterMain(int argc, char** argv);
 }
 
