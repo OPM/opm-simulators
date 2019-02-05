@@ -150,7 +150,10 @@ public:
     void writeOutput(bool isSubStep)
     {
         Scalar curTime = simulator_.time() + simulator_.timeStepSize();
-        Scalar totalSolverTime = simulator_.executionTimer().realTimeElapsed();
+        Scalar totalCpuTime =
+            simulator_.executionTimer().realTimeElapsed() +
+            simulator_.setupTimer().realTimeElapsed() +
+            simulator_.vanguard().externalSetupTime();
         Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
 
         // output using eclWriter if enabled
@@ -195,8 +198,8 @@ public:
             const auto& simConfig = eclState.getSimulationConfig();
 
             // Add TCPU
-            if (totalSolverTime != 0.0)
-                miscSummaryData["TCPU"] = totalSolverTime;
+            if (totalCpuTime != 0.0)
+                miscSummaryData["TCPU"] = totalCpuTime;
 
             bool enableDoublePrecisionOutput = EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
             const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
