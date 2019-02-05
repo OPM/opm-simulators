@@ -62,7 +62,7 @@ NEW_PROP_TAG(ScaleLinearSystem);
 NEW_PROP_TAG(LinearSolverBackend);
 NEW_PROP_TAG(PreconditionerAddWellContributions);
 NEW_PROP_TAG(CprSolverVerbose);
-NEW_PROP_TAG(CprUseDRS);
+NEW_PROP_TAG(CprUseDrs);
 
 SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
 SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
@@ -83,7 +83,7 @@ SET_BOOL_PROP(FlowIstlSolverParams, PreconditionerAddWellContributions, false);
 SET_STRING_PROP(FlowIstlSolverParams, SystemStrategy, "original");
 SET_BOOL_PROP(FlowIstlSolverParams, ScaleLinearSystem, false);
 SET_BOOL_PROP(FlowIstlSolverParams, CprSolverVerbose, false);
-SET_BOOL_PROP(FlowIstlSolverParams, CprUseDRS, false);
+SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
 
 END_PROPERTIES
 
@@ -194,7 +194,7 @@ namespace Opm
 	    system_strategy_ = EWOMS_GET_PARAM(TypeTag, std::string, SystemStrategy);
 	    scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
 	    cpr_solver_verbose_  =  EWOMS_GET_PARAM(TypeTag, bool, CprSolverVerbose);
-	    cpr_use_drs_  =  EWOMS_GET_PARAM(TypeTag, bool, CprUseDRS);
+	    cpr_use_drs_  =  EWOMS_GET_PARAM(TypeTag, bool, CprUseDrs);
         }
 
         template <class TypeTag>
@@ -217,7 +217,7 @@ namespace Opm
 	    EWOMS_REGISTER_PARAM(TypeTag, std::string, SystemStrategy, "Strategy for reformulating and scale linear system");
 	    EWOMS_REGISTER_PARAM(TypeTag, bool, ScaleLinearSystem, "Scale linear system according to equation scale and primary variable types");
 	    EWOMS_REGISTER_PARAM(TypeTag, bool, CprSolverVerbose, "Verbose for cpr solver");
-	    EWOMS_REGISTER_PARAM(TypeTag, bool, CprUseDRS, "Use dynamic row sum using weighs");
+	    EWOMS_REGISTER_PARAM(TypeTag, bool, CprUseDrs, "Use dynamic row sum using weighs");
         }
 
         FlowLinearSolverParameters() { reset(); }
