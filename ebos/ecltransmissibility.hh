@@ -272,8 +272,8 @@ public:
 
                 // local indices of the faces of the inside and
                 // outside elements which contain the intersection
-                unsigned insideFaceIdx  = intersection.indexInInside();
-                unsigned outsideFaceIdx = intersection.indexInOutside();
+                int insideFaceIdx  = intersection.indexInInside();
+                int outsideFaceIdx = intersection.indexInOutside();
 
                 if (insideFaceIdx == -1) {
                     // NNC. Set zero transmissibility, as it will be
@@ -798,10 +798,11 @@ private:
 
     void computeHalfTrans_(Scalar& halfTrans,
                            const DimVector& areaNormal,
-                           unsigned faceIdx, // in the reference element that contains the intersection
+                           int faceIdx, // in the reference element that contains the intersection
                            const DimVector& distance,
                            const DimMatrix& perm) const
     {
+        assert(faceIdx >= 0);
         unsigned dimIdx = faceIdx/2;
         assert(dimIdx < dimWorld);
         halfTrans = perm[dimIdx][dimIdx];
@@ -815,10 +816,11 @@ private:
     }
 
     DimVector distanceVector_(const DimVector& center,
-                              unsigned faceIdx, // in the reference element that contains the intersection
+                              int faceIdx, // in the reference element that contains the intersection
                               unsigned elemIdx,
                               const std::array<std::vector<DimVector>, dimWorld>& axisCentroids) const
     {
+        assert(faceIdx >= 0);
         unsigned dimIdx = faceIdx/2;
         assert(dimIdx < dimWorld);
         DimVector x = center;
