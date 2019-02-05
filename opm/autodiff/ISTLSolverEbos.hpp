@@ -267,7 +267,12 @@ protected:
 	      	std::ofstream fileb("rhs_istl.txt");
 	      	Dune::writeMatrixMarket(*rhs_, fileb);
 	      }
-	    }
+        }else{
+            if(parameters_.scale_linear_system_){
+                // also scale weights
+                this->scaleEquationsAndVariables(weights_);
+            }
+        }
         }
       
         bool solve(Vector& x) {
@@ -678,7 +683,7 @@ protected:
 	  BlockVector& brhs = (*rhs_)[i.index()];
 	  
 	  for (auto j=(*i).begin(); j!=endj; ++j){
-	    MatrixBlockType& block = *j;
+        MatrixBlockType& block = *j;
 	    const auto& priVars = sol[i.index()];
 	    for ( std::size_t ii = 0; ii < block.rows; ii++ ){	        
 	      for(std::size_t jj=0; jj < block.cols; jj++){

@@ -118,8 +118,8 @@ scaleMatrixDRS(const Operator& op, const Communication& comm,
 	    }
 	  }
       }
-      return std::make_tuple(std::move(matrix), createOperator(op, *matrix, comm));
     }
+    return std::make_tuple(std::move(matrix), createOperator(op, *matrix, comm));
 }
 
 //! \brief Applies diagonal scaling to the discretization Matrix (Scheichl, 2003)
