@@ -160,6 +160,14 @@ opm_add_test(flow_blackoil_amgcl
     flow/flow_blackoil_amgcl.cpp)
 install(TARGETS flow_blackoil_amgcl DESTINATION bin)
 
+opm_add_test(flow_blackoil_amgcl_cpr
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators"
+  SOURCES
+    flow/flow_blackoil_amgcl_cpr.cpp)
+install(TARGETS flow_blackoil_amgcl_cpr DESTINATION bin)
 
 
 add_test(NAME flow__version

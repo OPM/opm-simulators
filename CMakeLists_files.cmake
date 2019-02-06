@@ -180,11 +180,11 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/gatherConvergenceReport.hpp
   opm/linearsolvers/crssolverbackend.hh
   opm/linearsolvers/amgclsolverbackend.hh
-  opm/linearsolvers/amgclprmsolverbackend.hh
+  opm/linearsolvers/amgclsolverbackendcpr.hh
   opm/core/linalg/LinearSolverInterface.hpp
   opm/core/linalg/LinearSolverUmfpack.hpp
   opm/core/linalg/LinearSolverAmgcl.hpp
-  opm/core/linalg/LinearSolverAmgclPrm.hpp
+  opm/core/linalg/LinearSolverAmgclCpr.hpp
   opm/core/linalg/sparse_sys.h
   opm/core/linalg/call_umfpack.h
   flow/flow_tag.hpp
