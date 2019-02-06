@@ -306,8 +306,6 @@ namespace Opm
             for(const auto& entry: sum_dropped)
             {
                 auto& bdiag = (*a_ik)[index][index];
-                if(entry<0)
-                    std::cout << entry << std::endl;
                 bdiag += signFunctor(bdiag) * entry;
                 ++index;
             }
