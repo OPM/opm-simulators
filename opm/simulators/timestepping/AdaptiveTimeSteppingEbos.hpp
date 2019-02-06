@@ -179,12 +179,12 @@ namespace Opm {
                     in a sub cycle of time steps
         */
         template <class Solver>
-        SimulatorReport step(const SimulatorTimer& simulatorTimer,
+        std::vector<SimulatorReport> step(const SimulatorTimer& simulatorTimer,
                              Solver& solver,
                              const bool isEvent,
                              const std::vector<int>* fipnum = nullptr)
         {
-            SimulatorReport report;
+	  std::vector<SimulatorReport> report;
             const double timestep = simulatorTimer.currentStepLength();
 
             // init last time step as a fraction of the given time step
@@ -208,7 +208,7 @@ namespace Opm {
             AdaptiveSimulatorTimer substepTimer(simulatorTimer, suggestedNextTimestep_, maxTimeStep_);
 
             // reset the statistics for the failed substeps
-            failureReport_ = SimulatorReport();
+            failureReports_.resize(0);// = SimulatorReport();
 
             // counter for solver restarts
             int restarts = 0;
@@ -228,7 +228,7 @@ namespace Opm {
                 std::string causeOfFailure = "";
                 try {
                     substepReport = solver.step(substepTimer);
-                    report += substepReport;
+                    report.push_back(substepReport);
 
                     if (solverVerbose_) {
                         // report number of linear iterations
@@ -324,20 +324,20 @@ namespace Opm {
 
                         ebosProblem.writeOutput(/*isSubStep=*/true);
 
-                        report.output_write_time += perfTimer.secsSinceStart();
+                        report.back().output_write_time += perfTimer.secsSinceStart();
                     }
 
                     // set new time step length
                     substepTimer.provideTimeStepEstimate(dtEstimate);
 
-                    report.converged = substepTimer.done();
+                    report.back().converged = substepTimer.done();
                     substepTimer.setLastStepFailed(false);
 
                 }
                 else { // in case of no convergence
                     substepTimer.setLastStepFailed(true);
 
-                    failureReport_ += substepReport;
+                    failureReports_.push_back(substepReport);
 
                     // If we have restarted (i.e. cut the timestep) too
                     // many times, we have failed and throw an exception.
@@ -425,8 +425,8 @@ namespace Opm {
         /** \brief Returns the simulator report for the failed substeps of the last
          *         report step.
          */
-        const SimulatorReport& failureReport() const
-        { return failureReport_; };
+      const std::vector<SimulatorReport>& failureReports() const
+        { return failureReports_; };
 
         double suggestedNextStep() const
         { return suggestedNextTimestep_; }
@@ -532,7 +532,7 @@ namespace Opm {
 
         typedef std::unique_ptr<TimeStepControlInterface> TimeStepControlType;
 
-        SimulatorReport failureReport_;       //!< statistics for the failed substeps of the last timestep
+        std::vector<SimulatorReport> failureReports_;       //!< statistics for the failed substeps of the last timestep
         TimeStepControlType timeStepControl_; //!< time step control object
         double restartFactor_;               //!< factor to multiply time step with when solver fails to converge
         double growthFactor_;                //!< factor to multiply time step when solver recovered from failed convergence

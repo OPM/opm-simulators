@@ -510,29 +510,71 @@ namespace Opm
                 }
             }
 
+	    
             if (!ioConfig.initOnly()) {
                 if (output_cout_) {
                     std::string msg;
                     msg = "\n\n================ Starting main simulation loop ===============\n";
                     OpmLog::info(msg);
                 }
+		std::vector<SimulatorReport> successReports = simulator_->run(simtimer);
+		std::vector<SimulatorReport> failureReports = simulator_->failureReport();
 
-                SimulatorReport successReport = simulator_->run(simtimer);
-                SimulatorReport failureReport = simulator_->failureReport();
-
+		
                 if (output_cout_) {
                     std::ostringstream ss;
                     ss << "\n\n================    End of simulation     ===============\n\n";
-                    successReport.reportFullyImplicit(ss, &failureReport);
+		    SimulatorReport totalSuccessReport;
+		    for(SimulatorReport st : successReports){
+		      totalSuccessReport += st;
+		    }		    
+		    SimulatorReport totalFailureReport;
+		    for(SimulatorReport st : failureReports){
+		      totalFailureReport += st;
+		    }                    
+                    totalSuccessReport.reportFullyImplicit(ss, &totalFailureReport);
                     OpmLog::info(ss.str());
                 }
-
+		// write out timing report for all timesteps
+		std::string dir = simulator_->outputDir();
+		if (dir == ".")
+		  dir = "";
+		else if (!dir.empty() && dir.back() != '/')
+		  dir += "/";
+		namespace fs = boost::filesystem;
+		fs::path output_dir(dir);
+		fs::path subdir("reports");
+		output_dir = output_dir / subdir;
+		if(!(fs::exists(output_dir))){
+		  fs::create_directory(output_dir);
+		}
+		// Combine and return.
+		{
+		  fs::path filename = output_dir / fs::path("success_reports.txt");
+		  std::ofstream file(filename.string());
+		  reportHeader(file);
+		  for(SimulatorReport sr: successReports){
+		    file << sr;
+		  }
+		}
+		{
+		  fs::path filename = output_dir / fs::path("failed_reports.txt");
+		  std::ofstream file(filename.string());
+		  reportHeader(file);
+		  for(SimulatorReport sr: failureReports){
+		    file << sr;
+		  }
+		}
+		
             } else {
                 if (output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }
 
             }
+	    
+	    
+		  
         }
 
         /// This is the main function of Flow.

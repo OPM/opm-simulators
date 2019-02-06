@@ -292,13 +292,15 @@ namespace Opm {
                 // Compute the nonlinear update.
                 const int nc = UgGridHelpers::numCells(grid_);
                 BVector x(nc);
-
+                linear_solve_setup_time_ = 0.0;
                 try {
                     solveJacobianSystem(x);
+                    report.linear_solve_setup_time += linear_solve_setup_time_;
                     report.linear_solve_time += perfTimer.stop();
                     report.total_linear_iterations += linearIterationsLastSolve();
                 }
                 catch (...) {
+                    report.linear_solve_setup_time += linear_solve_setup_time_;
                     report.linear_solve_time += perfTimer.stop();
                     report.total_linear_iterations += linearIterationsLastSolve();
 
@@ -481,7 +483,10 @@ namespace Opm {
             x = 0.0;
 
             auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
+            Dune::Timer perfTimer;
+            perfTimer.start();
             ebosSolver.prepare(ebosJac.istlMatrix(), ebosResid);
+            linear_solve_setup_time_ = perfTimer.stop();
             ebosSolver.solve(x);
        }
 
@@ -908,7 +913,7 @@ namespace Opm {
         double dsMax() const { return param_.ds_max_; }
         double drMaxRel() const { return param_.dr_max_rel_; }
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
-
+        double linear_solve_setup_time_;
     public:
         std::vector<bool> wasSwitched_;
     };

@@ -129,9 +129,9 @@ public:
     /// \param[in,out] timer       governs the requested reporting timesteps
     /// \param[in,out] state       state of reservoir: pressure, fluxes
     /// \return                    simulation report, with timing data
-    SimulatorReport run(SimulatorTimer& timer)
+  std::vector<SimulatorReport> run(SimulatorTimer& timer)
     {
-        failureReport_ = SimulatorReport();
+      //failureReports_ = SimulatorReport();
 
         // handle restarts
         std::unique_ptr<RestartValue> restartValues;
@@ -181,9 +181,11 @@ public:
             }
         }
 
-        SimulatorReport report;
-        SimulatorReport stepReport;
-
+      std::vector<SimulatorReport> report;
+      {
+        SimulatorReport initRep;
+        report.push_back(initRep);
+      }
         if (isRestart()) {
             wellModel_().initFromRestartFile(*restartValues);
         }
@@ -208,8 +210,8 @@ public:
 
                 wellModel_().beginReportStep(timer.currentStepNum());
                 ebosSimulator_.problem().writeOutput(false);
-
-                report.output_write_time += perfTimer.stop();
+		
+                report.back().output_write_time += perfTimer.stop();
             }
 
             // Run a multiple steps of the solver depending on the time step control.
@@ -248,19 +250,24 @@ public:
                         events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE, timer.currentStepNum());
-                stepReport = adaptiveTimeStepping->step(timer, *solver, event, nullptr);
-                report += stepReport;
-                failureReport_ += adaptiveTimeStepping->failureReport();
+                std::vector<SimulatorReport> stepReport =
+		  adaptiveTimeStepping->step(timer, *solver, event, nullptr);
+                //report += stepReport;
+		report.insert(report.end(), stepReport.begin(), stepReport.end());
+		std::vector<SimulatorReport> subFailureReports = adaptiveTimeStepping->failureReports();
+        failureReports_.insert(failureReports_.end(), subFailureReports.begin(), subFailureReports.end());
             }
             else {
                 // solve for complete report step
-                stepReport = solver->step(timer);
-                report += stepReport;
-                failureReport_ += solver->failureReport();
-
+                SimulatorReport localStepReport = solver->step(timer);
+                //report += stepReport;
+		report.push_back(localStepReport);
+		//report.insert(report.end(), stepReport.begin(), stepReport.end());
+                //failureReport_ += solver->failureReport();
+		failureReports_.push_back(solver->failureReport());
                 if (terminalOutput_) {
                     std::ostringstream ss;
-                    stepReport.reportStep(ss);
+                    localStepReport.reportStep(ss);
                     OpmLog::info(ss.str());
                 }
             }
@@ -271,7 +278,7 @@ public:
             solverTimer.stop();
 
             // update timing.
-            report.solver_time += solverTimer.secsSinceStart();
+            report.back().solver_time += solverTimer.secsSinceStart();
 
             // Increment timer, remember well state.
             ++timer;
@@ -290,12 +297,12 @@ public:
             const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
             ebosSimulator_.problem().setNextTimeStepSize(nextstep);
             ebosSimulator_.problem().writeOutput(false);
-            report.output_write_time += perfTimer.stop();
+            report.back().output_write_time += perfTimer.stop();
 
             if (terminalOutput_) {
                 std::string msg =
-                    "Time step took " + std::to_string(solverTimer.secsSinceStart()) + " seconds; "
-                    "total solver time " + std::to_string(report.solver_time) + " seconds.";
+		  "Time step took " + std::to_string(solverTimer.secsSinceStart()) + " seconds; "
+		  "total solver time " + std::to_string(report.back().solver_time) + " seconds.";
                 OpmLog::debug(msg);
             }
 
@@ -303,20 +310,23 @@ public:
 
         // Stop timer and create timing report
         totalTimer.stop();
-        report.total_time = totalTimer.secsSinceStart();
-        report.converged = true;
+        report.back().total_time = totalTimer.secsSinceStart();
+        report.back().converged = true;
 
         return report;
     }
 
     /** \brief Returns the simulator report for the failed substeps of the simulation.
      */
-    const SimulatorReport& failureReport() const
-    { return failureReport_; };
+  const std::vector<SimulatorReport>& failureReport() const
+    { return failureReports_; };
 
     const Grid& grid() const
     { return ebosSimulator_.vanguard().grid(); }
 
+  std::string outputDir(){
+    return ebosSimulator_.problem().outputDir();
+  }
 protected:
 
     std::unique_ptr<Solver> createSolver(WellModel& wellModel)
@@ -365,7 +375,7 @@ protected:
     // Data.
     Simulator& ebosSimulator_;
     std::unique_ptr<WellConnectionAuxiliaryModule<TypeTag>> wellAuxMod_;
-    SimulatorReport failureReport_;
+    std::vector<SimulatorReport> failureReports_;
 
     ModelParameters modelParam_;
     SolverParameters solverParam_;

@@ -21,7 +21,7 @@
 #define OPM_SIMULATORREPORT_HEADER_INCLUDED
 
 #include <iosfwd>
-
+#include <iostream>
 namespace Opm
 {
 
@@ -33,6 +33,7 @@ namespace Opm
         double total_time;
         double solver_time;
         double assemble_time;
+        double linear_solve_setup_time;
         double linear_solve_time;
         double update_time;
         double output_write_time;
@@ -60,6 +61,8 @@ namespace Opm
         // Whether to print statistics to std::cout
         bool verbose_;
     };
+  std::ostream& operator<<(std::ostream& os, const SimulatorReport simrep);
+  void reportHeader(std::ostream& os);
 
 } // namespace Opm
 

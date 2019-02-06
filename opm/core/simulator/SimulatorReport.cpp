@@ -33,6 +33,7 @@ namespace Opm
           total_time(0.0),
           solver_time(0.0),
           assemble_time(0.0),
+          linear_solve_setup_time(0.0),
           linear_solve_time(0.0),
           update_time(0.0),
           output_write_time(0.0),
@@ -49,6 +50,7 @@ namespace Opm
     {
         pressure_time += sr.pressure_time;
         transport_time += sr.transport_time;
+        linear_solve_setup_time += sr.linear_solve_setup_time;
         linear_solve_time += sr.linear_solve_time;
         solver_time += sr.solver_time;
         assemble_time += sr.assemble_time;
@@ -119,6 +121,14 @@ namespace Opm
                 }
                 os << std::endl;
 
+                t = linear_solve_setup_time + (failureReport ? failureReport->linear_solve_setup_time : 0.0);
+                os << " Linear solve setup time (seconds): " << t;
+                if (failureReport) {
+                    os << " (Failed: " << failureReport->linear_solve_setup_time << "; "
+                       << 100*failureReport->linear_solve_setup_time/t << "%)";
+                }
+                os << std::endl;
+
                 t = update_time + (failureReport ? failureReport->update_time : 0.0);
                 os << " Update time (seconds):       " << t;
                 if (failureReport) {
@@ -179,6 +189,43 @@ namespace Opm
                << std::endl;
         }
     }
-
+  std::ostream& operator<<(std::ostream& os, const SimulatorReport simrep){
+    os << simrep.pressure_time << " ";
+    os << simrep.transport_time << " ";
+    os << simrep.transport_time << " ";
+    os << simrep.total_time << " ";
+    os << simrep.solver_time << " ";
+    os << simrep.assemble_time << " ";
+    os << simrep.linear_solve_setup_time << " ";
+    os << simrep.linear_solve_time << " ";
+    os << simrep.update_time << " ";
+    os << simrep.output_write_time << " ";
+    os << simrep.total_well_iterations << " ";
+    os << simrep.total_linearizations << " ";
+    os << simrep.total_newton_iterations << " ";
+    os << simrep.total_linear_iterations << " ";
+    os << simrep.converged << " ";
+    os << std::endl;
+    return os;
+  }
+  void reportHeader(std::ostream& os){
+    os << " % ";
+    os << " pressure_time  ";
+    os << " transport_time  ";
+    os << " transport_time  ";
+    os << " total_time  ";
+    os << " solver_time  ";
+    os << " assemble_time  ";
+    os << " linear_solve_setup_time  ";
+    os << " linear_solve_time  ";
+    os << " update_time  ";
+    os << " output_write_time  ";
+    os << " total_well_iterations  ";
+    os << " total_linearizations  ";
+    os << " total_newton_iterations  ";
+    os << " total_linear_iterations  ";
+    os << " converged  ";
+    os << std::endl;
+  }
 
 } // namespace Opm
