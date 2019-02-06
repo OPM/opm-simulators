@@ -191,11 +191,14 @@ createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
 			       const Vector& weights)
 {
     using AMG = BlackoilAmg<Op,S,C,P,index>;
+    const int verbosity    = ( params.cpr_solver_verbose_ &&
+                                       comm.communicator().rank()==0 ) ? 1 : 0;
+
     // TODO: revise choice of parameters
     int coarsenTarget=1200;
     using Criterion = C;
     Criterion criterion(15, coarsenTarget);
-    criterion.setDebugLevel( 0 ); // no debug information, 1 for printing hierarchy information
+    criterion.setDebugLevel( verbosity ); // no debug information, 1 for printing hierarchy information
     criterion.setDefaultValuesIsotropic(2);
     criterion.setNoPostSmoothSteps( 1 );
     criterion.setNoPreSmoothSteps( 1 );

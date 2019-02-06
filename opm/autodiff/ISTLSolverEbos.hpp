@@ -191,8 +191,8 @@ protected:
       
         enum { pressureIndex = Indices::pressureSwitchIdx };
         static const int numEq = Indices::numEq;
-
-
+     typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false, TypeTag > OperatorSerial;
+      
     public:
         typedef Dune::AssembledLinearOperator< Matrix, Vector, Vector > AssembledLinearOperatorType;
 
@@ -269,12 +269,17 @@ protected:
                 this->scaleEquationsAndVariables(weights_);
 	      }
 	    }
+	   
+	    if( not(isParallel()) ){
+	      const WellModel& wellModel = simulator_.problem().wellModel();
+	      opA_serial_.reset(new OperatorSerial(*matrix_, *matrix_, wellModel));
+	    }
         }
       
         bool solve(Vector& x) {
             // Solve system.
-
-            const WellModel& wellModel = simulator_.problem().wellModel();
+	  const WellModel& wellModel = simulator_.problem().wellModel();
+            
 
             if( isParallel() )
             {
@@ -292,10 +297,10 @@ protected:
                 solve( opA, x, *rhs_, *(opA.comm()) );
             }
             else
-            {
-	      typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false, TypeTag > Operator;
-                Operator opA(*matrix_, *matrix_, wellModel);
-                solve( opA, x, *rhs_ );
+	      {
+		
+                //OperatorSerial opA(*matrix_, *matrix_, wellModel);
+                solve( *opA_serial_, x, *rhs_ );
 		
 		if((parameters_.linear_solver_verbosity_ > 5) &&
 		   (iterations_ > parameters_.linear_solver_verbosity_)) {		
@@ -315,21 +320,21 @@ protected:
 		  std::ostringstream oss;
 		  oss << "prob_" << simulator_.episodeIndex() << "_";
 		  oss << simulator_.time() << "_";
-          std::string output_file(oss.str());
-          fs::path full_path = output_dir / output_file;
-          std::string prefix = full_path.string();
-          {
-            std::string filename = prefix + "matrix_istl.txt";
-            std::ofstream filem(filename);
+		  std::string output_file(oss.str());
+		  fs::path full_path = output_dir / output_file;
+		  std::string prefix = full_path.string();
+		  {
+		    std::string filename = prefix + "matrix_istl.txt";
+		    std::ofstream filem(filename);
 		    Dune::writeMatrixMarket(*matrix_, filem);
 		  }
-          {
-            std::string filename = prefix + "rhs_istl.txt";
-            std::ofstream fileb(filename);
+		  {
+		    std::string filename = prefix + "rhs_istl.txt";
+		    std::ofstream fileb(filename);
 		    Dune::writeMatrixMarket(*rhs_, fileb);
 		  }
 		}
-            }
+	      }
 	    if(parameters_.scale_linear_system_){
 	      scaleSolution(x);
 	    }
@@ -871,6 +876,7 @@ protected:
         FlowLinearSolverParameters parameters_;
         Vector weights_;
 	bool scale_variables_;
+      std::shared_ptr<OperatorSerial> opA_serial_;
     }; // end ISTLSolver
 
 } // namespace Opm
