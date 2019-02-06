@@ -144,10 +144,12 @@ namespace Opm
 
         virtual void assembleWellEq(const Simulator& ebosSimulator,
                                     const double dt,
-                                    WellState& well_state) override;
+                                    WellState& well_state,
+                                    Opm::DeferredLogger& deferred_logger) override;
 
         virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
-                                               WellState& well_state) const override;
+                                               WellState& well_state,
+                                               Opm::DeferredLogger& deferred_logger) const override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const override;
@@ -165,7 +167,8 @@ namespace Opm
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,
-                                           std::vector<double>& well_potentials) /* const */ override;
+                                           std::vector<double>& well_potentials,
+                                           Opm::DeferredLogger& deferred_logger) /* const */ override;
 
         virtual void updatePrimaryVariables(const WellState& well_state) const override;
 
@@ -353,29 +356,31 @@ namespace Opm
 
         void updateThp(WellState& well_state) const;
 
-        void assembleControlEq();
+        void assembleControlEq(Opm::DeferredLogger& deferred_logger);
 
         // handle the non reasonable fractions due to numerical overshoot
         void processFractions() const;
 
         // updating the inflow based on the current reservoir condition
-        void updateIPR(const Simulator& ebos_simulator) const;
+        void updateIPR(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) const;
 
         // update the operability status of the well is operable under the current reservoir condition
         // mostly related to BHP limit and THP limit
         virtual void checkWellOperability(const Simulator& ebos_simulator,
-                                          const WellState& well_state) override;
+                                          const WellState& well_state,
+                                          Opm::DeferredLogger& deferred_logger) override;
 
         // check whether the well is operable under the current reservoir condition
         // mostly related to BHP limit and THP limit
         void updateWellOperability(const Simulator& ebos_simulator,
-                                   const WellState& well_state);
+                                   const WellState& well_state,
+                                   Opm::DeferredLogger& deferred_logger);
 
         // check whether the well is operable under BHP limit with current reservoir condition
         void checkOperabilityUnderBHPLimitProducer(const Simulator& ebos_simulator);
 
         // check whether the well is operable under THP limit with current reservoir condition
-        void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator);
+        void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger);
 
         // update WellState based on IPR and associated VFP table
         void updateWellStateWithTHPTargetIPR(const Simulator& ebos_simulator,
@@ -390,7 +395,8 @@ namespace Opm
 
         // whether the well can produce / inject based on the current well state (bhp)
         bool canProduceInjectWithCurrentBhp(const Simulator& ebos_simulator,
-                                            const WellState& well_state);
+                                            const WellState& well_state,
+                                            Opm::DeferredLogger& deferred_logger);
 
         // turn on crossflow to avoid singular well equations
         // when the well is banned from cross-flow and the BHP is not properly initialized,
