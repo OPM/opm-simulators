@@ -198,7 +198,7 @@ namespace Ewoms {
                 auto M_cp = M;// = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
                 auto b_cp = b;
                 
-                double pressure_scale_ = 50e5;
+                pressure_scale_ = 50e5;
                 rightTrans_ =getPressureTransform(pressure_scale_);
                 multBlocksInMatrix(M_cp, rightTrans_, false);
                 MatrixBlockType leftTrans(0.0);
@@ -249,6 +249,10 @@ namespace Ewoms {
                     scaleCPRSystem(M_cp, b_cp, leftTrans);
                     auto leftTinv = leftTrans.transpose();
                     leftTinv.invert();
+                    if(printMatrixSystem_){
+                        std::cout << "Matrix leftTinv" << std::endl;
+                        Dune::writeMatrixMarket(leftTinv, std::cout);
+                    }
                     auto bweights = toVector(weights_);
                     multBlocksVector(bweights, leftTinv);
                     weights_ = toStdVector(bweights);    
