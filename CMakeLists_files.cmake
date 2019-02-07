@@ -122,6 +122,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/FlowMainEbos.hpp
   opm/autodiff/GraphColoring.hpp
   opm/autodiff/ISTLSolverEbos.hpp
+  opm/autodiff/ISTLSolverEbosCpr.hpp
   opm/autodiff/IterationReport.hpp
   opm/autodiff/MatrixBlock.hpp
   opm/autodiff/moduleVersion.hpp

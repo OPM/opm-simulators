@@ -20,7 +20,8 @@
 */
 #include "config.h"
 #include "flow/flow_tag.hpp"
-#include <opm/linearsolvers/amgclsolverbackend.hh>
+//#include <opm/linearsolvers/amgclsolverbackend.hh>
+#include  <opm/autodiff/ISTLSolverEbosCpr.hpp>
 //#include <ewoms/linear/superlubackend.hh>
 
 BEGIN_PROPERTIES
@@ -44,8 +45,6 @@ SET_PROP(EclFlowProblemSimple, FluidState)
 //typedef Opm::BlackOilFluidSystemSimple<Scalar> type;
        typedef Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  Indices::numPhases > type;
 };
-SET_STRING_PROP(EclFlowProblemSimple,AmgclSolverStrategy,"amgcl_impes_cpr");
-SET_STRING_PROP(EclFlowProblemSimple,AmgclSetupFile,"amgcl_setup.json");
 SET_BOOL_PROP(EclFlowProblemSimple,MatrixAddWellContributions,true);
 SET_INT_PROP(EclFlowProblemSimple,LinearSolverVerbosity,1);
 SET_SCALAR_PROP(EclFlowProblemSimple, LinearSolverReduction, 1e-2);
@@ -72,7 +71,7 @@ namespace Ewoms {
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::ParallelBiCGStabSolverBackend<TypeTag>);//not work
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::SuperLUBackend<TypeTag>)//not work
     //SET_TAG_PROP(EclFlowProblem, FluidState, Opm::BlackOilFluidState);
-    SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::AMGCLSolverBackend<TypeTag>);
+    SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbosCpr<TypeTag>);
     SET_BOOL_PROP(EclFlowProblemSimple, EnableStorageCache, true);
     SET_BOOL_PROP(EclFlowProblemSimple, EnableIntensiveQuantityCache, true);
     
