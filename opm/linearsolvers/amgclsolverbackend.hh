@@ -139,7 +139,8 @@ namespace Ewoms {
                 }else {
                     // show message:
                     std::cout << "Error opening file " <<  fileName <<std::endl;
-                    OPM_THROW(std::runtime_error,"Error opening file");
+                    std::cout << "Use default settings " << std::endl;
+                    prm_ = getDefaultSettings();
                 }
                 
                 solver_type_ = EWOMS_GET_PARAM(TypeTag, std::string, AmgclSolverStrategy);
@@ -736,7 +737,30 @@ namespace Ewoms {
                 }
                 return A;
             }
-        
+
+            static boost::property_tree::ptree getDefaultSettings(){
+                boost::property_tree::ptree prm;
+                prm.put("solver.tol",0.0001);
+                prm.put("solver.maxiter",50);
+                prm.put("solver.type","bicgstab");
+                prm.put("precond.block_size",3);
+                prm.put("precond.active_rows",0);
+                prm.put("precond.pprecond.coarsening.type","aggregation");
+                prm.put("precond.pprecond.coarsening.over_interp","1.5");
+                prm.put("precond.pprecond.coarsening.aggr.eps_strong",0.08);
+                prm.put("precond.pprecond.direct_coarse",false);
+                prm.put("precond.pprecond.ncycle", 1);
+                prm.put("precond.pprecond.nposts", 1);
+                prm.put("precond.pprecond.pre_cycles",1);
+                prm.put("precond.pprecond.relax.type","ilu0");
+                prm.put("precond.pprecond.relax.damping",1);
+                prm.put("precond.sprecond.type","ilu0");
+                prm.put("precond.sprecond.damping",1);
+                prm.put("eps_dd",0.20000);
+                prm.put("eps_ps",0.02000);
+                return prm;
+            }
+
             Simulator& simulator_;
             bool matrixAddWellContribution_;
             bool printMatrixSystem_;

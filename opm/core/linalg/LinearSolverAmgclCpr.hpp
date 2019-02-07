@@ -74,12 +74,16 @@ namespace Opm
 	prm.erase("verbose");
 	if(use_drs_){	    
 	  solver_cpr_drs_.reset(new solver_cpr_drs_t(std::tie(sz, ptr, col, val), prm));
-	  std::ofstream file("amg_setup_cpr_drs.json");
-	  boost::property_tree::json_parser::write_json(file, prm);
+	  if(prm_.get<bool>("verbose")){
+	    std::ofstream file("amg_setup_cpr_drs.json");
+	    boost::property_tree::json_parser::write_json(file, prm);
+	  }
 	}else{
-	  solver_cpr_.reset(new solver_cpr_t(std::tie(sz, ptr, col, val), prm)); 
-	  std::ofstream file("amg_setup_cpr.json");
-	  boost::property_tree::json_parser::write_json(file, prm);
+	  solver_cpr_.reset(new solver_cpr_t(std::tie(sz, ptr, col, val), prm));
+	  if(prm_.get<bool>("verbose")){
+	    std::ofstream file("amg_setup_cpr.json");
+	    boost::property_tree::json_parser::write_json(file, prm);
+	  }
 	}
 	delete x;
       }
@@ -104,13 +108,19 @@ namespace Opm
                 clock.start();
 		if(use_drs_){
 		  std::tie(iters, error) = (*solver_cpr_drs_)(rhs, sol);
-		  std::cout << (*solver_cpr_drs_) << std::endl;
+		  if(prm_.get<bool>("verbose")){
+		    std::cout << (*solver_cpr_drs_) << std::endl;
+		  }
 		}else{
 		  std::tie(iters, error) = (*solver_cpr_)(rhs, sol);
-		  std::cout << (*solver_cpr_) << std::endl;
+		  if(prm_.get<bool>("verbose")){
+		    std::cout << (*solver_cpr_) << std::endl;
+		  }
 		}
-                std::cout << "Iterations" << iters << std::endl;
-                std::cout << "Errors " << error << std::endl;
+		if(prm_.get<bool>("verbose")){
+		  std::cout << "Iterations" << iters << std::endl;
+		  std::cout << "Errors " << error << std::endl;
+		}
                 solve_time_ = clock.secsSinceStart();
                 delete y;            
         }

@@ -118,8 +118,10 @@ namespace Opm
             using Solver = amgcl::make_solver<Precond, IterativeSolver>;
             auto x = new DebugTimeReport("setup");
             Solver solve(std::tie(sz, ptr, col, val), prm);
-            std::ofstream file("amg_setup_cpr_drs.json");
-            boost::property_tree::json_parser::write_json(file, prm);
+	    if(prm_.get<bool>("verbose")){
+	      std::ofstream file("amg_setup_cpr_drs.json");
+	      boost::property_tree::json_parser::write_json(file, prm);
+	    }
             delete x;
             auto y = new DebugTimeReport("solution");
             std::tie(iters, error) = solve(rhs, sol);
@@ -138,8 +140,10 @@ namespace Opm
             using Solver = amgcl::make_solver<Precond, IterativeSolver>;
             auto x = new DebugTimeReport("setup");
             Solver solve(std::tie(sz, ptr, col, val), prm);
-            std::ofstream file("amg_setup_cpr.json");
-            boost::property_tree::json_parser::write_json(file, prm);
+	    if(prm_.get<bool>("verbose")){
+	      std::ofstream file("amg_setup_cpr.json");
+	      boost::property_tree::json_parser::write_json(file, prm);
+	    }
             delete x;
             auto y = new DebugTimeReport("solution");
             std::tie(iters, error) = solve(rhs, sol);
