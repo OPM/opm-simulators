@@ -269,11 +269,7 @@ protected:
                 this->scaleEquationsAndVariables(weights_);
 	      }
 	    }
-	   
-	    if( not(isParallel()) ){
-	      const WellModel& wellModel = simulator_.problem().wellModel();
-	      opA_serial_.reset(new OperatorSerial(*matrix_, *matrix_, wellModel));
-	    }
+
         }
       
         bool solve(Vector& x) {
@@ -298,9 +294,10 @@ protected:
             }
             else
 	      {
-		
-                //OperatorSerial opA(*matrix_, *matrix_, wellModel);
-                solve( *opA_serial_, x, *rhs_ );
+		const WellModel& wellModel = simulator_.problem().wellModel();
+		//typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false ,TypeTag> OperatorSerial;
+                OperatorSerial opA(*matrix_, *matrix_, wellModel);
+                solve( opA, x, *rhs_ );
 		
 		if((parameters_.linear_solver_verbosity_ > 5) &&
 		   (iterations_ > parameters_.linear_solver_verbosity_)) {		

@@ -749,6 +749,8 @@ namespace Ewoms {
                 prm.put("precond.pprecond.coarsening.over_interp","1.5");
                 prm.put("precond.pprecond.coarsening.aggr.eps_strong",0.08);
                 prm.put("precond.pprecond.direct_coarse",false);
+                prm.put("precond.pprecond.coarse_enough", 1000);
+                prm.put("precond.pprecond.max_levels", 3);
                 prm.put("precond.pprecond.ncycle", 1);
                 prm.put("precond.pprecond.nposts", 1);
                 prm.put("precond.pprecond.pre_cycles",1);
