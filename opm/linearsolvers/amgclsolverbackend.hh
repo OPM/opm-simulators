@@ -424,7 +424,7 @@ namespace Ewoms {
                         leftTrans=getBlockTransform(1);                                                                            
                         MatrixBlockType eqChange=getBlockTransform(2);                                                             
                         MatrixBlockType scaleEq =getBlockTransform(3);                                                             
-                        leftTrans = leftTrans.rightmultiply(eqChange);                                                             
+                        //leftTrans = leftTrans.rightmultiply(eqChange);// correct if water is first equation                                                             
                         leftTrans = leftTrans.leftmultiply(scaleEq);
                     } break;
                     default:
