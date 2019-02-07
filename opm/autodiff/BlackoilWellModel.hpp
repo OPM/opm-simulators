@@ -290,9 +290,9 @@ namespace Opm {
             std::vector<bool> is_cell_perforated_;
 
             // create the well container
-            std::vector<WellInterfacePtr > createWellContainer(const int time_step);
+            std::vector<WellInterfacePtr > createWellContainer(const int time_step, Opm::DeferredLogger& deferred_logger);
 
-            WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step) const;
+            WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, Opm::DeferredLogger& deferred_logger) const;
 
             WellState well_state_;
             WellState previous_well_state_;
@@ -346,16 +346,16 @@ namespace Opm {
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
-            void updateWellControls();
+            void updateWellControls(Opm::DeferredLogger& deferred_logger);
 
             void updateGroupControls(Opm::DeferredLogger& deferred_logger);
 
             // setting the well_solutions_ based on well_state.
-            void updatePrimaryVariables();
+            void updatePrimaryVariables(Opm::DeferredLogger& deferred_logger);
 
             void setupCartesianToCompressed_(const int* global_cell, int number_of_cells);
 
-            void computeRepRadiusPerfLength(const Grid& grid);
+            void computeRepRadiusPerfLength(const Grid& grid, Opm::DeferredLogger& deferred_logger);
 
 
             void computeAverageFormationFactor(std::vector<double>& B_avg) const;
@@ -366,7 +366,7 @@ namespace Opm {
                                          std::vector<double>& voidage_conversion_coeffs) const;
 
             // Calculating well potentials for each well
-            void computeWellPotentials(std::vector<double>& well_potentials);
+            void computeWellPotentials(std::vector<double>& well_potentials, Opm::DeferredLogger& deferred_logger);
 
             const std::vector<double>& wellPerfEfficiencyFactors() const;
 
@@ -377,7 +377,7 @@ namespace Opm {
             // twice at the beginning of the time step
             /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
             /// at the beginning of the time step and no derivatives are included in these quantities
-            void calculateExplicitQuantities() const;
+            void calculateExplicitQuantities(Opm::DeferredLogger& deferred_logger) const;
 
             SimulatorReport solveWellEq(const double dt, Opm::DeferredLogger& deferred_logger);
 
@@ -398,9 +398,9 @@ namespace Opm {
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(Opm::DeferredLogger& deferred_logger);
 
-            void prepareGroupControl();
+            void prepareGroupControl(Opm::DeferredLogger& deferred_logger);
 
-            void computeRESV(const std::size_t step);
+            void computeRESV(const std::size_t step, Opm::DeferredLogger& deferred_logger);
 
             void extractLegacyCellPvtRegionIndex_();
 
@@ -419,7 +419,7 @@ namespace Opm {
 
             void updatePerforationIntensiveQuantities();
 
-            void wellTesting(const int timeStepIdx, const double simulationTime);
+            void wellTesting(const int timeStepIdx, const double simulationTime, Opm::DeferredLogger& deferred_logger);
 
             // convert well data from opm-common to well state from opm-core
             void wellsToState( const data::Wells& wells,

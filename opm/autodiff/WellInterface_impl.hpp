@@ -19,6 +19,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/simulators/DeferredLoggingErrorHelpers.hpp>
 
 namespace Opm
 {
@@ -330,7 +331,7 @@ namespace Opm
     template<typename TypeTag>
     double
     WellInterface<TypeTag>::
-    mostStrictBhpFromBhpLimits() const
+    mostStrictBhpFromBhpLimits(Opm::DeferredLogger& deferred_logger) const
     {
         double bhp;
 
@@ -343,7 +344,7 @@ namespace Opm
             bhp = -std::numeric_limits<double>::max();
             break;
         default:
-            OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name());
+            OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name(), deferred_logger);
         }
 
         // The number of the well controls/constraints
@@ -367,7 +368,7 @@ namespace Opm
                     }
                     break;
                 default:
-                    OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name());
+                    OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name(), deferred_logger);
                 } // end of switch
             }
         }
@@ -393,13 +394,13 @@ namespace Opm
     template<typename TypeTag>
     double
     WellInterface<TypeTag>::
-    getTHPConstraint() const
+    getTHPConstraint(Opm::DeferredLogger& deferred_logger) const
     {
         const int thp_control_index = getTHPControlIndex();
 
         if (thp_control_index < 0) {
-            OPM_THROW(std::runtime_error, " there is no THP constraint/limit for well " << name()
-                                          << ", while we are requesting it ");
+            OPM_DEFLOG_THROW(std::runtime_error, " there is no THP constraint/limit for well " << name()
+                                          << ", while we are requesting it ", deferred_logger);
         }
 
         return well_controls_iget_target(well_controls_, thp_control_index);
@@ -509,7 +510,7 @@ namespace Opm
 
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
             updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
-            updatePrimaryVariables(well_state);
+            updatePrimaryVariables(well_state, deferred_logger);
         }
     }
 
@@ -520,7 +521,7 @@ namespace Opm
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
-    underPredictionMode() const
+    underPredictionMode(Opm::DeferredLogger& deferred_logger) const
     {
         bool under_prediction_mode = false;
 
@@ -532,7 +533,7 @@ namespace Opm
             under_prediction_mode = well_ecl_->getInjectionProperties(current_step_).predictionMode;
             break;
         default:
-            OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name());
+            OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name(), deferred_logger);
         }
 
         return under_prediction_mode;
@@ -753,7 +754,7 @@ namespace Opm
 
         // Based on current understanding, only under prediction mode, we need to shut well due to various
         // reasons or limits. With more knowlage or testing cases later, this might need to be corrected.
-        if (!underPredictionMode() ) {
+        if (!underPredictionMode(deferred_logger) ) {
             return;
         }
 
@@ -971,7 +972,7 @@ namespace Opm
 
         WellState well_state_copy = well_state;
 
-        updatePrimaryVariables(well_state_copy);
+        updatePrimaryVariables(well_state_copy, deferred_logger);
         initPrimaryVariablesEvaluation();
 
         // create a well
@@ -1020,7 +1021,9 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     computeRepRadiusPerfLength(const Grid& grid,
-                               const std::vector<int>& cartesian_to_compressed)
+                               const std::vector<int>& cartesian_to_compressed,
+                               Opm::DeferredLogger& deferred_logger
+                               )
     {
         const int* cart_dims = Opm::UgGridHelpers::cartDims(grid);
         auto cell_to_faces = Opm::UgGridHelpers::cell2Faces(grid);
@@ -1050,8 +1053,8 @@ namespace Opm
                 const int cell = cartesian_to_compressed[cart_grid_indx];
 
                 if (cell < 0) {
-                    OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
-                              << k << " not found in grid (well = " << name() << ')');
+                    OPM_DEFLOG_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
+                              << k << " not found in grid (well = " << name() << ')', deferred_logger);
                 }
 
                 {
@@ -1076,7 +1079,7 @@ namespace Opm
                             perf_length = cubical[2];
                             break;
                         default:
-                            OPM_THROW(std::runtime_error, " Dirtecion of well is not supported ");
+                            OPM_DEFLOG_THROW(std::runtime_error, " Dirtecion of well is not supported ", deferred_logger);
                     }
 
                     const double repR = std::sqrt(re * radius);
@@ -1126,7 +1129,7 @@ namespace Opm
 
     template<typename TypeTag>
     bool
-    WellInterface<TypeTag>::isVFPActive() const
+    WellInterface<TypeTag>::isVFPActive(Opm::DeferredLogger& deferred_logger) const
     {
         // since the well_controls only handles the VFP number when THP constraint/target is there.
         // we need to get the table number through the parser, in case THP constraint/target is not there.
@@ -1141,8 +1144,8 @@ namespace Opm
                 if (vfp_properties_->getProd()->hasTable(table_id)) {
                     return true;
                 } else {
-                    OPM_THROW(std::runtime_error, "VFPPROD table " << std::to_string(table_id) << " is specfied,"
-                              << " for well " << name() << ", while we could not access it during simulation");
+                    OPM_DEFLOG_THROW(std::runtime_error, "VFPPROD table " << std::to_string(table_id) << " is specfied,"
+                              << " for well " << name() << ", while we could not access it during simulation", deferred_logger);
                 }
             }
 
@@ -1154,8 +1157,8 @@ namespace Opm
                 if (vfp_properties_->getInj()->hasTable(table_id)) {
                     return true;
                 } else {
-                    OPM_THROW(std::runtime_error, "VFPINJ table " << std::to_string(table_id) << " is specfied,"
-                              << " for well " << name() << ", while we could not access it during simulation");
+                    OPM_DEFLOG_THROW(std::runtime_error, "VFPINJ table " << std::to_string(table_id) << " is specfied,"
+                              << " for well " << name() << ", while we could not access it during simulation", deferred_logger);
                 }
             }
         }
@@ -1181,14 +1184,15 @@ namespace Opm
         do {
             assembleWellEq(ebosSimulator, dt, well_state, deferred_logger);
 
-            auto report = getWellConvergence(B_avg);
+            auto report = getWellConvergence(B_avg, deferred_logger);
+
             converged = report.converged();
             if (converged) {
                 break;
             }
 
             ++it;
-            solveEqAndUpdateWellState(well_state);
+            solveEqAndUpdateWellState(well_state, deferred_logger);
 
             updateWellControl(ebosSimulator, well_state, deferred_logger);
             initPrimaryVariablesEvaluation();
@@ -1316,6 +1320,7 @@ namespace Opm
                 return connectionRates_[perfIdx][activeCompIdx].value();
             }
         }
+        // this is not thread safe
         OPM_THROW(std::invalid_argument, "The well with name " + name()
                   + " does not perforate cell " + std::to_string(cellIdx));
         return 0.0;

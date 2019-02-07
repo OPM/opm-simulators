@@ -174,6 +174,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/core/wells/WellsManager.hpp
   opm/core/wells/WellsManager_impl.hpp
   opm/simulators/ParallelFileMerger.hpp
+  opm/simulators/DeferredLoggingErrorHelpers.hpp
   opm/simulators/DeferredLogger.hpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
   opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp

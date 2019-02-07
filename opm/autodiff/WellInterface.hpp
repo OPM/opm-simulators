@@ -147,9 +147,9 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const = 0;
 
-        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const = 0;
+        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger) const = 0;
 
-        virtual void solveEqAndUpdateWellState(WellState& well_state) = 0;
+        virtual void solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger) = 0;
 
         virtual void assembleWellEq(const Simulator& ebosSimulator,
                                     const double dt,
@@ -165,12 +165,13 @@ namespace Opm
 
         void setWellEfficiencyFactor(const double efficiency_factor);
 
-        void computeRepRadiusPerfLength(const Grid& grid, const std::vector<int>& cartesian_to_compressed);
+        void computeRepRadiusPerfLength(const Grid& grid, const std::vector<int>& cartesian_to_compressed, Opm::DeferredLogger& deferred_logger);
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                                           WellState& well_state) const = 0;
+                                                           WellState& well_state,
+                                                           Opm::DeferredLogger& deferred_logger) const = 0;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const = 0;
@@ -192,10 +193,11 @@ namespace Opm
                                WellState& well_state,
                                Opm::DeferredLogger& deferred_logger) /* const */;
 
-        virtual void updatePrimaryVariables(const WellState& well_state) const = 0;
+        virtual void updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& deferred_logger) const = 0;
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
-                                                 const WellState& well_state) = 0; // should be const?
+                                                 const WellState& well_state,
+                                                 Opm::DeferredLogger& deferred_logger) = 0; // should be const?
 
         /// \brief Wether the Jacobian will also have well contributions in it.
         virtual bool jacobianContainsWellContributions() const
@@ -249,7 +251,7 @@ namespace Opm
         bool wellHasTHPConstraints() const;
 
         /// Returns true if the well is currently in prediction mode (i.e. not history mode).
-        bool underPredictionMode() const;
+        bool underPredictionMode(Opm::DeferredLogger& deferred_logger) const;
 
         // update perforation water throughput based on solved water rate
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const = 0;
@@ -349,14 +351,14 @@ namespace Opm
                                  const WellState& well_state,
                                  Opm::DeferredLogger& deferred_logger) const;
 
-        double getTHPConstraint() const;
+        double getTHPConstraint(Opm::DeferredLogger& deferred_logger) const;
 
         int getTHPControlIndex() const;
 
         // Component fractions for each phase for the well
         const std::vector<double>& compFrac() const;
 
-        double mostStrictBhpFromBhpLimits() const;
+        double mostStrictBhpFromBhpLimits(Opm::DeferredLogger& deferred_logger) const;
 
         // a tuple type for ratio limit check.
         // first value indicates whether ratio limit is violated, when the ratio limit is not violated, the following two
@@ -376,7 +378,7 @@ namespace Opm
         double scalingFactor(const int comp_idx) const;
 
         // whether a well is specified with a non-zero and valid VFP table number
-        bool isVFPActive() const;
+        bool isVFPActive(Opm::DeferredLogger& deferred_logger) const;
 
         struct OperabilityStatus;
 

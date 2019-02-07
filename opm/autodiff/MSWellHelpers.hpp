@@ -22,6 +22,8 @@
 #ifndef OPM_MSWELLHELPERS_HEADER_INCLUDED
 #define OPM_MSWELLHELPERS_HEADER_INCLUDED
 
+#include <opm/simulators/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/DeferredLogger.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/istl/solvers.hh>
 #if HAVE_UMFPACK
@@ -62,6 +64,7 @@ namespace mswellhelpers
 
         return y;
 #else
+        // this is not thread safe
         OPM_THROW(std::runtime_error, "Cannot use invDXDirect() without UMFPACK. "
                   "Reconfigure opm-simulator with SuiteSparse/UMFPACK support and recompile.");
 #endif // HAVE_UMFPACK
@@ -74,7 +77,7 @@ namespace mswellhelpers
     // obtain y = D^-1 * x with a BICSSTAB iterative solver
     template <typename MatrixType, typename VectorType>
     VectorType
-    invDX(const MatrixType& D, VectorType x)
+    invDX(const MatrixType& D, VectorType x, Opm::DeferredLogger& deferred_logger)
     {
         // the function will change the value of x, so we should not use reference of x here.
 
@@ -107,7 +110,7 @@ namespace mswellhelpers
         linsolver.apply(y, x, res);
 
         if ( !res.converged ) {
-            OPM_THROW(Opm::NumericalIssue, "the invDX does not get converged! ");
+            OPM_DEFLOG_THROW(Opm::NumericalIssue, "the invDX does not get converged! ", deferred_logger);
         }
 
         return y;
