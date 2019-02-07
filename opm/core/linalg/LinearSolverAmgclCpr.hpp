@@ -37,8 +37,8 @@
 #include <amgcl/coarsening/smoothed_aggregation.hpp>
 #include <amgcl/relaxation/spai0.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
-#include <amgcl/runtime.hpp>
-//#include <amgcl/solver/runtime.hpp>
+//#include <amgcl/runtime.hpp>
+#include <amgcl/solver/runtime.hpp>
 #include <amgcl/relaxation/runtime.hpp>
 #include <amgcl/preconditioner/dummy.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
@@ -50,37 +50,34 @@
 
 namespace Opm
 {
-    class LinearSolverAmgclCpr
+  class LinearSolverAmgclCpr
+  {
+  public:
+    LinearSolverAmgclCpr(const boost::property_tree::ptree& prm):
+      prm_(prm),
+      solve_time_(1e99),
+      setup_time_(0.0)
     {
-    public:
-      LinearSolverAmgclCpr(const boost::property_tree::ptree& prm):
-	prm_(prm),
-	solve_time_(1e99),
-	setup_time_(0.0)
-      {
-	
-      }
+      
+    }
       void init(const int sz,
 		const std::vector<int>& ptr,
 		const std::vector<int>& col,
-		const std::vector<double>& val,
-		const std::vector<double>& rhs,
-		const double tolerance,
-		const int maxiter){
+		const std::vector<double>& val){
 	auto x = new DebugTimeReport("setup all");
 	time::StopWatch clock;
 	boost::property_tree::ptree prm = prm_;
-	bool use_drs = prm.get<bool>("use_drs");
+	use_drs_ = prm.get<bool>("use_drs");
 	prm.erase("solver_type");
 	prm.erase("use_drs");
 	prm.erase("block_size");
 	prm.erase("verbose");
-	if(use_drs){	    
-	  solve_cpr_drs_.reset(new solver_cpr_drs_t(std::tie(sz, ptr, col, val), prm));
+	if(use_drs_){	    
+	  solver_cpr_drs_.reset(new solver_cpr_drs_t(std::tie(sz, ptr, col, val), prm));
 	  std::ofstream file("amg_setup_cpr_drs.json");
 	  boost::property_tree::json_parser::write_json(file, prm);
 	}else{
-	  solve_cpr_.reset(new solver_cpr_drs_t(std::tie(sz, ptr, col, val), prm)); 
+	  solver_cpr_.reset(new solver_cpr_t(std::tie(sz, ptr, col, val), prm)); 
 	  std::ofstream file("amg_setup_cpr.json");
 	  boost::property_tree::json_parser::write_json(file, prm);
 	}
@@ -105,12 +102,13 @@ namespace Opm
                 auto y = new DebugTimeReport("solution");
                 time::StopWatch clock;
                 clock.start();
-		ifif(use_drs_){
+		if(use_drs_){
 		  std::tie(iters, error) = (*solver_cpr_drs_)(rhs, sol);
+		  std::cout << (*solver_cpr_drs_) << std::endl;
 		}else{
-		  std::tie(iters, error) = (*solver_cpr_drs_)(rhs, sol);
+		  std::tie(iters, error) = (*solver_cpr_)(rhs, sol);
+		  std::cout << (*solver_cpr_) << std::endl;
 		}
-                std::cout << (*solver_) << std::endl;
                 std::cout << "Iterations" << iters << std::endl;
                 std::cout << "Errors " << error << std::endl;
                 solve_time_ = clock.secsSinceStart();
@@ -123,15 +121,16 @@ namespace Opm
       using SPrecond = amgcl::relaxation::as_preconditioner<Backend, amgcl::runtime::relaxation::wrapper>;
       using Precond_cpr_drs = amgcl::preconditioner::cpr_drs<PPrecond, SPrecond>;
       using IterativeSolver = amgcl::runtime::solver::wrapper<Backend>;
-      using solver_t_cpr_drs = amgcl::make_solver<Precond_cpr_drs, IterativeSolver>;
+      using solver_cpr_drs_t = amgcl::make_solver<Precond_cpr_drs, IterativeSolver>;
       using Precond_cpr = amgcl::preconditioner::cpr<PPrecond, SPrecond>;
       //using solver_t = amgcl:<Precond, IterativeSolver>;
-      using solver_t_cpr = amgcl::make_solver<Precond_cpr, IterativeSolver>;
-      std::shared_ptr<solver_t_cpr_drs> solver_cpr_drs_;
-      std::shared_ptr<solver_t_cpr> solver_cpr_;
+      using solver_cpr_t = amgcl::make_solver<Precond_cpr, IterativeSolver>;
+      std::shared_ptr<solver_cpr_drs_t> solver_cpr_drs_;
+      std::shared_ptr<solver_cpr_t> solver_cpr_;
       boost::property_tree::ptree prm_;
       double solve_time_;
       double setup_time_;
+      bool use_drs_;
     };
 
 } // namespace Opm

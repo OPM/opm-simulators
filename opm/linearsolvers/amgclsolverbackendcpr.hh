@@ -28,6 +28,7 @@
 #define EWOMS_AMGCLSOLVER_BACKEND_CPR_HH
 
 #include <opm/linearsolvers/amgclsolverbackend.hh>
+#include <opm/core/linalg/LinearSolverAmgclCpr.hpp>
 BEGIN_PROPERTIES
 
 END_PROPERTIES
@@ -35,7 +36,8 @@ END_PROPERTIES
 namespace Ewoms {
     namespace Linear {
         template <class TypeTag>
-        class AMGCLSolverBackendCpr : public amgclsolverbacken<TypeTag>
+        class AMGCLSolverBackendCpr :
+            public AMGCLSolverBackend<TypeTag>
         {
             typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
             typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)       FluidSystem;
@@ -54,38 +56,41 @@ namespace Ewoms {
             //              "The AMGCLSolver linear solver backend requires the IstlSparseMatrixAdapter");
             typedef typename GridView::template Codim<0>::Entity Element;
             typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-            typedef typename amgclsolverbacken<TypeTag>  SuperClass;
+            typedef AMGCLSolverBackend<TypeTag>  SuperClass;
         public:
             typedef Dune::AssembledLinearOperator< Matrix, Vector, Vector > AssembledLinearOperatorType;
             
-            AMGCLSolverBackendCPR(Simulator& simulator):
+            AMGCLSolverBackendCpr(Simulator& simulator):
                 SuperClass(simulator)
             {
             }
-
+            static void registerParameters()
+            {
+                SuperClass::registerParameters();
+            }
             void prepare(const Matrix& M, Vector& b)
             {
                 SuperClass::prepare(M, b);
-                solver_.reset(new Opm::LinearSolverAmgclCpr(prm_));
+                solver_.reset(new Opm::LinearSolverAmgclCpr(this->prm_));
+                solver_->init(this->sz_, this->M_.ptr, this->M_.col, this->M_.val);
             }
 
             bool solve(Vector& sol)
             {
-                std::vector<double> x(sz_, 0.0);
-                const int nnz = M_.ptr[sz_];
-                Opm::LinearSolverAmgcl solver(prm_);
+                std::vector<double> x(this->sz_, 0.0);
+                const int nnz = this->M_.ptr[this->sz_];
                 double error;
-                solver_->solve(sz_, M_.ptr, M_.col, M_.val, b_, x, iters_, error);
-                for (int cell = 0; cell < n_; ++cell) {
-                    for (int phase = 0; phase < np_; ++phase) {
-                        sol[cell][phase] = x[np_*cell + phase];
+                solver_->solve(this->b_, x, this->iters_, error);
+                for (int cell = 0; cell < this->n_; ++cell) {
+                    for (int phase = 0; phase < this->np_; ++phase) {
+                        sol[cell][phase] = x[this->np_*cell + phase];
                     }
                 }
-                multBlocksVector(sol, rightTrans_);
+                this->multBlocksVector(sol, this->rightTrans_);
                 return true;
             }
 
-            int iterations () const { return iters_; }
+            int iterations () const { return this->iters_; }
         private:
             std::unique_ptr<Opm::LinearSolverAmgclCpr> solver_;
                 

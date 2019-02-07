@@ -198,7 +198,7 @@ namespace Ewoms {
                 auto M_cp = M;// = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
                 auto b_cp = b;
                 
-                pressure_scale_ = 50e5;
+                double pressure_scale_ = 50e5;
                 rightTrans_ =getPressureTransform(pressure_scale_);
                 multBlocksInMatrix(M_cp, rightTrans_, false);
                 MatrixBlockType leftTrans(0.0);
@@ -348,12 +348,7 @@ namespace Ewoms {
                 solver.solve(sz_, M_.ptr, M_.col, M_.val, b_, x, iters_, error);
                 for (int cell = 0; cell < n_; ++cell) {
                     for (int phase = 0; phase < np_; ++phase) {
-                        if(phase==0){
-                            // have transformed pressure variable
-                            sol[cell][phase] = x[np_*cell + phase];
-                        }else{
-                            sol[cell][phase] = x[np_*cell + phase];
-                        }
+                        sol[cell][phase] = x[np_*cell + phase];
                     }
                 }
                 multBlocksVector(sol, rightTrans_);
@@ -361,7 +356,7 @@ namespace Ewoms {
             }
 
             int iterations () const { return iters_; }
-        private:
+        protected:
             static MatrixBlockType getPressureTransform(double pressure_scale){
                 int np = FluidSystem::numPhases;
                 MatrixBlockType leftTrans(0.0);
@@ -737,7 +732,7 @@ namespace Ewoms {
                 }
                 return A;
             }
-
+        
             Simulator& simulator_;
             bool matrixAddWellContribution_;
             bool printMatrixSystem_;
