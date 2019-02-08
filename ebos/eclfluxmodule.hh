@@ -361,11 +361,12 @@ protected:
                                      unsigned timeIdx,
                                      const FluidState& exFluidState)
     {
-        bool enableBoundaryMassFlux = false;
+        const auto& problem = elemCtx.problem();
+
+        bool enableBoundaryMassFlux = problem.hasFreeBoundaryConditions();
         if (!enableBoundaryMassFlux)
             return;
 
-        const auto& problem = elemCtx.problem();
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.boundaryFace(scvfIdx);
 

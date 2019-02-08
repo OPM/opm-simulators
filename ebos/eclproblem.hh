@@ -623,6 +623,8 @@ public:
         }
 
         tracerModel_.init();
+
+        readBoundaryConditions_();
     }
 
     void prefetch(const Element& elem) const
@@ -822,24 +824,6 @@ public:
 
         aquiferModel_.endTimeStep();
         tracerModel_.endTimeStep();
-
-
-        // we no longer need the initial soluiton
-        if (this->simulator().episodeIndex() == 0 && !initialFluidStates_.empty())  {
-            // we always need to provide a temperature and if energy is not conserved, we
-            // use the initial one. This means we have to "salvage" the temperature from
-            // the initial fluid states before deleting the array.
-            if (!enableEnergy) {
-                initialTemperature_.resize(initialFluidStates_.size());
-                for (unsigned i = 0; i < initialFluidStates_.size(); ++i) {
-                    const auto& fs = initialFluidStates_[i];
-                    initialTemperature_[i] = fs.temperature(/*phaseIdx=*/0);
-                }
-            }
-
-            initialFluidStates_.clear();
-        }
-
 
         updateCompositionChangeLimits_();
     }
@@ -1308,6 +1292,48 @@ public:
             values.setThermalFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
         }
 
+        if (hasFreeBoundaryConditions()) {
+
+            unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
+            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
+            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
+            switch (indexInInside) {
+            case 0:
+            {
+                if (freebcXMinus_[globalDofIdx])
+                    values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
+                break;
+            }
+            case 1:
+                if (freebcX_[globalDofIdx])
+                    values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
+
+                break;
+            case 2:
+                if (freebcYMinus_[globalDofIdx])
+                    values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
+
+                break;
+            case 3:
+                if (freebcY_[globalDofIdx])
+                    values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
+
+                break;
+            case 4:
+                if (freebcZMinus_[globalDofIdx])
+                    values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
+
+                break;
+            case 5:
+                if (freebcZ_[globalDofIdx])
+                    values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
+
+                break;
+            default:
+                throw std::logic_error("invalid face index for boundary condition");
+
+            }
+        }
     }
 
     /*!
@@ -1487,6 +1513,9 @@ public:
         const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         return (oilVaporizationControl.getType() == Opm::OilVaporizationEnum::VAPPARS);
     }
+
+    bool hasFreeBoundaryConditions() const
+    { return hasFreeBoundaryConditions_; }
 
 private:
     bool drsdtActive_() const
@@ -2264,6 +2293,35 @@ private:
         pffDofData_.update(distFn);
     }
 
+    void readBoundaryConditions_()
+    {
+        hasFreeBoundaryConditions_ = false;
+        readBoundaryConditionKeyword_("FREEBCX", freebcX_ );
+        readBoundaryConditionKeyword_("FREEBCX-", freebcXMinus_ );
+        readBoundaryConditionKeyword_("FREEBCY", freebcY_ );
+        readBoundaryConditionKeyword_("FREEBCY-", freebcYMinus_ );
+        readBoundaryConditionKeyword_("FREEBCZ", freebcZ_ );
+        readBoundaryConditionKeyword_("FREEBCZ-", freebcZMinus_ );
+    }
+
+    void readBoundaryConditionKeyword_(const std::string& name, std::vector<bool>& compressedData )
+    {
+        const auto& eclProps = this->simulator().vanguard().eclState().get3DProperties();
+        const auto& vanguard = this->simulator().vanguard();
+
+        unsigned numElems = vanguard.gridView().size(/*codim=*/0);
+        compressedData.resize(numElems, false);
+
+        if (eclProps.hasDeckDoubleGridProperty(name)) {
+            const std::vector<double>& data = eclProps.getDoubleGridProperty(name).getData();
+            for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+                unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
+                compressedData[elemIdx] = (data[cartElemIdx] > 0);
+            }
+            hasFreeBoundaryConditions_ = true;
+        }
+    }
+
     static std::string briefDescription_;
 
     std::vector<Scalar> porosity_;
@@ -2308,6 +2366,14 @@ private:
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
+
+    bool hasFreeBoundaryConditions_;
+    std::vector<bool> freebcX_;
+    std::vector<bool> freebcXMinus_;
+    std::vector<bool> freebcY_;
+    std::vector<bool> freebcYMinus_;
+    std::vector<bool> freebcZ_;
+    std::vector<bool> freebcZMinus_;
 
 
 };

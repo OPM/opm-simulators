@@ -146,11 +146,18 @@ public:
             if (enableTemperature || enableEnergy)
                 fluidState.setTemperature(initialState.temperature()[elemIdx]);
 
-            // set the phase pressures.
+            // set the phase pressures, invB factor and density
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
                 fluidState.setPressure(phaseIdx, initialState.press()[phaseIdx][elemIdx]);
+
+                const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState, phaseIdx, regionIdx);
+                fluidState.setInvB(phaseIdx, b);
+
+                const auto& rho = FluidSystem::density(fluidState, phaseIdx, regionIdx);
+                fluidState.setDensity(phaseIdx, rho);
+
             }
         }
     }
