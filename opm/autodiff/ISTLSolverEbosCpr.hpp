@@ -145,16 +145,11 @@ namespace Opm
 	      
 	      //SuperClass::constructPreconditionerAndSolve(opA, x, *(this->rhs_), info, result);
 		
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
-	      Dune::SolverCategory::Category category=Dune::SolverCategory::sequential
-		auto sp = Dune::createScalarProduct<Vector,POrComm>(parallelInformation_arg, category);
-#else
 	      constexpr int  category = Dune::SolverCategory::sequential;
 	      typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
 	      typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
 	      SPPointer sp(ScalarProductChooser::construct(parallelInformation_arg));
 	      sp_ = std::move(sp);
-#endif
 	      Vector& istlb = *(this->rhs_);
 	      parallelInformation_arg.copyOwnerToAll(istlb, istlb);
 	      
