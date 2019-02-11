@@ -380,7 +380,7 @@ protected:
             // Communicate if parallel.
             parallelInformation_arg.copyOwnerToAll(istlb, istlb);
 
-#if FLOW_SUPPORT_AMG // activate AMG if either flow_ebos is used or UMFPack is not available
+	    //#if FLOW_SUPPORT_AMG // activate AMG if either flow_ebos is used or UMFPack is not available
             if( parameters_.linear_solver_use_amg_ || parameters_.use_cpr_)
             {
                 typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
@@ -426,7 +426,7 @@ protected:
                 }
             }
             else
-#endif
+	      //#endif
             {
                 // Construct preconditioner.
                 auto precond = constructPrecond(linearOperator, parallelInformation_arg);

@@ -90,50 +90,152 @@ namespace Opm
 
         void prepare(const Matrix& M, Vector& b) {
 	  SuperClass::prepare(M,b);
-	  const WellModel& wellModel = this->simulator_.problem().wellModel();
-	  if( this->isParallel() ){
-#ifdef HAVE_MPI		    
-	    typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true ,TypeTag> Operator;
+// 	  const WellModel& wellModel = this->simulator_.problem().wellModel();
+// 	  if( this->isParallel() ){
+// #ifdef HAVE_MPI		    
+// 	    typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true ,TypeTag> Operator;
 	    
-	    auto ebosJacIgnoreOverlap = Matrix(*(this->matrix_));
-	    //remove ghost rows in local matrix
-	    makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
+// 	    auto ebosJacIgnoreOverlap = Matrix(*(this->matrix_));
+// 	    //remove ghost rows in local matrix
+// 	    makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
 	    
-	    //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
-	    //to be certain that correct matrix is used for preconditioning.
-	    Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel,
-			 this->parallelInformation_ );
-	    const size_t size = opA.getmat().N();
-	    const ParallelISTLInformation& info =
-	      boost::any_cast<const ParallelISTLInformation&>( parallelInformation_);
-	    auto& comm = *(opA.comm());
-	    // As we use a dune-istl with block size np the number of components
-	    // per parallel is only one.
-	    info.copyValuesTo(comm.indexSet(), comm.remoteIndices(),
-			      size, 1);
-	                // Communicate if parallel.
-            info.copyOwnerToAll(this->rhs_, this->rhs_);
-	    linsolve_.reset(constructLinearSolver<Dune::SolverCategory::overlapping>(opA, comm));
-#endif	    
-	  }else{
-	    const WellModel& wellModel = this->simulator_.problem().wellModel();
-	    OperatorSerial opA(*(this->matrix_), *(this->matrix_), wellModel);  
-	    Dune::Amg::SequentialInformation info;
-	    info.copyOwnerToAll(*(this->rhs_), *(this->rhs_));
-	    constructLinearSolver(opA, info);    
-	  }
+// 	    //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
+// 	    //to be certain that correct matrix is used for preconditioning.
+// 	    Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel,
+// 			 this->parallelInformation_ );
+// 	    const size_t size = opA.getmat().N();
+// 	    const ParallelISTLInformation& info =
+// 	      boost::any_cast<const ParallelISTLInformation&>( parallelInformation_);
+// 	    auto& comm = *(opA.comm());
+// 	    // As we use a dune-istl with block size np the number of components
+// 	    // per parallel is only one.
+// 	    info.copyValuesTo(comm.indexSet(), comm.remoteIndices(),
+// 			      size, 1);
+// 	                // Communicate if parallel.
+//             info.copyOwnerToAll(this->rhs_, this->rhs_);
+// 	    constructLinearSolver<Dune::SolverCategory::overlapping>(opA, comm);
+// #endif	    
+// 	  }else{
+// 	    const WellModel& wellModel = this->simulator_.problem().wellModel();
+// 	    OperatorSerial opA(*(this->matrix_), *(this->matrix_), wellModel);  
+// 	    Dune::Amg::SequentialInformation info;
+// 	    info.copyOwnerToAll(*(this->rhs_), *(this->rhs_));
+// 	    constructLinearSolver(opA, info);    
+// 	  }
 	  
         }
       
         bool solve(Vector& x) {
+	  //SuperClass::solve(x);
+	    const WellModel& wellModel = this->simulator_.problem().wellModel();
+            
+
+            if( this->isParallel() )
+            {
+#if HAVE_MPI			      
+	      typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true ,TypeTag> Operator;
+
+	      auto ebosJacIgnoreOverlap = Matrix(*(this->matrix_));
+                //remove ghost rows in local matrix
+                this->makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
+
+                //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
+                //to be certain that correct matrix is used for preconditioning.
+                Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel,
+                             this->parallelInformation_ );
+                assert( opA.comm() );
+		//SuperClass::solve( opA, x, *(this->rhs_), *(opA.comm()) );
+		typedef Dune::OwnerOverlapCopyCommunication<int,int>& comm = *(opA.comm());
+		const size_t size = opA.getmat().N();
+
+                const ParallelISTLInformation& info =
+                    boost::any_cast<const ParallelISTLInformation&>( this->parallelInformation_);
+
+                // As we use a dune-istl with block size np the number of components
+                // per parallel is only one.
+                info.copyValuesTo(comm.indexSet(), comm.remoteIndices(),
+                                  size, 1);
+                // Construct operator, scalar product and vectors needed.
+		Dune::InverseOperatorResult result;
+		SuperClass::constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, x, *(this->rhs_), comm, result);
+		SuperClass::checkConvergence(result);
+#endif
+            }
+            else
+	    {
+		const WellModel& wellModel = this->simulator_.problem().wellModel();
+		//typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false ,TypeTag> OperatorSerial;
+                OperatorSerial opASerial(*(this->matrix_), *(this->matrix_), wellModel);
+		Dune::InverseOperatorResult result;
+		//Dune::Amg::SequentialInformation info;
+		typedef Dune::Amg::SequentialInformation POrComm;
+		POrComm parallelInformation_arg;
+		typedef  OperatorSerial LinearOperator;
+		LinearOperator& linearOperator = opASerial;
+		//SuperClass::constructPreconditionerAndSolve(opA, x, *(this->rhs_), info, result);
+		
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+		Dune::SolverCategory::Category category=Dune::SolverCategory::sequential
+		auto sp = Dune::createScalarProduct<Vector,POrComm>(parallelInformation_arg, category);
+#else
+		constexpr int  category = Dune::SolverCategory::sequential;
+		typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
+		typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
+		SPPointer sp(ScalarProductChooser::construct(parallelInformation_arg));
+#endif
+		Vector& istlb = *(this->rhs_);
+		parallelInformation_arg.copyOwnerToAll(istlb, istlb);
+		typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
+                typedef typename CPRSelectorType::Operator MatrixOperator;
+
+                std::unique_ptr< MatrixOperator > opA;
+		
+                if( ! std::is_same< LinearOperator, MatrixOperator > :: value )
+                {
+                    // create new operator in case linear operator and matrix operator differ
+                    opA.reset( CPRSelectorType::makeOperator( linearOperator.getmat(), parallelInformation_arg ) );
+                }
+
+                const double relax = this->parameters_.ilu_relaxation_;
+                const MILU_VARIANT ilu_milu  = this->parameters_.ilu_milu_;
+		using Matrix         = typename MatrixOperator::matrix_type;
+		using CouplingMetric = Dune::Amg::Diagonal<pressureIndex>;
+		using CritBase       = Dune::Amg::SymmetricCriterion<Matrix, CouplingMetric>;
+		using Criterion      = Dune::Amg::CoarsenCriterion<CritBase>;
+		using AMG = typename ISTLUtility
+		  ::BlackoilAmgSelector< Matrix, Vector, Vector,POrComm, Criterion, pressureIndex >::AMG;
+		
+		std::unique_ptr< AMG > amg;
+		// Construct preconditioner.
+		Criterion crit(15, 2000);
+		//SuperClass::constructAMGPrecond< Criterion >( linearOperator, parallelInformation_arg, amg, opA, relax, ilu_milu );
+		ISTLUtility::template createAMGPreconditionerPointer<Criterion>( *opA,
+										 relax,
+										 parallelInformation_arg,
+										 amg,
+										 this->parameters_,
+										 this->weights_ );
+	    
+                    // Solve.
+		//SuperClass::solve(linearOperator, x, istlb, *sp, *amg, result);
+		int verbosity = ( this->isIORank_ ) ? this->parameters_.linear_solver_verbosity_ : 0;
+		Dune::BiCGSTABSolver<Vector> linsolve(linearOperator, *sp, *amg,
+                          this->parameters_.linear_solver_reduction_,
+                          this->parameters_.linear_solver_maxiter_,
+                          verbosity);
+                // Solve system.
+                linsolve.apply(x, istlb, result);
+		SuperClass::checkConvergence(result);
+	   }
             // Solve system.
-	    Dune::InverseOperatorResult result;
-	    linsolve_->apply(x, *(this->rhs_), result);
-	    this->checkConvergence( result );
-	    if(this->parameters_.scale_linear_system_){
-	      this->scaleSolution(x);
-	    }	    
-            return this->converged_;
+	    //Dune::InverseOperatorResult result;
+	    //linsolve_->apply(x, *(this->rhs_), result);
+	    //this->checkConvergence( result );
+	    // x = solution_;
+	    // if(this->parameters_.scale_linear_system_){
+	    //   this->scaleSolution(x);
+	    // }	    
+            // return this->converged_;
         }
 	
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
@@ -178,6 +280,11 @@ namespace Opm
 	    std::unique_ptr< AMG > amg;
 	    // Construct preconditioner.
 	    Criterion crit(15, 2000);
+	    
+	    
+                    // Solve.
+            
+	    
 	    //this->constructAMGPrecond<Criterion>( linearOperator, parallelInformation_arg, amg, opA, relax, ilu_milu );
 	    ISTLUtility::template createAMGPreconditionerPointer<Criterion>( *opA,
 									     relax,
@@ -185,17 +292,31 @@ namespace Opm
 									     amg,
 									     this->parameters_,
 									     this->weights_ );
+	    
+	    
+	    
+	    
 	    int verbosity = ( this->isIORank_ ) ? this->parameters_.linear_solver_verbosity_ : 0;
 	    	    
-	    linsolve_.reset(new Dune::BiCGSTABSolver<Vector>(*opA,
-							    *sp,
-							    *amg,
-							    this->parameters_.linear_solver_reduction_,
-							    this->parameters_.linear_solver_restart_,
-							    verbosity));
-	    prec_ = std::move(amg);
-	    op_ = std::move(opA);
-	    sp_ = std::move(sp);
+	    // linsolve_.reset(new Dune::BiCGSTABSolver<Vector>(*opA,
+	    // 						    *sp,
+	    // 						    *amg,
+	    // 						    this->parameters_.linear_solver_reduction_,
+	    // 						    this->parameters_.linear_solver_restart_,
+	    // 						    verbosity));
+	    solution_.resize(this->rhs_->size());
+	    Dune::InverseOperatorResult result;
+	    Dune::BiCGSTABSolver<Vector> linsolve(*opA,
+						  *sp,
+						  *amg,
+						  this->parameters_.linear_solver_reduction_,
+						  this->parameters_.linear_solver_restart_,
+						  verbosity);
+            linsolve.apply(solution_, *(this->rhs_), result);
+	    this->checkConvergence( result);
+	    // prec_ = std::move(amg);
+	    // op_ = std::move(opA);
+	    // sp_ = std::move(sp);
 	    
         }
 
@@ -217,6 +338,7 @@ namespace Opm
       std::shared_ptr< Dune::LinearOperator<Vector,Vector>  > op_;
       std::shared_ptr< Dune::Preconditioner<Vector,Vector>  > prec_;
       std::shared_ptr< Dune::ScalarProduct<Vector> > sp_;
+      Vector solution_;
       
     }; // end ISTLSolver
 
