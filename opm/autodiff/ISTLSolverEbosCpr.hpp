@@ -68,8 +68,8 @@ namespace Opm
       typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false, TypeTag > OperatorSerial;
       typedef ISTLSolverEbos<TypeTag> SuperClass;
       typedef Dune::Amg::SequentialInformation POrComm;
-      typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
-      typedef typename CPRSelectorType::Operator MatrixOperator;
+      //typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
+      typedef Dune::MatrixAdapter<Matrix,Vector, Vector> MatrixAdapter;
       static constexpr int category = Dune::SolverCategory::sequential;
       typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
       
@@ -155,40 +155,67 @@ namespace Opm
 	      
 	      
 		
-	      if( ! std::is_same< LinearOperator, MatrixOperator > :: value )
+	      if( ! std::is_same< LinearOperator, MatrixAdapter > :: value )
                 {
 		  // create new operator in case linear operator and matrix operator differ
-		  opA_.reset( CPRSelectorType::makeOperator( opASerial_->getmat(), parallelInformation_arg ) );
+		  opA_.reset( new MatrixAdapter( opASerial_->getmat()));//, parallelInformation_arg ) );
                 }
 
 	      const double relax = this->parameters_.ilu_relaxation_;
-	      //const MILU_VARIANT ilu_milu  = this->parameters_.ilu_milu_;
-	      using Matrix         = typename MatrixOperator::matrix_type;
+	      const MILU_VARIANT ilu_milu  = this->parameters_.ilu_milu_;
+	      using Matrix         = typename MatrixAdapter::matrix_type;
 	      using CouplingMetric = Dune::Amg::Diagonal<pressureIndex>;
 	      using CritBase       = Dune::Amg::SymmetricCriterion<Matrix, CouplingMetric>;
 	      using Criterion      = Dune::Amg::CoarsenCriterion<CritBase>;
 	      using AMG = typename ISTLUtility
-		::BlackoilAmgSelector< Matrix, Vector, Vector,POrComm, Criterion, pressureIndex >::AMG;
+	      	::BlackoilAmgSelector< Matrix, Vector, Vector,POrComm, Criterion, pressureIndex >::AMG;
 		
 	      //std::unique_ptr< AMG > amg;
 	      // Construct preconditioner.
 	      Criterion crit(15, 2000);
 	      //SuperClass::constructAMGPrecond< Criterion >( linearOperator, parallelInformation_arg, amg, opA, relax, ilu_milu );
-	      ISTLUtility::template createAMGPreconditionerPointer<Criterion>( *opA_,
-									       relax,
-									       parallelInformation_arg,
-									       amg_,
-									       this->parameters_,
-									       this->weights_ );
-
+	      // ISTLUtility::template createAMGPreconditionerPointer<Criterion>( *opA_,
+	      // 								       relax,
+	      // 								       parallelInformation_arg,
+	      // 								       amg_,
+	      // 								       this->parameters_,
+	      // 								       this->weights_ );
+	      //using AMG = BlackoilAmg<Op,S,Criterion,P, PressureIndex>;
+	      POrComm& comm = parallelInformation_arg;
+	      const int verbosity    = ( this->parameters_.cpr_solver_verbose_ &&
+                                       comm.communicator().rank()==0 ) ? 1 : 0;
+	      
+	      // TODO: revise choice of parameters
+	      int coarsenTarget=1200;
+	      Criterion criterion(15, coarsenTarget);
+	      criterion.setDebugLevel( verbosity ); // no debug information, 1 for printing hierarchy information
+	      criterion.setDefaultValuesIsotropic(2);
+	      criterion.setNoPostSmoothSteps( 1 );
+	      criterion.setNoPreSmoothSteps( 1 );
+	      
+	      // Since DUNE 2.2 we also need to pass the smoother args instead of steps directly
+	      typedef typename AMG::Smoother Smoother;
+	      typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
+	      SmootherArgs  smootherArgs;
+	      smootherArgs.iterations = 1;
+	      smootherArgs.relaxationFactor = relax;
+	      //ISTLUtility::setILUParameters(smootherArgs, ilu_milu);
+	      ISTLUtility::setILUParameters(smootherArgs, this->parameters_);
+	      const Opm::CPRParameter& params(this->parameters_); // strange conversion
+	      MatrixAdapter& opARef = *opA_;
+	      amg_.reset( new AMG( params, this->weights_, opARef, criterion, smootherArgs, comm ) );
+	      //amg_.reset( new AMG(*opA_, criterion, smootherArgs, comm ) );
 	      
 	      // Solve.
 	      //SuperClass::solve(linearOperator, x, istlb, *sp, *amg, result);
-	      int verbosity = ( this->isIORank_ ) ? this->parameters_.linear_solver_verbosity_ : 0;
-	      linsolve_.reset(new Dune::BiCGSTABSolver<Vector>(*opASerial_, *sp_, *amg_,
+	      //references seems to do something els than refering
+	      
+	      int verbosity_linsolve = ( this->isIORank_ ) ? this->parameters_.linear_solver_verbosity_ : 0;
+	      LinearOperator& opASerialRef = *opASerial_;
+	      linsolve_.reset(new Dune::BiCGSTABSolver<Vector>(opASerialRef, *sp_, *amg_,
 						    this->parameters_.linear_solver_reduction_,
 							       this->parameters_.linear_solver_maxiter_,
-							       verbosity));
+							       verbosity_linsolve));
 
 	    }	  
         }
@@ -223,14 +250,14 @@ namespace Opm
 
     protected:
       
-      //using Matrix         = typename MatrixOperator::matrix_type;
+      //using Matrix         = typename MatrixAdapter::matrix_type;
       using CouplingMetric = Dune::Amg::Diagonal<pressureIndex>;
       using CritBase       = Dune::Amg::SymmetricCriterion<Matrix, CouplingMetric>;
       using Criterion      = Dune::Amg::CoarsenCriterion<CritBase>;
       using AMG = typename ISTLUtility
 	::BlackoilAmgSelector< Matrix, Vector, Vector,POrComm, Criterion, pressureIndex >::AMG;
       typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
-      std::unique_ptr< MatrixOperator > opA_;
+      std::unique_ptr< MatrixAdapter > opA_;
       std::unique_ptr< OperatorSerial > opASerial_;
       std::unique_ptr< AMG > amg_;
       SPPointer  sp_;
