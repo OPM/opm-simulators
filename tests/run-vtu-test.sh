@@ -15,25 +15,6 @@ usage() {
     echo "where TEST_TYPE can either be --plain, --simulation, --spe1 or --parallel-simulation=\$NUM_CORES (is '$TEST_TYPE')."
 };
 
-validateResults() {
-    local OUTPUT_FILE="$1"
-    local SIM_NAME="$2"
-
-    for REFERENCE_RESULT in ${MY_DIR}/../tests/referencesolutions/$SIM_NAME*; do
-        echo "Comparing with \"$REFERENCE_RESULT\"... "
-        if python2 "${MY_DIR}/fuzzycomparevtu.py" "$REFERENCE_RESULT" "$OUTPUT_FILE"; then
-            # SUCCESS!!!!!!
-            echo "Result file '$OUTPUT_FILE' and reference '$REFERENCE_RESULT' are identical" 
-            return 0
-        fi
-    done
-    
-    echo "There are no reference results which are are identical to \"$TEST_RESULT\"."
-    echo "Make sure the contents of \"$TEST_RESULT\" are still valid and "
-    echo "if necessary, add a reference result."
-    exit 1
-}
-
 # this function clips the help message printed by an ewoms simulation
 # to what is actually printed, throwing away all garbage which is
 # printed before or after the "meat"
@@ -124,9 +105,7 @@ case "$TEST_TYPE" in
 
         echo "Simulation name: '$SIM_NAME'"
         echo "Number of timesteps: '$NUM_TIMESTEPS'"
-        echo "Test result file: '$TEST_RESULT'"
 
-        validateResults "$TEST_RESULT" "$SIM_NAME"
         exit 0
         ;;
 
@@ -156,10 +135,6 @@ case "$TEST_TYPE" in
                 echo "File $TEST_RESULT does not exist or is not readable"
                 exit 1
             fi
-
-            echo "Validate result for process $PROC_NUM (file: $TEST_RESULT)"
-
-            validateResults "$TEST_RESULT" "$REF_FILE"
         done
         exit 0
         ;;
@@ -177,12 +152,6 @@ case "$TEST_TYPE" in
             exit 1
         fi
 
-        COMPARE_ECL_COMMAND="$2"
-        if ! test -x "$COMPARE_ECL_COMMAND"; then
-            echo "Cannot run ebos test: No valid comparison program for ECL data files specified."
-            exit 1
-        fi
-
         #########
         # Run the simulator
         if ! "$EBOS_COMMAND" "data/SPE1CASE1" ; then
@@ -190,40 +159,15 @@ case "$TEST_TYPE" in
         fi
         #########
 
-        #########
-        # compare the results
-        EXIT_CODE=0
+        # make sure that the simulator produced non-empty output files
+        for EXT in "INIT" "EGRID" "UNRST" "UNSMRY" "SMSPEC"; do
+            if ! test -s "SPE1CASE1.$EXT"; then
+                echo "The simulator did not produce a non-empty SPE1CASE1.$EXT file"
+                exit 1
+            fi
+        done
 
-        ABS_TOL=100.0
-        REL_TOL=0.1
-
-        echo
-        echo "Comparing produced .SMRY file with reference."
-        "${COMPARE_ECL_COMMAND}" -t SMRY "SPE1CASE1.UNSMRY" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1.UNSMRY" "$ABS_TOL" "$REL_TOL"
-        if test "$?" -ne 0; then
-            EXIT_CODE=1
-            "${COMPARE_ECL_COMMAND}" -a -t SMRY "SPE1CASE1.UNSMRY" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1.UNSMRY" "$ABS_TOL" "$REL_TOL"
-        fi
-
-        echo
-        echo "Comparing produced .UNRST file with reference."
-        "${COMPARE_ECL_COMMAND}" -t UNRST "SPE1CASE1" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1" "${ABS_TOL}" "${REL_TOL}"
-        if test "$?" -ne 0; then
-            EXIT_CODE=1
-            "${COMPARE_ECL_COMMAND}" -a -t UNRST "SPE1CASE1" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1" "$ABS_TOL" "$REL_TOL"
-        fi
-
-        echo
-        echo "Comparing produced .INIT file with reference."
-        "${COMPARE_ECL_COMMAND}" -t INIT "SPE1CASE1" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1" "${ABS_TOL}" "${REL_TOL}"
-        if test "$?" -ne 0; then
-            EXIT_CODE=1
-            "${COMPARE_ECL_COMMAND}" -a -t INIT "SPE1CASE1" "${MY_DIR}/../tests/referencesolutions/SPE1CASE1" "$ABS_TOL" "$REL_TOL"
-        fi
-
-        # TODO: compare the EGRID files (seems to be currently supported by compareECL)
-        
-        exit "$EXIT_CODE"
+        exit 0
         ;;
 
     "--restart")
@@ -237,13 +181,13 @@ case "$TEST_TYPE" in
         fi
         RESTART_TIME=$(grep "Serialize" "test-$RND.log" | tail -n 1 | sed "s/.*time=\([0-9.e+\-]*\).*/\1/")
         rm "test-$RND.log"
-        
+
         if ! "$TEST_BINARY" $TEST_ARGS --restart-time="$RESTART_TIME" --newton-write-convergence=true; then
             echo "Restarting $TEST_BINARY failed"
             exit 1;
         fi
         exit 0
-        ;;        
+        ;;
 
     "--parameters")
         HELP_MSG="$($TEST_BINARY --help | clipToHelpMessage)"
