@@ -199,9 +199,10 @@ namespace Opm
 	      SmootherArgs  smootherArgs;
 	      smootherArgs.iterations = 1;
 	      smootherArgs.relaxationFactor = relax;
-	      //ISTLUtility::setILUParameters(smootherArgs, ilu_milu);
-	      ISTLUtility::setILUParameters(smootherArgs, this->parameters_);
 	      const Opm::CPRParameter& params(this->parameters_); // strange conversion
+	      //ISTLUtility::setILUParameters(smootherArgs, ilu_milu);
+	      ISTLUtility::setILUParameters(smootherArgs, params);
+	      
 	      MatrixAdapter& opARef = *opA_;
 	      amg_.reset( new AMG( params, this->weights_, opARef, criterion, smootherArgs, comm ) );
 	      //amg_.reset( new AMG(*opA_, criterion, smootherArgs, comm ) );
