@@ -63,6 +63,7 @@ NEW_PROP_TAG(LinearSolverBackend);
 NEW_PROP_TAG(PreconditionerAddWellContributions);
 NEW_PROP_TAG(CprSolverVerbose);
 NEW_PROP_TAG(CprUseDrs);
+NEW_PROP_TAG(CprMaxIter);
 
 SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
 SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
@@ -84,6 +85,7 @@ SET_STRING_PROP(FlowIstlSolverParams, SystemStrategy, "original");
 SET_BOOL_PROP(FlowIstlSolverParams, ScaleLinearSystem, false);
 SET_BOOL_PROP(FlowIstlSolverParams, CprSolverVerbose, false);
 SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
+SET_INT_PROP(FlowIstlSolverParams, CprMaxIter, 20);
 
 END_PROPERTIES
 
@@ -195,6 +197,7 @@ namespace Opm
 	    scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
 	    cpr_solver_verbose_  =  EWOMS_GET_PARAM(TypeTag, bool, CprSolverVerbose);
 	    cpr_use_drs_  =  EWOMS_GET_PARAM(TypeTag, bool, CprUseDrs);
+	    cpr_max_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxIter);
         }
 
         template <class TypeTag>
@@ -218,6 +221,7 @@ namespace Opm
 	    EWOMS_REGISTER_PARAM(TypeTag, bool, ScaleLinearSystem, "Scale linear system according to equation scale and primary variable types");
 	    EWOMS_REGISTER_PARAM(TypeTag, bool, CprSolverVerbose, "Verbose for cpr solver");
 	    EWOMS_REGISTER_PARAM(TypeTag, bool, CprUseDrs, "Use dynamic row sum using weighs");
+	    EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxIter, "MaxIterations of the pressure amg solver");
         }
 
         FlowLinearSolverParameters() { reset(); }
