@@ -39,7 +39,7 @@ namespace Opm
     , cell_perforation_depth_diffs_(number_of_perforations_, 0.0)
     , cell_perforation_pressure_diffs_(number_of_perforations_, 0.0)
     , perforation_segment_depth_diffs_(number_of_perforations_, 0.0)
-    , segment_comp_initial_(numberOfSegments(), std::vector<double>(num_components_, 0.0))
+    , segment_fluid_initial_(numberOfSegments(), std::vector<double>(num_components_, 0.0))
     , segment_densities_(numberOfSegments(), 0.0)
     , segment_viscosities_(numberOfSegments(), 0.0)
     , segment_mass_rates_(numberOfSegments(), 0.0)
@@ -742,13 +742,13 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeInitialComposition()
+    computeInitialSegmentFluids(const Simulator& ebos_simulator)
     {
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
-            // TODO: probably it should be numWellEq -1 more accurately,
-            // while by meaning it should be num_comp
+            // TODO: trying to reduce the times for the surfaceVolumeFraction calculation
+            const double surface_volume = getSegmentSurfaceVolume(ebos_simulator, seg).value();
             for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                segment_comp_initial_[seg][comp_idx] = surfaceVolumeFraction(seg, comp_idx).value();
+                segment_fluid_initial_[seg][comp_idx] = surface_volume * surfaceVolumeFraction(seg, comp_idx).value();
             }
         }
     }
@@ -818,7 +818,7 @@ namespace Opm
                                 Opm::DeferredLogger& deferred_logger)
     {
         computePerfCellPressDiffs(ebosSimulator);
-        computeInitialComposition();
+        computeInitialSegmentFluids(ebosSimulator);
     }
 
 
@@ -1830,11 +1830,11 @@ namespace Opm
             // calculating the accumulation term // TODO: without considering the efficiencty factor for now
             // volume of the segment
             {
-                const double volume = segmentSet()[seg].volume();
+                const EvalWell segment_surface_volume = getSegmentSurfaceVolume(ebosSimulator, seg);
                 // for each component
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                    EvalWell accumulation_term = volume / dt * (surfaceVolumeFraction(seg, comp_idx) - segment_comp_initial_[seg][comp_idx])
-                                               + getSegmentRate(seg, comp_idx);
+                    EvalWell accumulation_term = (segment_surface_volume * surfaceVolumeFraction(seg, comp_idx)
+                                                 - segment_fluid_initial_[seg][comp_idx]) / dt + getSegmentRate(seg, comp_idx);
 
                     resWell_[seg][comp_idx] += accumulation_term.value();
                     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -1939,5 +1939,135 @@ namespace Opm
     updateWaterThroughput(const double dt OPM_UNUSED, WellState& well_state OPM_UNUSED) const
     {
     }
+
+
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getSegmentSurfaceVolume(const Simulator& ebos_simulator, const int seg_idx) const
+    {
+        EvalWell temperature;
+        int pvt_region_index;
+        {
+            // using the pvt region of first perforated cell
+            // TODO: it should be a member of the WellInterface, initialized properly
+            const int cell_idx = well_cells_[0];
+            const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+            const auto& fs = intQuants.fluidState();
+            temperature.setValue(fs.temperature(FluidSystem::oilPhaseIdx).value());
+            pvt_region_index = fs.pvtRegionIndex();
+        }
+
+        const EvalWell seg_pressure = getSegmentPressure(seg_idx);
+
+        std::vector<EvalWell> mix_s(num_components_, 0.0);
+        for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
+            mix_s[comp_idx] = surfaceVolumeFraction(seg_idx, comp_idx);
+        }
+
+        std::vector<EvalWell> b(num_components_, 0.);
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+            b[waterCompIdx] =
+                FluidSystem::waterPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+        }
+
+        EvalWell rv(0.0);
+        // gas phase
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                const EvalWell rvmax = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvt_region_index, temperature, seg_pressure);
+                if (mix_s[oilCompIdx] > 0.0) {
+                    if (mix_s[gasCompIdx] > 0.0) {
+                        rv = mix_s[oilCompIdx] / mix_s[gasCompIdx];
+                    }
+
+                    if (rv > rvmax) {
+                        rv = rvmax;
+                    }
+                    b[gasCompIdx] =
+                        FluidSystem::gasPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rv);
+                } else { // no oil exists
+                    b[gasCompIdx] =
+                        FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                }
+            } else { // no Liquid phase
+                // it is the same with zero mix_s[Oil]
+                b[gasCompIdx] =
+                    FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+            }
+        }
+
+        EvalWell rs(0.0);
+        // oil phase
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                const EvalWell rsmax = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvt_region_index, temperature, seg_pressure);
+                if (mix_s[gasCompIdx] > 0.0) {
+                    if (mix_s[oilCompIdx] > 0.0) {
+                        rs = mix_s[gasCompIdx] / mix_s[oilCompIdx];
+                    }
+                    // std::cout << " rs " << rs.value() << " rsmax " << rsmax.value() << std::endl;
+
+                    if (rs > rsmax) {
+                        rs = rsmax;
+                    }
+                    b[oilCompIdx] =
+                        FluidSystem::oilPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rs);
+                } else { // no oil exists
+                    b[oilCompIdx] =
+                        FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                }
+            } else { // no gas phase
+                // it is the same with zero mix_s[Gas]
+                b[oilCompIdx] =
+                    FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+            }
+        }
+
+        std::vector<EvalWell> mix(mix_s);
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+
+            const EvalWell d = 1.0 - rs * rv;
+            if (d <= 0.0 || d > 1.0) {
+                OPM_THROW(Opm::NumericalIssue, "Problematic d value " << d << " obtained for well " << name()
+                                               << " during convertion to surface volume with rs " << rs
+                                               << ", rv " << rv << " and pressure " << seg_pressure
+                                               << " obtaining d " << d);
+            }
+
+            if (rs > 0.0) { // rs > 0.0?
+                mix[gasCompIdx] = (mix_s[gasCompIdx] - mix_s[oilCompIdx] * rs) / d;
+            }
+            if (rv > 0.0) { // rv > 0.0?
+                mix[oilCompIdx] = (mix_s[oilCompIdx] - mix_s[gasCompIdx] * rv) / d;
+            }
+        }
+
+        EvalWell vol_ratio(0.0);
+        for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
+            vol_ratio += mix[comp_idx] / b[comp_idx];
+        }
+
+        // segment volume
+        const double volume = segmentSet()[seg_idx].volume();
+
+        return volume / vol_ratio;
+    }
+
+    }
+
+
+
+
 
 }

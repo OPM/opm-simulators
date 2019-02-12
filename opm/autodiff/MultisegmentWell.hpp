@@ -243,8 +243,8 @@ namespace Opm
         // the segment the perforation belongs to
         std::vector<double> perforation_segment_depth_diffs_;
 
-        // the intial component compistion of segments
-        std::vector<std::vector<double> > segment_comp_initial_;
+        // the intial amount of fluids in each segment under surface condition
+        std::vector<std::vector<double> > segment_fluid_initial_;
 
         // the densities of segment fluids
         // we should not have this member variable
@@ -280,7 +280,7 @@ namespace Opm
         void initSegmentRatesWithWellRates(WellState& well_state) const;
 
         // computing the accumulation term for later use in well mass equations
-        void computeInitialComposition();
+        void computeInitialSegmentFluids(const Simulator& ebos_simulator);
 
         // compute the pressure difference between the perforation and cell center
         void computePerfCellPressDiffs(const Simulator& ebosSimulator);
@@ -366,6 +366,9 @@ namespace Opm
                                          WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger) override;
 
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
+
+        EvalWell getSegmentSurfaceVolume(const Simulator& ebos_simulator, const int seg_idx) const;
+
     };
 
 }
