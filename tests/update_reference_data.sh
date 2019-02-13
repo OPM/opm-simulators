@@ -53,6 +53,7 @@ tests[base_model_1]="flow model1 BASE_MODEL_1 base_model_1"
 tests[msw_model_1]="flow model1 MSW_MODEL_1 msw_model_1"
 tests[faults_model_1]="flow model1 FAULTS_MODEL_1 faults_model_1"
 tests[polymer_injectivity]="flow polymer_injectivity 2D_POLYMER_INJECTIVITY"
+tests[nnc]="flow editnnc NNC_AND_EDITNNC nnc"
 
 changed_tests=""
 for test_name in ${!tests[*]}
