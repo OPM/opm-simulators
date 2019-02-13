@@ -357,7 +357,6 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
     enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
     enum { enablePolymerMolarWeight = GET_PROP_VALUE(TypeTag, EnablePolymerMW) };
-
     enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
     enum { enableThermalFluxBoundaries = GET_PROP_VALUE(TypeTag, EnableThermalFluxBoundaries) };
@@ -737,12 +736,12 @@ public:
         const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         if (drsdtActive_())
             // DRSDT is enabled
-            for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx )
+            for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
                 maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*this->simulator().timeStepSize();
 
         if (drvdtActive_())
             // DRVDT is enabled
-            for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx )
+            for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
                 maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
 
         wellModel_.beginTimeStep();
@@ -958,7 +957,6 @@ public:
     Scalar thresholdPressure(unsigned elem1Idx, unsigned elem2Idx) const
     { return thresholdPressures_.thresholdPressure(elem1Idx, elem2Idx); }
 
-
     const EclThresholdPressure<TypeTag>& thresholdPressure() const
     { return thresholdPressures_; }
 
@@ -1064,7 +1062,6 @@ public:
         return thermalLawManager_->solidEnergyLawParams(globalSpaceIdx);
     }
 
-
     /*!
      * \copydoc FvBaseMultiPhaseProblem::thermalConductionParams
      */
@@ -1112,7 +1109,6 @@ public:
 
         return polymerConcentration_[elemIdx];
     }
-
 
     /*!
     * \brief Returns the polymer molecule weight for a given cell index
@@ -1191,7 +1187,7 @@ public:
     { return plmixnumRegionIndex(context.globalSpaceIndex(spaceIdx, timeIdx)); }
 
     /*!
-     * \brief Returns the index the relevant PLMIXNUM ( for polymer module) region given a cell index
+     * \brief Returns the index the relevant PLMIXNUM (for polymer module) region given a cell index
      */
     unsigned plmixnumRegionIndex(unsigned elemIdx) const
     {
@@ -1218,8 +1214,6 @@ public:
 
         return maxPolymerAdsorption_[elemIdx];
     }
-
-
 
     /*!
      * \copydoc FvBaseProblem::name
@@ -1266,17 +1260,15 @@ public:
         }
 
         if (hasFreeBoundaryConditions()) {
-
             unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
             unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
             unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
             switch (indexInInside) {
             case 0:
-            {
                 if (freebcXMinus_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
+
                 break;
-            }
             case 1:
                 if (freebcX_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
@@ -1400,7 +1392,7 @@ public:
     {
         int pvtRegionIdx = pvtRegionIndex(globalDofIdx);
         if (!drsdtActive_() || maxDRs_[pvtRegionIdx] < 0.0)
-            return std::numeric_limits<Scalar>::max()/2;
+            return std::numeric_limits<Scalar>::max()/2.0;
 
         // this is a bit hacky because it assumes that a time discretization with only
         // two time indices is used.
@@ -1418,7 +1410,7 @@ public:
     {
         int pvtRegionIdx = pvtRegionIndex(globalDofIdx);
         if (!drvdtActive_() || maxDRv_[pvtRegionIdx] < 0.0)
-            return std::numeric_limits<Scalar>::max()/2;
+            return std::numeric_limits<Scalar>::max()/2.0;
 
         // this is a bit hacky because it assumes that a time discretization with only
         // two time indices is used.
@@ -1470,7 +1462,7 @@ public:
     { return wellModel_; }
 
     // temporary solution to facilitate output of initial state from flow
-    const InitialFluidState& initialFluidState(unsigned globalDofIdx ) const
+    const InitialFluidState& initialFluidState(unsigned globalDofIdx) const
     { return initialFluidStates_[globalDofIdx]; }
 
     const Opm::EclipseIO& eclIO() const
@@ -1478,7 +1470,7 @@ public:
 
     bool vapparsActive() const
     {
-        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0 );
+        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0);
         const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         return (oilVaporizationControl.getType() == Opm::OilVaporizationEnum::VAPPARS);
     }
@@ -1489,31 +1481,30 @@ public:
 private:
     bool drsdtActive_() const
     {
-        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0 );
+        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0);
         const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         return (oilVaporizationControl.drsdtActive());
-
     }
+
     bool drvdtActive_() const
     {
-        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0 );
+        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0);
         const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         return (oilVaporizationControl.drvdtActive());
 
     }
-    Scalar cellCenterDepth( const Element& element ) const
+
+    Scalar cellCenterDepth(const Element& element) const
     {
-        typedef typename Element :: Geometry Geometry;
-        static constexpr int zCoord = Element :: dimension - 1;
+        typedef typename Element::Geometry Geometry;
+        static constexpr int zCoord = Element::dimension - 1;
         Scalar zz = 0.0;
 
         const Geometry geometry = element.geometry();
-
         const int corners = geometry.corners();
-        for (int i=0; i<corners; ++i)
-        {
-            zz += geometry.corner( i )[ zCoord ];
-        }
+        for (int i=0; i < corners; ++i)
+            zz += geometry.corner(i)[zCoord];
+
         return zz/Scalar(corners);
     }
 
@@ -1532,7 +1523,7 @@ private:
             const Element& element = *elemIt;
             const unsigned int elemIdx = elemMapper.index(element);
 
-            elementCenterDepth_[elemIdx] = cellCenterDepth( element );
+            elementCenterDepth_[elemIdx] = cellCenterDepth(element);
         }
     }
 
@@ -1541,7 +1532,7 @@ private:
     {
         // update the "last Rs" values for all elements, including the ones in the ghost
         // and overlap regions
-        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0 );
+        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0);
         const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
 
         if (oilVaporizationControl.drsdtActive()) {
@@ -1559,7 +1550,7 @@ private:
                 const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = iq.fluidState();
 
-                typedef typename std::decay<decltype(fs) >::type FluidState;
+                typedef typename std::decay<decltype(fs)>::type FluidState;
 
                 int pvtRegionIdx = pvtRegionIndex(compressedDofIdx);
                 if (oilVaporizationControl.getOption(pvtRegionIdx) || fs.saturation(gasPhaseIdx) > freeGasMinSaturation_)
@@ -1589,7 +1580,7 @@ private:
                 const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = iq.fluidState();
 
-                typedef typename std::decay<decltype(fs) >::type FluidState;
+                typedef typename std::decay<decltype(fs)>::type FluidState;
 
                 lastRv_[compressedDofIdx] =
                     Opm::BlackOil::template getRv_<FluidSystem,
@@ -1834,6 +1825,7 @@ private:
     void readEclRestartSolution_()
     {
         // Set the start time of the simulation
+        const auto& schedule = this->simulator().vanguard().schedule();
         const auto& eclState = this->simulator().vanguard().eclState();
         const auto& timeMap = this->simulator().vanguard().schedule().getTimeMap();
         const auto& initconfig = eclState.getInitConfig();
@@ -1850,10 +1842,10 @@ private:
         size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
         if (enableSolvent)
-            solventSaturation_.resize(numElems,0.0);
+            solventSaturation_.resize(numElems, 0.0);
 
         if (enablePolymer)
-            polymerConcentration_.resize(numElems,0.0);
+            polymerConcentration_.resize(numElems, 0.0);
 
         if (enablePolymerMolarWeight) {
             const std::string msg {"Support of the RESTART for polymer molecular weight "
@@ -1887,12 +1879,12 @@ private:
         const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         if (drsdtActive_())
             // DRSDT is enabled
-            for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx )
+            for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
                 maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*this->simulator().timeStepSize();
 
         if (drvdtActive_())
             // DRVDT is enabled
-            for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx )
+            for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
                 maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
 
         if (tracerModel().numTracers() > 0)
@@ -1930,17 +1922,17 @@ private:
         // each phase needs to be above certain value to be claimed to be existing
         // this is used to recover some RESTART running with the defaulted single-precision format
         const Scalar smallSaturationTolerance = 1.e-6;
-        Scalar sumSaturation = 0.;
+        Scalar sumSaturation = 0.0;
         for (size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (FluidSystem::phaseIsActive(phaseIdx)) {
                 if (elemFluidState.saturation(phaseIdx) < smallSaturationTolerance)
-                    elemFluidState.setSaturation(phaseIdx, 0.);
+                    elemFluidState.setSaturation(phaseIdx, 0.0);
 
                 sumSaturation += elemFluidState.saturation(phaseIdx);
             }
         }
 
-        assert(sumSaturation > 0.);
+        assert(sumSaturation > 0.0);
 
         for (size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (FluidSystem::phaseIsActive(phaseIdx)) {
@@ -2055,7 +2047,7 @@ private:
 
             // this assumes that capillary pressures only depend on the phase saturations
             // and possibly on temperature. (this is always the case for ECL problems.)
-            Dune::FieldVector< Scalar, numPhases > pc( 0 );
+            Dune::FieldVector<Scalar, numPhases> pc(0.0);
             const auto& matParams = materialLawParams(dofIdx);
             MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
             Opm::Valgrind::CheckDefined(oilPressure);
@@ -2102,7 +2094,7 @@ private:
 
         if (enableSolvent) {
             const std::vector<double>& solventSaturationData = eclState.get3DProperties().getDoubleGridProperty("SSOL").getData();
-            solventSaturation_.resize(numDof,0.0);
+            solventSaturation_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
                 assert(0 <= cartesianDofIdx);
@@ -2113,7 +2105,7 @@ private:
 
         if (enablePolymer) {
             const std::vector<double>& polyConcentrationData = eclState.get3DProperties().getDoubleGridProperty("SPOLY").getData();
-            polymerConcentration_.resize(numDof,0.0);
+            polymerConcentration_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
                 assert(0 <= cartesianDofIdx);
@@ -2124,7 +2116,7 @@ private:
 
         if (enablePolymerMolarWeight) {
             const std::vector<double>& polyMoleWeightData = eclState.get3DProperties().getDoubleGridProperty("SPOLYMW").getData();
-            polymerMoleWeight_.resize(numDof,0.0);
+            polymerMoleWeight_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 const size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
                 assert(0 <= cartesianDofIdx);
@@ -2132,10 +2124,7 @@ private:
                 polymerMoleWeight_[dofIdx] = polyMoleWeightData[cartesianDofIdx];
             }
         }
-
     }
-
-
 
     // update the hysteresis parameters of the material laws for the whole grid
     bool updateHysteresis_()
@@ -2291,15 +2280,15 @@ private:
     void readBoundaryConditions_()
     {
         hasFreeBoundaryConditions_ = false;
-        readBoundaryConditionKeyword_("FREEBCX", freebcX_ );
-        readBoundaryConditionKeyword_("FREEBCX-", freebcXMinus_ );
-        readBoundaryConditionKeyword_("FREEBCY", freebcY_ );
-        readBoundaryConditionKeyword_("FREEBCY-", freebcYMinus_ );
-        readBoundaryConditionKeyword_("FREEBCZ", freebcZ_ );
-        readBoundaryConditionKeyword_("FREEBCZ-", freebcZMinus_ );
+        readBoundaryConditionKeyword_("FREEBCX", freebcX_);
+        readBoundaryConditionKeyword_("FREEBCX-", freebcXMinus_);
+        readBoundaryConditionKeyword_("FREEBCY", freebcY_);
+        readBoundaryConditionKeyword_("FREEBCY-", freebcYMinus_);
+        readBoundaryConditionKeyword_("FREEBCZ", freebcZ_);
+        readBoundaryConditionKeyword_("FREEBCZ-", freebcZMinus_);
     }
 
-    void readBoundaryConditionKeyword_(const std::string& name, std::vector<bool>& compressedData )
+    void readBoundaryConditionKeyword_(const std::string& name, std::vector<bool>& compressedData)
     {
         const auto& eclProps = this->simulator().vanguard().eclState().get3DProperties();
         const auto& vanguard = this->simulator().vanguard();
@@ -2368,8 +2357,6 @@ private:
     std::vector<bool> freebcYMinus_;
     std::vector<bool> freebcZ_;
     std::vector<bool> freebcZMinus_;
-
-
 };
 
 template <class TypeTag>
