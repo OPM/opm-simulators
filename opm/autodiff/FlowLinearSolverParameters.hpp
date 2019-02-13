@@ -64,6 +64,7 @@ NEW_PROP_TAG(PreconditionerAddWellContributions);
 NEW_PROP_TAG(CprSolverVerbose);
 NEW_PROP_TAG(CprUseDrs);
 NEW_PROP_TAG(CprMaxIter);
+NEW_PROP_TAG(CprEllSolvetype);
 
 SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
 SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
@@ -86,6 +87,7 @@ SET_BOOL_PROP(FlowIstlSolverParams, ScaleLinearSystem, false);
 SET_BOOL_PROP(FlowIstlSolverParams, CprSolverVerbose, false);
 SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
 SET_INT_PROP(FlowIstlSolverParams, CprMaxIter, 20);
+SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
 
 END_PROPERTIES
 
@@ -106,6 +108,7 @@ namespace Opm
         bool cpr_use_drs_;
         int cpr_max_ell_iter_;
         int cpr_max_iter_;
+        int cpr_ell_solvetype_;
         bool cpr_use_amg_;
         bool cpr_use_bicgstab_;
         bool cpr_solver_verbose_;
@@ -142,6 +145,7 @@ namespace Opm
             cpr_ilu_redblack_         = false;
             cpr_ilu_reorder_sphere_   = true;
             cpr_max_ell_iter_         = 25;
+	    cpr_ell_solvetype_        = 0;
 	    cpr_use_drs_              = false;
 	    cpr_max_iter_             = 25;
             cpr_use_amg_              = true;
@@ -198,6 +202,8 @@ namespace Opm
 	    cpr_solver_verbose_  =  EWOMS_GET_PARAM(TypeTag, bool, CprSolverVerbose);
 	    cpr_use_drs_  =  EWOMS_GET_PARAM(TypeTag, bool, CprUseDrs);
 	    cpr_max_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxIter);
+	    cpr_ell_solvetype_  =  EWOMS_GET_PARAM(TypeTag, int, CprEllSolvetype);
+	    
         }
 
         template <class TypeTag>
@@ -222,6 +228,7 @@ namespace Opm
 	    EWOMS_REGISTER_PARAM(TypeTag, bool, CprSolverVerbose, "Verbose for cpr solver");
 	    EWOMS_REGISTER_PARAM(TypeTag, bool, CprUseDrs, "Use dynamic row sum using weighs");
 	    EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxIter, "MaxIterations of the pressure amg solver");
+	    EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "solver type of elliptic solve 0 bicgstab 1 cg other only amg preconditioner");
         }
 
         FlowLinearSolverParameters() { reset(); }

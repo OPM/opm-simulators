@@ -111,6 +111,7 @@ list (APPEND TEST_DATA_FILES
 list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/AquiferCarterTracy.hpp
   opm/autodiff/BlackoilAmg.hpp
+  opm/autodiff/BlackoilAmgClean.hpp
   opm/autodiff/BlackoilDetails.hpp
   opm/autodiff/BlackoilModelParametersEbos.hpp
   opm/autodiff/BlackoilAquiferModel.hpp
