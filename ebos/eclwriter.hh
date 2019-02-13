@@ -238,7 +238,7 @@ public:
         }
     }
 
-    void restartBegin()
+    void beginRestart()
     {
         bool enableHysteresis = simulator_.problem().materialLawManager()->enableHysteresis();
         bool enableSwatinit = simulator_.vanguard().eclState().get3DProperties().hasDeckDoubleGridProperty("SWATINIT");
@@ -277,10 +277,17 @@ public:
             const auto& thpresValues = restartValues.getExtra("THRESHPR");
             thpres.setFromRestart(thpresValues);
         }
+        restartTimeStepSize_ = restartValues.getExtra("OPMEXTRA")[0];
     }
+
+    void endRestart()
+    {}
 
     const EclOutputBlackOilModule<TypeTag>& eclOutputModule() const
     { return eclOutputModule_; }
+
+    Scalar restartTimeStepSize() const
+    { return restartTimeStepSize_; }
 
 
 private:
@@ -481,6 +488,7 @@ private:
     std::unique_ptr<Opm::EclipseIO> eclIO_;
     Grid globalGrid_;
     std::unique_ptr<TaskletRunner> taskletRunner_;
+    Scalar restartTimeStepSize_;
 
 
 };

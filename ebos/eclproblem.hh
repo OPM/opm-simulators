@@ -578,28 +578,18 @@ public:
 
         const auto& initconfig = eclState.getInitConfig();
         const auto& timeMap = simulator.vanguard().schedule().getTimeMap();
-        if(initconfig.restartRequested()) {
-            // Set the start time of the simulation
-            simulator.setStartTime( timeMap.getStartTime(/*timeStepIdx=*/initconfig.getRestartStep()) );
-            simulator.setEpisodeIndex(initconfig.getRestartStep());
-            simulator.setEpisodeLength(0.0);
-            simulator.setTimeStepSize(0.0);
 
-            readEclRestartSolution_();
-        }
-        else {
-            readInitialCondition_();
-            // Set the start time of the simulation
-            simulator.setStartTime( timeMap.getStartTime(/*timeStepIdx=*/0) );
+        readInitialCondition_();
+        // Set the start time of the simulation
+        simulator.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
 
-            // We want the episode index to be the same as the report step index to make
-            // things simpler, so we have to set the episode index to -1 because it is
-            // incremented inside beginEpisode(). The size of the initial time step and
-            // length of the initial episode is set to zero for the same reason.
-            simulator.setEpisodeIndex(-1);
-            simulator.setEpisodeLength(0.0);
-            simulator.setTimeStepSize(0.0);
-        }
+        // We want the episode index to be the same as the report step index to make
+        // things simpler, so we have to set the episode index to -1 because it is
+        // incremented inside beginEpisode(). The size of the initial time step and
+        // length of the initial episode is set to zero for the same reason.
+        simulator.setEpisodeIndex(-1);
+        simulator.setEpisodeLength(0.0);
+        simulator.setTimeStepSize(0.0);
 
         updatePffDofData_();
 
@@ -1350,10 +1340,12 @@ public:
      */
     void initialSolutionApplied()
     {
+        const auto& eclState = this->simulator().vanguard().eclState();
+
         // initialize the wells. Note that this needs to be done after initializing the
         // intrinsic permeabilities and the after applying the initial solution because
         // the well model uses these...
-        wellModel_.init(this->simulator().vanguard().eclState(), this->simulator().vanguard().schedule());
+        wellModel_.init(eclState, this->simulator().vanguard().schedule());
 
         // let the object for threshold pressures initialize itself. this is done only at
         // this point, because determining the threshold pressures may require to access
@@ -1366,6 +1358,10 @@ public:
         updateCompositionChangeLimits_();
 
         aquiferModel_.initialSolutionApplied();
+
+        const auto& initconfig = eclState.getInitConfig();
+        if (initconfig.restartRequested())
+            readEclRestartSolution_();
     }
 
     /*!
@@ -1837,7 +1833,19 @@ private:
 
     void readEclRestartSolution_()
     {
-        eclWriter_->restartBegin();
+        // Set the start time of the simulation
+        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& timeMap = this->simulator().vanguard().schedule().getTimeMap();
+        const auto& initconfig = eclState.getInitConfig();
+        int episodeIdx = initconfig.getRestartStep() - 1;
+
+        this->simulator().setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
+        this->simulator().setTime(timeMap.getTimePassedUntil(episodeIdx));
+        this->simulator().setEpisodeIndex(episodeIdx);
+        this->simulator().setEpisodeLength(timeMap.getTimeStepLength(episodeIdx));
+        this->simulator().setTimeStepSize(eclWriter_->restartTimeStepSize());
+
+        eclWriter_->beginRestart();
 
         size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
@@ -1854,6 +1862,9 @@ private:
             Opm::OpmLog::warning("NO_POLYMW_RESTART", msg);
             polymerMoleWeight_.resize(numElems, 0.0);
         }
+
+        // this is a hack to preserve the initial fluid states
+        auto tmpInitialFs = initialFluidStates_;
 
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
@@ -1887,6 +1898,31 @@ private:
         if (tracerModel().numTracers() > 0)
             std::cout << "Warning: Restart is not implemented for the tracer model, it will initialize with initial tracer concentration" << std::endl;
 
+        // assign the restart solution to the current solution. note that we still need
+        // to compute real initial solution after this because the initial fluid states
+        // need to be correct for stuff like boundary conditions.
+        auto& sol = this->model().solution(/*timeIdx=*/0);
+        const auto& gridView = this->gridView();
+        ElementContext elemCtx(this->simulator());
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const auto& elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity)
+                continue;
+
+            elemCtx.updatePrimaryStencil(elem);
+            int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            initial(sol[elemIdx], elemCtx, /*spaceIdx=*/0, /*timeIdx=*/0);
+        }
+
+        // this is a hack to preserve the initial fluid states
+        initialFluidStates_ = tmpInitialFs;
+        // make sure that the stuff which needs to be done at the beginning of an episode
+        // is run.
+        this->beginEpisode(/*isOnRestart=*/true);
+
+        eclWriter_->endRestart();
     }
 
     void processRestartSaturations_(InitialFluidState& elemFluidState)
