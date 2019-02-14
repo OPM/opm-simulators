@@ -221,11 +221,13 @@ namespace Opm
 	      //references seems to do something els than refering
 	      
 	      int verbosity_linsolve = ( this->isIORank_ ) ? this->parameters_.linear_solver_verbosity_ : 0;
-	      LinearOperator& opASerialRef = *opASerial_;
+	      LinearOperator& opASerialRef = *opASerial_;	      
 	      linsolve_.reset(new Dune::BiCGSTABSolver<Vector>(opASerialRef, *sp_, *amg_,
 						    this->parameters_.linear_solver_reduction_,
 							       this->parameters_.linear_solver_maxiter_,
 							       verbosity_linsolve));
+	      // amg her is the full cpr preconditioner
+	      //amg_->updatePreconditioner(this->weights_,opARef, smootherArgs, comm);
 
 	    }	  
         }

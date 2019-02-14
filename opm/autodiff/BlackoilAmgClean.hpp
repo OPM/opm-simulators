@@ -19,6 +19,7 @@
 #ifndef OPM_AMGCLEAN_HEADER_INCLUDED
 #define OPM_AMGCLEAN_HEADER_INCLUDED
 
+#include <opm/autodiff/twolevelmethodcpr.hh>
 #include <ewoms/linear/matrixblock.hh>
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
 #include <opm/autodiff/FlowLinearSolverParameters.hpp>
@@ -53,12 +54,136 @@ namespace Dune
 namespace Opm
 {
 
+  
+    template<class Operator, class Criterion, class Communication, std::size_t COMPONENT_INDEX>
+    class OneComponentAggregationLevelTransferPolicyCpr;
+    
+    template<class Operator, class Criterion, class Communication, std::size_t COMPONENT_INDEX>
+    class OneComponentAggregationLevelTransferPolicyCpr
+      : public Dune::Amg::LevelTransferPolicyCpr<Operator, typename Detail::ScalarType<Operator>::value>
+    {
+      typedef Dune::Amg::AggregatesMap<typename Operator::matrix_type::size_type> AggregatesMap;
+    public:
+      using CoarseOperator = typename Detail::ScalarType<Operator>::value;
+      typedef Dune::Amg::LevelTransferPolicy<Operator,CoarseOperator> FatherType;
+      typedef Communication ParallelInformation;
+      
+    public:
+      OneComponentAggregationLevelTransferPolicyCpr(const Criterion& crit, const Communication& comm)
+        : criterion_(crit), communication_(&const_cast<Communication&>(comm))
+      {}
+
+      void createCoarseLevelSystem(const Operator& fineOperator)
+      {
+	prolongDamp_ = 1;
+
+	using CoarseMatrix = typename CoarseOperator::matrix_type;
+	const auto& fineLevelMatrix = fineOperator.getmat();
+	coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), CoarseMatrix::row_wise));
+	auto createIter = coarseLevelMatrix_->createbegin();
+
+	for ( const auto& row: fineLevelMatrix )
+	  {
+	    for ( auto col = row.begin(), cend = row.end(); col != cend; ++col)
+	      {
+		createIter.insert(col.index());
+	      }
+	    ++createIter;
+	  }
+
+	auto coarseRow = coarseLevelMatrix_->begin();
+	for ( const auto& row: fineLevelMatrix )
+	  {
+	    auto coarseCol = coarseRow->begin();
+
+	    for ( auto col = row.begin(), cend = row.end(); col != cend; ++col, ++coarseCol )
+	      {
+		assert( col.index() == coarseCol.index() );
+		*coarseCol = (*col)[COMPONENT_INDEX][COMPONENT_INDEX];
+	      }
+	    ++coarseRow;
+	  }
+	coarseLevelCommunication_.reset(communication_, [](Communication*){});
+
+
+	this->lhs_.resize(this->coarseLevelMatrix_->M());
+	this->rhs_.resize(this->coarseLevelMatrix_->N());
+	using OperatorArgs = typename Dune::Amg::ConstructionTraits<CoarseOperator>::Arguments;
+	OperatorArgs oargs(*coarseLevelMatrix_, *coarseLevelCommunication_);
+	this->operator_.reset(Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs));
+      }
+
+      template<class M>
+      void calculateCoarseEntries(const M& fineMatrix)
+      {
+	*coarseLevelMatrix_ = 0;
+        for(auto row = fineMatrix.begin(), rowEnd = fineMatrix.end();
+            row != rowEnd; ++row)
+	  {
+            const auto& i = (*aggregatesMap_)[row.index()];
+            if(i != AggregatesMap::ISOLATED)
+	      {
+                for(auto entry = row->begin(), entryEnd = row->end();
+                    entry != entryEnd; ++entry)
+		  {
+                    const auto& j = (*aggregatesMap_)[entry.index()];
+                    if ( j != AggregatesMap::ISOLATED )
+		      {
+                        (*coarseLevelMatrix_)[i][j] += (*entry)[COMPONENT_INDEX][COMPONENT_INDEX];
+		      }
+		  }
+	      }
+	  }
+      }
+
+      void moveToCoarseLevel(const typename FatherType::FineRangeType& fine)
+      {
+        // Set coarse vector to zero
+        this->rhs_=0;
+
+	auto end = fine.end(),  begin=fine.begin();
+	
+	for(auto block=begin; block != end; ++block)
+	  {
+	    this->rhs_[block-begin] = (*block)[COMPONENT_INDEX];
+	  }
+        
+
+        this->lhs_=0;
+      }
+
+      void moveToFineLevel(typename FatherType::FineDomainType& fine)
+      {
+        
+	auto end=fine.end(), begin=fine.begin();
+	
+	for(auto block=begin; block != end; ++block)
+	  {
+	    (*block)[COMPONENT_INDEX] = this->lhs_[block-begin];
+	  }
+	
+      }
+
+      OneComponentAggregationLevelTransferPolicyCpr* clone() const
+      {
+        return new OneComponentAggregationLevelTransferPolicyCpr(*this);
+      }
+
+      const Communication& getCoarseLevelCommunication() const
+      {
+        return *coarseLevelCommunication_;
+      }
+    private:
+      typename Operator::matrix_type::field_type prolongDamp_;
+      std::shared_ptr<AggregatesMap> aggregatesMap_;
+      Criterion criterion_;
+      Communication* communication_;
+      std::shared_ptr<Communication> coarseLevelCommunication_;
+      std::shared_ptr<typename CoarseOperator::matrix_type> coarseLevelMatrix_;
+    };
+
   namespace Detail
   {
-    template<class Operator, class Criterion, class Communication, std::size_t COMPONENT_INDEX>
-    class OneComponentAggregationLevelTransferPolicy;
-
-
     /**
      * @brief A policy class for solving the coarse level system using one step of AMG.
      * @tparam O The type of the linear operator used.
@@ -213,7 +338,9 @@ namespace Opm
         return inv; //std::shared_ptr<InverseOperator<X,X> >(inv);
 
       }
-
+      void recalculateGalerkin(){
+	coarseOperator_.recalculateHierarchy();
+      }
     private:
       /** @brief The coarse level operator. */
       std::shared_ptr<Operator> coarseOperator_;
@@ -268,19 +395,19 @@ namespace Opm
       typename Detail::OneComponentCriterionType<Criterion,COMPONENT_INDEX>::value;
     using CoarseCriterion =  typename Detail::ScalarType<Criterion>::value;
     using LevelTransferPolicy =
-      OneComponentAggregationLevelTransferPolicy<Operator,
-						 FineCriterion,
-						 Communication,
-						 COMPONENT_INDEX>;
+      OneComponentAggregationLevelTransferPolicyCpr<Operator,
+						    FineCriterion,
+						    Communication,
+						    COMPONENT_INDEX>;
     using CoarseSolverPolicy   =
       Detail::OneStepAMGCoarseSolverPolicyNoSolve<CoarseOperator,
 						  CoarseSmoother,
 						  CoarseCriterion,
 						  LevelTransferPolicy>;
     using TwoLevelMethod =
-      Dune::Amg::TwoLevelMethod<Operator,
-				CoarseSolverPolicy,
-				Smoother>;
+      Dune::Amg::TwoLevelMethodCpr<Operator,
+				   CoarseSolverPolicy,
+				   Smoother>;
   public:
     // define the category
     enum {
@@ -305,13 +432,27 @@ namespace Opm
 						     COMPONENT_INDEX, weights, param)),
 	smoother_(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
 						      smargs, comm)),
-	levelTransferPolicy_(criterion, comm, param.cpr_pressure_aggregation_),
+	levelTransferPolicy_(criterion, comm),
 	coarseSolverPolicy_(&param, smargs, criterion),
 	twoLevelMethod_(std::get<1>(scaledMatrixOperator_), smoother_,
 			levelTransferPolicy_,
 			coarseSolverPolicy_, 0, 1)
-    {}
-
+    {
+    }
+    void updatePreconditioner(const typename TwoLevelMethod::FineDomainType& weights,
+			      const Operator& fineOperator,
+			      const SmootherArgs& smargs,
+			      const Communication& comm){
+      // weights_ = weights;
+      // scaledMatrixOperator_ = Detail::scaleMatrixDRS(fineOperator, comm,
+      // 						     COMPONENT_INDEX, weights_, param_);
+      // smoother_ .reset(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
+      // 							   smargs, comm));
+      // twoLevelMethod_.updatePreconditioner(std::get<1>(scaledMatrixOperator_),
+      // 					   smoother_,
+      // 					   coarseSolverPolicy_);					  
+    }
+    
     void pre(typename TwoLevelMethod::FineDomainType& x,
              typename TwoLevelMethod::FineRangeType& b)
     {
@@ -333,6 +474,7 @@ namespace Opm
   private:
     const CPRParameter& param_;
     const typename TwoLevelMethod::FineDomainType& weights_;
+    //typename TwoLevelMethod::FineDomainType weights_;//make copy
     std::tuple<std::unique_ptr<Matrix>, Operator> scaledMatrixOperator_;
     std::shared_ptr<Smoother> smoother_;
     LevelTransferPolicy levelTransferPolicy_;

@@ -50,6 +50,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/linalg/LinearSolverAmgcl.cpp
   opm/core/linalg/call_umfpack.c
   opm/core/linalg/sparse_sys.c
+  opm/autodiff/twolevelmethodcpr.hh
   )
 
 # originally generated with the command:
