@@ -1348,13 +1348,7 @@ public:
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
 
         values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
-
-        if (useMassConservativeInitialCondition_) {
-            const auto& matParams = materialLawParams(context, spaceIdx, timeIdx);
-            values.assignMassConservative(initialFluidStates_[globalDofIdx], matParams);
-        }
-        else
-            values.assignNaive(initialFluidStates_[globalDofIdx]);
+        values.assignNaive(initialFluidStates_[globalDofIdx]);
 
         if (enableSolvent)
             values[Indices::solventSaturationIdx] = solventSaturation_[globalDofIdx];
@@ -1854,11 +1848,6 @@ private:
         typedef Ewoms::EclEquilInitializer<TypeTag> EquilInitializer;
         EquilInitializer equilInitializer(this->simulator(), *materialLawManager_);
 
-        // since the EquilInitializer provides fluid states that are consistent with the
-        // black-oil model, we can use naive instead of mass conservative determination
-        // of the primary variables.
-        useMassConservativeInitialCondition_ = false;
-
         size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
@@ -1869,11 +1858,6 @@ private:
 
     void readEclRestartSolution_()
     {
-        // since the EquilInitializer provides fluid states that are consistent with the
-        // black-oil model, we can use naive instead of mass conservative determination
-        // of the primary variables.
-        useMassConservativeInitialCondition_ = false;
-
         eclWriter_->restartBegin();
 
         size_t numElems = this->model().numGridDof();
@@ -1956,10 +1940,6 @@ private:
         const auto& vanguard = this->simulator().vanguard();
         const auto& eclState = vanguard.eclState();
         const auto& eclProps = eclState.get3DProperties();
-
-        // the values specified in the deck do not need to be consistent,
-        // we still don't try to make the consistent.
-        useMassConservativeInitialCondition_ = false;
 
         // make sure all required quantities are enables
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && !eclProps.hasDeckDoubleGridProperty("SWAT"))
@@ -2343,7 +2323,6 @@ private:
 
     std::vector<Scalar> maxPolymerAdsorption_;
 
-    bool useMassConservativeInitialCondition_;
     std::vector<InitialFluidState> initialFluidStates_;
     std::vector<Scalar> initialTemperature_;
 
