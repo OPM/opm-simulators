@@ -1533,6 +1533,10 @@ public:
      */
     Scalar nextTimeStepSize() const
     {
+        // allow external code to do the timestepping
+        if (this->nextTimeStepSize_ > 0.0)
+            return this->nextTimeStepSize_;
+
         int episodeIdx = this->simulator().episodeIndex();
 
         // for the initial episode, we use a fixed time step size
