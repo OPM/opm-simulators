@@ -917,18 +917,6 @@ public:
         eclWriter_->writeOutput(isSubStep);
     }
 
-    // this method is DEPRECATED!!!
-    void writeOutput(Opm::data::Wells& dw, Scalar t, bool substep, Scalar totalSolverTime, Scalar nextstep, bool verbose = true)
-    {
-        // use the generic code to prepare the output fields and to
-        // write the desired VTK files.
-        ParentType::writeOutput(verbose);
-
-        // output using eclWriter if enabled
-        if (eclWriter_)
-            eclWriter_->writeOutput(dw, t, substep, totalSolverTime, nextstep);
-    }
-
     /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
