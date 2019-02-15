@@ -139,6 +139,11 @@ NEW_PROP_TAG(EnableThermalFluxBoundaries);
 // The class which deals with ECL aquifers
 NEW_PROP_TAG(EclAquiferModel);
 
+NEW_PROP_TAG(MaxTimeStepSizeAfterWellEvent);
+NEW_PROP_TAG(RestartShrinkFactor);
+NEW_PROP_TAG(MaxFails);
+NEW_PROP_TAG(EnableEclTuning);
+
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 
@@ -231,7 +236,7 @@ SET_SCALAR_PROP(EclBaseProblem, EndTime, 1e100);
 // The chosen value means that the size of the first time step is the
 // one of the initial episode (if the length of the initial episode is
 // not millions of trillions of years, that is...)
-SET_SCALAR_PROP(EclBaseProblem, InitialTimeStepSize, 1e100);
+SET_SCALAR_PROP(EclBaseProblem, InitialTimeStepSize, 3600*24);
 
 // the default for the allowed volumetric error for oil per second
 SET_SCALAR_PROP(EclBaseProblem, NewtonRawTolerance, 1e-2);
@@ -328,6 +333,12 @@ SET_BOOL_PROP(EclBaseProblem, EnableTracerModel, false);
 // By default, simulators derived from the EclBaseProblem are production simulators,
 // i.e., experimental features must be explicitly enabled at compile time
 SET_BOOL_PROP(EclBaseProblem, EnableExperiments, false);
+
+// set defaults for the time stepping parameters
+SET_SCALAR_PROP(EclBaseProblem, MaxTimeStepSizeAfterWellEvent, 3600*24*365.25);
+SET_SCALAR_PROP(EclBaseProblem, RestartShrinkFactor, 3);
+SET_INT_PROP(EclBaseProblem, MaxFails, 10);
+SET_BOOL_PROP(EclBaseProblem, EnableEclTuning, false);
 
 END_PROPERTIES
 
@@ -430,6 +441,14 @@ public:
                              "The frequencies of which time steps are serialized to disk");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTracerModel,
                              "Transport tracers found in the deck.");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxTimeStepSizeAfterWellEvent,
+                             "Maximum time step size after an well event");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, RestartShrinkFactor,
+                             "Factor by which the time step is reduced after convergence failure");
+        EWOMS_REGISTER_PARAM(TypeTag, int, MaxFails,
+                             "Maximum consecutive convergence failures before termination");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEclTuning,
+                             "Honor some aspects of the TUNING keyword from the ECL deck.");
     }
 
     /*!
@@ -540,6 +559,14 @@ public:
         if (EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput))
             // create the ECL writer
             eclWriter_.reset(new EclWriterType(simulator));
+
+        enableEclTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclTuning);
+        initialTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
+        maxTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxTimeStepSize);
+        maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxTimeStepSizeAfterWellEvent);
+        restartShrinkFactor_ = EWOMS_GET_PARAM(TypeTag, Scalar, RestartShrinkFactor);
+        maxFails_ = EWOMS_GET_PARAM(TypeTag, int, MaxFails);
+        minTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, MinTimeStepSize);
     }
 
     /*!
@@ -551,13 +578,27 @@ public:
 
         auto& simulator = this->simulator();
 
-        // set the value of the gravity constant to the one used by the FLOW simulator
+        // the "NOGRAV" keyword from Frontsim or setting the EnableGravity to false
+        // disables gravity, else the standard value of the gravity constant at sea level
+        // on earth is used
         this->gravity_ = 0.0;
-
-        // the "NOGRAV" keyword from Frontsim disables gravity...
         const auto& deck = simulator.vanguard().deck();
-        if (!deck.hasKeyword("NOGRAV") && EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
+        if (EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
             this->gravity_[dim - 1] = 9.80665;
+        if (deck.hasKeyword("NOGRAV"))
+            this->gravity_[dim - 1] = 0.0;
+
+        if (enableEclTuning_) {
+            // if support for the TUNING keyword is enabled, we get the initial time
+            // steping parameters from it instead of from command line parameters
+            const auto& schedule = simulator.vanguard().schedule();
+            const auto& tuning = schedule.getTuning();
+            initialTimeStepSize_ = tuning.getTSINIT(0);
+            maxTimeStepAfterWellEvent_ = tuning.getTMAXWC(0);
+            maxTimeStepSize_ = tuning.getTSMAXZ(0);
+            restartShrinkFactor_ = tuning.getTSFCNV(0);
+            minTimeStepSize_ = tuning.getTSMINZ(0);
+        }
 
         // deal with DRSDT
         const auto& eclState = simulator.vanguard().eclState();
@@ -683,6 +724,19 @@ public:
             updatePffDofData_();
         }
 
+        // react to TUNING changes
+        if (nextEpisodeIdx > 0
+            && enableEclTuning_
+            && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, nextEpisodeIdx))
+        {
+            const auto& tuning = schedule.getTuning();
+            initialTimeStepSize_ = tuning.getTSINIT(nextEpisodeIdx);
+            maxTimeStepAfterWellEvent_ = tuning.getTMAXWC(nextEpisodeIdx);
+            maxTimeStepSize_ = tuning.getTSMAXZ(nextEpisodeIdx);
+            restartShrinkFactor_ = tuning.getTSFCNV(nextEpisodeIdx);
+            minTimeStepSize_ = tuning.getTSMINZ(nextEpisodeIdx);
+        }
+
         // Opm::TimeMap deals with points in time, so the number of time intervals (i.e.,
         // report steps) is one less!
         int numReportSteps = timeMap.size() - 1;
@@ -696,17 +750,14 @@ public:
         }
 
         Scalar episodeLength = timeMap.getTimeStepLength(nextEpisodeIdx);
-        Scalar dt = episodeLength;
-        if (nextEpisodeIdx == 0) {
-            // allow the size of the initial time step to be set via an external parameter
-            Scalar initialDt = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
-            dt = std::min(dt, initialDt);
-        }
+        simulator.startNextEpisode(episodeLength);
 
-        if (nextEpisodeIdx < numReportSteps) {
-            simulator.startNextEpisode(episodeLength);
-            simulator.setTimeStepSize(dt);
-        }
+        Scalar dt = limitNextTimeStepSize_(episodeLength);
+        if (nextEpisodeIdx == 0)
+            // allow the size of the initial time step to be set via an external parameter
+            dt = std::min(dt, initialTimeStepSize_);
+
+        simulator.setTimeStepSize(dt);
 
         const bool invalidateFromHyst = updateHysteresis_();
         const bool invalidateFromMaxOilSat = updateMaxOilSaturation_();
@@ -1485,6 +1536,68 @@ public:
 
     bool hasFreeBoundaryConditions() const
     { return hasFreeBoundaryConditions_; }
+
+    /*!
+     * \brief Propose the size of the next time step to the simulator.
+     *
+     * This method is only called if the Newton solver does converge, the simulator
+     * automatically cuts the time step in half without consultating this method again.
+     */
+    Scalar nextTimeStepSize() const
+    {
+        int episodeIdx = this->simulator().episodeIndex();
+
+        // for the initial episode, we use a fixed time step size
+        if (episodeIdx < 0)
+            return initialTimeStepSize_;
+
+        // ask the newton method for a suggestion. This suggestion will be based on how
+        // well the previous time step converged. After that, apply the runtime time
+        // stepping constraints.
+        const auto& newtonMethod = this->model().newtonMethod();
+        const auto& simulator = this->simulator();
+        return limitNextTimeStepSize_(newtonMethod.suggestTimeStepSize(simulator.timeStepSize()));
+    }
+
+    /*!
+     * \brief Called by Ewoms::Simulator in order to do a time integration on the model.
+     */
+    void timeIntegration()
+    {
+        Simulator& simulator = this->simulator();
+        // if the time step size of the simulator is smaller than
+        // the specified minimum size and we're not going to finish
+        // the simulation or an episode, try with the minimum size.
+        if (simulator.timeStepSize() < minTimeStepSize_ &&
+            !simulator.episodeWillBeOver() &&
+            !simulator.willBeFinished())
+        {
+            simulator.setTimeStepSize(minTimeStepSize_);
+        }
+
+        for (unsigned i = 0; i < maxFails_; ++i) {
+            bool converged = this->model().update();
+            if (converged)
+                return;
+
+            Scalar dt = simulator.timeStepSize();
+            Scalar nextDt = dt / restartShrinkFactor_;
+            if (nextDt < minTimeStepSize_)
+                break; // give up: we can't make the time step smaller anymore!
+            simulator.setTimeStepSize(nextDt);
+
+            // update failed
+            if (this->gridView().comm().rank() == 0)
+                std::cout << "Newton solver did not converge with "
+                          << "dt=" << dt << " seconds. Retrying with time step of "
+                          << nextDt << " seconds\n" << std::flush;
+        }
+
+        throw std::runtime_error("Newton solver didn't converge after "
+                                 +std::to_string(maxFails_)+" time-step divisions. dt="
+                                 +std::to_string(double(simulator.timeStepSize())));
+    }
+
 
 private:
     bool drsdtActive_() const
@@ -2409,6 +2522,56 @@ private:
         }
     }
 
+    // this method applies the runtime constraints specified via the deck and/or command
+    // line parameters for the size of the next time step size.
+    Scalar limitNextTimeStepSize_(Scalar dtNext) const
+    {
+        const auto& events = this->simulator().vanguard().schedule().getEvents();
+        int episodeIdx = this->simulator().episodeIndex();
+
+        // first thing in the morning, limit the time step size to the maximum size
+        dtNext = std::min(dtNext, maxTimeStepSize_);
+
+        // if TUNING is enabled, limit the time step size after a tuning event to TSINIT
+        if (enableEclTuning_ && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, episodeIdx)) {
+            const auto& tuning = this->simulator().vanguard().schedule().getTuning();
+            return std::min(dtNext, tuning.getTSINIT(episodeIdx));
+        }
+
+        // use at least slightly more than half of the maximum time step size by default
+        if (dtNext < maxTimeStepSize_ && maxTimeStepSize_ < dtNext*2)
+            dtNext = 1.01 * maxTimeStepSize_/2.0;
+
+        Scalar remainingEpisodeTime =
+            this->simulator().episodeStartTime()
+            + this->simulator().episodeLength()
+            - this->simulator().time()
+            - this->simulator().timeStepSize();
+
+        // limit the time step size to the remaining time of the episode
+        dtNext = std::min(dtNext, remainingEpisodeTime);
+
+        // if we would have a small amount of time left over in the current episode, make
+        // two equal time steps instead of a big and a small one
+        if (dtNext < remainingEpisodeTime*(1.0 - 1e-5) && dtNext*1.25 > remainingEpisodeTime)
+            // note: limiting to the maximum time step size here is probably not strictly
+            // necessary, but it should not hurt and is more fool-proof
+            dtNext = std::min(maxTimeStepSize_, remainingEpisodeTime/2.0);
+
+        // if a well event occured, respect the limit for the maximum time step after
+        // that, too
+        int reportStepIdx = std::max(episodeIdx, 0);
+        bool wellEventOccured =
+            events.hasEvent(Opm::ScheduleEvents::NEW_WELL, reportStepIdx)
+            || events.hasEvent(Opm::ScheduleEvents::PRODUCTION_UPDATE, reportStepIdx)
+            || events.hasEvent(Opm::ScheduleEvents::INJECTION_UPDATE, reportStepIdx)
+            || events.hasEvent(Opm::ScheduleEvents::WELL_STATUS_CHANGE, reportStepIdx);
+        if (episodeIdx >= 0 && wellEventOccured)
+            dtNext = std::min(dtNext, maxTimeStepAfterWellEvent_);
+
+        return dtNext;
+    }
+
     static std::string briefDescription_;
 
     std::vector<Scalar> porosity_;
@@ -2460,6 +2623,7 @@ private:
     std::vector<bool> freebcYMinus_;
     std::vector<bool> freebcZ_;
     std::vector<bool> freebcZMinus_;
+
     std::vector<RateVector> massratebcX_;
     std::vector<RateVector> massratebcXMinus_;
     std::vector<RateVector> massratebcY_;
@@ -2467,6 +2631,14 @@ private:
     std::vector<RateVector> massratebcZ_;
     std::vector<RateVector> massratebcZMinus_;
 
+    // time stepping parameters
+    bool enableEclTuning_;
+    Scalar initialTimeStepSize_;
+    Scalar maxTimeStepAfterWellEvent_;
+    Scalar maxTimeStepSize_;
+    Scalar restartShrinkFactor_;
+    unsigned maxFails_;
+    Scalar minTimeStepSize_;
 };
 
 template <class TypeTag>
