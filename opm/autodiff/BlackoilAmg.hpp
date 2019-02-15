@@ -410,7 +410,7 @@ private:
             const int maxit        = param_->cpr_max_iter_;
             const int verbosity    = ( param_->cpr_solver_verbose_ &&
                                        comm_.communicator().rank()==0 ) ? 1 : 0;
-            if ( param_->cpr_use_bicgstab_ )
+            if ( param_->cpr_ell_solvetype_ )
             {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
@@ -435,7 +435,7 @@ private:
                 }
 #endif
             }
-            else
+            else if (param_->cpr_ell_solvetype_ == 1)
             {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 Dune::CGSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
@@ -460,6 +460,30 @@ private:
                 }
 #endif
             }
+	    else
+	    {
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+                Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
+                                         tolerance, maxit, verbosity);
+                solver.apply(x,b,res);
+#else	      
+                if ( !amg_ )
+                {
+                  Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
+                                                 reinterpret_cast<Smoother&>(*prec),
+                                                 tolerance, maxit, verbosity);
+                  solver.apply(x,b,res);
+                }
+                else
+                {
+                    Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
+                                                   reinterpret_cast<AMGType&>(*prec),
+                                                   tolerance, maxit, verbosity);
+                    solver.apply(x,b,res);
+                }
+		
+#endif		
+	    }
 
 #if ! DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             delete sp;

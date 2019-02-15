@@ -108,39 +108,40 @@ namespace Opm
 	  SuperClass::prepare(M,b);
 	  const WellModel& wellModel = this->simulator_.problem().wellModel();
 	  
-	  
+#if HAVE_MPI			      	  
 	  if( this->isParallel() )
 	    {
-#if HAVE_MPI			      
-	      typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true ,TypeTag> Operator;
+	      // parallel implemantation si as before
+	      // typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true ,TypeTag> Operator;
 			
-	      auto ebosJacIgnoreOverlap = Matrix(*(this->matrix_));
-	      //remove ghost rows in local matrix
-	      this->makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
+	      // auto ebosJacIgnoreOverlap = Matrix(*(this->matrix_));
+	      // //remove ghost rows in local matrix
+	      // this->makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
 	      
-	      //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
-	      //to be certain that correct matrix is used for preconditioning.
-	      Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel,
-			   this->parallelInformation_ );
-	      assert( opA.comm() );
-	      //SuperClass::solve( opA, x, *(this->rhs_), *(opA.comm()) );
-	      typedef Dune::OwnerOverlapCopyCommunication<int,int>& comm = *(opA.comm());
-	      const size_t size = opA.getmat().N();
+	      // //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
+	      // //to be certain that correct matrix is used for preconditioning.
+	      // Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel,
+	      // 		   this->parallelInformation_ );
+	      // assert( opA.comm() );
+	      // //SuperClass::solve( opA, x, *(this->rhs_), *(opA.comm()) );
+	      // typedef Dune::OwnerOverlapCopyCommunication<int,int>& comm = *(opA.comm());
+	      // const size_t size = opA.getmat().N();
 
-	      const ParallelISTLInformation& info =
-		boost::any_cast<const ParallelISTLInformation&>( this->parallelInformation_);
+	      // const ParallelISTLInformation& info =
+	      // 	boost::any_cast<const ParallelISTLInformation&>( this->parallelInformation_);
 
-	      // As we use a dune-istl with block size np the number of components
-	      // per parallel is only one.
-	      info.copyValuesTo(comm.indexSet(), comm.remoteIndices(),
-				size, 1);
-	      // Construct operator, scalar product and vectors needed.
-	      Dune::InverseOperatorResult result;
-	      SuperClass::constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, x, *(this->rhs_), comm, result);
-	      SuperClass::checkConvergence(result);
-#endif
+	      // // As we use a dune-istl with block size np the number of components
+	      // // per parallel is only one.
+	      // info.copyValuesTo(comm.indexSet(), comm.remoteIndices(),
+	      // 			size, 1);
+	      // // Construct operator, scalar product and vectors needed.
+	      // Dune::InverseOperatorResult result;
+	      // SuperClass::constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, x, *(this->rhs_), comm, result);
+	      // SuperClass::checkConvergence(result);
+
             }
 	  else
+#endif	    
 	    {
 	      const WellModel& wellModel = this->simulator_.problem().wellModel();
 	      //typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false ,TypeTag> OperatorSerial;
@@ -234,17 +235,22 @@ namespace Opm
       
         bool solve(Vector& x) {
 	  //SuperClass::solve(x);
-
-	  // Solve system.
-	  Dune::InverseOperatorResult result;
-	  Vector& istlb = *(this->rhs_);
-	  linsolve_->apply(x, istlb, result);
-	  SuperClass::checkConvergence(result);
-	  
-	  if(this->parameters_.scale_linear_system_){
-	    this->scaleSolution(x);
-	  }	    
-	  return this->converged_;
+	  if( this->isParallel() ){
+	  // for now only call the superclass
+	   bool converged = SuperClass::solve(x);
+	   return converged;
+	  }else{
+	    // Solve system.
+	    Dune::InverseOperatorResult result;
+	    Vector& istlb = *(this->rhs_);
+	    linsolve_->apply(x, istlb, result);
+	    SuperClass::checkConvergence(result);
+	    
+	    if(this->parameters_.scale_linear_system_){
+	      this->scaleSolution(x);
+	    }
+	  }
+	    return this->converged_;
         }
 	
 
