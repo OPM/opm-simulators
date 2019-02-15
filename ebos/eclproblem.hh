@@ -127,9 +127,6 @@ NEW_PROP_TAG(EnableWriteAllSolutions);
 // The number of time steps skipped between writing two consequtive restart files
 NEW_PROP_TAG(RestartWritingInterval);
 
-// Disable well treatment (for users which do this externally)
-NEW_PROP_TAG(DisableWells);
-
 // Enable the additional checks even if compiled in debug mode (i.e., with the NDEBUG
 // macro undefined). Next to a slightly better performance, this also eliminates some
 // print statements in debug mode.
@@ -310,10 +307,6 @@ SET_TYPE_PROP(EclBaseProblem, NewtonMethod, Ewoms::EclNewtonMethod<TypeTag>);
 // The frequency of writing restart (*.ers) files. This is the number of time steps
 // between writing restart files
 SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
-
-// By default, ebos should handle the wells internally, so we don't disable the well
-// treatment
-SET_BOOL_PROP(EclBaseProblem, DisableWells, false);
 
 // By default, we enable the debugging checks if we're compiled in debug mode
 SET_BOOL_PROP(EclBaseProblem, EnableDebuggingChecks, true);
@@ -732,13 +725,12 @@ public:
         if (GET_PROP_VALUE(TypeTag, EnablePolymer))
             updateMaxPolymerAdsorption_();
 
-        if (!GET_PROP_VALUE(TypeTag, DisableWells))
-            // set up the wells for the next episode.
-            //
-            // TODO: the first two arguments seem to be unnecessary
-            wellModel_.beginEpisode(this->simulator().vanguard().eclState(),
-                                    this->simulator().vanguard().schedule(),
-                                    isOnRestart);
+        // set up the wells for the next episode.
+        //
+        // TODO: the first two arguments seem to be unnecessary
+        wellModel_.beginEpisode(this->simulator().vanguard().eclState(),
+                                this->simulator().vanguard().schedule(),
+                                isOnRestart);
 
         aquiferModel_.beginEpisode();
 
@@ -763,10 +755,7 @@ public:
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx )
                 maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
 
-        if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
-            wellModel_.beginTimeStep();
-        }
-
+        wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
 
@@ -787,9 +776,7 @@ public:
      */
     void beginIteration()
     {
-        if (!GET_PROP_VALUE(TypeTag, DisableWells))
-            wellModel_.beginIteration();
-
+        wellModel_.beginIteration();
         aquiferModel_.beginIteration();
     }
 
@@ -798,9 +785,7 @@ public:
      */
     void endIteration()
     {
-        if (!GET_PROP_VALUE(TypeTag, DisableWells))
-            wellModel_.endIteration();
-
+        wellModel_.endIteration();
         aquiferModel_.endIteration();
     }
 
@@ -819,9 +804,7 @@ public:
         }
 #endif // NDEBUG
 
-        if (!GET_PROP_VALUE(TypeTag, DisableWells))
-            wellModel_.endTimeStep();
-
+        wellModel_.endTimeStep();
         aquiferModel_.endTimeStep();
         tracerModel_.endTimeStep();
 
@@ -1373,12 +1356,10 @@ public:
      */
     void initialSolutionApplied()
     {
-        if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
-            // initialize the wells. Note that this needs to be done after initializing the
-            // intrinsic permeabilities and the after applying the initial solution because
-            // the well model uses these...
-            wellModel_.init(this->simulator().vanguard().eclState(), this->simulator().vanguard().schedule());
-        }
+        // initialize the wells. Note that this needs to be done after initializing the
+        // intrinsic permeabilities and the after applying the initial solution because
+        // the well model uses these...
+        wellModel_.init(this->simulator().vanguard().eclState(), this->simulator().vanguard().schedule());
 
         // let the object for threshold pressures initialize itself. this is done only at
         // this point, because determining the threshold pressures may require to access
@@ -1406,18 +1387,16 @@ public:
     {
         rate = 0.0;
 
-        if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
-            wellModel_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
+        wellModel_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
 
-            // convert the source term from the total mass rate of the
-            // cell to the one per unit of volume as used by the model.
-            unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
-                rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
+        // convert the source term from the total mass rate of the
+        // cell to the one per unit of volume as used by the model.
+        unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
+            rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
 
-                Opm::Valgrind::CheckDefined(rate[eqIdx]);
-                assert(Opm::isfinite(rate[eqIdx]));
-            }
+            Opm::Valgrind::CheckDefined(rate[eqIdx]);
+            assert(Opm::isfinite(rate[eqIdx]));
         }
 
         aquiferModel_.addToSource(rate, context, spaceIdx, timeIdx);
