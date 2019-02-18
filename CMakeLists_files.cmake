@@ -104,7 +104,9 @@ list (APPEND TEST_DATA_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
+  opm/autodiff/AquiferInterface.hpp
   opm/autodiff/AquiferCarterTracy.hpp
+  opm/autodiff/AquiferFetkovich.hpp
   opm/autodiff/BlackoilAmg.hpp
   opm/autodiff/BlackoilDetails.hpp
   opm/autodiff/BlackoilModelParametersEbos.hpp

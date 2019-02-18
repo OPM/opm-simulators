@@ -134,7 +134,7 @@ namespace Opm {
       for (size_t i = 0; i < aquifersData.size(); ++i)
       {
         aquifers_CarterTracy.push_back(
-          AquiferCarterTracy<TypeTag> (aquifersData.at(i), aquifer_connection.at(i), cartesian_to_compressed_, this->simulator_)
+          AquiferCarterTracy<TypeTag>  (aquifer_connection.at(i), cartesian_to_compressed_, this->simulator_ , aquifersData.at(i))
         );
       }
     }
@@ -161,7 +161,7 @@ namespace Opm {
       for (size_t i = 0; i < aquifersData.size(); ++i)
       {
         aquifers_Fetkovich.push_back(
-          AquiferFetkovich<TypeTag> (aquifersData.at(i), aquifer_connection.at(i),cartesian_to_compressed_, this->simulator_)
+          AquiferFetkovich<TypeTag> (aquifer_connection.at(i), cartesian_to_compressed_, this->simulator_ , aquifersData.at(i))
         );
       }
     }
