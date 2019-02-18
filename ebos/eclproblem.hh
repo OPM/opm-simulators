@@ -500,8 +500,11 @@ public:
             return
                 "The Ecl-deck Black-Oil reservoir Simulator (ebos); a hydrocarbon "
                 "reservoir simulation program that processes ECL-formatted input "
-                "files which is provided by the Open Porous Media project "
-                "(https://opm-project.org).";
+                "files and is provided by the Open Porous Media project "
+                "(https://opm-project.org).\n"
+                "\n"
+                "THE `ebos` SIMULATOR IS FOR RESEARCH PURPOSES ONLY! For industrial "
+                "applications, use `flow`."
         else
             return briefDescription_;
     }
