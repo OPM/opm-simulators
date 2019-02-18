@@ -121,6 +121,7 @@ namespace Opm
       Qai_[idx]/context.dofVolume(spaceIdx, timeIdx);
     }
 
+  protected:
     inline Scalar gravity_() const
     {
       return ebos_simulator_.problem().gravity()[2];
@@ -133,8 +134,8 @@ namespace Opm
 
       // We next get our connections to the aquifer and initialize these quantities using the initialize_connections function
       initializeConnections(connection);
-
       calculateAquiferCondition();
+      calculateAquiferConstants();
 
       pressure_previous_.resize(cell_idx_.size(), 0.);
       pressure_current_.resize(cell_idx_.size(), 0.);
@@ -186,7 +187,6 @@ namespace Opm
 
     virtual void endTimeStep() = 0;
 
-  protected:
     const Aquancon::AquanconOutput connection_;
     const Simulator& ebos_simulator_;
     const std::unordered_map<int, int> cartesian_to_compressed_;
@@ -216,6 +216,8 @@ namespace Opm
     virtual void calculateInflowRate(int idx, const Simulator& simulator) = 0;
 
     virtual void calculateAquiferCondition() = 0;
+
+    virtual void calculateAquiferConstants() = 0;
 
     virtual Scalar calculateReservoirEquilibrium() =0;
       // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer

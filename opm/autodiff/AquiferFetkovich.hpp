@@ -99,7 +99,8 @@ namespace Opm
       {
         const int cell_index = Base::cartesian_to_compressed_.at(Base::cell_idx_[idx]);
         Base::cellToConnectionIdx_[cell_index] = idx;
-        const auto cellFacesRange = cell2Faces[cell_index];
+
+  	    const auto cellFacesRange = cell2Faces[cell_index];
         for(auto cellFaceIter = cellFacesRange.begin(); cellFaceIter != cellFacesRange.end(); ++cellFaceIter)
         {
           // The index of the face in the compressed grid
@@ -158,10 +159,13 @@ namespace Opm
       return pa_;
     }
 
+    inline void calculateAquiferConstants()
+    {
+      Base::Tc_ = ( aqufetp_data_.C_t * aqufetp_data_.V0 ) / aqufetp_data_.J ;
+    }
     // This function implements Eq 5.14 of the EclipseTechnicalDescription
     inline void calculateInflowRate(int idx, const Simulator& simulator)
     {
-      Base::Tc_ = ( aqufetp_data_.C_t * aqufetp_data_.V0 ) / aqufetp_data_.J ;
       Scalar td_Tc_ = simulator.timeStepSize() / Base::Tc_ ;
       Scalar exp_ = (1 - exp(-td_Tc_)) / td_Tc_;
       Base::Qai_.at(idx) = Base::alphai_.at(idx) * aqufetp_data_.J * dpai(idx) * exp_;

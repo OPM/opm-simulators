@@ -64,53 +64,6 @@ namespace Opm
             const AquiferCT::AQUCT_data aquct_data_;
             Scalar beta_; // Influx constant
 
-            inline void getInfluenceTableValues(Scalar& pitd, Scalar& pitd_prime, const Scalar& td)
-            {
-                // We use the opm-common numeric linear interpolator
-                pitd = Opm::linearInterpolation(aquct_data_.td, aquct_data_.pi, td);
-                pitd_prime = Opm::linearInterpolationDerivative(aquct_data_.td, aquct_data_.pi, td);
-            }
-
-            inline Scalar dpai(int idx)
-            {
-                Scalar dp = Base::pa0_ + Base::rhow_.at(idx).value()*Base::gravity_()*(Base::cell_depth_.at(idx) - aquct_data_.d0) - Base::pressure_previous_.at(idx);
-                return dp;
-            }
-
-            // This function implements Eqs 5.8 and 5.9 of the EclipseTechnicalDescription
-            inline void calculateEqnConstants(Scalar& a, Scalar& b, const int idx, const Simulator& simulator)
-            {
-                const Scalar td_plus_dt = (simulator.timeStepSize() + simulator.time()) / Base::Tc_;
-                const Scalar td = simulator.time() / Base::Tc_;
-                Scalar PItdprime = 0.;
-                Scalar PItd = 0.;
-                getInfluenceTableValues(PItd, PItdprime, td_plus_dt);
-                a = 1.0/Base::Tc_ * ( (beta_ * dpai(idx)) - (Base::W_flux_.value() * PItdprime) ) / ( PItd - td*PItdprime );
-                b = beta_ / (Base::Tc_ * ( PItd - td*PItdprime));
-            }
-
-            // This function implements Eq 5.7 of the EclipseTechnicalDescription
-            inline void calculateInflowRate(int idx, const Simulator& simulator)
-            {
-                Scalar a, b;
-                calculateEqnConstants(a,b,idx,simulator);
-                Base::Qai_.at(idx) = Base::alphai_.at(idx)*( a - b * ( Base::pressure_current_.at(idx) - Base::pressure_previous_.at(idx) ) );
-            }
-
-            inline void calculateAquiferConstants()
-            {
-                // We calculate the influx constant
-                beta_ = aquct_data_.c2 * aquct_data_.h
-                        * aquct_data_.theta * aquct_data_.phi_aq
-                        * aquct_data_.C_t
-                        * aquct_data_.r_o * aquct_data_.r_o;
-                // We calculate the time constant
-                Base::Tc_ = Base::mu_w_ * aquct_data_.phi_aq
-                      * aquct_data_.C_t
-                      * aquct_data_.r_o * aquct_data_.r_o
-                      / ( aquct_data_.k_a * aquct_data_.c1 );
-            }
-
             // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer
             inline void initializeConnections(const Aquancon::AquanconOutput& connection)
             {
@@ -182,22 +135,66 @@ namespace Opm
                 }
 
                 const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
-
                 for (size_t idx = 0; idx < Base::cell_idx_.size(); ++idx)
                 {
                     Base::alphai_.at(idx) = (denom_face_areas < eps_sqrt)? // Prevent no connection NaNs due to division by zero
-                                      0.
-                                    : ( connection.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx) )/denom_face_areas;
+                    0.
+                    : ( connection.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx) )/denom_face_areas;
                 }
+            }
+
+            inline void getInfluenceTableValues(Scalar& pitd, Scalar& pitd_prime, const Scalar& td)
+            {
+                // We use the opm-common numeric linear interpolator
+                pitd = Opm::linearInterpolation(aquct_data_.td, aquct_data_.pi, td);
+                pitd_prime = Opm::linearInterpolationDerivative(aquct_data_.td, aquct_data_.pi, td);
+            }
+
+            inline Scalar dpai(int idx)
+            {
+                Scalar dp = Base::pa0_ + Base::rhow_.at(idx).value()*Base::gravity_()*(Base::cell_depth_.at(idx) - aquct_data_.d0) - Base::pressure_previous_.at(idx);
+                return dp;
+            }
+
+            // This function implements Eqs 5.8 and 5.9 of the EclipseTechnicalDescription
+            inline void calculateEqnConstants(Scalar& a, Scalar& b, const int idx, const Simulator& simulator)
+            {
+                const Scalar td_plus_dt = (simulator.timeStepSize() + simulator.time()) / Base::Tc_;
+                const Scalar td = simulator.time() / Base::Tc_;
+                Scalar PItdprime = 0.;
+                Scalar PItd = 0.;
+                getInfluenceTableValues(PItd, PItdprime, td_plus_dt);
+                a = 1.0/Base::Tc_ * ( (beta_ * dpai(idx)) - (Base::W_flux_.value() * PItdprime) ) / ( PItd - td*PItdprime );
+                b = beta_ / (Base::Tc_ * ( PItd - td*PItdprime));
+            }
+
+            // This function implements Eq 5.7 of the EclipseTechnicalDescription
+            inline void calculateInflowRate(int idx, const Simulator& simulator)
+            {
+                Scalar a, b;
+                calculateEqnConstants(a,b,idx,simulator);
+                Base::Qai_.at(idx) = Base::alphai_.at(idx)*( a - b * ( Base::pressure_current_.at(idx) - Base::pressure_previous_.at(idx) ) );
+            }
+
+            inline void calculateAquiferConstants()
+            {
+                // We calculate the influx constant
+                beta_ = aquct_data_.c2 * aquct_data_.h
+                        * aquct_data_.theta * aquct_data_.phi_aq
+                        * aquct_data_.C_t
+                        * aquct_data_.r_o * aquct_data_.r_o;
+                // We calculate the time constant
+                Base::Tc_ = Base::mu_w_ * aquct_data_.phi_aq
+                      * aquct_data_.C_t
+                      * aquct_data_.r_o * aquct_data_.r_o
+                      / ( aquct_data_.k_a * aquct_data_.c1 );
             }
 
             inline void calculateAquiferCondition()
             {
 
                 int pvttableIdx = aquct_data_.pvttableID - 1;
-
                 Base::rhow_.resize(Base::cell_idx_.size(),0.);
-
                 if (!aquct_data_.p0)
                 {
                    Base::pa0_ = calculateReservoirEquilibrium();
@@ -214,7 +211,6 @@ namespace Opm
                 elemCtx.updatePrimaryStencil(*elemIt);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 const auto& iq0 = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-
                 // Initialize a FluidState object first
                 FluidState fs_aquifer;
                 // We use the temperature of the first cell connected to the aquifer
@@ -223,9 +219,7 @@ namespace Opm
                 Eval temperature_aq, pa0_mean;
                 temperature_aq = fs_aquifer.temperature(0);
                 pa0_mean = Base::pa0_;
-
                 Eval mu_w_aquifer = FluidSystem::waterPvt().viscosity(pvttableIdx, temperature_aq, pa0_mean);
-
                 Base::mu_w_ = mu_w_aquifer.value();
 
             }
@@ -248,7 +242,7 @@ namespace Opm
                     size_t cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                     int idx = Base::cellToConnectionIdx_[cellIdx];
                     if (idx < 0)
-                        continue;
+                    continue;
 
                     elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                     const auto& iq0 = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
