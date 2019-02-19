@@ -503,7 +503,7 @@ public:
                 "(https://opm-project.org).\n"
                 "\n"
                 "THE `ebos` SIMULATOR IS FOR RESEARCH PURPOSES ONLY! For industrial "
-                "applications, use `flow`."
+                "applications, use `flow`.";
         else
             return briefDescription_;
     }
