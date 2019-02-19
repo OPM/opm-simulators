@@ -552,11 +552,6 @@ public:
         if (!deck.hasKeyword("NOGRAV") && EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
             this->gravity_[dim - 1] = 9.80665;
 
-        // this is actually not fully correct: the latest occurence of VAPPARS and DRSDT
-        // or DRVDT up to the current time step in the schedule section counts, presence
-        // of VAPPARS alone is not sufficient to disable DR[SV]DT. TODO: implment support
-        // for this in opm-parser's Schedule object"
-
         // deal with DRSDT
         const auto& eclState = simulator.vanguard().eclState();
         unsigned ntpvt = eclState.runspec().tabdims().getNumPVTTables();
@@ -575,7 +570,6 @@ public:
         readThermalParameters_();
         transmissibilities_.finishInit();
 
-        const auto& initconfig = eclState.getInitConfig();
         const auto& timeMap = simulator.vanguard().schedule().getTimeMap();
 
         readInitialCondition_();
@@ -1827,7 +1821,7 @@ private:
         // Set the start time of the simulation
         const auto& schedule = this->simulator().vanguard().schedule();
         const auto& eclState = this->simulator().vanguard().eclState();
-        const auto& timeMap = this->simulator().vanguard().schedule().getTimeMap();
+        const auto& timeMap = schedule.getTimeMap();
         const auto& initconfig = eclState.getInitConfig();
         int episodeIdx = initconfig.getRestartStep() - 1;
 
@@ -1907,6 +1901,13 @@ private:
             int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             initial(sol[elemIdx], elemCtx, /*spaceIdx=*/0, /*timeIdx=*/0);
         }
+
+        // make sure that the ghost and overlap entities exhibit the correct
+        // solution. alternatively, this could be done in the loop above by also
+        // considering non-interior elements. Since the initial() method might not work
+        // 100% correctly for such elements, let's play safe and explicitly synchronize
+        // using message passing.
+        this->model().syncOverlap();
 
         // this is a hack to preserve the initial fluid states
         initialFluidStates_ = tmpInitialFs;
