@@ -35,7 +35,6 @@
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 #include <opm/autodiff/MissingFeatures.hpp>
-#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/material/common/ResetLocale.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
