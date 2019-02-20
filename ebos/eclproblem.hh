@@ -1264,36 +1264,43 @@ public:
             unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
             unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
             unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
+            unsigned pvtRegionIdx = pvtRegionIndex(context, spaceIdx, timeIdx);
             switch (indexInInside) {
             case 0:
                 if (freebcXMinus_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-
+                else
+                    values.setMassRate(massratebcXMinus_[globalDofIdx], pvtRegionIdx);
                 break;
             case 1:
                 if (freebcX_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-
+                else
+                    values.setMassRate(massratebcX_[globalDofIdx], pvtRegionIdx);
                 break;
             case 2:
                 if (freebcYMinus_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-
+                else
+                    values.setMassRate(massratebcYMinus_[globalDofIdx], pvtRegionIdx);
                 break;
             case 3:
                 if (freebcY_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-
+                else
+                    values.setMassRate(massratebcY_[globalDofIdx], pvtRegionIdx);
                 break;
             case 4:
                 if (freebcZMinus_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-
+                else
+                    values.setMassRate(massratebcZMinus_[globalDofIdx], pvtRegionIdx);
                 break;
             case 5:
                 if (freebcZ_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-
+                else
+                    values.setMassRate(massratebcZ_[globalDofIdx], pvtRegionIdx);
                 break;
             default:
                 throw std::logic_error("invalid face index for boundary condition");
@@ -2294,6 +2301,94 @@ private:
         readBoundaryConditionKeyword_("FREEBCY-", freebcYMinus_);
         readBoundaryConditionKeyword_("FREEBCZ", freebcZ_);
         readBoundaryConditionKeyword_("FREEBCZ-", freebcZMinus_);
+
+        const auto& vanguard = this->simulator().vanguard();
+
+        if (vanguard.deck().hasKeyword("BCRATE")) {
+            hasFreeBoundaryConditions_ = true;
+            size_t numCartDof = vanguard.cartesianSize();
+            unsigned numElems = vanguard.gridView().size(/*codim=*/0);
+            std::vector<int> cartesianToCompressedElemIdx(numCartDof);
+
+            for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx)
+                cartesianToCompressedElemIdx[vanguard.cartesianIndex(elemIdx)] = elemIdx;
+
+            massratebcXMinus_.resize(numElems, 0.0);
+            massratebcX_.resize(numElems, 0.0);
+            massratebcYMinus_.resize(numElems, 0.0);
+            massratebcY_.resize(numElems, 0.0);
+            massratebcZMinus_.resize(numElems, 0.0);
+            massratebcZ_.resize(numElems, 0.0);
+
+            const auto& ratebcs = vanguard.deck().getKeywordList("BCRATE");
+            for (size_t listIdx = 0; listIdx < ratebcs.size(); ++listIdx) {
+                const auto& ratebc = *ratebcs[listIdx];
+
+                for (size_t record = 0; record < ratebc.size(); ++record) {
+
+                    std::string compName = ratebc.getRecord(record).getItem("COMPONENT").getTrimmedString(0);
+                    int compIdx = -999;
+
+                    if (compName == "OIL")
+                        compIdx = oilCompIdx;
+                    else if (compName == "GAS")
+                        compIdx = gasCompIdx;
+                    else if (compName == "WATER")
+                        compIdx = waterCompIdx;
+                    else if (compName == "SOLVENT")
+                    {
+                        if (!enableSolvent)
+                            throw std::logic_error("solvent is disabled and you're trying to add solvent to BCRATE");
+
+                        compIdx = Indices::solventSaturationIdx;
+                    }
+                    else if (compName == "POLYMER")
+                    {
+                        if (!enablePolymer)
+                            throw std::logic_error("polymer is disabled and you're trying to add polymer to BCRATE");
+
+                        compIdx = Indices::polymerConcentrationIdx;
+                    }
+                    else
+                        throw std::logic_error("invalid component name for BCRATE");
+                    assert(compIdx >= 0);
+
+                    std::string direction = ratebc.getRecord(record).getItem("DIRECTION").getTrimmedString(0);
+                    std::vector<RateVector>* data = 0;
+                    if (direction == "X-")
+                        data = &massratebcXMinus_;
+                    else if (direction == "X")
+                        data = &massratebcX_;
+                    else if (direction == "Y-")
+                        data = &massratebcYMinus_;
+                    else if (direction == "Y")
+                        data = &massratebcY_;
+                    else if (direction == "Z-")
+                        data = &massratebcZMinus_;
+                    else if (direction == "Z")
+                        data = &massratebcZ_;
+                    else
+                        throw std::logic_error("invalid direction for BCRATE");
+
+                    int i1 = ratebc.getRecord(record).getItem("I1").template get< int >(0) - 1;
+                    int i2 = ratebc.getRecord(record).getItem("I2").template get< int >(0) - 1;
+                    int j1 = ratebc.getRecord(record).getItem("J1").template get< int >(0) - 1;
+                    int j2 = ratebc.getRecord(record).getItem("J2").template get< int >(0) - 1;
+                    int k1 = ratebc.getRecord(record).getItem("K1").template get< int >(0) - 1;
+                    int k2 = ratebc.getRecord(record).getItem("K2").template get< int >(0) - 1;
+                    const Evaluation rate = ratebc.getRecord(record).getItem("RATE").getSIDouble(0);
+                    for (int i = i1; i <= i2; ++i) {
+                        for (int j = j1; j <= j2; ++j) {
+                            for (int k = k1; k <= k2; ++k) {
+                                std::array<int, 3> tmp = {i,j,k};
+                                size_t elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
+                                (*data)[elemIdx][compIdx] = rate;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     void readBoundaryConditionKeyword_(const std::string& name, std::vector<bool>& compressedData)
@@ -2365,6 +2460,13 @@ private:
     std::vector<bool> freebcYMinus_;
     std::vector<bool> freebcZ_;
     std::vector<bool> freebcZMinus_;
+    std::vector<RateVector> massratebcX_;
+    std::vector<RateVector> massratebcXMinus_;
+    std::vector<RateVector> massratebcY_;
+    std::vector<RateVector> massratebcYMinus_;
+    std::vector<RateVector> massratebcZ_;
+    std::vector<RateVector> massratebcZMinus_;
+
 };
 
 template <class TypeTag>
