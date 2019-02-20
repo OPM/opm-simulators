@@ -325,6 +325,10 @@ SET_BOOL_PROP(EclBaseProblem, EnableThermalFluxBoundaries, false);
 
 SET_BOOL_PROP(EclBaseProblem, EnableTracerModel, false);
 
+// By default, simulators derived from the EclBaseProblem are production simulators,
+// i.e., experimental features must be explicitly enabled at compile time
+SET_BOOL_PROP(EclBaseProblem, EnableExperiments, false);
+
 END_PROPERTIES
 
 namespace Ewoms {

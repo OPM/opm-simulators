@@ -36,6 +36,11 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(EclProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
 
+// Enable experimental features for ebos: ebos is the research simulator of the OPM
+// project. If you're looking for a more stable "production quality" simulator, consider
+// using `flow`
+SET_BOOL_PROP(EclProblem, EnableExperiments, true);
+
 END_PROPERTIES
 
 int main(int argc, char **argv)
