@@ -139,10 +139,11 @@ NEW_PROP_TAG(EnableThermalFluxBoundaries);
 // The class which deals with ECL aquifers
 NEW_PROP_TAG(EclAquiferModel);
 
-NEW_PROP_TAG(MaxTimeStepSizeAfterWellEvent);
-NEW_PROP_TAG(RestartShrinkFactor);
-NEW_PROP_TAG(MaxFails);
-NEW_PROP_TAG(EnableEclTuning);
+// time stepping parameters
+NEW_PROP_TAG(EclMaxTimeStepSizeAfterWellEvent);
+NEW_PROP_TAG(EclRestartShrinkFactor);
+NEW_PROP_TAG(EclMaxFails);
+NEW_PROP_TAG(EclEnableTuning);
 
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
@@ -335,10 +336,10 @@ SET_BOOL_PROP(EclBaseProblem, EnableTracerModel, false);
 SET_BOOL_PROP(EclBaseProblem, EnableExperiments, false);
 
 // set defaults for the time stepping parameters
-SET_SCALAR_PROP(EclBaseProblem, MaxTimeStepSizeAfterWellEvent, 3600*24*365.25);
-SET_SCALAR_PROP(EclBaseProblem, RestartShrinkFactor, 3);
-SET_INT_PROP(EclBaseProblem, MaxFails, 10);
-SET_BOOL_PROP(EclBaseProblem, EnableEclTuning, false);
+SET_SCALAR_PROP(EclBaseProblem, EclMaxTimeStepSizeAfterWellEvent, 3600*24*365.25);
+SET_SCALAR_PROP(EclBaseProblem, EclRestartShrinkFactor, 3);
+SET_INT_PROP(EclBaseProblem, EclMaxFails, 10);
+SET_BOOL_PROP(EclBaseProblem, EclEnableTuning, false);
 
 END_PROPERTIES
 
@@ -441,13 +442,13 @@ public:
                              "The frequencies of which time steps are serialized to disk");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTracerModel,
                              "Transport tracers found in the deck.");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxTimeStepSizeAfterWellEvent,
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent,
                              "Maximum time step size after an well event");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, RestartShrinkFactor,
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclRestartShrinkFactor,
                              "Factor by which the time step is reduced after convergence failure");
-        EWOMS_REGISTER_PARAM(TypeTag, int, MaxFails,
+        EWOMS_REGISTER_PARAM(TypeTag, int, EclMaxFails,
                              "Maximum consecutive convergence failures before termination");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEclTuning,
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableTuning,
                              "Honor some aspects of the TUNING keyword from the ECL deck.");
     }
 
@@ -560,13 +561,13 @@ public:
             // create the ECL writer
             eclWriter_.reset(new EclWriterType(simulator));
 
-        enableEclTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclTuning);
+        enableTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableTuning);
         initialTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
-        maxTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxTimeStepSize);
-        maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxTimeStepSizeAfterWellEvent);
-        restartShrinkFactor_ = EWOMS_GET_PARAM(TypeTag, Scalar, RestartShrinkFactor);
-        maxFails_ = EWOMS_GET_PARAM(TypeTag, int, MaxFails);
         minTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, MinTimeStepSize);
+        maxTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxTimeStepSize);
+        maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent);
+        restartShrinkFactor_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclRestartShrinkFactor);
+        maxFails_ = EWOMS_GET_PARAM(TypeTag, int, EclMaxFails);
     }
 
     /*!
@@ -588,7 +589,7 @@ public:
         if (deck.hasKeyword("NOGRAV"))
             this->gravity_[dim - 1] = 0.0;
 
-        if (enableEclTuning_) {
+        if (enableTuning_) {
             // if support for the TUNING keyword is enabled, we get the initial time
             // steping parameters from it instead of from command line parameters
             const auto& schedule = simulator.vanguard().schedule();
@@ -726,7 +727,7 @@ public:
 
         // react to TUNING changes
         if (nextEpisodeIdx > 0
-            && enableEclTuning_
+            && enableTuning_
             && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, nextEpisodeIdx))
         {
             const auto& tuning = schedule.getTuning();
@@ -2525,7 +2526,7 @@ private:
         dtNext = std::min(dtNext, maxTimeStepSize_);
 
         // if TUNING is enabled, limit the time step size after a tuning event to TSINIT
-        if (enableEclTuning_ && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, episodeIdx)) {
+        if (enableTuning_ && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, episodeIdx)) {
             const auto& tuning = this->simulator().vanguard().schedule().getTuning();
             return std::min(dtNext, tuning.getTSINIT(episodeIdx));
         }
@@ -2624,7 +2625,7 @@ private:
     std::vector<RateVector> massratebcZMinus_;
 
     // time stepping parameters
-    bool enableEclTuning_;
+    bool enableTuning_;
     Scalar initialTimeStepSize_;
     Scalar maxTimeStepAfterWellEvent_;
     Scalar maxTimeStepSize_;
