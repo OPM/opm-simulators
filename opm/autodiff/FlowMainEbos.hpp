@@ -132,12 +132,17 @@ namespace Opm
             // in flow only the deck file determines the end time of the simulation
             EWOMS_HIDE_PARAM(TypeTag, EndTime);
 
-            // time stepping is not (yet) done by the eWoms code in flow
+            // time stepping is not done by the eWoms code in flow
             EWOMS_HIDE_PARAM(TypeTag, InitialTimeStepSize);
             EWOMS_HIDE_PARAM(TypeTag, MaxTimeStepDivisions);
             EWOMS_HIDE_PARAM(TypeTag, MaxTimeStepSize);
             EWOMS_HIDE_PARAM(TypeTag, MinTimeStepSize);
             EWOMS_HIDE_PARAM(TypeTag, PredeterminedTimeStepsFile);
+
+            EWOMS_HIDE_PARAM(TypeTag, EclMaxTimeStepSizeAfterWellEvent);
+            EWOMS_HIDE_PARAM(TypeTag, EclRestartShrinkFactor);
+            EWOMS_HIDE_PARAM(TypeTag, EclMaxFails);
+            EWOMS_HIDE_PARAM(TypeTag, EclEnableTuning);
 
             // flow also does not use the eWoms Newton method
             EWOMS_HIDE_PARAM(TypeTag, NewtonMaxError);
