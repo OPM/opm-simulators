@@ -195,10 +195,10 @@ int main(int argc, char** argv)
             }
 
             deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
-            if ( outputCout ) {
+            Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
+
+            if ( outputCout )
                 Opm::checkDeck(*deck, parser);
-                Opm::MissingFeatures::checkKeywords(*deck);
-            }
 
             eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
             schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
