@@ -101,18 +101,23 @@ namespace Opm {
         if (!localWellsActive())
             return;
 
-        // we don't what to add the schur complement
-        // here since it affects the getConvergence method
-        /*
+        if (!param_.matrix_add_well_contributions_) {
+            // if the well contributions are not supposed to be included explicitly in
+            // the matrix, we only apply the vector part of the Schur complement here.
+            for (const auto& well: well_container_) {
+                // r = r - duneC_^T * invDuneD_ * resWell_
+                well->apply(res);
+            }
+            return;
+        }
+
         for (const auto& well: well_container_) {
-            if (param_.matrix_add_well_contributions_)
-                well->addWellContributions(mat);
+            well->addWellContributions(mat.istlMatrix());
 
             // applying the well residual to reservoir residuals
             // r = r - duneC_^T * invDuneD_ * resWell_
             well->apply(res);
         }
-        */
     }
 
 
