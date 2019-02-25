@@ -246,7 +246,7 @@ namespace Opm {
             report.total_linearizations = 1;
 
             try {
-                report += assemble(timer, iteration);
+                report += assembleReservoir(timer, iteration);
                 report.assemble_time += perfTimer.stop();
             }
             catch (...) {
@@ -292,6 +292,11 @@ namespace Opm {
                 // Compute the nonlinear update.
                 const int nc = UgGridHelpers::numCells(grid_);
                 BVector x(nc);
+
+                // apply the Schur compliment of the well model to the reservoir linearized
+                // equations
+                wellModel().linearize(ebosSimulator().model().linearizer().jacobian(),
+                                      ebosSimulator().model().linearizer().residual());
 
                 try {
                     solveJacobianSystem(x);
@@ -360,13 +365,13 @@ namespace Opm {
         /// \param[in]      reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        SimulatorReport assemble(const SimulatorTimerInterface& timer,
-                                 const int iterationIdx)
+        SimulatorReport assembleReservoir(const SimulatorTimerInterface& timer,
+                                          const int iterationIdx)
         {
             // -------- Mass balance equations --------
             ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
             ebosSimulator_.problem().beginIteration();
-            ebosSimulator_.model().linearizer().linearize();
+            ebosSimulator_.model().linearizer().linearizeDomain();
             ebosSimulator_.problem().endIteration();
 
             return wellModel().lastReport();
