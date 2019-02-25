@@ -60,6 +60,12 @@ namespace Opm {
             void endTimeStep();
             void endEpisode();
 
+            template <class Restarter>
+            void serialize(Restarter& res);
+
+            template <class Restarter>
+            void deserialize(Restarter& res);
+
         protected:
             // ---------      Types      ---------
             typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
