@@ -656,7 +656,8 @@ namespace Opm
                     const WellConnections& completion_set = well_ecl->getConnections(time_step);
                     // number of segment for this single well
                     const int well_nseg = segment_set.size();
-                    const int nperf = completion_set.size();
+                    // const int nperf = completion_set.size();
+                    int n_activeperf = 0;
                     nseg_ += well_nseg;
                     for (auto segID = 0*well_nseg; segID < well_nseg; ++segID) {
                         this->seg_number_.push_back(segment_set[segID].segmentNumber());
@@ -664,10 +665,13 @@ namespace Opm
                     // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
                     // that is why I think we should use a well model to initialize the WellState here
                     std::vector<std::vector<int>> segment_perforations(well_nseg);
-                    for (int perf = 0; perf < nperf; ++perf) {
+                    for (int perf = 0; perf < completion_set.size(); ++perf) {
                         const Connection& connection = completion_set.get(perf);
-                        const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
-                        segment_perforations[segment_index].push_back(perf);
+                        if (connection.state() == WellCompletion::OPEN) {
+                            const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
+                            segment_perforations[segment_index].push_back(n_activeperf);
+                            n_activeperf++;
+                        }
                     }
 
                     std::vector<std::vector<int>> segment_inlets(well_nseg);
@@ -688,7 +692,10 @@ namespace Opm
                         const int np = numPhases();
                         const int start_perf = wells->well_connpos[w];
                         const int start_perf_next_well = wells->well_connpos[w + 1];
-                        assert(nperf == (start_perf_next_well - start_perf)); // make sure the information from wells_ecl consistent with wells
+
+                        // make sure the information from wells_ecl consistent with wells
+                        assert(n_activeperf == (start_perf_next_well - start_perf));
+
                         if (pu.phase_used[Gas]) {
                             const int gaspos = pu.phase_pos[Gas];
                             // scale the phase rates for Gas to avoid too bad initial guess for gas fraction
@@ -696,7 +703,7 @@ namespace Opm
                             // TODO: to see if this strategy can benefit StandardWell too
                             // TODO: it might cause big problem for gas rate control or if there is a gas rate limit
                             // maybe the best way is to initialize the fractions first then get the rates
-                            for (int perf = 0; perf < nperf; perf++) {
+                            for (int perf = 0; perf < n_activeperf; perf++) {
                                 const int perf_pos = start_perf + perf;
                                 perfPhaseRates()[np * perf_pos + gaspos] *= 100.;
                             }

@@ -60,12 +60,25 @@ namespace Opm
         // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.
         // for other facilities needed but not available from parser, we need to process them here
 
-        // initialize the segment_perforations_
+        // initialize the segment_perforations_ and update perforation_segment_depth_diffs_
         const WellConnections& completion_set = well_ecl_->getConnections(current_step_);
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+        // index of the perforation within wells struct
+        // there might be some perforations not active, which causes the number of the perforations in
+        // well_ecl_ and wells struct different
+        // the current implementation is a temporary solution for now, it should be corrected from the parser
+        // side
+        int i_perf_wells = 0;
+        perf_depth_.resize(number_of_perforations_, 0.);
+        for (int perf = 0; perf < completion_set.size(); ++perf) {
             const Connection& connection = completion_set.get(perf);
-            const int segment_index = segmentNumberToIndex(connection.segment());
-            segment_perforations_[segment_index].push_back(perf);
+            if (connection.state() == WellCompletion::OPEN) {
+                const int segment_index = segmentNumberToIndex(connection.segment());
+                segment_perforations_[segment_index].push_back(i_perf_wells);
+                perf_depth_[i_perf_wells] = connection.depth();
+                const double segment_depth = segmentSet()[segment_index].depth();
+                perforation_segment_depth_diffs_[i_perf_wells] = perf_depth_[i_perf_wells] - segment_depth;
+                i_perf_wells++;
+            }
         }
 
         // initialize the segment_inlets_
@@ -77,16 +90,6 @@ namespace Opm
                 const int segment_index = segmentNumberToIndex(segment_number);
                 const int outlet_segment_index = segmentNumberToIndex(outlet_segment_number);
                 segment_inlets_[outlet_segment_index].push_back(segment_index);
-            }
-        }
-
-        // callcuate the depth difference between perforations and their segments
-        perf_depth_.resize(number_of_perforations_, 0.);
-        for (int seg = 0; seg < numberOfSegments(); ++seg) {
-            const double segment_depth = segmentSet()[seg].depth();
-            for (const int perf : segment_perforations_[seg]) {
-                perf_depth_[perf] = completion_set.get(perf).depth();
-                perforation_segment_depth_diffs_[perf] = perf_depth_[perf] - segment_depth;
             }
         }
 
