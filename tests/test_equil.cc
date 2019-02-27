@@ -224,7 +224,7 @@ void test_PhasePressure()
 
     typedef TTAG(TestEquilTypeTag) TypeTag;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    auto simulator = initSimulator<TypeTag>("data/equil_base.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_base.DATA");
     initDefaultFluidSystem<TypeTag>();
 
     Ewoms::EQUIL::EquilReg
@@ -255,7 +255,7 @@ void test_CellSubset()
 
     typedef TTAG(TestEquilTypeTag) TypeTag;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    auto simulator = initSimulator<TypeTag>("data/equil_base.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_base.DATA");
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -348,7 +348,7 @@ void test_RegMapping()
 
     typedef TTAG(TestEquilTypeTag) TypeTag;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    auto simulator = initSimulator<TypeTag>("data/equil_base.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_base.DATA");
     initDefaultFluidSystem<TypeTag>();
 
     Ewoms::EQUIL::EquilReg region[] =
@@ -429,7 +429,7 @@ void test_DeckAllDead();
 void test_DeckAllDead()
 {
     typedef TTAG(TestEquilTypeTag) TypeTag;
-    auto simulator = initSimulator<TypeTag>("data/equil_deadfluids.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_deadfluids.DATA");
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -458,7 +458,7 @@ void test_CapillaryInversion()
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
-    auto simulator = initSimulator<TypeTag>("data/equil_capillary.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_capillary.DATA");
 
     // Test the capillary inversion for oil-water.
     const int cell = 0;
@@ -506,7 +506,7 @@ void test_DeckWithCapillary();
 void test_DeckWithCapillary()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
-    auto simulator = initSimulator<TypeTag>("data/equil_capillary.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_capillary.DATA");
     auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -545,7 +545,7 @@ void test_DeckWithCapillaryOverlap();
 void test_DeckWithCapillaryOverlap()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
-    auto simulator = initSimulator<TypeTag>("data/equil_capillary_overlap.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_capillary_overlap.DATA");
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -605,7 +605,7 @@ void test_DeckWithLiveOil();
 void test_DeckWithLiveOil()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
-    auto simulator = initSimulator<TypeTag>("data/equil_liveoil.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_liveoil.DATA");
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -683,7 +683,7 @@ void test_DeckWithLiveGas();
 void test_DeckWithLiveGas()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
-    auto simulator = initSimulator<TypeTag>("data/equil_livegas.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_livegas.DATA");
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -764,7 +764,7 @@ void test_DeckWithRSVDAndRVVD();
 void test_DeckWithRSVDAndRVVD()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
-    auto simulator = initSimulator<TypeTag>("data/equil_rsvd_and_rvvd.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_rsvd_and_rvvd.DATA");
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -865,7 +865,7 @@ void test_DeckWithPBVDAndPDVD();
 void test_DeckWithPBVDAndPDVD()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
-    auto simulator = initSimulator<TypeTag>("data/equil_pbvd_and_pdvd.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_pbvd_and_pdvd.DATA");
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -957,7 +957,7 @@ void test_DeckWithSwatinit()
 {
 #if 0
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
-    auto simulator = initSimulator<TypeTag>("data/equil_capillary_swatinit.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_capillary_swatinit.DATA");
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
