@@ -687,15 +687,20 @@ namespace Opm {
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
 
+
+            std::vector< Scalar > B_avg(numComponents(), Scalar() );
+            computeAverageFormationFactor(B_avg);
+
             if (param_.solve_welleq_initially_ && iterationIdx == 0) {
                 // solve the well equations as a pre-processing step
-                    last_report_ = solveWellEq(dt, local_deferredLogger);
+                last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
+
 
                 if (initial_step_) {
                     // update the explicit quantities to get the initial fluid distribution in the well correct.
                     calculateExplicitQuantities(local_deferredLogger);
                     prepareTimeStep(local_deferredLogger);
-                    last_report_ = solveWellEq(dt, local_deferredLogger);
+                    last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
                     initial_step_ = false;
                 }
                 // TODO: should we update the explicit related here again, or even prepareTimeStep().
@@ -876,10 +881,6 @@ namespace Opm {
     solveWellEq(const double dt, Opm::DeferredLogger& deferred_logger)
     {
         WellState well_state0 = well_state_;
-
-        const int numComp = numComponents();
-        std::vector< Scalar > B_avg( numComp, Scalar() );
-        computeAverageFormationFactor(B_avg);
 
         const int max_iter = param_.max_welleq_iter_;
 
@@ -1443,7 +1444,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    computeAverageFormationFactor(std::vector<double>& B_avg) const
+    computeAverageFormationFactor(std::vector<Scalar>& B_avg) const
     {
         const auto& grid = ebosSimulator_.vanguard().grid();
         const auto& gridView = grid.leafGridView();

@@ -237,6 +237,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     assembleWellEq(const Simulator& ebosSimulator,
+                   const std::vector<Scalar>& B_avg,
                    const double dt,
                    WellState& well_state,
                    Opm::DeferredLogger& deferred_logger)
@@ -244,7 +245,8 @@ namespace Opm
 
         const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
         if (use_inner_iterations) {
-            iterateWellEquations(ebosSimulator, dt, well_state, deferred_logger);
+
+            iterateWellEquations(ebosSimulator, B_avg, dt, well_state, deferred_logger);
         }
 
         assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, deferred_logger);
@@ -1763,6 +1765,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     iterateWellEquations(const Simulator& ebosSimulator,
+                         const std::vector<Scalar>& B_avg,
                          const double dt,
                          WellState& well_state,
                          Opm::DeferredLogger& deferred_logger)
@@ -1780,14 +1783,8 @@ namespace Opm
 
             const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
-            // TODO: use these small values for now, not intend to reach the convergence
-            // in this stage, but, should we?
-            // We should try to avoid hard-code values in the code.
-            // If we want to use the real one, we need to find a way to get them.
-            // const std::vector<double> B {0.8, 0.8, 0.008};
-            const std::vector<double> B {0.5, 0.5, 0.005};
 
-            const auto report = getWellConvergence(B, deferred_logger);
+            const auto report = getWellConvergence(B_avg, deferred_logger);
             if (report.converged()) {
                 break;
             }
@@ -1831,8 +1828,8 @@ namespace Opm
         const int nseg = numberOfSegments();
 
         for (int seg = 0; seg < nseg; ++seg) {
-            // calculating the accumulation term // TODO: without considering the efficiencty factor for now
-            // volume of the segment
+            // calculating the accumulation term
+            // TODO: without considering the efficiencty factor for now
             {
                 const EvalWell segment_surface_volume = getSegmentSurfaceVolume(ebosSimulator, seg);
                 // for each component
