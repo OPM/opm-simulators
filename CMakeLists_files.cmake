@@ -50,6 +50,8 @@ list (APPEND MAIN_SOURCE_FILES
 # originally generated with the command:
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_SOURCE_FILES
+  tests/test_equil.cc
+  tests/test_ecl_output.cc
   tests/test_blackoil_amg.cpp
   tests/test_convergencereport.cpp
   tests/test_graphcoloring.cpp
@@ -75,6 +77,13 @@ if(MPI_FOUND)
 endif()
 
 list (APPEND TEST_DATA_FILES
+  tests/SUMMARY_DECK_NON_CONSTANT_POROSITY.DATA
+  tests/equil_base.DATA
+  tests/equil_capillary.DATA
+  tests/equil_capillary_overlap.DATA
+  tests/equil_capillary_swatinit.DATA
+  tests/equil_deadfluids.DATA
+  tests/equil_pbvd_and_pdvd.DATA
   tests/VFPPROD1
   tests/VFPPROD2
   tests/msw.data

@@ -128,6 +128,7 @@ opm_add_test(test_gatherdeferredlogger
 )
 
 
+# the production oriented general-purpose ECL simulator
 opm_add_test(flow
   ONLY_COMPILE
   ALWAYS_ENABLE
@@ -150,8 +151,17 @@ add_test(NAME flow__version
 set_tests_properties(flow__version PROPERTIES
                      PASS_REGULAR_EXPRESSION "${${project}_LABEL}")
 
+# the research oriented general-purpose ECL simulator ("ebos" == &ecl
+# &black-&oil &simulator)
+opm_add_test(ebos
+  SOURCES ebos/ebos.cc
+  EXE_NAME ebos
+  ONLY_COMPILE)
 
+if(OPM_GRID_FOUND AND HAVE_ECL_INPUT AND HAVE_ECL_OUTPUT)
+  install(TARGETS ebos DESTINATION bin)
+endif()
 
 include(OpmBashCompletion)
 opm_add_bash_completion(flow)
-
+opm_add_bash_completion(ebos)

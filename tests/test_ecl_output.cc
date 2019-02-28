@@ -115,7 +115,7 @@ void test_summary();
 void test_summary()
 {
     typedef typename TTAG(TestEclOutputTypeTag) TypeTag;
-    const std::string filename = "data/SUMMARY_DECK_NON_CONSTANT_POROSITY.DATA";
+    const std::string filename = "SUMMARY_DECK_NON_CONSTANT_POROSITY.DATA";
     const std::string casename = "SUMMARY_DECK_NON_CONSTANT_POROSITY";
 
     auto simulator = initSimulator<TypeTag>(filename.data());
