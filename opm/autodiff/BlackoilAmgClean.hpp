@@ -243,14 +243,25 @@ namespace Opm
 	  amg_.reset(new AMGType(op, crit,args, comm));
         }
 
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+        Dune::SolverCategory::Category category() const override
+        {
+            return std::is_same<Communication, Dune::Amg::SequentialInformation>::value ?
+                Dune::SolverCategory::sequential : Dune::SolverCategory::overlapping;
+        }
+#endif
+	
 
         void apply(X& x, X& b, double reduction, Dune::InverseOperatorResult& res)
         {
 	  DUNE_UNUSED_PARAMETER(reduction);
 	  DUNE_UNUSED_PARAMETER(res);
-
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+            auto sp = Dune::createScalarProduct<X,Communication>(comm_, op_.category());
+#else	  
 	  using Chooser = Dune::ScalarProductChooser<X,Communication,AMGType::category>;
 	  auto sp = Chooser::construct(comm_);
+#endif
 	  Dune::Preconditioner<X,X>* prec = amg_.get();
 	  // Linear solver parameters
 	  const double tolerance = param_->cpr_solver_tol_;
@@ -261,9 +272,14 @@ namespace Opm
             {
 	      // Category of preconditioner will be checked at compile time. Therefore we need
 	      // to cast to the derived class
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+	      Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
+                                               tolerance, maxit, verbosity);
+#else	      
 	      Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
 					     reinterpret_cast<AMGType&>(*prec),
 					     tolerance, maxit, verbosity);
+#endif
 	      solver.apply(x,b,res);
  
             }
@@ -271,9 +287,14 @@ namespace Opm
             {
 	      // Category of preconditioner will be checked at compile time. Therefore we need
 	      // to cast to the derived class
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+	      Dune::CGSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
+                                               tolerance, maxit, verbosity);
+#else	      
 	      Dune::CGSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
 				       reinterpret_cast<AMGType&>(*prec),
 				       tolerance, maxit, verbosity);
+#endif
 	      solver.apply(x,b,res);
             }
 	  else
@@ -286,12 +307,21 @@ namespace Opm
 	      // x += v; 
 	      // op_->applyscaleadd(-1,x,b);
 	      // prec->post(x);
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+	      Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
+                                         tolerance, maxit, verbosity);
+#else	      
 	      Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
-				       reinterpret_cast<AMGType&>(*prec),
-				       tolerance, maxit, verbosity);
-	      solver.apply(x,b,res);
+					 reinterpret_cast<AMGType&>(*prec),
+					 tolerance, maxit, verbosity);
+#endif
+	      solver.apply(x,b,res);	      
 	    }
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+
+#else
 	  delete sp;
+#endif
         }
 
         void apply(X& x, X& b, Dune::InverseOperatorResult& res)
@@ -409,7 +439,7 @@ namespace Opm
 				   CoarseSolverPolicy,
 				   Smoother>;
   public:
-    #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
     Dune::SolverCategory::Category category() const override
     {
       return std::is_same<Communication, Dune::Amg::SequentialInformation>::value ?
@@ -452,7 +482,7 @@ namespace Opm
 			      const Operator& fineOperator,
 			      const SmootherArgs& smargs,
 			      const Communication& comm){
-      // weights_ = weights;
+      weights_ = weights;
       // scaledMatrixOperator_ = Detail::scaleMatrixDRS(fineOperator, comm,
       // 						     COMPONENT_INDEX, weights_, param_);
       // smoother_ .reset(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
@@ -482,8 +512,8 @@ namespace Opm
     }
   private:
     const CPRParameter& param_;
-    const typename TwoLevelMethod::FineDomainType& weights_;
-    //typename TwoLevelMethod::FineDomainType weights_;//make copy
+    //const typename TwoLevelMethod::FineDomainType& weights_;
+    typename TwoLevelMethod::FineDomainType weights_;//make copy
     std::tuple<std::unique_ptr<Matrix>, Operator> scaledMatrixOperator_;
     std::shared_ptr<Smoother> smoother_;
     LevelTransferPolicy levelTransferPolicy_;

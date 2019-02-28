@@ -71,8 +71,13 @@ namespace Opm
       typedef Dune::Amg::SequentialInformation POrComm;
       //typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
       typedef Dune::MatrixAdapter<Matrix,Vector, Vector> MatrixAdapter;
+      
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)      
+      
+#else
       static constexpr int category = Dune::SolverCategory::sequential;
       typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
+#endif
 //Operator MatrixOperator = Dune::MatrixAdapter<Matrix,Vector,Vector>
       typedef Opm::ParallelOverlappingILU0<Matrix,Vector,Vector, POrComm> Smoother;
       //ParallelInformation = Dune::Amg::SequentialInformation
@@ -154,11 +159,18 @@ namespace Opm
 	      
 	      //SuperClass::constructPreconditionerAndSolve(opA, x, *(this->rhs_), info, result);
 		
+	      
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+	      constexpr Dune::SolverCategory::Category category=Dune::SolverCategory::sequential;
+	      auto sp = Dune::createScalarProduct<Vector,POrComm>(parallelInformation_arg, category);
+	      sp_ = std::move(sp);
+#else
 	      constexpr int  category = Dune::SolverCategory::sequential;
 	      typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
 	      typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
 	      SPPointer sp(ScalarProductChooser::construct(parallelInformation_arg));
 	      sp_ = std::move(sp);
+#endif 
 	      Vector& istlb = *(this->rhs_);
 	      parallelInformation_arg.copyOwnerToAll(istlb, istlb);
 	      
@@ -228,7 +240,7 @@ namespace Opm
 							       this->parameters_.linear_solver_maxiter_,
 							       verbosity_linsolve));
 	      // amg her is the full cpr preconditioner
-	      //amg_->updatePreconditioner(this->weights_,opARef, smootherArgs, comm);
+	      amg_->updatePreconditioner(this->weights_,opARef, smootherArgs, comm);
 
 	    }	  
         }
@@ -276,8 +288,12 @@ namespace Opm
       //	::BlackoilAmgSelector< Matrix, Vector, Vector,POrComm, Criterion, pressureIndex >::AMG;
       //Operator MatrixOperator = Dune::MatrixAdapter<Matrix,Vector,Vector>
       //Smoother ParallelOverLappingILU0<Matrix,Vector,Vector>
-      //ParallelInformation = Dune::Amg::SequentialInformation 
+      //ParallelInformation = Dune::Amg::SequentialInformation
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)      
+      typedef std::shared_ptr< Dune::ScalarProduct<Vector> > SPPointer;
+#else      
       typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
+#endif
       std::unique_ptr< MatrixAdapter > opA_;
       std::unique_ptr< OperatorSerial > opASerial_;
       std::unique_ptr< BLACKOILAMG > amg_;
