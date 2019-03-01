@@ -26,6 +26,7 @@
 
 #include <ebos/eclproblem.hh>
 #include <ewoms/common/start.hh>
+#include <flow/flowlinearizer.hh>
 
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 
@@ -85,6 +86,7 @@ SET_BOOL_PROP(EclFlowProblem, EnableSolvent, false);
 SET_BOOL_PROP(EclFlowProblem, EnableTemperature, true);
 SET_BOOL_PROP(EclFlowProblem, EnableEnergy, false);
 
+SET_TYPE_PROP(EclFlowProblem, Linearizer, Opm::FlowLinearizer<TypeTag>);
 SET_TYPE_PROP(EclFlowProblem, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
 SET_TAG_PROP(EclFlowProblem, LinearSolverSplice, FlowIstlSolver);
 
