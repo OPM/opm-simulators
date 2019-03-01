@@ -61,7 +61,7 @@ SET_TYPE_PROP(Co2InjectionFlashNiEcfvProblem, Scalar, quad);
 // precision scalars... (this seems to only apply to Dune >= 2.4)
 SET_TAG_PROP(Co2InjectionFlashNiEcfvProblem, LinearSolverSplice, ParallelBiCGStabLinearSolver);
 #else
-SET_SCALAR_PROP(Co2InjectionFlashNiEcfvProblem, NewtonRawTolerance, 1e-5);
+SET_SCALAR_PROP(Co2InjectionFlashNiEcfvProblem, NewtonTolerance, 1e-5);
 #endif
 
 END_PROPERTIES

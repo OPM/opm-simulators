@@ -137,7 +137,7 @@ public:
 SET_STRING_PROP(ReservoirBaseProblem, GridFile, "data/reservoir.dgf");
 
 // increase the tolerance for this problem to get larger time steps
-SET_SCALAR_PROP(ReservoirBaseProblem, NewtonRawTolerance, 1e-6);
+SET_SCALAR_PROP(ReservoirBaseProblem, NewtonTolerance, 1e-6);
 
 END_PROPERTIES
 
