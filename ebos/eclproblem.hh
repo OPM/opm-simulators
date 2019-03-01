@@ -111,10 +111,10 @@ class EclProblem;
 BEGIN_PROPERTIES
 
 #if EBOS_USE_ALUGRID
-NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclAluGridVanguard, EclOutputBlackOil));
+NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclAluGridVanguard, EclOutputBlackOil, VtkEclTracer));
 #else
 NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclCpGridVanguard, EclOutputBlackOil, VtkEclTracer));
-//NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclPolyhedralGridVanguard, EclOutputBlackOil));
+//NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclPolyhedralGridVanguard, EclOutputBlackOil, VtkEclTracer));
 #endif
 
 // The class which deals with ECL wells
