@@ -31,6 +31,7 @@
 #include "equil/initstateequil.hh"
 
 #include <ewoms/common/propertysystem.hh>
+#include <ewoms/models/blackoil/blackoilproperties.hh>
 
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
