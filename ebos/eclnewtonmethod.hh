@@ -210,6 +210,8 @@ public:
         Scalar y = EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonSumToleranceExponent);
         sumTolerance_ = x*std::pow(sumPv, y);
 
+        this->endIterMsg() << " (max: " << this->tolerance_ << ", violated for " << errorPvFraction_*100 << "% of the pore volume), aggegate error: " << errorSum_ << " (max: " << sumTolerance_ << ")";
+
         // make sure that the error never grows beyond the maximum
         // allowed one
         if (this->error_ > newtonMaxError)

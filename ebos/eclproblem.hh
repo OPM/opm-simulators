@@ -707,6 +707,18 @@ public:
         // The first thing to do in the morning of an episode is update update the
         // eclState and the deck if they need to be changed.
         int nextEpisodeIdx = simulator.episodeIndex();
+
+        if (this->gridView().comm().rank() == 0) {
+            boost::posix_time::ptime curDateTime =
+                boost::posix_time::from_time_t(timeMap.getStartTime(nextEpisodeIdx+1));
+            std::cout << "Report step " << nextEpisodeIdx + 2
+                      << "/" << timeMap.numTimesteps()
+                      << " at day " << timeMap.getTimePassedUntil(nextEpisodeIdx+1)/(24*3600)
+                      << "/" << timeMap.getTotalTime()/(24*3600)
+                      << ", date = " << curDateTime.date()
+                      << "\n ";
+        }
+
         if (nextEpisodeIdx > 0 &&
             events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER, nextEpisodeIdx))
         {
