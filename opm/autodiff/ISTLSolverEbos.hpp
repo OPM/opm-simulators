@@ -534,7 +534,7 @@ protected:
             // Check for failure of linear solver.
             if (!parameters_.ignoreConvergenceFailure_ && !result.converged) {
                 const std::string msg("Convergence failure for linear solver.");
-                OPM_THROW_NOLOG(LinearSolverProblem, msg);
+                OPM_THROW_NOLOG(NumericalIssue, msg);
             }
         }
     protected:
