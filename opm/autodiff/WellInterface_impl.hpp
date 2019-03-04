@@ -1182,7 +1182,7 @@ namespace Opm
         bool converged;
         WellState well_state0 = well_state;
         do {
-            assembleWellEq(ebosSimulator, dt, well_state, deferred_logger);
+            assembleWellEq(ebosSimulator, B_avg, dt, well_state, deferred_logger);
 
             auto report = getWellConvergence(B_avg, deferred_logger);
 

@@ -688,6 +688,7 @@ namespace Opm {
             initPrimaryVariablesEvaluation();
 
 
+
             std::vector< Scalar > B_avg(numComponents(), Scalar() );
             computeAverageFormationFactor(B_avg);
 
@@ -707,8 +708,8 @@ namespace Opm {
                 // basically, this is a more updated state from the solveWellEq based on fixed
                 // reservoir state, will tihs be a better place to inialize the explict information?
             }
-
-            assembleWellEq(dt, local_deferredLogger);
+	    assembleWellEq(B_avg, dt, local_deferredLogger);
+	    
         } catch (std::exception& e) {
             exception_thrown = 1;
         }
@@ -720,10 +721,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assembleWellEq(const double dt, Opm::DeferredLogger& deferred_logger)
+    assembleWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger)
     {
         for (auto& well : well_container_) {
-            well->assembleWellEq(ebosSimulator_, dt, well_state_, deferred_logger);
+            well->assembleWellEq(ebosSimulator_, B_avg, dt, well_state_, deferred_logger);
         }
     }
 
@@ -878,7 +879,7 @@ namespace Opm {
     template<typename TypeTag>
     SimulatorReport
     BlackoilWellModel<TypeTag>::
-    solveWellEq(const double dt, Opm::DeferredLogger& deferred_logger)
+    solveWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger)
     {
         WellState well_state0 = well_state_;
 
@@ -888,8 +889,9 @@ namespace Opm {
         bool converged;
         int exception_thrown = 0;
         do {
+
             try {
-                assembleWellEq(dt, deferred_logger);
+                assembleWellEq(B_avg, dt, deferred_logger);
             } catch (std::exception& e) {
                 exception_thrown = 1;
             }
