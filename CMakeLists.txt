@@ -161,9 +161,7 @@ opm_add_test(ebos
   LIBRARIES "opmsimulators"
   SOURCES ebos/ebos.cc)
 
-if(OPM_GRID_FOUND AND HAVE_ECL_INPUT AND HAVE_ECL_OUTPUT)
-  install(TARGETS ebos DESTINATION bin)
-endif()
+install(TARGETS ebos DESTINATION bin)
 
 include(OpmBashCompletion)
 opm_add_bash_completion(flow)
