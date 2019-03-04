@@ -240,7 +240,7 @@ SET_SCALAR_PROP(EclBaseProblem, EndTime, 1e100);
 SET_SCALAR_PROP(EclBaseProblem, InitialTimeStepSize, 3600*24);
 
 // the default for the allowed volumetric error for oil per second
-SET_SCALAR_PROP(EclBaseProblem, NewtonRawTolerance, 1e-2);
+SET_SCALAR_PROP(EclBaseProblem, NewtonTolerance, 1e-2);
 
 // the tolerated amount of "incorrect" amount of oil per time step for the complete
 // reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
