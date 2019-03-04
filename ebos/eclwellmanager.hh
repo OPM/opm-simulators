@@ -406,24 +406,20 @@ public:
             wells_[wellIdx]->beginIterationPreProcess();
 
         // call the accumulation routines
-        ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(simulator_.vanguard().gridView());
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-        {
-            ElementContext elemCtx(simulator_);
-            auto elemIt = threadedElemIt.beginParallel();
-            for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
-                const Element& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity)
-                    continue;
+        ElementContext elemCtx(simulator_);
+        const auto gridView = simulator_.vanguard().gridView();
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity)
+                continue;
 
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-                for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx)
-                    wells_[wellIdx]->beginIterationAccumulate(elemCtx, /*timeIdx=*/0);
-            }
+            for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx)
+                wells_[wellIdx]->beginIterationAccumulate(elemCtx, /*timeIdx=*/0);
         }
 
         // call the postprocessing routines

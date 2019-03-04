@@ -47,6 +47,9 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/DeferredLogger.hpp>
 
+#include <ewoms/models/blackoil/blackoilpolymermodules.hh>
+#include <ewoms/models/blackoil/blackoilsolventmodules.hh>
+
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
 #include<dune/istl/matrixmatrix.hh>

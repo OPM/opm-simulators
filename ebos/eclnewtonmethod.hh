@@ -159,15 +159,24 @@ public:
             }
 
             const auto& r = currentResidual[dofIdx];
-            const double pvValue =
+            Scalar pvValue =
                 this->simulator_.problem().porosity(dofIdx)
                 * this->model().dofTotalVolume(dofIdx);
             sumPv += pvValue;
             bool cnvViolated = false;
 
+            Scalar dofVolume = this->model().dofTotalVolume(dofIdx);
+
             for (unsigned eqIdx = 0; eqIdx < r.size(); ++eqIdx) {
                 Scalar tmpError = r[eqIdx] * dt * this->model().eqWeight(dofIdx, eqIdx) / pvValue;
                 Scalar tmpError2 = r[eqIdx] * this->model().eqWeight(dofIdx, eqIdx);
+
+                // in the case of a volumetric formulation, the residual in the above is
+                // per cubic meter
+                if (GET_PROP_VALUE(TypeTag, UseVolumetricResidual)) {
+                    tmpError *= dofVolume;
+                    tmpError2 *= dofVolume;
+                }
 
                 this->error_ = Opm::max(std::abs(tmpError), this->error_);
 
@@ -200,6 +209,8 @@ public:
         Scalar x = EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonSumTolerance);
         Scalar y = EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonSumToleranceExponent);
         sumTolerance_ = x*std::pow(sumPv, y);
+
+        this->endIterMsg() << " (max: " << this->tolerance_ << ", violated for " << errorPvFraction_*100 << "% of the pore volume), aggegate error: " << errorSum_ << " (max: " << sumTolerance_ << ")";
 
         // make sure that the error never grows beyond the maximum
         // allowed one

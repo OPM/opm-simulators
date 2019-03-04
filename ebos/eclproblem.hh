@@ -111,10 +111,10 @@ class EclProblem;
 BEGIN_PROPERTIES
 
 #if EBOS_USE_ALUGRID
-NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclAluGridVanguard, EclOutputBlackOil));
+NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclAluGridVanguard, EclOutputBlackOil, VtkEclTracer));
 #else
 NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclCpGridVanguard, EclOutputBlackOil, VtkEclTracer));
-//NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclPolyhedralGridVanguard, EclOutputBlackOil));
+//NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclPolyhedralGridVanguard, EclOutputBlackOil, VtkEclTracer));
 #endif
 
 // The class which deals with ECL wells
@@ -370,6 +370,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
+    enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
     enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
     enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
     enum { enablePolymerMolarWeight = GET_PROP_VALUE(TypeTag, EnablePolymerMW) };
@@ -707,6 +708,18 @@ public:
         // The first thing to do in the morning of an episode is update update the
         // eclState and the deck if they need to be changed.
         int nextEpisodeIdx = simulator.episodeIndex();
+
+        if (enableExperiments && this->gridView().comm().rank() == 0) {
+            boost::posix_time::ptime curDateTime =
+                boost::posix_time::from_time_t(timeMap.getStartTime(nextEpisodeIdx+1));
+            std::cout << "Report step " << nextEpisodeIdx + 2
+                      << "/" << timeMap.numTimesteps()
+                      << " at day " << timeMap.getTimePassedUntil(nextEpisodeIdx+1)/(24*3600)
+                      << "/" << timeMap.getTotalTime()/(24*3600)
+                      << ", date = " << curDateTime.date()
+                      << "\n ";
+        }
+
         if (nextEpisodeIdx > 0 &&
             events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER, nextEpisodeIdx))
         {
