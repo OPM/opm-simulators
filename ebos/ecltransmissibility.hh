@@ -676,9 +676,14 @@ private:
                 // Silently discard as it is not between active cells
                 continue;
 
-            if (low == -1 || high == -1)
-                OPM_THROW(std::logic_error, "NNC between active and inactive cells (" <<
-                          low << " -> " << high);
+            if (low == -1 || high == -1) {
+                // Discard the NNC if it is between active cell and inactive cell
+                std::ostringstream sstr;
+                sstr << "NNC between active and inactive cells ("
+                     << low << " -> " << high << ")";
+                Opm::OpmLog::warning(sstr.str());
+                continue;
+            }
 
             auto candidate = trans_.find(isId_(low, high));
 
