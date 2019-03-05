@@ -154,13 +154,14 @@ set_tests_properties(flow__version PROPERTIES
 # the research oriented general-purpose ECL simulator ("ebos" == &ecl
 # &black-&oil &simulator)
 opm_add_test(ebos
-  SOURCES ebos/ebos.cc
+  ONLY_COMPILE
+  ALWAYS_ENABLE
   EXE_NAME ebos
-  ONLY_COMPILE)
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators"
+  SOURCES ebos/ebos.cc)
 
-if(OPM_GRID_FOUND AND HAVE_ECL_INPUT AND HAVE_ECL_OUTPUT)
-  install(TARGETS ebos DESTINATION bin)
-endif()
+install(TARGETS ebos DESTINATION bin)
 
 include(OpmBashCompletion)
 opm_add_bash_completion(flow)

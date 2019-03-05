@@ -23,28 +23,15 @@
 /*!
  * \file
  *
- * \brief A general-purpose simulator for ECL decks using the black-oil model.
+ * \brief The main file for ebos, a general-purpose simulator for ECL decks for research
+ *        purposes.
  */
 #include "config.h"
 
-#include <opm/material/common/quad.hpp>
-#include <ewoms/common/start.hh>
-
-#include "eclproblem.hh"
-
-BEGIN_PROPERTIES
-
-NEW_TYPE_TAG(EclProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
-
-// Enable experimental features for ebos: ebos is the research simulator of the OPM
-// project. If you're looking for a more stable "production quality" simulator, consider
-// using `flow`
-SET_BOOL_PROP(EclProblem, EnableExperiments, true);
-
-END_PROPERTIES
+#include "ebos.hh"
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(EclProblem) ProblemTypeTag;
+    typedef TTAG(EbosTypeTag) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
 }
