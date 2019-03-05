@@ -161,7 +161,52 @@ opm_add_test(ebos
   LIBRARIES "opmsimulators"
   SOURCES ebos/ebos.cc)
 
+opm_add_test(ebos_solvent
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  SOURCES ebos/ebos_solvent.cc
+  EXE_NAME ebos_solvent
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
+
+opm_add_test(ebos_polymer
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  SOURCES ebos/ebos_polymer.cc
+  EXE_NAME ebos_polymer
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
+
+opm_add_test(ebos_gasoil
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  SOURCES ebos/ebos_gasoil.cc
+  EXE_NAME ebos_gasoil
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
+
+opm_add_test(ebos_oilwater
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  SOURCES ebos/ebos_oilwater.cc
+  EXE_NAME ebos_oilwater
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
+
+opm_add_test(ebos_thermal
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  SOURCES ebos/ebos_thermal.cc
+  EXE_NAME ebos_thermal
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
+
 install(TARGETS ebos DESTINATION bin)
+install(TARGETS ebos_solvent DESTINATION bin)
+install(TARGETS ebos_polymer DESTINATION bin)
+install(TARGETS ebos_gasoil DESTINATION bin)
+install(TARGETS ebos_oilwater DESTINATION bin)
+install(TARGETS ebos_thermal DESTINATION bin)
 
 include(OpmBashCompletion)
 opm_add_bash_completion(flow)
