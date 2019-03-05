@@ -127,6 +127,10 @@ NEW_PROP_TAG(EnableWriteAllSolutions);
 // The number of time steps skipped between writing two consequtive restart files
 NEW_PROP_TAG(RestartWritingInterval);
 
+// Enable partial compensation of systematic mass losses via the source term of the next time
+// step
+NEW_PROP_TAG(EclEnableDriftCompensation);
+
 // Enable the additional checks even if compiled in debug mode (i.e., with the NDEBUG
 // macro undefined). Next to a slightly better performance, this also eliminates some
 // print statements in debug mode.
@@ -314,6 +318,12 @@ SET_TYPE_PROP(EclBaseProblem, NewtonMethod, Ewoms::EclNewtonMethod<TypeTag>);
 // between writing restart files
 SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
 
+// Drift compensation is an experimental feature, i.e., systematic errors in the
+// conservation quantities are only compensated for if experimental mode is enabled.
+SET_BOOL_PROP(EclBaseProblem,
+              EclEnableDriftCompensation,
+              GET_PROP_VALUE(TypeTag, EnableExperiments));
+
 // By default, we enable the debugging checks if we're compiled in debug mode
 SET_BOOL_PROP(EclBaseProblem, EnableDebuggingChecks, true);
 
@@ -361,6 +371,9 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Stencil) Stencil;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
+    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
+
 
     // Grid and world dimension
     enum { dim = GridView::dimension };
@@ -443,6 +456,9 @@ public:
                              "The frequencies of which time steps are serialized to disk");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTracerModel,
                              "Transport tracers found in the deck.");
+        if (enableExperiments)
+            EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableDriftCompensation,
+                                 "Enable partial compensation of systematic mass losses via the source term of the next time step");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent,
                              "Maximum time step size after an well event");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclRestartShrinkFactor,
@@ -562,6 +578,11 @@ public:
             // create the ECL writer
             eclWriter_.reset(new EclWriterType(simulator));
 
+        if (enableExperiments)
+            enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
+        else
+            enableDriftCompensation_ = false;
+
         enableTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableTuning);
         initialTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
         minTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, MinTimeStepSize);
@@ -651,6 +672,11 @@ public:
         tracerModel_.init();
 
         readBoundaryConditions_();
+
+        if (enableDriftCompensation_) {
+            drift_.resize(numDof);
+            drift_ = 0.0;
+        }
     }
 
     void prefetch(const Element& elem) const
@@ -863,7 +889,18 @@ public:
         aquiferModel_.endTimeStep();
         tracerModel_.endTimeStep();
 
+        // deal with DRSDT and DRVDT
         updateCompositionChangeLimits_();
+
+        if (enableDriftCompensation_) {
+            const auto& residual = this->model().linearizer().residual();
+            for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); globalDofIdx ++) {
+                drift_[globalDofIdx] = residual[globalDofIdx];
+                drift_[globalDofIdx] *= this->simulator().timeStepSize();
+                if (GET_PROP_VALUE(TypeTag, UseVolumetricResidual))
+                    drift_[globalDofIdx] *= this->model().dofTotalVolume(globalDofIdx);
+            }
+        }
     }
 
     /*!
@@ -1443,6 +1480,38 @@ public:
         }
 
         aquiferModel_.addToSource(rate, context, spaceIdx, timeIdx);
+
+        // if requested, compensate systematic mass loss for cells which were "well
+        // behaved" in the last time step
+        if (enableDriftCompensation_) {
+            unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+            const auto& intQuants = context.intensiveQuantities(spaceIdx, timeIdx);
+            const auto& simulator = this->simulator();
+            const auto& model = this->model();
+
+            // we need a higher maxCompensation than the Newton tolerance because the
+            // current time step might be shorter than the last one
+            Scalar maxCompensation = 10.0*model.newtonMethod().tolerance();
+
+            Scalar poro = intQuants.referencePorosity();
+            Scalar dt = simulator.timeStepSize();
+
+            EqVector dofDriftRate = drift_[globalDofIdx];
+            dofDriftRate /= dt*context.dofTotalVolume(spaceIdx, timeIdx);
+
+            // compute the weighted total drift rate
+            Scalar totalDriftRate = 0.0;
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+                totalDriftRate +=
+                    std::abs(dofDriftRate[eqIdx])*dt*model.eqWeight(globalDofIdx, eqIdx)/poro;
+
+            // make sure that we do not exceed the maximum rate of drift compensation
+            if (totalDriftRate > maxCompensation)
+                dofDriftRate *= maxCompensation/totalDriftRate;
+
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+                rate[eqIdx] -= dofDriftRate[eqIdx];
+        }
     }
 
     /*!
@@ -2614,6 +2683,9 @@ private:
     std::vector<Scalar> maxDRv_;
     constexpr static Scalar freeGasMinSaturation_ = 1e-7;
     std::vector<Scalar> maxOilSaturation_;
+
+    bool enableDriftCompensation_;
+    GlobalEqVector drift_;
 
     EclWellModel wellModel_;
     EclAquiferModel aquiferModel_;
