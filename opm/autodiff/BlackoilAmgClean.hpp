@@ -53,7 +53,42 @@ namespace Dune
 
 namespace Opm
 {
-
+  namespace Detail
+  {
+    template<class Operator, class Communication,class Vector>
+    std::unique_ptr<typename Operator::matrix_type> scaleMatrixDRSPtr(const Operator& op,
+								      const Communication& comm,
+								      std::size_t pressureIndex,
+								      const Vector& weights, const Opm::CPRParameter& param)
+    {
+      using Matrix = typename Operator::matrix_type;
+      using Block = typename Matrix::block_type;
+      using BlockVector = typename Vector::block_type;
+      std::unique_ptr<Matrix> matrix(new Matrix(op.getmat()));
+      if(param.cpr_use_drs_){
+	const auto endi = matrix->end();
+	for (auto i=matrix->begin(); i!=endi; ++i){
+	  const BlockVector& bw = weights[i.index()];
+	  const auto endj = (*i).end();
+	  for (auto j=(*i).begin(); j!=endj; ++j){  
+	    {
+	      BlockVector bvec(0.0);
+	      Block& block = *j;
+	      for ( std::size_t ii = 0; ii < Block::rows; ii++ ){
+		for(std::size_t jj=0; jj < Block::cols; jj++){
+		  // should introduce limmits which also change the weights
+		  bvec[jj] += bw[ii]*block[ii][jj];
+		  //block[pressureIndex][j] += block[i][j];
+		}		  
+	      }
+	      block[pressureIndex] = bvec; 
+	    }
+	  }
+	}
+      }
+      return matrix;//, createOperator(op, *matrix, comm));
+    }
+  }
   
     template<class Operator, class Criterion, class Communication, std::size_t COMPONENT_INDEX>
     class OneComponentAggregationLevelTransferPolicyCpr;
@@ -113,28 +148,48 @@ namespace Opm
 	this->operator_.reset(Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs));
       }
 
-      template<class M>
-      void calculateCoarseEntries(const M& fineMatrix)
+      // compleately unsafe!!!!!!
+      void calculateCoarseEntries(const Operator& fineOperator)//const M& fineMatrix)
       {
+	const auto& fineMatrix = fineOperator.getmat();
 	*coarseLevelMatrix_ = 0;
         for(auto row = fineMatrix.begin(), rowEnd = fineMatrix.end();
             row != rowEnd; ++row)
 	  {
-            const auto& i = (*aggregatesMap_)[row.index()];
-            if(i != AggregatesMap::ISOLATED)
+            const auto& i = row.index();
+	    for(auto entry = row->begin(), entryEnd = row->end();
+		entry != entryEnd; ++entry)
 	      {
-                for(auto entry = row->begin(), entryEnd = row->end();
-                    entry != entryEnd; ++entry)
-		  {
-                    const auto& j = (*aggregatesMap_)[entry.index()];
-                    if ( j != AggregatesMap::ISOLATED )
-		      {
-                        (*coarseLevelMatrix_)[i][j] += (*entry)[COMPONENT_INDEX][COMPONENT_INDEX];
-		      }
-		  }
+		const auto& j = entry.index();
+		(*coarseLevelMatrix_)[i][j] += (*entry)[COMPONENT_INDEX][COMPONENT_INDEX];
 	      }
 	  }
       }
+
+      
+      //template<class M>
+      // void calculateCoarseEntriesOld(const Operator& fineOperator)//const M& fineMatrix)
+      // {
+      // 	const auto& fineMatrix = fineOperator.getmat();
+      // 	*coarseLevelMatrix_ = 0;
+      //   for(auto row = fineMatrix.begin(), rowEnd = fineMatrix.end();
+      //       row != rowEnd; ++row)
+      // 	  {
+      //       const auto& i = (*aggregatesMap_)[row.index()];
+      //       if(i != AggregatesMap::ISOLATED)
+      // 	      {
+      //           for(auto entry = row->begin(), entryEnd = row->end();
+      //               entry != entryEnd; ++entry)
+      // 		  {
+      //               const auto& j = (*aggregatesMap_)[entry.index()];
+      //               if ( j != AggregatesMap::ISOLATED )
+      // 		      {
+      //                   (*coarseLevelMatrix_)[i][j] += (*entry)[COMPONENT_INDEX][COMPONENT_INDEX];
+      // 		      }
+      // 		  }
+      // 	      }
+      // 	  }
+      // }
 
       void moveToCoarseLevel(const typename FatherType::FineRangeType& fine)
       {
@@ -175,7 +230,7 @@ namespace Opm
       }
     private:
       typename Operator::matrix_type::field_type prolongDamp_;
-      std::shared_ptr<AggregatesMap> aggregatesMap_;
+      //std::shared_ptr<AggregatesMap> aggregatesMap_;
       Criterion criterion_;
       Communication* communication_;
       std::shared_ptr<Communication> coarseLevelCommunication_;
@@ -234,15 +289,21 @@ namespace Opm
       struct AMGInverseOperator : public Dune::InverseOperator<X,X>
       {
         AMGInverseOperator(const CPRParameter* param,
-                           const typename AMGType::Operator& op,
+                           typename AMGType::Operator& op,
                            const Criterion& crit,
                            const typename AMGType::SmootherArgs& args,
                            const Communication& comm)
-	  : param_(param), amg_(), op_(op), comm_(comm)
+	  : param_(param), amg_(),crit_(crit), op_(op),args_(args), comm_(comm)
         {
 	  amg_.reset(new AMGType(op, crit,args, comm));
         }
 
+	void updateAmgPreconditioner(){//typename AMGType::Operator& op){
+	  //op_ = op;
+	  amg_->recalculateHierarchy();
+	  //amg_.reset(new AMGType(op, crit_,args_, comm_));
+	  //amg_->recalculateGalerkin();
+	}
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
         Dune::SolverCategory::Category category() const override
         {
@@ -339,7 +400,10 @@ namespace Opm
         const CPRParameter* param_;
         X x_;
         std::unique_ptr<AMGType> amg_;
-        const typename AMGType::Operator& op_;
+	//std::unique_ptr<typename AMGType::Operator> op_;
+	const typename AMGType::Operator& op_;
+	Criterion crit_;
+	typename AMGType::SmootherArgs args_;
         const Communication& comm_;
       };
 
@@ -353,6 +417,10 @@ namespace Opm
        * @param transferPolicy The policy describing the transfer between levels.
        * @return A pointer to the constructed coarse level solver.
        */
+      template<class LTP>
+      void setCoarseOperator(LTP& transferPolicy){
+	coarseOperator_= transferPolicy.getCoarseLevelOperator();
+      }
       template<class LTP>
       CoarseLevelSolver* createCoarseLevelSolver(LTP& transferPolicy)
       {
@@ -368,9 +436,9 @@ namespace Opm
         return inv; //std::shared_ptr<InverseOperator<X,X> >(inv);
 
       }
-      void recalculateGalerkin(){
-	coarseOperator_.recalculateHierarchy();
-      }
+      //void recalculateGalerkin(){
+      //	coarseOperator_.recalculateHierarchy();
+      //}
     private:
       /** @brief The coarse level operator. */
       std::shared_ptr<Operator> coarseOperator_;
@@ -467,13 +535,15 @@ namespace Opm
                 const SmootherArgs& smargs, const Communication& comm)
       : param_(param),
 	weights_(weights),
-	scaledMatrixOperator_(Detail::scaleMatrixDRS(fineOperator, comm,
-						     COMPONENT_INDEX, weights, param)),
-	smoother_(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
+	scaledMatrix_(Detail::scaleMatrixDRSPtr(fineOperator, comm,
+						COMPONENT_INDEX, weights_, param)),
+	scaledMatrixOperator_(Detail::createOperatorPtr(fineOperator, *scaledMatrix_, comm)),
+	smoother_(Detail::constructSmoother<Smoother>(*scaledMatrixOperator_,
 						      smargs, comm)),
 	levelTransferPolicy_(criterion, comm),
 	coarseSolverPolicy_(&param, smargs, criterion),
-	twoLevelMethod_(std::get<1>(scaledMatrixOperator_), smoother_,
+	twoLevelMethod_(*scaledMatrixOperator_,
+			smoother_,
 			levelTransferPolicy_,
 			coarseSolverPolicy_, 0, 1)
     {
@@ -483,13 +553,14 @@ namespace Opm
 			      const SmootherArgs& smargs,
 			      const Communication& comm){
       weights_ = weights;
-      // scaledMatrixOperator_ = Detail::scaleMatrixDRS(fineOperator, comm,
-      // 						     COMPONENT_INDEX, weights_, param_);
-      // smoother_ .reset(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
-      // 							   smargs, comm));
-      // twoLevelMethod_.updatePreconditioner(std::get<1>(scaledMatrixOperator_),
-      // 					   smoother_,
-      // 					   coarseSolverPolicy_);					  
+      *scaledMatrix_ = *Detail::scaleMatrixDRSPtr(fineOperator, comm,
+      						    COMPONENT_INDEX, weights_, param_); 
+      //*scaledMatrixOperator_ = *Detail::createOperatorPtr(fineOperator,*scaledMatrix_,comm);
+      smoother_ .reset(Detail::constructSmoother<Smoother>(*scaledMatrixOperator_,
+       							   smargs, comm));
+      twoLevelMethod_.updatePreconditioner(*scaledMatrixOperator_,
+       					   smoother_,
+       					   coarseSolverPolicy_);					  
     }
     
     void pre(typename TwoLevelMethod::FineDomainType& x,
@@ -514,7 +585,10 @@ namespace Opm
     const CPRParameter& param_;
     //const typename TwoLevelMethod::FineDomainType& weights_;
     typename TwoLevelMethod::FineDomainType weights_;//make copy
-    std::tuple<std::unique_ptr<Matrix>, Operator> scaledMatrixOperator_;
+    std::unique_ptr<Matrix> scaledMatrix_;
+    std::unique_ptr<Operator> scaledMatrixOperator_;
+    //Operator scaledMatrixOperator_;
+    //std::tuple<std::unique_ptr<Matrix>, Operator> 
     std::shared_ptr<Smoother> smoother_;
     LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;

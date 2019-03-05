@@ -118,6 +118,9 @@ public:
    * @param fineOperator The operator of the fine level system.
    */
   virtual void createCoarseLevelSystem(const FineOperatorType& fineOperator)=0;
+
+  //template<class M>
+  virtual void calculateCoarseEntries(const FineOperatorType& fineOperator) = 0;
   //virtual void recalculateGalerkin(FineOperatorType& fineOperator)=0;
 
   /** @brief Clone the current object. */
@@ -420,7 +423,7 @@ public:
    * @param preSteps The number of smoothing steps to apply after the coarse
    * level correction.
    */
-  TwoLevelMethodCpr(const FineOperatorType& op,
+  TwoLevelMethodCpr(FineOperatorType& op,
                     std::shared_ptr<SmootherType> smoother,
                     const LevelTransferPolicyCpr<FineOperatorType,
                     CoarseOperatorType>& policy,
@@ -431,7 +434,7 @@ public:
   {
     policy_ = policy.clone();
     policy_->createCoarseLevelSystem(*operator_);
-    coarseSolver_=coarsePolicy.createCoarseLevelSolver(*policy_);
+    coarseSolver_= coarsePolicy.createCoarseLevelSolver(*policy_);
   }
 
   TwoLevelMethodCpr(const TwoLevelMethodCpr& other)
@@ -446,18 +449,24 @@ public:
     delete policy_;
     delete coarseSolver_;
   }
-  void updatePreconditioner(const FineOperatorType& op,
+  void updatePreconditioner(FineOperatorType& op,
                             std::shared_ptr<SmootherType> smoother,
                             CoarseLevelSolverPolicy& coarsePolicy){
     //assume new matrix is not reallocated the new precondition should anyway be made
-    //operator_ = *op; hope fine scale operator is the same
-    //smoother_ = smoother;
-    //policy_->createCoarseLevelSystem(*operator_);
-    // if(not(coarseSolver_ == 0)){
-    //   delete coarseSolver_;
-    // }
-    //coarseSolver_ = coarsePolicy.createCoarseLevelSolver(*policy_);
-    //coarseSolver_.recalculateHirarchy();
+    //operator_ = &op;// hope fine scale operator is the same
+    smoother_ = smoother;    
+    if(not(coarseSolver_ == 0)){
+      //delete coarseSolver_;
+      std::cout << " Only rebuild hirarchy " << std::endl;
+      //policy_->createCoarseLevelSystem(*operator_);
+      policy_->calculateCoarseEntries(*operator_);
+      //policy_->calculateCoarseEntries(7);
+      coarseSolver_->updateAmgPreconditioner();// *(policy_->getCoarseLevelOperator()) );
+    }else{
+      // we should probably not be heere
+      policy_->createCoarseLevelSystem(*operator_);
+      coarseSolver_ = coarsePolicy.createCoarseLevelSolver(*policy_);  
+    }        
   }
                             
 
@@ -536,7 +545,7 @@ private:
      */
     const FineOperatorType* matrix;
   };
-  const FineOperatorType* operator_;
+  FineOperatorType* operator_;
   /** @brief The coarse level solver. */
   CoarseLevelSolver* coarseSolver_;
   /** @brief The fine level smoother. */

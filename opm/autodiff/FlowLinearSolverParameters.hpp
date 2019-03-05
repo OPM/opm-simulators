@@ -65,6 +65,7 @@ NEW_PROP_TAG(CprSolverVerbose);
 NEW_PROP_TAG(CprUseDrs);
 NEW_PROP_TAG(CprMaxIter);
 NEW_PROP_TAG(CprEllSolvetype);
+NEW_PROP_TAG(CprReuseSetup);
 
 SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
 SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
@@ -88,6 +89,7 @@ SET_BOOL_PROP(FlowIstlSolverParams, CprSolverVerbose, false);
 SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
 SET_INT_PROP(FlowIstlSolverParams, CprMaxIter, 20);
 SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
+SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, false);
 
 END_PROPERTIES
 
@@ -113,7 +115,7 @@ namespace Opm
         bool cpr_use_bicgstab_;
         bool cpr_solver_verbose_;
         bool cpr_pressure_aggregation_;
-
+      bool cpr_reuse_setup_;
         CPRParameter() { reset(); }
 
         // CPRParameter( const ParameterGroup& param)
@@ -152,6 +154,7 @@ namespace Opm
             cpr_use_bicgstab_         = true;
             cpr_solver_verbose_       = false;
             cpr_pressure_aggregation_ = false;
+	    cpr_reuse_setup_          = false;
         }
     };
 
@@ -203,6 +206,7 @@ namespace Opm
 	    cpr_use_drs_  =  EWOMS_GET_PARAM(TypeTag, bool, CprUseDrs);
 	    cpr_max_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxIter);
 	    cpr_ell_solvetype_  =  EWOMS_GET_PARAM(TypeTag, int, CprEllSolvetype);
+	    cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, bool, CprReuseSetup);
 	    
         }
 
@@ -229,6 +233,7 @@ namespace Opm
 	    EWOMS_REGISTER_PARAM(TypeTag, bool, CprUseDrs, "Use dynamic row sum using weighs");
 	    EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxIter, "MaxIterations of the pressure amg solver");
 	    EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "solver type of elliptic solve 0 bicgstab 1 cg other only amg preconditioner");
+	    EWOMS_REGISTER_PARAM(TypeTag, bool, CprReuseSetup, "Reuse Amg Setup");
         }
 
         FlowLinearSolverParameters() { reset(); }

@@ -68,6 +68,11 @@ Dune::MatrixAdapter<M,X,Y> createOperator(const Dune::MatrixAdapter<M,X,Y>&, con
     return Dune::MatrixAdapter<M,X,Y>(matrix);
 }
 
+template<class M, class X, class Y, class T>
+std::unique_ptr< Dune::MatrixAdapter<M,X,Y> > createOperatorPtr(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
+{
+  return std::make_unique< Dune::MatrixAdapter<M,X,Y> >(matrix);
+}  
 /**
  * \brief Creates an OverlappingSchwarzOperator as an operator.
  *
@@ -410,7 +415,7 @@ private:
             const int maxit        = param_->cpr_max_iter_;
             const int verbosity    = ( param_->cpr_solver_verbose_ &&
                                        comm_.communicator().rank()==0 ) ? 1 : 0;
-            if ( param_->cpr_ell_solvetype_ )
+            if ( param_->cpr_ell_solvetype_ == 0)
             {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,

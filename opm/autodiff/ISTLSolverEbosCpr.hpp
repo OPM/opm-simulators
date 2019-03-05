@@ -110,7 +110,15 @@ namespace Opm
         }
 
         void prepare(const Matrix& M, Vector& b) {
-	  SuperClass::prepare(M,b);
+	  int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
+	  //    double dt = this->simulator_.timeStepSize();
+	  if( newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_) ){
+	    SuperClass::matrix_.reset(new Matrix(M));
+	  }else{
+	    *SuperClass::matrix_ = M;
+	  }
+	  SuperClass::rhs_ = &b;
+	  SuperClass::scaleSystem();
 	  const WellModel& wellModel = this->simulator_.problem().wellModel();
 	  
 #if HAVE_MPI			      	  
@@ -226,9 +234,16 @@ namespace Opm
 	      ISTLUtility::setILUParameters(smootherArgs, params);
 	      
 	      MatrixAdapter& opARef = *opA_;
-	      amg_.reset( new BLACKOILAMG( params, this->weights_, opARef, criterion, smootherArgs, comm ) );
-	      //amg_.reset( new AMG(*opA_, criterion, smootherArgs, comm ) );
-	      
+	      int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
+	      double dt = this->simulator_.timeStepSize();
+	      if( newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_) ){
+		amg_.reset( new BLACKOILAMG( params, this->weights_, opARef, criterion, smootherArgs, comm ) );
+	      }else{
+		if(this->parameters_.cpr_solver_verbose_){
+		  std::cout << " Only update amg solver " << std::endl;
+		}
+		amg_->updatePreconditioner(this->weights_,opARef, smootherArgs, comm);
+	      }
 	      // Solve.
 	      //SuperClass::solve(linearOperator, x, istlb, *sp, *amg, result);
 	      //references seems to do something els than refering
@@ -239,8 +254,7 @@ namespace Opm
 						    this->parameters_.linear_solver_reduction_,
 							       this->parameters_.linear_solver_maxiter_,
 							       verbosity_linsolve));
-	      // amg her is the full cpr preconditioner
-	      amg_->updatePreconditioner(this->weights_,opARef, smootherArgs, comm);
+	      
 
 	    }	  
         }

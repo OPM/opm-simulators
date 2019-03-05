@@ -219,58 +219,61 @@ protected:
             matrix_for_preconditioner_.reset();
         }
 
-        void prepare(const Matrix& M, Vector& b) {
- 	    matrix_.reset(new Matrix(M));
-            rhs_ = &b;
-	    bool matrix_cont_added = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+      void prepare(const Matrix& M, Vector& b) {
+	matrix_.reset(new Matrix(M));
+	rhs_ = &b;
+	this->scaleSystem();
+      }
+      void scaleSystem(){
+	bool matrix_cont_added = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
 	    
-	    if(matrix_cont_added){
-	      //Vector weights;
-	      bool form_cpr = true;
-	      if(parameters_.system_strategy_ == "quasiimpes"){
-		weights_ = getQuasiImpesWeights();
-	      }else if(parameters_.system_strategy_ == "trueimpes"){
-		weights_ = getStorageWeights();
-	      }else if(parameters_.system_strategy_ == "simple"){
-		BlockVector bvec(1.0);
-		weights_ = getSimpleWeights(bvec);
-	      }else if(parameters_.system_strategy_ == "original"){
-		BlockVector bvec(0.0);
-		bvec[pressureIndex] = 1;
-		weights_ = getSimpleWeights(bvec);
-	      }else{
-		form_cpr = false;
-          }
+	if(matrix_cont_added){
+	  //Vector weights;
+	  bool form_cpr = true;
+	  if(parameters_.system_strategy_ == "quasiimpes"){
+	    weights_ = getQuasiImpesWeights();
+	  }else if(parameters_.system_strategy_ == "trueimpes"){
+	    weights_ = getStorageWeights();
+	  }else if(parameters_.system_strategy_ == "simple"){
+	    BlockVector bvec(1.0);
+	    weights_ = getSimpleWeights(bvec);
+	  }else if(parameters_.system_strategy_ == "original"){
+	    BlockVector bvec(0.0);
+	    bvec[pressureIndex] = 1;
+	    weights_ = getSimpleWeights(bvec);
+	  }else{
+	    form_cpr = false;
+	  }
           if(parameters_.linear_solver_verbosity_ > 1000) {
-                        std::ofstream filem("matrix_istl_pre.txt");
-                         Dune::writeMatrixMarket(*matrix_, filem);
-                         std::ofstream fileb("rhs_istl_pre.txt");
-                         Dune::writeMatrixMarket(*rhs_, fileb);
-                         std::ofstream filew("weights_istl.txt");
-                         Dune::writeMatrixMarket(weights_, filew);
+	    std::ofstream filem("matrix_istl_pre.txt");
+	    Dune::writeMatrixMarket(*matrix_, filem);
+	    std::ofstream fileb("rhs_istl_pre.txt");
+	    Dune::writeMatrixMarket(*rhs_, fileb);
+	    std::ofstream filew("weights_istl.txt");
+	    Dune::writeMatrixMarket(weights_, filew);
           }
 
-	      if(parameters_.scale_linear_system_){
-		// also scale weights
-		this->scaleEquationsAndVariables(weights_);
-	      }
-	      if(form_cpr && not(parameters_.cpr_use_drs_)){
-		scaleMatrixAndRhs(weights_);
-	      }
+	  if(parameters_.scale_linear_system_){
+	    // also scale weights
+	    this->scaleEquationsAndVariables(weights_);
+	  }
+	  if(form_cpr && not(parameters_.cpr_use_drs_)){
+	    scaleMatrixAndRhs(weights_);
+	  }
 	      
-	      if(weights_.size() == 0){
-		// if weights are not set cpr_use_drs_=false;
-		parameters_.cpr_use_drs_ = false;
-	      }
+	  if(weights_.size() == 0){
+	    // if weights are not set cpr_use_drs_=false;
+	    parameters_.cpr_use_drs_ = false;
+	  }
 	      
         }else{
-	      if(parameters_.scale_linear_system_){
-                // also scale weights
-                this->scaleEquationsAndVariables(weights_);
-	      }
-	    }
+	  if(parameters_.scale_linear_system_){
+	    // also scale weights
+	    this->scaleEquationsAndVariables(weights_);
+	  }
+	}
 
-        }
+      }
       
         bool solve(Vector& x) {
             // Solve system.
