@@ -174,7 +174,7 @@ rm -rf %{buildroot}
 
 %files doc
 %{_docdir}/*
-/etc/bash_completion.d/flow_bash_completion.sh
+/etc/bash_completion.d/*
 
 %files -n libopm-simulators1
 %defattr(-,root,root,-)
