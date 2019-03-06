@@ -24,6 +24,7 @@
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
 #include <opm/autodiff/FlowLinearSolverParameters.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
+#include <opm/autodiff/amgcpr.hh>
 #include <dune/istl/paamg/twolevelmethod.hh>
 #include <dune/istl/paamg/aggregates.hh>
 #include <dune/istl/bvector.hh>
@@ -265,7 +266,7 @@ namespace Opm
       /** @brief The type of the arguments used for constructing the smoother. */
       typedef typename Dune::Amg::SmootherTraits<S>::Arguments SmootherArgs;
       /** @brief The type of the AMG construct on the coarse level.*/
-      typedef Dune::Amg::AMG<Operator,X,Smoother,Communication> AMGType;
+      typedef Dune::Amg::AMGCPR<Operator,X,Smoother,Communication> AMGType;
       /**
        * @brief Constructs the coarse solver policy.
        * @param args The arguments used for constructing the smoother.
@@ -300,7 +301,8 @@ namespace Opm
 
 	void updateAmgPreconditioner(){//typename AMGType::Operator& op){
 	  //op_ = op;
-	  amg_->recalculateHierarchy();
+	  //amg_->recalculateHierarchy();
+	  amg_->updateSolver();
 	  //amg_.reset(new AMGType(op, crit_,args_, comm_));
 	  //amg_->recalculateGalerkin();
 	}
