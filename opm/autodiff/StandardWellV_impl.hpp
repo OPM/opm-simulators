@@ -546,17 +546,17 @@ namespace Opm
                 connectionRates_[perf][componentIdx] = Base::restrictEval(cq_s_effective);
 
                 // subtract sum of phase fluxes in the well equations.
-                resWell_[0][componentIdx] -= cq_s_effective.value();
+                resWell_[0][componentIdx] += cq_s_effective.value();
 
                 // assemble the jacobians
                 for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
                     // also need to consider the efficiency factor when manipulating the jacobians.
                     duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
-                    invDuneD_[0][0][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx+numEq);
+                    invDuneD_[0][0][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
                 }
 
                 for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
-                    duneB_[0][cell_idx][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx);
+                    duneB_[0][cell_idx][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx);
                 }
 
                 // Store the perforation phase flux for later usage.
@@ -687,8 +687,10 @@ namespace Opm
 
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {
+            // TODO: following the development in MSW, we need to convert the volume of the wellbore to be surface volume
+            // since all the rates are under surface condition
             EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
-            resWell_loc += getQs(componentIdx) * well_efficiency_factor_;
+            resWell_loc -= getQs(componentIdx) * well_efficiency_factor_;
             for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
@@ -2168,6 +2170,8 @@ namespace Opm
     calculateExplicitQuantities(const Simulator& ebosSimulator,
                                 const WellState& well_state)
     {
+        updatePrimaryVariables(well_state);
+        initPrimaryVariablesEvaluation();
         computeWellConnectionPressures(ebosSimulator, well_state);
         computeAccumWell();
     }
