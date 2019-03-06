@@ -21,6 +21,8 @@ cmake_minimum_required (VERSION 2.8)
 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
+option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
+option(BUILD_EBOS "Build the research oriented ebos simulator and its variants?" ON)
 
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
@@ -127,7 +129,9 @@ opm_add_test(test_gatherdeferredlogger
     5 ${CMAKE_BINARY_DIR}
 )
 
+include(OpmBashCompletion)
 
+if (BUILD_FLOW)
 # the production oriented general-purpose ECL simulator
 opm_add_test(flow
   ONLY_COMPILE
@@ -145,12 +149,15 @@ opm_add_test(flow
     flow/flow_ebos_oilwater_polymer.cpp
     flow/flow_ebos_oilwater_polymer_injectivity.cpp)
 install(TARGETS flow DESTINATION bin)
+opm_add_bash_completion(flow)
 
 add_test(NAME flow__version
          COMMAND flow --version)
 set_tests_properties(flow__version PROPERTIES
                      PASS_REGULAR_EXPRESSION "${${project}_LABEL}")
+endif()
 
+if (BUILD_EBOS)
 # the research oriented general-purpose ECL simulator ("ebos" == &ecl
 # &black-&oil &simulator)
 opm_add_test(ebos
@@ -208,6 +215,10 @@ install(TARGETS ebos_gasoil DESTINATION bin)
 install(TARGETS ebos_oilwater DESTINATION bin)
 install(TARGETS ebos_thermal DESTINATION bin)
 
-include(OpmBashCompletion)
-opm_add_bash_completion(flow)
 opm_add_bash_completion(ebos)
+opm_add_bash_completion(ebos_solvent)
+opm_add_bash_completion(ebos_polymer)
+opm_add_bash_completion(ebos_gasoil)
+opm_add_bash_completion(ebos_oilwater)
+opm_add_bash_completion(ebos_thermal)
+endif()
