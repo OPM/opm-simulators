@@ -27,8 +27,8 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/WellTestState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
 
 

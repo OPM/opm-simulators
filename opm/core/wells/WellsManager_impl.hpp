@@ -6,7 +6,7 @@
 #include <opm/grid/utility/compressedToCartesian.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/WellConnections.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 #include <algorithm>
