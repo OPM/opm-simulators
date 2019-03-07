@@ -299,10 +299,10 @@ namespace Opm
 	  amg_.reset(new AMGType(op, crit,args, comm));
         }
 
-	void updateAmgPreconditioner(){//typename AMGType::Operator& op){
+	void updateAmgPreconditioner(typename AMGType::Operator& op){
 	  //op_ = op;
 	  //amg_->recalculateHierarchy();
-	  amg_->updateSolver();
+	  amg_->updateSolver(crit_, op, comm_);
 	  //amg_.reset(new AMGType(op, crit_,args_, comm_));
 	  //amg_->recalculateGalerkin();
 	}
@@ -403,7 +403,7 @@ namespace Opm
         X x_;
         std::unique_ptr<AMGType> amg_;
 	//std::unique_ptr<typename AMGType::Operator> op_;
-	const typename AMGType::Operator& op_;
+	typename AMGType::Operator& op_;
 	Criterion crit_;
 	typename AMGType::SmootherArgs args_;
         const Communication& comm_;
