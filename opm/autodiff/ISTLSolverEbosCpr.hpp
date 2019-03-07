@@ -236,7 +236,23 @@ namespace Opm
 	      MatrixAdapter& opARef = *opA_;
 	      int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
 	      double dt = this->simulator_.timeStepSize();
-	      if( newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_) ){
+	      bool update_preconditioner = false;
+	      
+	      if(this->parameters_.cpr_reuse_setup_ < 1){
+		update_preconditioner = true;
+	      }
+	      if(this->parameters_.cpr_reuse_setup_ < 2){
+		if(newton_iteration < 1){
+		  update_preconditioner = true;
+		}
+	      }
+	      if(this->parameters_.cpr_reuse_setup_ < 3){
+		if( this->iterations() > 10){
+		  update_preconditioner = true;
+		}
+	      }
+	      
+	      if( update_preconditioner or (amg_== 0) ){
 		amg_.reset( new BLACKOILAMG( params, this->weights_, opARef, criterion, smootherArgs, comm ) );
 	      }else{
 		if(this->parameters_.cpr_solver_verbose_){

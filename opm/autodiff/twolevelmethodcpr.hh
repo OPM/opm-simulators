@@ -457,7 +457,7 @@ public:
     smoother_ = smoother;    
     if(not(coarseSolver_ == 0)){
       //delete coarseSolver_;
-      std::cout << " Only rebuild hirarchy " << std::endl;
+      //std::cout << " Only rebuild hirarchy " << std::endl;
       //policy_->createCoarseLevelSystem(*operator_);
       policy_->calculateCoarseEntries(*operator_);
       //policy_->calculateCoarseEntries(7);
