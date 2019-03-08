@@ -555,7 +555,8 @@ namespace Opm
     {
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);
-        updateWellState(xw, false, well_state, deferred_logger);
+
+        updateWellState(xw, well_state, deferred_logger);
     }
 
 
@@ -682,7 +683,7 @@ namespace Opm
         // which is why we do not put the assembleWellEq here.
         const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
-        updateWellState(dx_well, false, well_state, deferred_logger);
+        updateWellState(dx_well, well_state, deferred_logger);
     }
 
 
@@ -766,14 +767,11 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
-                    const bool inner_iteration,
+
                     WellState& well_state,
-                    Opm::DeferredLogger& deferred_logger) const
+		    Opm::DeferredLogger& deferred_logger
+                    const double relaxation_factor) const
     {
-        const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
-
-        const double relaxation_factor = (use_inner_iterations && inner_iteration) ? 0.2 : 1.0;
-
         const double dFLimit = param_.dwell_fraction_max_;
         const double max_pressure_change = param_.max_pressure_change_ms_wells_;
         const std::vector<std::array<double, numWellEq> > old_primary_variables = primary_variables_;
@@ -781,13 +779,15 @@ namespace Opm
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 const int sign = dwells[seg][WFrac] > 0. ? 1 : -1;
-                const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]), relaxation_factor * dFLimit);
+                // const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]), relaxation_factor * dFLimit);
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]) * relaxation_factor, dFLimit);
                 primary_variables_[seg][WFrac] = old_primary_variables[seg][WFrac] - dx_limited;
             }
 
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 const int sign = dwells[seg][GFrac] > 0. ? 1 : -1;
-                const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]), relaxation_factor * dFLimit);
+                // const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]), relaxation_factor * dFLimit);
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]) * relaxation_factor, dFLimit);
                 primary_variables_[seg][GFrac] = old_primary_variables[seg][GFrac] - dx_limited;
             }
 
@@ -798,6 +798,7 @@ namespace Opm
             {
                 const int sign = dwells[seg][SPres] > 0.? 1 : -1;
                 const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]), relaxation_factor * max_pressure_change);
+                // const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change);
                 primary_variables_[seg][SPres] = old_primary_variables[seg][SPres] - dx_limited;
             }
 
@@ -1770,13 +1771,15 @@ namespace Opm
                          WellState& well_state,
                          Opm::DeferredLogger& deferred_logger)
     {
-        // basically, it only iterate through the equations.
-        // we update the primary variables
-        // if converged, we can update the well_state.
-        // the function updateWellState() should have a flag to show
-        // if we will update the well state.
         const int max_iter_number = param_.max_inner_iter_ms_wells_;
+        const WellState well_state0 = well_state;
+        const std::vector<Scalar> residuals0 = getWellResiduals(B_avg);
+        std::vector<std::vector<Scalar> > residual_history;
+        std::vector<double> measure_history;
         int it = 0;
+        // relaxation factor
+        double relaxation_factor = 1.;
+        const double min_relaxation_factor = 0.2;
         for (; it < max_iter_number; ++it) {
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, deferred_logger);
@@ -1789,11 +1792,57 @@ namespace Opm
                 break;
             }
 
-            updateWellState(dx_well, true, well_state, deferred_logger);
+            residual_history.push_back(getWellResiduals(B_avg));
+            measure_history.push_back(getResidualMeasureValue(residual_history[it]));
+
+            bool is_oscillate = false;
+            bool is_stagnate = false;
+
+            detectOscillations(measure_history, it, is_oscillate, is_stagnate);
+            // TODO: maybe we should have more sophiscated strategy to recover the relaxation factor,
+            // for example, to recover it to be bigger
+
+            if (is_oscillate || is_stagnate) {
+                // a factor value to reduce the relaxation_factor
+                const double reduction_mutliplier = 0.9;
+                relaxation_factor = std::max(relaxation_factor * reduction_mutliplier, min_relaxation_factor);
+
+                // debug output
+                std::ostringstream sstr;
+                if (is_stagnate) {
+                    sstr << " well " << name() << " observes stagnation within " << it << "th inner iterations\n";
+                }
+                if (is_oscillate) {
+                    sstr << " well " << name() << " osbserves oscillation within " << it <<"th inner iterations\n";
+                }
+                sstr << " relaxation_factor is " << relaxation_factor << " now\n";
+                deferred_logger.debug(sstr.str());
+            }
+
+            updateWellState(dx_well, well_state, deferred_logger, relaxation_factor);
 
             initPrimaryVariablesEvaluation();
         }
-        // TODO: maybe we should not use these values if they are not converged.
+
+        // TODO: we should decide whether to keep the updated well_state, or recover to use the old well_state
+        if (it < max_iter_number) {
+            std::ostringstream sstr;
+            sstr << " well " << name() << " manage to get converged within " << it << " inner iterations";
+            deferred_logger.debug(sstr.str());
+        } else {
+            std::ostringstream sstr;
+            sstr << " well " << name() << " did not get converged within " << it << " inner iterations \n";
+            sstr << " outputting the residual history for well " << name() << " during inner iterations \n";
+            for (int i = 0; i < it; ++i) {
+                const auto& residual = residual_history[i];
+                sstr << " residual at " << i << "th iteration ";
+                for (const auto& res : residual) {
+                    sstr << " " << res;
+                }
+                sstr << " " << measure_history[i] << " \n";
+            }
+            deferred_logger.debug(sstr.str());
+        }
     }
 
 
@@ -2064,6 +2113,107 @@ namespace Opm
         const double volume = segmentSet()[seg_idx].volume();
 
         return volume / vol_ratio;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    std::vector<typename MultisegmentWell<TypeTag>::Scalar>
+    MultisegmentWell<TypeTag>::
+    getWellResiduals(const std::vector<Scalar>& B_avg) const
+    {
+        assert(int(B_avg.size() ) == num_components_);
+        std::vector<Scalar> residuals(numWellEq, 0.0);
+
+        // TODO: maybe we should distinguish the bhp control or rate control equations here
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+                double residual;
+                if (eq_idx < num_components_) {
+                    residual = std::abs(resWell_[seg][eq_idx]) * B_avg[eq_idx];
+                } else {
+                    residual = std::abs(resWell_[seg][eq_idx]);
+                }
+                if (std::isnan(residual) || std::isinf(residual)) {
+                    OPM_THROW(Opm::NumericalIssue, "nan or inf value for residal get for well " << name()
+                                                    << " segment " << seg << " eq_idx " << eq_idx);
+                }
+
+                if (residual > residuals[eq_idx]) {
+                    residuals[eq_idx] = residual;
+                }
+            }
+        }
+
+        return residuals;
+    }
+
+
+
+
+
+    /// Detect oscillation or stagnation based on the residual measure history
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    detectOscillations(const std::vector<double>& measure_history,
+                       const int it, bool& oscillate, bool& stagnate) const
+    {
+        if ( it < 2 ) {
+            oscillate = false;
+            stagnate = false;
+            return;
+        }
+
+        stagnate = true;
+        int oscillate_eqs = 0;
+        const double F0 = measure_history[it];
+        const double F1 = measure_history[it - 1];
+        const double F2 = measure_history[it - 2];
+        const double d1 = std::abs((F0 - F2) / F0);
+        const double d2 = std::abs((F0 - F1) / F0);
+
+        const double oscillaton_rel_tol = 0.2;
+        oscillate = (d1 < oscillaton_rel_tol) && (oscillaton_rel_tol < d2);
+
+        const double stagnation_rel_tol = 1.e-2;
+        stagnate = std::abs((F1 - F2) / F2) <= stagnation_rel_tol;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    double
+    MultisegmentWell<TypeTag>::
+    getResidualMeasureValue(const std::vector<double>& residuals) const
+    {
+        assert(int(residuals.size()) == numWellEq);
+
+        const double rate_tolerance = param_.tolerance_wells_;
+        int count = 0;
+        double sum = 0;
+        for (int eq_idx = 0; eq_idx < numWellEq - 1; ++eq_idx) {
+            if (residuals[eq_idx] > rate_tolerance) {
+                sum += residuals[eq_idx] / rate_tolerance;
+                ++count;
+            }
+        }
+
+        const double pressure_tolerance = param_.tolerance_pressure_ms_wells_;
+        if (residuals[SPres] > pressure_tolerance) {
+            sum += residuals[SPres] / pressure_tolerance;
+            ++count;
+        }
+
+        // if (count == 0), it should be converged.
+        assert(count != 0);
+
+        // return sum / double(count);
+        return sum;
     }
 
 }

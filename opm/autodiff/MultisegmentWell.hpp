@@ -271,9 +271,10 @@ namespace Opm
 
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
-                             const bool inner_iteration,
                              WellState& well_state,
-                             Opm::DeferredLogger& deferred_logger) const;
+			     Opm::DeferredLogger& deferred_logger,
+                             const double relaxation_factor=1.0) const;
+
 
         // initialize the segment rates with well rates
         // when there is no more accurate way to initialize the segment rates, we initialize
@@ -370,6 +371,13 @@ namespace Opm
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
 
         EvalWell getSegmentSurfaceVolume(const Simulator& ebos_simulator, const int seg_idx) const;
+
+        std::vector<Scalar> getWellResiduals(const std::vector<Scalar>& B_avg) const;
+
+        void detectOscillations(const std::vector<double>& measure_history,
+                                const int it, bool& oscillate, bool& stagnate) const;
+
+        double getResidualMeasureValue(const std::vector<double>& residuals) const;
 
     };
 
