@@ -1883,9 +1883,9 @@ namespace Opm
                 const EvalWell segment_surface_volume = getSegmentSurfaceVolume(ebosSimulator, seg);
                 // for each component
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                    const EvalWell accumulation_term = (segment_fluid_initial_[seg][comp_idx]
-                                                - segment_surface_volume * surfaceVolumeFraction(seg, comp_idx) ) / dt
-                                                + getSegmentRate(seg, comp_idx);
+                    const EvalWell accumulation_term = (segment_surface_volume * surfaceVolumeFraction(seg, comp_idx)
+                                                     - segment_fluid_initial_[seg][comp_idx]) / dt
+                                                     - getSegmentRate(seg, comp_idx);
 
                     resWell_[seg][comp_idx] += accumulation_term.value();
                     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -1899,9 +1899,9 @@ namespace Opm
                 for (const int inlet : segment_inlets_[seg]) {
                     for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                         const EvalWell inlet_rate = getSegmentRate(inlet, comp_idx);
-                        resWell_[seg][comp_idx] -= inlet_rate.value();
+                        resWell_[seg][comp_idx] += inlet_rate.value();
                         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                            duneD_[seg][inlet][comp_idx][pv_idx] -= inlet_rate.derivative(pv_idx + numEq);
+                            duneD_[seg][inlet][comp_idx][pv_idx] += inlet_rate.derivative(pv_idx + numEq);
                         }
                     }
                 }
@@ -1932,7 +1932,7 @@ namespace Opm
                     connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
 
                     // subtract sum of phase fluxes in the well equations.
-                    resWell_[seg][comp_idx] -= cq_s_effective.value();
+                    resWell_[seg][comp_idx] += cq_s_effective.value();
 
                     // assemble the jacobians
                     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -1941,7 +1941,7 @@ namespace Opm
                         duneC_[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + numEq); // intput in transformed matrix
 
                         // the index name for the D should be eq_idx / pv_idx
-                        duneD_[seg][seg][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx + numEq);
+                        duneD_[seg][seg][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx + numEq);
                     }
 
                     for (int pv_idx = 0; pv_idx < numEq; ++pv_idx) {
