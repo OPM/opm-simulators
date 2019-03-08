@@ -27,6 +27,7 @@
 #ifndef OPM_BLACK_OIL_FLUID_SYSTEM_HPP
 #define OPM_BLACK_OIL_FLUID_SYSTEM_HPP
 
+#include "BlackOilDefaultIndexTraits.hpp"
 #include "blackoilpvt/OilPvtMultiplexer.hpp"
 #include "blackoilpvt/GasPvtMultiplexer.hpp"
 #include "blackoilpvt/WaterPvtMultiplexer.hpp"
@@ -53,8 +54,7 @@ LhsEval getRs_(typename std::enable_if<!HasMember_Rs<FluidState>::value, const F
                unsigned regionIdx)
 {
     const auto& XoG =
-        Opm::decay<LhsEval>(fluidState.massFraction(FluidSystem::oilPhaseIdx,
-                                                                   FluidSystem::gasCompIdx));
+        Opm::decay<LhsEval>(fluidState.massFraction(FluidSystem::oilPhaseIdx, FluidSystem::gasCompIdx));
     return FluidSystem::convertXoGToRs(XoG, regionIdx);
 }
 
@@ -69,8 +69,7 @@ LhsEval getRv_(typename std::enable_if<!HasMember_Rv<FluidState>::value, const F
                unsigned regionIdx)
 {
     const auto& XgO =
-        Opm::decay<LhsEval>(fluidState.massFraction(FluidSystem::gasPhaseIdx,
-                                                                   FluidSystem::oilCompIdx));
+        Opm::decay<LhsEval>(fluidState.massFraction(FluidSystem::gasPhaseIdx, FluidSystem::oilCompIdx));
     return FluidSystem::convertXgOToRv(XgO, regionIdx);
 }
 
@@ -88,8 +87,8 @@ auto getRv_(typename std::enable_if<HasMember_Rv<FluidState>::value, const Fluid
  *
  * \tparam Scalar The type used for scalar floating point values
  */
-template <class Scalar>
-class BlackOilFluidSystem : public BaseFluidSystem<Scalar, BlackOilFluidSystem<Scalar> >
+template <class Scalar, class IndexTraits = Opm::BlackOilDefaultIndexTraits>
+class BlackOilFluidSystem : public BaseFluidSystem<Scalar, BlackOilFluidSystem<Scalar, IndexTraits> >
 {
     typedef BlackOilFluidSystem ThisType;
 
@@ -366,11 +365,11 @@ public:
     static const unsigned numPhases = 3;
 
     //! Index of the water phase
-    static const unsigned waterPhaseIdx = 0;
+    static const unsigned waterPhaseIdx = IndexTraits::waterPhaseIdx;
     //! Index of the oil phase
-    static const unsigned oilPhaseIdx = 1;
+    static const unsigned oilPhaseIdx = IndexTraits::oilPhaseIdx;
     //! Index of the gas phase
-    static const unsigned gasPhaseIdx = 2;
+    static const unsigned gasPhaseIdx = IndexTraits::gasPhaseIdx;
 
     //! The pressure at the surface
     static Scalar surfacePressure;
@@ -381,10 +380,17 @@ public:
     //! \copydoc BaseFluidSystem::phaseName
     static const char* phaseName(unsigned phaseIdx)
     {
-        static const char* name[] = { "water", "oil", "gas" };
+        switch (phaseIdx) {
+        case waterPhaseIdx:
+            return "water";
+        case oilPhaseIdx:
+            return "oil";
+        case gasPhaseIdx:
+            return "gas";
 
-        assert(0 <= phaseIdx && phaseIdx < numPhases + 1);
-        return name[phaseIdx];
+        default:
+            throw std::logic_error("Phase index " + std::to_string(phaseIdx) + " is unknown");
+        }
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
@@ -402,16 +408,13 @@ public:
     static const unsigned numComponents = 3;
 
     //! Index of the oil component
-    static const unsigned oilCompIdx = 0;
+    static const unsigned oilCompIdx = IndexTraits::oilCompIdx;
     //! Index of the water component
-    static const unsigned waterCompIdx = 1;
+    static const unsigned waterCompIdx = IndexTraits::waterCompIdx;
     //! Index of the gas component
-    static const unsigned gasCompIdx = 2;
+    static const unsigned gasCompIdx = IndexTraits::gasCompIdx;
 
 protected:
-    static const int phaseToSolventCompIdx_[3];
-    static const int phaseToSoluteCompIdx_[3];
-
     static unsigned char numActivePhases_;
     static bool phaseIsActive_[numPhases];
 
@@ -429,19 +432,50 @@ public:
 
     //! \brief returns the index of "primary" component of a phase (solvent)
     static constexpr unsigned solventComponentIndex(unsigned phaseIdx)
-    { return static_cast<unsigned>(phaseToSolventCompIdx_[phaseIdx]); }
+    {
+        switch (phaseIdx) {
+        case waterPhaseIdx:
+            return waterCompIdx;
+        case oilPhaseIdx:
+            return oilCompIdx;
+        case gasPhaseIdx:
+            return gasCompIdx;
+
+        default:
+            throw std::logic_error("Phase index " + std::to_string(phaseIdx) + " is unknown");
+        }
+    }
 
     //! \brief returns the index of "secondary" component of a phase (solute)
     static constexpr unsigned soluteComponentIndex(unsigned phaseIdx)
-    { return static_cast<unsigned>(phaseToSoluteCompIdx_[phaseIdx]); }
+    {
+        switch (phaseIdx) {
+        case waterPhaseIdx:
+            throw std::logic_error("The water phase does not have any solutes in the black oil model!");
+        case oilPhaseIdx:
+            return gasCompIdx;
+        case gasPhaseIdx:
+            return oilCompIdx;
+
+        default:
+            throw std::logic_error("Phase index " + std::to_string(phaseIdx) + " is unknown");
+        }
+    }
 
     //! \copydoc BaseFluidSystem::componentName
     static const char* componentName(unsigned compIdx)
     {
-        static const char* name[] = { "Oil", "Water", "Gas" };
+        switch (compIdx) {
+        case waterCompIdx:
+            return "Water";
+        case oilCompIdx:
+            return "Oil";
+        case gasCompIdx:
+            return "Gas";
 
-        assert(0 <= compIdx && compIdx < numComponents);
-        return name[compIdx];
+        default:
+            throw std::logic_error("Component index " + std::to_string(compIdx) + " is unknown");
+        }
     }
 
     //! \copydoc BaseFluidSystem::molarMass
@@ -1290,75 +1324,58 @@ private:
     static bool isInitialized_;
 };
 
-template <class Scalar>
-const int BlackOilFluidSystem<Scalar>::phaseToSolventCompIdx_[3] =
-{
-    waterCompIdx, // water phase
-    oilCompIdx, // oil phase
-    gasCompIdx // gas phase
-};
+template <class Scalar, class IndexTraits>
+unsigned char BlackOilFluidSystem<Scalar, IndexTraits>::numActivePhases_;
 
+template <class Scalar, class IndexTraits>
+bool BlackOilFluidSystem<Scalar, IndexTraits>::phaseIsActive_[numPhases];
 
-template <class Scalar>
-const int BlackOilFluidSystem<Scalar>::phaseToSoluteCompIdx_[3] =
-{
-    -1, // water phase
-    gasCompIdx, // oil phase
-    oilCompIdx // gas phase
-};
+template <class Scalar, class IndexTraits>
+short BlackOilFluidSystem<Scalar, IndexTraits>::activeToCanonicalPhaseIdx_[numPhases];
 
-template <class Scalar>
-unsigned char BlackOilFluidSystem<Scalar>::numActivePhases_;
+template <class Scalar, class IndexTraits>
+short BlackOilFluidSystem<Scalar, IndexTraits>::canonicalToActivePhaseIdx_[numPhases];
 
-template <class Scalar>
-bool BlackOilFluidSystem<Scalar>::phaseIsActive_[numPhases];
-
-template <class Scalar>
-short BlackOilFluidSystem<Scalar>::activeToCanonicalPhaseIdx_[numPhases];
-
-template <class Scalar>
-short BlackOilFluidSystem<Scalar>::canonicalToActivePhaseIdx_[numPhases];
-
-template <class Scalar>
+template <class Scalar, class IndexTraits>
 Scalar
-BlackOilFluidSystem<Scalar>::surfaceTemperature; // [K]
+BlackOilFluidSystem<Scalar, IndexTraits>::surfaceTemperature; // [K]
 
-template <class Scalar>
+template <class Scalar, class IndexTraits>
 Scalar
-BlackOilFluidSystem<Scalar>::surfacePressure; // [Pa]
+BlackOilFluidSystem<Scalar, IndexTraits>::surfacePressure; // [Pa]
 
-template <class Scalar>
+template <class Scalar, class IndexTraits>
 Scalar
-BlackOilFluidSystem<Scalar>::reservoirTemperature_;
+BlackOilFluidSystem<Scalar, IndexTraits>::reservoirTemperature_;
 
-template <class Scalar>
-bool BlackOilFluidSystem<Scalar>::enableDissolvedGas_;
+template <class Scalar, class IndexTraits>
+bool BlackOilFluidSystem<Scalar, IndexTraits>::enableDissolvedGas_;
 
-template <class Scalar>
-bool BlackOilFluidSystem<Scalar>::enableVaporizedOil_;
+template <class Scalar, class IndexTraits>
+bool BlackOilFluidSystem<Scalar, IndexTraits>::enableVaporizedOil_;
 
-template <class Scalar>
+template <class Scalar, class IndexTraits>
 std::shared_ptr<OilPvtMultiplexer<Scalar> >
-BlackOilFluidSystem<Scalar>::oilPvt_;
+BlackOilFluidSystem<Scalar, IndexTraits>::oilPvt_;
 
-template <class Scalar>
+template <class Scalar, class IndexTraits>
 std::shared_ptr<Opm::GasPvtMultiplexer<Scalar> >
-BlackOilFluidSystem<Scalar>::gasPvt_;
+BlackOilFluidSystem<Scalar, IndexTraits>::gasPvt_;
 
-template <class Scalar>
+template <class Scalar, class IndexTraits>
 std::shared_ptr<WaterPvtMultiplexer<Scalar> >
-BlackOilFluidSystem<Scalar>::waterPvt_;
+BlackOilFluidSystem<Scalar, IndexTraits>::waterPvt_;
 
-template <class Scalar>
+template <class Scalar, class IndexTraits>
 std::vector<std::array<Scalar, 3> >
-BlackOilFluidSystem<Scalar>::referenceDensity_;
+BlackOilFluidSystem<Scalar, IndexTraits>::referenceDensity_;
 
-template <class Scalar>
+template <class Scalar, class IndexTraits>
 std::vector<std::array<Scalar, 3> >
-BlackOilFluidSystem<Scalar>::molarMass_;
+BlackOilFluidSystem<Scalar, IndexTraits>::molarMass_;
 
-template <class Scalar>
-bool BlackOilFluidSystem<Scalar>::isInitialized_ = false;
+template <class Scalar, class IndexTraits>
+bool BlackOilFluidSystem<Scalar, IndexTraits>::isInitialized_ = false;
 
 } // namespace Opm
 
