@@ -26,7 +26,7 @@
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
 
 namespace Opm

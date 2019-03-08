@@ -20,7 +20,7 @@
 #include "config.h"
 #include <opm/core/wells/WellCollection.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
 
 #include <boost/lexical_cast.hpp>

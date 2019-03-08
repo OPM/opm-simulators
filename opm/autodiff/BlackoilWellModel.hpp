@@ -34,7 +34,7 @@
 #include <tuple>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/WellTestState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellCollection.hpp>
