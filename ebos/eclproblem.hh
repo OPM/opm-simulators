@@ -619,7 +619,7 @@ public:
             initialTimeStepSize_ = tuning.getTSINIT(0);
             maxTimeStepAfterWellEvent_ = tuning.getTMAXWC(0);
             maxTimeStepSize_ = tuning.getTSMAXZ(0);
-            restartShrinkFactor_ = tuning.getTSFCNV(0);
+            restartShrinkFactor_ = 1./tuning.getTSFCNV(0);
             minTimeStepSize_ = tuning.getTSMINZ(0);
         }
 
@@ -764,19 +764,6 @@ public:
             updatePffDofData_();
         }
 
-        // react to TUNING changes
-        if (nextEpisodeIdx > 0
-            && enableTuning_
-            && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, nextEpisodeIdx))
-        {
-            const auto& tuning = schedule.getTuning();
-            initialTimeStepSize_ = tuning.getTSINIT(nextEpisodeIdx);
-            maxTimeStepAfterWellEvent_ = tuning.getTMAXWC(nextEpisodeIdx);
-            maxTimeStepSize_ = tuning.getTSMAXZ(nextEpisodeIdx);
-            restartShrinkFactor_ = tuning.getTSFCNV(nextEpisodeIdx);
-            minTimeStepSize_ = tuning.getTSMINZ(nextEpisodeIdx);
-        }
-
         // Opm::TimeMap deals with points in time, so the number of time intervals (i.e.,
         // report steps) is one less!
         int numReportSteps = timeMap.size() - 1;
@@ -789,12 +776,28 @@ public:
             ++ nextEpisodeIdx;
         }
 
+        // react to TUNING changes
+        bool tuningEvent = false;
+        if (nextEpisodeIdx > 0
+            && enableTuning_
+            && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, nextEpisodeIdx))
+        {
+            const auto& tuning = schedule.getTuning();
+            initialTimeStepSize_ = tuning.getTSINIT(nextEpisodeIdx);
+            maxTimeStepAfterWellEvent_ = tuning.getTMAXWC(nextEpisodeIdx);
+            maxTimeStepSize_ = tuning.getTSMAXZ(nextEpisodeIdx);
+            restartShrinkFactor_ = 1./tuning.getTSFCNV(nextEpisodeIdx);
+            minTimeStepSize_ = tuning.getTSMINZ(nextEpisodeIdx);
+            tuningEvent = true;
+        }
+
         Scalar episodeLength = timeMap.getTimeStepLength(nextEpisodeIdx);
         simulator.startNextEpisode(episodeLength);
 
         Scalar dt = limitNextTimeStepSize_(episodeLength);
-        if (nextEpisodeIdx == 0)
+        if (nextEpisodeIdx == 0 || tuningEvent)
             // allow the size of the initial time step to be set via an external parameter
+            // if TUNING is enabled, also limit the time step size after a tuning event to TSINIT
             dt = std::min(dt, initialTimeStepSize_);
 
         simulator.setTimeStepSize(dt);
@@ -2607,12 +2610,6 @@ private:
         // first thing in the morning, limit the time step size to the maximum size
         dtNext = std::min(dtNext, maxTimeStepSize_);
 
-        // if TUNING is enabled, limit the time step size after a tuning event to TSINIT
-        if (enableTuning_ && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, episodeIdx)) {
-            const auto& tuning = this->simulator().vanguard().schedule().getTuning();
-            return std::min(dtNext, tuning.getTSINIT(episodeIdx));
-        }
-
         // use at least slightly more than half of the maximum time step size by default
         if (dtNext < maxTimeStepSize_ && maxTimeStepSize_ < dtNext*2)
             dtNext = 1.01 * maxTimeStepSize_/2.0;
@@ -2641,7 +2638,7 @@ private:
             || events.hasEvent(Opm::ScheduleEvents::PRODUCTION_UPDATE, reportStepIdx)
             || events.hasEvent(Opm::ScheduleEvents::INJECTION_UPDATE, reportStepIdx)
             || events.hasEvent(Opm::ScheduleEvents::WELL_STATUS_CHANGE, reportStepIdx);
-        if (episodeIdx >= 0 && wellEventOccured)
+        if (episodeIdx >= 0 && wellEventOccured && maxTimeStepAfterWellEvent_ > 0)
             dtNext = std::min(dtNext, maxTimeStepAfterWellEvent_);
 
         return dtNext;
