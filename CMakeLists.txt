@@ -24,6 +24,7 @@ set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
 option(BUILD_EBOS "Build the research oriented ebos simulator?" ON)
 option(BUILD_EBOS_EXTENSIONS "Build the variants for various extensions of ebos by default?" OFF)
+option(BUILD_EBOS_DEBUG_EXTENSIONS "Build the ebos variants which are purely for debugging by default?" OFF)
 
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
@@ -231,6 +232,20 @@ opm_add_test(ebos_thermal
   DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
   SOURCES ebos/ebos_thermal.cc
   EXE_NAME ebos_thermal
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
+
+if (NOT BUILD_EBOS_DEBUG_EXTENSIONS)
+  set(EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF "FALSE")
+else()
+  set(EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF "TRUE")
+endif()
+
+opm_add_test(ebos_altidx
+  ONLY_COMPILE
+  DEFAULT_ENABLE_IF ${EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF}
+  SOURCES ebos/ebos_altidx.cc
+  EXE_NAME ebos_altidx
   DEPENDS "opmsimulators"
   LIBRARIES "opmsimulators")
 
