@@ -334,6 +334,13 @@ public:
             }
         }
 
+        // ROCKC
+        if (rstKeywords["ROCKC"] > 0) {
+            rstKeywords["ROCKC"] = 0;
+            porvMultiplier_.resize(bufferSize, 0.0);
+            swMax_.resize(bufferSize, 0.0);
+        }
+
         //Warn for any unhandled keyword
         if (log) {
             for (auto& keyValue: rstKeywords) {
@@ -495,6 +502,12 @@ public:
 
             if (soMax_.size() > 0)
                 soMax_[globalDofIdx] = elemCtx.simulator().problem().maxOilSaturation(globalDofIdx);
+
+            if (swMax_.size() > 0)
+                swMax_[globalDofIdx] = elemCtx.simulator().problem().maxWaterSaturation(globalDofIdx);
+
+            if (porvMultiplier_.size() > 0)
+                porvMultiplier_[globalDofIdx] = elemCtx.simulator().problem().getPoreVolumeMultiplier(Opm::getValue(fs.pressure(oilPhaseIdx)), elemCtx, dofIdx, /*timeIdx=*/ 0 );
 
             const auto& matLawManager = elemCtx.simulator().problem().materialLawManager();
             if (matLawManager->enableHysteresis()) {
@@ -829,6 +842,14 @@ public:
 
         if (bubblePointPressure_.size() > 0)
             sol.insert ("PBUB", Opm::UnitSystem::measure::pressure, std::move(bubblePointPressure_), Opm::data::TargetType::RESTART_AUXILIARY);
+
+
+        if (swMax_.size() > 0)
+            sol.insert ("SWMAX", Opm::UnitSystem::measure::identity, std::move(swMax_), Opm::data::TargetType::RESTART_SOLUTION);
+
+        if (porvMultiplier_.size() > 0)
+            sol.insert ("PORV_MOD", Opm::UnitSystem::measure::identity, std::move(porvMultiplier_), Opm::data::TargetType::RESTART_SOLUTION);
+
 
         // Fluid in place
         for (int i = 0; i<FipDataType::numFipValues; i++) {
@@ -1397,6 +1418,9 @@ private:
     ScalarBuffer ppcw_;
     ScalarBuffer bubblePointPressure_;
     ScalarBuffer dewPointPressure_;
+    ScalarBuffer porvMultiplier_;
+    ScalarBuffer swMax_;
+
     std::vector<int> failedCellsPb_;
     std::vector<int> failedCellsPd_;
     std::vector<int> fipnum_;

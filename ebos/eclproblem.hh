@@ -79,12 +79,17 @@
 #include <opm/material/fluidsystems/blackoilpvt/DeadOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
+#include <opm/material/common/IntervalTabulated2DFunction.hpp>
+
+
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/RockwnodTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/OverburdTable.hpp>
 #include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
 
@@ -821,6 +826,9 @@ public:
         if (GET_PROP_VALUE(TypeTag, EnablePolymer))
             updateMaxPolymerAdsorption_();
 
+        updateMaxWaterSaturation_();
+        updateMinumumPressure_();
+
         // set up the wells for the next episode.
         //
         // TODO: the first two arguments seem to be unnecessary
@@ -1013,7 +1021,14 @@ public:
                             unsigned toDofLocalIdx) const
     {
         assert(fromDofLocalIdx == 0);
-        return pffDofData_.get(context.element(), toDofLocalIdx).transmissibility;
+        if( transmissibilityMultiplier_.size() == 0)
+            return pffDofData_.get(context.element(), toDofLocalIdx).transmissibility;
+
+        const auto& intQuants = context.intensiveQuantities(toDofLocalIdx, /*timeIdx=*/0);
+        const auto& pressure = intQuants.fluidState().pressure(oilPhaseIdx);
+#warning Do we need to care about the derivatives.
+        return pffDofData_.get(context.element(), toDofLocalIdx).transmissibility *
+                getTransmissibiltyMultiplier(Opm::scalarValue(pressure), context, toDofLocalIdx, /*timeIdx=*/0);
     }
 
     /*!
@@ -1593,6 +1608,22 @@ public:
         maxOilSaturation_[globalDofIdx] = value;
     }
 
+
+    /*!
+     * \brief Returns an element's maximum water phase saturation observed during the
+     *        simulation.
+     *
+     * This is a bit of a hack from the conceptional point of view, but it is required to
+     * match the results of the 'flow' and ECLIPSE 100 simulators.
+     */
+    Scalar maxWaterSaturation(unsigned globalDofIdx) const
+    {
+        if (maxWaterSaturation_.size() == 0)
+            return 0.0;
+
+        return maxWaterSaturation_[globalDofIdx];
+    }
+
     /*!
      * \brief Returns a reference to the ECL well manager used by the problem.
      *
@@ -1684,6 +1715,62 @@ public:
         throw std::runtime_error("Newton solver didn't converge after "
                                  +std::to_string(maxFails_)+" time-step divisions. dt="
                                  +std::to_string(double(simulator.timeStepSize())));
+    }
+
+    template <class LhsEval, class Context>
+    LhsEval getPoreVolumeMultiplier(const LhsEval& pressure, const Context& context, unsigned spaceIdx, unsigned timeIdx) const {
+
+        if (poreVolumeMultiplier_.size() == 0)
+            return 1.0;
+
+        unsigned tableIdx = 0;
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+
+        if (!rockTableIdx_.empty()) {
+            tableIdx = rockTableIdx_[globalSpaceIdx];
+        }
+        LhsEval waterSaturationIncrease = maxWaterSaturation_[globalSpaceIdx] - initialFluidStates_[globalSpaceIdx].saturation(waterPhaseIdx);
+
+      //  if (globalSpaceIdx == 0)
+    //         std::cout << maxWaterSaturation_[globalSpaceIdx] << " " << poreVolumeMultiplier_[tableIdx].eval(pressure, waterSaturationIncrease, /*extrapolation=*/false) <<std::endl;
+
+        LhsEval effectivePressure = pressure;
+
+        if (minimumPressure_.size() > 0) // The pore space change is irreversible
+            effectivePressure = minimumPressure_[globalSpaceIdx];
+
+        if (overburdenPressure_.size() > 0 )
+            effectivePressure -= overburdenPressure_[globalSpaceIdx];
+
+        return poreVolumeMultiplier_[tableIdx].eval(effectivePressure, waterSaturationIncrease, /*extrapolation=*/true);
+    }
+
+    template <class LhsEval, class Context>
+    LhsEval getTransmissibiltyMultiplier(const LhsEval& pressure, const Context& context, unsigned spaceIdx, unsigned timeIdx) const {
+
+        if (transmissibilityMultiplier_.size() == 0)
+            return 1.0;
+
+        unsigned tableIdx = 0;
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+
+        if (!rockTableIdx_.empty()) {
+            tableIdx = rockTableIdx_[globalSpaceIdx];
+        }
+        LhsEval waterSaturationIncrease = maxWaterSaturation_[globalSpaceIdx] - initialFluidStates_[globalSpaceIdx].saturation(waterPhaseIdx);
+
+        //if (globalSpaceIdx == 0)
+        //    std::cout << maxWaterSaturation_[globalSpaceIdx] << " " << poreVolumeMultiplier_[tableIdx].eval(pressure, waterSaturationIncrease, /*extrapolation=*/false) <<std::endl;
+
+        LhsEval effectivePressure = pressure;
+
+        if (minimumPressure_.size() > 0) // The pore space change is irreversible
+            effectivePressure = minimumPressure_[globalSpaceIdx];
+
+        if (overburdenPressure_.size() > 0 )
+            effectivePressure -= overburdenPressure_[globalSpaceIdx];
+
+        return transmissibilityMultiplier_[tableIdx].eval(effectivePressure, waterSaturationIncrease, /*extrapolation=*/true);
     }
 
 
@@ -1885,6 +1972,56 @@ private:
         return false;
     }
 
+    void updateMaxWaterSaturation_()
+    {
+        // water compaction is activated in ROCKCOMP
+        if (maxWaterSaturation_.size()== 0)
+            return;
+
+        ElementContext elemCtx(this->simulator());
+        const auto& vanguard = this->simulator().vanguard();
+        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = iq.fluidState();
+
+            Scalar Sw = Opm::decay<Scalar>(fs.saturation(waterPhaseIdx));
+            maxWaterSaturation_[compressedDofIdx] = std::max(maxWaterSaturation_[compressedDofIdx], Sw);
+        }
+    }
+
+    void updateMinumumPressure_()
+    {
+        // IRREVERS option is used in ROCKCOMP
+        if (minimumPressure_.size() == 0)
+            return;
+
+        ElementContext elemCtx(this->simulator());
+        const auto& vanguard = this->simulator().vanguard();
+        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = iq.fluidState();
+
+            Scalar Po = Opm::decay<Scalar>(fs.pressure(oilPhaseIdx));
+            minimumPressure_[compressedDofIdx] = std::min(minimumPressure_[compressedDofIdx], Po);
+        }
+    }
+
     void readRockParameters_()
     {
         const auto& deck = this->simulator().vanguard().deck();
@@ -1893,17 +2030,98 @@ private:
 
         // the ROCK keyword has not been specified, so we don't need
         // to read rock parameters
-        if (!deck.hasKeyword("ROCK"))
-            return;
+        if (deck.hasKeyword("ROCK")) {
 
-        const auto& rockKeyword = deck.getKeyword("ROCK");
-        rockParams_.resize(rockKeyword.size());
-        for (size_t rockRecordIdx = 0; rockRecordIdx < rockKeyword.size(); ++ rockRecordIdx) {
-            const auto& rockRecord = rockKeyword.getRecord(rockRecordIdx);
-            rockParams_[rockRecordIdx].referencePressure =
-                rockRecord.getItem("PREF").getSIDouble(0);
-            rockParams_[rockRecordIdx].compressibility =
-                rockRecord.getItem("COMPRESSIBILITY").getSIDouble(0);
+            const auto& rockKeyword = deck.getKeyword("ROCK");
+            rockParams_.resize(rockKeyword.size());
+            for (size_t rockRecordIdx = 0; rockRecordIdx < rockKeyword.size(); ++ rockRecordIdx) {
+                const auto& rockRecord = rockKeyword.getRecord(rockRecordIdx);
+                rockParams_[rockRecordIdx].referencePressure =
+                        rockRecord.getItem("PREF").getSIDouble(0);
+                rockParams_[rockRecordIdx].compressibility =
+                        rockRecord.getItem("COMPRESSIBILITY").getSIDouble(0);
+            }
+        } else if (deck.hasKeyword("ROCKCOMP")) {
+
+            const auto& rockcomp = deck.getKeyword("ROCKCOMP");
+            //for (size_t rockRecordIdx = 0; rockRecordIdx < rockcomp.size(); ++ rockRecordIdx) {
+            assert(rockcomp.size() == 1);
+            const auto& rockcompRecord = rockcomp.getRecord(0);
+            const auto& option = rockcompRecord.getItem("HYSTERESIS").getTrimmedString(0);
+            if (option == "REVERS") {
+                // interpolate the porv volume multiplier using the pressure in the cell
+            } else if (option == "IRREVERS") {
+                // interpolate the porv volume multiplier using the minimum pressure in the cell
+                // i.e. don't allow re-inflation.
+                unsigned numElem = vanguard.gridView().size(0);
+                minimumPressure_.resize(numElem, 1e99);
+            } else if (option == "NO") {
+                return;
+            } else {
+                throw std::runtime_error("ROCKCOMP option " + option + " not supported for item 1");
+            }
+
+            size_t numRocktabTables = rockcompRecord.getItem("NTROCC").template get< int >(0);
+
+            //size_t numRocktabTables = 1;
+            const auto& waterCompationItem = rockcompRecord.getItem("WATER_COMPACTION").getTrimmedString(0);
+            bool waterCompaction = false;
+            if (waterCompationItem == "YES") {
+                waterCompaction = true;
+                unsigned numElem = vanguard.gridView().size(0);
+                maxWaterSaturation_.resize(numElem, 0.0);
+            } else {
+                throw std::runtime_error("ROCKCOMP option " + waterCompationItem + " not supported for item 3. Only YES is supported");
+            }
+
+            if (waterCompaction) {
+                const auto& rock2dTables = eclState.getTableManager().getRock2dTables();
+                const auto& rock2dtrTables = eclState.getTableManager().getRock2dtrTables();
+                const auto& rockwnodTables = eclState.getTableManager().getRockwnodTables();
+
+                if (rock2dTables.size() != numRocktabTables)
+                    throw std::runtime_error("Water compation option is selected in ROCKCOMP." + std::to_string(numRocktabTables)
+                                             +" ROCK2D tables is expected, but " + std::to_string(rock2dTables.size()) +" is provided");
+
+                if (rockwnodTables.size() != numRocktabTables)
+                    throw std::runtime_error("Water compation option is selected in ROCKCOMP." + std::to_string(numRocktabTables)
+                                             +" ROCKWNOD tables is expected, but " + std::to_string(rockwnodTables.size()) +" is provided");
+                //TODO check size match
+                poreVolumeMultiplier_.resize(numRocktabTables);
+                for ( size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
+                    const Opm::RockwnodTable& rockwnodTable =  rockwnodTables.template getTable<Opm::RockwnodTable>(regionIdx);
+                    const auto& rock2dTable = rock2dTables[regionIdx];
+
+                    if (rockwnodTable.getSaturationColumn().size() != rock2dTable.sizeMultValues())
+                        throw std::runtime_error("Number of entries in ROCKWNOD and ROCK2D needs to match.");
+
+                    for ( size_t xIdx = 0; xIdx < rock2dTable.size(); ++xIdx) {
+                        poreVolumeMultiplier_[regionIdx].appendXPos(rock2dTable.getPressureValue(xIdx));
+                        for ( size_t yIdx = 0; yIdx < rockwnodTable.getSaturationColumn().size(); ++yIdx) {
+                            poreVolumeMultiplier_[regionIdx].appendSamplePoint(xIdx, rockwnodTable.getSaturationColumn()[yIdx],rock2dTable.getPvmultValue(xIdx, yIdx));
+                        }
+                    }
+                }
+                if (rock2dtrTables.size() > 0 ) {
+                    transmissibilityMultiplier_.resize(numRocktabTables);
+                    for ( size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
+                        const Opm::RockwnodTable& rockwnodTable =  rockwnodTables.template getTable<Opm::RockwnodTable>(regionIdx);
+                        const auto& rock2dtrTable = rock2dtrTables[regionIdx];
+
+                        if (rockwnodTable.getSaturationColumn().size() != rock2dtrTable.sizeMultValues())
+                            throw std::runtime_error("Number of entries in ROCKWNOD and ROCK2DTR needs to match.");
+
+                        for ( size_t xIdx = 0; xIdx < rock2dtrTable.size(); ++xIdx) {
+                            transmissibilityMultiplier_[regionIdx].appendXPos(rock2dtrTable.getPressureValue(xIdx));
+                            for ( size_t yIdx = 0; yIdx < rockwnodTable.getSaturationColumn().size(); ++yIdx) {
+                                transmissibilityMultiplier_[regionIdx].appendSamplePoint(xIdx, rockwnodTable.getSaturationColumn()[yIdx],rock2dtrTable.getTransMultValue(xIdx, yIdx));
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            return;
         }
 
         // check the kind of region which is supposed to be used by checking the ROCKOPTS
@@ -1928,19 +2146,47 @@ private:
 
         // the deck does not specify the selected keyword, so everything uses the first
         // record of ROCK.
-        if (!eclState.get3DProperties().hasDeckIntGridProperty(propName))
-            return;
+        if (eclState.get3DProperties().hasDeckIntGridProperty(propName)) {
+            const std::vector<int>& tablenumData =
+                    eclState.get3DProperties().getIntGridProperty(propName).getData();
+            unsigned numElem = vanguard.gridView().size(0);
+            rockTableIdx_.resize(numElem);
+            for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
+                unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
 
-        const std::vector<int>& tablenumData =
-            eclState.get3DProperties().getIntGridProperty(propName).getData();
-        unsigned numElem = vanguard.gridView().size(0);
-        rockTableIdx_.resize(numElem);
-        for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
-            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
-
-            // reminder: Eclipse uses FORTRAN-style indices
-            rockTableIdx_[elemIdx] = tablenumData[cartElemIdx] - 1;
+                // reminder: Eclipse uses FORTRAN-style indices
+                rockTableIdx_[elemIdx] = tablenumData[cartElemIdx] - 1;
+            }
         }
+
+        // Store overburden pressure pr element
+        const auto& overburdTables = eclState.getTableManager().getOverburdTables();
+        if (overburdTables.size() > 0 ) {
+            unsigned numElem = vanguard.gridView().size(0);
+            overburdenPressure_.resize(numElem,0.0);
+
+            const auto& rockcomp = deck.getKeyword("ROCKCOMP");
+            const auto& rockcompRecord = rockcomp.getRecord(0);
+            size_t numRocktabTables = rockcompRecord.getItem("NTROCC").template get< int >(0);
+
+            if (overburdTables.size() != numRocktabTables)
+                throw std::runtime_error(std::to_string(numRocktabTables) +" OVERBURD tables is expected, but " + std::to_string(overburdTables.size()) +" is provided");
+
+            std::vector<Opm::Tabulated1DFunction<Scalar>> overburdenTables(numRocktabTables);
+            for (size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
+                const Opm::OverburdTable& overburdTable =  overburdTables.template getTable<Opm::OverburdTable>(regionIdx);
+                overburdenTables[regionIdx].setXYContainers(overburdTable.getDepthColumn(),overburdTable.getOverburdenPressureColumn());
+            }
+
+            for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
+                unsigned tableIdx = 0;
+                if (!rockTableIdx_.empty()) {
+                    tableIdx = rockTableIdx_[elemIdx];
+                }
+                overburdenPressure_[elemIdx] = overburdenTables[tableIdx].eval(elementCenterDepth_[elemIdx], /*extrapolation=*/true);
+            }
+        }
+
     }
 
     void readMaterialParameters_()
@@ -2069,6 +2315,19 @@ private:
             readEquilInitialCondition_();
 
         readBlackoilExtentionsInitialConditions_();
+
+        //initialize min/max values
+        size_t numElems = this->model().numGridDof();
+        for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            const auto& fs = initialFluidStates_[elemIdx];
+            if(maxWaterSaturation_.size() > 0)
+                maxWaterSaturation_[elemIdx] = std::max(maxWaterSaturation_[elemIdx], fs.saturation(waterPhaseIdx));
+            if(maxOilSaturation_.size() > 0)
+                maxOilSaturation_[elemIdx] = std::max(maxOilSaturation_[elemIdx], fs.saturation(oilPhaseIdx));
+            if(minimumPressure_.size() > 0)
+                minimumPressure_[elemIdx] = std::min(minimumPressure_[elemIdx], fs.pressure(oilPhaseIdx));
+        }
+
 
     }
 
@@ -2762,6 +3021,14 @@ private:
     std::vector<Scalar> maxDRv_;
     constexpr static Scalar freeGasMinSaturation_ = 1e-7;
     std::vector<Scalar> maxOilSaturation_;
+    std::vector<Scalar> maxWaterSaturation_;
+    std::vector<Scalar> overburdenPressure_;
+    std::vector<Scalar> minimumPressure_;
+
+
+    std::vector<Opm::UniformXTabulated2DFunction<Scalar>> poreVolumeMultiplier_;
+    std::vector<Opm::UniformXTabulated2DFunction<Scalar>> transmissibilityMultiplier_;
+
 
     bool enableDriftCompensation_;
     GlobalEqVector drift_;
