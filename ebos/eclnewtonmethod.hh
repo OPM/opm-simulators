@@ -160,7 +160,7 @@ public:
 
             const auto& r = currentResidual[dofIdx];
             Scalar pvValue =
-                this->simulator_.problem().porosity(dofIdx)
+                this->simulator_.problem().referencePorosity(dofIdx, /*timeIdx=*/0)
                 * this->model().dofTotalVolume(dofIdx);
             sumPv += pvValue;
             bool cnvViolated = false;
