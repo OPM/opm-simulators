@@ -183,18 +183,22 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
     return EllipticPreconditionerPointer(new ParallelPreconditioner(Ae, comm, relax, milu));
 }
 
-template < class C, class Op, class P, class S, std::size_t index >
+template < class C, class Op, class P, class S, std::size_t index,class Vector>
 inline void
 createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
                                std::unique_ptr< BlackoilAmg<Op,S,C,P,index> >& amgPtr,
-                               const CPRParameter& params)
+                               const CPRParameter& params,
+			       const Vector& weights)
 {
     using AMG = BlackoilAmg<Op,S,C,P,index>;
+    const int verbosity    = ( params.cpr_solver_verbose_ &&
+                                       comm.communicator().rank()==0 ) ? 1 : 0;
+
     // TODO: revise choice of parameters
     int coarsenTarget=1200;
     using Criterion = C;
     Criterion criterion(15, coarsenTarget);
-    criterion.setDebugLevel( 0 ); // no debug information, 1 for printing hierarchy information
+    criterion.setDebugLevel( verbosity ); // no debug information, 1 for printing hierarchy information
     criterion.setDefaultValuesIsotropic(2);
     criterion.setNoPostSmoothSteps( 1 );
     criterion.setNoPreSmoothSteps( 1 );
@@ -207,7 +211,7 @@ createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
     smootherArgs.relaxationFactor = relax;
     setILUParameters(smootherArgs, params);
 
-    amgPtr.reset( new AMG( params, opA, criterion, smootherArgs, comm ) );
+    amgPtr.reset( new AMG( params, weights, opA, criterion, smootherArgs, comm ) );
 }
 
 template < class C, class Op, class P, class AMG >
