@@ -20,6 +20,7 @@
 
 
 #include <opm/autodiff/MSWellHelpers.hpp>
+#include <opm/simulators/DeferredLoggingErrorHelpers.hpp>
 
 namespace Opm
 {
@@ -240,10 +241,10 @@ namespace Opm
 
         const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
         if (use_inner_iterations) {
-            iterateWellEquations(ebosSimulator, dt, well_state);
+            iterateWellEquations(ebosSimulator, dt, well_state, deferred_logger);
         }
 
-        assembleWellEqWithoutIteration(ebosSimulator, dt, well_state);
+        assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, deferred_logger);
     }
 
 
@@ -411,7 +412,7 @@ namespace Opm
     template <typename TypeTag>
     ConvergenceReport
     MultisegmentWell<TypeTag>::
-    getWellConvergence(const std::vector<double>& B_avg) const
+    getWellConvergence(const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger) const
     {
         assert(int(B_avg.size()) == num_components_);
 
@@ -437,7 +438,7 @@ namespace Opm
                 ctrltype = CR::WellFailure::Type::ControlRate;
                 break;
             default:
-                OPM_THROW(std::runtime_error, "Unknown well control control types for well " << name());
+                OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
         }
         assert(ctrltype != CR::WellFailure::Type::Invalid);
 
@@ -544,11 +545,12 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                          WellState& well_state) const
+                                          WellState& well_state,
+                                          Opm::DeferredLogger& deferred_logger) const
     {
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);
-        updateWellState(xw, false, well_state);
+        updateWellState(xw, false, well_state, deferred_logger);
     }
 
 
@@ -582,7 +584,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updatePrimaryVariables(const WellState& well_state) const
+    updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& deferred_logger) const
     {
         // TODO: to test using rate conversion coefficients to see if it will be better than
         // this default one
@@ -669,13 +671,13 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    solveEqAndUpdateWellState(WellState& well_state)
+    solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger)
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
-        updateWellState(dx_well, false, well_state);
+        updateWellState(dx_well, false, well_state, deferred_logger);
     }
 
 
@@ -760,7 +762,8 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
                     const bool inner_iteration,
-                    WellState& well_state) const
+                    WellState& well_state,
+                    Opm::DeferredLogger& deferred_logger) const
     {
         const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
 
@@ -811,7 +814,8 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     calculateExplicitQuantities(const Simulator& ebosSimulator,
-                                const WellState& /* well_state */)
+                                const WellState& /* well_state */,
+                                Opm::DeferredLogger& deferred_logger)
     {
         computePerfCellPressDiffs(ebosSimulator);
         computeInitialComposition();
@@ -973,7 +977,9 @@ namespace Opm
                     const int perf,
                     const EvalWell& segment_pressure,
                     const bool& allow_cf,
-                    std::vector<EvalWell>& cq_s) const
+                    std::vector<EvalWell>& cq_s,
+                    Opm::DeferredLogger& deferred_logger) const
+
     {
         std::vector<EvalWell> cmix_s(num_components_, 0.0);
 
@@ -1062,8 +1068,8 @@ namespace Opm
                 const EvalWell d = 1.0 - rv * rs;
 
                 if (d.value() == 0.0) {
-                    OPM_THROW(Opm::NumericalIssue, "Zero d value obtained for well " << name() << " during flux calcuation"
-                                                  << " with rs " << rs << " and rv " << rv);
+                    OPM_DEFLOG_THROW(Opm::NumericalIssue, "Zero d value obtained for well " << name() << " during flux calcuation"
+                                                  << " with rs " << rs << " and rv " << rv, deferred_logger);
                 }
 
                 const EvalWell tmp_oil = (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d;
@@ -1376,14 +1382,14 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    assembleControlEq() const
+    assembleControlEq(Opm::DeferredLogger& deferred_logger) const
     {
         EvalWell control_eq(0.0);
 
         switch (well_controls_get_current_type(well_controls_)) {
             case THP: // not handling this one for now
             {
-                OPM_THROW(std::runtime_error, "Not handling THP control for Multisegment wells for now");
+                OPM_DEFLOG_THROW(std::runtime_error, "Not handling THP control for Multisegment wells for now", deferred_logger);
             }
             case BHP:
             {
@@ -1441,7 +1447,7 @@ namespace Opm
                 break;
             }
             default:
-                OPM_THROW(std::runtime_error, "Unknown well control control types for well " << name());
+                OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
         }
 
 
@@ -1751,7 +1757,8 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     iterateWellEquations(const Simulator& ebosSimulator,
                          const double dt,
-                         WellState& well_state)
+                         WellState& well_state,
+                         Opm::DeferredLogger& deferred_logger)
     {
         // basically, it only iterate through the equations.
         // we update the primary variables
@@ -1762,7 +1769,7 @@ namespace Opm
         int it = 0;
         for (; it < max_iter_number; ++it) {
 
-            assembleWellEqWithoutIteration(ebosSimulator, dt, well_state);
+            assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, deferred_logger);
 
             const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
@@ -1773,12 +1780,12 @@ namespace Opm
             // const std::vector<double> B {0.8, 0.8, 0.008};
             const std::vector<double> B {0.5, 0.5, 0.005};
 
-            const auto report = getWellConvergence(B);
+            const auto report = getWellConvergence(B, deferred_logger);
             if (report.converged()) {
                 break;
             }
 
-            updateWellState(dx_well, true, well_state);
+            updateWellState(dx_well, true, well_state, deferred_logger);
 
             initPrimaryVariablesEvaluation();
         }
@@ -1794,7 +1801,8 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                    const double dt,
-                                   WellState& well_state)
+                                   WellState& well_state,
+                                   Opm::DeferredLogger& deferred_logger)
     {
         // calculate the fluid properties needed.
         computeSegmentFluidProperties(ebosSimulator);
@@ -1853,7 +1861,7 @@ namespace Opm
                 std::vector<EvalWell> mob(num_components_, 0.0);
                 getMobility(ebosSimulator, perf, mob);
                 std::vector<EvalWell> cq_s(num_components_, 0.0);
-                computePerfRate(int_quants, mob, seg, perf, seg_pressure, allow_cf, cq_s);
+                computePerfRate(int_quants, mob, seg, perf, seg_pressure, allow_cf, cq_s, deferred_logger);
 
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                     // the cq_s entering mass balance equations need to consider the efficiency factors.
@@ -1886,7 +1894,7 @@ namespace Opm
 
             // the fourth dequation, the pressure drop equation
             if (seg == 0) { // top segment, pressure equation is the control equation
-                assembleControlEq();
+                assembleControlEq(deferred_logger);
             } else {
                 assemblePressureEq(seg);
             }

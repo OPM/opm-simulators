@@ -152,7 +152,7 @@ namespace Opm
                                                Opm::DeferredLogger& deferred_logger) const override;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const override;
+        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger) const override;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const override;
@@ -162,7 +162,8 @@ namespace Opm
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                                           WellState& well_state) const override;
+                                                           WellState& well_state,
+                                                           Opm::DeferredLogger& deferred_logger) const override;
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
@@ -170,12 +171,13 @@ namespace Opm
                                            std::vector<double>& well_potentials,
                                            Opm::DeferredLogger& deferred_logger) /* const */ override;
 
-        virtual void updatePrimaryVariables(const WellState& well_state) const override;
+        virtual void updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& deferred_logger) const override;
 
-        virtual void solveEqAndUpdateWellState(WellState& well_state) override;
+        virtual void solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger) override;
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
-                                                 const WellState& well_state) override; // should be const?
+                                                 const WellState& well_state,
+                                                 Opm::DeferredLogger& deferred_logger) override; // should be const?
 
         virtual void  addWellContributions(Mat& mat) const override;
 
@@ -283,7 +285,8 @@ namespace Opm
 
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
-                             WellState& well_state) const;
+                             WellState& well_state,
+                             Opm::DeferredLogger& deferred_logger) const;
 
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.
@@ -323,38 +326,43 @@ namespace Opm
                              const bool allow_cf,
                              std::vector<EvalWell>& cq_s,
                              double& perf_dis_gas_rate,
-                             double& perf_vap_oil_rate) const;
+                             double& perf_vap_oil_rate,
+                             Opm::DeferredLogger& deferred_logger) const;
 
         // TODO: maybe we should provide a light version of computePerfRate, which does not include the
         // calculation of the derivatives
         void computeWellRatesWithBhp(const Simulator& ebosSimulator,
                                      const EvalWell& bhp,
-                                     std::vector<double>& well_flux) const;
+                                     std::vector<double>& well_flux,
+                                     Opm::DeferredLogger& deferred_logger) const;
 
         std::vector<double> computeWellPotentialWithTHP(const Simulator& ebosSimulator,
                                                         const double initial_bhp, // bhp from BHP constraints
-                                                        const std::vector<double>& initial_potential) const;
+                                                        const std::vector<double>& initial_potential,
+                                                        Opm::DeferredLogger& deferred_logger) const;
 
         template <class ValueType>
-        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const int control_index) const;
+        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const int control_index, Opm::DeferredLogger& deferred_logger) const;
 
-        double calculateThpFromBhp(const std::vector<double>& rates, const double bhp) const;
+        double calculateThpFromBhp(const std::vector<double>& rates, const double bhp, Opm::DeferredLogger& deferred_logger) const;
 
         // get the mobility for specific perforation
         void getMobility(const Simulator& ebosSimulator,
                          const int perf,
-                         std::vector<EvalWell>& mob) const;
+                         std::vector<EvalWell>& mob,
+                         Opm::DeferredLogger& deferred_logger) const;
 
         void updateWaterMobilityWithPolymer(const Simulator& ebos_simulator,
                                             const int perf,
-                                            std::vector<EvalWell>& mob_water) const;
+                                            std::vector<EvalWell>& mob_water,
+                                            Opm::DeferredLogger& deferred_logger) const;
 
         void updatePrimaryVariablesNewton(const BVectorWell& dwells,
                                           const WellState& well_state) const;
 
-        void updateWellStateFromPrimaryVariables(WellState& well_state) const;
+        void updateWellStateFromPrimaryVariables(WellState& well_state, Opm::DeferredLogger& deferred_logger) const;
 
-        void updateThp(WellState& well_state) const;
+        void updateThp(WellState& well_state, Opm::DeferredLogger& deferred_logger) const;
 
         void assembleControlEq(Opm::DeferredLogger& deferred_logger);
 
@@ -377,17 +385,19 @@ namespace Opm
                                    Opm::DeferredLogger& deferred_logger);
 
         // check whether the well is operable under BHP limit with current reservoir condition
-        void checkOperabilityUnderBHPLimitProducer(const Simulator& ebos_simulator);
+        void checkOperabilityUnderBHPLimitProducer(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger);
 
         // check whether the well is operable under THP limit with current reservoir condition
         void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger);
 
         // update WellState based on IPR and associated VFP table
         void updateWellStateWithTHPTargetIPR(const Simulator& ebos_simulator,
-                                             WellState& well_state) const;
+                                             WellState& well_state,
+                                             Opm::DeferredLogger& deferred_logger) const;
 
         void updateWellStateWithTHPTargetIPRProducer(const Simulator& ebos_simulator,
-                                                     WellState& well_state) const;
+                                                     WellState& well_state,
+                                                     Opm::DeferredLogger& deferred_logger) const;
 
         // for a well, when all drawdown are in the wrong direction, then this well will not
         // be able to produce/inject .
@@ -408,7 +418,7 @@ namespace Opm
         // calculate the BHP from THP target based on IPR
         // TODO: we need to check the operablility here first, if not operable, then maybe there is
         // no point to do this
-        double calculateBHPWithTHPTargetIPR() const;
+        double calculateBHPWithTHPTargetIPR(Opm::DeferredLogger& deferred_logger) const;
 
         // relaxation factor considering only one fraction value
         static double relaxationFactorFraction(const double old_value,
@@ -433,21 +443,25 @@ namespace Opm
         // to handle the effect from formation damage.
         EvalWell pskin(const double throuhgput,
                        const EvalWell& water_velocity,
-                       const EvalWell& poly_inj_conc) const;
+                       const EvalWell& poly_inj_conc,
+                       Opm::DeferredLogger& deferred_logger) const;
 
         // calculate the skin pressure based on water velocity, throughput during water injection.
         EvalWell pskinwater(const double throughput,
-                            const EvalWell& water_velocity) const;
+                            const EvalWell& water_velocity,
+                            Opm::DeferredLogger& deferred_logger) const;
 
         // calculate the injecting polymer molecular weight based on the througput and water velocity
         EvalWell wpolymermw(const double throughput,
-                            const EvalWell& water_velocity) const;
+                            const EvalWell& water_velocity,
+                            Opm::DeferredLogger& deferred_logger) const;
 
         // handle the extra equations for polymer injectivity study
         void handleInjectivityRateAndEquations(const IntensiveQuantities& int_quants,
                                                const WellState& well_state,
                                                const int perf,
-                                               std::vector<EvalWell>& cq_s);
+                                               std::vector<EvalWell>& cq_s,
+                                               Opm::DeferredLogger& deferred_logger);
 
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
     };
