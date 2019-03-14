@@ -77,9 +77,8 @@ Dune::MatrixAdapter<M,X,Y> createOperator(const Dune::MatrixAdapter<M,X,Y>&, con
 template<class M, class X, class Y, class T>
 std::unique_ptr< Dune::MatrixAdapter<M,X,Y> > createOperatorPtr(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
 {
-  return std::make_unique< Dune::MatrixAdapter<M,X,Y> >(matrix);
-}  
-
+    return std::make_unique< Dune::MatrixAdapter<M,X,Y> >(matrix);
+}
 /**
  * \brief Creates an OverlappingSchwarzOperator as an operator.
  *
@@ -119,13 +118,9 @@ scaleMatrixDRS(const Operator& op, const Communication& comm,
             for (auto j = (*i).begin(); j != endj; ++j) {  
                 BlockVector bvec(0.0);
                 Block& block = *j;
-                for (std::size_t ii = 0; ii < Block::rows; ii++) {
-                    for (std::size_t jj = 0; jj < Block::cols; jj++) {
-                        // should introduce limmits which also change the weights
-                        bvec[jj] += bw[ii]*block[ii][jj];
-                    }
-                }
-                block[pressureIndex] = bvec; 
+                BlockVector& bvec = block[pressureIndex];
+                // should introduce limits which also change the weights
+                block.mtv(bw, bvec);
             }
         }
     }
@@ -144,13 +139,9 @@ void scaleVectorDRS(Vector& vector, std::size_t pressureIndex, const Opm::CPRPar
     using Block = typename Vector::block_type;
     if (param.cpr_use_drs_) {
         for (std::size_t j = 0; j < vector.size(); ++j) {
-            double val(0.0);
             Block& block = vector[j];
             const Block& bw = weights[j];
-            for (std::size_t i = 0; i < Block::dimension; i++) {
-                val += bw[i]*block[i];
-            }
-            block[pressureIndex] = val;
+            block[pressureIndex] = bw.dot(block);
         }
     }
 }
@@ -468,8 +459,8 @@ private:
                 }
 #endif
             }
-	    else
-	    {
+            else
+            {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
                                          tolerance, maxit, verbosity);
@@ -489,9 +480,9 @@ private:
                                                    tolerance, maxit, verbosity);
                     solver.apply(x,b,res);
                 }
-		
-#endif		
-	    }
+
+#endif
+            }
 
 #if ! DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             delete sp;
@@ -983,20 +974,19 @@ public:
      * \param comm The information about the parallelization.
      */
     BlackoilAmg(const CPRParameter& param,
-		const typename TwoLevelMethod::FineDomainType& weights,
+                const typename TwoLevelMethod::FineDomainType& weights,
                 const Operator& fineOperator, const Criterion& criterion,
                 const SmootherArgs& smargs, const Communication& comm)
         : param_(param),
-	  weights_(weights),
+          weights_(weights),
           scaledMatrixOperator_(Detail::scaleMatrixDRS(fineOperator, comm,
-						       COMPONENT_INDEX, weights, param)),
+                                COMPONENT_INDEX, weights, param)),
           smoother_(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
-                                                        smargs, comm)),
+                    smargs, comm)),
           levelTransferPolicy_(criterion, comm, param.cpr_pressure_aggregation_),
           coarseSolverPolicy_(&param, smargs, criterion),
           twoLevelMethod_(std::get<1>(scaledMatrixOperator_), smoother_,
-                          levelTransferPolicy_,
-                          coarseSolverPolicy_, 0, 1)
+                          levelTransferPolicy_, coarseSolverPolicy_, 0, 1)
     {}
 
     void pre(typename TwoLevelMethod::FineDomainType& x,

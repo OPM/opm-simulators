@@ -188,7 +188,7 @@ inline void
 createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
                                std::unique_ptr< BlackoilAmg<Op,S,C,P,index> >& amgPtr,
                                const CPRParameter& params,
-			       const Vector& weights)
+                               const Vector& weights)
 {
     using AMG = BlackoilAmg<Op,S,C,P,index>;
     const int verbosity = ( params.cpr_solver_verbose_ && comm.communicator().rank() == 0 ) ? 1 : 0;

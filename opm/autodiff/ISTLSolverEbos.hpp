@@ -253,6 +253,10 @@ protected:
                     parameters_.cpr_use_drs_ = false;
                 }
             } else {
+                if (parameters_.use_cpr_ && parameters_.cpr_use_drs_) {
+                   OpmLog::warning("DRS_DISABLE", "Disabling DRS as matrix does not contain well contributions");
+                }
+                parameters_.cpr_use_drs_ = false;
                 if (parameters_.scale_linear_system_) {
                     // also scale weights
                     this->scaleEquationsAndVariables(weights_);
@@ -288,23 +292,23 @@ protected:
                 //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
                 //to be certain that correct matrix is used for preconditioning.
                 Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel,
-                             parallelInformation_ );
+                        parallelInformation_ );
                 assert( opA.comm() );
                 solve( opA, x, *rhs_, *(opA.comm()) );
             }
             else
             {
-		typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false > Operator;
-		Operator opA(*matrix_, *matrix_, wellModel);
+                const WellModel& wellModel = simulator_.problem().wellModel();
+                typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false > Operator;
+                Operator opA(*matrix_, *matrix_, wellModel);
                 solve( opA, x, *rhs_ );
             }
 
-	    if (parameters_.scale_linear_system_) {
+            if (parameters_.scale_linear_system_) {
                 scaleSolution(x);
-	    }
+            }
 
             return converged_;
-
         }
 
 
@@ -404,13 +408,13 @@ protected:
         }
 
 
-	// 3x3 matrix block inversion was unstable at least 2.3 until and including
-	// 2.5.0. There may still be some issue with the 4x4 matrix block inversion
-	// we therefore still use the block inversion in OPM
+        // 3x3 matrix block inversion was unstable at least 2.3 until and including
+        // 2.5.0. There may still be some issue with the 4x4 matrix block inversion
+        // we therefore still use the block inversion in OPM
         typedef ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::MatrixBlock<typename Matrix::field_type,
-                                                                           Matrix::block_type::rows,
-                                                                           Matrix::block_type::cols> >,
-                                        				   Vector, Vector> SeqPreconditioner;
+                                                                            Matrix::block_type::rows,
+                                                                            Matrix::block_type::cols> >,
+                                                                            Vector, Vector> SeqPreconditioner;
 
 
         template <class Operator>
@@ -833,7 +837,7 @@ protected:
         std::vector<std::pair<int,std::vector<int>>> overlapRowAndColumns_;
         FlowLinearSolverParameters parameters_;
         Vector weights_;
-	bool scale_variables_;
+        bool scale_variables_;
     }; // end ISTLSolver
 
 } // namespace Opm
