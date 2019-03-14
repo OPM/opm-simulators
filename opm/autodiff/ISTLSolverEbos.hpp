@@ -253,6 +253,10 @@ protected:
                     parameters_.cpr_use_drs_ = false;
                 }
             } else {
+                if (parameters_.use_cpr_ && parameters_.cpr_use_drs_) {
+                   OpmLog::warning("DRS_DISABLE", "Disabling DRS as matrix does not contain well contributions");
+                }
+                parameters_.cpr_use_drs_ = false;
                 if (parameters_.scale_linear_system_) {
                     // also scale weights
                     this->scaleEquationsAndVariables(weights_);
