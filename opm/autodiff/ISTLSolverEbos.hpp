@@ -34,7 +34,6 @@
 
 #include <ewoms/common/parametersystem.hh>
 #include <ewoms/common/propertysystem.hh>
-//#include <ewoms/linear/matrixmarket_ewoms.hh>
 
 #include <dune/istl/scalarproducts.hh>
 #include <dune/istl/operators.hh>
@@ -171,7 +170,7 @@ protected:
     template <class TypeTag>
     class ISTLSolverEbos
     {
-         typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+        typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
         typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
         typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
@@ -180,15 +179,15 @@ protected:
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
         typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
 
-      typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
-      typedef typename Vector::block_type BlockVector;
-      typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-      typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
-      typedef typename GridView::template Codim<0>::Entity Element;
-      typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+        typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
+        typedef typename Vector::block_type BlockVector;
+        typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+        typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+        typedef typename GridView::template Codim<0>::Entity Element;
+        typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
         enum { pressureIndex = Indices::pressureSwitchIdx };
         static const int numEq = Indices::numEq;
-      
+
     public:
         typedef Dune::AssembledLinearOperator< Matrix, Vector, Vector > AssembledLinearOperatorType;
 
@@ -214,74 +213,63 @@ protected:
         void eraseMatrix() {
             matrix_for_preconditioner_.reset();
         }
-      void prepare(const SparseMatrixAdapter& M, Vector& b) {
-	matrix_.reset(new Matrix(M.istlMatrix()));
-	rhs_ = &b;
-	this->scaleSystem();
-      }
-      void scaleSystem(){
-	bool matrix_cont_added = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+
+        void prepare(const SparseMatrixAdapter& M, Vector& b)
+        {
+            matrix_.reset(new Matrix(M.istlMatrix()));
+            rhs_ = &b;
+            this->scaleSystem();
+        }
+
+        void scaleSystem()
+        {
+            const bool matrix_cont_added = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
 	    
-	if(matrix_cont_added){
-	  //Vector weights;
-	  bool form_cpr = true;
-	  if(parameters_.system_strategy_ == "quasiimpes"){
-	    weights_ = getQuasiImpesWeights();
-	  }else if(parameters_.system_strategy_ == "trueimpes"){
-	    weights_ = getStorageWeights();
-	  }else if(parameters_.system_strategy_ == "simple"){
-	    BlockVector bvec(1.0);
-	    weights_ = getSimpleWeights(bvec);
-	  }else if(parameters_.system_strategy_ == "original"){
-	    BlockVector bvec(0.0);
-	    bvec[pressureIndex] = 1;
-	    weights_ = getSimpleWeights(bvec);
-	  }else{
-	    form_cpr = false;
-	  }
-          // if(parameters_.linear_solver_verbosity_ > 1000) {
-	  //   std::ofstream filem("matrix_istl_pre.txt");
-	  //   Dune::writeMatrixMarket(*matrix_, filem);
-	  //   std::ofstream fileb("rhs_istl_pre.txt");
-	  //   Dune::writeMatrixMarket(*rhs_, fileb);
-	  //   std::ofstream filew("weights_istl.txt");
-	  //   Dune::writeMatrixMarket(weights_, filew);
-          // }
+            if (matrix_cont_added) {
+                bool form_cpr = true;
+                if (parameters_.system_strategy_ == "quasiimpes") {
+                    weights_ = getQuasiImpesWeights();
+                } else if (parameters_.system_strategy_ == "trueimpes") {
+                    weights_ = getStorageWeights();
+                } else if (parameters_.system_strategy_ == "simple") {
+                    BlockVector bvec(1.0);
+                    weights_ = getSimpleWeights(bvec);
+                } else if (parameters_.system_strategy_ == "original") {
+                    BlockVector bvec(0.0);
+                    bvec[pressureIndex] = 1;
+                    weights_ = getSimpleWeights(bvec);
+                } else {
+                    form_cpr = false;
+                }
+                if (parameters_.scale_linear_system_) {
+                    // also scale weights
+                    this->scaleEquationsAndVariables(weights_);
+                }
+                if (form_cpr && not(parameters_.cpr_use_drs_)) {
+                    scaleMatrixAndRhs(weights_);
+                }
+                if (weights_.size() == 0) {
+                    // if weights are not set cpr_use_drs_=false;
+                    parameters_.cpr_use_drs_ = false;
+                }
+            } else {
+                if (parameters_.scale_linear_system_) {
+                    // also scale weights
+                    this->scaleEquationsAndVariables(weights_);
+                }
+            }
+        }
 
-	  if(parameters_.scale_linear_system_){
-	    // also scale weights
-	    this->scaleEquationsAndVariables(weights_);
-	  }
-	  if(form_cpr && not(parameters_.cpr_use_drs_)){
-	    scaleMatrixAndRhs(weights_);
-	  }
-	      
-	  if(weights_.size() == 0){
-	    // if weights are not set cpr_use_drs_=false;
-	    parameters_.cpr_use_drs_ = false;
-	  }
-	      
-        }else{
-	  if(parameters_.scale_linear_system_){
-	    // also scale weights
-	    this->scaleEquationsAndVariables(weights_);
-	  }
-	}
-      }
-      
- 
-        
-
-        void setResidual(Vector& b) {
-            //rhs_ = &b;
+        void setResidual(Vector& /* b */) {
+            // rhs_ = &b; // Must be handled in prepare() instead.
         }
 
         void getResidual(Vector& b) const {
             b = *rhs_;
         }
 
-        void setMatrix(const SparseMatrixAdapter& M) {
-            //matrix_ = &M.istlMatrix();
+        void setMatrix(const SparseMatrixAdapter& /* M */) {
+            // matrix_ = &M.istlMatrix(); // Must be handled in prepare() instead.
         }
 
         bool solve(Vector& x) {
@@ -305,50 +293,15 @@ protected:
                 solve( opA, x, *rhs_, *(opA.comm()) );
             }
             else
-
-	      {
-		const WellModel& wellModel = simulator_.problem().wellModel();		
+            {
 		typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false > Operator;
 		Operator opA(*matrix_, *matrix_, wellModel);
                 solve( opA, x, *rhs_ );
-		
-		// if((parameters_.linear_solver_verbosity_ > 5) &&
-		//    (iterations_ > parameters_.linear_solver_verbosity_)) {		
-		//   std::string dir = simulator_.problem().outputDir();
-		//   if (dir == ".")
-		//     dir = "";
-		//   else if (!dir.empty() && dir.back() != '/')
-		//     dir += "/";
-		//   namespace fs = boost::filesystem;
-		//   fs::path output_dir(dir);
-		//   fs::path subdir("reports");
-		//   output_dir = output_dir / subdir;
-		//   if(!(fs::exists(output_dir))){
-		//     fs::create_directory(output_dir);
-		//   }
-		//   // Combine and return.
-		//   std::ostringstream oss;
-		//   oss << "prob_" << simulator_.episodeIndex() << "_";
-		//   oss << simulator_.time() << "_";
-		//   std::string output_file(oss.str());
-		//   fs::path full_path = output_dir / output_file;
-		//   std::string prefix = full_path.string();
-		//   {
-		//     std::string filename = prefix + "matrix_istl.txt";
-		//     std::ofstream filem(filename);
-		//     Dune::writeMatrixMarket(*matrix_, filem);
-		//   }
-		//   {
-		//     std::string filename = prefix + "rhs_istl.txt";
-		//     std::ofstream fileb(filename);
-		//     Dune::writeMatrixMarket(*rhs_, fileb);
-		//   }
-		// }
-	      }
-	    if(parameters_.scale_linear_system_){
-	      scaleSolution(x);
+            }
+
+	    if (parameters_.scale_linear_system_) {
+                scaleSolution(x);
 	    }
-	    
 
             return converged_;
 
@@ -640,7 +593,6 @@ protected:
     protected:
 
         bool isParallel() const {
-
 #if HAVE_MPI
             return parallelInformation_.type() == typeid(ParallelISTLInformation);
 #else
@@ -675,208 +627,198 @@ protected:
             }
         }
 
-       // weights to make approxiate pressure equations
-      Vector getStorageWeights(){
-	Vector weights(rhs_->size()); 
-	BlockVector rhs(0.0);
-	rhs[pressureIndex] = 1.0;
-	int index = 0;
-	ElementContext elemCtx(simulator_);
-	const auto& vanguard = simulator_.vanguard();
-	auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-	const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-	for (; elemIt != elemEndIt; ++elemIt) {
-	  const Element& elem = *elemIt;
-	  elemCtx.updatePrimaryStencil(elem);
-	  elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-	  Dune::FieldVector<Evaluation, numEq> storage;
-	  unsigned threadId = ThreadManager::threadId();
-	  simulator_.model().localLinearizer(threadId).localResidual().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
-	  Scalar extrusionFactor =
-	    elemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
-	  Scalar scvVolume =
-	    elemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
-	  Scalar storage_scale = scvVolume / elemCtx.simulator().timeStepSize();
-	  MatrixBlockType block;
-	  int offset = 0;
-	  double pressure_scale = 50e5;
-	  for(int ii=0; ii< numEq; ++ii){
-	    for(int jj=0; jj< numEq; ++jj){
-	      //const auto& vec = storage[ii].derivative(jj);
-	      block[ii][jj] = storage[ii].derivative(jj)/storage_scale;
-	      if(jj==0){
-		block[ii][jj] *=pressure_scale;
-	      }
-	    }
-	  }
-	  BlockVector bweights;
-	  MatrixBlockType block_transpose = block.transpose();
-	  block_transpose.solve(bweights, rhs);
-	  bweights /=1000; // given normal desnistyies this scales weights to about 1
-	  weights[index] = bweights;
-	  ++index;
-	}
-	return weights;
-      }
+        // Weights to make approximate pressure equations.
+        Vector getStorageWeights() const
+        {
+            Vector weights(rhs_->size()); 
+            BlockVector rhs(0.0);
+            rhs[pressureIndex] = 1.0;
+            int index = 0;
+            ElementContext elemCtx(simulator_);
+            const auto& vanguard = simulator_.vanguard();
+            auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+            const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+            for (; elemIt != elemEndIt; ++elemIt) {
+                const Element& elem = *elemIt;
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                Dune::FieldVector<Evaluation, numEq> storage;
+                unsigned threadId = ThreadManager::threadId();
+                simulator_.model().localLinearizer(threadId).localResidual().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
+                Scalar extrusionFactor = elemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
+                Scalar scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
+                Scalar storage_scale = scvVolume / elemCtx.simulator().timeStepSize();
+                MatrixBlockType block;
+                int offset = 0;
+                double pressure_scale = 50e5;
+                for (int ii = 0; ii < numEq; ++ii) {
+                    for (int jj = 0; jj < numEq; ++jj) {
+                        block[ii][jj] = storage[ii].derivative(jj)/storage_scale;
+                        if (jj == 0) {
+                            block[ii][jj] *= pressure_scale;
+                        }
+                    }
+                }
+                BlockVector bweights;
+                MatrixBlockType block_transpose = block.transpose();
+                block_transpose.solve(bweights, rhs);
+                bweights /= 1000.0; // given normal densities this scales weights to about 1.
+                weights[index] = bweights;
+                ++index;
+            }
+            return weights;
+        }
 
-      void scaleEquationsAndVariables(Vector& weights){
-	// loop over primary variables
-	const auto& sol = simulator_.model().solution(0);
-	const auto endi = matrix_->end();
-	int index = 0;
-	for (auto i=matrix_->begin(); i!=endi; ++i){
-	  const auto endj = (*i).end();
-	  BlockVector& brhs = (*rhs_)[i.index()];
-	  
-	  for (auto j=(*i).begin(); j!=endj; ++j){
-        MatrixBlockType& block = *j;
-	    const auto& priVars = sol[i.index()];
-	    for ( std::size_t ii = 0; ii < block.rows; ii++ ){	        
-	      for(std::size_t jj=0; jj < block.cols; jj++){
-		//double var_scale = getVarscale(jj, priVars.primaryVarsMeaning))
-		double var_scale = simulator_.model().primaryVarWeight(i.index(),jj);
-		block[ii][jj] /=var_scale;
-		block[ii][jj] *= simulator_.model().eqWeight(i.index(), ii);
-	      }
-	    }
-	  }
-	  for(std::size_t ii=0; ii < brhs.size(); ii++){
-	    brhs[ii] *= simulator_.model().eqWeight(i.index(), ii);
-	  }
-	  if(weights_.size() == matrix_->N()){
-	    BlockVector& bw = weights[i.index()];
-	    for(std::size_t ii=0; ii < brhs.size(); ii++){
-	      bw[ii]  /= simulator_.model().eqWeight(i.index(), ii);
-	    }
-	    double abs_max =
-	      *std::max_element(bw.begin(), bw.end(), [](double a, double b){ return std::abs(a) < std::abs(b); } );
-	    bw /= abs_max;
-	  }
-	  
-	}                        
-      }
-      void scaleSolution(Vector& x){
-	const auto& sol = simulator_.model().solution(0);
-	for(std::size_t i=0; i < x.size(); ++i){
-	  const auto& primVar = sol[i];
-	  auto& bx = x[i];
-	  for(std::size_t jj=0; jj < bx.size(); jj++){
-	    double var_scale = simulator_.model().primaryVarWeight(i,jj);
-            bx[jj] /= var_scale;
-	  }	  
-	}
-      }
-      
-      Vector getQuasiImpesWeights(){
-	Matrix& A = *matrix_;
-	Vector weights(rhs_->size());
-	BlockVector rhs(0.0);
-	rhs[pressureIndex] = 1;
-	const auto endi = A.end();
-	int index = 0;
-	for (auto i=A.begin(); i!=endi; ++i){
-	  const auto endj = (*i).end();                                        
-	  MatrixBlockType diag_block(0.0);
-	  for (auto j=(*i).begin(); j!=endj; ++j){
-	    if(i.index() == j.index()){
-	      diag_block = (*j);
-	      break;
-	    }                        
-	  }                    
-	  BlockVector bweights;
-	  auto diag_block_transpose = diag_block.transpose();
-	  diag_block_transpose.solve(bweights, rhs);
-	  double abs_max =
-	    *std::max_element(bweights.begin(), bweights.end(), [](double a, double b){ return std::abs(a) < std::abs(b); } );
-	  bweights /= std::abs(abs_max);
-	  weights[i.index()] = bweights;
-	}
-	return weights;
-      }
-      
-      Vector getSimpleWeights(const BlockVector& rhs){
-	Vector weights(rhs_->size(),0);
-	for(auto& bw: weights){
-	  bw = rhs;
-	}
-	return weights;
-      }
+        void scaleEquationsAndVariables(Vector& weights)
+        {
+            // loop over primary variables
+            const auto& sol = simulator_.model().solution(0);
+            const auto endi = matrix_->end();
+            int index = 0;
+            for (auto i = matrix_->begin(); i != endi; ++i) {
+                const auto endj = (*i).end();
+                BlockVector& brhs = (*rhs_)[i.index()];
+                for (auto j = (*i).begin(); j != endj; ++j) {
+                    MatrixBlockType& block = *j;
+                    const auto& priVars = sol[i.index()];
+                    for (std::size_t ii = 0; ii < block.rows; ii++ ) {
+                        for (std::size_t jj = 0; jj < block.cols; jj++) {
+                            double var_scale = simulator_.model().primaryVarWeight(i.index(),jj);
+                            block[ii][jj] /= var_scale;
+                            block[ii][jj] *= simulator_.model().eqWeight(i.index(), ii);
+                        }
+                    }
+                }
+                for (std::size_t ii = 0; ii < brhs.size(); ii++) {
+                    brhs[ii] *= simulator_.model().eqWeight(i.index(), ii);
+                }
+                if (weights_.size() == matrix_->N()) {
+                    BlockVector& bw = weights[i.index()];
+                    for (std::size_t ii = 0; ii < brhs.size(); ii++) {
+                        bw[ii] /= simulator_.model().eqWeight(i.index(), ii);
+                    }
+                    double abs_max =
+                        *std::max_element(bw.begin(), bw.end(), [](double a, double b){ return std::abs(a) < std::abs(b); } );
+                    bw /= abs_max;
+                }
+            }
+        }
 
-      void scaleMatrixAndRhs(const Vector& weights){
-	//static_assert(pressureIndex == 0, "Current support that pressure equation should be first");
-	//using Matrix = typename Operator::matrix_type;
-	using Block = typename Matrix::block_type;
-	//Vector& rhs = *rhs_;
-	//Matrix& A = *matrix_;
-	//int index = 0;
-	//for ( auto& row : *matrix_ ){
-	const auto endi = matrix_->end();
-	for (auto i=matrix_->begin(); i!=endi; ++i){
-	  
-	  //const auto& bweights = weights[row.index()];
-	  const BlockVector& bweights = weights[i.index()];
-	  BlockVector& brhs = (*rhs_)[i.index()];
-	  //++index;
-	  //for ( auto& block : row ){
-	  const auto endj = (*i).end();                                        
-	  for (auto j=(*i).begin(); j!=endj; ++j){    
-	    // assume it is something on all rows
-	    // the blew logic depend on pressureIndex=0
-	    Block& block = (*j);
-	    for ( std::size_t ii = 0; ii < block.rows; ii++ ){
-	      if ( ii == 0 ){
-		for(std::size_t jj=0; jj < block.cols; jj++){
-		  block[0][jj] *= bweights[ii];//*block[ii][jj];
-		}
-	      } else {
-		for(std::size_t jj=0; jj < block.cols; jj++){
-		  block[0][jj] += bweights[ii]*block[ii][jj];
-		}
-	      }
-	    }
-	    
-	  }
-	  for(std::size_t ii=0; ii < brhs.size(); ii++){
-	    if ( ii == 0 ){
-	      brhs[0] *= bweights[ii];//*brhs[ii];
-	    }else{
-	      brhs[0] += bweights[ii]*brhs[ii];
-	    }
-	  }	      
-	}
-      }
-      
-      static void multBlocksInMatrix(Matrix& ebosJac,const MatrixBlockType& trans,bool left=true){
-	const int n = ebosJac.N();
-	//const int np = FluidSystem::numPhases;
-	for (int row_index = 0; row_index < n; ++row_index) {
-	  auto& row = ebosJac[row_index];
-	  auto* dataptr = row.getptr();
-	  //auto* indexptr = row.getindexptr();
-	  for (int elem = 0; elem < row.N(); ++elem) {
-	    auto& block = dataptr[elem];
-	    if(left){
-	      block = block.leftmultiply(trans);
-	    }else{
-	      block = block.rightmultiply(trans);
-	    }
-	  }
-	}
-      }      
-      
-      static void multBlocksVector(Vector& ebosResid_cp,const MatrixBlockType& leftTrans){
-	for( auto& bvec: ebosResid_cp){
-	  auto bvec_new=bvec;
-	  leftTrans.mv(bvec, bvec_new);
-	  bvec=bvec_new;
-	}
-      }
-      static void scaleCPRSystem(Matrix& M_cp,Vector& b_cp,const MatrixBlockType& leftTrans){
-	multBlocksInMatrix(M_cp, leftTrans, true);
-	multBlocksVector(b_cp, leftTrans);
-      }
+        void scaleSolution(Vector& x)
+        {
+            const auto& sol = simulator_.model().solution(0);
+            for (std::size_t i = 0; i < x.size(); ++i) {
+                const auto& primVar = sol[i];
+                auto& bx = x[i];
+                for (std::size_t jj = 0; jj < bx.size(); jj++) {
+                    double var_scale = simulator_.model().primaryVarWeight(i,jj);
+                    bx[jj] /= var_scale;
+                }
+            }
+        }
 
+        Vector getQuasiImpesWeights()
+        {
+            Matrix& A = *matrix_;
+            Vector weights(rhs_->size());
+            BlockVector rhs(0.0);
+            rhs[pressureIndex] = 1;
+            const auto endi = A.end();
+            int index = 0;
+            for (auto i = A.begin(); i!=endi; ++i) {
+                const auto endj = (*i).end();
+                MatrixBlockType diag_block(0.0);
+                for (auto j=(*i).begin(); j!=endj; ++j) {
+                    if (i.index() == j.index()) {
+                        diag_block = (*j);
+                        break;
+                    }
+                }
+                BlockVector bweights;
+                auto diag_block_transpose = diag_block.transpose();
+                diag_block_transpose.solve(bweights, rhs);
+                double abs_max =
+                    *std::max_element(bweights.begin(), bweights.end(), [](double a, double b){ return std::abs(a) < std::abs(b); } );
+                bweights /= std::abs(abs_max);
+                weights[i.index()] = bweights;
+            }
+            return weights;
+        }
 
+        Vector getSimpleWeights(const BlockVector& rhs)
+        {
+            Vector weights(rhs_->size(), 0);
+            for (auto& bw : weights) {
+                bw = rhs;
+            }
+            return weights;
+        }
+
+        void scaleMatrixAndRhs(const Vector& weights)
+        {
+            using Block = typename Matrix::block_type;
+            const auto endi = matrix_->end();
+            for (auto i = matrix_->begin(); i !=endi; ++i) {
+                const BlockVector& bweights = weights[i.index()];
+                BlockVector& brhs = (*rhs_)[i.index()];
+                const auto endj = (*i).end();
+                for (auto j = (*i).begin(); j != endj; ++j) {
+                    // assume it is something on all rows
+                    // the blew logic depend on pressureIndex=0
+                    Block& block = (*j);
+                    for ( std::size_t ii = 0; ii < block.rows; ii++ ) {
+                        if ( ii == 0 ) {
+                            for (std::size_t jj = 0; jj < block.cols; jj++) {
+                                block[0][jj] *= bweights[ii];
+                            }
+                        } else {
+                            for (std::size_t jj = 0; jj < block.cols; jj++) {
+                                block[0][jj] += bweights[ii]*block[ii][jj];
+                            }
+                        }
+                    }
+                }
+                for (std::size_t ii = 0; ii < brhs.size(); ii++) {
+                    if ( ii == 0 ){
+                        brhs[0] *= bweights[ii];
+                    } else {
+                        brhs[0] += bweights[ii]*brhs[ii];
+                    }
+                }
+            }
+        }
+
+        static void multBlocksInMatrix(Matrix& ebosJac, const MatrixBlockType& trans, const bool left = true)
+        {
+            const int n = ebosJac.N();
+            for (int row_index = 0; row_index < n; ++row_index) {
+                auto& row = ebosJac[row_index];
+                auto* dataptr = row.getptr();
+                for (int elem = 0; elem < row.N(); ++elem) {
+                    auto& block = dataptr[elem];
+                    if (left) {
+                        block = block.leftmultiply(trans);
+                    } else {
+                        block = block.rightmultiply(trans);
+                    }
+                }
+            }
+        }
+      
+        static void multBlocksVector(Vector& ebosResid_cp, const MatrixBlockType& leftTrans)
+        {
+            for (auto& bvec : ebosResid_cp) {
+                auto bvec_new = bvec;
+                leftTrans.mv(bvec, bvec_new);
+                bvec = bvec_new;
+            }
+        }
+
+        static void scaleCPRSystem(Matrix& M_cp, Vector& b_cp, const MatrixBlockType& leftTrans)
+        {
+            multBlocksInMatrix(M_cp, leftTrans, true);
+            multBlocksVector(b_cp, leftTrans);
+        }
 
         const Simulator& simulator_;
         mutable int iterations_;
