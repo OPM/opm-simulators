@@ -118,13 +118,9 @@ scaleMatrixDRS(const Operator& op, const Communication& comm,
             for (auto j = (*i).begin(); j != endj; ++j) {  
                 BlockVector bvec(0.0);
                 Block& block = *j;
-                for (std::size_t ii = 0; ii < Block::rows; ii++) {
-                    for (std::size_t jj = 0; jj < Block::cols; jj++) {
-                        // should introduce limmits which also change the weights
-                        bvec[jj] += bw[ii]*block[ii][jj];
-                    }
-                }
-                block[pressureIndex] = bvec; 
+                BlockVector& bvec = block[pressureIndex];
+                // should introduce limits which also change the weights
+                block.mtv(bw, bvec);
             }
         }
     }
