@@ -183,7 +183,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
     return EllipticPreconditionerPointer(new ParallelPreconditioner(Ae, comm, relax, milu));
 }
 
-template < class C, class Op, class P, class S, std::size_t index,class Vector>
+template < class C, class Op, class P, class S, std::size_t index, class Vector>
 inline void
 createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
                                std::unique_ptr< BlackoilAmg<Op,S,C,P,index> >& amgPtr,
@@ -191,8 +191,7 @@ createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
 			       const Vector& weights)
 {
     using AMG = BlackoilAmg<Op,S,C,P,index>;
-    const int verbosity    = ( params.cpr_solver_verbose_ &&
-                                       comm.communicator().rank()==0 ) ? 1 : 0;
+    const int verbosity = ( params.cpr_solver_verbose_ && comm.communicator().rank() == 0 ) ? 1 : 0;
 
     // TODO: revise choice of parameters
     int coarsenTarget=1200;

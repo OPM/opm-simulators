@@ -68,11 +68,18 @@ Dune::MatrixAdapter<M,X,Y> createOperator(const Dune::MatrixAdapter<M,X,Y>&, con
     return Dune::MatrixAdapter<M,X,Y>(matrix);
 }
 
+/**
+ * \brief Creates a MatrixAdapter as an operator, storing it in a unique_ptr.
+ *
+ * The first argument is used to specify the return type using function overloading.
+ * \param matrix The matrix to wrap.
+ */
 template<class M, class X, class Y, class T>
 std::unique_ptr< Dune::MatrixAdapter<M,X,Y> > createOperatorPtr(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
 {
   return std::make_unique< Dune::MatrixAdapter<M,X,Y> >(matrix);
 }  
+
 /**
  * \brief Creates an OverlappingSchwarzOperator as an operator.
  *
@@ -95,35 +102,32 @@ Dune::OverlappingSchwarzOperator<M,X,Y,T> createOperator(const Dune::Overlapping
 //! \param comm The communication objecte describing the data distribution.
 //! \param pressureIndex The index of the pressure in the matrix block
 //! \retun A pair of the scaled matrix and the associated operator-
-template<class Operator, class Communication,class Vector>
+template<class Operator, class Communication, class Vector>
 std::tuple<std::unique_ptr<typename Operator::matrix_type>, Operator>
 scaleMatrixDRS(const Operator& op, const Communication& comm,
-	       std::size_t pressureIndex,const Vector& weights, const Opm::CPRParameter& param)
+               std::size_t pressureIndex, const Vector& weights, const Opm::CPRParameter& param)
 {
     using Matrix = typename Operator::matrix_type;
     using Block = typename Matrix::block_type;
     using BlockVector = typename Vector::block_type;
     std::unique_ptr<Matrix> matrix(new Matrix(op.getmat()));
-    if(param.cpr_use_drs_){
-      const auto endi = matrix->end();
-      for (auto i=matrix->begin(); i!=endi; ++i){
-	const BlockVector& bw = weights[i.index()];
-	const auto endj = (*i).end();
-	  for (auto j=(*i).begin(); j!=endj; ++j){  
-	    {
-	      BlockVector bvec(0.0);
-	      Block& block = *j;
-	      for ( std::size_t ii = 0; ii < Block::rows; ii++ ){
-		  for(std::size_t jj=0; jj < Block::cols; jj++){
-		    // should introduce limmits which also change the weights
-		    bvec[jj] += bw[ii]*block[ii][jj];
-		    //block[pressureIndex][j] += block[i][j];
-		  }		  
-	      }
-	      block[pressureIndex] = bvec; 
-	    }
-	  }
-      }
+    if (param.cpr_use_drs_) {
+        const auto endi = matrix->end();
+        for (auto i = matrix->begin(); i != endi; ++i) {
+            const BlockVector& bw = weights[i.index()];
+            const auto endj = (*i).end();
+            for (auto j = (*i).begin(); j != endj; ++j) {  
+                BlockVector bvec(0.0);
+                Block& block = *j;
+                for (std::size_t ii = 0; ii < Block::rows; ii++) {
+                    for (std::size_t jj = 0; jj < Block::cols; jj++) {
+                        // should introduce limmits which also change the weights
+                        bvec[jj] += bw[ii]*block[ii][jj];
+                    }
+                }
+                block[pressureIndex] = bvec; 
+            }
+        }
     }
     return std::make_tuple(std::move(matrix), createOperator(op, *matrix, comm));
 }
@@ -138,17 +142,16 @@ template<class Vector>
 void scaleVectorDRS(Vector& vector, std::size_t pressureIndex, const Opm::CPRParameter& param, const Vector& weights)
 {
     using Block = typename Vector::block_type;
-    if(param.cpr_use_drs_){
-      for(std::size_t j=0; j < vector.size(); ++j){
-	double val(0.0);
-	Block& block = vector[j];
-	const Block& bw = weights[j];
-	for ( std::size_t i = 0; i < Block::dimension; i++ ){
-	  val += bw[i]*block[i];
-	  //block[pressureIndex] += block[i];
-	}
-	block[pressureIndex] = val;
-      }
+    if (param.cpr_use_drs_) {
+        for (std::size_t j = 0; j < vector.size(); ++j) {
+            double val(0.0);
+            Block& block = vector[j];
+            const Block& bw = weights[j];
+            for (std::size_t i = 0; i < Block::dimension; i++) {
+                val += bw[i]*block[i];
+            }
+            block[pressureIndex] = val;
+        }
     }
 }
 
@@ -1022,7 +1025,6 @@ private:
     LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;
     TwoLevelMethod twoLevelMethod_;
-  //BlockVector weights_;
 };
 
 namespace ISTLUtility
