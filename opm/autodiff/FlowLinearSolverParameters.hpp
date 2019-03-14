@@ -103,9 +103,9 @@ namespace Opm
      */
     struct CPRParameter
     {
-      double cpr_relax_;
-       double cpr_solver_tol_;
-       int cpr_ilu_n_;
+        double cpr_relax_;
+        double cpr_solver_tol_;
+        int cpr_ilu_n_;
         MILU_VARIANT cpr_ilu_milu_;
         bool cpr_ilu_redblack_;
         bool cpr_ilu_reorder_sphere_;
@@ -120,30 +120,9 @@ namespace Opm
         int cpr_reuse_setup_;
         CPRParameter() { reset(); }
 
-        // CPRParameter( const ParameterGroup& param)
-        // {
-        //     // reset values to default
-        //     reset();
-
-        //     cpr_relax_                = param.getDefault("cpr_relax", cpr_relax_);
-        //     cpr_solver_tol_           = param.getDefault("cpr_solver_tol", cpr_solver_tol_);
-        //     //cpr_ilu_n_                = param.getDefault("cpr_ilu_n", cpr_ilu_n_);
-        //     //cpr_ilu_redblack_         = param.getDefault("ilu_redblack", cpr_ilu_redblack_);
-        //     //cpr_ilu_reorder_sphere_   = param.getDefault("ilu_reorder_sphere", cpr_ilu_reorder_sphere_);
-        //     //cpr_max_ell_iter_         = param.getDefault("cpr_max_elliptic_iter",cpr_max_ell_iter_);
-        //     //cpr_use_amg_              = param.getDefault("cpr_use_amg", cpr_use_amg_);
-        //     cpr_use_bicgstab_         = param.getDefault("cpr_use_bicgstab", cpr_use_bicgstab_);
-        //     cpr_solver_verbose_       = param.getDefault("cpr_solver_verbose", cpr_solver_verbose_);
-        //     cpr_pressure_aggregation_ = param.getDefault("cpr_pressure_aggregation", cpr_pressure_aggregation_);
-
-        //     //std::string milu("ILU");
-        //     //cpr_ilu_milu_ = convertString2Milu(param.getDefault("ilu_milu", milu));
-        // }
-
         void reset()
         {
-	  //cpr_relax_                = 1.0;
-           cpr_solver_tol_           = 1e-2;
+            cpr_solver_tol_           = 1e-2;
             cpr_ilu_n_                = 0;
             cpr_ilu_milu_             = MILU_VARIANT::ILU;
             cpr_ilu_redblack_         = false;
@@ -240,33 +219,6 @@ namespace Opm
         }
 
         FlowLinearSolverParameters() { reset(); }
-        // read values from parameter class
-        // FlowLinearSolverParameters( const ParameterGroup& param )
-        //     : CPRParameter(param)
-        // {
-        //     // set default parameters
-        //     reset();
-
-        //     // read parameters (using previsouly set default values)
-        //     newton_use_gmres_        = param.getDefault("newton_use_gmres", newton_use_gmres_ );
-        //     linear_solver_reduction_ = param.getDefault("linear_solver_reduction", linear_solver_reduction_ );
-        //     linear_solver_maxiter_   = param.getDefault("linear_solver_maxiter", linear_solver_maxiter_);
-        //     linear_solver_restart_   = param.getDefault("linear_solver_restart", linear_solver_restart_);
-        //     linear_solver_verbosity_ = param.getDefault("linear_solver_verbosity", linear_solver_verbosity_);
-        //     require_full_sparsity_pattern_ = param.getDefault("require_full_sparsity_pattern", require_full_sparsity_pattern_);
-        //     ignoreConvergenceFailure_ = param.getDefault("linear_solver_ignoreconvergencefailure", ignoreConvergenceFailure_);
-        //     linear_solver_use_amg_    = param.getDefault("linear_solver_use_amg", linear_solver_use_amg_ );
-        //     ilu_relaxation_           = param.getDefault("ilu_relaxation", ilu_relaxation_ );
-        //     ilu_fillin_level_         = param.getDefault("ilu_fillin_level",  ilu_fillin_level_ );
-        //     ilu_redblack_             = param.getDefault("ilu_redblack", cpr_ilu_redblack_);
-        //     ilu_reorder_sphere_       = param.getDefault("ilu_reorder_sphere", cpr_ilu_reorder_sphere_);
-        //     std::string milu("ILU");
-        //     ilu_milu_ = convertString2Milu(param.getDefault("ilu_milu", milu));
-
-        //     // Check whether to use cpr approach
-        //     const std::string cprSolver = "cpr";
-        //     use_cpr_ = ( param.getDefault("solver_approach", std::string()) == cprSolver );
-        // }
 
         // set default values
         void reset()
