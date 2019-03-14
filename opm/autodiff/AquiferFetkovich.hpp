@@ -100,7 +100,7 @@ namespace Opm
         const int cell_index = Base::cartesian_to_compressed_.at(Base::cell_idx_[idx]);
         Base::cellToConnectionIdx_[cell_index] = idx;
 
-  	    const auto cellFacesRange = cell2Faces[cell_index];
+        const auto cellFacesRange = cell2Faces[cell_index];
         for(auto cellFaceIter = cellFacesRange.begin(); cellFaceIter != cellFacesRange.end(); ++cellFaceIter)
         {
           // The index of the face in the compressed grid
@@ -237,4 +237,4 @@ namespace Opm
     }
   }; //Class AquiferFetkovich
 } // namespace Opm
-  #endif
+#endif
