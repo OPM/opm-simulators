@@ -303,7 +303,13 @@ void runBlackoilAmgLaplace()
     smootherArgs.iterations = 1;
     Opm::CPRParameter param;
 
+    Vector weights(b.size());
+    for (auto& elem : weights) {
+        elem = 1.0;
+    }
+
     Opm::BlackoilAmg<Operator,ParSmoother,Criterion,Communication,0> amg(param,
+                                                                         weights,
                                                                          fop, criterion,
                                                                          smootherArgs,
                                                                          comm);
