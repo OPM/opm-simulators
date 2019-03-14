@@ -653,7 +653,6 @@ protected:
                 Scalar scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
                 Scalar storage_scale = scvVolume / elemCtx.simulator().timeStepSize();
                 MatrixBlockType block;
-                int offset = 0;
                 double pressure_scale = 50e5;
                 for (int ii = 0; ii < numEq; ++ii) {
                     for (int jj = 0; jj < numEq; ++jj) {
@@ -676,15 +675,12 @@ protected:
         void scaleEquationsAndVariables(Vector& weights)
         {
             // loop over primary variables
-            const auto& sol = simulator_.model().solution(0);
             const auto endi = matrix_->end();
-            int index = 0;
             for (auto i = matrix_->begin(); i != endi; ++i) {
                 const auto endj = (*i).end();
                 BlockVector& brhs = (*rhs_)[i.index()];
                 for (auto j = (*i).begin(); j != endj; ++j) {
                     MatrixBlockType& block = *j;
-                    const auto& priVars = sol[i.index()];
                     for (std::size_t ii = 0; ii < block.rows; ii++ ) {
                         for (std::size_t jj = 0; jj < block.cols; jj++) {
                             double var_scale = simulator_.model().primaryVarWeight(i.index(),jj);
@@ -710,9 +706,7 @@ protected:
 
         void scaleSolution(Vector& x)
         {
-            const auto& sol = simulator_.model().solution(0);
             for (std::size_t i = 0; i < x.size(); ++i) {
-                const auto& primVar = sol[i];
                 auto& bx = x[i];
                 for (std::size_t jj = 0; jj < bx.size(); jj++) {
                     double var_scale = simulator_.model().primaryVarWeight(i,jj);
@@ -728,7 +722,6 @@ protected:
             BlockVector rhs(0.0);
             rhs[pressureIndex] = 1;
             const auto endi = A.end();
-            int index = 0;
             for (auto i = A.begin(); i!=endi; ++i) {
                 const auto endj = (*i).end();
                 MatrixBlockType diag_block(0.0);
