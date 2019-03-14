@@ -77,9 +77,8 @@ Dune::MatrixAdapter<M,X,Y> createOperator(const Dune::MatrixAdapter<M,X,Y>&, con
 template<class M, class X, class Y, class T>
 std::unique_ptr< Dune::MatrixAdapter<M,X,Y> > createOperatorPtr(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
 {
-  return std::make_unique< Dune::MatrixAdapter<M,X,Y> >(matrix);
-}  
-
+    return std::make_unique< Dune::MatrixAdapter<M,X,Y> >(matrix);
+}
 /**
  * \brief Creates an OverlappingSchwarzOperator as an operator.
  *
@@ -468,8 +467,8 @@ private:
                 }
 #endif
             }
-	    else
-	    {
+            else
+            {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
                                          tolerance, maxit, verbosity);
@@ -489,9 +488,9 @@ private:
                                                    tolerance, maxit, verbosity);
                     solver.apply(x,b,res);
                 }
-		
-#endif		
-	    }
+
+#endif
+            }
 
 #if ! DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             delete sp;
@@ -983,20 +982,19 @@ public:
      * \param comm The information about the parallelization.
      */
     BlackoilAmg(const CPRParameter& param,
-		const typename TwoLevelMethod::FineDomainType& weights,
+                const typename TwoLevelMethod::FineDomainType& weights,
                 const Operator& fineOperator, const Criterion& criterion,
                 const SmootherArgs& smargs, const Communication& comm)
         : param_(param),
-	  weights_(weights),
+          weights_(weights),
           scaledMatrixOperator_(Detail::scaleMatrixDRS(fineOperator, comm,
-						       COMPONENT_INDEX, weights, param)),
+                                COMPONENT_INDEX, weights, param)),
           smoother_(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
-                                                        smargs, comm)),
+                    smargs, comm)),
           levelTransferPolicy_(criterion, comm, param.cpr_pressure_aggregation_),
           coarseSolverPolicy_(&param, smargs, criterion),
           twoLevelMethod_(std::get<1>(scaledMatrixOperator_), smoother_,
-                          levelTransferPolicy_,
-                          coarseSolverPolicy_, 0, 1)
+                          levelTransferPolicy_, coarseSolverPolicy_, 0, 1)
     {}
 
     void pre(typename TwoLevelMethod::FineDomainType& x,

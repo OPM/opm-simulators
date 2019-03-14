@@ -128,14 +128,14 @@ namespace Opm
             cpr_ilu_redblack_         = false;
             cpr_ilu_reorder_sphere_   = true;
             cpr_max_ell_iter_         = 25;
-	    cpr_ell_solvetype_        = 0;
-	    cpr_use_drs_              = false;
-	    cpr_max_iter_             = 25;
+            cpr_ell_solvetype_        = 0;
+            cpr_use_drs_              = false;
+            cpr_max_iter_             = 25;
             cpr_use_amg_              = true;
             cpr_use_bicgstab_         = true;
             cpr_solver_verbose_       = 0;
             cpr_pressure_aggregation_ = false;
-	    cpr_reuse_setup_          = 0;
+            cpr_reuse_setup_          = 0;
         }
     };
 
@@ -181,14 +181,13 @@ namespace Opm
             ignoreConvergenceFailure_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure);
             linear_solver_use_amg_ = EWOMS_GET_PARAM(TypeTag, bool, UseAmg);
             use_cpr_ = EWOMS_GET_PARAM(TypeTag, bool, UseCpr);
-	    system_strategy_ = EWOMS_GET_PARAM(TypeTag, std::string, SystemStrategy);
-	    scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
-	    cpr_solver_verbose_  =  EWOMS_GET_PARAM(TypeTag, int, CprSolverVerbose);
-	    cpr_use_drs_  =  EWOMS_GET_PARAM(TypeTag, bool, CprUseDrs);
-	    cpr_max_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxIter);
-	    cpr_ell_solvetype_  =  EWOMS_GET_PARAM(TypeTag, int, CprEllSolvetype);
-	    cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
-	    
+            system_strategy_ = EWOMS_GET_PARAM(TypeTag, std::string, SystemStrategy);
+            scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
+            cpr_solver_verbose_  =  EWOMS_GET_PARAM(TypeTag, int, CprSolverVerbose);
+            cpr_use_drs_  =  EWOMS_GET_PARAM(TypeTag, bool, CprUseDrs);
+            cpr_max_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxIter);
+            cpr_ell_solvetype_  =  EWOMS_GET_PARAM(TypeTag, int, CprEllSolvetype);
+            cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
         }
 
         template <class TypeTag>
@@ -208,14 +207,13 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseAmg, "Use AMG as the linear solver's preconditioner");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseCpr, "Use CPR as the linear solver's preconditioner");
-	    EWOMS_REGISTER_PARAM(TypeTag, std::string, SystemStrategy, "Strategy for reformulating and scale linear system");
-	    EWOMS_REGISTER_PARAM(TypeTag, bool, ScaleLinearSystem, "Scale linear system according to equation scale and primary variable types");
-	    EWOMS_REGISTER_PARAM(TypeTag, int, CprSolverVerbose, "Verbose for cpr solver");
-	    EWOMS_REGISTER_PARAM(TypeTag, bool, CprUseDrs, "Use dynamic row sum using weighs");
-	    EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxIter, "MaxIterations of the pressure amg solver");
-	    EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "solver type of elliptic solve 0 bicgstab 1 cg other only amg preconditioner");
-	    EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse Amg Setup");
-
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, SystemStrategy, "Strategy for reformulating and scale linear system");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, ScaleLinearSystem, "Scale linear system according to equation scale and primary variable types");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprSolverVerbose, "Verbose for cpr solver");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, CprUseDrs, "Use dynamic row sum using weighs");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxIter, "MaxIterations of the pressure amg solver");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "solver type of elliptic solve 0 bicgstab 1 cg other only amg preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse Amg Setup");
         }
 
         FlowLinearSolverParameters() { reset(); }
