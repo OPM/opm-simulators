@@ -139,13 +139,9 @@ void scaleVectorDRS(Vector& vector, std::size_t pressureIndex, const Opm::CPRPar
     using Block = typename Vector::block_type;
     if (param.cpr_use_drs_) {
         for (std::size_t j = 0; j < vector.size(); ++j) {
-            double val(0.0);
             Block& block = vector[j];
             const Block& bw = weights[j];
-            for (std::size_t i = 0; i < Block::dimension; i++) {
-                val += bw[i]*block[i];
-            }
-            block[pressureIndex] = val;
+            block[pressureIndex] = bw.dot(block);
         }
     }
 }
