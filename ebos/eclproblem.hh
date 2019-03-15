@@ -2144,6 +2144,11 @@ private:
             }
         }
 
+        // If ROCKCOMP is used and ROCKNUM is specified ROCK2D ROCK2DTR ROCKTAB etc. uses ROCKNUM
+        // to give the correct table index.
+        if (deck.hasKeyword("ROCKCOMP") && eclState.get3DProperties().hasDeckIntGridProperty("ROCKNUM"))
+            propName = "ROCKNUM";
+
         // the deck does not specify the selected keyword, so everything uses the first
         // record of ROCK.
         if (eclState.get3DProperties().hasDeckIntGridProperty(propName)) {
