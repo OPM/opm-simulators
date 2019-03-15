@@ -34,6 +34,7 @@
 
 #include "Evaluation.hpp"
 #include "Math.hpp"
+#include "FastSmallVector.hpp"
 
 #include <opm/material/common/Valgrind.hpp>
 
@@ -87,8 +88,8 @@ protected:
     void checkDefined_() const
     {
 #ifndef NDEBUG
-       for (const auto& v: data_)
-           Valgrind::CheckDefined(v);
+        for (int i = dstart_(); i < dend_(); ++i)
+            Valgrind::CheckDefined(data_[i]);
 #endif
     }
 
@@ -518,7 +519,7 @@ public:
 
 private:
 
-    std::vector<ValueT> data_;
+    FastSmallVector<ValueT, 8> data_;
 };
 
 template <class Scalar>
