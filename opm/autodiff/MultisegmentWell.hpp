@@ -272,7 +272,7 @@ namespace Opm
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
                              WellState& well_state,
-			     Opm::DeferredLogger& deferred_logger,
+			                 Opm::DeferredLogger& deferred_logger,
                              const double relaxation_factor=1.0) const;
 
 

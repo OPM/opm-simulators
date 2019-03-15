@@ -590,7 +590,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& deferred_logger) const
+    updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& /* deferred_logger */) const
     {
         // TODO: to test using rate conversion coefficients to see if it will be better than
         // this default one
@@ -767,9 +767,8 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
-
                     WellState& well_state,
-		    Opm::DeferredLogger& deferred_logger
+		            Opm::DeferredLogger& deferred_logger,
                     const double relaxation_factor) const
     {
         const double dFLimit = param_.dwell_fraction_max_;
@@ -823,7 +822,7 @@ namespace Opm
                                 const WellState& well_state,
                                 Opm::DeferredLogger& deferred_logger)
     {
-        updatePrimaryVariables(well_state);
+        updatePrimaryVariables(well_state, deferred_logger);
         initPrimaryVariablesEvaluation();
         computePerfCellPressDiffs(ebosSimulator);
         computeInitialSegmentFluids(ebosSimulator);
