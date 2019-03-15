@@ -79,7 +79,7 @@ specializationTemplate = \
 #include <opm/material/common/Valgrind.hpp>
 
 {% if numDerivs < 0 %}\
-#include <vector>
+#include "FastSmallVector.hpp"
 {% else %}\
 #include <array>
 {% endif %}\
@@ -180,8 +180,13 @@ protected:
     void checkDefined_() const
     {
 #ifndef NDEBUG
+{% if numDerivs < 0 %}\
+        for (int i = dstart_(); i < dend_(); ++i)
+            Valgrind::CheckDefined(data_[i]);
+{% else %}\
        for (const auto& v: data_)
            Valgrind::CheckDefined(v);
+{% endif %}\
 #endif
     }
 
@@ -728,7 +733,7 @@ public:
 private:
 
 {% if numDerivs < 0 %}\
-    std::vector<ValueT> data_;
+    FastSmallVector<ValueT, 9> data_;
 {% elif numDerivs == 0 %}\
     std::array<ValueT, numDerivs + 1> data_;
 {% else %}\

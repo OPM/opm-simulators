@@ -34,11 +34,10 @@
 
 #include "Evaluation.hpp"
 #include "Math.hpp"
-#include "FastSmallVector.hpp"
 
 #include <opm/material/common/Valgrind.hpp>
 
-#include <vector>
+#include "FastSmallVector.hpp"
 #include <cmath>
 #include <cassert>
 #include <cstring>
@@ -519,7 +518,7 @@ public:
 
 private:
 
-    FastSmallVector<ValueT, 8> data_;
+    FastSmallVector<ValueT, 9> data_;
 };
 
 template <class Scalar>
