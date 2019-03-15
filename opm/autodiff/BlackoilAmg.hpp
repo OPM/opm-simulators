@@ -116,7 +116,6 @@ scaleMatrixDRS(const Operator& op, const Communication& comm,
             const BlockVector& bw = weights[i.index()];
             const auto endj = (*i).end();
             for (auto j = (*i).begin(); j != endj; ++j) {  
-                BlockVector bvec(0.0);
                 Block& block = *j;
                 BlockVector& bvec = block[pressureIndex];
                 // should introduce limits which also change the weights
