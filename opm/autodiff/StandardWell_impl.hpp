@@ -282,6 +282,7 @@ namespace Opm
     computePerfRate(const IntensiveQuantities& intQuants,
                     const std::vector<EvalWell>& mob,
                     const EvalWell& bhp,
+                    const double Tw,
                     const int perf,
                     const bool allow_cf,
                     std::vector<EvalWell>& cq_s,
@@ -317,7 +318,6 @@ namespace Opm
                 return;
             }
 
-            const double Tw = well_index_[perf];
             // compute component volumetric rates at standard conditions
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 const EvalWell cq_p = - Tw * (mob[componentIdx] * drawdown);
@@ -355,7 +355,6 @@ namespace Opm
             }
 
             // injection perforations total volume rates
-            const double Tw = well_index_[perf];
             const EvalWell cqt_i = - Tw * (total_mob_dense * drawdown);
 
             // surface volume fraction of fluids within wellbore
@@ -486,7 +485,9 @@ namespace Opm
             std::vector<EvalWell> cq_s(num_components_, 0.0);
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            computePerfRate(intQuants, mob, bhp, perf, allow_cf,
+            double trans_mult = ebosSimulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx)), cell_idx);
+            const double Tw = well_index_[perf] * trans_mult;
+            computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
             // updating the solution gas rate and solution oil rate
@@ -1273,7 +1274,7 @@ namespace Opm
             }
 
             // the well index associated with the connection
-            const double tw_perf = well_index_[perf];
+            const double tw_perf = well_index_[perf]* ebos_simulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(int_quantities.fluidState().pressure(FluidSystem::oilPhaseIdx)), cell_idx);
 
             // TODO: there might be some indices related problems here
             // phases vs components
@@ -2202,11 +2203,13 @@ namespace Opm
             // flux for each perforation
             std::vector<EvalWell> mob(num_components_, 0.0);
             getMobility(ebosSimulator, perf, mob, deferred_logger);
+       	    double trans_mult = ebosSimulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx)), cell_idx);
+            const double Tw = well_index_[perf] * trans_mult;
 
             std::vector<EvalWell> cq_s(num_components_, 0.0);
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            computePerfRate(intQuants, mob, bhp, perf, allow_cf,
+            computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
             for(int p = 0; p < np; ++p) {
@@ -2605,7 +2608,9 @@ namespace Opm
             std::vector<EvalWell> cq_s(num_components_,0.0);
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            computePerfRate(int_quant, mob, bhp, perf, allow_cf,
+            double trans_mult = ebos_simulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(int_quant.fluidState().pressure(FluidSystem::oilPhaseIdx)), cell_idx);
+            const double Tw = well_index_[perf] * trans_mult;
+            computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
             // TODO: make area a member
             const double area = 2 * M_PI * perf_rep_radius_[perf] * perf_length_[perf];

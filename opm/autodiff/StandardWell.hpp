@@ -318,6 +318,7 @@ namespace Opm
         void computePerfRate(const IntensiveQuantities& intQuants,
                              const std::vector<EvalWell>& mob,
                              const EvalWell& bhp,
+                             const double Tw,
                              const int perf,
                              const bool allow_cf,
                              std::vector<EvalWell>& cq_s,
