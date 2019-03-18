@@ -338,6 +338,7 @@ public:
         if (rstKeywords["ROCKC"] > 0) {
             rstKeywords["ROCKC"] = 0;
             porvMultiplier_.resize(bufferSize, 0.0);
+            transMultiplier_.resize(bufferSize, 0.0);
             swMax_.resize(bufferSize, 0.0);
         }
 
@@ -508,6 +509,9 @@ public:
 
             if (porvMultiplier_.size() > 0)
                 porvMultiplier_[globalDofIdx] = elemCtx.simulator().problem().getPoreVolumeMultiplier(Opm::getValue(fs.pressure(oilPhaseIdx)), elemCtx, dofIdx, /*timeIdx=*/ 0 );
+
+            if (transMultiplier_.size() > 0)
+                transMultiplier_[globalDofIdx] = elemCtx.simulator().problem().getTransmissibiltyMultiplier(Opm::getValue(fs.pressure(oilPhaseIdx)), elemCtx, dofIdx, /*timeIdx=*/ 0 );
 
             const auto& matLawManager = elemCtx.simulator().problem().materialLawManager();
             if (matLawManager->enableHysteresis()) {
@@ -849,6 +853,9 @@ public:
 
         if (porvMultiplier_.size() > 0)
             sol.insert ("PORV_MOD", Opm::UnitSystem::measure::identity, std::move(porvMultiplier_), Opm::data::TargetType::RESTART_SOLUTION);
+
+        if (transMultiplier_.size() > 0)
+            sol.insert ("PERM_MOD", Opm::UnitSystem::measure::identity, std::move(transMultiplier_), Opm::data::TargetType::RESTART_SOLUTION);
 
 
         // Fluid in place
@@ -1419,6 +1426,7 @@ private:
     ScalarBuffer bubblePointPressure_;
     ScalarBuffer dewPointPressure_;
     ScalarBuffer porvMultiplier_;
+    ScalarBuffer transMultiplier_;
     ScalarBuffer swMax_;
 
     std::vector<int> failedCellsPb_;

@@ -859,6 +859,9 @@ public:
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
                 maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
 
+        updateMaxWaterSaturation_();
+        updateMinumumPressure_();
+
         wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
@@ -1024,11 +1027,12 @@ public:
         if( transmissibilityMultiplier_.size() == 0)
             return pffDofData_.get(context.element(), toDofLocalIdx).transmissibility;
 
-        const auto& intQuants = context.intensiveQuantities(toDofLocalIdx, /*timeIdx=*/0);
+#warning Do we need to care about the face tag i.e. XPLUS etc.?
+        const auto& intQuants = context.intensiveQuantities(fromDofLocalIdx, /*timeIdx=*/0);
         const auto& pressure = intQuants.fluidState().pressure(oilPhaseIdx);
 #warning Do we need to care about the derivatives.
         return pffDofData_.get(context.element(), toDofLocalIdx).transmissibility *
-                getTransmissibiltyMultiplier(Opm::scalarValue(pressure), context, toDofLocalIdx, /*timeIdx=*/0);
+                getTransmissibiltyMultiplier(Opm::scalarValue(pressure), context, fromDofLocalIdx, /*timeIdx=*/0);
     }
 
     /*!
@@ -1758,10 +1762,29 @@ public:
             tableIdx = rockTableIdx_[globalSpaceIdx];
         }
         LhsEval waterSaturationIncrease = maxWaterSaturation_[globalSpaceIdx] - initialFluidStates_[globalSpaceIdx].saturation(waterPhaseIdx);
+        LhsEval effectivePressure = pressure;
 
-        //if (globalSpaceIdx == 0)
-        //    std::cout << maxWaterSaturation_[globalSpaceIdx] << " " << poreVolumeMultiplier_[tableIdx].eval(pressure, waterSaturationIncrease, /*extrapolation=*/false) <<std::endl;
+        if (minimumPressure_.size() > 0) // The pore space change is irreversible
+            effectivePressure = minimumPressure_[globalSpaceIdx];
 
+        if (overburdenPressure_.size() > 0 )
+            effectivePressure -= overburdenPressure_[globalSpaceIdx];
+
+        return transmissibilityMultiplier_[tableIdx].eval(effectivePressure, waterSaturationIncrease, /*extrapolation=*/true);
+    }
+
+    template <class LhsEval>
+    LhsEval getTransmissibiltyMultiplier(const LhsEval& pressure, unsigned globalSpaceIdx) const {
+
+        if (transmissibilityMultiplier_.size() == 0)
+            return 1.0;
+
+        unsigned tableIdx = 0;
+
+        if (!rockTableIdx_.empty()) {
+            tableIdx = rockTableIdx_[globalSpaceIdx];
+        }
+        LhsEval waterSaturationIncrease = maxWaterSaturation_[globalSpaceIdx] - initialFluidStates_[globalSpaceIdx].saturation(waterPhaseIdx);
         LhsEval effectivePressure = pressure;
 
         if (minimumPressure_.size() > 0) // The pore space change is irreversible
