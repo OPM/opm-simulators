@@ -343,12 +343,13 @@ protected:
             // does not matter, though.
             unsigned upstreamIdx = upstreamIndex_(phaseIdx);
             const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
+            const Evaluation transModified = trans*problem.getTransmissibiltyMultiplier(up.fluidState().pressure(FluidSystem::oilPhaseIdx), stencil.globalSpaceIndex(upstreamIdx));
             if (upstreamIdx == interiorDofIdx_)
                 volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-trans/faceArea);
+                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-transModified/faceArea);
             else
                 volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*(-trans/faceArea));
+                    pressureDifference_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*(-transModified/faceArea));
         }
     }
 
@@ -427,13 +428,14 @@ protected:
             // only works for the element centered finite volume method. for ebos this
             // does not matter, though.
             unsigned upstreamIdx = upstreamIndex_(phaseIdx);
+            const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
+            const Evaluation transModified = trans*problem.getTransmissibiltyMultiplier(up.fluidState().pressure(FluidSystem::oilPhaseIdx), stencil.globalSpaceIndex(upstreamIdx));
             if (upstreamIdx == interiorDofIdx_) {
-                const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
                 volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-trans/faceArea);
+                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-transModified/faceArea);
 
                 if (enableSolvent && phaseIdx == gasPhaseIdx) {
-                        asImp_().setSolventVolumeFlux( pressureDifference_[phaseIdx]*up.solventMobility()*(-trans/faceArea));
+                        asImp_().setSolventVolumeFlux( pressureDifference_[phaseIdx]*up.solventMobility()*(-transModified/faceArea));
                 }
             }
             else {
@@ -448,7 +450,7 @@ protected:
 
                 const auto& mob = kr[phaseIdx]/exFluidState.viscosity(phaseIdx);
                 volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*mob*(-trans/faceArea);
+                    pressureDifference_[phaseIdx]*mob*(-transModified/faceArea);
 
                 // Solvent inflow is not yet supported
                 if (enableSolvent && phaseIdx == gasPhaseIdx) {

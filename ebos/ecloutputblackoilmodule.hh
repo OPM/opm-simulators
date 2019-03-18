@@ -508,10 +508,10 @@ public:
                 swMax_[globalDofIdx] = elemCtx.simulator().problem().maxWaterSaturation(globalDofIdx);
 
             if (porvMultiplier_.size() > 0)
-                porvMultiplier_[globalDofIdx] = elemCtx.simulator().problem().getPoreVolumeMultiplier(Opm::getValue(fs.pressure(oilPhaseIdx)), elemCtx, dofIdx, /*timeIdx=*/ 0 );
+                porvMultiplier_[globalDofIdx] = elemCtx.simulator().problem().getPoreVolumeMultiplier(Opm::getValue(fs.pressure(oilPhaseIdx)), globalDofIdx);
 
             if (transMultiplier_.size() > 0)
-                transMultiplier_[globalDofIdx] = elemCtx.simulator().problem().getTransmissibiltyMultiplier(Opm::getValue(fs.pressure(oilPhaseIdx)), elemCtx, dofIdx, /*timeIdx=*/ 0 );
+                transMultiplier_[globalDofIdx] = elemCtx.simulator().problem().getTransmissibiltyMultiplier(Opm::getValue(fs.pressure(oilPhaseIdx)), globalDofIdx);
 
             const auto& matLawManager = elemCtx.simulator().problem().materialLawManager();
             if (matLawManager->enableHysteresis()) {

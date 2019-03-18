@@ -1024,15 +1024,7 @@ public:
                             unsigned toDofLocalIdx) const
     {
         assert(fromDofLocalIdx == 0);
-        if( transmissibilityMultiplier_.size() == 0)
-            return pffDofData_.get(context.element(), toDofLocalIdx).transmissibility;
-
-#warning Do we need to care about the face tag i.e. XPLUS etc.?
-        const auto& intQuants = context.intensiveQuantities(fromDofLocalIdx, /*timeIdx=*/0);
-        const auto& pressure = intQuants.fluidState().pressure(oilPhaseIdx);
-#warning Do we need to care about the derivatives.
-        return pffDofData_.get(context.element(), toDofLocalIdx).transmissibility *
-                getTransmissibiltyMultiplier(Opm::scalarValue(pressure), context, fromDofLocalIdx, /*timeIdx=*/0);
+        return pffDofData_.get(context.element(), toDofLocalIdx).transmissibility;
     }
 
     /*!
@@ -1721,23 +1713,17 @@ public:
                                  +std::to_string(double(simulator.timeStepSize())));
     }
 
-    template <class LhsEval, class Context>
-    LhsEval getPoreVolumeMultiplier(const LhsEval& pressure, const Context& context, unsigned spaceIdx, unsigned timeIdx) const {
+    template <class LhsEval>
+    LhsEval getPoreVolumeMultiplier(const LhsEval& pressure, unsigned globalSpaceIdx) const {
 
         if (poreVolumeMultiplier_.size() == 0)
             return 1.0;
 
         unsigned tableIdx = 0;
-        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-
         if (!rockTableIdx_.empty()) {
             tableIdx = rockTableIdx_[globalSpaceIdx];
         }
         LhsEval waterSaturationIncrease = maxWaterSaturation_[globalSpaceIdx] - initialFluidStates_[globalSpaceIdx].saturation(waterPhaseIdx);
-
-      //  if (globalSpaceIdx == 0)
-    //         std::cout << maxWaterSaturation_[globalSpaceIdx] << " " << poreVolumeMultiplier_[tableIdx].eval(pressure, waterSaturationIncrease, /*extrapolation=*/false) <<std::endl;
-
         LhsEval effectivePressure = pressure;
 
         if (minimumPressure_.size() > 0) // The pore space change is irreversible
@@ -1747,30 +1733,6 @@ public:
             effectivePressure -= overburdenPressure_[globalSpaceIdx];
 
         return poreVolumeMultiplier_[tableIdx].eval(effectivePressure, waterSaturationIncrease, /*extrapolation=*/true);
-    }
-
-    template <class LhsEval, class Context>
-    LhsEval getTransmissibiltyMultiplier(const LhsEval& pressure, const Context& context, unsigned spaceIdx, unsigned timeIdx) const {
-
-        if (transmissibilityMultiplier_.size() == 0)
-            return 1.0;
-
-        unsigned tableIdx = 0;
-        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-
-        if (!rockTableIdx_.empty()) {
-            tableIdx = rockTableIdx_[globalSpaceIdx];
-        }
-        LhsEval waterSaturationIncrease = maxWaterSaturation_[globalSpaceIdx] - initialFluidStates_[globalSpaceIdx].saturation(waterPhaseIdx);
-        LhsEval effectivePressure = pressure;
-
-        if (minimumPressure_.size() > 0) // The pore space change is irreversible
-            effectivePressure = minimumPressure_[globalSpaceIdx];
-
-        if (overburdenPressure_.size() > 0 )
-            effectivePressure -= overburdenPressure_[globalSpaceIdx];
-
-        return transmissibilityMultiplier_[tableIdx].eval(effectivePressure, waterSaturationIncrease, /*extrapolation=*/true);
     }
 
     template <class LhsEval>
