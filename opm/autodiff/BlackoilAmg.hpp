@@ -427,8 +427,11 @@ private:
             // Linear solver parameters
             const double tolerance = param_->cpr_solver_tol_;
             const int maxit        = param_->cpr_max_iter_;
-            const int verbosity    = ( param_->cpr_solver_verbose_ &&
-                                       comm_.communicator().rank()==0 ) ? 1 : 0;
+            int verbosity = 0;
+            if (comm_.communicator().rank() == 0) {
+                verbosity = param_->cpr_solver_verbose_;
+            }
+
             if ( param_->cpr_ell_solvetype_ == 0)
             {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)

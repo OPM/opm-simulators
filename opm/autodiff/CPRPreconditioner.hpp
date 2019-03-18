@@ -197,8 +197,10 @@ createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm,
                                const Vector& weights)
 {
     using AMG = BlackoilAmg<Op,S,C,P,PressureEqnIndex,PressureVarIndex>;
-    const int verbosity = ( params.cpr_solver_verbose_ && comm.communicator().rank() == 0 ) ? 1 : 0;
-
+    int verbosity = 0;
+    if (comm.communicator().rank() == 0) {
+        verbosity = params.cpr_solver_verbose_;
+    }
     // TODO: revise choice of parameters
     int coarsenTarget=1200;
     using Criterion = C;
