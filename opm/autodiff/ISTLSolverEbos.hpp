@@ -769,11 +769,11 @@ protected:
                     }
                     block[pressureEqnIndex] = neweq;
                 }
-                BlockVector newrhs(0.0);
+                Scalar newrhs(0.0);
                 for (std::size_t ii = 0; ii < brhs.size(); ii++) {
                     newrhs += bweights[ii]*brhs[ii];
                 }
-                brhs = newrhs;
+                brhs[pressureEqnIndex] = newrhs;
             }
         }
 
