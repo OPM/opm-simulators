@@ -340,6 +340,7 @@ public:
             porvMultiplier_.resize(bufferSize, 0.0);
             transMultiplier_.resize(bufferSize, 0.0);
             swMax_.resize(bufferSize, 0.0);
+            overburdenPressure_.resize(bufferSize, 0.0);
         }
 
         //Warn for any unhandled keyword
@@ -506,6 +507,9 @@ public:
 
             if (swMax_.size() > 0)
                 swMax_[globalDofIdx] = elemCtx.simulator().problem().maxWaterSaturation(globalDofIdx);
+
+            if (overburdenPressure_.size() > 0)
+                overburdenPressure_[globalDofIdx] = elemCtx.simulator().problem().getOverburdenPressure(globalDofIdx);
 
             if (porvMultiplier_.size() > 0)
                 porvMultiplier_[globalDofIdx] = elemCtx.simulator().problem().getPoreVolumeMultiplier(Opm::getValue(fs.pressure(oilPhaseIdx)), globalDofIdx);
@@ -850,6 +854,9 @@ public:
 
         if (swMax_.size() > 0)
             sol.insert ("SWMAX", Opm::UnitSystem::measure::identity, std::move(swMax_), Opm::data::TargetType::RESTART_SOLUTION);
+
+        if (overburdenPressure_.size() > 0)
+            sol.insert ("PRES_OVB", Opm::UnitSystem::measure::pressure, std::move(overburdenPressure_), Opm::data::TargetType::RESTART_SOLUTION);
 
         if (porvMultiplier_.size() > 0)
             sol.insert ("PORV_MOD", Opm::UnitSystem::measure::identity, std::move(porvMultiplier_), Opm::data::TargetType::RESTART_SOLUTION);
@@ -1428,6 +1435,7 @@ private:
     ScalarBuffer porvMultiplier_;
     ScalarBuffer transMultiplier_;
     ScalarBuffer swMax_;
+    ScalarBuffer overburdenPressure_;
 
     std::vector<int> failedCellsPb_;
     std::vector<int> failedCellsPd_;

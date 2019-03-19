@@ -1758,6 +1758,10 @@ public:
         return transmissibilityMultiplier_[tableIdx].eval(effectivePressure, waterSaturationIncrease, /*extrapolation=*/true);
     }
 
+    Scalar getOverburdenPressure(unsigned globalSpaceIdx) const {
+        return overburdenPressure_[globalSpaceIdx];
+    }
+
 
 private:
     void checkDeckCompatibility_() const

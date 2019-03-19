@@ -2203,7 +2203,7 @@ namespace Opm
             // flux for each perforation
             std::vector<EvalWell> mob(num_components_, 0.0);
             getMobility(ebosSimulator, perf, mob, deferred_logger);
-       	    double trans_mult = ebosSimulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx)), cell_idx);
+            double trans_mult = ebosSimulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx)), cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
 
             std::vector<EvalWell> cq_s(num_components_, 0.0);
