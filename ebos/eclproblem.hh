@@ -1363,7 +1363,7 @@ public:
             values.setThermalFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
         }
 
-        if (hasFreeBoundaryConditions()) {
+        if (nonTrivialBoundaryConditions()) {
             unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
             unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
             unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
@@ -1618,8 +1618,8 @@ public:
         return (oilVaporizationControl.getType() == Opm::OilVaporizationEnum::VAPPARS);
     }
 
-    bool hasFreeBoundaryConditions() const
-    { return hasFreeBoundaryConditions_; }
+    bool nonTrivialBoundaryConditions() const
+    { return nonTrivialBoundaryConditions_; }
 
     /*!
      * \brief Propose the size of the next time step to the simulator.
@@ -2549,18 +2549,11 @@ private:
 
     void readBoundaryConditions_()
     {
-        hasFreeBoundaryConditions_ = false;
-        readBoundaryConditionKeyword_("FREEBCX", freebcX_);
-        readBoundaryConditionKeyword_("FREEBCX-", freebcXMinus_);
-        readBoundaryConditionKeyword_("FREEBCY", freebcY_);
-        readBoundaryConditionKeyword_("FREEBCY-", freebcYMinus_);
-        readBoundaryConditionKeyword_("FREEBCZ", freebcZ_);
-        readBoundaryConditionKeyword_("FREEBCZ-", freebcZMinus_);
-
+        nonTrivialBoundaryConditions_ = false;
         const auto& vanguard = this->simulator().vanguard();
 
-        if (vanguard.deck().hasKeyword("BCRATE")) {
-            hasFreeBoundaryConditions_ = true;
+        if (vanguard.deck().hasKeyword("BC")) {
+            nonTrivialBoundaryConditions_ = true;
             size_t numCartDof = vanguard.cartesianSize();
             unsigned numElems = vanguard.gridView().size(/*codim=*/0);
             std::vector<int> cartesianToCompressedElemIdx(numCartDof);
@@ -2574,14 +2567,21 @@ private:
             massratebcY_.resize(numElems, 0.0);
             massratebcZMinus_.resize(numElems, 0.0);
             massratebcZ_.resize(numElems, 0.0);
+            freebcX_.resize(numElems, false);
+            freebcXMinus_.resize(numElems, false);
+            freebcY_.resize(numElems, false);
+            freebcYMinus_.resize(numElems, false);
+            freebcZ_.resize(numElems, false);
+            freebcZMinus_.resize(numElems, false);
 
-            const auto& ratebcs = vanguard.deck().getKeywordList("BCRATE");
-            for (size_t listIdx = 0; listIdx < ratebcs.size(); ++listIdx) {
-                const auto& ratebc = *ratebcs[listIdx];
+            const auto& bcs = vanguard.deck().getKeywordList("BC");
+            for (size_t listIdx = 0; listIdx < bcs.size(); ++listIdx) {
+                const auto& bc = *bcs[listIdx];
 
-                for (size_t record = 0; record < ratebc.size(); ++record) {
+                for (size_t record = 0; record < bc.size(); ++record) {
 
-                    std::string compName = ratebc.getRecord(record).getItem("COMPONENT").getTrimmedString(0);
+                    std::string type = bc.getRecord(record).getItem("TYPE").getTrimmedString(0);
+                    std::string compName = bc.getRecord(record).getItem("COMPONENT").getTrimmedString(0);
                     int compIdx = -999;
 
                     if (compName == "OIL")
@@ -2593,74 +2593,92 @@ private:
                     else if (compName == "SOLVENT")
                     {
                         if (!enableSolvent)
-                            throw std::logic_error("solvent is disabled and you're trying to add solvent to BCRATE");
+                            throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
 
                         compIdx = Indices::solventSaturationIdx;
                     }
                     else if (compName == "POLYMER")
                     {
                         if (!enablePolymer)
-                            throw std::logic_error("polymer is disabled and you're trying to add polymer to BCRATE");
+                            throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
 
                         compIdx = Indices::polymerConcentrationIdx;
                     }
+                    else if (compName == "NONE")
+                    {
+                        if ( type == "RATE")
+                            throw std::logic_error("you need to specify the component when RATE type is set in BC");
+                    }
                     else
-                        throw std::logic_error("invalid component name for BCRATE");
-                    assert(compIdx >= 0);
+                        throw std::logic_error("invalid component name for BC");
 
-                    std::string direction = ratebc.getRecord(record).getItem("DIRECTION").getTrimmedString(0);
-                    std::vector<RateVector>* data = 0;
-                    if (direction == "X-")
-                        data = &massratebcXMinus_;
-                    else if (direction == "X")
-                        data = &massratebcX_;
-                    else if (direction == "Y-")
-                        data = &massratebcYMinus_;
-                    else if (direction == "Y")
-                        data = &massratebcY_;
-                    else if (direction == "Z-")
-                        data = &massratebcZMinus_;
-                    else if (direction == "Z")
-                        data = &massratebcZ_;
-                    else
-                        throw std::logic_error("invalid direction for BCRATE");
+                    int i1 = bc.getRecord(record).getItem("I1").template get< int >(0) - 1;
+                    int i2 = bc.getRecord(record).getItem("I2").template get< int >(0) - 1;
+                    int j1 = bc.getRecord(record).getItem("J1").template get< int >(0) - 1;
+                    int j2 = bc.getRecord(record).getItem("J2").template get< int >(0) - 1;
+                    int k1 = bc.getRecord(record).getItem("K1").template get< int >(0) - 1;
+                    int k2 = bc.getRecord(record).getItem("K2").template get< int >(0) - 1;
+                    std::string direction = bc.getRecord(record).getItem("DIRECTION").getTrimmedString(0);
 
-                    int i1 = ratebc.getRecord(record).getItem("I1").template get< int >(0) - 1;
-                    int i2 = ratebc.getRecord(record).getItem("I2").template get< int >(0) - 1;
-                    int j1 = ratebc.getRecord(record).getItem("J1").template get< int >(0) - 1;
-                    int j2 = ratebc.getRecord(record).getItem("J2").template get< int >(0) - 1;
-                    int k1 = ratebc.getRecord(record).getItem("K1").template get< int >(0) - 1;
-                    int k2 = ratebc.getRecord(record).getItem("K2").template get< int >(0) - 1;
-                    const Evaluation rate = ratebc.getRecord(record).getItem("RATE").getSIDouble(0);
-                    for (int i = i1; i <= i2; ++i) {
-                        for (int j = j1; j <= j2; ++j) {
-                            for (int k = k1; k <= k2; ++k) {
-                                std::array<int, 3> tmp = {i,j,k};
-                                size_t elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
-                                (*data)[elemIdx][compIdx] = rate;
+                    if (type == "RATE") {
+                        assert(compIdx >= 0);
+                        std::vector<RateVector>* data = 0;
+                        if (direction == "X-")
+                            data = &massratebcXMinus_;
+                        else if (direction == "X")
+                            data = &massratebcX_;
+                        else if (direction == "Y-")
+                            data = &massratebcYMinus_;
+                        else if (direction == "Y")
+                            data = &massratebcY_;
+                        else if (direction == "Z-")
+                            data = &massratebcZMinus_;
+                        else if (direction == "Z")
+                            data = &massratebcZ_;
+                        else
+                            throw std::logic_error("invalid direction for BC");
+
+                        const Evaluation rate = bc.getRecord(record).getItem("RATE").getSIDouble(0);
+                        for (int i = i1; i <= i2; ++i) {
+                            for (int j = j1; j <= j2; ++j) {
+                                for (int k = k1; k <= k2; ++k) {
+                                    std::array<int, 3> tmp = {i,j,k};
+                                    size_t elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
+                                    (*data)[elemIdx][compIdx] = rate;
+                                }
                             }
                         }
+                    } else if (type == "FREE") {
+                        std::vector<bool>* data = 0;
+                        if (direction == "X-")
+                            data = &freebcXMinus_;
+                        else if (direction == "X")
+                            data = &freebcX_;
+                        else if (direction == "Y-")
+                            data = &freebcYMinus_;
+                        else if (direction == "Y")
+                            data = &freebcY_;
+                        else if (direction == "Z-")
+                            data = &freebcZMinus_;
+                        else if (direction == "Z")
+                            data = &freebcZ_;
+                        else
+                            throw std::logic_error("invalid direction for BC");
+
+                        for (int i = i1; i <= i2; ++i) {
+                            for (int j = j1; j <= j2; ++j) {
+                                for (int k = k1; k <= k2; ++k) {
+                                    std::array<int, 3> tmp = {i,j,k};
+                                    size_t elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
+                                    (*data)[elemIdx] = true;
+                                }
+                            }
+                        }
+                    } else {
+                        throw std::logic_error("invalid type for BC. Use FREE or RATE");
                     }
                 }
             }
-        }
-    }
-
-    void readBoundaryConditionKeyword_(const std::string& name, std::vector<bool>& compressedData)
-    {
-        const auto& eclProps = this->simulator().vanguard().eclState().get3DProperties();
-        const auto& vanguard = this->simulator().vanguard();
-
-        unsigned numElems = vanguard.gridView().size(/*codim=*/0);
-        compressedData.resize(numElems, false);
-
-        if (eclProps.hasDeckDoubleGridProperty(name)) {
-            const std::vector<double>& data = eclProps.getDoubleGridProperty(name).getData();
-            for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-                unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
-                compressedData[elemIdx] = (data[cartElemIdx] > 0);
-            }
-            hasFreeBoundaryConditions_ = true;
         }
     }
 
@@ -2754,7 +2772,7 @@ private:
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
 
-    bool hasFreeBoundaryConditions_;
+    bool nonTrivialBoundaryConditions_;
     std::vector<bool> freebcX_;
     std::vector<bool> freebcXMinus_;
     std::vector<bool> freebcY_;
