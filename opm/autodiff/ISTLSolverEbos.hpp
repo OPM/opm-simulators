@@ -61,6 +61,17 @@ END_PROPERTIES
 
 namespace Opm
 {
+template <class DenseMatrix>
+DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
+{
+    DenseMatrix tmp;
+    for (int i = 0; i < M.rows; ++i)
+        for (int j = 0; j < M.cols; ++j)
+            tmp[j][i] = M[i][j];
+
+    return tmp;
+}
+
 //=====================================================================
 // Implementation for ISTL-matrix based operator
 //=====================================================================
@@ -662,7 +673,7 @@ protected:
                     }
                 }
                 BlockVector bweights;
-                MatrixBlockType block_transpose = block.transpose();
+                MatrixBlockType block_transpose = Opm::transposeDenseMatrix(block);
                 block_transpose.solve(bweights, rhs);
                 bweights /= 1000.0; // given normal densities this scales weights to about 1.
                 weights[index] = bweights;
@@ -731,7 +742,7 @@ protected:
                     }
                 }
                 BlockVector bweights;
-                auto diag_block_transpose = diag_block.transpose();
+                auto diag_block_transpose = Opm::transposeDenseMatrix(diag_block);
                 diag_block_transpose.solve(bweights, rhs);
                 double abs_max =
                     *std::max_element(bweights.begin(), bweights.end(), [](double a, double b){ return std::abs(a) < std::abs(b); } );
