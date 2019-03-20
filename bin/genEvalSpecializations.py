@@ -79,7 +79,7 @@ specializationTemplate = \
 #include <opm/material/common/Valgrind.hpp>
 
 {% if numDerivs < 0 %}\
-#include "FastSmallVector.hpp"
+#include <opm/material/common/FastSmallVector.hpp>
 {% else %}\
 #include <array>
 {% endif %}\
