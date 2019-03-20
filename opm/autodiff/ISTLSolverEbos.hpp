@@ -249,13 +249,16 @@ protected:
                     bvec[pressureEqnIndex] = 1;
                     weights_ = getSimpleWeights(bvec);
                 } else {
+                    if (parameters_.system_strategy_ != "none") {
+                        OpmLog::warning("unknown_system_strategy", "Unknown linear solver system strategy: '" + parameters_.system_strategy_ + "', applying 'none' strategy.");
+                    }
                     form_cpr = false;
                 }
                 if (parameters_.scale_linear_system_) {
                     // also scale weights
                     this->scaleEquationsAndVariables(weights_);
                 }
-                if (form_cpr && not(parameters_.cpr_use_drs_)) {
+                if (form_cpr && !(parameters_.cpr_use_drs_)) {
                     scaleMatrixAndRhs(weights_);
                 }
                 if (weights_.size() == 0) {
@@ -302,7 +305,7 @@ protected:
                 //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
                 //to be certain that correct matrix is used for preconditioning.
                 Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel,
-                        parallelInformation_ );
+                             parallelInformation_ );
                 assert( opA.comm() );
                 solve( opA, x, *rhs_, *(opA.comm()) );
             }
@@ -642,6 +645,8 @@ protected:
         }
 
         // Weights to make approximate pressure equations.
+        // Calculated from the storage terms (only) of the
+        // conservation equations, ignoring all other terms.
         Vector getStorageWeights() const
         {
             Vector weights(rhs_->size()); 
@@ -682,6 +687,13 @@ protected:
             return weights;
         }
 
+        // Interaction between the CPR weights (the function argument 'weights')
+        // and the variable and equation weights from
+        // simulator_.model().primaryVarWeight() and
+        // simulator_.model().eqWeight() is nontrivial and does not work
+        // at the moment. Possibly refactoring of ewoms weight treatment
+        // is needed. In the meantime this function shows what needs to be
+        // done to integrate the weights properly.
         void scaleEquationsAndVariables(Vector& weights)
         {
             // loop over primary variables
@@ -702,7 +714,7 @@ protected:
                 for (std::size_t ii = 0; ii < brhs.size(); ii++) {
                     brhs[ii] *= simulator_.model().eqWeight(i.index(), ii);
                 }
-                if (weights_.size() == matrix_->N()) {
+                if (weights.size() == matrix_->N()) {
                     BlockVector& bw = weights[i.index()];
                     for (std::size_t ii = 0; ii < brhs.size(); ii++) {
                         bw[ii] /= simulator_.model().eqWeight(i.index(), ii);

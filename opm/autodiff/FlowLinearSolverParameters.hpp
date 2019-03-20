@@ -63,7 +63,7 @@ NEW_PROP_TAG(SystemStrategy);
 NEW_PROP_TAG(ScaleLinearSystem);
 NEW_PROP_TAG(CprSolverVerbose);
 NEW_PROP_TAG(CprUseDrs);
-NEW_PROP_TAG(CprMaxIter);
+NEW_PROP_TAG(CprMaxEllIter);
 NEW_PROP_TAG(CprEllSolvetype);
 NEW_PROP_TAG(CprReuseSetup);
 
@@ -83,11 +83,11 @@ SET_BOOL_PROP(FlowIstlSolverParams, UseAmg, false);
 SET_BOOL_PROP(FlowIstlSolverParams, UseCpr, false);
 SET_TYPE_PROP(FlowIstlSolverParams, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
 SET_BOOL_PROP(FlowIstlSolverParams, PreconditionerAddWellContributions, false);
-SET_STRING_PROP(FlowIstlSolverParams, SystemStrategy, "original");
+SET_STRING_PROP(FlowIstlSolverParams, SystemStrategy, "none");
 SET_BOOL_PROP(FlowIstlSolverParams, ScaleLinearSystem, false);
 SET_INT_PROP(FlowIstlSolverParams, CprSolverVerbose, 0);
 SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
-SET_INT_PROP(FlowIstlSolverParams, CprMaxIter, 20);
+SET_INT_PROP(FlowIstlSolverParams, CprMaxEllIter, 20);
 SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
 SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 0);
 
@@ -111,7 +111,6 @@ namespace Opm
         bool cpr_ilu_reorder_sphere_;
         bool cpr_use_drs_;
         int cpr_max_ell_iter_;
-        int cpr_max_iter_;
         int cpr_ell_solvetype_;
         bool cpr_use_amg_;
         bool cpr_use_bicgstab_;
@@ -130,7 +129,6 @@ namespace Opm
             cpr_max_ell_iter_         = 25;
             cpr_ell_solvetype_        = 0;
             cpr_use_drs_              = false;
-            cpr_max_iter_             = 25;
             cpr_use_amg_              = true;
             cpr_use_bicgstab_         = true;
             cpr_solver_verbose_       = 0;
@@ -185,7 +183,7 @@ namespace Opm
             scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
             cpr_solver_verbose_  =  EWOMS_GET_PARAM(TypeTag, int, CprSolverVerbose);
             cpr_use_drs_  =  EWOMS_GET_PARAM(TypeTag, bool, CprUseDrs);
-            cpr_max_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxIter);
+            cpr_max_ell_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxEllIter);
             cpr_ell_solvetype_  =  EWOMS_GET_PARAM(TypeTag, int, CprEllSolvetype);
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
         }
@@ -207,12 +205,12 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseAmg, "Use AMG as the linear solver's preconditioner");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseCpr, "Use CPR as the linear solver's preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, SystemStrategy, "Strategy for reformulating and scale linear system");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, SystemStrategy, "Strategy for reformulating and scaling linear system (none: no scaling -- should not be used with CPR, original: use weights that are equivalent to no scaling -- should not be used with CPR, simple: form pressure equation as simple sum of conservation equations, quasiimpes: form pressure equation based on diagonal block, trueimpes: form pressure equation based on linearization of accumulation term)");
             EWOMS_REGISTER_PARAM(TypeTag, bool, ScaleLinearSystem, "Scale linear system according to equation scale and primary variable types");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CprSolverVerbose, "Verbose for cpr solver");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, CprUseDrs, "Use dynamic row sum using weighs");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxIter, "MaxIterations of the pressure amg solver");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "solver type of elliptic solve 0 bicgstab 1 cg other only amg preconditioner");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprSolverVerbose, "Verbosity of cpr solver (0: silent, 1: print summary of inner linear solver, 2: print extensive information about inner linear solve, including setup information)");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, CprUseDrs, "Use dynamic row sum using weights");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxEllIter, "MaxIterations of the elliptic pressure part of the cpr solver");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "Solver type of elliptic pressure solve (0: bicgstab, 1: cg, 2: only amg preconditioner)");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse Amg Setup");
         }
 

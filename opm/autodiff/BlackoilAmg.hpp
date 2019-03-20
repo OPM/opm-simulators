@@ -426,7 +426,7 @@ private:
             }
             // Linear solver parameters
             const double tolerance = param_->cpr_solver_tol_;
-            const int maxit        = param_->cpr_max_iter_;
+            const int maxit        = param_->cpr_max_ell_iter_;
             int verbosity = 0;
             if (comm_.communicator().rank() == 0) {
                 verbosity = param_->cpr_solver_verbose_;
@@ -506,6 +506,12 @@ private:
 
 #endif
             }
+
+            // Warn if unknown options.
+            if (param_->cpr_ell_solvetype_ > 2 && comm_.communicator().rank() == 0) {
+                OpmLog::warning("cpr_ell_solver_type_unknown", "Unknown CPR elliptic solver type specification, using LoopSolver.");
+            }
+
 
 #if ! DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             delete sp;
@@ -926,16 +932,17 @@ private:
  * \brief An algebraic twolevel or multigrid approach for solving blackoil (supports CPR with and without AMG)
  *
  * This preconditioner first decouples the component used for coarsening using a simple scaling
- * approach (e.g. Scheichl, Masson 2013,\see scaleMatrixDRS). Then it constructs the first
- * coarse level system, either by simply extracting the coupling between the components at COMPONENT_INDEX
- * in the matrix blocks or by extracting them and applying aggregation to them directly. This coarse level
+ * approach (e.g. Scheichl, Masson 2013,\see scaleMatrixDRS). Then it constructs the
+ * coarse level system. The coupling is defined by the weights corresponding to the element located at
+ * (COMPONENT_INDEX, VARIABLE_INDEX) in the block matrix. Then the coarse level system is constructed
+ * either by extracting these elements, or by applying aggregation to them directly. This coarse level
  * can be solved either by AMG or by ILU. The preconditioner is configured using CPRParameter.
  * \tparam O The type of the operator (encapsulating a BCRSMatrix).
  * \tparam S The type of the smoother.
  * \tparam C The type of coarsening criterion to use.
  * \tparam P The type of the class describing the parallelization.
- * \tparam COMPONENT_INDEX The index of the component to use for coarsening (usually the pressure).
- * \tparam VARIABLE_INDEX The index of the variable to use for coarsening (usually the pressure).
+ * \tparam COMPONENT_INDEX The index of the component to use for coarsening (usually water).
+ * \tparam VARIABLE_INDEX The index of the variable to use for coarsening (usually pressure).
  */
 template<typename O, typename S, typename C,
          typename P, std::size_t COMPONENT_INDEX, std::size_t VARIABLE_INDEX>
@@ -1005,9 +1012,9 @@ public:
         : param_(param),
           weights_(weights),
           scaledMatrixOperator_(Detail::scaleMatrixDRS(fineOperator, comm,
-                                COMPONENT_INDEX, weights, param)),
+                                                       COMPONENT_INDEX, weights, param)),
           smoother_(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
-                    smargs, comm)),
+                                                        smargs, comm)),
           levelTransferPolicy_(criterion, comm, param.cpr_pressure_aggregation_),
           coarseSolverPolicy_(&param, smargs, criterion),
           twoLevelMethod_(std::get<1>(scaledMatrixOperator_), smoother_,
