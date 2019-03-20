@@ -61,6 +61,7 @@ namespace Opm
         void note(const std::string& message);
 
         void logMessages();
+        std::vector<Message>& getMessages();
 
     private:
         std::vector<Message> messages_;

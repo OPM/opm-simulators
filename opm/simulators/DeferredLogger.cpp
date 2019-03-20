@@ -87,5 +87,9 @@ namespace Opm
             OpmLog::addTaggedMessage(m.flag, m.tag, m.text);
         }
     }
+    std::vector<DeferredLogger::Message>& DeferredLogger::getMessages()
+    {
+        return messages_;
+    }
 
 } // namespace Opm

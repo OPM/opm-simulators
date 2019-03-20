@@ -109,6 +109,7 @@ namespace Opm
                           const double gravity_arg,
                           const int num_cells) override;
 
+        std::string getWellStateInfo(const WellState& well_state, const int well_number, const int decimals) const;
 
         virtual void initPrimaryVariablesEvaluation() const override;
 

@@ -157,6 +157,8 @@ namespace Opm
                                     Opm::DeferredLogger& deferred_logger
                                     ) = 0;
 
+        virtual std::string getWellStateInfo(const WellState& well_state, const int well_number, const int decimals = 2) const = 0;
+
         void updateWellTestState(const WellState& well_state,
                                  const double& simulationTime,
                                  const bool& writeMessageToOPMLog,
@@ -255,6 +257,8 @@ namespace Opm
 
         // update perforation water throughput based on solved water rate
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const = 0;
+
+        int numberOfPerforations() const;
 
     protected:
 

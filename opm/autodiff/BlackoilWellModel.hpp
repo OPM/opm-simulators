@@ -61,6 +61,7 @@
 BEGIN_PROPERTIES
 
 NEW_PROP_TAG(EnableTerminalOutput);
+NEW_PROP_TAG(WellDebugVerbosityLevel);
 
 END_PROPERTIES
 
@@ -301,6 +302,9 @@ namespace Opm {
             bool terminal_output_;
             bool has_solvent_;
             bool has_polymer_;
+            int well_debug_verbosity_level_;
+            bool well_debug_first_time_;
+            std::string output_dir_;
             std::vector<int> pvt_region_idx_;
             PhaseUsage phase_usage_;
             size_t global_nc_;

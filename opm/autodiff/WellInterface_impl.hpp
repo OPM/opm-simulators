@@ -123,6 +123,23 @@ namespace Opm
         }
     }
 
+    namespace {
+
+        template <typename T>
+        std::string to_string_with_precision(const T a_value, const int n)
+        {
+            std::ostringstream out;
+            out.precision(n);
+            out << std::scientific << a_value;
+            std::string ret = out.str();
+            if ( !(ret.find("-") == 0) ) {
+                ret = " "+ret;
+            }
+            return ret;
+        }
+    }
+
+
 
 
     template<typename TypeTag>
@@ -1165,6 +1182,13 @@ namespace Opm
     }
 
 
+    template<typename TypeTag>
+    int
+    WellInterface<TypeTag>::
+    numberOfPerforations() const
+    {
+        return number_of_perforations_;
+    }
 
 
 
