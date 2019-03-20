@@ -37,7 +37,7 @@
 
 #include <opm/material/common/Valgrind.hpp>
 
-#include "FastSmallVector.hpp"
+#include <opm/material/common/FastSmallVector.hpp>
 #include <cmath>
 #include <cassert>
 #include <cstring>
