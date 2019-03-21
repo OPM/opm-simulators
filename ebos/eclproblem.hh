@@ -1321,12 +1321,10 @@ public:
     template <class Context>
     Scalar temperature(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
-        // use the temporally constant temperature, i.e. use the initial temperature of
-        // the DOF
+        // use the initial temperature of the DOF if temperature is not a primary
+        // variable
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        if (!initialFluidStates_.empty())
-            return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
-        return initialTemperature_[globalDofIdx];
+        return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
     }
 
     /*!
@@ -2666,7 +2664,6 @@ private:
     std::vector<Scalar> maxPolymerAdsorption_;
 
     std::vector<InitialFluidState> initialFluidStates_;
-    std::vector<Scalar> initialTemperature_;
 
     std::vector<Scalar> polymerConcentration_;
     // polymer molecular weight
