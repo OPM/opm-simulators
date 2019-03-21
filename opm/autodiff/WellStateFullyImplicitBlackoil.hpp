@@ -63,6 +63,7 @@ namespace Opm
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
         void init(const Wells* wells, const std::vector<double>& cellPressures,
+                  const Schedule& schedule,
                   const std::vector<const Well*>& wells_ecl, const int report_step,
                   const WellStateFullyImplicitBlackoil* prevState, const PhaseUsage& pu)
         {
@@ -114,8 +115,7 @@ namespace Opm
                         OPM_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ");
                     }
 
-                    const Well* well_ecl = wells_ecl[index_well_ecl];
-                    effective_events_occurred_[w] = (well_ecl->hasEvent(effective_events_mask, report_step) );
+                    effective_events_occurred_[w] = (schedule.hasWellEvent(well_name, effective_events_mask, report_step) );
                 }
             } // end of if (!well_ecl.empty() )
 
@@ -285,11 +285,11 @@ namespace Opm
             }
         }
 
-        void resize(const Wells* wells, size_t numCells, const PhaseUsage& pu)
+        void resize(const Wells* wells, const Schedule& schedule, std::size_t numCells, const PhaseUsage& pu)
         {
             const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
             const std::vector<const Well*> wells_ecl;
-            init(wells, tmp, wells_ecl, 0, nullptr, pu);
+            init(wells, tmp, schedule, wells_ecl, 0, nullptr, pu);
         }
 
         /// Allocate and initialize if wells is non-null.  Also tries

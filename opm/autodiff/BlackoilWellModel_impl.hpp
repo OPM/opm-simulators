@@ -256,7 +256,7 @@ namespace Opm {
             const double p = fs.pressure(FluidSystem::oilPhaseIdx).value();
             cellPressures[cellIdx] = p;
         }
-        well_state_.init(wells(), cellPressures, wells_ecl_, timeStepIdx, &previous_well_state_, phase_usage_);
+        well_state_.init(wells(), cellPressures, schedule(), wells_ecl_, timeStepIdx, &previous_well_state_, phase_usage_);
 
         // handling MS well related
         if (param_.use_multisegment_well_) { // if we use MultisegmentWell model
@@ -502,7 +502,7 @@ namespace Opm {
         if (nw > 0) {
             const auto phaseUsage = phaseUsageFromDeck(eclState());
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
-            well_state_.resize(wells, numCells, phaseUsage); // Resize for restart step
+            well_state_.resize(wells, schedule(), numCells, phaseUsage); // Resize for restart step
             wellsToState(restartValues.wells, phaseUsage, well_state_);
             previous_well_state_ = well_state_;
         }
