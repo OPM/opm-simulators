@@ -413,7 +413,7 @@ namespace Opm
                                        WellState& well_state,
                                        Opm::DeferredLogger& deferred_logger);
 
-        void scaleProductivityIndex(const int perfIdx, double& productivity_index, Opm::DeferredLogger& deferred_logger);
+        void scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger);
 
         // count the number of times an output log message is created in the productivity
         // index calculations
