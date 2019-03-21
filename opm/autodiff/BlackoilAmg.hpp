@@ -21,6 +21,7 @@
 
 #include <ewoms/linear/matrixblock.hh>
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
+#include <opm/autodiff/FlowLinearSolverParameters.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
 #include <dune/istl/paamg/twolevelmethod.hh>
 #include <dune/istl/paamg/aggregates.hh>
@@ -40,6 +41,27 @@ template<class M, class Norm>
 class UnSymmetricCriterion;
 }
 }
+
+namespace Opm
+{
+    namespace Amg
+    {
+        template<int Row, int Column>
+        class Element
+        {
+        public:
+            enum { /* @brief We preserve the sign.*/
+                is_sign_preserving = true
+            };
+
+            template<class M>
+            typename M::field_type operator()(const M& m) const
+            {
+                return m[Row][Column];
+            }
+        };
+    } // namespace Amg
+} // namespace Opm
 
 namespace Dune
 {
@@ -68,6 +90,17 @@ Dune::MatrixAdapter<M,X,Y> createOperator(const Dune::MatrixAdapter<M,X,Y>&, con
 }
 
 /**
+ * \brief Creates a MatrixAdapter as an operator, storing it in a unique_ptr.
+ *
+ * The first argument is used to specify the return type using function overloading.
+ * \param matrix The matrix to wrap.
+ */
+template<class M, class X, class Y, class T>
+std::unique_ptr< Dune::MatrixAdapter<M,X,Y> > createOperatorPtr(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
+{
+    return std::make_unique< Dune::MatrixAdapter<M,X,Y> >(matrix);
+}
+/**
  * \brief Creates an OverlappingSchwarzOperator as an operator.
  *
  * The first argument is used to specify the return type using function overloading.
@@ -87,30 +120,27 @@ Dune::OverlappingSchwarzOperator<M,X,Y,T> createOperator(const Dune::Overlapping
 //! Sedimentary Basin Simulations, 2003.
 //! \param op The operator that stems from the discretization.
 //! \param comm The communication objecte describing the data distribution.
-//! \param pressureIndex The index of the pressure in the matrix block
+//! \param pressureEqnIndex The index of the pressure in the matrix block
 //! \retun A pair of the scaled matrix and the associated operator-
-template<class Operator, class Communication>
+template<class Operator, class Communication, class Vector>
 std::tuple<std::unique_ptr<typename Operator::matrix_type>, Operator>
-scaleMatrixQuasiImpes(const Operator& op, const Communication& comm,
-                      std::size_t pressureIndex)
+scaleMatrixDRS(const Operator& op, const Communication& comm,
+               std::size_t pressureEqnIndex, const Vector& weights, const Opm::CPRParameter& param)
 {
     using Matrix = typename Operator::matrix_type;
     using Block = typename Matrix::block_type;
+    using BlockVector = typename Vector::block_type;
     std::unique_ptr<Matrix> matrix(new Matrix(op.getmat()));
-
-    for ( auto& row : *matrix )
-    {
-        for ( auto& block : row )
-        {
-            for ( std::size_t i = 0; i < Block::rows; i++ )
-            {
-                if ( i != pressureIndex )
-                {
-                    for(std::size_t j=0; j < Block::cols; j++)
-                    {
-                        block[pressureIndex][j] += block[i][j];
-                    }
-                }
+    if (param.cpr_use_drs_) {
+        const auto endi = matrix->end();
+        for (auto i = matrix->begin(); i != endi; ++i) {
+            const BlockVector& bw = weights[i.index()];
+            const auto endj = (*i).end();
+            for (auto j = (*i).begin(); j != endj; ++j) {  
+                Block& block = *j;
+                BlockVector& bvec = block[pressureEqnIndex];
+                // should introduce limits which also change the weights
+                block.mtv(bw, bvec);
             }
         }
     }
@@ -122,20 +152,16 @@ scaleMatrixQuasiImpes(const Operator& op, const Communication& comm,
 //! See section 3.2.3 of Scheichl, Masson: Decoupling and Block Preconditioning for
 //! Sedimentary Basin Simulations, 2003.
 //! \param vector The vector to scale
-//! \param pressureIndex The index of the pressure in the matrix block
+//! \param pressureEqnIndex The index of the pressure in the matrix block
 template<class Vector>
-void scaleVectorQuasiImpes(Vector& vector, std::size_t pressureIndex)
+void scaleVectorDRS(Vector& vector, std::size_t pressureEqnIndex, const Opm::CPRParameter& param, const Vector& weights)
 {
     using Block = typename Vector::block_type;
-
-    for ( auto& block: vector)
-    {
-        for ( std::size_t i = 0; i < Block::dimension; i++ )
-        {
-            if ( i != pressureIndex )
-            {
-                block[pressureIndex] += block[i];
-            }
+    if (param.cpr_use_drs_) {
+        for (std::size_t j = 0; j < vector.size(); ++j) {
+            Block& block = vector[j];
+            const Block& bw = weights[j];
+            block[pressureEqnIndex] = bw.dot(block);
         }
     }
 }
@@ -284,23 +310,23 @@ struct ScalarType<Dune::Amg::CoarsenCriterion<Dune::Amg::UnSymmetricCriterion<Du
     using value = Dune::Amg::CoarsenCriterion<Dune::Amg::UnSymmetricCriterion<Dune::BCRSMatrix<typename ScalarType<B>::value>, Dune::Amg::FirstDiagonal> >;
 };
 
-template<class C, std::size_t COMPONENT_INDEX>
+template<class C, std::size_t COMPONENT_INDEX, std::size_t VARIABLE_INDEX>
 struct OneComponentCriterionType
 {};
 
-template<class B, class N, std::size_t COMPONENT_INDEX>
-struct OneComponentCriterionType<Dune::Amg::CoarsenCriterion<Dune::Amg::SymmetricCriterion<Dune::BCRSMatrix<B>,N> >,COMPONENT_INDEX>
+template<class B, class N, std::size_t COMPONENT_INDEX, std::size_t VARIABLE_INDEX>
+struct OneComponentCriterionType<Dune::Amg::CoarsenCriterion<Dune::Amg::SymmetricCriterion<Dune::BCRSMatrix<B>,N> >, COMPONENT_INDEX, VARIABLE_INDEX>
 {
-    using value = Dune::Amg::CoarsenCriterion<Dune::Amg::SymmetricCriterion<Dune::BCRSMatrix<B>, Dune::Amg::Diagonal<COMPONENT_INDEX> > >;
+    using value = Dune::Amg::CoarsenCriterion<Dune::Amg::SymmetricCriterion<Dune::BCRSMatrix<B>, Opm::Amg::Element<COMPONENT_INDEX, VARIABLE_INDEX> > >;
 };
 
-template<class B, class N, std::size_t COMPONENT_INDEX>
-struct OneComponentCriterionType<Dune::Amg::CoarsenCriterion<Dune::Amg::UnSymmetricCriterion<Dune::BCRSMatrix<B>,N> >,COMPONENT_INDEX>
+template<class B, class N, std::size_t COMPONENT_INDEX, std::size_t VARIABLE_INDEX>
+struct OneComponentCriterionType<Dune::Amg::CoarsenCriterion<Dune::Amg::UnSymmetricCriterion<Dune::BCRSMatrix<B>,N> >, COMPONENT_INDEX, VARIABLE_INDEX>
 {
-    using value = Dune::Amg::CoarsenCriterion<Dune::Amg::UnSymmetricCriterion<Dune::BCRSMatrix<B>, Dune::Amg::Diagonal<COMPONENT_INDEX> > >;
+    using value = Dune::Amg::CoarsenCriterion<Dune::Amg::UnSymmetricCriterion<Dune::BCRSMatrix<B>, Opm::Amg::Element<COMPONENT_INDEX, VARIABLE_INDEX> > >;
 };
 
-template<class Operator, class Criterion, class Communication, std::size_t COMPONENT_INDEX>
+template<class Operator, class Criterion, class Communication, std::size_t COMPONENT_INDEX, std::size_t VARIABLE_INDEX>
 class OneComponentAggregationLevelTransferPolicy;
 
 
@@ -401,9 +427,12 @@ private:
             // Linear solver parameters
             const double tolerance = param_->cpr_solver_tol_;
             const int maxit        = param_->cpr_max_ell_iter_;
-            const int verbosity    = ( param_->cpr_solver_verbose_ &&
-                                       comm_.communicator().rank()==0 ) ? 1 : 0;
-            if ( param_->cpr_use_bicgstab_ )
+            int verbosity = 0;
+            if (comm_.communicator().rank() == 0) {
+                verbosity = param_->cpr_solver_verbose_;
+            }
+
+            if ( param_->cpr_ell_solvetype_ == 0)
             {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
@@ -428,7 +457,7 @@ private:
                 }
 #endif
             }
-            else
+            else if (param_->cpr_ell_solvetype_ == 1)
             {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 Dune::CGSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
@@ -453,6 +482,36 @@ private:
                 }
 #endif
             }
+            else
+            {
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+                Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
+                                         tolerance, maxit, verbosity);
+                solver.apply(x,b,res);
+#else	      
+                if ( !amg_ )
+                {
+                  Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
+                                                 reinterpret_cast<Smoother&>(*prec),
+                                                 tolerance, maxit, verbosity);
+                  solver.apply(x,b,res);
+                }
+                else
+                {
+                    Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
+                                                   reinterpret_cast<AMGType&>(*prec),
+                                                   tolerance, maxit, verbosity);
+                    solver.apply(x,b,res);
+                }
+
+#endif
+            }
+
+            // Warn if unknown options.
+            if (param_->cpr_ell_solvetype_ > 2 && comm_.communicator().rank() == 0) {
+                OpmLog::warning("cpr_ell_solver_type_unknown", "Unknown CPR elliptic solver type specification, using LoopSolver.");
+            }
+
 
 #if ! DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             delete sp;
@@ -645,7 +704,7 @@ void buildCoarseSparseMatrix(M& coarseMatrix, G& fineGraph, const V& visitedMap,
  * @tparam Criterion The criterion that describes the aggregation procedure.
  * @tparam Communication The class that describes the communication pattern.
  */
-template<class Operator, class Criterion, class Communication, std::size_t COMPONENT_INDEX>
+template<class Operator, class Criterion, class Communication, std::size_t COMPONENT_INDEX, std::size_t VARIABLE_INDEX>
 class OneComponentAggregationLevelTransferPolicy
     : public Dune::Amg::LevelTransferPolicy<Operator, typename Detail::ScalarType<Operator>::value>
 {
@@ -756,7 +815,7 @@ public:
                 for ( auto col = row.begin(), cend = row.end(); col != cend; ++col, ++coarseCol )
                 {
                     assert( col.index() == coarseCol.index() );
-                    *coarseCol = (*col)[COMPONENT_INDEX][COMPONENT_INDEX];
+                    *coarseCol = (*col)[COMPONENT_INDEX][VARIABLE_INDEX];
                 }
                 ++coarseRow;
             }
@@ -786,7 +845,7 @@ public:
                     const auto& j = (*aggregatesMap_)[entry.index()];
                     if ( j != AggregatesMap::ISOLATED )
                     {
-                        (*coarseLevelMatrix_)[i][j] += (*entry)[COMPONENT_INDEX][COMPONENT_INDEX];
+                        (*coarseLevelMatrix_)[i][j] += (*entry)[COMPONENT_INDEX][VARIABLE_INDEX];
                     }
                 }
             }
@@ -873,18 +932,20 @@ private:
  * \brief An algebraic twolevel or multigrid approach for solving blackoil (supports CPR with and without AMG)
  *
  * This preconditioner first decouples the component used for coarsening using a simple scaling
- * approach (e.g. Scheichl, Masson 2013,\see scaleMatrixQuasiImpes). Then it constructs the first
- * coarse level system, either by simply extracting the coupling between the components at COMPONENT_INDEX
- * in the matrix blocks or by extracting them and applying aggregation to them directly. This coarse level
+ * approach (e.g. Scheichl, Masson 2013,\see scaleMatrixDRS). Then it constructs the
+ * coarse level system. The coupling is defined by the weights corresponding to the element located at
+ * (COMPONENT_INDEX, VARIABLE_INDEX) in the block matrix. Then the coarse level system is constructed
+ * either by extracting these elements, or by applying aggregation to them directly. This coarse level
  * can be solved either by AMG or by ILU. The preconditioner is configured using CPRParameter.
  * \tparam O The type of the operator (encapsulating a BCRSMatrix).
  * \tparam S The type of the smoother.
  * \tparam C The type of coarsening criterion to use.
  * \tparam P The type of the class describing the parallelization.
- * \tparam COMPONENT_INDEX The index of the component to use for coarsening (usually the pressure).
+ * \tparam COMPONENT_INDEX The index of the component to use for coarsening (usually water).
+ * \tparam VARIABLE_INDEX The index of the variable to use for coarsening (usually pressure).
  */
 template<typename O, typename S, typename C,
-         typename P, std::size_t COMPONENT_INDEX>
+         typename P, std::size_t COMPONENT_INDEX, std::size_t VARIABLE_INDEX>
 class BlackoilAmg
     : public Dune::Preconditioner<typename O::domain_type, typename O::range_type>
 {
@@ -905,13 +966,14 @@ protected:
     using CoarseOperator = typename Detail::ScalarType<Operator>::value;
     using CoarseSmoother = typename Detail::ScalarType<Smoother>::value;
     using FineCriterion  =
-        typename Detail::OneComponentCriterionType<Criterion,COMPONENT_INDEX>::value;
+        typename Detail::OneComponentCriterionType<Criterion, COMPONENT_INDEX, VARIABLE_INDEX>::value;
     using CoarseCriterion =  typename Detail::ScalarType<Criterion>::value;
     using LevelTransferPolicy =
         OneComponentAggregationLevelTransferPolicy<Operator,
                                                    FineCriterion,
                                                    Communication,
-                                                   COMPONENT_INDEX>;
+                                                   COMPONENT_INDEX,
+                                                   VARIABLE_INDEX>;
     using CoarseSolverPolicy   =
         Detail::OneStepAMGCoarseSolverPolicy<CoarseOperator,
                                              CoarseSmoother,
@@ -944,18 +1006,19 @@ public:
      * \param comm The information about the parallelization.
      */
     BlackoilAmg(const CPRParameter& param,
+                const typename TwoLevelMethod::FineDomainType& weights,
                 const Operator& fineOperator, const Criterion& criterion,
                 const SmootherArgs& smargs, const Communication& comm)
         : param_(param),
-          scaledMatrixOperator_(Detail::scaleMatrixQuasiImpes(fineOperator, comm,
-                                                              COMPONENT_INDEX)),
+          weights_(weights),
+          scaledMatrixOperator_(Detail::scaleMatrixDRS(fineOperator, comm,
+                                                       COMPONENT_INDEX, weights, param)),
           smoother_(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
                                                         smargs, comm)),
           levelTransferPolicy_(criterion, comm, param.cpr_pressure_aggregation_),
           coarseSolverPolicy_(&param, smargs, criterion),
           twoLevelMethod_(std::get<1>(scaledMatrixOperator_), smoother_,
-                          levelTransferPolicy_,
-                          coarseSolverPolicy_, 0, 1)
+                          levelTransferPolicy_, coarseSolverPolicy_, 0, 1)
     {}
 
     void pre(typename TwoLevelMethod::FineDomainType& x,
@@ -973,11 +1036,12 @@ public:
                const typename TwoLevelMethod::FineRangeType& d)
     {
         auto scaledD = d;
-        Detail::scaleVectorQuasiImpes(scaledD, COMPONENT_INDEX);
+        Detail::scaleVectorDRS(scaledD, COMPONENT_INDEX, param_, weights_);
         twoLevelMethod_.apply(v, scaledD);
     }
 private:
     const CPRParameter& param_;
+    const typename TwoLevelMethod::FineDomainType& weights_;
     std::tuple<std::unique_ptr<Matrix>, Operator> scaledMatrixOperator_;
     std::shared_ptr<Smoother> smoother_;
     LevelTransferPolicy levelTransferPolicy_;
@@ -997,7 +1061,7 @@ namespace ISTLUtility
 /// \tparam C The type of the coarsening criterion to use.
 /// \tparam index The pressure index.
 ////
-template<class M, class X, class Y, class P, class C, std::size_t index>
+template<class M, class X, class Y, class P, class C, std::size_t pressureEqnIndex, std::size_t pressureVarIndex>
 struct BlackoilAmgSelector
 {
     using Criterion = C;
@@ -1005,7 +1069,7 @@ struct BlackoilAmgSelector
     using ParallelInformation = typename Selector::ParallelInformation;
     using Operator = typename Selector::Operator;
     using Smoother = typename Selector::EllipticPreconditioner;
-    using AMG = BlackoilAmg<Operator,Smoother,Criterion,ParallelInformation,index>;
+    using AMG = BlackoilAmg<Operator, Smoother, Criterion, ParallelInformation, pressureEqnIndex, pressureVarIndex>;
 };
 } // end namespace ISTLUtility
 } // end namespace Opm

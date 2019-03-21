@@ -59,6 +59,13 @@ NEW_PROP_TAG(UseAmg);
 NEW_PROP_TAG(UseCpr);
 NEW_PROP_TAG(LinearSolverBackend);
 NEW_PROP_TAG(PreconditionerAddWellContributions);
+NEW_PROP_TAG(SystemStrategy);
+NEW_PROP_TAG(ScaleLinearSystem);
+NEW_PROP_TAG(CprSolverVerbose);
+NEW_PROP_TAG(CprUseDrs);
+NEW_PROP_TAG(CprMaxEllIter);
+NEW_PROP_TAG(CprEllSolvetype);
+NEW_PROP_TAG(CprReuseSetup);
 
 SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
 SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
@@ -76,6 +83,13 @@ SET_BOOL_PROP(FlowIstlSolverParams, UseAmg, false);
 SET_BOOL_PROP(FlowIstlSolverParams, UseCpr, false);
 SET_TYPE_PROP(FlowIstlSolverParams, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
 SET_BOOL_PROP(FlowIstlSolverParams, PreconditionerAddWellContributions, false);
+SET_STRING_PROP(FlowIstlSolverParams, SystemStrategy, "none");
+SET_BOOL_PROP(FlowIstlSolverParams, ScaleLinearSystem, false);
+SET_INT_PROP(FlowIstlSolverParams, CprSolverVerbose, 0);
+SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
+SET_INT_PROP(FlowIstlSolverParams, CprMaxEllIter, 20);
+SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
+SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 0);
 
 
 
@@ -95,47 +109,31 @@ namespace Opm
         MILU_VARIANT cpr_ilu_milu_;
         bool cpr_ilu_redblack_;
         bool cpr_ilu_reorder_sphere_;
+        bool cpr_use_drs_;
         int cpr_max_ell_iter_;
+        int cpr_ell_solvetype_;
         bool cpr_use_amg_;
         bool cpr_use_bicgstab_;
-        bool cpr_solver_verbose_;
+        int cpr_solver_verbose_;
         bool cpr_pressure_aggregation_;
-
+        int cpr_reuse_setup_;
         CPRParameter() { reset(); }
-
-        CPRParameter( const ParameterGroup& param)
-        {
-            // reset values to default
-            reset();
-
-            cpr_relax_                = param.getDefault("cpr_relax", cpr_relax_);
-            cpr_solver_tol_           = param.getDefault("cpr_solver_tol", cpr_solver_tol_);
-            cpr_ilu_n_                = param.getDefault("cpr_ilu_n", cpr_ilu_n_);
-            cpr_ilu_redblack_         = param.getDefault("ilu_redblack", cpr_ilu_redblack_);
-            cpr_ilu_reorder_sphere_   = param.getDefault("ilu_reorder_sphere", cpr_ilu_reorder_sphere_);
-            cpr_max_ell_iter_         = param.getDefault("cpr_max_elliptic_iter",cpr_max_ell_iter_);
-            cpr_use_amg_              = param.getDefault("cpr_use_amg", cpr_use_amg_);
-            cpr_use_bicgstab_         = param.getDefault("cpr_use_bicgstab", cpr_use_bicgstab_);
-            cpr_solver_verbose_       = param.getDefault("cpr_solver_verbose", cpr_solver_verbose_);
-            cpr_pressure_aggregation_ = param.getDefault("cpr_pressure_aggregation", cpr_pressure_aggregation_);
-
-            std::string milu("ILU");
-            cpr_ilu_milu_ = convertString2Milu(param.getDefault("ilu_milu", milu));
-        }
 
         void reset()
         {
-            cpr_relax_                = 1.0;
             cpr_solver_tol_           = 1e-2;
             cpr_ilu_n_                = 0;
             cpr_ilu_milu_             = MILU_VARIANT::ILU;
             cpr_ilu_redblack_         = false;
             cpr_ilu_reorder_sphere_   = true;
             cpr_max_ell_iter_         = 25;
+            cpr_ell_solvetype_        = 0;
+            cpr_use_drs_              = false;
             cpr_use_amg_              = true;
             cpr_use_bicgstab_         = true;
-            cpr_solver_verbose_       = false;
+            cpr_solver_verbose_       = 0;
             cpr_pressure_aggregation_ = false;
+            cpr_reuse_setup_          = 0;
         }
     };
 
@@ -160,6 +158,8 @@ namespace Opm
         bool   ignoreConvergenceFailure_;
         bool   linear_solver_use_amg_;
         bool   use_cpr_;
+        std::string system_strategy_;
+        bool scale_linear_system_;
 
         template <class TypeTag>
         void init()
@@ -179,6 +179,13 @@ namespace Opm
             ignoreConvergenceFailure_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure);
             linear_solver_use_amg_ = EWOMS_GET_PARAM(TypeTag, bool, UseAmg);
             use_cpr_ = EWOMS_GET_PARAM(TypeTag, bool, UseCpr);
+            system_strategy_ = EWOMS_GET_PARAM(TypeTag, std::string, SystemStrategy);
+            scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
+            cpr_solver_verbose_  =  EWOMS_GET_PARAM(TypeTag, int, CprSolverVerbose);
+            cpr_use_drs_  =  EWOMS_GET_PARAM(TypeTag, bool, CprUseDrs);
+            cpr_max_ell_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxEllIter);
+            cpr_ell_solvetype_  =  EWOMS_GET_PARAM(TypeTag, int, CprEllSolvetype);
+            cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
         }
 
         template <class TypeTag>
@@ -198,37 +205,16 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseAmg, "Use AMG as the linear solver's preconditioner");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseCpr, "Use CPR as the linear solver's preconditioner");
-
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, SystemStrategy, "Strategy for reformulating and scaling linear system (none: no scaling -- should not be used with CPR, original: use weights that are equivalent to no scaling -- should not be used with CPR, simple: form pressure equation as simple sum of conservation equations, quasiimpes: form pressure equation based on diagonal block, trueimpes: form pressure equation based on linearization of accumulation term)");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, ScaleLinearSystem, "Scale linear system according to equation scale and primary variable types");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprSolverVerbose, "Verbosity of cpr solver (0: silent, 1: print summary of inner linear solver, 2: print extensive information about inner linear solve, including setup information)");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, CprUseDrs, "Use dynamic row sum using weights");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxEllIter, "MaxIterations of the elliptic pressure part of the cpr solver");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "Solver type of elliptic pressure solve (0: bicgstab, 1: cg, 2: only amg preconditioner)");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse Amg Setup");
         }
 
         FlowLinearSolverParameters() { reset(); }
-        // read values from parameter class
-        FlowLinearSolverParameters( const ParameterGroup& param )
-            : CPRParameter(param)
-        {
-            // set default parameters
-            reset();
-
-            // read parameters (using previsouly set default values)
-            newton_use_gmres_        = param.getDefault("newton_use_gmres", newton_use_gmres_ );
-            linear_solver_reduction_ = param.getDefault("linear_solver_reduction", linear_solver_reduction_ );
-            linear_solver_maxiter_   = param.getDefault("linear_solver_maxiter", linear_solver_maxiter_);
-            linear_solver_restart_   = param.getDefault("linear_solver_restart", linear_solver_restart_);
-            linear_solver_verbosity_ = param.getDefault("linear_solver_verbosity", linear_solver_verbosity_);
-            require_full_sparsity_pattern_ = param.getDefault("require_full_sparsity_pattern", require_full_sparsity_pattern_);
-            ignoreConvergenceFailure_ = param.getDefault("linear_solver_ignoreconvergencefailure", ignoreConvergenceFailure_);
-            linear_solver_use_amg_    = param.getDefault("linear_solver_use_amg", linear_solver_use_amg_ );
-            ilu_relaxation_           = param.getDefault("ilu_relaxation", ilu_relaxation_ );
-            ilu_fillin_level_         = param.getDefault("ilu_fillin_level",  ilu_fillin_level_ );
-            ilu_redblack_             = param.getDefault("ilu_redblack", cpr_ilu_redblack_);
-            ilu_reorder_sphere_       = param.getDefault("ilu_reorder_sphere", cpr_ilu_reorder_sphere_);
-            std::string milu("ILU");
-            ilu_milu_ = convertString2Milu(param.getDefault("ilu_milu", milu));
-
-            // Check whether to use cpr approach
-            const std::string cprSolver = "cpr";
-            use_cpr_ = ( param.getDefault("solver_approach", std::string()) == cprSolver );
-        }
 
         // set default values
         void reset()
