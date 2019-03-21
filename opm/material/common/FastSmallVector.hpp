@@ -23,31 +23,44 @@
 /*!
  * \file
  *
+ * \brief An implementation of vector/array based on small object optimization. It is intended
+ *        to be used by the DynamicEvaluation for better efficiency.
+ *
  * \copydoc Opm::FastSmallVector
  */
 #ifndef OPM_FAST_SMALL_VECTOR_HPP
 #define OPM_FAST_SMALL_VECTOR_HPP
 
 #include <array>
-#include <cstring>
+#include <algorithm>
 
 namespace Opm {
 
+/*!
+ * \brief An implementation of vector/array based on small object optimization. It is intended
+ *        to be used by the DynamicEvaluation for better efficiency.
+ */
+//! ValueType is the type of the data
+//! N is the size of the buffer that willl be allocated during compilation time
 template <typename ValueType, unsigned N>
 class FastSmallVector
 {
 public:
+    //! default constructor
     FastSmallVector()
     {
         size_ = 0;
         dataPtr_ = smallBuf_.data();
     }
 
+    //! constructor based on the number of the element
     explicit FastSmallVector(const size_t numElem)
     {
         init_(numElem);
     }
 
+    //! constructor based on the number of the element, and all the elements
+    //! will have the same value
     FastSmallVector(const size_t numElem, const ValueType value)
     {
         init_(numElem);
@@ -55,6 +68,7 @@ public:
         std::fill(dataPtr_, dataPtr_ + size_, value);
     }
 
+    //! copy constructor
     FastSmallVector(const FastSmallVector& other)
     {
         size_ = 0;
@@ -63,6 +77,7 @@ public:
         (*this) = other;
     }
 
+    //! move constructor
     FastSmallVector(FastSmallVector&& other)
     {
         size_ = 0;
@@ -71,6 +86,7 @@ public:
         (*this) = std::move(other);
     }
 
+    //! destructor
     ~FastSmallVector()
     {
         if (dataPtr_ != smallBuf_.data())
@@ -78,6 +94,7 @@ public:
     }
 
 
+    //! move assignment
     FastSmallVector& operator=(FastSmallVector&& other)
     {
         if (dataPtr_ != smallBuf_.data() && dataPtr_ != other.dataPtr_)
@@ -97,6 +114,7 @@ public:
         return (*this);
     }
 
+    //! copy assignment
     FastSmallVector& operator=(const FastSmallVector& other)
     {
         size_ = other.size_;
@@ -116,12 +134,15 @@ public:
         return (*this);
     }
 
+    //! access the idx th element
     ValueType& operator[](size_t idx)
     { return dataPtr_[idx]; }
 
+    //! const access the idx th element
     const ValueType& operator[](size_t idx) const
     { return dataPtr_[idx]; }
 
+    //! number of the element
     size_t size() const
     { return size_; }
 
