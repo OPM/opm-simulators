@@ -7,6 +7,14 @@ DIMENS
 
 GRID
 
+PERMX
+   500*0.25 /
+
+COPY
+  PERMX PERMY /
+  PERMX PERMZ /
+/
+
 DXV
 10*1000.0 /
 

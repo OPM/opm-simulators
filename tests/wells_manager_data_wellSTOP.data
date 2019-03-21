@@ -20,10 +20,15 @@ DZV
 10.0 20.0 30.0 10.0 5.0 /
 
 TOPS
-  100*10  /
+  100*10 / 
 
 PERMX
-500*1.0 /
+   500*0.25 /
+
+COPY
+  PERMX PERMY /
+  PERMX PERMZ /
+/
 
 SCHEDULE
 
