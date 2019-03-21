@@ -521,7 +521,7 @@ private:
     FastSmallVector<ValueT, staticSize> data_;
 };
 
-template <class Scalar, unsigned staticSize = 9>
+template <class Scalar, unsigned staticSize = 0>
 using DynamicEvaluation = Evaluation<Scalar, DynamicSize, staticSize>;
 
 } // namespace DenseAd
@@ -536,4 +536,4 @@ Opm::DenseAd::Evaluation<Scalar, -1, staticSize> variable(int numDerivatives, co
 
 } // namespace Opm
 
-#endif // OPM_DENSEAD_EALUATION-1_HPP
+#endif // OPM_DENSEAD_EVALUATION_DYNAMIC_HPP
