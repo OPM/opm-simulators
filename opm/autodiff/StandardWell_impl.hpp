@@ -616,6 +616,7 @@ namespace Opm
             // Compute Productivity index if asked for
             const auto& pu = phaseUsage();
             const Opm::SummaryConfig& summaryConfig = ebosSimulator.vanguard().summaryConfig();
+            const Opm::Schedule& schedule = ebosSimulator.vanguard().schedule();
             for (int p = 0; p < np; ++p) {
                 if ( (pu.phase_pos[Water] == p && (summaryConfig.hasSummaryKey("WPIW:" + name()) || summaryConfig.hasSummaryKey("WPIL:" + name())))
                         || (pu.phase_pos[Oil] == p && (summaryConfig.hasSummaryKey("WPIO:" + name()) || summaryConfig.hasSummaryKey("WPIL:" + name())))
@@ -623,8 +624,9 @@ namespace Opm
 
                     const unsigned int compIdx = flowPhaseToEbosCompIdx(p);
                     const double drawdown = well_state.perfPress()[first_perf_ + perf] - intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx).value();
+                    const bool new_well = schedule.hasWellEvent(name(), ScheduleEvents::NEW_WELL, current_step_);
                     double productivity_index = cq_s[compIdx].value() / drawdown;
-                    scaleProductivityIndex(perf, productivity_index, deferred_logger);
+                    scaleProductivityIndex(perf, productivity_index, new_well, deferred_logger);
                     well_state.productivityIndex()[np*index_of_well_ + p] += productivity_index;
                 }
             }

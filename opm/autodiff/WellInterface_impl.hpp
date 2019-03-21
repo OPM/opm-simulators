@@ -1262,13 +1262,9 @@ namespace Opm
 
     template<typename TypeTag>
     void
-    WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index, Opm::DeferredLogger& deferred_logger)
+    WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger)
     {
-
         const auto& connection = well_ecl_->getConnections(current_step_)[perfIdx];
-
-        const bool new_well = well_ecl_->hasEvent(ScheduleEvents::NEW_WELL , current_step_);
-
         if (well_ecl_->getDrainageRadius(current_step_) < 0) {
             if (new_well && perfIdx == 0) {
                 deferred_logger.warning("PRODUCTIVITY_INDEX_WARNING", "Negative drainage radius not supported. The productivity index is set to zero");
