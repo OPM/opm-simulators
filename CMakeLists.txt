@@ -156,6 +156,16 @@ opm_add_test(flow
   flow/flow_ebos_oilwater_polymer.cpp
   flow/flow_ebos_oilwater_polymer_injectivity.cpp)
 
+opm_add_test(flow_blackoil_dunecpr
+  ONLY_COMPILE
+  DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
+  SOURCES flow/flow_blackoil_dunecpr.cpp
+  EXE_NAME flow_blackoil_dunecpr
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
+
+
+
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)
   opm_add_bash_completion(flow)
