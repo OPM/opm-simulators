@@ -122,7 +122,7 @@ namespace Opm
         typedef Dune::DynamicMatrix<Scalar> OffDiagMatrixBlockWellType;
         typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellType> OffDiagMatWell;
 
-        typedef DenseAd::DynamicEvaluation<Scalar> EvalWell;
+        typedef DenseAd::DynamicEvaluation<Scalar, numStaticWellEq + numEq + 1> EvalWell;
 
         using Base::contiSolventEqIdx;
         using Base::contiPolymerEqIdx;
