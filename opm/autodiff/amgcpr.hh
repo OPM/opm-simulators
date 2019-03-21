@@ -213,7 +213,7 @@ namespace Dune
             typedef DirectSolverSelector< typename M::matrix_type, X > SolverSelector;
             
             // Use superlu if we are purely sequential or with only one processor on the coarsest level.
-            if( SolverSelector::isDirectSolver && false)
+            if( SolverSelector::isDirectSolver)
               {
                 solver_.reset(SolverSelector::create(matrices_->matrices().coarsest()->getmat(), false, false));  
                 if(verbosity_>0 )
