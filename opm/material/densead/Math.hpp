@@ -39,25 +39,25 @@
 namespace Opm {
 namespace DenseAd {
 // forward declaration of the Evaluation template class
-template <class ValueT, int numVars>
+template <class ValueT, int numVars, unsigned staticSize>
 class Evaluation;
 
 // provide some algebraic functions
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> abs(const Evaluation<ValueType, numVars>& x)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> abs(const Evaluation<ValueType, numVars, staticSize>& x)
 { return (x > 0.0)?x:-x; }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> min(const Evaluation<ValueType, numVars>& x1,
-                                   const Evaluation<ValueType, numVars>& x2)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> min(const Evaluation<ValueType, numVars, staticSize>& x1,
+                                               const Evaluation<ValueType, numVars, staticSize>& x2)
 { return (x1 < x2)?x1:x2; }
 
-template <class Arg1ValueType, class ValueType, int numVars>
-Evaluation<ValueType, numVars> min(const Arg1ValueType& x1,
-                                   const Evaluation<ValueType, numVars>& x2)
+template <class Arg1ValueType, class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> min(const Arg1ValueType& x1,
+                                               const Evaluation<ValueType, numVars, staticSize>& x2)
 {
     if (x1 < x2) {
-        Evaluation<ValueType, numVars> ret(x2);
+        Evaluation<ValueType, numVars, staticSize> ret(x2);
         ret = x1;
         return ret;
     }
@@ -65,22 +65,22 @@ Evaluation<ValueType, numVars> min(const Arg1ValueType& x1,
         return x2;
 }
 
-template <class ValueType, int numVars, class Arg2ValueType>
-Evaluation<ValueType, numVars> min(const Evaluation<ValueType, numVars>& x1,
-                                   const Arg2ValueType& x2)
+template <class ValueType, int numVars, unsigned staticSize, class Arg2ValueType>
+Evaluation<ValueType, numVars, staticSize> min(const Evaluation<ValueType, numVars, staticSize>& x1,
+                                               const Arg2ValueType& x2)
 { return min(x2, x1); }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> max(const Evaluation<ValueType, numVars>& x1,
-                                   const Evaluation<ValueType, numVars>& x2)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> max(const Evaluation<ValueType, numVars, staticSize>& x1,
+                                               const Evaluation<ValueType, numVars, staticSize>& x2)
 { return (x1 > x2)?x1:x2; }
 
-template <class Arg1ValueType, class ValueType, int numVars>
-Evaluation<ValueType, numVars> max(const Arg1ValueType& x1,
-                                   const Evaluation<ValueType, numVars>& x2)
+template <class Arg1ValueType, class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> max(const Arg1ValueType& x1,
+                                               const Evaluation<ValueType, numVars, staticSize>& x2)
 {
     if (x1 > x2) {
-        Evaluation<ValueType, numVars> ret(x2);
+        Evaluation<ValueType, numVars, staticSize> ret(x2);
         ret = x1;
         return ret;
     }
@@ -88,17 +88,17 @@ Evaluation<ValueType, numVars> max(const Arg1ValueType& x1,
         return x2;
 }
 
-template <class ValueType, int numVars, class Arg2ValueType>
-Evaluation<ValueType, numVars> max(const Evaluation<ValueType, numVars>& x1,
-                                   const Arg2ValueType& x2)
+template <class ValueType, int numVars, unsigned staticSize, class Arg2ValueType>
+Evaluation<ValueType, numVars, staticSize> max(const Evaluation<ValueType, numVars, staticSize>& x1,
+                                               const Arg2ValueType& x2)
 { return max(x2, x1); }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> tan(const Evaluation<ValueType, numVars>& x)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> tan(const Evaluation<ValueType, numVars, staticSize>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(x);
+    Evaluation<ValueType, numVars, staticSize> result(x);
 
     const ValueType& tmp = ValueTypeToolbox::tan(x.value());
     result.setValue(tmp);
@@ -111,12 +111,12 @@ Evaluation<ValueType, numVars> tan(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> atan(const Evaluation<ValueType, numVars>& x)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> atan(const Evaluation<ValueType, numVars, staticSize>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(x);
+    Evaluation<ValueType, numVars, staticSize> result(x);
 
     result.setValue(ValueTypeToolbox::atan(x.value()));
 
@@ -128,13 +128,13 @@ Evaluation<ValueType, numVars> atan(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> atan2(const Evaluation<ValueType, numVars>& x,
-                                     const Evaluation<ValueType, numVars>& y)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> atan2(const Evaluation<ValueType, numVars, staticSize>& x,
+                                                 const Evaluation<ValueType, numVars, staticSize>& y)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(x);
+    Evaluation<ValueType, numVars, staticSize> result(x);
 
     result.setValue(ValueTypeToolbox::atan2(x.value(), y.value()));
 
@@ -149,13 +149,13 @@ Evaluation<ValueType, numVars> atan2(const Evaluation<ValueType, numVars>& x,
     return result;
 }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> atan2(const Evaluation<ValueType, numVars>& x,
-                                     const ValueType& y)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> atan2(const Evaluation<ValueType, numVars, staticSize>& x,
+                                                 const ValueType& y)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(x);
+    Evaluation<ValueType, numVars, staticSize> result(x);
 
     result.setValue(ValueTypeToolbox::atan2(x.value(), y));
 
@@ -170,13 +170,13 @@ Evaluation<ValueType, numVars> atan2(const Evaluation<ValueType, numVars>& x,
     return result;
 }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> atan2(const ValueType& x,
-                                     const Evaluation<ValueType, numVars>& y)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> atan2(const ValueType& x,
+                                                 const Evaluation<ValueType, numVars, staticSize>& y)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(y);
+    Evaluation<ValueType, numVars, staticSize> result(y);
 
     result.setValue(ValueTypeToolbox::atan2(x, y.value()));
 
@@ -191,12 +191,12 @@ Evaluation<ValueType, numVars> atan2(const ValueType& x,
     return result;
 }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> sin(const Evaluation<ValueType, numVars>& x)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> sin(const Evaluation<ValueType, numVars, staticSize>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(x);
+    Evaluation<ValueType, numVars, staticSize> result(x);
 
     result.setValue(ValueTypeToolbox::sin(x.value()));
 
@@ -208,12 +208,12 @@ Evaluation<ValueType, numVars> sin(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> asin(const Evaluation<ValueType, numVars>& x)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> asin(const Evaluation<ValueType, numVars, staticSize>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(x);
+    Evaluation<ValueType, numVars, staticSize> result(x);
 
     result.setValue(ValueTypeToolbox::asin(x.value()));
 
@@ -225,12 +225,12 @@ Evaluation<ValueType, numVars> asin(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> cos(const Evaluation<ValueType, numVars>& x)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> cos(const Evaluation<ValueType, numVars, staticSize>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(x);
+    Evaluation<ValueType, numVars, staticSize> result(x);
 
     result.setValue(ValueTypeToolbox::cos(x.value()));
 
@@ -242,12 +242,12 @@ Evaluation<ValueType, numVars> cos(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> acos(const Evaluation<ValueType, numVars>& x)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> acos(const Evaluation<ValueType, numVars, staticSize>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(x);
+    Evaluation<ValueType, numVars, staticSize> result(x);
 
     result.setValue(ValueTypeToolbox::acos(x.value()));
 
@@ -259,12 +259,12 @@ Evaluation<ValueType, numVars> acos(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> sqrt(const Evaluation<ValueType, numVars>& x)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> sqrt(const Evaluation<ValueType, numVars, staticSize>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(x);
+    Evaluation<ValueType, numVars, staticSize> result(x);
 
     const ValueType& sqrt_x = ValueTypeToolbox::sqrt(x.value());
     result.setValue(sqrt_x);
@@ -278,11 +278,11 @@ Evaluation<ValueType, numVars> sqrt(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> exp(const Evaluation<ValueType, numVars>& x)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> exp(const Evaluation<ValueType, numVars, staticSize>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
-    Evaluation<ValueType, numVars> result(x);
+    Evaluation<ValueType, numVars, staticSize> result(x);
 
     const ValueType& exp_x = ValueTypeToolbox::exp(x.value());
     result.setValue(exp_x);
@@ -296,12 +296,12 @@ Evaluation<ValueType, numVars> exp(const Evaluation<ValueType, numVars>& x)
 }
 
 // exponentiation of arbitrary base with a fixed constant
-template <class ValueType, int numVars, class ExpType>
-Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
-                                   const ExpType& exp)
+template <class ValueType, int numVars, unsigned staticSize, class ExpType>
+Evaluation<ValueType, numVars, staticSize> pow(const Evaluation<ValueType, numVars, staticSize>& base,
+                                               const ExpType& exp)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
-    Evaluation<ValueType, numVars> result(base);
+    Evaluation<ValueType, numVars, staticSize> result(base);
 
     const ValueType& pow_x = ValueTypeToolbox::pow(base.value(), exp);
     result.setValue(pow_x);
@@ -322,13 +322,13 @@ Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
 }
 
 // exponentiation of constant base with an arbitrary exponent
-template <class BaseType, class ValueType, int numVars>
-Evaluation<ValueType, numVars> pow(const BaseType& base,
-                                   const Evaluation<ValueType, numVars>& exp)
+template <class BaseType, class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> pow(const BaseType& base,
+                                               const Evaluation<ValueType, numVars, staticSize>& exp)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(exp);
+    Evaluation<ValueType, numVars, staticSize> result(exp);
 
     if (base == 0.0) {
         // we special case the base 0 case because 0.0 is in the valid range of the
@@ -350,13 +350,13 @@ Evaluation<ValueType, numVars> pow(const BaseType& base,
 
 // this is the most expensive power function. Computationally it is pretty expensive, so
 // one of the above two variants above should be preferred if possible.
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
-                                   const Evaluation<ValueType, numVars>& exp)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> pow(const Evaluation<ValueType, numVars, staticSize>& base,
+                                               const Evaluation<ValueType, numVars, staticSize>& exp)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(base);
+    Evaluation<ValueType, numVars, staticSize> result(base);
 
     if (base == 0.0) {
         // we special case the base 0 case because 0.0 is in the valid range of the
@@ -382,12 +382,12 @@ Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
     return result;
 }
 
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> log(const Evaluation<ValueType, numVars>& x)
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> log(const Evaluation<ValueType, numVars, staticSize>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
 
-    Evaluation<ValueType, numVars> result(x);
+    Evaluation<ValueType, numVars, staticSize> result(x);
 
     result.setValue(ValueTypeToolbox::log(x.value()));
 
@@ -403,15 +403,15 @@ Evaluation<ValueType, numVars> log(const Evaluation<ValueType, numVars>& x)
 
 // a kind of traits class for the automatic differentiation case. (The toolbox for the
 // scalar case is provided by the MathToolbox.hpp header file.)
-template <class ValueT, int numVars>
-struct MathToolbox<Opm::DenseAd::Evaluation<ValueT, numVars> >
+template <class ValueT, int numVars, unsigned staticSize>
+struct MathToolbox<Opm::DenseAd::Evaluation<ValueT, numVars, staticSize> >
 {
 private:
 public:
     typedef ValueT ValueType;
     typedef Opm::MathToolbox<ValueType> InnerToolbox;
     typedef typename InnerToolbox::Scalar Scalar;
-    typedef Opm::DenseAd::Evaluation<ValueType, numVars> Evaluation;
+    typedef Opm::DenseAd::Evaluation<ValueType, numVars, staticSize> Evaluation;
 
     static ValueType value(const Evaluation& eval)
     { return eval.value(); }

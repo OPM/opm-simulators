@@ -51,8 +51,8 @@ namespace DenseAd {
  * \brief Represents a function evaluation and its derivatives w.r.t. a
  *        run-time specified set of variables.
  */
-template <class ValueT>
-class Evaluation<ValueT, DynamicSize>
+template <class ValueT, unsigned staticSize>
+class Evaluation<ValueT, DynamicSize, staticSize>
 {
 public:
     //! the template argument which specifies the number of
@@ -518,22 +518,22 @@ public:
 
 private:
 
-    FastSmallVector<ValueT, 9> data_;
+    FastSmallVector<ValueT, staticSize> data_;
 };
 
-template <class Scalar>
-using DynamicEvaluation = Evaluation<Scalar, DynamicSize>;
+template <class Scalar, unsigned staticSize = 9>
+using DynamicEvaluation = Evaluation<Scalar, DynamicSize, staticSize>;
 
 } // namespace DenseAd
 
-template <class Scalar>
-Opm::DenseAd::Evaluation<Scalar, -1> constant(int numDerivatives, const Scalar& value)
-{ return Opm::DenseAd::Evaluation<Scalar, -1>::createConstant(numDerivatives, value); }
+template <class Scalar, unsigned staticSize>
+Opm::DenseAd::Evaluation<Scalar, -1, staticSize> constant(int numDerivatives, const Scalar& value)
+{ return Opm::DenseAd::Evaluation<Scalar, -1, staticSize>::createConstant(numDerivatives, value); }
 
-template <class Scalar>
-Opm::DenseAd::Evaluation<Scalar, -1> variable(int numDerivatives, const Scalar& value, unsigned idx)
-{ return Opm::DenseAd::Evaluation<Scalar, -1>::createVariable(numDerivatives, value, idx); }
+template <class Scalar, unsigned staticSize>
+Opm::DenseAd::Evaluation<Scalar, -1, staticSize> variable(int numDerivatives, const Scalar& value, unsigned idx)
+{ return Opm::DenseAd::Evaluation<Scalar, -1, staticSize>::createVariable(numDerivatives, value, idx); }
 
 } // namespace Opm
 
-#endif // OPM_DENSEAD_EVALUATION-1_HPP
+#endif // OPM_DENSEAD_EALUATION-1_HPP

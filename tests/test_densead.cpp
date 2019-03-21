@@ -48,7 +48,7 @@
 #include <cassert>
 #include <stdexcept>
 
-template <class Eval, int numVars, class Scalar, class Implementation>
+template <class Eval, int numVars, int staticSize, class Scalar, class Implementation>
 struct TestEnvBase
 {
     const Implementation& asImp_() const
@@ -496,23 +496,23 @@ struct TestEnvBase
         testOperators(eps);
 
         std::cout << "  Testing min()\n";
-        test2DFunction1(Opm::DenseAd::min<Scalar, numVars>,
+        test2DFunction1(Opm::DenseAd::min<Scalar, numVars, staticSize>,
                         myScalarMin,
                         -1000, 1000,
                         /*p=*/1.234);
 
-        test2DFunction2(Opm::DenseAd::min<Scalar, numVars>,
+        test2DFunction2(Opm::DenseAd::min<Scalar, numVars, staticSize>,
                         myScalarMin,
                         /*T=*/1.234,
                         -1000, 1000);
 
         std::cout << "  Testing max()\n";
-        test2DFunction1(Opm::DenseAd::max<Scalar, numVars>,
+        test2DFunction1(Opm::DenseAd::max<Scalar, numVars, staticSize>,
                         myScalarMax,
                         -1000, 1000,
                         /*p=*/1.234);
 
-        test2DFunction2(Opm::DenseAd::max<Scalar, numVars>,
+        test2DFunction2(Opm::DenseAd::max<Scalar, numVars, staticSize>,
                         myScalarMax,
                         /*T=*/1.234,
                         -1000, 1000);
@@ -522,40 +522,40 @@ struct TestEnvBase
         testPowExp();
 
         std::cout << "  Testing abs()\n";
-        test1DFunction(Opm::DenseAd::abs<Scalar, numVars>,
+        test1DFunction(Opm::DenseAd::abs<Scalar, numVars, staticSize>,
                        static_cast<Scalar (*)(Scalar)>(std::abs));
 
         std::cout << "  Testing sqrt()\n";
-        test1DFunction(Opm::DenseAd::sqrt<Scalar, numVars>,
+        test1DFunction(Opm::DenseAd::sqrt<Scalar, numVars, staticSize>,
                        static_cast<Scalar (*)(Scalar)>(std::sqrt));
 
         std::cout << "  Testing sin()\n";
-        test1DFunction(Opm::DenseAd::sin<Scalar, numVars>,
+        test1DFunction(Opm::DenseAd::sin<Scalar, numVars, staticSize>,
                        static_cast<Scalar (*)(Scalar)>(std::sin),
                        0, 2*M_PI);
 
         std::cout << "  Testing asin()\n";
-        test1DFunction(Opm::DenseAd::asin<Scalar, numVars>,
+        test1DFunction(Opm::DenseAd::asin<Scalar, numVars, staticSize>,
                        static_cast<Scalar (*)(Scalar)>(std::asin),
                        -1.0, 1.0);
 
         std::cout << "  Testing cos()\n";
-        test1DFunction(Opm::DenseAd::cos<Scalar, numVars>,
+        test1DFunction(Opm::DenseAd::cos<Scalar, numVars, staticSize>,
                        static_cast<Scalar (*)(Scalar)>(std::cos),
                        0, 2*M_PI);
 
         std::cout << "  Testing acos()\n";
-        test1DFunction(Opm::DenseAd::acos<Scalar, numVars>,
+        test1DFunction(Opm::DenseAd::acos<Scalar, numVars, staticSize>,
                        static_cast<Scalar (*)(Scalar)>(std::acos),
                        -1.0, 1.0);
 
         std::cout << "  Testing tan()\n";
-        test1DFunction(Opm::DenseAd::tan<Scalar, numVars>,
+        test1DFunction(Opm::DenseAd::tan<Scalar, numVars, staticSize>,
                        static_cast<Scalar (*)(Scalar)>(std::tan),
                        -M_PI / 2 * 0.95, M_PI / 2 * 0.95);
 
         std::cout << "  Testing atan()\n";
-        test1DFunction(Opm::DenseAd::atan<Scalar, numVars>,
+        test1DFunction(Opm::DenseAd::atan<Scalar, numVars, staticSize>,
                        static_cast<Scalar (*)(Scalar)>(std::atan),
                        -10*1000.0, 10*1000.0);
 
@@ -563,12 +563,12 @@ struct TestEnvBase
         testAtan2();
 
         std::cout << "  Testing exp()\n";
-        test1DFunction(Opm::DenseAd::exp<Scalar, numVars>,
+        test1DFunction(Opm::DenseAd::exp<Scalar, numVars, staticSize>,
                        static_cast<Scalar (*)(Scalar)>(std::exp),
                        -100, 100);
 
         std::cout << "  Testing log()\n";
-        test1DFunction(Opm::DenseAd::log<Scalar, numVars>,
+        test1DFunction(Opm::DenseAd::log<Scalar, numVars, staticSize>,
                        static_cast<Scalar (*)(Scalar)>(std::log),
                        1e-6, 1e9);
 
@@ -627,13 +627,14 @@ struct TestEnvBase
 
 };//StaticTestEnv
 
-template <class Scalar>
-struct DynamicTestEnv : public TestEnvBase<Opm::DenseAd::DynamicEvaluation<Scalar>,
+template <class Scalar, int staticSize>
+struct DynamicTestEnv : public TestEnvBase<Opm::DenseAd::DynamicEvaluation<Scalar, staticSize>,
                                            -1,
+                                           staticSize,
                                            Scalar,
-                                           DynamicTestEnv<Scalar> >
+                                           DynamicTestEnv<Scalar, staticSize> >
 {
-    typedef Opm::DenseAd::DynamicEvaluation<Scalar> Eval;
+    typedef Opm::DenseAd::DynamicEvaluation<Scalar, staticSize> Eval;
     DynamicTestEnv(int numDerivs)
         : numDerivs_(numDerivs)
     {}
@@ -642,18 +643,19 @@ struct DynamicTestEnv : public TestEnvBase<Opm::DenseAd::DynamicEvaluation<Scala
     { return Eval(); }
 
     Eval createConstant(Scalar c) const
-    { return Opm::constant(numDerivs_, c); }
+    { return Opm::constant<Scalar, staticSize>(numDerivs_, c); }
 
     Eval createVariable(Scalar v, int varIdx) const
-    { return Opm::variable(numDerivs_, v, varIdx); }
+    { return Opm::variable<Scalar, staticSize>(numDerivs_, v, varIdx); }
 
 private:
     int numDerivs_;
 };
 
-template <class Scalar, int numDerivs>
+template <class Scalar, int numDerivs, int staticSize = 0>
 struct StaticTestEnv : public TestEnvBase<Opm::DenseAd::Evaluation<Scalar, numDerivs>,
                                           numDerivs,
+                                          staticSize,
                                           Scalar,
                                           StaticTestEnv<Scalar, numDerivs> >
 {
@@ -691,9 +693,9 @@ int main(int argc, char **argv)
 
     std::cout << "Testing dynamically sized evaluations\n";
     std::cout << " -> Scalar == double\n";
-    DynamicTestEnv<double>(5).testAll();
+    DynamicTestEnv<double, 6>(5).testAll();
     std::cout << " -> Scalar == float\n";
-    DynamicTestEnv<float>(5).testAll();
+    DynamicTestEnv<float, 6>(5).testAll();
 
     return 0;
 }
