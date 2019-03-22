@@ -140,6 +140,10 @@ NEW_PROP_TAG(EnableDebuggingChecks);
 // thermal gradient specified via the TEMPVD keyword
 NEW_PROP_TAG(EnableThermalFluxBoundaries);
 
+// Specify whether API tracking should be enabled (replaces PVT regions).
+// TODO: This is not yet implemented
+NEW_PROP_TAG(EnableApiTracking);
+
 // The class which deals with ECL aquifers
 NEW_PROP_TAG(EclAquiferModel);
 
@@ -228,6 +232,9 @@ SET_BOOL_PROP(EclBaseProblem, EnableGravity, true);
 
 // only write the solutions for the report steps to disk
 SET_BOOL_PROP(EclBaseProblem, EnableWriteAllSolutions, false);
+
+// disable API tracking
+SET_BOOL_PROP(EclBaseProblem, EnableApiTracking, false);
 
 // The default for the end time of the simulation [s]
 //
@@ -390,6 +397,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
     enum { enableThermalFluxBoundaries = GET_PROP_VALUE(TypeTag, EnableThermalFluxBoundaries) };
+    enum { enableApiTracking = GET_PROP_VALUE(TypeTag, EnableApiTracking) };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -1685,6 +1693,11 @@ private:
     void checkDeckCompatibility_() const
     {
         const auto& deck = this->simulator().vanguard().deck();
+
+        if (enableApiTracking)
+            throw std::logic_error("API tracking is not yet implemented but requested at compile time.");
+        if (!enableApiTracking && deck.hasKeyword("API"))
+            throw std::logic_error("The simulator is build with API tracking disabled, but API tracking is requested by the deck.");
 
         if (enableSolvent && !deck.hasKeyword("SOLVENT"))
             throw std::runtime_error("The simulator requires the solvent option to be enabled, but the deck does not.");
