@@ -56,6 +56,7 @@ NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(Evaluation);
 NEW_PROP_TAG(ElementContext);
 NEW_PROP_TAG(FluidSystem);
+NEW_PROP_TAG(EnableExperiments);
 
 END_PROPERTIES
 
@@ -80,6 +81,7 @@ class EclThresholdPressure
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
+    enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
     enum { numPhases = FluidSystem::numPhases };
 
 public:
@@ -158,13 +160,40 @@ public:
      * they should be different for the fluid phase but are not. Anyway, this seems to be
      * E100's way of doing things, so we do it the same way.
      */
-    Scalar thresholdPressure(int elemIdx1, int elemIdx2) const
+    Scalar thresholdPressure(int elem1Idx, int elem2Idx) const
     {
         if (!enableThresholdPressure_)
             return 0.0;
 
-        unsigned short equilRegion1Idx = elemEquilRegion_[elemIdx1];
-        unsigned short equilRegion2Idx = elemEquilRegion_[elemIdx2];
+        if (enableExperiments) {
+            // threshold pressure accross faults
+            if (!thpresftValues_.empty()) {
+                const auto& vanguard = simulator_.vanguard();
+                int cartElem1Idx = vanguard.cartesianIndex(elem1Idx);
+                int cartElem2Idx = vanguard.cartesianIndex(elem2Idx);
+
+                assert(0 <= cartElem1Idx && cartElemFaultIdx_.size() > cartElem1Idx);
+                assert(0 <= cartElem2Idx && cartElemFaultIdx_.size() > cartElem2Idx);
+
+                int fault1Idx = cartElemFaultIdx_[cartElem1Idx];
+                int fault2Idx = cartElemFaultIdx_[cartElem2Idx];
+                if (fault1Idx != -1 && fault1Idx == fault2Idx)
+                    // inside a fault there's no threshold pressure, even accross EQUIL
+                    // regions.
+                    return 0.0;
+                if (fault1Idx != fault2Idx) {
+                    // TODO: which value if a cell is part of multiple faults? we take
+                    // the maximum here.
+                    Scalar val1 = (fault1Idx >= 0) ? thpresftValues_[fault1Idx] : 0.0;
+                    Scalar val2 = (fault2Idx >= 0) ? thpresftValues_[fault2Idx] : 0.0;
+                    return std::max(val1, val2);
+                }
+            }
+        }
+
+        // threshold pressure accross EQUIL regions
+        unsigned short equilRegion1Idx = elemEquilRegion_[elem1Idx];
+        unsigned short equilRegion2Idx = elemEquilRegion_[elem2Idx];
 
         if (equilRegion1Idx == equilRegion2Idx)
             return 0.0;
@@ -257,6 +286,7 @@ private:
         const auto& gridView = vanguard.gridView();
         const auto& elementMapper = simulator_.model().elementMapper();
         const auto& eclState = simulator_.vanguard().eclState();
+        const auto& deck = simulator_.vanguard().deck();
         const Opm::SimulationConfig& simConfig = eclState.getSimulationConfig();
         const auto& thpres = simConfig.getThresholdPressure();
 
@@ -307,6 +337,45 @@ private:
                 }
             }
         }
+
+        if (enableExperiments) {
+            // apply threshold pressures accross faults (experimental!)
+            if (deck.hasKeyword("THPRESFT"))
+                extractThpresft_(deck.getKeyword("THPRESFT"));
+        }
+
+    }
+
+    void extractThpresft_(const Opm::DeckKeyword& thpresftKeyword)
+    {
+        // retrieve the faults collection.
+        const Opm::EclipseState& eclState = simulator_.vanguard().eclState();
+        const Opm::FaultCollection& faults = eclState.getFaults();
+
+        // extract the multipliers from the deck keyword
+        int numFaults = faults.size();
+        int numCartesianElem = eclState.getInputGrid().getCartesianSize();
+        thpresftValues_.resize(numFaults, -1.0);
+        cartElemFaultIdx_.resize(numCartesianElem, -1);
+        for (size_t recordIdx = 0; recordIdx < thpresftKeyword.size(); ++ recordIdx) {
+            const Opm::DeckRecord& record = thpresftKeyword.getRecord(recordIdx);
+
+            const std::string& faultName = record.getItem("FAULT_NAME").getTrimmedString(0);
+            Scalar thpresValue = record.getItem("VALUE").getSIDouble(0);
+
+            for (size_t faultIdx = 0; faultIdx < faults.size(); faultIdx++) {
+                auto& fault = faults.getFault(faultIdx);
+                if (fault.getName() != faultName)
+                    continue;
+
+                thpresftValues_[faultIdx] = thpresValue;
+                for (const Opm::FaultFace& face: fault)
+                    // "face" is a misnomer because the object describes a set of cell
+                    // indices, but we go with the conventions of the parser here...
+                    for (size_t cartElemIdx: face)
+                        cartElemFaultIdx_[cartElemIdx] = faultIdx;
+            }
+        }
     }
 
     const Simulator& simulator_;
@@ -315,6 +384,10 @@ private:
     std::vector<Scalar> thpres_;
     unsigned numEquilRegions_;
     std::vector<unsigned char> elemEquilRegion_;
+
+    // threshold pressure accross faults. EXPERIMENTAL!
+    std::vector<Scalar> thpresftValues_;
+    std::vector<int> cartElemFaultIdx_;
 
     bool enableThresholdPressure_;
 };
