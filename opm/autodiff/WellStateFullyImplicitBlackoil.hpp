@@ -462,12 +462,11 @@ namespace Opm
                 // we need to create a trival segment related values to avoid there will be some
                 // multi-segment wells added later.
                 nseg_ = nw;
-                seg_number_.clear();
-                top_segment_index_.reserve(nw);
-                seg_number_.reserve(nw);
+                top_segment_index_.resize(nw);
+                seg_number_.resize(nw);
                 for (int w = 0; w < nw; ++w) {
-                    top_segment_index_.push_back(w);
-                    seg_number_.push_back(1); // Top segment is segment #1
+                    top_segment_index_[w] = w;
+                    seg_number_[w] = 1; // Top segment is segment #1
                 }
                 segpress_ = bhp();
                 segrates_ = wellRates();
