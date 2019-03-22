@@ -82,6 +82,15 @@ OPTIONS
 ---------------------------------------------------------
 GRID
 
+
+PERMX
+   10*0.25 /
+
+COPY
+  PERMX PERMY /
+  PERMX PERMZ /
+/
+
 NEWTRAN
 
 GRIDFILE
