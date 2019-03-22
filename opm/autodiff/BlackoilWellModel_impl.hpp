@@ -259,16 +259,8 @@ namespace Opm {
         well_state_.init(wells(), cellPressures, schedule(), wells_ecl_, timeStepIdx, &previous_well_state_, phase_usage_);
 
         // handling MS well related
-        if (param_.use_multisegment_well_) { // if we use MultisegmentWell model
-            for (const auto& well : wells_ecl_) {
-                // TODO: this is acutally not very accurate, because sometimes a deck just claims a MS well
-                // while keep the well shut. More accurately, we should check if the well exisits in the Wells
-                // structure here
-                if (well->isMultiSegment(timeStepIdx) ) { // there is one well is MS well
-                    well_state_.initWellStateMSWell(wells(), wells_ecl_, timeStepIdx, phase_usage_, previous_well_state_);
-                    break;
-                }
-            }
+        if (param_.use_multisegment_well_&& anyMSWellOpen(wells(), timeStepIdx)) { // if we use MultisegmentWell model
+            well_state_.initWellStateMSWell(wells(), wells_ecl_, timeStepIdx, phase_usage_, &previous_well_state_);
         }
 
         // update the previous well state. This is used to restart failed steps.
@@ -480,13 +472,16 @@ namespace Opm {
     initFromRestartFile(const RestartValue& restartValues)
     {
         const auto& defunctWellNames = ebosSimulator_.vanguard().defunctWellNames();
+
+        // The restart step value is used to identify wells present at the given
+        // time step. Wells that are added at the same time step as RESTART is initiated
+        // will not be present in a restart file. Use the previous time step to retrieve
+        // wells that have information written to the restart file.
+        const int report_step = std::max(eclState().getInitConfig().getRestartStep() - 1, 0);
+
         WellsManager wellsmanager(eclState(),
                                   schedule(),
-                                  // The restart step value is used to identify wells present at the given
-                                  // time step. Wells that are added at the same time step as RESTART is initiated
-                                  // will not be present in a restart file. Use the previous time step to retrieve
-                                  // wells that have information written to the restart file.
-                                  std::max(eclState().getInitConfig().getRestartStep() - 1, 0),
+                                  report_step,
                                   Opm::UgGridHelpers::numCells(grid()),
                                   Opm::UgGridHelpers::globalCell(grid()),
                                   Opm::UgGridHelpers::cartDims(grid()),
@@ -502,8 +497,9 @@ namespace Opm {
         if (nw > 0) {
             const auto phaseUsage = phaseUsageFromDeck(eclState());
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
-            well_state_.resize(wells, schedule(), numCells, phaseUsage); // Resize for restart step
-            wellsToState(restartValues.wells, phaseUsage, well_state_);
+            const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpen(wells, report_step));
+            well_state_.resize(wells, wells_ecl_, schedule(), handle_ms_well, report_step, numCells, phaseUsage); // Resize for restart step
+            wellsToState(restartValues.wells, phaseUsage, handle_ms_well, report_step, well_state_);
             previous_well_state_ = well_state_;
         }
         initial_step_ = false;
@@ -1667,8 +1663,11 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     wellsToState( const data::Wells& wells,
-                       PhaseUsage phases,
-                       WellStateFullyImplicitBlackoil& state ) {
+                  const PhaseUsage& phases,
+                  const bool handle_ms_well,
+                  const int report_step,
+                  WellStateFullyImplicitBlackoil& state ) const
+    {
 
         using rt = data::Rates::opt;
         const auto np = phases.num_phases;
@@ -1724,6 +1723,85 @@ namespace Opm {
                 }
                 ++local_comp_index;
             }
+
+            if (handle_ms_well && !well.segments.empty()) {
+                // we need the well_ecl_ information
+                const std::string& well_name = wm.first;
+                const Well* well_ecl = getWellEcl(well_name);
+                assert(well_ecl);
+
+                const WellSegments& segment_set = well_ecl->getWellSegments(report_step);
+
+                const int top_segment_index = state.topSegmentIndex(well_index);
+                const auto& segments = well.segments;
+
+                // \Note: eventually we need to hanlde the situations that some segments are shut
+                assert(segment_set.size() == segments.size());
+
+                for (const auto& segment : segments) {
+                    const int segment_index = segment_set.segmentNumberToIndex(segment.first);
+
+                    // recovering segment rates and pressure from the restart values
+                    state.segPress()[top_segment_index + segment_index] = segment.second.pressure;
+
+                    const auto& segment_rates = segment.second.rates;
+                    for (int p = 0; p < np; ++p) {
+                        state.segRates()[(top_segment_index + segment_index) * np + p] = segment_rates.get(phs[p]);
+                    }
+                }
+            }
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    bool
+    BlackoilWellModel<TypeTag>::
+    anyMSWellOpen(const Wells* wells, const int report_step) const
+    {
+        bool any_ms_well_open = false;
+
+        const int nw = wells->number_of_wells;
+        for (int w = 0; w < nw; ++w) {
+            const std::string well_name = std::string(wells->name[w]);
+
+            const Well* well_ecl = getWellEcl(well_name);
+
+            assert(well_ecl);
+
+            if (well_ecl->isMultiSegment(report_step) ) {
+                any_ms_well_open = true;
+                break;
+            }
+        }
+        return any_ms_well_open;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    const Well*
+    BlackoilWellModel<TypeTag>::
+    getWellEcl(const std::string& well_name) const
+    {
+        // finding the location of the well in wells_ecl
+        const int nw_wells_ecl = wells_ecl_.size();
+        int index_well = 0;
+        for (; index_well < nw_wells_ecl; ++index_well) {
+            if (well_name == wells_ecl_[index_well]->name()) {
+                break;
+            }
+        }
+
+        if (index_well < nw_wells_ecl) {
+            return wells_ecl_[index_well];
+        } else {
+            return nullptr;
         }
     }
 

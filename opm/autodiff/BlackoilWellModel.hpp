@@ -423,9 +423,14 @@ namespace Opm {
 
             // convert well data from opm-common to well state from opm-core
             void wellsToState( const data::Wells& wells,
-                               PhaseUsage phases,
-                               WellStateFullyImplicitBlackoil& state );
+                               const PhaseUsage& phases,
+                               const bool handle_ms_well,
+                               const int report_step,
+                               WellStateFullyImplicitBlackoil& state ) const;
 
+            bool anyMSWellOpen(const Wells* wells, const int report_step) const;
+
+            const Well* getWellEcl(const std::string& well_name) const;
         };
 
 
