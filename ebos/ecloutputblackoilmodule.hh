@@ -854,7 +854,11 @@ public:
     void outputFipLog(std::map<std::string, double>& miscSummaryData,  std::map<std::string, std::vector<double>>& regionData, const bool substep)
     {
         const auto& comm = simulator_.gridView().comm();
-        size_t ntFip = *std::max_element(fipnum_.begin(), fipnum_.end());
+        auto maxElement = std::max_element(fipnum_.begin(), fipnum_.end());
+        size_t ntFip = 0;
+        if ( maxElement != fipnum_.end() ) {
+            ntFip = *maxElement;
+        }
         ntFip = comm.max(ntFip);
 
         // sum values over each region
