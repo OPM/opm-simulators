@@ -238,11 +238,11 @@ public:
     {
         oilReferenceDensity_.resize(numRegions);
         gasReferenceDensity_.resize(numRegions);
-        inverseOilBTable_.resize(numRegions);
-        inverseOilBMuTable_.resize(numRegions);
+        inverseOilBTable_.resize(numRegions, TabulatedTwoDFunction{InterpolationGuide::LeftExtreme});
+        inverseOilBMuTable_.resize(numRegions, TabulatedTwoDFunction{InterpolationGuide::LeftExtreme});
         inverseSaturatedOilBTable_.resize(numRegions);
         inverseSaturatedOilBMuTable_.resize(numRegions);
-        oilMuTable_.resize(numRegions);
+        oilMuTable_.resize(numRegions, TabulatedTwoDFunction{InterpolationGuide::LeftExtreme});
         saturatedOilMuTable_.resize(numRegions);
         saturatedGasDissolutionFactorTable_.resize(numRegions);
         saturationPressure_.resize(numRegions);
