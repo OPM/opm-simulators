@@ -694,8 +694,14 @@ int main(int argc, char **argv)
     std::cout << "Testing dynamically sized evaluations\n";
     std::cout << " -> Scalar == double\n";
     DynamicTestEnv<double, 6>(5).testAll();
+    DynamicTestEnv<double, 0>(5).testAll();
+    DynamicTestEnv<double, 4>(8).testAll();
+    DynamicTestEnv<double, 4>(2).testAll();
     std::cout << " -> Scalar == float\n";
     DynamicTestEnv<float, 6>(5).testAll();
+    DynamicTestEnv<float, 0>(5).testAll();
+    DynamicTestEnv<float, 4>(8).testAll();
+    DynamicTestEnv<float, 4>(2).testAll();
 
     return 0;
 }
