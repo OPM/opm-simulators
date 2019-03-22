@@ -471,6 +471,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     initFromRestartFile(const RestartValue& restartValues)
     {
+        // TODO: it looks like we will have the report step, and also we have the wells_ecl, and we should be able to do a proper initialization of well_state
         const auto& defunctWellNames = ebosSimulator_.vanguard().defunctWellNames();
 
         // The restart step value is used to identify wells present at the given
@@ -497,10 +498,18 @@ namespace Opm {
         if (nw > 0) {
             const auto phaseUsage = phaseUsageFromDeck(eclState());
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
+<<<<<<< dc95966ad9c42556e2b5b317a3582eba9447b6a3
             const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal(wells, report_step));
             well_state_.resize(wells, wells_ecl_, schedule(), handle_ms_well, report_step, numCells, phaseUsage); // Resize for restart step
+=======
+            const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpen(wells, report_step));
+            // well_state_.resize(wells, schedule(), numCells, phaseUsage); // Resize for restart step
+            well_state_.resize(wells, wells_ecl_, handle_ms_well, report_step, numCells, phaseUsage); // Resize for restart step
+>>>>>>> first version of restarting for multisegment well
             wellsToState(restartValues.wells, phaseUsage, handle_ms_well, report_step, well_state_);
             previous_well_state_ = well_state_;
+        // void resize(const Wells* wells, const std::vector<const Well*>& wells_ecl, const bool handle_ms_well,
+        // const int report_step, const size_t numCells, const PhaseUsage& pu)
         }
         initial_step_ = false;
     }
@@ -1725,7 +1734,11 @@ namespace Opm {
             }
 
             if (handle_ms_well && !well.segments.empty()) {
+<<<<<<< dc95966ad9c42556e2b5b317a3582eba9447b6a3
                 // we need the well_ecl_ information
+=======
+                // we need to the wells_ecl_ information
+>>>>>>> first version of restarting for multisegment well
                 const std::string& well_name = wm.first;
                 const Well* well_ecl = getWellEcl(well_name);
                 assert(well_ecl);
@@ -1735,7 +1748,11 @@ namespace Opm {
                 const int top_segment_index = state.topSegmentIndex(well_index);
                 const auto& segments = well.segments;
 
+<<<<<<< dc95966ad9c42556e2b5b317a3582eba9447b6a3
                 // \Note: eventually we need to hanlde the situations that some segments are shut
+=======
+                // possibly wrong if some segments are shut
+>>>>>>> first version of restarting for multisegment well
                 assert(segment_set.size() == segments.size());
 
                 for (const auto& segment : segments) {
@@ -1750,6 +1767,61 @@ namespace Opm {
                     }
                 }
             }
+<<<<<<< dc95966ad9c42556e2b5b317a3582eba9447b6a3
+=======
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    bool
+    BlackoilWellModel<TypeTag>::
+    anyMSWellOpen(const Wells* wells, const int report_step) const
+    {
+        bool any_ms_well_open = false;
+
+        const int nw = wells->number_of_wells;
+        for (int w = 0; w < nw; ++w) {
+            const std::string well_name = std::string(wells->name[w]);
+
+            const Well* well_ecl = getWellEcl(well_name);
+
+            assert(well_ecl);
+
+            if (well_ecl->isMultiSegment(report_step) ) {
+                any_ms_well_open = true;
+                break;
+            }
+        }
+        return any_ms_well_open;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    const Well*
+    BlackoilWellModel<TypeTag>::
+    getWellEcl(const std::string& well_name) const
+    {
+        // finding the location of the well in wells_ecl
+        const int nw_wells_ecl = wells_ecl_.size();
+        int index_well = 0;
+        for (; index_well < nw_wells_ecl; ++index_well) {
+            if (well_name == wells_ecl_[index_well]->name()) {
+                break;
+            }
+        }
+
+        if (index_well < nw_wells_ecl) {
+            return wells_ecl_[index_well];
+        } else {
+            return nullptr;
+>>>>>>> first version of restarting for multisegment well
         }
     }
 
