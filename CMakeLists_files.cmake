@@ -206,8 +206,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/StandardWell_impl.hpp
   opm/simulators/wells/MultisegmentWell.hpp
   opm/simulators/wells/MultisegmentWell_impl.hpp
-  opm/simulators/wells/StandardWellV.hpp
-  opm/simulators/wells/StandardWellV_impl.hpp
   opm/simulators/wells/MSWellHelpers.hpp
   opm/simulators/wells/BlackoilWellModel.hpp
   opm/simulators/wells/BlackoilWellModel_impl.hpp

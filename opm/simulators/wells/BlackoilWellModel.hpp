@@ -46,7 +46,6 @@
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
-#include <opm/simulators/wells/StandardWellV.hpp>
 #include <opm/simulators/wells/MultisegmentWell.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
 #include <opm/autodiff/SimFIBODetails.hpp>
