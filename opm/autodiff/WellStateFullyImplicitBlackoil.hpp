@@ -25,8 +25,12 @@
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
+
 #include <vector>
 #include <cassert>
 #include <string>
