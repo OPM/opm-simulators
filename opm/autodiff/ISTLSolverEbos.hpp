@@ -492,7 +492,9 @@ protected:
             // TODO: Revise when linear solvers interface opm-core is done
             // Construct linear solver.
             // GMRes solver
-            int verbosity = ( isIORank_ ) ? parameters_.linear_solver_verbosity_ : 0;
+            int verbosity = 0;
+            if (simulator_.gridView().comm().rank() == 0)
+                verbosity = parameters_.linear_solver_verbosity_;
 
             if ( parameters_.newton_use_gmres_ ) {
                 Dune::RestartedGMResSolver<Vector> linsolve(opA, sp, precond,
@@ -836,7 +838,6 @@ protected:
         mutable int iterations_;
         mutable bool converged_;
         boost::any parallelInformation_;
-        bool isIORank_;
 
         std::unique_ptr<Matrix> matrix_;
         Vector *rhs_;
