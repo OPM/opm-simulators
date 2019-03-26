@@ -33,7 +33,7 @@
 
 #include <array>
 #include <memory>
-#include <except>
+#include <exception>
 #include <vector>
 #include <cassert>
 

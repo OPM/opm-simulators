@@ -25,6 +25,9 @@
  *
  * \brief The common settings for all ebos variants.
  */
+#ifndef EBOS_HH
+#define EBOS_HH
+
 #include "eclproblem.hh"
 
 #include <opm/autodiff/BlackoilWellModel.hpp>
@@ -133,3 +136,5 @@ public:
     using ParentType::EclProblem;
 };
 }
+
+#endif // EBOS_HH
