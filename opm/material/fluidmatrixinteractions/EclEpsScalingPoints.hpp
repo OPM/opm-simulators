@@ -47,6 +47,7 @@
 #include <opm/material/common/Means.hpp>
 
 #include <array>
+#include <vector>
 #include <string>
 #include <iostream>
 #include <cassert>
