@@ -340,6 +340,7 @@ public:
             porvMultiplier_.resize(bufferSize, 0.0);
             transMultiplier_.resize(bufferSize, 0.0);
             swMax_.resize(bufferSize, 0.0);
+            minimumPressure_.resize(bufferSize, 0.0);
             overburdenPressure_.resize(bufferSize, 0.0);
         }
 
@@ -507,6 +508,9 @@ public:
 
             if (swMax_.size() > 0)
                 swMax_[globalDofIdx] = elemCtx.simulator().problem().maxWaterSaturation(globalDofIdx);
+
+            if (minimumPressure_.size() > 0)
+                minimumPressure_[globalDofIdx] = elemCtx.simulator().problem().minimumPressure(globalDofIdx);
 
             if (overburdenPressure_.size() > 0)
                 overburdenPressure_[globalDofIdx] = elemCtx.simulator().problem().getOverburdenPressure(globalDofIdx);
@@ -855,6 +859,9 @@ public:
         if (swMax_.size() > 0)
             sol.insert ("SWMAX", Opm::UnitSystem::measure::identity, std::move(swMax_), Opm::data::TargetType::RESTART_SOLUTION);
 
+        if (minimumPressure_.size() > 0)
+            sol.insert ("PRESROCC", Opm::UnitSystem::measure::pressure, std::move(minimumPressure_), Opm::data::TargetType::RESTART_SOLUTION);
+
         if (overburdenPressure_.size() > 0)
             sol.insert ("PRES_OVB", Opm::UnitSystem::measure::pressure, std::move(overburdenPressure_), Opm::data::TargetType::RESTART_SOLUTION);
 
@@ -1144,6 +1151,8 @@ private:
         const double pv =
             elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
             * intQuants.porosity().value();
+//        * elemCtx.simulator().problem().porosity(globalDofIdx);
+
 
         if (pressureTimesHydrocarbonVolume_.size() > 0 && pressureTimesPoreVolume_.size() > 0) {
             assert(hydrocarbonPoreVolume_.size() ==  pressureTimesHydrocarbonVolume_.size());
@@ -1436,6 +1445,7 @@ private:
     ScalarBuffer transMultiplier_;
     ScalarBuffer swMax_;
     ScalarBuffer overburdenPressure_;
+    ScalarBuffer minimumPressure_;
 
     std::vector<int> failedCellsPb_;
     std::vector<int> failedCellsPd_;

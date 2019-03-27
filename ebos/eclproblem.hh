@@ -826,9 +826,6 @@ public:
         if (GET_PROP_VALUE(TypeTag, EnablePolymer))
             updateMaxPolymerAdsorption_();
 
-        updateMaxWaterSaturation_();
-        updateMinumumPressure_();
-
         // set up the wells for the next episode.
         //
         // TODO: the first two arguments seem to be unnecessary
@@ -838,8 +835,14 @@ public:
 
         aquiferModel_.beginEpisode();
 
-        if (doInvalidate)
+        if (true)
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+
+        if (this->simulator().timeStepIndex() > 0)
+            for (unsigned dofIdx = 0; dofIdx < this->model().numGridDof(); ++dofIdx)
+                this->model().setIntensiveQuantitiesCacheEntryValidity(dofIdx,
+                                                             /*timeIdx=*/1,
+                                                             /*valid=*/true);
     }
 
     /*!
@@ -859,8 +862,26 @@ public:
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
                 maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
 
-        updateMaxWaterSaturation_();
-        updateMinumumPressure_();
+
+        // update maximum water saturation and minimum pressure
+        // used when ROCKCOMP is activated
+        //updateMaxWaterSaturation_();
+        //updateMinumumPressure_();
+
+        if (true)
+            this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+
+
+        if (this->simulator().timeStepIndex() > 0)
+            for (unsigned dofIdx = 0; dofIdx < this->model().numGridDof(); ++dofIdx)
+                this->model().setIntensiveQuantitiesCacheEntryValidity(dofIdx,
+                                                             /*timeIdx=*/1,
+                                                             /*valid=*/true);
+
+        // update maximum water saturation and minimum pressure
+        // used when ROCKCOMP is activated
+        //updateMaxWaterSaturation_();
+        //updateMinumumPressure_();
 
         wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
@@ -876,7 +897,7 @@ public:
      * or DRVDT are active in ebos.
      */
     bool recycleFirstIterationStorage() const
-    { return !drsdtActive_() && !drvdtActive_(); }
+    { return false;  } //&& !drsdtActive_() && !drvdtActive_(); }
 
     /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
@@ -914,6 +935,9 @@ public:
         wellModel_.endTimeStep();
         aquiferModel_.endTimeStep();
         tracerModel_.endTimeStep();
+
+        updateMaxWaterSaturation_();
+        updateMinumumPressure_();
 
         // deal with DRSDT and DRVDT
         updateCompositionChangeLimits_();
@@ -1609,8 +1633,8 @@ public:
      * \brief Returns an element's maximum water phase saturation observed during the
      *        simulation.
      *
-     * This is a bit of a hack from the conceptional point of view, but it is required to
-     * match the results of the 'flow' and ECLIPSE 100 simulators.
+     * This is used for output of the maximum water saturation used as input
+     * for water induced rock compation ROCK2D/ROCK2DTR.
      */
     Scalar maxWaterSaturation(unsigned globalDofIdx) const
     {
@@ -1619,6 +1643,23 @@ public:
 
         return maxWaterSaturation_[globalDofIdx];
     }
+
+
+    /*!
+     * \brief Returns an element's minimum pressure observed during the
+     *        simulation.
+     *
+     * This is used for output of the minimum pressure used as input
+     * for the irreversible rock compation option.
+     */
+    Scalar minimumPressure(unsigned globalDofIdx) const
+    {
+        if (minimumPressure_.size() == 0)
+            return 0.0;
+
+        return minimumPressure_[globalDofIdx];
+    }
+
 
     /*!
      * \brief Returns a reference to the ECL well manager used by the problem.
