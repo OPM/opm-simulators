@@ -44,16 +44,6 @@ namespace Opm {
 
 
 
-/*!
- * \brief Indicates how interpolation will be performed. Normal interpolation
- *        is done by interpolating vertically between lines of sample points,
- *        whereas LeftExtreme or RightExtreme implies guided interpolation, where
- *        interpolation is done parallel to a guide line. With LeftExtreme
- *        the lowest Y values will be used for the guide, and the guide line slope
- *        extends unchanged to infinity. With RightExtreme, the highest Y values
- *        are used, and the slope decreases linearly down to 0 at Y = 0.
- */
-enum class InterpolationGuide { LeftExtreme, RightExtreme, Vertical };
 
 /*!
  * \brief Implements a scalar function that depends on two variables and which is sampled
@@ -70,7 +60,21 @@ class UniformXTabulated2DFunction
 
 public:
 
-    explicit UniformXTabulated2DFunction(const InterpolationGuide iGuide)
+    /*!
+     * \brief Indicates how interpolation will be performed.
+     *
+     *        Normal interpolation is done by interpolating vertically
+     *        between lines of sample points, whereas LeftExtreme or
+     *        RightExtreme implies guided interpolation, where
+     *        interpolation is done parallel to a guide line. With
+     *        LeftExtreme the lowest Y values will be used for the guide,
+     *        and the guide line slope extends unchanged to infinity. With
+     *        RightExtreme, the highest Y values are used, and the slope
+     *        decreases linearly down to 0 (normal interpolation) for y <= 0.
+     */
+    enum class InterpolationPolicy { LeftExtreme, RightExtreme, Vertical };
+
+    explicit UniformXTabulated2DFunction(const InterpolationPolicy iGuide)
         : interpGuide_(iGuide)
     { }
 
@@ -298,13 +302,13 @@ public:
         const Evaluation& alpha = xToAlpha(x, i);
         // find upper and lower y value
         Evaluation shift = 0.0;
-        if (interpGuide_ == InterpolationGuide::Vertical) {
+        if (interpGuide_ == InterpolationPolicy::Vertical) {
             // Shift is zero, no need to reset it.
         } else {
-            if (interpGuide_ == InterpolationGuide::LeftExtreme) {
+            if (interpGuide_ == InterpolationPolicy::LeftExtreme) {
                 shift = yPos_[i+1] - yPos_[i];
             } else {
-                assert(interpGuide_ == InterpolationGuide::RightExtreme);
+                assert(interpGuide_ == InterpolationPolicy::RightExtreme);
                 shift = yPos_[i+1] - yPos_[i];
                 auto yEnd = yPos_[i]*(1.0 - alpha) + yPos_[i+1]*alpha;
                 if (yEnd > 0.) {
@@ -314,13 +318,13 @@ public:
                 }
             }
         }
-        auto ylower =  y - alpha*shift;
-        auto yupper =  y + (1-alpha)*shift;
+        auto yLower =  y - alpha*shift;
+        auto yUpper =  y + (1-alpha)*shift;
 
-        unsigned j1 = ySegmentIndex(ylower, i, extrapolate);
-        unsigned j2 = ySegmentIndex(yupper, i + 1, extrapolate);
-        const Evaluation& beta1 = yToBeta(ylower, i, j1);
-        const Evaluation& beta2 = yToBeta(yupper, i + 1, j2);
+        unsigned j1 = ySegmentIndex(yLower, i, extrapolate);
+        unsigned j2 = ySegmentIndex(yUpper, i + 1, extrapolate);
+        const Evaluation& beta1 = yToBeta(yLower, i, j1);
+        const Evaluation& beta2 = yToBeta(yUpper, i + 1, j2);
 
         // evaluate the two function values for the same y value ...
         const Evaluation& s1 = valueAt(i, j1)*(1.0 - beta1) + valueAt(i, j1 + 1)*beta1;
@@ -345,8 +349,8 @@ public:
     {
         if (xPos_.empty() || xPos_.back() < nextX) {
             xPos_.push_back(nextX);
-            yPos_.resize(xPos_.size());
-            samples_.resize(xPos_.size());
+            yPos_.push_back(-1e100);
+            samples_.push_back({});
             return xPos_.size() - 1;
         }
         else if (xPos_.front() > nextX) {
@@ -371,7 +375,7 @@ public:
         Scalar x = iToX(i);
         if (samples_[i].empty() || std::get<1>(samples_[i].back()) < y) {
             samples_[i].push_back(SamplePoint(x, y, value));
-            if (interpGuide_ == InterpolationGuide::RightExtreme) {
+            if (interpGuide_ == InterpolationPolicy::RightExtreme) {
                 yPos_[i] = y;
             }
             return samples_[i].size() - 1;
@@ -379,7 +383,7 @@ public:
         else if (std::get<1>(samples_[i].front()) > y) {
             // slow, but we still don't care...
             samples_[i].insert(samples_[i].begin(), SamplePoint(x, y, value));
-            if (interpGuide_ == InterpolationGuide::LeftExtreme) {
+            if (interpGuide_ == InterpolationPolicy::LeftExtreme) {
                 yPos_[i] = y;
             }
             return 0;
@@ -432,7 +436,7 @@ private:
     std::vector<Scalar> xPos_;
     // the position on the y-axis of the guide point
     std::vector<Scalar> yPos_;
-    InterpolationGuide interpGuide_;
+    InterpolationPolicy interpGuide_;
 
 
 };

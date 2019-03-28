@@ -90,7 +90,7 @@ struct Test
         Scalar yMin = -1/2.0;
         Scalar yMax = 1/3.0;
         unsigned n = 40;
-        auto tab = std::make_shared<Opm::UniformXTabulated2DFunction<Scalar>>(Opm::InterpolationGuide::Vertical);
+        auto tab = std::make_shared<Opm::UniformXTabulated2DFunction<Scalar>>(Opm::UniformXTabulated2DFunction<Scalar>::InterpolationPolicy::Vertical);
         for (unsigned i = 0; i < m; ++i) {
             Scalar x = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
             tab->appendXPos(x);
@@ -115,7 +115,7 @@ struct Test
         Scalar yMin = - 4.0;
         Scalar yMax = 5.0;
 
-        auto tab = std::make_shared<Opm::UniformXTabulated2DFunction<Scalar>>(Opm::InterpolationGuide::Vertical);
+        auto tab = std::make_shared<Opm::UniformXTabulated2DFunction<Scalar>>(Opm::UniformXTabulated2DFunction<Scalar>::InterpolationPolicy::Vertical);
 
         for (unsigned i = 0; i < m; ++i) {
             Scalar x = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
