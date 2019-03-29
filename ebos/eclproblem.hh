@@ -863,10 +863,16 @@ public:
                 maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
 
 
+
+        wellModel_.beginTimeStep();
+        aquiferModel_.beginTimeStep();
+        tracerModel_.beginTimeStep();
+
+
         // update maximum water saturation and minimum pressure
         // used when ROCKCOMP is activated
-        //updateMaxWaterSaturation_();
-        //updateMinumumPressure_();
+        updateMaxWaterSaturation_();
+        updateMinumumPressure_();
 
         if (true)
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
@@ -877,15 +883,12 @@ public:
                 this->model().setIntensiveQuantitiesCacheEntryValidity(dofIdx,
                                                              /*timeIdx=*/1,
                                                              /*valid=*/true);
-
         // update maximum water saturation and minimum pressure
         // used when ROCKCOMP is activated
         //updateMaxWaterSaturation_();
         //updateMinumumPressure_();
 
-        wellModel_.beginTimeStep();
-        aquiferModel_.beginTimeStep();
-        tracerModel_.beginTimeStep();
+
 
     }
 
@@ -935,9 +938,6 @@ public:
         wellModel_.endTimeStep();
         aquiferModel_.endTimeStep();
         tracerModel_.endTimeStep();
-
-        updateMaxWaterSaturation_();
-        updateMinumumPressure_();
 
         // deal with DRSDT and DRVDT
         updateCompositionChangeLimits_();
@@ -1800,6 +1800,9 @@ public:
     }
 
     Scalar getOverburdenPressure(unsigned globalSpaceIdx) const {
+        if (overburdenPressure_.size() == 0)
+            return 0.0;
+
         return overburdenPressure_[globalSpaceIdx];
     }
 
