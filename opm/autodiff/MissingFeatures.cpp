@@ -95,7 +95,6 @@ namespace MissingFeatures {
             "CPR",
             "DATE",
             "ECHO",
-            "EDITNNC",
             "ENDACTIO",
             "ENDFIN"
             "ENDNUM",
