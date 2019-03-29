@@ -30,9 +30,13 @@
 
 #include "tracervdtable.hh"
 
+#include <ewoms/models/blackoil/blackoilmodel.hh>
+
 #include <dune/istl/operators.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/preconditioners.hh>
+
+#include <dune/common/version.hh>
 
 #include <string>
 #include <vector>
