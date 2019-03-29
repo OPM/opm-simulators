@@ -204,7 +204,6 @@ namespace MissingFeatures {
             "WPAVE",
             "WPITAB",
             "WTEMP",
-            "WTEST",
             "WTRACER",
             "ZIPPY2" };
         std::multimap<std::string, PartiallySupported<std::string> > string_options;
