@@ -94,7 +94,6 @@ namespace MissingFeatures {
             "CONNECTION",
             "CPR",
             "DATE",
-            "ECHO",
             "ENDACTIO",
             "ENDFIN"
             "ENDNUM",
@@ -130,7 +129,6 @@ namespace MissingFeatures {
             "NETBALAN",
             "NEXTSTEP",
             "NOCASC",
-            "NOECHO",
             "NOGGF",
             "NOINSPEC",
             "NOMONITO",
