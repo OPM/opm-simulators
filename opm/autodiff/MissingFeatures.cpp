@@ -170,7 +170,6 @@ namespace MissingFeatures {
             "RPTPROS",
             "PRTRST",
             "RPTRUNSP",
-            "RPTSCHED",
             "RPTSMRY",
             "RPTSOL",
             "RSCONST",
