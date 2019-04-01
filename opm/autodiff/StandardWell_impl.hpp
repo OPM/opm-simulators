@@ -485,7 +485,7 @@ namespace Opm
             std::vector<EvalWell> cq_s(num_components_, 0.0);
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            double trans_mult = ebosSimulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx)), cell_idx);
+            double trans_mult = ebosSimulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx)), /*timeIdx=*/ 0,  cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
             computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
@@ -1274,7 +1274,7 @@ namespace Opm
             }
 
             // the well index associated with the connection
-            const double tw_perf = well_index_[perf]* ebos_simulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(int_quantities.fluidState().pressure(FluidSystem::oilPhaseIdx)), cell_idx);
+            const double tw_perf = well_index_[perf]* ebos_simulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(int_quantities.fluidState().pressure(FluidSystem::oilPhaseIdx)), /*timeIdx=*/ 0, cell_idx);
 
             // TODO: there might be some indices related problems here
             // phases vs components
@@ -2203,7 +2203,7 @@ namespace Opm
             // flux for each perforation
             std::vector<EvalWell> mob(num_components_, 0.0);
             getMobility(ebosSimulator, perf, mob, deferred_logger);
-            double trans_mult = ebosSimulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx)), cell_idx);
+            double trans_mult = ebosSimulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx)), /*timeIdx=*/ 0, cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
 
             std::vector<EvalWell> cq_s(num_components_, 0.0);
@@ -2608,7 +2608,7 @@ namespace Opm
             std::vector<EvalWell> cq_s(num_components_,0.0);
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            double trans_mult = ebos_simulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(int_quant.fluidState().pressure(FluidSystem::oilPhaseIdx)), cell_idx);
+            double trans_mult = ebos_simulator.problem().getTransmissibiltyMultiplier(Opm::scalarValue(int_quant.fluidState().pressure(FluidSystem::oilPhaseIdx)), /*timeIdx=*/ 0, cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
             computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);

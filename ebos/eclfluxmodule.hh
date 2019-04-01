@@ -343,7 +343,7 @@ protected:
             // does not matter, though.
             unsigned upstreamIdx = upstreamIndex_(phaseIdx);
             const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
-            const Evaluation transModified = trans*problem.getTransmissibiltyMultiplier(up.fluidState().pressure(FluidSystem::oilPhaseIdx), stencil.globalSpaceIndex(upstreamIdx));
+            const Evaluation transModified = trans*problem.getTransmissibiltyMultiplier(up.fluidState().pressure(FluidSystem::oilPhaseIdx), timeIdx, stencil.globalSpaceIndex(upstreamIdx));
             if (upstreamIdx == interiorDofIdx_)
                 volumeFlux_[phaseIdx] =
                     pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-transModified/faceArea);
@@ -429,7 +429,7 @@ protected:
             // does not matter, though.
             unsigned upstreamIdx = upstreamIndex_(phaseIdx);
             const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
-            const Evaluation transModified = trans*problem.getTransmissibiltyMultiplier(up.fluidState().pressure(FluidSystem::oilPhaseIdx), stencil.globalSpaceIndex(upstreamIdx));
+            const Evaluation transModified = trans*problem.getTransmissibiltyMultiplier(up.fluidState().pressure(FluidSystem::oilPhaseIdx), /*timeIdx=*/0, stencil.globalSpaceIndex(upstreamIdx));
             if (upstreamIdx == interiorDofIdx_) {
                 volumeFlux_[phaseIdx] =
                     pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-transModified/faceArea);

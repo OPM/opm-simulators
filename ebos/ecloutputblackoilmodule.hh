@@ -507,19 +507,19 @@ public:
                 soMax_[globalDofIdx] = elemCtx.simulator().problem().maxOilSaturation(globalDofIdx);
 
             if (swMax_.size() > 0)
-                swMax_[globalDofIdx] = elemCtx.simulator().problem().maxWaterSaturation(globalDofIdx);
+                swMax_[globalDofIdx] = elemCtx.simulator().problem().maxWaterSaturation(/*timeIdx=*/0, globalDofIdx);
 
             if (minimumPressure_.size() > 0)
-                minimumPressure_[globalDofIdx] = elemCtx.simulator().problem().minimumPressure(globalDofIdx);
+                minimumPressure_[globalDofIdx] = elemCtx.simulator().problem().minimumPressure(/*timeIdx=*/0, globalDofIdx);
 
             if (overburdenPressure_.size() > 0)
                 overburdenPressure_[globalDofIdx] = elemCtx.simulator().problem().getOverburdenPressure(globalDofIdx);
 
             if (porvMultiplier_.size() > 0)
-                porvMultiplier_[globalDofIdx] = elemCtx.simulator().problem().getPoreVolumeMultiplier(Opm::getValue(fs.pressure(oilPhaseIdx)), globalDofIdx);
+                porvMultiplier_[globalDofIdx] = elemCtx.simulator().problem().getPoreVolumeMultiplier(Opm::getValue(fs.pressure(oilPhaseIdx)), /*timeIdx=*/0, globalDofIdx);
 
             if (transMultiplier_.size() > 0)
-                transMultiplier_[globalDofIdx] = elemCtx.simulator().problem().getTransmissibiltyMultiplier(Opm::getValue(fs.pressure(oilPhaseIdx)), globalDofIdx);
+                transMultiplier_[globalDofIdx] = elemCtx.simulator().problem().getTransmissibiltyMultiplier(Opm::getValue(fs.pressure(oilPhaseIdx)), /*timeIdx=*/0, globalDofIdx);
 
             const auto& matLawManager = elemCtx.simulator().problem().materialLawManager();
             if (matLawManager->enableHysteresis()) {

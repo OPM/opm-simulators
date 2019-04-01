@@ -878,11 +878,11 @@ public:
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
 
 
-        if (this->simulator().timeStepIndex() > 0)
-            for (unsigned dofIdx = 0; dofIdx < this->model().numGridDof(); ++dofIdx)
-                this->model().setIntensiveQuantitiesCacheEntryValidity(dofIdx,
-                                                             /*timeIdx=*/1,
-                                                             /*valid=*/true);
+        //if (this->simulator().timeStepIndex() > 0)
+        //    for (unsigned dofIdx = 0; dofIdx < this->model().numGridDof(); ++dofIdx)
+        //        this->model().setIntensiveQuantitiesCacheEntryValidity(dofIdx,
+        //                                                     /*timeIdx=*/1,
+        //                                                     /*valid=*/true);
         // update maximum water saturation and minimum pressure
         // used when ROCKCOMP is activated
         //updateMaxWaterSaturation_();
@@ -1636,10 +1636,13 @@ public:
      * This is used for output of the maximum water saturation used as input
      * for water induced rock compation ROCK2D/ROCK2DTR.
      */
-    Scalar maxWaterSaturation(unsigned globalDofIdx) const
+    Scalar maxWaterSaturation(unsigned timeIdx, unsigned globalDofIdx) const
     {
         if (maxWaterSaturation_.size() == 0)
             return 0.0;
+
+        if (timeIdx == 0)
+            return maxWaterSaturation0_[globalDofIdx];
 
         return maxWaterSaturation_[globalDofIdx];
     }
@@ -1652,10 +1655,13 @@ public:
      * This is used for output of the minimum pressure used as input
      * for the irreversible rock compation option.
      */
-    Scalar minimumPressure(unsigned globalDofIdx) const
+    Scalar minimumPressure(unsigned timeIdx, unsigned globalDofIdx) const
     {
         if (minimumPressure_.size() == 0)
             return 0.0;
+
+        if (timeIdx == 0)
+            return minimumPressure0_[globalDofIdx];
 
         return minimumPressure_[globalDofIdx];
     }
@@ -1755,7 +1761,7 @@ public:
     }
 
     template <class LhsEval>
-    LhsEval getPoreVolumeMultiplier(const LhsEval& pressure, unsigned globalSpaceIdx) const {
+    LhsEval getPoreVolumeMultiplier(const LhsEval& pressure, unsigned timeIdx, unsigned globalSpaceIdx) const {
 
         if (poreVolumeMultiplier_.size() == 0)
             return 1.0;
@@ -1764,11 +1770,11 @@ public:
         if (!rockTableIdx_.empty()) {
             tableIdx = rockTableIdx_[globalSpaceIdx];
         }
-        LhsEval waterSaturationIncrease = maxWaterSaturation_[globalSpaceIdx] - initialFluidStates_[globalSpaceIdx].saturation(waterPhaseIdx);
+        LhsEval waterSaturationIncrease = maxWaterSaturation(timeIdx, globalSpaceIdx) - initialFluidStates_[globalSpaceIdx].saturation(waterPhaseIdx);
         LhsEval effectivePressure = pressure;
 
         if (minimumPressure_.size() > 0) // The pore space change is irreversible
-            effectivePressure = minimumPressure_[globalSpaceIdx];
+            effectivePressure = minimumPressure(timeIdx, globalSpaceIdx);
 
         if (overburdenPressure_.size() > 0 )
             effectivePressure -= overburdenPressure_[globalSpaceIdx];
@@ -1777,7 +1783,7 @@ public:
     }
 
     template <class LhsEval>
-    LhsEval getTransmissibiltyMultiplier(const LhsEval& pressure, unsigned globalSpaceIdx) const {
+    LhsEval getTransmissibiltyMultiplier(const LhsEval& pressure, unsigned timeIdx, unsigned globalSpaceIdx) const {
 
         if (transmissibilityMultiplier_.size() == 0)
             return 1.0;
@@ -1787,11 +1793,11 @@ public:
         if (!rockTableIdx_.empty()) {
             tableIdx = rockTableIdx_[globalSpaceIdx];
         }
-        LhsEval waterSaturationIncrease = maxWaterSaturation_[globalSpaceIdx] - initialFluidStates_[globalSpaceIdx].saturation(waterPhaseIdx);
+        LhsEval waterSaturationIncrease = maxWaterSaturation(timeIdx, globalSpaceIdx) - initialFluidStates_[globalSpaceIdx].saturation(waterPhaseIdx);
         LhsEval effectivePressure = pressure;
 
         if (minimumPressure_.size() > 0) // The pore space change is irreversible
-            effectivePressure = minimumPressure_[globalSpaceIdx];
+            effectivePressure = minimumPressure(timeIdx, globalSpaceIdx);
 
         if (overburdenPressure_.size() > 0 )
             effectivePressure -= overburdenPressure_[globalSpaceIdx];
@@ -2011,6 +2017,7 @@ private:
         if (maxWaterSaturation_.size()== 0)
             return;
 
+        maxWaterSaturation0_ = maxWaterSaturation_;
         ElementContext elemCtx(this->simulator());
         const auto& vanguard = this->simulator().vanguard();
         auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
@@ -2025,7 +2032,7 @@ private:
             const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& fs = iq.fluidState();
 
-            Scalar Sw = Opm::decay<Scalar>(fs.saturation(waterPhaseIdx));
+            Scalar Sw = Opm::decay<Scalar>(fs.saturation(waterPhaseIdx));            
             maxWaterSaturation_[compressedDofIdx] = std::max(maxWaterSaturation_[compressedDofIdx], Sw);
         }
     }
@@ -2036,6 +2043,7 @@ private:
         if (minimumPressure_.size() == 0)
             return;
 
+        minimumPressure0_ = minimumPressure_;
         ElementContext elemCtx(this->simulator());
         const auto& vanguard = this->simulator().vanguard();
         auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
@@ -2088,6 +2096,7 @@ private:
                 // i.e. don't allow re-inflation.
                 unsigned numElem = vanguard.gridView().size(0);
                 minimumPressure_.resize(numElem, 1e99);
+                minimumPressure0_.resize(numElem, 1e99);
             } else if (option == "NO") {
                 return;
             } else {
@@ -2103,6 +2112,7 @@ private:
                 waterCompaction = true;
                 unsigned numElem = vanguard.gridView().size(0);
                 maxWaterSaturation_.resize(numElem, 0.0);
+                maxWaterSaturation0_.resize(numElem, 0.0);
             } else {
                 throw std::runtime_error("ROCKCOMP option " + waterCompationItem + " not supported for item 3. Only YES is supported");
             }
@@ -3060,8 +3070,11 @@ private:
     constexpr static Scalar freeGasMinSaturation_ = 1e-7;
     std::vector<Scalar> maxOilSaturation_;
     std::vector<Scalar> maxWaterSaturation_;
+    std::vector<Scalar> maxWaterSaturation0_;
     std::vector<Scalar> overburdenPressure_;
     std::vector<Scalar> minimumPressure_;
+    std::vector<Scalar> minimumPressure0_;
+
 
 
     std::vector<Opm::UniformXTabulated2DFunction<Scalar>> poreVolumeMultiplier_;
