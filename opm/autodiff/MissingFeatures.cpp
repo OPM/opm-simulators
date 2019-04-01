@@ -94,8 +94,6 @@ namespace MissingFeatures {
             "CONNECTION",
             "CPR",
             "DATE",
-            "ECHO",
-            "EDITNNC",
             "ENDACTIO",
             "ENDFIN"
             "ENDNUM",
@@ -131,7 +129,6 @@ namespace MissingFeatures {
             "NETBALAN",
             "NEXTSTEP",
             "NOCASC",
-            "NOECHO",
             "NOGGF",
             "NOINSPEC",
             "NOMONITO",
@@ -170,7 +167,6 @@ namespace MissingFeatures {
             "RPTPROS",
             "PRTRST",
             "RPTRUNSP",
-            "RPTSCHED",
             "RPTSMRY",
             "RPTSOL",
             "RSCONST",
@@ -205,7 +201,6 @@ namespace MissingFeatures {
             "WPAVE",
             "WPITAB",
             "WTEMP",
-            "WTEST",
             "WTRACER",
             "ZIPPY2" };
         std::multimap<std::string, PartiallySupported<std::string> > string_options;

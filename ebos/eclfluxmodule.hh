@@ -363,7 +363,7 @@ protected:
     {
         const auto& problem = elemCtx.problem();
 
-        bool enableBoundaryMassFlux = problem.hasFreeBoundaryConditions();
+        bool enableBoundaryMassFlux = problem.nonTrivialBoundaryConditions();
         if (!enableBoundaryMassFlux)
             return;
 
