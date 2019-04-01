@@ -300,15 +300,27 @@ public:
         // table ...
         unsigned i = xSegmentIndex(x, extrapolate);
         const Evaluation& alpha = xToAlpha(x, i);
-        // find upper and lower y value
+        // The 'shift' is used to shift the points used to interpolate within
+        // the (i) and (i+1) sets of sample points, so that when approaching
+        // the boundary of the domain given by the samples, one gets the same
+        // value as one would get by interpolating along the boundary curve
+        // itself.
         Evaluation shift = 0.0;
         if (interpGuide_ == InterpolationPolicy::Vertical) {
             // Shift is zero, no need to reset it.
         } else {
+            // find upper and lower y value
             if (interpGuide_ == InterpolationPolicy::LeftExtreme) {
+                // The domain is above the boundary curve, up to y = infinity.
+                // The shift is therefore the same for all values of y.
                 shift = yPos_[i+1] - yPos_[i];
             } else {
                 assert(interpGuide_ == InterpolationPolicy::RightExtreme);
+                // The domain is below the boundary curve, down to y = 0.
+                // The shift is therefore no longer the the same for all
+                // values of y, since at y = 0 the shift must be zero.
+                // The shift is computed by linear interpolation between
+                // the maximal value at the domain boundary curve, and zero.
                 shift = yPos_[i+1] - yPos_[i];
                 auto yEnd = yPos_[i]*(1.0 - alpha) + yPos_[i+1]*alpha;
                 if (yEnd > 0.) {
