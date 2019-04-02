@@ -116,7 +116,6 @@ namespace Opm
                     }
 
                     effective_events_occurred_[w] = (schedule.hasWellEvent(well_name, effective_events_mask, report_step) );
-                    std::cout << "well " << w << effective_events_occurred_[w] << std::endl;
                 }
             } // end of if (!well_ecl.empty() )
 

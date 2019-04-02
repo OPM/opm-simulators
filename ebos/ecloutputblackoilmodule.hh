@@ -1151,8 +1151,6 @@ private:
         const double pv =
             elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
             * intQuants.porosity().value();
-//        * elemCtx.simulator().problem().porosity(globalDofIdx);
-
 
         if (pressureTimesHydrocarbonVolume_.size() > 0 && pressureTimesPoreVolume_.size() > 0) {
             assert(hydrocarbonPoreVolume_.size() ==  pressureTimesHydrocarbonVolume_.size());

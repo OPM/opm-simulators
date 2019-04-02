@@ -835,14 +835,9 @@ public:
 
         aquiferModel_.beginEpisode();
 
-        if (true)
+        if (doInvalidate)
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
 
-        if (this->simulator().timeStepIndex() > 0)
-            for (unsigned dofIdx = 0; dofIdx < this->model().numGridDof(); ++dofIdx)
-                this->model().setIntensiveQuantitiesCacheEntryValidity(dofIdx,
-                                                             /*timeIdx=*/1,
-                                                             /*valid=*/true);
     }
 
     /*!
@@ -862,34 +857,18 @@ public:
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
                 maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
 
+        // update maximum water saturation and minimum pressure
+        // used when ROCKCOMP is activated
+        const bool doInvalidateMaxSaturation = updateMaxWaterSaturation_();
+        const bool doInvalidateMinimumPressure = updateMinumumPressure_();
+        const bool doInvalidate = doInvalidateMaxSaturation || doInvalidateMinimumPressure;
 
+        if (doInvalidate)
+            this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
 
         wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
-
-
-        // update maximum water saturation and minimum pressure
-        // used when ROCKCOMP is activated
-        updateMaxWaterSaturation_();
-        updateMinumumPressure_();
-
-        if (true)
-            this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-
-
-        //if (this->simulator().timeStepIndex() > 0)
-        //    for (unsigned dofIdx = 0; dofIdx < this->model().numGridDof(); ++dofIdx)
-        //        this->model().setIntensiveQuantitiesCacheEntryValidity(dofIdx,
-        //                                                     /*timeIdx=*/1,
-        //                                                     /*valid=*/true);
-        // update maximum water saturation and minimum pressure
-        // used when ROCKCOMP is activated
-        //updateMaxWaterSaturation_();
-        //updateMinumumPressure_();
-
-
-
     }
 
     /*!
@@ -897,11 +876,11 @@ public:
      *        term for the solution of the previous time step.
      *
      * For quite technical reasons, the storage term cannot be recycled if either DRSDT
-     * or DRVDT are active in ebos.
+     * or DRVDT are active in ebos. Nor if the porosity is changes between timesteps
+     * using the poreVolumeMultiplier()
      */
     bool recycleFirstIterationStorage() const
-    { return false;  } //&& !drsdtActive_() && !drvdtActive_(); }
-
+    { return !drsdtActive_() && !drvdtActive_() && poreVolumeMultiplier_.empty();  }
     /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
      */
@@ -2011,11 +1990,11 @@ private:
         return false;
     }
 
-    void updateMaxWaterSaturation_()
+    bool updateMaxWaterSaturation_()
     {
         // water compaction is activated in ROCKCOMP
         if (maxWaterSaturation_.size()== 0)
-            return;
+            return false;
 
         maxWaterSaturation0_ = maxWaterSaturation_;
         ElementContext elemCtx(this->simulator());
@@ -2035,13 +2014,14 @@ private:
             Scalar Sw = Opm::decay<Scalar>(fs.saturation(waterPhaseIdx));            
             maxWaterSaturation_[compressedDofIdx] = std::max(maxWaterSaturation_[compressedDofIdx], Sw);
         }
+        return true;
     }
 
-    void updateMinumumPressure_()
+    bool updateMinumumPressure_()
     {
         // IRREVERS option is used in ROCKCOMP
         if (minimumPressure_.size() == 0)
-            return;
+            return false;
 
         minimumPressure0_ = minimumPressure_;
         ElementContext elemCtx(this->simulator());
@@ -2061,6 +2041,7 @@ private:
             Scalar Po = Opm::decay<Scalar>(fs.pressure(oilPhaseIdx));
             minimumPressure_[compressedDofIdx] = std::min(minimumPressure_[compressedDofIdx], Po);
         }
+        return true;
     }
 
     void readRockParameters_()
