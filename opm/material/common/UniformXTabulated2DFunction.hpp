@@ -42,6 +42,9 @@
 
 namespace Opm {
 
+
+
+
 /*!
  * \brief Implements a scalar function that depends on two variables and which is sampled
  *        uniformly in the X direction, but non-uniformly on the Y axis-
@@ -56,7 +59,23 @@ class UniformXTabulated2DFunction
     typedef std::tuple</*x=*/Scalar, /*y=*/Scalar, /*value=*/Scalar> SamplePoint;
 
 public:
-    UniformXTabulated2DFunction()
+
+    /*!
+     * \brief Indicates how interpolation will be performed.
+     *
+     *        Normal interpolation is done by interpolating vertically
+     *        between lines of sample points, whereas LeftExtreme or
+     *        RightExtreme implies guided interpolation, where
+     *        interpolation is done parallel to a guide line. With
+     *        LeftExtreme the lowest Y values will be used for the guide,
+     *        and the guide line slope extends unchanged to infinity. With
+     *        RightExtreme, the highest Y values are used, and the slope
+     *        decreases linearly down to 0 (normal interpolation) for y <= 0.
+     */
+    enum class InterpolationPolicy { LeftExtreme, RightExtreme, Vertical };
+
+    explicit UniformXTabulated2DFunction(const InterpolationPolicy iGuide)
+        : interpGuide_(iGuide)
     { }
 
     /*!
@@ -281,11 +300,43 @@ public:
         // table ...
         unsigned i = xSegmentIndex(x, extrapolate);
         const Evaluation& alpha = xToAlpha(x, i);
+        // The 'shift' is used to shift the points used to interpolate within
+        // the (i) and (i+1) sets of sample points, so that when approaching
+        // the boundary of the domain given by the samples, one gets the same
+        // value as one would get by interpolating along the boundary curve
+        // itself.
+        Evaluation shift = 0.0;
+        if (interpGuide_ == InterpolationPolicy::Vertical) {
+            // Shift is zero, no need to reset it.
+        } else {
+            // find upper and lower y value
+            if (interpGuide_ == InterpolationPolicy::LeftExtreme) {
+                // The domain is above the boundary curve, up to y = infinity.
+                // The shift is therefore the same for all values of y.
+                shift = yPos_[i+1] - yPos_[i];
+            } else {
+                assert(interpGuide_ == InterpolationPolicy::RightExtreme);
+                // The domain is below the boundary curve, down to y = 0.
+                // The shift is therefore no longer the the same for all
+                // values of y, since at y = 0 the shift must be zero.
+                // The shift is computed by linear interpolation between
+                // the maximal value at the domain boundary curve, and zero.
+                shift = yPos_[i+1] - yPos_[i];
+                auto yEnd = yPos_[i]*(1.0 - alpha) + yPos_[i+1]*alpha;
+                if (yEnd > 0.) {
+                    shift = shift * y / yEnd;
+                } else {
+                    shift = 0.;
+                }
+            }
+        }
+        auto yLower =  y - alpha*shift;
+        auto yUpper =  y + (1-alpha)*shift;
 
-        unsigned j1 = ySegmentIndex(y, i, extrapolate);
-        unsigned j2 = ySegmentIndex(y, i + 1, extrapolate);
-        const Evaluation& beta1 = yToBeta(y, i, j1);
-        const Evaluation& beta2 = yToBeta(y, i + 1, j2);
+        unsigned j1 = ySegmentIndex(yLower, i, extrapolate);
+        unsigned j2 = ySegmentIndex(yUpper, i + 1, extrapolate);
+        const Evaluation& beta1 = yToBeta(yLower, i, j1);
+        const Evaluation& beta2 = yToBeta(yUpper, i + 1, j2);
 
         // evaluate the two function values for the same y value ...
         const Evaluation& s1 = valueAt(i, j1)*(1.0 - beta1) + valueAt(i, j1 + 1)*beta1;
@@ -310,12 +361,14 @@ public:
     {
         if (xPos_.empty() || xPos_.back() < nextX) {
             xPos_.push_back(nextX);
-            samples_.resize(xPos_.size());
+            yPos_.push_back(-1e100);
+            samples_.push_back({});
             return xPos_.size() - 1;
         }
         else if (xPos_.front() > nextX) {
             // this is slow, but so what?
             xPos_.insert(xPos_.begin(), nextX);
+            yPos_.insert(yPos_.begin(), -1e100);
             samples_.insert(samples_.begin(), std::vector<SamplePoint>());
             return 0;
         }
@@ -326,20 +379,25 @@ public:
     /*!
      * \brief Append a sample point.
      *
-     * Returns the i index of that line.
+     * Returns the i index of the new point within its line.
      */
     size_t appendSamplePoint(size_t i, Scalar y, Scalar value)
     {
         assert(0 <= i && i < numX());
-
         Scalar x = iToX(i);
         if (samples_[i].empty() || std::get<1>(samples_[i].back()) < y) {
             samples_[i].push_back(SamplePoint(x, y, value));
+            if (interpGuide_ == InterpolationPolicy::RightExtreme) {
+                yPos_[i] = y;
+            }
             return samples_[i].size() - 1;
         }
         else if (std::get<1>(samples_[i].front()) > y) {
             // slow, but we still don't care...
             samples_[i].insert(samples_[i].begin(), SamplePoint(x, y, value));
+            if (interpGuide_ == InterpolationPolicy::LeftExtreme) {
+                yPos_[i] = y;
+            }
             return 0;
         }
 
@@ -388,6 +446,11 @@ private:
 
     // the position of each vertical line on the x-axis
     std::vector<Scalar> xPos_;
+    // the position on the y-axis of the guide point
+    std::vector<Scalar> yPos_;
+    InterpolationPolicy interpGuide_;
+
+
 };
 } // namespace Opm
 
