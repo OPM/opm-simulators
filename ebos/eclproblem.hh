@@ -668,7 +668,7 @@ public:
         updatePffDofData_();
 
         if (GET_PROP_VALUE(TypeTag, EnablePolymer)) {
-            const auto& vanguard = this->simulator().vanguard();
+            const auto& vanguard = simulator.vanguard();
             const auto& gridView = vanguard.gridView();
             int numElements = gridView.size(/*codim=*/0);
             maxPolymerAdsorption_.resize(numElements, 0.0);
@@ -740,8 +740,8 @@ public:
     {
         // Proceed to the next report step
         Simulator& simulator = this->simulator();
-        auto& eclState = this->simulator().vanguard().eclState();
-        const auto& schedule = this->simulator().vanguard().schedule();
+        auto& eclState = simulator.vanguard().eclState();
+        const auto& schedule = simulator.vanguard().schedule();
         const auto& events = schedule.getEvents();
         const auto& timeMap = schedule.getTimeMap();
 
@@ -837,17 +837,18 @@ public:
      */
     void beginTimeStep()
     {
-        int epsiodeIdx = this->simulator().episodeIndex();
-        const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const auto& simulator = this->simulator();
+        int epsiodeIdx = simulator.episodeIndex();
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         if (drsdtActive_())
             // DRSDT is enabled
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
-                maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*this->simulator().timeStepSize();
+                maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*simulator.timeStepSize();
 
         if (drvdtActive_())
             // DRVDT is enabled
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
-                maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
+                maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*simulator.timeStepSize();
 
         wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
@@ -900,6 +901,7 @@ public:
         }
 #endif // NDEBUG
 
+        const auto& simulator = this->simulator();
         wellModel_.endTimeStep();
         aquiferModel_.endTimeStep();
         tracerModel_.endTimeStep();
@@ -911,7 +913,7 @@ public:
             const auto& residual = this->model().linearizer().residual();
             for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); globalDofIdx ++) {
                 drift_[globalDofIdx] = residual[globalDofIdx];
-                drift_[globalDofIdx] *= this->simulator().timeStepSize();
+                drift_[globalDofIdx] *= simulator.timeStepSize();
                 if (GET_PROP_VALUE(TypeTag, UseVolumetricResidual))
                     drift_[globalDofIdx] *= this->model().dofTotalVolume(globalDofIdx);
             }
@@ -945,14 +947,15 @@ public:
      */
     bool shouldWriteOutput() const
     {
-        if (this->simulator().timeStepIndex() < 0)
+        const auto& simulator = this->simulator();
+        if (simulator.timeStepIndex() < 0)
             // always write the initial solution
             return true;
 
         if (EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions))
             return true;
 
-        return this->simulator().episodeWillBeOver();
+        return simulator.episodeWillBeOver();
     }
 
     /*!
@@ -1438,7 +1441,8 @@ public:
      */
     void initialSolutionApplied()
     {
-        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
 
         // initialize the wells. Note that this needs to be done after initializing the
         // intrinsic permeabilities and the after applying the initial solution because
@@ -1605,8 +1609,9 @@ public:
 
     bool vapparsActive() const
     {
-        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0);
-        const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const auto& simulator = this->simulator();
+        int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         return (oilVaporizationControl.getType() == Opm::OilVaporizationEnum::VAPPARS);
     }
 
@@ -1625,7 +1630,8 @@ public:
         if (this->nextTimeStepSize_ > 0.0)
             return this->nextTimeStepSize_;
 
-        int episodeIdx = this->simulator().episodeIndex();
+        const auto& simulator = this->simulator();
+        int episodeIdx = simulator.episodeIndex();
 
         // for the initial episode, we use a fixed time step size
         if (episodeIdx < 0)
@@ -1635,7 +1641,6 @@ public:
         // well the previous time step converged. After that, apply the runtime time
         // stepping constraints.
         const auto& newtonMethod = this->model().newtonMethod();
-        const auto& simulator = this->simulator();
         return limitNextTimeStepSize_(newtonMethod.suggestTimeStepSize(simulator.timeStepSize()));
     }
 
@@ -1737,15 +1742,17 @@ private:
 
     bool drsdtActive_() const
     {
-        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0);
-        const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const auto& simulator = this->simulator();
+        int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         return (oilVaporizationControl.drsdtActive());
     }
 
     bool drvdtActive_() const
     {
-        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0);
-        const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const auto& simulator = this->simulator();
+        int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         return (oilVaporizationControl.drvdtActive());
 
     }
@@ -1766,7 +1773,8 @@ private:
 
     void updateElementDepths_()
     {
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
         const auto& gridView = vanguard.gridView();
         const auto& elemMapper = this->elementMapper();;
 
@@ -1788,12 +1796,13 @@ private:
     {
         // update the "last Rs" values for all elements, including the ones in the ghost
         // and overlap regions
-        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0);
-        const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const auto& simulator = this->simulator();
+        int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
 
         if (oilVaporizationControl.drsdtActive()) {
-            ElementContext elemCtx(this->simulator());
-            const auto& vanguard = this->simulator().vanguard();
+            ElementContext elemCtx(simulator);
+            const auto& vanguard = simulator.vanguard();
             auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
             const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++elemIt) {
@@ -1822,8 +1831,8 @@ private:
         // update the "last Rv" values for all elements, including the ones in the ghost
         // and overlap regions
         if (drvdtActive_()) {
-            ElementContext elemCtx(this->simulator());
-            const auto& vanguard = this->simulator().vanguard();
+            ElementContext elemCtx(simulator);
+            const auto& vanguard = simulator.vanguard();
             auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
             const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++elemIt) {
@@ -1848,10 +1857,12 @@ private:
 
     bool updateMaxOilSaturation_()
     {
+        const auto& simulator = this->simulator();
+
         // we use VAPPARS
         if (vapparsActive()) {
-            ElementContext elemCtx(this->simulator());
-            const auto& vanguard = this->simulator().vanguard();
+            ElementContext elemCtx(simulator);
+            const auto& vanguard = simulator.vanguard();
             auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
             const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++elemIt) {
@@ -1879,9 +1890,10 @@ private:
 
     void readRockParameters_()
     {
-        const auto& deck = this->simulator().vanguard().deck();
-        const auto& eclState = this->simulator().vanguard().eclState();
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& deck = simulator.vanguard().deck();
+        const auto& eclState = simulator.vanguard().eclState();
+        const auto& vanguard = simulator.vanguard();
 
         // the ROCK keyword has not been specified, so we don't need
         // to read rock parameters
@@ -1937,7 +1949,8 @@ private:
 
     void readMaterialParameters_()
     {
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
         const auto& deck = vanguard.deck();
         const auto& eclState = vanguard.eclState();
 
@@ -1972,7 +1985,8 @@ private:
         if (!enableEnergy)
             return;
 
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
         const auto& deck = vanguard.deck();
         const auto& eclState = vanguard.eclState();
 
@@ -1988,7 +2002,8 @@ private:
 
     void updatePorosity_()
     {
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
         const auto& eclGrid = eclState.getInputGrid();
         const auto& props = eclState.get3DProperties();
@@ -2036,7 +2051,7 @@ private:
             // we define the porosity as the accumulated pore volume divided by the
             // geometric volume of the element. Note that -- in pathetic cases -- it can
             // be larger than 1.0!
-            Scalar dofVolume = this->simulator().model().dofTotalVolume(dofIdx);
+            Scalar dofVolume = simulator.model().dofTotalVolume(dofIdx);
             assert(dofVolume > 0.0);
             porosity_[dofIdx] = poreVolume/dofVolume;
         }
@@ -2044,15 +2059,17 @@ private:
 
     void initFluidSystem_()
     {
-        const auto& deck = this->simulator().vanguard().deck();
-        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& simulator = this->simulator();
+        const auto& deck = simulator.vanguard().deck();
+        const auto& eclState = simulator.vanguard().eclState();
 
         FluidSystem::initFromDeck(deck, eclState);
    }
 
     void readInitialCondition_()
     {
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
 
         const auto& deck = vanguard.deck();
         if (!deck.hasKeyword("EQUIL"))
@@ -2066,9 +2083,11 @@ private:
 
     void readEquilInitialCondition_()
     {
+        const auto& simulator = this->simulator();
+
         // initial condition corresponds to hydrostatic conditions.
         typedef Ewoms::EclEquilInitializer<TypeTag> EquilInitializer;
-        EquilInitializer equilInitializer(this->simulator(), *materialLawManager_);
+        EquilInitializer equilInitializer(simulator, *materialLawManager_);
 
         size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
@@ -2081,17 +2100,18 @@ private:
     void readEclRestartSolution_()
     {
         // Set the start time of the simulation
-        const auto& schedule = this->simulator().vanguard().schedule();
-        const auto& eclState = this->simulator().vanguard().eclState();
+        auto& simulator = this->simulator();
+        const auto& schedule = simulator.vanguard().schedule();
+        const auto& eclState = simulator.vanguard().eclState();
         const auto& timeMap = schedule.getTimeMap();
         const auto& initconfig = eclState.getInitConfig();
         int episodeIdx = initconfig.getRestartStep() - 1;
 
-        this->simulator().setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
-        this->simulator().setTime(timeMap.getTimePassedUntil(episodeIdx));
-        this->simulator().setEpisodeIndex(episodeIdx);
-        this->simulator().setEpisodeLength(timeMap.getTimeStepLength(episodeIdx));
-        this->simulator().setTimeStepSize(eclWriter_->restartTimeStepSize());
+        simulator.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
+        simulator.setTime(timeMap.getTimePassedUntil(episodeIdx));
+        simulator.setEpisodeIndex(episodeIdx);
+        simulator.setEpisodeLength(timeMap.getTimeStepLength(episodeIdx));
+        simulator.setTimeStepSize(eclWriter_->restartTimeStepSize());
 
         eclWriter_->beginRestart();
 
@@ -2117,7 +2137,7 @@ private:
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
             elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
-            eclWriter_->eclOutputModule().initHysteresisParams(this->simulator(), elemIdx);
+            eclWriter_->eclOutputModule().initHysteresisParams(simulator, elemIdx);
             eclWriter_->eclOutputModule().assignToFluidState(elemFluidState, elemIdx);
 
             processRestartSaturations_(elemFluidState);
@@ -2131,17 +2151,17 @@ private:
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
 
-        const int epsiodeIdx = this->simulator().episodeIndex();
-        const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const int epsiodeIdx = simulator.episodeIndex();
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         if (drsdtActive_())
             // DRSDT is enabled
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
-                maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*this->simulator().timeStepSize();
+                maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*simulator.timeStepSize();
 
         if (drvdtActive_())
             // DRVDT is enabled
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
-                maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
+                maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*simulator.timeStepSize();
 
         if (tracerModel().numTracers() > 0)
             std::cout << "Warning: Restart is not implemented for the tracer model, it will initialize with initial tracer concentration" << std::endl;
@@ -2151,7 +2171,7 @@ private:
         // need to be correct for stuff like boundary conditions.
         auto& sol = this->model().solution(/*timeIdx=*/0);
         const auto& gridView = this->gridView();
-        ElementContext elemCtx(this->simulator());
+        ElementContext elemCtx(simulator);
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
@@ -2207,7 +2227,8 @@ private:
 
     void readExplicitInitialCondition_()
     {
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
         const auto& eclProps = eclState.get3DProperties();
 
@@ -2233,7 +2254,7 @@ private:
 
         initialFluidStates_.resize(numDof);
 
-        const auto& cartSize = this->simulator().vanguard().cartesianDimensions();
+        const auto& cartSize = simulator.vanguard().cartesianDimensions();
         size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
 
         std::vector<double> waterSaturationData;
@@ -2351,7 +2372,8 @@ private:
 
     void readBlackoilExtentionsInitialConditions_()
     {
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
         size_t numDof = this->model().numGridDof();
 
@@ -2397,8 +2419,9 @@ private:
 
         // we need to update the hysteresis data for _all_ elements (i.e., not just the
         // interior ones) to avoid desynchronization of the processes in the parallel case!
-        ElementContext elemCtx(this->simulator());
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        ElementContext elemCtx(simulator);
+        const auto& vanguard = simulator.vanguard();
         auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
@@ -2417,8 +2440,9 @@ private:
     void updateMaxPolymerAdsorption_()
     {
         // we need to update the max polymer adsoption data for all elements
-        ElementContext elemCtx(this->simulator());
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        ElementContext elemCtx(simulator);
+        const auto& vanguard = simulator.vanguard();
         auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
@@ -2436,14 +2460,15 @@ private:
 
     void updatePvtnum_()
     {
-        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         if (!eclProps.hasDeckIntGridProperty("PVTNUM"))
             return;
 
         const auto& pvtnumData = eclProps.getIntGridProperty("PVTNUM").getData();
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& vanguard = simulator.vanguard();
 
         unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         pvtnum_.resize(numElems);
@@ -2455,14 +2480,15 @@ private:
 
     void updateSatnum_()
     {
-        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         if (!eclProps.hasDeckIntGridProperty("SATNUM"))
             return;
 
         const auto& satnumData = eclProps.getIntGridProperty("SATNUM").getData();
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& vanguard = simulator.vanguard();
 
         unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         satnum_.resize(numElems);
@@ -2474,14 +2500,15 @@ private:
 
     void updateMiscnum_()
     {
-        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         if (!eclProps.hasDeckIntGridProperty("MISCNUM"))
             return;
 
         const auto& miscnumData = eclProps.getIntGridProperty("MISCNUM").getData();
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& vanguard = simulator.vanguard();
 
         unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         miscnum_.resize(numElems);
@@ -2493,14 +2520,15 @@ private:
 
     void updatePlmixnum_()
     {
-        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         if (!eclProps.hasDeckIntGridProperty("PLMIXNUM"))
             return;
 
         const auto& plmixnumData = eclProps.getIntGridProperty("PLMIXNUM").getData();
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& vanguard = simulator.vanguard();
 
         unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         plmixnum_.resize(numElems);
@@ -2543,7 +2571,8 @@ private:
     void readBoundaryConditions_()
     {
         nonTrivialBoundaryConditions_ = false;
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
 
         if (vanguard.deck().hasKeyword("BC")) {
             nonTrivialBoundaryConditions_ = true;
@@ -2682,15 +2711,16 @@ private:
         if (!enableExperiments)
             return dtNext;
 
-        const auto& events = this->simulator().vanguard().schedule().getEvents();
-        int episodeIdx = this->simulator().episodeIndex();
+        const auto& simulator = this->simulator();
+        const auto& events = simulator.vanguard().schedule().getEvents();
+        int episodeIdx = simulator.episodeIndex();
 
         // first thing in the morning, limit the time step size to the maximum size
         dtNext = std::min(dtNext, maxTimeStepSize_);
 
         Scalar remainingEpisodeTime =
-            this->simulator().episodeStartTime() + this->simulator().episodeLength()
-            - (this->simulator().startTime() + this->simulator().time());
+            simulator.episodeStartTime() + simulator.episodeLength()
+            - (simulator.startTime() + simulator.time());
         assert(remainingEpisodeTime >= 0.0);
 
         // if we would have a small amount of time left over in the current episode, make
