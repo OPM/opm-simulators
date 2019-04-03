@@ -2676,31 +2676,26 @@ private:
     }
 
     // this method applies the runtime constraints specified via the deck and/or command
-    // line parameters for the size of the next time step size.
+    // line parameters for the size of the next time step.
     Scalar limitNextTimeStepSize_(Scalar dtNext) const
     {
+        if (!enableExperiments)
+            return dtNext;
+
         const auto& events = this->simulator().vanguard().schedule().getEvents();
         int episodeIdx = this->simulator().episodeIndex();
 
         // first thing in the morning, limit the time step size to the maximum size
         dtNext = std::min(dtNext, maxTimeStepSize_);
 
-        // use at least slightly more than half of the maximum time step size by default
-        if (dtNext < maxTimeStepSize_ && maxTimeStepSize_ < dtNext*2)
-            dtNext = 1.01 * maxTimeStepSize_/2.0;
-
         Scalar remainingEpisodeTime =
-            this->simulator().episodeStartTime()
-            + this->simulator().episodeLength()
-            - this->simulator().time()
-            - this->simulator().timeStepSize();
-
-        // limit the time step size to the remaining time of the episode
-        dtNext = std::min(dtNext, remainingEpisodeTime);
+            this->simulator().episodeStartTime() + this->simulator().episodeLength()
+            - (this->simulator().startTime() + this->simulator().time());
+        assert(remainingEpisodeTime >= 0.0);
 
         // if we would have a small amount of time left over in the current episode, make
         // two equal time steps instead of a big and a small one
-        if (dtNext < remainingEpisodeTime*(1.0 - 1e-5) && dtNext*1.25 > remainingEpisodeTime)
+        if (remainingEpisodeTime/2.0 < dtNext && dtNext < remainingEpisodeTime*(1.0 - 1e-5))
             // note: limiting to the maximum time step size here is probably not strictly
             // necessary, but it should not hurt and is more fool-proof
             dtNext = std::min(maxTimeStepSize_, remainingEpisodeTime/2.0);
