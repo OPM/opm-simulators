@@ -1691,6 +1691,7 @@ private:
     void checkDeckCompatibility_() const
     {
         const auto& deck = this->simulator().vanguard().deck();
+        bool beVerbose = this->simulator().gridView().comm().rank() == 0;
 
         if (enableApiTracking)
             throw std::logic_error("API tracking is not yet implemented but requested at compile time.");
@@ -1716,17 +1717,17 @@ private:
         else if (!enableEnergy && deckEnergyEnabled)
             throw std::runtime_error("The deck enables the TEMP or the THERMAL option, but the simulator is not compiled to support either.");
 
-        if (deckEnergyEnabled && deck.hasKeyword("TEMP"))
-            std::cout << "WARNING: The deck requests the TEMP option, i.e., treating energy "
+        if (deckEnergyEnabled && deck.hasKeyword("TEMP") && beVerbose)
+            std::cerr << "WARNING: The deck requests the TEMP option, i.e., treating energy "
                       << "conservation as a post processing step. This is currently unsupported, "
-                      << "i.e., energy conservation is always handled fully implicitly.";
+                      << "i.e., energy conservation is always handled fully implicitly." << std::endl;
 
         int numDeckPhases = FluidSystem::numActivePhases();
-        if (numDeckPhases < Indices::numPhases)
-            std::cout << "WARNING: The number of active phases specified by the deck ("
+        if (numDeckPhases < Indices::numPhases && beVerbose)
+            std::cerr << "WARNING: The number of active phases specified by the deck ("
                       << numDeckPhases << ") is smaller than the number of compiled-in phases ("
                       << Indices::numPhases << "). This usually results in a significant "
-                      << "performance degradation compared to using a specialized simulator.";
+                      << "performance degradation compared to using a specialized simulator."  << std::endl;
         else if (numDeckPhases < Indices::numPhases)
             throw std::runtime_error("The deck enables "+std::to_string(numDeckPhases)+" phases "
                                      "while this simulator can only handle "+
@@ -1739,7 +1740,7 @@ private:
             throw std::runtime_error("The deck enables gas, but this simulator cannot handle it.");
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && !Indices::waterEnabled)
             throw std::runtime_error("The deck enables water, but this simulator cannot handle it.");
-        // the opposite cases should be fine (albeit a bit slower than possible)
+        // the opposite cases should be fine (albeit a bit slower than what's possible)
     }
 
     bool drsdtActive_() const
