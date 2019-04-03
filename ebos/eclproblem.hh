@@ -957,15 +957,12 @@ public:
 
     /*!
      * \brief Returns true if an eWoms restart file should be written to disk.
+     *
+     * The EclProblem does not write any restart files using the ad-hoc format, only ones
+     * using the ECL format.
      */
     bool shouldWriteRestartFile() const
-    {
-        unsigned n = EWOMS_GET_PARAM(TypeTag, unsigned, RestartWritingInterval);
-        unsigned i = this->simulator().timeStepIndex();
-        if (i > 0 && (i%n) == 0)
-            return true; // we don't write a restart file for the initial condition
-        return false;
-    }
+    { return false; }
 
     /*!
      * \brief Write the requested quantities of the current solution into the output
