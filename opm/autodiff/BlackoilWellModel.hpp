@@ -112,7 +112,7 @@ namespace Opm {
 
             BlackoilWellModel(Simulator& ebosSimulator);
 
-            void init(const Opm::EclipseState& eclState, const Opm::Schedule& schedule);
+            void init();
 
             /////////////
             // <eWoms auxiliary module stuff>
@@ -153,9 +153,7 @@ namespace Opm {
                 // TODO (?)
             }
 
-            void beginEpisode(const Opm::EclipseState& /* eclState */,
-                              const Opm::Schedule& /* schedule */,
-                              bool isRestart)
+            void beginEpisode(bool isRestart)
             {
                 size_t episodeIdx = ebosSimulator_.episodeIndex();
                 // beginEpisode in eclProblem advances the episode index

@@ -824,11 +824,7 @@ public:
             updateMaxPolymerAdsorption_();
 
         // set up the wells for the next episode.
-        //
-        // TODO: the first two arguments seem to be unnecessary
-        wellModel_.beginEpisode(this->simulator().vanguard().eclState(),
-                                this->simulator().vanguard().schedule(),
-                                isOnRestart);
+        wellModel_.beginEpisode(isOnRestart);
 
         aquiferModel_.beginEpisode();
 
@@ -1447,7 +1443,7 @@ public:
         // initialize the wells. Note that this needs to be done after initializing the
         // intrinsic permeabilities and the after applying the initial solution because
         // the well model uses these...
-        wellModel_.init(eclState, this->simulator().vanguard().schedule());
+        wellModel_.init();
 
         // let the object for threshold pressures initialize itself. this is done only at
         // this point, because determining the threshold pressures may require to access

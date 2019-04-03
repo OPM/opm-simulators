@@ -101,9 +101,10 @@ public:
      *
      * I.e., well positions, names etc...
      */
-    void init(const Opm::EclipseState& eclState OPM_UNUSED,
-              const Opm::Schedule& deckSchedule)
+    void init()
     {
+        const Opm::Schedule& deckSchedule = simulator_.vanguard().schedule();
+
         // create the wells which intersect with the current process' grid
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule.numWells(); ++deckWellIdx)
         {
@@ -130,8 +131,10 @@ public:
      * \brief This should be called the problem before each simulation
      *        episode to adapt the well controls.
      */
-    void beginEpisode(const Opm::EclipseState& eclState, const Opm::Schedule& deckSchedule, bool wasRestarted=false)
+    void beginEpisode(bool wasRestarted=false)
     {
+        const Opm::EclipseState& eclState = simulator_.vanguard().eclState();
+        const Opm::Schedule& deckSchedule = simulator_.vanguard().schedule();
         unsigned episodeIdx = simulator_.episodeIndex();
 
         WellConnectionsMap wellCompMap;

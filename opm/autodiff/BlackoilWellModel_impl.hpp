@@ -38,8 +38,11 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    init(const Opm::EclipseState& eclState, const Opm::Schedule& /* schedule */)
+    init()
     {
+        const Opm::EclipseState& eclState = ebosSimulator_.vanguard().eclState();
+        const Opm::Schedule& schedule = ebosSimulator_.vanguard().schedule();
+
         gravity_ = ebosSimulator_.problem().gravity()[2];
 
         extractLegacyCellPvtRegionIndex_();
