@@ -194,7 +194,9 @@ protected:
         typedef typename GridView::template Codim<0>::Entity Element;
         typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
         // Due to miscibility oil <-> gas the water eqn is the one we can replace with a pressure equation.
-        enum { pressureEqnIndex = BlackOilDefaultIndexTraits::waterCompIdx };
+        static const bool waterEnabled = Indices::waterEnabled;
+        static const int pindex = (waterEnabled) ? BlackOilDefaultIndexTraits::waterCompIdx : BlackOilDefaultIndexTraits::oilCompIdx;
+        enum { pressureEqnIndex = pindex };
         enum { pressureVarIndex = Indices::pressureSwitchIdx };
         static const int numEq = Indices::numEq;
 
