@@ -592,7 +592,7 @@ public:
     void deserialize(Restarter& res OPM_UNUSED)
     {
         // initialize the wells for the current episode
-        beginEpisode(simulator_.vanguard().eclState(), simulator_.vanguard().schedule(), /*wasRestarted=*/true);
+        beginEpisode(/*wasRestarted=*/true);
     }
 
     /*!

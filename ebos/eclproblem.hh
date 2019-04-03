@@ -610,6 +610,19 @@ public:
         ParentType::finishInit();
 
         auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
+        const auto& schedule = simulator.vanguard().schedule();
+        const auto& timeMap = schedule.getTimeMap();
+
+        // Set the start time of the simulation
+        simulator.setStartTime(timeMap.getStartTime(/*reportStepIdx=*/0));
+
+        // We want the episode index to be the same as the report step index to make
+        // things simpler, so we have to set the episode index to -1 because it is
+        // incremented by endEpisode(). The size of the initial time step and
+        // length of the initial episode is set to zero for the same reason.
+        simulator.setEpisodeIndex(-1);
+        simulator.setEpisodeLength(0.0);
 
         // the "NOGRAV" keyword from Frontsim or setting the EnableGravity to false
         // disables gravity, else the standard value of the gravity constant at sea level
@@ -634,7 +647,6 @@ public:
         }
 
         // deal with DRSDT
-        const auto& eclState = simulator.vanguard().eclState();
         unsigned ntpvt = eclState.runspec().tabdims().getNumPVTTables();
         maxDRs_.resize(ntpvt, 1e30);
         dRsDtOnlyFreeGas_.resize(ntpvt, false);
@@ -651,19 +663,7 @@ public:
         readThermalParameters_();
         transmissibilities_.finishInit();
 
-        const auto& timeMap = simulator.vanguard().schedule().getTimeMap();
-
         readInitialCondition_();
-        // Set the start time of the simulation
-        simulator.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
-
-        // We want the episode index to be the same as the report step index to make
-        // things simpler, so we have to set the episode index to -1 because it is
-        // incremented inside beginEpisode(). The size of the initial time step and
-        // length of the initial episode is set to zero for the same reason.
-        simulator.setEpisodeIndex(-1);
-        simulator.setEpisodeLength(0.0);
-        simulator.setTimeStepSize(0.0);
 
         updatePffDofData_();
 
@@ -691,6 +691,11 @@ public:
             eclWriter_->writeInit();
 
         simulator.vanguard().releaseGlobalTransmissibilities();
+
+        // after finishing the initialization and writing the initial solution, we move
+        // to the first "real" episode/report step
+        simulator.startNextEpisode(timeMap.getTimeStepLength(0));
+        simulator.setEpisodeIndex(0);
     }
 
     void prefetch(const Element& elem) const
@@ -739,37 +744,21 @@ public:
     void beginEpisode(bool isOnRestart = false)
     {
         // Proceed to the next report step
-        Simulator& simulator = this->simulator();
+        auto& simulator = this->simulator();
         auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
         const auto& events = schedule.getEvents();
         const auto& timeMap = schedule.getTimeMap();
+        int episodeIdx = simulator.episodeIndex();
 
-        // The first thing to do in the morning of an episode is update update the
-        // eclState and the deck if they need to be changed.
-        int nextEpisodeIdx = simulator.episodeIndex();
-
-        if (enableExperiments && this->gridView().comm().rank() == 0) {
-            boost::posix_time::ptime curDateTime =
-                boost::posix_time::from_time_t(timeMap.getStartTime(nextEpisodeIdx+1));
-            std::cout << "Report step " << nextEpisodeIdx + 2
-                      << "/" << timeMap.numTimesteps()
-                      << " at day " << timeMap.getTimePassedUntil(nextEpisodeIdx+1)/(24*3600)
-                      << "/" << timeMap.getTotalTime()/(24*3600)
-                      << ", date = " << curDateTime.date()
-                      << "\n ";
-        }
-
-        if (nextEpisodeIdx > 0 &&
-            events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER, nextEpisodeIdx))
-        {
+        if (episodeIdx >= 0 && events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER, episodeIdx)) {
             // bring the contents of the keywords to the current state of the SCHEDULE
-            // section
+            // section.
             //
             // TODO (?): make grid topology changes possible (depending on what exactly
             // has changed, the grid may need be re-created which has some serious
             // implications on e.g., the solution of the simulation.)
-            const auto& miniDeck = schedule.getModifierDeck(nextEpisodeIdx);
+            const auto& miniDeck = schedule.getModifierDeck(episodeIdx);
             eclState.applyModifierDeck(miniDeck);
 
             // re-compute all quantities which may possibly be affected.
@@ -778,43 +767,31 @@ public:
             updatePffDofData_();
         }
 
-        // Opm::TimeMap deals with points in time, so the number of time intervals (i.e.,
-        // report steps) is one less!
-        int numReportSteps = timeMap.size() - 1;
-
-        // start the next episode if there are additional report steps, else finish the
-        // simulation
-        while (nextEpisodeIdx < numReportSteps &&
-               simulator.time() >= timeMap.getTimePassedUntil(nextEpisodeIdx + 1)*(1 - 1e-10))
-        {
-            ++ nextEpisodeIdx;
+        if (enableExperiments && this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
+            // print some useful information in experimental mode. (the production
+            // simulator does this externally.)
+            boost::posix_time::ptime curDateTime =
+                boost::posix_time::from_time_t(timeMap.getStartTime(episodeIdx));
+            std::cout << "Report step " << episodeIdx + 1
+                      << "/" << timeMap.numTimesteps()
+                      << " at day " << timeMap.getTimePassedUntil(episodeIdx)/(24*3600)
+                      << "/" << timeMap.getTotalTime()/(24*3600)
+                      << ", date = " << curDateTime.date()
+                      << "\n ";
         }
 
         // react to TUNING changes
         bool tuningEvent = false;
-        if (nextEpisodeIdx > 0
-            && enableTuning_
-            && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, nextEpisodeIdx))
+        if (episodeIdx > 0 && enableTuning_ && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, episodeIdx))
         {
             const auto& tuning = schedule.getTuning();
-            initialTimeStepSize_ = tuning.getTSINIT(nextEpisodeIdx);
-            maxTimeStepAfterWellEvent_ = tuning.getTMAXWC(nextEpisodeIdx);
-            maxTimeStepSize_ = tuning.getTSMAXZ(nextEpisodeIdx);
-            restartShrinkFactor_ = 1./tuning.getTSFCNV(nextEpisodeIdx);
-            minTimeStepSize_ = tuning.getTSMINZ(nextEpisodeIdx);
+            initialTimeStepSize_ = tuning.getTSINIT(episodeIdx);
+            maxTimeStepAfterWellEvent_ = tuning.getTMAXWC(episodeIdx);
+            maxTimeStepSize_ = tuning.getTSMAXZ(episodeIdx);
+            restartShrinkFactor_ = 1./tuning.getTSFCNV(episodeIdx);
+            minTimeStepSize_ = tuning.getTSMINZ(episodeIdx);
             tuningEvent = true;
         }
-
-        Scalar episodeLength = timeMap.getTimeStepLength(nextEpisodeIdx);
-        simulator.startNextEpisode(episodeLength);
-
-        Scalar dt = limitNextTimeStepSize_(episodeLength);
-        if (nextEpisodeIdx == 0 || tuningEvent)
-            // allow the size of the initial time step to be set via an external parameter
-            // if TUNING is enabled, also limit the time step size after a tuning event to TSINIT
-            dt = std::min(dt, initialTimeStepSize_);
-
-        simulator.setTimeStepSize(dt);
 
         const bool invalidateFromHyst = updateHysteresis_();
         const bool invalidateFromMaxOilSat = updateMaxOilSaturation_();
@@ -824,9 +801,18 @@ public:
             updateMaxPolymerAdsorption_();
 
         // set up the wells for the next episode.
-        wellModel_.beginEpisode(isOnRestart);
+        wellModel_.beginEpisode();
 
+        // set up the aquifers for the next episode.
         aquiferModel_.beginEpisode();
+
+        // set the size of the initial time step of the episode
+        Scalar dt = limitNextTimeStepSize_(simulator.episodeLength());
+        if (episodeIdx == 0 || tuningEvent)
+            // allow the size of the initial time step to be set via an external parameter
+            // if TUNING is enabled, also limit the time step size after a tuning event to TSINIT
+            dt = std::min(dt, initialTimeStepSize_);
+        simulator.setTimeStepSize(dt);
 
         if (doInvalidate)
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
@@ -927,15 +913,18 @@ public:
     {
         auto& simulator = this->simulator();
         const auto& schedule = simulator.vanguard().schedule();
+        const auto& timeMap = schedule.getTimeMap();
 
         int episodeIdx = simulator.episodeIndex();
 
-        const auto& timeMap = schedule.getTimeMap();
-        int numReportSteps = timeMap.size() - 1;
-        if (episodeIdx + 1 >= numReportSteps) {
+        // check if we're finished ...
+        if (episodeIdx + 1 >= static_cast<int>(timeMap.numTimesteps())) {
             simulator.setFinished(true);
             return;
         }
+
+        // .. if we're not yet done, start the next episode (report step)
+        simulator.startNextEpisode(timeMap.getTimeStepLength(episodeIdx + 1));
     }
 
     /*!
@@ -1442,7 +1431,8 @@ public:
     void initialSolutionApplied()
     {
         const auto& simulator = this->simulator();
-        const auto& eclState = simulator.vanguard().eclState();
+        const auto& vanguard = simulator.vanguard();
+        const auto& eclState = vanguard.eclState();
 
         // initialize the wells. Note that this needs to be done after initializing the
         // intrinsic permeabilities and the after applying the initial solution because
@@ -2109,9 +2099,13 @@ private:
 
         simulator.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
         simulator.setTime(timeMap.getTimePassedUntil(episodeIdx));
+
+        simulator.startNextEpisode(simulator.startTime() + simulator.time(),
+                                   timeMap.getTimeStepLength(episodeIdx));
         simulator.setEpisodeIndex(episodeIdx);
-        simulator.setEpisodeLength(timeMap.getTimeStepLength(episodeIdx));
-        simulator.setTimeStepSize(eclWriter_->restartTimeStepSize());
+
+        Scalar dt = std::min(eclWriter_->restartTimeStepSize(), simulator.episodeLength());
+        simulator.setTimeStepSize(dt);
 
         eclWriter_->beginRestart();
 
@@ -2195,7 +2189,7 @@ private:
         initialFluidStates_ = tmpInitialFs;
         // make sure that the stuff which needs to be done at the beginning of an episode
         // is run.
-        this->beginEpisode(/*isOnRestart=*/true);
+        this->beginEpisode();
 
         eclWriter_->endRestart();
     }
