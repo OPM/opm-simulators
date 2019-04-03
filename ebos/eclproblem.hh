@@ -582,14 +582,16 @@ public:
         const auto& vanguard = simulator.vanguard();
         SolventModule::initFromDeck(vanguard.deck(), vanguard.eclState());
         PolymerModule::initFromDeck(vanguard.deck(), vanguard.eclState());
-        if (EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput))
-            // create the ECL writer
-            eclWriter_.reset(new EclWriterType(simulator));
+
+        // create the ECL writer
+        eclWriter_.reset(new EclWriterType(simulator));
 
         if (enableExperiments)
             enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
         else
             enableDriftCompensation_ = false;
+
+        enableEclOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
 
         enableTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableTuning);
         initialTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
@@ -672,11 +674,6 @@ public:
             maxPolymerAdsorption_.resize(numElements, 0.0);
         }
 
-        if (eclWriter_) {
-            eclWriter_->writeInit();
-            this->simulator().vanguard().releaseGlobalTransmissibilities();
-        }
-
         tracerModel_.init();
 
         readBoundaryConditions_();
@@ -689,6 +686,11 @@ public:
         if (enableExperiments)
             checkDeckCompatibility_();
 
+        // write the static output files (EGRID, INIT, SMSPEC, etc.)
+        if (enableEclOutput_)
+            eclWriter_->writeInit();
+
+        simulator.vanguard().releaseGlobalTransmissibilities();
     }
 
     void prefetch(const Element& elem) const
@@ -974,10 +976,8 @@ public:
         // write the desired VTK files.
         ParentType::writeOutput(isSubStep, verbose);
 
-        if (!eclWriter_)
-            return;
-
-        eclWriter_->writeOutput(isSubStep);
+        if (enableEclOutput_)
+            eclWriter_->writeOutput(isSubStep);
     }
 
     /*!
@@ -1451,9 +1451,6 @@ public:
         // this point, because determining the threshold pressures may require to access
         // the initial solution.
         thresholdPressures_.finishInit();
-
-        // release the memory of the EQUIL grid since it's no longer needed after this point
-        this->simulator().vanguard().releaseEquilGrid();
 
         updateCompositionChangeLimits_();
 
@@ -2765,6 +2762,8 @@ private:
 
     EclWellModel wellModel_;
     EclAquiferModel aquiferModel_;
+
+    bool enableEclOutput_;
     std::unique_ptr<EclWriterType> eclWriter_;
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
