@@ -648,11 +648,13 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
 {
     auto units = Opm::UnitSystem::newMETRIC();
 
+    Opm::ParseContext parseContext;
+    Opm::ErrorGuard errorGuard;
     Opm::Parser parser;
     boost::filesystem::path file("VFPPROD2");
 
     auto deck = parser.parseFile(file.string());
-    Opm::checkDeck(deck, parser);
+    Opm::checkDeck(deck, parser, parseContext, errorGuard);
 
     BOOST_REQUIRE(deck.hasKeyword("VFPPROD"));
     BOOST_CHECK_EQUAL(deck.count("VFPPROD"), 1);
