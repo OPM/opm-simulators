@@ -80,7 +80,7 @@
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 #include <opm/material/common/IntervalTabulated2DFunction.hpp>
-
+#include <opm/material/common/UniformXTabulated2DFunction.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -441,6 +441,8 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef EclTracerModel<TypeTag> TracerModel;
 
     typedef typename GridView::template Codim<0>::Iterator ElementIterator;
+
+    typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
 
     struct RockParams {
         Scalar referencePressure;
@@ -2111,7 +2113,7 @@ private:
                     throw std::runtime_error("Water compation option is selected in ROCKCOMP." + std::to_string(numRocktabTables)
                                              +" ROCKWNOD tables is expected, but " + std::to_string(rockwnodTables.size()) +" is provided");
                 //TODO check size match
-                poreVolumeMultiplier_.resize(numRocktabTables);
+                poreVolumeMultiplier_.resize(numRocktabTables, TabulatedTwoDFunction{TabulatedTwoDFunction::InterpolationPolicy::Vertical});
                 for ( size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
                     const Opm::RockwnodTable& rockwnodTable =  rockwnodTables.template getTable<Opm::RockwnodTable>(regionIdx);
                     const auto& rock2dTable = rock2dTables[regionIdx];
@@ -2127,7 +2129,7 @@ private:
                     }
                 }
                 if (rock2dtrTables.size() > 0 ) {
-                    transmissibilityMultiplier_.resize(numRocktabTables);
+                    transmissibilityMultiplier_.resize(numRocktabTables, TabulatedTwoDFunction{TabulatedTwoDFunction::InterpolationPolicy::Vertical});
                     for ( size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
                         const Opm::RockwnodTable& rockwnodTable =  rockwnodTables.template getTable<Opm::RockwnodTable>(regionIdx);
                         const auto& rock2dtrTable = rock2dtrTables[regionIdx];
@@ -3058,8 +3060,8 @@ private:
 
 
 
-    std::vector<Opm::UniformXTabulated2DFunction<Scalar>> poreVolumeMultiplier_;
-    std::vector<Opm::UniformXTabulated2DFunction<Scalar>> transmissibilityMultiplier_;
+    std::vector<TabulatedTwoDFunction> poreVolumeMultiplier_;
+    std::vector<TabulatedTwoDFunction> transmissibilityMultiplier_;
 
 
     bool enableDriftCompensation_;
