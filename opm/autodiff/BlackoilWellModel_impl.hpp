@@ -259,7 +259,7 @@ namespace Opm {
         well_state_.init(wells(), cellPressures, schedule(), wells_ecl_, timeStepIdx, &previous_well_state_, phase_usage_);
 
         // handling MS well related
-        if (param_.use_multisegment_well_&& anyMSWellOpen(wells(), timeStepIdx)) { // if we use MultisegmentWell model
+        if (param_.use_multisegment_well_&& anyMSWellOpenLocal(wells(), timeStepIdx)) { // if we use MultisegmentWell model
             well_state_.initWellStateMSWell(wells(), wells_ecl_, timeStepIdx, phase_usage_, &previous_well_state_);
         }
 
@@ -497,7 +497,7 @@ namespace Opm {
         if (nw > 0) {
             const auto phaseUsage = phaseUsageFromDeck(eclState());
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
-            const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpen(wells, report_step));
+            const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal(wells, report_step));
             well_state_.resize(wells, wells_ecl_, schedule(), handle_ms_well, report_step, numCells, phaseUsage); // Resize for restart step
             wellsToState(restartValues.wells, phaseUsage, handle_ms_well, report_step, well_state_);
             previous_well_state_ = well_state_;
@@ -1760,7 +1760,7 @@ namespace Opm {
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
-    anyMSWellOpen(const Wells* wells, const int report_step) const
+    anyMSWellOpenLocal(const Wells* wells, const int report_step) const
     {
         bool any_ms_well_open = false;
 
@@ -1769,8 +1769,6 @@ namespace Opm {
             const std::string well_name = std::string(wells->name[w]);
 
             const Well* well_ecl = getWellEcl(well_name);
-
-            assert(well_ecl);
 
             if (well_ecl->isMultiSegment(report_step) ) {
                 any_ms_well_open = true;
@@ -1789,20 +1787,16 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     getWellEcl(const std::string& well_name) const
     {
-        // finding the location of the well in wells_ecl
-        const int nw_wells_ecl = wells_ecl_.size();
-        int index_well = 0;
-        for (; index_well < nw_wells_ecl; ++index_well) {
-            if (well_name == wells_ecl_[index_well]->name()) {
-                break;
-            }
-        }
+        // finding the iterator of the well in wells_ecl
+        auto well_ecl = std::find_if(wells_ecl_.begin(),
+                                     wells_ecl_.end(),
+                                     [&well_name](const Well* elem)->bool {
+                                         return elem->name() == well_name;
+                                     });
 
-        if (index_well < nw_wells_ecl) {
-            return wells_ecl_[index_well];
-        } else {
-            return nullptr;
-        }
+        assert(well_ecl != wells_ecl_.end());
+
+        return *well_ecl;
     }
 
 } // namespace Opm

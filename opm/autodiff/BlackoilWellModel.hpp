@@ -428,7 +428,8 @@ namespace Opm {
                                const int report_step,
                                WellStateFullyImplicitBlackoil& state ) const;
 
-            bool anyMSWellOpen(const Wells* wells, const int report_step) const;
+            // whether there exists any multisegment well open on this process
+            bool anyMSWellOpenLocal(const Wells* wells, const int report_step) const;
 
             const Well* getWellEcl(const std::string& well_name) const;
         };
