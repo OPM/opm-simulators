@@ -171,144 +171,7 @@ namespace Dune
        * @brief Update the coarse solver and the hierarchies.
        */
       template<class C>  
-      void updateSolver(C& criterion, Operator& /* matrix */, const PI& pinfo)
-      {
-        Timer watch;
-        smoothers_.reset(new Hierarchy<Smoother,A>);
-        solver_.reset();
-        coarseSmoother_.reset();
-        scalarProduct_.reset();
-        buildHierarchy_= true;
-        coarsesolverconverged = true;
-        smoothers_.reset(new Hierarchy<Smoother,A>);
-        matrices_->recalculateGalerkin(NegateSet<typename PI::OwnerSet>());
-        matrices_->coarsenSmoother(*smoothers_, smootherArgs_);
-        setupCoarseSolver();
-        if (verbosity_>0 && matrices_->parallelInformation().finest()->communicator().rank()==0) {
-          std::cout << "Recalculating galerkin and coarse somothers "<< matrices_->maxlevels() << " levels "
-                    << watch.elapsed() << " seconds." << std::endl;
-        }
-      }
-
-      void setupCoarseSolver()
-      {
-        setupCoarseSolverSerial();
-      }
-
-      void setupCoarseSolverSerial()
-      {
-        if(buildHierarchy_ && matrices_->levels()==matrices_->maxlevels())
-          {
-            // We have the carsest level. Create the coarse Solver
-            SmootherArgs sargs(smootherArgs_);
-            sargs.iterations = 1;
-            
-            typename ConstructionTraits<Smoother>::Arguments cargs;
-            cargs.setArgs(sargs);
-            
-            cargs.setMatrix(matrices_->matrices().coarsest()->getmat());
-            cargs.setComm(*matrices_->parallelInformation().coarsest());
-            
-            coarseSmoother_.reset(ConstructionTraits<Smoother>::construct(cargs));
-            scalarProduct_ = createScalarProduct<X>(cargs.getComm(),category());
-            
-            typedef DirectSolverSelector< typename M::matrix_type, X > SolverSelector;
-            
-            // Use superlu if we are purely sequential or with only one processor on the coarsest level.
-            if( SolverSelector::isDirectSolver)
-              {
-                solver_.reset(SolverSelector::create(matrices_->matrices().coarsest()->getmat(), false, false));  
-                if(verbosity_>0 )
-                  std::cout<< "Using a direct coarse solver (" << SolverSelector::name() << ")" << std::endl;
-              }
-            else
-              {
-                // solver_.reset(new BiCGSTABSolver<X>(const_cast<M&>(*matrices_->matrices().coarsest()),
-                //                                         *scalarProduct_,
-                //                                         *coarseSmoother_, 1E-2, 1000, 0));
-                solver_.reset(new LoopSolver<X>(const_cast<M&>(*matrices_->matrices().coarsest()),
-                                                *scalarProduct_,
-                                                *coarseSmoother_, 1E-2, 1, 0));
-              }
-          }
-      }
-
-      void setupCoarseSolverPar()
-      {
-        if(buildHierarchy_ && matrices_->levels()==matrices_->maxlevels()
-           && ( ! matrices_->redistributeInformation().back().isSetup() ||
-                matrices_->parallelInformation().coarsest().getRedistributed().communicator().size() ) )
-          {
-            // We have the carsest level. Create the coarse Solver
-            SmootherArgs sargs(smootherArgs_);
-            sargs.iterations = 1;
-            
-            typename ConstructionTraits<Smoother>::Arguments cargs;
-            cargs.setArgs(sargs);
-            if(matrices_->redistributeInformation().back().isSetup()) {
-              // Solve on the redistributed partitioning
-              cargs.setMatrix(matrices_->matrices().coarsest().getRedistributed().getmat());
-              cargs.setComm(matrices_->parallelInformation().coarsest().getRedistributed());
-            }else{
-              cargs.setMatrix(matrices_->matrices().coarsest()->getmat());
-              cargs.setComm(*matrices_->parallelInformation().coarsest());
-            }
-            
-            coarseSmoother_.reset(ConstructionTraits<Smoother>::construct(cargs));
-            scalarProduct_ = createScalarProduct<X>(cargs.getComm(),category());
-            
-            typedef DirectSolverSelector< typename M::matrix_type, X > SolverSelector;
-            
-            // Use superlu if we are purely sequential or with only one processor on the coarsest level.
-            if( SolverSelector::isDirectSolver &&
-                (std::is_same<ParallelInformation,SequentialInformation>::value // sequential mode
-                 || matrices_->parallelInformation().coarsest()->communicator().size()==1 //parallel mode and only one processor
-                 || (matrices_->parallelInformation().coarsest().isRedistributed()
-                     && matrices_->parallelInformation().coarsest().getRedistributed().communicator().size()==1
-                     && matrices_->parallelInformation().coarsest().getRedistributed().communicator().size()>0) )
-                )
-              { // redistribute and 1 proc
-                if(matrices_->parallelInformation().coarsest().isRedistributed())
-                  {
-                    if(matrices_->matrices().coarsest().getRedistributed().getmat().N()>0)
-                      {
-                        // We are still participating on this level
-                        solver_.reset(SolverSelector::create(matrices_->matrices().coarsest().getRedistributed().getmat(), false, false));
-                      }
-                    else
-                      solver_.reset();
-                  }
-                else
-                  {
-                    solver_.reset(SolverSelector::create(matrices_->matrices().coarsest()->getmat(), false, false));
-                  }
-                if(verbosity_>0 && matrices_->parallelInformation().coarsest()->communicator().rank()==0)
-                  std::cout<< "Using a direct coarse solver (" << SolverSelector::name() << ")" << std::endl;
-              }
-            else
-              {
-                if(matrices_->parallelInformation().coarsest().isRedistributed())
-                  {
-                    if(matrices_->matrices().coarsest().getRedistributed().getmat().N()>0)
-                      // We are still participating on this level
-                      
-                      // we have to allocate these types using the rebound allocator
-                      // in order to ensure that we fulfill the alignement requirements
-                      solver_.reset(new BiCGSTABSolver<X>(const_cast<M&>(matrices_->matrices().coarsest().getRedistributed()),
-                                                          *scalarProduct_,
-                                                          *coarseSmoother_, 1E-2, 1000, 0));
-                    else
-                      solver_.reset();
-                  }else
-                  {
-                    solver_.reset(new BiCGSTABSolver<X>(const_cast<M&>(*matrices_->matrices().coarsest()),
-                                                        *scalarProduct_,
-                                                        *coarseSmoother_, 1E-2, 1000, 0));
-                    
-                  }
-              }
-          }
-      }
+      void updateSolver(C& criterion, Operator& /* matrix */, const PI& pinfo);
 
       /**
        * @brief Check whether the coarse solver used is a direct solver.
@@ -326,6 +189,9 @@ namespace Dune
       template<class C>
       void createHierarchies(C& criterion, Operator& matrix,
                              const PI& pinfo);
+
+      void setupCoarseSolver();
+
       /**
        * @brief A struct that holds the context of the current level.
        *
@@ -525,6 +391,27 @@ namespace Dune
 
     template<class M, class X, class S, class PI, class A>
     template<class C>
+    void AMGCPR<M,X,S,PI,A>::updateSolver(C& criterion, Operator& /* matrix */, const PI& pinfo)
+    {
+      Timer watch;
+      smoothers_.reset(new Hierarchy<Smoother,A>);
+      solver_.reset();
+      coarseSmoother_.reset();
+      scalarProduct_.reset();
+      buildHierarchy_= true;
+      coarsesolverconverged = true;
+      smoothers_.reset(new Hierarchy<Smoother,A>);
+      matrices_->recalculateGalerkin(NegateSet<typename PI::OwnerSet>());
+      matrices_->coarsenSmoother(*smoothers_, smootherArgs_);
+      setupCoarseSolver();
+      if (verbosity_>0 && matrices_->parallelInformation().finest()->communicator().rank()==0) {
+        std::cout << "Recalculating galerkin and coarse somothers "<< matrices_->maxlevels() << " levels "
+                  << watch.elapsed() << " seconds." << std::endl;
+      }
+    }
+
+    template<class M, class X, class S, class PI, class A>
+    template<class C>
     void AMGCPR<M,X,S,PI,A>::createHierarchies(C& criterion, Operator& matrix,
                                             const PI& pinfo)
     {
@@ -541,6 +428,100 @@ namespace Dune
                  <<"(inclusive coarse solver) took "<<watch.elapsed()<<" seconds."<<std::endl;
     }
 
+    template<class M, class X, class S, class PI, class A>
+    void AMGCPR<M,X,S,PI,A>::setupCoarseSolver()
+    {
+      // test whether we should solve on the coarse level. That is the case if we
+      // have that level and if there was a redistribution on this level then our
+      // communicator has to be valid (size()>0) as the smoother might try to communicate
+      // in the constructor.
+      if(buildHierarchy_ && matrices_->levels()==matrices_->maxlevels()
+         && ( ! matrices_->redistributeInformation().back().isSetup() ||
+              matrices_->parallelInformation().coarsest().getRedistributed().communicator().size() ) )
+      {
+        // We have the carsest level. Create the coarse Solver
+        SmootherArgs sargs(smootherArgs_);
+        sargs.iterations = 1;
+
+        typename ConstructionTraits<Smoother>::Arguments cargs;
+        cargs.setArgs(sargs);
+        if(matrices_->redistributeInformation().back().isSetup()) {
+          // Solve on the redistributed partitioning
+          cargs.setMatrix(matrices_->matrices().coarsest().getRedistributed().getmat());
+          cargs.setComm(matrices_->parallelInformation().coarsest().getRedistributed());
+        }else{
+          cargs.setMatrix(matrices_->matrices().coarsest()->getmat());
+          cargs.setComm(*matrices_->parallelInformation().coarsest());
+        }
+
+        coarseSmoother_.reset(ConstructionTraits<Smoother>::construct(cargs));
+        scalarProduct_ = createScalarProduct<X>(cargs.getComm(),category());
+
+        typedef DirectSolverSelector< typename M::matrix_type, X > SolverSelector;
+
+        // Use superlu if we are purely sequential or with only one processor on the coarsest level.
+        if( SolverSelector::isDirectSolver &&
+            (std::is_same<ParallelInformation,SequentialInformation>::value // sequential mode
+           || matrices_->parallelInformation().coarsest()->communicator().size()==1 //parallel mode and only one processor
+           || (matrices_->parallelInformation().coarsest().isRedistributed()
+               && matrices_->parallelInformation().coarsest().getRedistributed().communicator().size()==1
+               && matrices_->parallelInformation().coarsest().getRedistributed().communicator().size()>0) )
+          )
+        { // redistribute and 1 proc
+          if(matrices_->parallelInformation().coarsest().isRedistributed())
+          {
+            if(matrices_->matrices().coarsest().getRedistributed().getmat().N()>0)
+            {
+              // We are still participating on this level
+              solver_.reset(SolverSelector::create(matrices_->matrices().coarsest().getRedistributed().getmat(), false, false));
+            }
+            else
+              solver_.reset();
+          }
+          else
+          {
+            solver_.reset(SolverSelector::create(matrices_->matrices().coarsest()->getmat(), false, false));
+          }
+          if(verbosity_>0 && matrices_->parallelInformation().coarsest()->communicator().rank()==0)
+            std::cout<< "Using a direct coarse solver (" << SolverSelector::name() << ")" << std::endl;
+        }
+        else
+        {
+          if(matrices_->parallelInformation().coarsest().isRedistributed())
+          {
+            if(matrices_->matrices().coarsest().getRedistributed().getmat().N()>0)
+              // We are still participating on this level
+
+              // we have to allocate these types using the rebound allocator
+              // in order to ensure that we fulfill the alignement requirements
+              solver_.reset(new BiCGSTABSolver<X>(const_cast<M&>(matrices_->matrices().coarsest().getRedistributed()),
+                                                  *scalarProduct_,
+                                                  *coarseSmoother_, 1E-2, 1000, 0));
+            else
+              solver_.reset();
+          }else
+          {
+              solver_.reset(new BiCGSTABSolver<X>(const_cast<M&>(*matrices_->matrices().coarsest()),
+                  *scalarProduct_,
+                  *coarseSmoother_, 1E-2, 1000, 0));
+            // // we have to allocate these types using the rebound allocator
+            // // in order to ensure that we fulfill the alignement requirements
+            // using Alloc = typename A::template rebind<BiCGSTABSolver<X>>::other;
+            // Alloc alloc;
+            // auto p = alloc.allocate(1);
+            // alloc.construct(p,
+            //   const_cast<M&>(*matrices_->matrices().coarsest()),
+            //   *scalarProduct_,
+            //   *coarseSmoother_, 1E-2, 1000, 0);
+            // solver_.reset(p,[](BiCGSTABSolver<X>* p){
+            //     Alloc alloc;
+            //     alloc.destroy(p);
+            //     alloc.deallocate(p,1);
+            //   });
+          }
+        }
+      }
+    }
 
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::pre(Domain& x, Range& b)
