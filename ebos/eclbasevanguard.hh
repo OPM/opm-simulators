@@ -31,6 +31,10 @@
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/GridHelpers.hpp>
+#include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
+
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
@@ -316,6 +320,11 @@ public:
         asImp_().filterConnections_();
         asImp_().updateOutputDir_();
         asImp_().finalizeInit_();
+
+        if (enableExperiments) {
+            Opm::RelpermDiagnostics relpermDiagnostics;
+            relpermDiagnostics.diagnosis(*internalEclState_, *internalDeck_, asImp_().grid());
+        }
     }
 
     /*!
