@@ -274,7 +274,11 @@ namespace Opm
 	      //SuperClass::solve(linearOperator, x, istlb, *sp, *amg, result);
 	      //references seems to do something els than refering
 	      
-	      int verbosity_linsolve = ( this->isIORank_ ) ? this->parameters_.linear_solver_verbosity_ : 0;
+              int verbosity_linsolve = 0;
+              if (comm.communicator().rank() == 0) {
+                  verbosity_linsolve = this->parameters_.linear_solver_verbosity_;
+              }
+
 	      LinearOperator& opASerialRef = *opASerial_;	      
 	      linsolve_.reset(new Dune::BiCGSTABSolver<Vector>(opASerialRef, *sp_, *amg_,
 						    this->parameters_.linear_solver_reduction_,
