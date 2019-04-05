@@ -971,14 +971,15 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computePerfRate(const IntensiveQuantities& int_quants,
-                    const std::vector<EvalWell>& mob_perfcells,
-                    const int seg,
-                    const int perf,
-                    const EvalWell& segment_pressure,
-                    const bool& allow_cf,
-                    std::vector<EvalWell>& cq_s,
-                    Opm::DeferredLogger& deferred_logger) const
+    computePerfRatePressure(const IntensiveQuantities& int_quants,
+                            const std::vector<EvalWell>& mob_perfcells,
+                            const int seg,
+                            const int perf,
+                            const EvalWell& segment_pressure,
+                            const bool& allow_cf,
+                            std::vector<EvalWell>& cq_s,
+                            EvalWell& perf_press,
+                            Opm::DeferredLogger& deferred_logger) const
 
     {
         std::vector<EvalWell> cmix_s(num_components_, 0.0);
@@ -1011,9 +1012,10 @@ namespace Opm
         // pressure difference between the perforation and the grid cell
         const double cell_perf_press_diff = cell_perforation_pressure_diffs_[perf];
 
+        perf_press = pressure_cell + cell_perf_press_diff;
         // Pressure drawdown (also used to determine direction of flow)
         // TODO: not 100% sure about the sign of the seg_perf_press_diff
-        const EvalWell drawdown = (pressure_cell + cell_perf_press_diff) - (segment_pressure + perf_seg_press_diff);
+        const EvalWell drawdown = perf_press - (segment_pressure + perf_seg_press_diff);
 
         // producing perforations
         if ( drawdown > 0.0) {
@@ -1861,7 +1863,15 @@ namespace Opm
                 std::vector<EvalWell> mob(num_components_, 0.0);
                 getMobility(ebosSimulator, perf, mob);
                 std::vector<EvalWell> cq_s(num_components_, 0.0);
-                computePerfRate(int_quants, mob, seg, perf, seg_pressure, allow_cf, cq_s, deferred_logger);
+                EvalWell perf_press;
+                computePerfRatePressure(int_quants, mob, seg, perf, seg_pressure, allow_cf, cq_s, perf_press, deferred_logger);
+
+                // store the perf pressure and rates
+                const int rate_start_offset = (first_perf_ + perf) * number_of_phases_;
+                for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
+                    well_state.perfPhaseRates()[rate_start_offset + ebosCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
+                }
+                well_state.perfPress()[first_perf_ + perf] = perf_press.value();
 
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                     // the cq_s entering mass balance equations need to consider the efficiency factors.
@@ -1877,14 +1887,14 @@ namespace Opm
 
                         // also need to consider the efficiency factor when manipulating the jacobians.
                         duneC_[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + numEq); // intput in transformed matrix
-                        
+
                         // the index name for the D should be eq_idx / pv_idx
                         duneD_[seg][seg][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx + numEq);
                     }
 
                     for (int pv_idx = 0; pv_idx < numEq; ++pv_idx) {
                         // also need to consider the efficiency factor when manipulating the jacobians.
-                        duneB_[seg][cell_idx][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx);   
+                        duneB_[seg][cell_idx][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx);
                     }
                 }
                 // TODO: we should save the perforation pressure and preforation rates?
