@@ -394,7 +394,7 @@ namespace Dune
 
     template<class M, class X, class S, class PI, class A>
     template<class C>
-    void AMGCPR<M,X,S,PI,A>::updateSolver(C& criterion, Operator& /* matrix */, const PI& pinfo)
+    void AMGCPR<M,X,S,PI,A>::updateSolver(C& /* criterion */, Operator& /* matrix */, const PI& /* pinfo */)
     {
       Timer watch;
       smoothers_.reset(new Hierarchy<Smoother,A>);

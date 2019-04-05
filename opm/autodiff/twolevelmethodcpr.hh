@@ -450,9 +450,11 @@ public:
     delete policy_;
     delete coarseSolver_;
   }
-  void updatePreconditioner(FineOperatorType& op,
+
+  void updatePreconditioner(FineOperatorType& /* op */,
                             std::shared_ptr<SmootherType> smoother,
-                            CoarseLevelSolverPolicy& coarsePolicy){
+                            CoarseLevelSolverPolicy& coarsePolicy)
+  {
     //assume new matrix is not reallocated the new precondition should anyway be made
     smoother_ = smoother;
     if (coarseSolver_) {
@@ -465,7 +467,6 @@ public:
       coarseSolver_ = coarsePolicy.createCoarseLevelSolver(*policy_);
     }
   }
-
 
   void pre(FineDomainType& x, FineRangeType& b)
   {
