@@ -408,7 +408,7 @@ private:
         }
 #endif
 
-        void apply(X& x, X& b, double reduction, Dune::InverseOperatorResult& res)
+        void apply(X& x, X& b, double reduction, Dune::InverseOperatorResult& res) override
         {
             DUNE_UNUSED_PARAMETER(reduction);
             DUNE_UNUSED_PARAMETER(res);
@@ -518,7 +518,7 @@ private:
 #endif
         }
 
-        void apply(X& x, X& b, Dune::InverseOperatorResult& res)
+        void apply(X& x, X& b, Dune::InverseOperatorResult& res) override
         {
             return apply(x,b,1e-8,res);
         }
@@ -1022,18 +1022,18 @@ public:
     {}
 
     void pre(typename TwoLevelMethod::FineDomainType& x,
-             typename TwoLevelMethod::FineRangeType& b)
+             typename TwoLevelMethod::FineRangeType& b) override
     {
         twoLevelMethod_.pre(x,b);
     }
 
-    void post(typename TwoLevelMethod::FineDomainType& x)
+    void post(typename TwoLevelMethod::FineDomainType& x) override
     {
         twoLevelMethod_.post(x);
     }
 
     void apply(typename TwoLevelMethod::FineDomainType& v,
-               const typename TwoLevelMethod::FineRangeType& d)
+               const typename TwoLevelMethod::FineRangeType& d) override
     {
         auto scaledD = d;
         Detail::scaleVectorDRS(scaledD, COMPONENT_INDEX, param_, weights_);

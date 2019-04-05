@@ -724,7 +724,7 @@ public:
 
       \copydoc Preconditioner::pre(X&,Y&)
     */
-    virtual void pre (Domain& x, Range& b)
+    virtual void pre (Domain& x, Range& b) override
     {
         DUNE_UNUSED_PARAMETER(x);
         DUNE_UNUSED_PARAMETER(b);
@@ -735,7 +735,7 @@ public:
 
       \copydoc Preconditioner::apply(X&,const Y&)
     */
-    virtual void apply (Domain& v, const Range& d)
+    virtual void apply (Domain& v, const Range& d) override
     {
         Range& md = reorderD(d);
         Domain& mv = reorderV(v);
@@ -806,7 +806,7 @@ public:
 
       \copydoc Preconditioner::post(X&)
     */
-    virtual void post (Range& x)
+    virtual void post (Range& x) override
     {
         DUNE_UNUSED_PARAMETER(x);
     }
