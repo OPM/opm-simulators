@@ -25,8 +25,12 @@
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
+
 #include <vector>
 #include <cassert>
 #include <string>
@@ -276,20 +280,29 @@ namespace Opm
             {
                 // we need to create a trival segment related values to avoid there will be some
                 // multi-segment wells added later.
-                top_segment_index_.reserve(nw);
+                nseg_ = nw;
+                top_segment_index_.resize(nw);
+                seg_number_.resize(nw);
                 for (int w = 0; w < nw; ++w) {
-                    top_segment_index_.push_back(w);
+                    top_segment_index_[w] = w;
+                    seg_number_[w] = 1; // Top segment is segment #1
                 }
                 segpress_ = bhp();
                 segrates_ = wellRates();
             }
         }
 
-        void resize(const Wells* wells, const Schedule& schedule, std::size_t numCells, const PhaseUsage& pu)
+
+        void resize(const Wells* wells, const std::vector<const Well*>& wells_ecl, const Schedule& schedule,
+                    const bool handle_ms_well, const int report_step, const size_t numCells,
+                    const PhaseUsage& pu)
         {
             const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-            const std::vector<const Well*> wells_ecl;
             init(wells, tmp, schedule, wells_ecl, 0, nullptr, pu);
+
+            if (handle_ms_well) {
+                initWellStateMSWell(wells, wells_ecl, report_step, pu, nullptr);
+            }
         }
 
         /// Allocate and initialize if wells is non-null.  Also tries
@@ -448,9 +461,13 @@ namespace Opm
             {
                 // we need to create a trival segment related values to avoid there will be some
                 // multi-segment wells added later.
+                nseg_ = nw;
+                seg_number_.clear();
                 top_segment_index_.reserve(nw);
+                seg_number_.reserve(nw);
                 for (int w = 0; w < nw; ++w) {
                     top_segment_index_.push_back(w);
+                    seg_number_.push_back(1); // Top segment is segment #1
                 }
                 segpress_ = bhp();
                 segrates_ = wellRates();
@@ -575,6 +592,13 @@ namespace Opm
                     }
                 }
                 assert(local_comp_index == this->wells_->well_connpos[ w + 1 ] - this->wells_->well_connpos[ w ]);
+
+                const auto nseg = this->numSegments(w);
+                for (auto seg_ix = 0*nseg; seg_ix < nseg; ++seg_ix) {
+                    const auto seg_no = this->segmentNumber(w, seg_ix);
+                    well.segments[seg_no] =
+                        this->reportSegmentResults(pu, w, seg_ix, seg_no);
+                }
             }
 
             return res;
@@ -582,9 +606,8 @@ namespace Opm
 
 
         /// init the MS well related.
-        template <typename PrevWellState>
         void initWellStateMSWell(const Wells* wells, const std::vector<const Well*>& wells_ecl,
-                                 const int time_step, const PhaseUsage& pu, const PrevWellState& prev_well_state)
+                                 const int time_step, const PhaseUsage& pu, const WellStateFullyImplicitBlackoil* prev_well_state)
         {
             // still using the order in wells
             const int nw = wells->number_of_wells;
@@ -598,6 +621,7 @@ namespace Opm
             segpress_.reserve(nw);
             segrates_.clear();
             segrates_.reserve(nw * numPhases());
+            seg_number_.clear();
 
             nseg_ = 0;
             // in the init function, the well rates and perforation rates have been initialized or copied from prevState
@@ -621,6 +645,7 @@ namespace Opm
                 top_segment_index_.push_back(nseg_);
                 if ( !well_ecl->isMultiSegment(time_step) ) { // not multi-segment well
                     nseg_ += 1;
+                    seg_number_.push_back(1); // Assign single segment (top) as number 1.
                     segpress_.push_back(bhp()[w]);
                     const int np = numPhases();
                     for (int p = 0; p < np; ++p) {
@@ -634,6 +659,9 @@ namespace Opm
                     const int well_nseg = segment_set.size();
                     const int nperf = completion_set.size();
                     nseg_ += well_nseg;
+                    for (auto segID = 0*well_nseg; segID < well_nseg; ++segID) {
+                        this->seg_number_.push_back(segment_set[segID].segmentNumber());
+                    }
                     // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
                     // that is why I think we should use a well model to initialize the WellState here
                     std::vector<std::vector<int>> segment_perforations(well_nseg);
@@ -709,13 +737,13 @@ namespace Opm
             assert(int(segpress_.size()) == nseg_);
             assert(int(segrates_.size()) == nseg_ * numPhases() );
 
-            if (!prev_well_state.wellMap().empty()) {
+            if (prev_well_state && !prev_well_state->wellMap().empty()) {
                 // copying MS well related
-                const auto& end = prev_well_state.wellMap().end();
+                const auto& end = prev_well_state->wellMap().end();
                 const int np = numPhases();
                 for (int w = 0; w < nw; ++w) {
                     const std::string name( wells->name[w] );
-                    const auto& it = prev_well_state.wellMap().find( name );
+                    const auto& it = prev_well_state->wellMap().find( name );
 
                     if (it != end) { // the well is found in the prev_well_state
                         // TODO: the well with same name can change a lot, like they might not have same number of segments
@@ -723,7 +751,7 @@ namespace Opm
                         // for now, we just copy them.
                         const int old_index_well = (*it).second[0];
                         const int new_index_well = w;
-                        const int old_top_segment_index = prev_well_state.topSegmentIndex(old_index_well);
+                        const int old_top_segment_index = prev_well_state->topSegmentIndex(old_index_well);
                         const int new_top_segmnet_index = topSegmentIndex(new_index_well);
                         int number_of_segment = 0;
                         // if it is the last well in list
@@ -734,11 +762,11 @@ namespace Opm
                         }
 
                         for (int i = 0; i < number_of_segment * np; ++i) {
-                            segrates_[new_top_segmnet_index * np + i] = prev_well_state.segRates()[old_top_segment_index * np + i];
+                            segrates_[new_top_segmnet_index * np + i] = prev_well_state->segRates()[old_top_segment_index * np + i];
                         }
 
                         for (int i = 0; i < number_of_segment; ++i) {
-                            segpress_[new_top_segmnet_index + i] = prev_well_state.segPress()[old_top_segment_index + i];
+                            segpress_[new_top_segmnet_index + i] = prev_well_state->segPress()[old_top_segment_index + i];
                         }
                     }
                 }
@@ -931,6 +959,66 @@ namespace Opm
         // Well potentials
         std::vector<double> well_potentials_;
 
+        /// Map segment index to segment number, mostly for MS wells.
+        ///
+        /// Segment number (one-based) of j-th segment in i-th well is
+        /// \code
+        ///    const auto top    = topSegmentIndex(i);
+        ///    const auto seg_No = seg_number_[top + j];
+        /// \end
+        std::vector<int> seg_number_;
+
+        ::Opm::data::Segment
+        reportSegmentResults(const PhaseUsage& pu,
+                             const int         well_id,
+                             const int         seg_ix,
+                             const int         seg_no) const
+        {
+            auto seg_res = ::Opm::data::Segment{};
+
+            const auto seg_dof =
+                this->topSegmentIndex(well_id) + seg_ix;
+
+            const auto* rate =
+                &this->segRates()[seg_dof * this->numPhases()];
+
+            seg_res.pressure = this->segPress()[seg_dof];
+
+            if (pu.phase_used[Water]) {
+                seg_res.rates.set(data::Rates::opt::wat,
+                                  rate[pu.phase_pos[Water]]);
+            }
+
+            if (pu.phase_used[Oil]) {
+                seg_res.rates.set(data::Rates::opt::oil,
+                                  rate[pu.phase_pos[Oil]]);
+            }
+
+            if (pu.phase_used[Gas]) {
+                seg_res.rates.set(data::Rates::opt::gas,
+                                  rate[pu.phase_pos[Gas]]);
+            }
+
+            seg_res.segNumber = seg_no;
+
+            return seg_res;
+        }
+
+        int numSegments(const int well_id) const
+        {
+            const auto topseg = this->topSegmentIndex(well_id);
+
+            return (well_id + 1 == this->numWells()) // Last well?
+                ? (this->numSegment() - topseg)
+                : (this->topSegmentIndex(well_id + 1) - topseg);
+        }
+
+        int segmentNumber(const int well_id, const int seg_id) const
+        {
+            const auto top_offset = this->topSegmentIndex(well_id);
+
+            return this->seg_number_[top_offset + seg_id];
+        }
     };
 
 } // namespace Opm
