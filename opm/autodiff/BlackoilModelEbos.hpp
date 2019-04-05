@@ -297,15 +297,17 @@ namespace Opm {
                 // equations
                 wellModel().linearize(ebosSimulator().model().linearizer().jacobian(),
                                       ebosSimulator().model().linearizer().residual());
-		linear_solve_setup_time_ = 0.0;
+
+                // Solve the linear system.
+                linear_solve_setup_time_ = 0.0;
                 try {
                     solveJacobianSystem(x);
-		    report.linear_solve_setup_time += linear_solve_setup_time_;
+                    report.linear_solve_setup_time += linear_solve_setup_time_;
                     report.linear_solve_time += perfTimer.stop();
                     report.total_linear_iterations += linearIterationsLastSolve();
                 }
                 catch (...) {
-		    report.linear_solve_setup_time += linear_solve_setup_time_;
+                    report.linear_solve_setup_time += linear_solve_setup_time_;
                     report.linear_solve_time += perfTimer.stop();
                     report.total_linear_iterations += linearIterationsLastSolve();
 
@@ -475,10 +477,10 @@ namespace Opm {
             x = 0.0;
 
             auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
-	    Dune::Timer perfTimer;
+            Dune::Timer perfTimer;
             perfTimer.start();
             ebosSolver.prepare(ebosJac, ebosResid);
-	    linear_solve_setup_time_ = perfTimer.stop();
+            linear_solve_setup_time_ = perfTimer.stop();
             ebosSolver.setResidual(ebosResid);
             // actually, the error needs to be calculated after setResidual in order to
             // account for parallelization properly. since the residual of ECFV
