@@ -78,40 +78,29 @@ namespace Detail
 {
 
 /**
- * \brief Creates a MatrixAdapter as an operator
- *
- * The first argument is used to specify the return type using function overloading.
- * \param matrix The matrix to wrap.
- */
-template<class M, class X, class Y, class T>
-Dune::MatrixAdapter<M,X,Y> createOperator(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
-{
-    return Dune::MatrixAdapter<M,X,Y>(matrix);
-}
-
-/**
  * \brief Creates a MatrixAdapter as an operator, storing it in a unique_ptr.
  *
  * The first argument is used to specify the return type using function overloading.
  * \param matrix The matrix to wrap.
  */
 template<class M, class X, class Y, class T>
-std::unique_ptr< Dune::MatrixAdapter<M,X,Y> > createOperatorPtr(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
+std::unique_ptr< Dune::MatrixAdapter<M,X,Y> >
+createOperator(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
 {
     return std::make_unique< Dune::MatrixAdapter<M,X,Y> >(matrix);
 }
 /**
- * \brief Creates an OverlappingSchwarzOperator as an operator.
+ * \brief Creates an OverlappingSchwarzOperator as an operator, storing it in a unique_ptr.
  *
  * The first argument is used to specify the return type using function overloading.
  * \param matrix The matrix to wrap.
  * \param comm The object encapsulating the parallelization information.
  */
 template<class M, class X, class Y, class T>
-Dune::OverlappingSchwarzOperator<M,X,Y,T> createOperator(const Dune::OverlappingSchwarzOperator<M,X,Y,T>&,
-                                                         const M& matrix, const T& comm)
+std::unique_ptr< Dune::OverlappingSchwarzOperator<M,X,Y,T> >
+createOperator(const Dune::OverlappingSchwarzOperator<M,X,Y,T>&, const M& matrix, const T& comm)
 {
-    return Dune::OverlappingSchwarzOperator<M,X,Y,T>(matrix, comm);
+    return std::make_unique< Dune::OverlappingSchwarzOperator<M,X,Y,T> >(matrix, comm);
 }
 
 //! \brief Applies diagonal scaling to the discretization Matrix (Scheichl, 2003)
@@ -122,10 +111,9 @@ Dune::OverlappingSchwarzOperator<M,X,Y,T> createOperator(const Dune::Overlapping
 //! \param comm The communication objecte describing the data distribution.
 //! \param pressureEqnIndex The index of the pressure in the matrix block
 //! \retun A pair of the scaled matrix and the associated operator-
-template<class Operator, class Communication, class Vector>
-std::tuple<std::unique_ptr<typename Operator::matrix_type>, Operator>
-scaleMatrixDRS(const Operator& op, const Communication& comm,
-               std::size_t pressureEqnIndex, const Vector& weights, const Opm::CPRParameter& param)
+template<class Operator, class Vector>
+std::unique_ptr<typename Operator::matrix_type>
+scaleMatrixDRS(const Operator& op, std::size_t pressureEqnIndex, const Vector& weights, const Opm::CPRParameter& param)
 {
     using Matrix = typename Operator::matrix_type;
     using Block = typename Matrix::block_type;
@@ -144,7 +132,7 @@ scaleMatrixDRS(const Operator& op, const Communication& comm,
             }
         }
     }
-    return std::make_tuple(std::move(matrix), createOperator(op, *matrix, comm));
+    return matrix;
 }
 
 //! \brief Applies diagonal scaling to the discretization Matrix (Scheichl, 2003)
@@ -1011,13 +999,13 @@ public:
                 const SmootherArgs& smargs, const Communication& comm)
         : param_(param),
           weights_(weights),
-          scaledMatrixOperator_(Detail::scaleMatrixDRS(fineOperator, comm,
-                                                       COMPONENT_INDEX, weights, param)),
-          smoother_(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
+          scaledMatrix_(Detail::scaleMatrixDRS(fineOperator, COMPONENT_INDEX, weights, param)),
+          scaledMatrixOperator_(Detail::createOperator(fineOperator, *scaledMatrix_, comm)),
+          smoother_(Detail::constructSmoother<Smoother>(*scaledMatrixOperator_,
                                                         smargs, comm)),
           levelTransferPolicy_(criterion, comm, param.cpr_pressure_aggregation_),
           coarseSolverPolicy_(&param, smargs, criterion),
-          twoLevelMethod_(std::get<1>(scaledMatrixOperator_), smoother_,
+          twoLevelMethod_(*scaledMatrixOperator_, smoother_,
                           levelTransferPolicy_, coarseSolverPolicy_, 0, 1)
     {}
 
@@ -1042,7 +1030,8 @@ public:
 private:
     const CPRParameter& param_;
     const typename TwoLevelMethod::FineDomainType& weights_;
-    std::tuple<std::unique_ptr<Matrix>, Operator> scaledMatrixOperator_;
+    std::unique_ptr<Matrix> scaledMatrix_;
+    std::unique_ptr<Operator> scaledMatrixOperator_;
     std::shared_ptr<Smoother> smoother_;
     LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;
