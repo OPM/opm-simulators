@@ -3,6 +3,9 @@
 #ifndef DUNE_ISTL_TWOLEVELMETHODCPR_HH
 #define DUNE_ISTL_TWOLEVELMETHODCPR_HH
 
+// NOTE: This file is a modified version of dune/istl/paamg/twolevelmethod.hh from
+// dune-istl release 2.6.0. Modifications have been kept as minimal as possible.
+
 #include <tuple>
 
 #include<dune/istl/operators.hh>
@@ -119,9 +122,10 @@ public:
    */
   virtual void createCoarseLevelSystem(const FineOperatorType& fineOperator)=0;
 
-  //template<class M>
+  /**
+   * @brief ???.
+   */
   virtual void calculateCoarseEntries(const FineOperatorType& fineOperator) = 0;
-  //virtual void recalculateGalerkin(FineOperatorType& fineOperator)=0;
 
   /** @brief Clone the current object. */
   virtual LevelTransferPolicyCpr* clone() const =0;
@@ -202,7 +206,7 @@ public:
     this->rhs_.resize(this->matrix_->N());
     this->operator_.reset(new O(*matrix_));
   }
- 
+
   void moveToCoarseLevel(const typename FatherType::FineRangeType& fineRhs)
   {
     Transfer<std::size_t,typename FatherType::FineRangeType,ParallelInformation>
@@ -264,7 +268,7 @@ public:
   : coarseOperator_(other.coarseOperator_), smootherArgs_(other.smootherArgs_),
     criterion_(other.criterion_)
   {}
- private:
+private:
   /**
    * @brief A wrapper that makes an inverse operator out of AMG.
    *
@@ -341,10 +345,7 @@ public:
     return inv; //std::shared_ptr<InverseOperator<X,X> >(inv);
 
   }
-  //void recalculateGalerkin(){//coarseOperator){
-    //coarseOperator_.resetOperator
-    //coarseOperator_.recalculateHierarchy();
-  //}
+
 private:
   /** @brief The coarse level operator. */
   std::shared_ptr<Operator> coarseOperator_;
@@ -423,10 +424,10 @@ public:
    * @param preSteps The number of smoothing steps to apply after the coarse
    * level correction.
    */
-  TwoLevelMethodCpr(FineOperatorType& op,
+  TwoLevelMethodCpr(const FineOperatorType& op,
                     std::shared_ptr<SmootherType> smoother,
                     const LevelTransferPolicyCpr<FineOperatorType,
-                    CoarseOperatorType>& policy,
+                                                 CoarseOperatorType>& policy,
                     CoarseLevelSolverPolicy& coarsePolicy,
                     std::size_t preSteps=1, std::size_t postSteps=1)
     : operator_(&op), smoother_(smoother),
@@ -434,7 +435,7 @@ public:
   {
     policy_ = policy.clone();
     policy_->createCoarseLevelSystem(*operator_);
-    coarseSolver_= coarsePolicy.createCoarseLevelSolver(*policy_);
+    coarseSolver_=coarsePolicy.createCoarseLevelSolver(*policy_);
   }
 
   TwoLevelMethodCpr(const TwoLevelMethodCpr& other)
@@ -453,36 +454,29 @@ public:
                             std::shared_ptr<SmootherType> smoother,
                             CoarseLevelSolverPolicy& coarsePolicy){
     //assume new matrix is not reallocated the new precondition should anyway be made
-    //operator_ = &op;// hope fine scale operator is the same
-    smoother_ = smoother;    
-    if(not(coarseSolver_ == 0)){
-      //delete coarseSolver_;
-      //std::cout << " Only rebuild hirarchy " << std::endl;
-      //policy_->createCoarseLevelSystem(*operator_);
+    smoother_ = smoother;
+    if (coarseSolver_) {
       policy_->calculateCoarseEntries(*operator_);
-      //policy_->calculateCoarseEntries(7);
       coarsePolicy.setCoarseOperator(*policy_);
-      //delete coarseSolver_;
-      //coarseSolver_ = coarsePolicy.createCoarseLevelSolver(*policy_);  
       coarseSolver_->updateAmgPreconditioner(*(policy_->getCoarseLevelOperator()));
-    }else{
+    } else {
       // we should probably not be heere
       policy_->createCoarseLevelSystem(*operator_);
-      coarseSolver_ = coarsePolicy.createCoarseLevelSolver(*policy_);  
-    }        
+      coarseSolver_ = coarsePolicy.createCoarseLevelSolver(*policy_);
+    }
   }
-                            
+
 
   void pre(FineDomainType& x, FineRangeType& b)
   {
     smoother_->pre(x,b);
   }
-  
+
   void post(FineDomainType& x)
   {
     DUNE_UNUSED_PARAMETER(x);
   }
-  
+
   void apply(FineDomainType& v, const FineRangeType& d)
   {
     FineDomainType u(v);
@@ -548,7 +542,7 @@ private:
      */
     const FineOperatorType* matrix;
   };
-  FineOperatorType* operator_;
+  const FineOperatorType* operator_;
   /** @brief The coarse level solver. */
   CoarseLevelSolver* coarseSolver_;
   /** @brief The fine level smoother. */
