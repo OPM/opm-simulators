@@ -295,14 +295,15 @@ namespace Opm
         // basically Q_p / \sigma_p Q_p
         EvalWell surfaceVolumeFraction(const int seg, const int comp_idx) const;
 
-        void computePerfRate(const IntensiveQuantities& int_quants,
-                             const std::vector<EvalWell>& mob_perfcells,
-                             const int seg,
-                             const int perf,
-                             const EvalWell& segment_pressure,
-                             const bool& allow_cf,
-                             std::vector<EvalWell>& cq_s,
-                             Opm::DeferredLogger& deferred_logger) const;
+        void computePerfRatePressure(const IntensiveQuantities& int_quants,
+                                     const std::vector<EvalWell>& mob_perfcells,
+                                     const int seg,
+                                     const int perf,
+                                     const EvalWell& segment_pressure,
+                                     const bool& allow_cf,
+                                     std::vector<EvalWell>& cq_s,
+                                     EvalWell& perf_press,
+                                     Opm::DeferredLogger& deferred_logger) const;
 
         // convert a Eval from reservoir to contain the derivative related to wells
         EvalWell extendEval(const Eval& in) const;
