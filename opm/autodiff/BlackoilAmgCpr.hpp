@@ -38,7 +38,7 @@
 
 namespace Opm
 {
-
+    /*
     template<class Operator, class Criterion, class Communication, std::size_t COMPONENT_INDEX, std::size_t VARIABLE_INDEX>
     class OneComponentAggregationLevelTransferPolicyCpr
         : public Dune::Amg::LevelTransferPolicyCpr<Operator, typename Detail::ScalarType<Operator>::value>
@@ -182,7 +182,8 @@ namespace Opm
         std::shared_ptr<Communication> coarseLevelCommunication_;
         std::shared_ptr<typename CoarseOperator::matrix_type> coarseLevelMatrix_;
     };
-
+    */
+#if 0
     namespace Detail
     {
         /**
@@ -399,7 +400,7 @@ namespace Opm
 
           
     } // end namespace Detail
-
+#endif // if 0
  
     /**
      * \brief An algebraic twolevel or multigrid approach for solving blackoil (supports CPR with and without AMG)
@@ -442,16 +443,16 @@ namespace Opm
             typename Detail::OneComponentCriterionType<Criterion,COMPONENT_INDEX, VARIABLE_INDEX>::value;
         using CoarseCriterion =  typename Detail::ScalarType<Criterion>::value;
         using LevelTransferPolicy =
-            OneComponentAggregationLevelTransferPolicyCpr<Operator,
-                                                          FineCriterion,
-                                                          Communication,
-                                                          COMPONENT_INDEX,
-                                                          VARIABLE_INDEX>;
+            OneComponentAggregationLevelTransferPolicy<Operator,
+                                                       FineCriterion,
+                                                       Communication,
+                                                       COMPONENT_INDEX,
+                                                       VARIABLE_INDEX>;
         using CoarseSolverPolicy   =
-            Detail::OneStepAMGCoarseSolverPolicyNoSolve<CoarseOperator,
-                                                        CoarseSmoother,
-                                                        CoarseCriterion,
-                                                        LevelTransferPolicy>;
+            Detail::OneStepAMGCoarseSolverPolicy<CoarseOperator,
+                                                 CoarseSmoother,
+                                                 CoarseCriterion,
+                                                 LevelTransferPolicy>;
         using TwoLevelMethod =
             Dune::Amg::TwoLevelMethodCpr<Operator,
                                          CoarseSolverPolicy,
@@ -489,7 +490,7 @@ namespace Opm
               scaledMatrixOperator_(Detail::createOperator(fineOperator, *scaledMatrix_, comm)),
               smoother_(Detail::constructSmoother<Smoother>(*scaledMatrixOperator_,
                                                             smargs, comm)),
-              levelTransferPolicy_(criterion, comm),
+              levelTransferPolicy_(criterion, comm, param.cpr_pressure_aggregation_),
               coarseSolverPolicy_(&param, smargs, criterion),
               twoLevelMethod_(*scaledMatrixOperator_,
                               smoother_,
