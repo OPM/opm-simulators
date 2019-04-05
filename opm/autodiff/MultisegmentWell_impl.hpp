@@ -21,6 +21,7 @@
 
 #include <opm/autodiff/MSWellHelpers.hpp>
 #include <opm/simulators/DeferredLoggingErrorHelpers.hpp>
+#include <sstream>
 
 namespace Opm
 {
@@ -378,6 +379,95 @@ namespace Opm
     }
 
 
+    template<typename TypeTag>
+    std::string
+    MultisegmentWell<TypeTag>::
+    getWellStateInfo(const WellState& well_state, const int well_number, const int decimals) const
+    {
+        std::string wellname = " MultisegmentWell " + name() + ": ";
+        std::string header;
+        for (std::size_t i = 0; i < wellname.length(); i++) {
+            header += "-";
+        }
+        std::string message;
+        message += "|" + header + "|\n";
+        message += "|" + wellname + "|\n";
+        message += "|" + header + "|\n";
+
+        message += " - rate: ";
+        int number_of_phases = well_state.numPhases();
+        for (int p = 0; p < number_of_phases; ++p) {
+            message += to_string_with_precision(well_state.wellRates()[well_number* number_of_phases + p], decimals) + " ";
+        }
+        message += "\n";
+
+        message += " - bhp [bar]: ";
+        message += to_string_with_precision(well_state.bhp()[well_number] / 1.e5, decimals) + "\n";
+
+        int number_of_segments = well_state.numSegment();
+        if (number_of_segments>0) {
+            std::string header;
+            header += " segment number | segment pressure | segment rate ";
+            for (int i = 13; i < number_of_phases*(decimals+8); i++) {
+                header += " ";
+            }
+            message += header;
+            message += "| perforation number | perforation pressure |  perforation rate \n";
+            message += "-------------------------------------------------------------------------------------------------------------------------------------------------\n";
+            int top_segment_index = well_state.topSegmentIndex(well_number);
+            for (int seg = 0; seg < number_of_segments; seg++) {
+                std::string seg_str = std::to_string(seg);
+                message += " " + seg_str;
+                for (std::size_t i = seg_str.length(); i < 15; i++) {
+                    message += " ";
+                }
+                std::string segpres_str = to_string_with_precision(well_state.segPress()[seg + top_segment_index] / 1.e5, decimals);
+                message += "| " + segpres_str;
+                for (std::size_t i = segpres_str.length(); i < 17; i++) {
+                    message += " ";
+                }
+                message += "| ";
+                for (int p = 0; p < number_of_phases; ++p) {
+                    message += to_string_with_precision(well_state.segRates() [(seg + top_segment_index) * number_of_phases + p], decimals) +  " ";
+                }
+                int j=0;
+                if (segment_perforations_[seg].size() == 0 ) {
+                    message += "|\n";
+                } else {
+                    for (const int perf : segment_perforations_[seg]) {
+                        if (j>0) {
+                            for (std::size_t i = 0; i < header.length(); i++) {
+                                message += " ";
+                            }
+                        }
+                        j++;
+
+                        std::string perf_str = std::to_string(perf);
+                        message += "| " + perf_str;
+                        for (std::size_t i = perf_str.length(); i<19; i++) {
+                            message += " ";
+                        }
+
+                        std::string perfpres_str = to_string_with_precision(well_state.perfPress()[perf] / 1.e5, decimals);
+                        message += "| " + perfpres_str;
+                        for (std::size_t i = perfpres_str.length(); i < 21; i++) {
+                            message += " ";
+                        }
+
+                        message += "| ";
+                        for (int p = 0; p < number_of_phases; ++p) {
+                            message += to_string_with_precision(well_state.perfPhaseRates()[(first_perf_ + perf) * number_of_phases + p], decimals) + " ";
+                        }
+                        message += "\n";
+                    }
+                }
+            }
+        } else {
+            message +=" - no segments \n";
+        }
+        message += "\n";
+        return message;
+    }
 
 
 

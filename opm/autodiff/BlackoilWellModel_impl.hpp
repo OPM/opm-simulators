@@ -21,6 +21,7 @@
 */
 
 #include <opm/simulators/DeferredLoggingErrorHelpers.hpp>
+#include <fstream>
 
 namespace Opm {
     template<typename TypeTag>
@@ -29,10 +30,13 @@ namespace Opm {
         : ebosSimulator_(ebosSimulator)
         , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
         , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
+        , well_debug_first_time_(true)
     {
         terminal_output_ = false;
         if (ebosSimulator.gridView().comm().rank() == 0)
             terminal_output_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
+
+        well_debug_verbosity_level_ = EWOMS_GET_PARAM(TypeTag, int, WellDebugVerbosityLevel);
     }
 
     template<typename TypeTag>
@@ -40,6 +44,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     init(const Opm::EclipseState& eclState, const Opm::Schedule& schedule)
     {
+        output_dir_ = ebosSimulator_.vanguard().eclState().getIOConfig().getOutputDir();
+
         gravity_ = ebosSimulator_.problem().gravity()[2];
 
         extractLegacyCellPvtRegionIndex_();
@@ -665,6 +671,39 @@ namespace Opm {
     assemble(const int iterationIdx,
              const double dt)
     {
+
+        if (well_debug_verbosity_level_>0) {
+
+            Opm::DeferredLogger local_msg;
+            int i = 0;
+            for (auto& well : well_container_) {
+                local_msg.debug(well->getWellStateInfo(well_state_, i));
+                i++;
+            }
+
+            Opm::DeferredLogger global_msgs = gatherDeferredLogger(local_msg);
+
+            const auto& cc = Dune::MPIHelper::getCollectiveCommunication();
+            if (cc.rank()==0) {
+                std::ofstream myfile;
+                std::string file = output_dir_ + "/WELLOUTPUT.WDBG";
+                if (well_debug_first_time_) {
+                    myfile.open(file, std::ios::out);
+                    well_debug_first_time_=false;
+                } else {
+                    myfile.open(file, std::ios::out | std::ios::app);
+                }
+                if (myfile.is_open())
+                {
+                    for (const auto msg : global_msgs.getMessages()) {
+                        myfile << msg.text;
+                    }
+                }
+                myfile.close();
+            }
+        }
+
+
 
         last_report_ = SimulatorReport();
 
