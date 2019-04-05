@@ -198,7 +198,7 @@ int main(int argc, char** argv)
             Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
 
             if ( outputCout )
-                Opm::checkDeck(*deck, parser);
+                Opm::checkDeck(*deck, parser, parseContext, errorGuard);
 
             eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
             schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
