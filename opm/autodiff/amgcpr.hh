@@ -3,6 +3,9 @@
 #ifndef DUNE_AMG_AMG_CPR_HH
 #define DUNE_AMG_AMG_CPR_HH
 
+// NOTE: This file is a modified version of dune/istl/paamg/amg.hh from
+// dune-istl release 2.6.0. Modifications have been kept as minimal as possible.
+
 #include <memory>
 #include <dune/common/exceptions.hh>
 #include <dune/istl/paamg/smoother.hh>
