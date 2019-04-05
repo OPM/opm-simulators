@@ -48,7 +48,7 @@ namespace Opm
     template <class TypeTag>
     class ISTLSolverEbosCpr : public ISTLSolverEbos<TypeTag>
     {
-         typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+        typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
         typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
         typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
@@ -65,15 +65,15 @@ namespace Opm
       //typedef typename GridView::template Codim<0>::Entity Element;
       //typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
 
-      enum { pressureEqnIndex = BlackOilDefaultIndexTraits::waterCompIdx };
+        enum { pressureEqnIndex = BlackOilDefaultIndexTraits::waterCompIdx };
         enum { pressureVarIndex = Indices::pressureSwitchIdx };
 
         static const int numEq = Indices::numEq;
-      typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false> OperatorSerial;
-      typedef ISTLSolverEbos<TypeTag> SuperClass;
-      typedef Dune::Amg::SequentialInformation POrComm;
-      //typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
-      typedef Dune::MatrixAdapter<Matrix,Vector, Vector> MatrixAdapter;
+        typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false> OperatorSerial;
+        typedef ISTLSolverEbos<TypeTag> SuperClass;
+        typedef Dune::Amg::SequentialInformation POrComm;
+        //typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
+        typedef Dune::MatrixAdapter<Matrix,Vector, Vector> MatrixAdapter;
       
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)      
       
@@ -89,7 +89,7 @@ namespace Opm
       using CouplingMetric = Opm::Amg::Element<pressureEqnIndex,pressureVarIndex>;
       using CritBase       = Dune::Amg::SymmetricCriterion<Matrix, CouplingMetric>;
       using Criterion      = Dune::Amg::CoarsenCriterion<CritBase>;      
-      typedef BlackoilAmgCpr<MatrixAdapter,CprSmootherFine, CprSmootherCoarse, Criterion, POrComm, pressureEqnIndex, pressureVarIndex> BLACKOILAMG;
+      typedef BlackoilAmgCpr<MatrixAdapter,CprSmootherFine, CprSmootherCoarse, Criterion, POrComm, pressureEqnIndex, pressureVarIndex> BlackoilAmgType;
 
 
     public:
@@ -232,8 +232,8 @@ namespace Opm
 	      //criterion.setGamma(1); //  //1 V cycle 2 WW
 	      
 	      // Since DUNE 2.2 we also need to pass the smoother args instead of steps directly
-	      typedef typename BLACKOILAMG::Smoother Smoother;
-	      typedef typename BLACKOILAMG::Smoother Smoother;
+	      typedef typename BlackoilAmgType::Smoother Smoother;
+	      typedef typename BlackoilAmgType::Smoother Smoother;
 	      typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
 	      SmootherArgs  smootherArgs;
 	      smootherArgs.iterations = 1;
@@ -263,7 +263,7 @@ namespace Opm
 	      }
 	      
 	      if( update_preconditioner or (amg_== 0) ){
-		amg_.reset( new BLACKOILAMG( params, this->weights_, opARef, criterion, smootherArgs, comm ) );
+		amg_.reset( new BlackoilAmgType( params, this->weights_, opARef, criterion, smootherArgs, comm ) );
 	      }else{
 		if(this->parameters_.cpr_solver_verbose_){
 		  std::cout << " Only update amg solver " << std::endl;
@@ -340,8 +340,8 @@ namespace Opm
 #endif
       std::unique_ptr< MatrixAdapter > opA_;
       std::unique_ptr< OperatorSerial > opASerial_;
-      std::unique_ptr< BLACKOILAMG > amg_;
-      SPPointer  sp_;
+      std::unique_ptr< BlackoilAmgType > amg_;
+      SPPointer sp_;
       std::shared_ptr< Dune::BiCGSTABSolver<Vector> > linsolve_;
       //std::shared_ptr< Dune::LinearOperator<Vector,Vector>  > op_;
       //std::shared_ptr< Dune::Preconditioner<Vector,Vector>  > prec_;
