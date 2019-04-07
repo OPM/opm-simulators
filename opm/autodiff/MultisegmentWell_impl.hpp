@@ -1019,7 +1019,7 @@ namespace Opm
         // pressure difference between the perforation and the grid cell
         const double cell_perf_press_diff = cell_perforation_pressure_diffs_[perf];
 
-        perf_press = pressure_cell + cell_perf_press_diff;
+        perf_press = pressure_cell - cell_perf_press_diff;
         // Pressure drawdown (also used to determine direction of flow)
         // TODO: not 100% sure about the sign of the seg_perf_press_diff
         const EvalWell drawdown = perf_press - (segment_pressure + perf_seg_press_diff);
@@ -1945,12 +1945,8 @@ namespace Opm
 
                     for (int pv_idx = 0; pv_idx < numEq; ++pv_idx) {
                         // also need to consider the efficiency factor when manipulating the jacobians.
-                        duneB_[seg][cell_idx][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx);
+                        duneB_[seg][cell_idx][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
                     }
-                    // TODO: we should save the perforation pressure and preforation rates?
-                    // we do not use it in the simulation for now, while we might need them if
-                    // we handle the pressure in SEG mode.
-                    well_state.perfPhaseRates()[(first_perf_ + perf) * number_of_phases_ + ebosCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
                 }
             }
 
