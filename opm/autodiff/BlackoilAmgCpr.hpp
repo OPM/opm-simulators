@@ -136,12 +136,10 @@ namespace Opm
         {
         }
 
-        void updatePreconditioner(const typename TwoLevelMethod::FineDomainType& weights,
-                                  const Operator& fineOperator,
+        void updatePreconditioner(const Operator& fineOperator,
                                   const SmootherArgs& smargs,
                                   const Communication& comm)
         {
-            weights_ = weights;
             *scaledMatrix_ = *Detail::scaleMatrixDRS(fineOperator, COMPONENT_INDEX, weights_, param_);
             smoother_.reset(Detail::constructSmoother<Smoother>(*scaledMatrixOperator_, smargs, comm));
             twoLevelMethod_.updatePreconditioner(*scaledMatrixOperator_,
@@ -170,7 +168,7 @@ namespace Opm
 
     private:
         const CPRParameter& param_;
-        typename TwoLevelMethod::FineDomainType weights_; //make copy
+        const typename TwoLevelMethod::FineDomainType& weights_;
         std::unique_ptr<Matrix> scaledMatrix_;
         std::unique_ptr<Operator> scaledMatrixOperator_;
         std::shared_ptr<Smoother> smoother_;

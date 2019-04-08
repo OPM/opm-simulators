@@ -268,7 +268,7 @@ namespace Opm
 		if(this->parameters_.cpr_solver_verbose_){
 		  std::cout << " Only update amg solver " << std::endl;
 		}
-		amg_->updatePreconditioner(this->weights_,opARef, smootherArgs, comm);
+		amg_->updatePreconditioner(opARef, smootherArgs, comm);
 	      }
 	      // Solve.
 	      //SuperClass::solve(linearOperator, x, istlb, *sp, *amg, result);
