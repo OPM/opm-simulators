@@ -318,6 +318,8 @@ namespace Opm
 
         EvalWell getSegmentRate(const int seg, const int comp_idx) const;
 
+        EvalWell getSegmentRateUpwinding(const int seg, const int comp_idx, const bool upwinding, int& seg_upwind) const;
+
         EvalWell getSegmentGTotal(const int seg) const;
 
         // get the mobility for specific perforation

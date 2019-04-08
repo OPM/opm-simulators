@@ -1283,6 +1283,10 @@ namespace Opm
             segment_densities_[seg] = density / volrat;
 
             // calculate the mass rates
+            // TODO: for now, we are not considering the upwinding for this amount
+            // since how to address the fact that the derivatives is not trivial for now
+            // and segment_mass_rates_ goes a long way with the frictional pressure loss
+            // and accelerational pressure loss, which needs some work to handle
             segment_mass_rates_[seg] = 0.;
             for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 const EvalWell rate = getSegmentRate(seg, comp_idx);
@@ -1314,6 +1318,37 @@ namespace Opm
                    const int comp_idx) const
     {
         return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg, comp_idx);
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getSegmentRateUpwinding(const int seg,
+                            const int comp_idx,
+                            const bool upwinding,
+                            int& seg_upwind) const
+    {
+        // not considering the injectors for now
+
+
+        if ((!upwinding) || (well_type_ == INJECTOR) || (primary_variables_evaluation_[seg][GTotal] <= 0.) ) {
+            seg_upwind = seg; // using the composition from the seg
+            return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg, comp_idx);
+        }
+
+        assert( seg != 0); // if top segment flowing towards the wrong direction, we are not handling it
+
+        // basically here, it a producer and flow is in the injecting direction
+        // we will use the compsotion from the outlet segment
+        const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
+        seg_upwind = outlet_segment_index;
+
+        // TODO: we can refactor above code to use the following return
+        return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg_upwind, comp_idx);
     }
 
 
@@ -1883,8 +1918,7 @@ namespace Opm
                 // for each component
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                     const EvalWell accumulation_term = (segment_surface_volume * surfaceVolumeFraction(seg, comp_idx)
-                                                     - segment_fluid_initial_[seg][comp_idx]) / dt
-                                                     - getSegmentRate(seg, comp_idx);
+                                                     - segment_fluid_initial_[seg][comp_idx]) / dt;
 
                     resWell_[seg][comp_idx] += accumulation_term.value();
                     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -1892,16 +1926,35 @@ namespace Opm
                     }
                 }
             }
+            // considering the contributions due to flowing out from the segment
+            {
+                for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
+                    int seg_upwind = -1;
+                    const EvalWell segment_rate = getSegmentRateUpwinding(seg, comp_idx, true, seg_upwind);
+
+                    assert(seg_upwind >= 0);
+
+                    resWell_[seg][comp_idx] -= segment_rate.value();
+                    duneD_[seg][seg][comp_idx][GTotal] -= segment_rate.derivative(GTotal + numEq);
+                    duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + numEq);
+                    duneD_[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + numEq);
+                    // pressure derivative should be zero
+                }
+            }
 
             // considering the contributions from the inlet segments
             {
                 for (const int inlet : segment_inlets_[seg]) {
                     for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                        const EvalWell inlet_rate = getSegmentRate(inlet, comp_idx);
+                        int seg_upwind = -1;
+                        const EvalWell inlet_rate = getSegmentRateUpwinding(inlet, comp_idx, true, seg_upwind);
+                        assert(seg_upwind >= 0);
+
                         resWell_[seg][comp_idx] += inlet_rate.value();
-                        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                            duneD_[seg][inlet][comp_idx][pv_idx] += inlet_rate.derivative(pv_idx + numEq);
-                        }
+                        duneD_[seg][inlet][comp_idx][GTotal] += inlet_rate.derivative(GTotal + numEq);
+                        duneD_[seg][seg_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + numEq);
+                        duneD_[seg][seg_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + numEq);
+                        // pressure derivative should be zero
                     }
                 }
             }
