@@ -178,6 +178,7 @@ protected:
     template <class TypeTag>
     class ISTLSolverEbos
     {
+    protected:
         typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
         typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
