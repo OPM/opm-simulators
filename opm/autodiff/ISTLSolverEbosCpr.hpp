@@ -95,7 +95,7 @@ namespace Opm
         void prepare(const SparseMatrixAdapter& M, Vector& b)
         {
             int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
-            if( newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_) ) {
+            if (newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_)) {
                 SuperClass::matrix_.reset(new Matrix(M.istlMatrix()));
             } else {
                 *SuperClass::matrix_ = M.istlMatrix();
@@ -106,33 +106,34 @@ namespace Opm
 	  
 #if HAVE_MPI			      	  
             if( this->isParallel() ) {
-                // parallel implemantation si as before
-                // typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true ,TypeTag> Operator;
-			
-                // auto ebosJacIgnoreOverlap = Matrix(*(this->matrix_));
-                // //remove ghost rows in local matrix
-                // this->makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
+#if 0
+                // Copied from superclass.
+                typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true> Operator;
+                auto ebosJacIgnoreOverlap = Matrix(*(this->matrix_));
+                //remove ghost rows in local matrix
+                this->makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
 	      
-                // //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
-                // //to be certain that correct matrix is used for preconditioning.
-                // Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel,
-                // 		   this->parallelInformation_ );
-                // assert( opA.comm() );
-                // //SuperClass::solve( opA, x, *(this->rhs_), *(opA.comm()) );
-                // typedef Dune::OwnerOverlapCopyCommunication<int,int>& comm = *(opA.comm());
-                // const size_t size = opA.getmat().N();
+                //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
+                //to be certain that correct matrix is used for preconditioning.
+                Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel,
+                             this->parallelInformation_ );
+                assert( opA.comm() );
+                //SuperClass::solve( opA, x, *(this->rhs_), *(opA.comm()) );
+                Dune::OwnerOverlapCopyCommunication<int,int>* comm = opA.comm();
+                const size_t size = opA.getmat().N();
 
-                // const ParallelISTLInformation& info =
-                // 	boost::any_cast<const ParallelISTLInformation&>( this->parallelInformation_);
+                const ParallelISTLInformation& info =
+                	boost::any_cast<const ParallelISTLInformation&>( this->parallelInformation_);
 
-                // // As we use a dune-istl with block size np the number of components
-                // // per parallel is only one.
-                // info.copyValuesTo(comm.indexSet(), comm.remoteIndices(),
-                // 			size, 1);
-                // // Construct operator, scalar product and vectors needed.
-                // Dune::InverseOperatorResult result;
-                // SuperClass::constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, x, *(this->rhs_), comm, result);
-                // SuperClass::checkConvergence(result);
+                // As we use a dune-istl with block size np the number of components
+                // per parallel is only one.
+                info.copyValuesTo(comm->indexSet(), comm.remoteIndices(),
+                			size, 1);
+                // Construct operator, scalar product and vectors needed.
+                Dune::InverseOperatorResult result;
+                SuperClass::constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, x, *(this->rhs_), *comm, result);
+                SuperClass::checkConvergence(result);
+#endif // if 0
 
             } else
 #endif	    
@@ -156,7 +157,7 @@ namespace Opm
 #endif 
                 Vector& istlb = *(this->rhs_);
                 parallelInformation_arg.copyOwnerToAll(istlb, istlb);
-		
+
                 if( ! std::is_same< LinearOperator, MatrixAdapter > :: value ) {
                     // create new operator in case linear operator and matrix operator differ
                     opA_.reset( new MatrixAdapter( opASerial_->getmat()));//, parallelInformation_arg ) );
@@ -168,10 +169,10 @@ namespace Opm
                 POrComm& comm = parallelInformation_arg;
                 const int verbosity    = ( this->parameters_.cpr_solver_verbose_ &&
                                            comm.communicator().rank()==0 ) ? 1 : 0;
-	      
+
                 // TODO: revise choice of parameters
-                //int coarsenTarget=4000;
-                int coarsenTarget=1200;
+                // int coarsenTarget = 4000;
+                int coarsenTarget = 1200;
                 Criterion criterion(15, coarsenTarget);
                 criterion.setDebugLevel( this->parameters_.cpr_solver_verbose_ ); // no debug information, 1 for printing hierarchy information
                 criterion.setDefaultValuesIsotropic(2);
@@ -181,7 +182,7 @@ namespace Opm
                 //criterion.setAlpha(0.01); // criterion for connection strong 1/3 is default
                 //criterion.setMaxLevel(2); //
                 //criterion.setGamma(1); //  //1 V cycle 2 WW
-	      
+
                 // Since DUNE 2.2 we also need to pass the smoother args instead of steps directly
                 typedef typename BlackoilAmgType::Smoother Smoother;
                 typedef typename BlackoilAmgType::Smoother Smoother;
@@ -254,7 +255,7 @@ namespace Opm
             }
 	    return this->converged_;
         }
-	
+
 
     protected:
 
