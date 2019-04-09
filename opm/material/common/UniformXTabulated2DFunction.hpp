@@ -41,10 +41,6 @@
 #include <cassert>
 
 namespace Opm {
-
-
-
-
 /*!
  * \brief Implements a scalar function that depends on two variables and which is sampled
  *        uniformly in the X direction, but non-uniformly on the Y axis-
@@ -63,19 +59,21 @@ public:
     /*!
      * \brief Indicates how interpolation will be performed.
      *
-     *        Normal interpolation is done by interpolating vertically
-     *        between lines of sample points, whereas LeftExtreme or
-     *        RightExtreme implies guided interpolation, where
-     *        interpolation is done parallel to a guide line. With
-     *        LeftExtreme the lowest Y values will be used for the guide,
-     *        and the guide line slope extends unchanged to infinity. With
-     *        RightExtreme, the highest Y values are used, and the slope
-     *        decreases linearly down to 0 (normal interpolation) for y <= 0.
+     * Normal interpolation is done by interpolating vertically between lines of sample
+     * points, whereas LeftExtreme or RightExtreme implies guided interpolation, where
+     * interpolation is done parallel to a guide line. With LeftExtreme the lowest Y
+     * values will be used for the guide, and the guide line slope extends unchanged to
+     * infinity. With RightExtreme, the highest Y values are used, and the slope
+     * decreases linearly down to 0 (normal interpolation) for y <= 0.
      */
-    enum class InterpolationPolicy { LeftExtreme, RightExtreme, Vertical };
+    enum InterpolationPolicy {
+        LeftExtreme,
+        RightExtreme,
+        Vertical
+    };
 
-    explicit UniformXTabulated2DFunction(const InterpolationPolicy iGuide)
-        : interpGuide_(iGuide)
+    explicit UniformXTabulated2DFunction(const InterpolationPolicy interpolationGuide = Vertical)
+        : interpolationGuide_(interpolationGuide)
     { }
 
     /*!
@@ -306,16 +304,16 @@ public:
         // value as one would get by interpolating along the boundary curve
         // itself.
         Evaluation shift = 0.0;
-        if (interpGuide_ == InterpolationPolicy::Vertical) {
+        if (interpolationGuide_ == InterpolationPolicy::Vertical) {
             // Shift is zero, no need to reset it.
         } else {
             // find upper and lower y value
-            if (interpGuide_ == InterpolationPolicy::LeftExtreme) {
+            if (interpolationGuide_ == InterpolationPolicy::LeftExtreme) {
                 // The domain is above the boundary curve, up to y = infinity.
                 // The shift is therefore the same for all values of y.
                 shift = yPos_[i+1] - yPos_[i];
             } else {
-                assert(interpGuide_ == InterpolationPolicy::RightExtreme);
+                assert(interpolationGuide_ == InterpolationPolicy::RightExtreme);
                 // The domain is below the boundary curve, down to y = 0.
                 // The shift is therefore no longer the the same for all
                 // values of y, since at y = 0 the shift must be zero.
@@ -387,7 +385,7 @@ public:
         Scalar x = iToX(i);
         if (samples_[i].empty() || std::get<1>(samples_[i].back()) < y) {
             samples_[i].push_back(SamplePoint(x, y, value));
-            if (interpGuide_ == InterpolationPolicy::RightExtreme) {
+            if (interpolationGuide_ == InterpolationPolicy::RightExtreme) {
                 yPos_[i] = y;
             }
             return samples_[i].size() - 1;
@@ -395,7 +393,7 @@ public:
         else if (std::get<1>(samples_[i].front()) > y) {
             // slow, but we still don't care...
             samples_[i].insert(samples_[i].begin(), SamplePoint(x, y, value));
-            if (interpGuide_ == InterpolationPolicy::LeftExtreme) {
+            if (interpolationGuide_ == InterpolationPolicy::LeftExtreme) {
                 yPos_[i] = y;
             }
             return 0;
@@ -448,9 +446,7 @@ private:
     std::vector<Scalar> xPos_;
     // the position on the y-axis of the guide point
     std::vector<Scalar> yPos_;
-    InterpolationPolicy interpGuide_;
-
-
+    InterpolationPolicy interpolationGuide_;
 };
 } // namespace Opm
 
