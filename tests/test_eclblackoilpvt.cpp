@@ -132,8 +132,6 @@ static const char* deckString1 =
 template <class Evaluation, class OilPvt, class GasPvt, class WaterPvt>
 void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& waterPvt)
 {
-    typedef typename Opm::MathToolbox<Evaluation> Toolbox;
-
     // we don't want to run this, we just want to make sure that it compiles
     while (0) {
         Evaluation temperature = 273.15 + 20.0;
@@ -141,7 +139,7 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
         Evaluation Rs = 0.0;
         Evaluation Rv = 0.0;
         Evaluation So = 0.5;
-        typename Toolbox::Scalar maxSo = 1.0;
+        Evaluation maxSo = 1.0;
         Evaluation tmp;
 
         /////

@@ -28,8 +28,8 @@
 #define OPM_LIVE_OIL_PVT_HPP
 
 #include <opm/material/Constants.hpp>
-
 #include <opm/material/common/OpmFinal.hpp>
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
@@ -500,14 +500,14 @@ public:
                                              const Evaluation& /*temperature*/,
                                              const Evaluation& pressure,
                                              const Evaluation& oilSaturation,
-                                             Scalar maxOilSaturation) const
+                                             Evaluation maxOilSaturation) const
     {
         Evaluation tmp =
             saturatedGasDissolutionFactorTable_[regionIdx].eval(pressure, /*extrapolate=*/true);
 
         // apply the vaporization parameters for the gas phase (cf. the Eclipse VAPPARS
         // keyword)
-        maxOilSaturation = std::min(maxOilSaturation, Scalar(1.0));
+        maxOilSaturation = Opm::min(maxOilSaturation, Scalar(1.0));
         if (vapPar2_ > 0.0 && maxOilSaturation > 0.01 && oilSaturation < maxOilSaturation) {
             static const Scalar eps = 0.001;
             const Evaluation& So = Opm::max(oilSaturation, eps);

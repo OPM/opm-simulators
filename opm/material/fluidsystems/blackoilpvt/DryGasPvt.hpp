@@ -266,7 +266,7 @@ public:
                                               const Evaluation& /*temperature*/,
                                               const Evaluation& /*pressure*/,
                                               const Evaluation& /*oilSaturation*/,
-                                              Scalar /*maxOilSaturation*/) const
+                                              const Evaluation& /*maxOilSaturation*/) const
     { return 0.0; /* this is dry gas! */ }
 
     /*!
