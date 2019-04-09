@@ -1075,12 +1075,12 @@ namespace Opm {
         try {
             for (const auto& well : well_container_) {
                 // Only compute the well potential when asked for
-                bool needed_for_output = ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
-                                           summaryConfig.hasSummaryKey( "WOPI:" + well->name()) ||
-                                           summaryConfig.hasSummaryKey( "WGPI:" + well->name())) && well->wellType() == INJECTOR) ||
-                                        ((summaryConfig.hasSummaryKey( "WWPP:" + well->name()) ||
-                                                           summaryConfig.hasSummaryKey( "WOPP:" + well->name()) ||
-                                                           summaryConfig.hasSummaryKey( "WGPP:" + well->name())) && well->wellType() == PRODUCER);
+                const bool needed_for_output = ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
+                                                 summaryConfig.hasSummaryKey( "WOPI:" + well->name()) ||
+                                                 summaryConfig.hasSummaryKey( "WGPI:" + well->name())) && well->wellType() == INJECTOR) ||
+                                               ((summaryConfig.hasSummaryKey( "WWPP:" + well->name()) ||
+                                                 summaryConfig.hasSummaryKey( "WOPP:" + well->name()) ||
+                                                 summaryConfig.hasSummaryKey( "WGPP:" + well->name())) && well->wellType() == PRODUCER);
                 if (needed_for_output || wellCollection().requireWellPotentials())
                 {
                     std::vector<double> potentials;

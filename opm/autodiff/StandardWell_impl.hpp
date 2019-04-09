@@ -2313,7 +2313,11 @@ namespace Opm
         }
 
         if (!converged) {
-            OPM_DEFLOG_THROW(std::runtime_error, "Failed in getting converged for the potential calculation for well " << name(), deferred_logger);
+            // TODO: temporary approach to recover the running of prediction case
+            // more sophisicated treatment should be developed to handle the situation in a general way
+            // OPM_DEFLOG_THROW(std::runtime_error, "Failed in getting converged for the potential calculation for well " << name(), deferred_logger);
+            deferred_logger.warning("FAILURE_GETTING_CONVERGED_POTENTIAL",
+                    "Failed in getting converged for the potential calculation for well " + name());
         }
 
         return potentials;
