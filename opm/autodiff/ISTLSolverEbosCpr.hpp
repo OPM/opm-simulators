@@ -116,30 +116,34 @@ namespace Opm
                 if (newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_)) {
                     //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
                     //to be certain that correct matrix is used for preconditioning.
-                    opAParallel_.reset(new OperatorParallel(*(this->matrix_), *(this->matrix_), wellModel,
-                                                            this->parallelInformation_ ));
+                    if( ! comm_ )
+                    {
+                        opAParallel_.reset(new OperatorParallel(*(this->matrix_), *(this->matrix_), wellModel,
+                                                                this->parallelInformation_ ));
+                        comm_ = opAParallel_->comm();
+                        assert(comm_->indexSet().size()==0);
+                        const size_t size = opAParallel_->getmat().N();
+
+                        const ParallelISTLInformation& info =
+                            boost::any_cast<const ParallelISTLInformation&>( this->parallelInformation_);
+
+                        // As we use a dune-istl with block size np the number of components
+                        // per parallel is only one.
+                        info.copyValuesTo(comm_->indexSet(), comm_->remoteIndices(),
+                                          size, 1);
+                    }
+                    else
+                    {
+                        opAParallel_.reset(new OperatorParallel(*(this->matrix_), *(this->matrix_), wellModel,
+                                                                comm_ ));
+                    }
                 }
 
-                typedef  OperatorParallel LinearOperator;
                 using POrComm =  Dune::OwnerOverlapCopyCommunication<int,int>;
-                POrComm* comm = opAParallel_->comm();
-
-                if (newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_)) {
-                    assert(comm->indexSet().size()==0);
-                    const size_t size = opAParallel_->getmat().N();
-
-                    const ParallelISTLInformation& info =
-                	boost::any_cast<const ParallelISTLInformation&>( this->parallelInformation_);
-
-                    // As we use a dune-istl with block size np the number of components
-                    // per parallel is only one.
-                    info.copyValuesTo(comm->indexSet(), comm->remoteIndices(),
-                                      size, 1);
-                }
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 constexpr Dune::SolverCategory::Category category=Dune::SolverCategory::overlapping;
-                auto sp = Dune::createScalarProduct<Vector,POrComm>(*comm, category);
+                auto sp = Dune::createScalarProduct<Vector,POrComm>(*comm_, category);
                 sp_ = std::move(sp);
 #else
                 constexpr int  category = Dune::SolverCategory::overlapping;
@@ -151,13 +155,13 @@ namespace Opm
 
                 using AMGOperator = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, POrComm>;
                 // If clause is always execute as as Linearoperator is WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false|true>;
-                if( ! std::is_same< LinearOperator, AMGOperator > :: value &&
+                if( ! std::is_same< OperatorParallel, AMGOperator > :: value &&
                     ( newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_) ) ) {
                     // create new operator in case linear operator and matrix operator differ
-                    opA_.reset( new AMGOperator( opAParallel_->getmat(), *comm ));
+                    opA_.reset( new AMGOperator( opAParallel_->getmat(), *comm_ ));
                 }
 
-                prepareSolver(*opAParallel_, *comm);
+                prepareSolver(*opAParallel_, *comm_);
 
             } else
 #endif
@@ -308,6 +312,8 @@ namespace Opm
       SPPointer sp_;
       std::shared_ptr< Dune::BiCGSTABSolver<Vector> > linsolve_;
         const void* oldMat;
+        using POrComm =  Dune::OwnerOverlapCopyCommunication<int,int>;
+        std::shared_ptr<POrComm> comm_;
     }; // end ISTLSolver
 
 } // namespace Opm
