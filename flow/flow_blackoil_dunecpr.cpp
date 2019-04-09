@@ -27,8 +27,6 @@
 BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
 NEW_PROP_TAG(FluidState);
-NEW_PROP_TAG(CprSmootherFine);
-NEW_PROP_TAG(CprSmootherCoarse);
 //SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 SET_PROP(EclFlowProblemSimple, FluidState)
     {
@@ -46,33 +44,6 @@ SET_PROP(EclFlowProblemSimple, FluidState)
     public:
 //typedef Opm::BlackOilFluidSystemSimple<Scalar> type;
        typedef Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  Indices::numPhases > type;
-};
-SET_PROP(EclFlowProblemSimple, CprSmootherFine)
-    {
-    private:
-      typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
-      typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-      typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
-      typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
-      typedef Dune::Amg::SequentialInformation POrComm;
-      
-    public:
-      typedef Opm::ParallelOverlappingILU0<Matrix,Vector,Vector, POrComm> type;
-      //typedef Dune::SeqILU0<Matrix,Vector,Vector, POrComm> type;
-};
-
-SET_PROP(EclFlowProblemSimple, CprSmootherCoarse)
-    {
-    private:
-      typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
-      typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-      typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
-      typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
-      typedef Dune::Amg::SequentialInformation POrComm;
-      
-    public:
-      typedef Opm::ParallelOverlappingILU0<Matrix,Vector,Vector, POrComm> type;
-      //typedef Dune::SeqILU0<Matrix,Vector,Vector, POrComm> type;
 };
 
 SET_BOOL_PROP(EclFlowProblemSimple,MatrixAddWellContributions,true);

@@ -24,10 +24,6 @@
 #include <opm/autodiff/BlackoilAmgCpr.hpp>
 #include <utility>
 #include <memory>
-BEGIN_PROPERTIES
-NEW_PROP_TAG(CprSmootherFine);
-NEW_PROP_TAG(CprSmootherCoarse);
-END_PROPERTIES
 
 namespace Opm
 {
@@ -60,23 +56,25 @@ namespace Opm
         enum { pressureVarIndex = SuperClass::pressureVarIndex };
 
         // New properties in this subclass.
-        using CprSmootherFine = typename GET_PROP_TYPE(TypeTag, CprSmootherFine);
-        using CprSmootherCoarse = typename GET_PROP_TYPE(TypeTag, CprSmootherCoarse);
+        using Preconditioner            = Dune::Preconditioner<Vector, Vector>;
+        using MatrixAdapter             = Dune::MatrixAdapter<Matrix,Vector, Vector>;
+
+        using CouplingMetric            = Opm::Amg::Element<pressureEqnIndex,pressureVarIndex>;
+        using CritBase                  = Dune::Amg::SymmetricCriterion<Matrix, CouplingMetric>;
+        using Criterion                 = Dune::Amg::CoarsenCriterion<CritBase>;
+
+        using ParallelMatrixAdapter     = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Dune::OwnerOverlapCopyCommunication<int,int> >;
+        using CprSmootherFine           = Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Dune::Amg::SequentialInformation>;
+        using CprSmootherCoarse         = CprSmootherFine;
+        using BlackoilAmgType           = BlackoilAmgCpr<MatrixAdapter,CprSmootherFine, CprSmootherCoarse, Criterion, Dune::Amg::SequentialInformation,
+                                                 pressureEqnIndex, pressureVarIndex>;
+        using ParallelCprSmootherFine   = Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Dune::OwnerOverlapCopyCommunication<int,int> >;
+        using ParallelCprSmootherCoarse = ParallelCprSmootherFine;
+        using ParallelBlackoilAmgType   = BlackoilAmgCpr<ParallelMatrixAdapter, ParallelCprSmootherFine, ParallelCprSmootherCoarse, Criterion,
+                                                 Dune::OwnerOverlapCopyCommunication<int,int>, pressureEqnIndex, pressureVarIndex>;
 
         using OperatorSerial = WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false>;
-        using POrComm =  Dune::Amg::SequentialInformation;
-        using MatrixAdapter = Dune::MatrixAdapter<Matrix,Vector, Vector>;
-
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
-
-#else
-      static constexpr int category = Dune::SolverCategory::sequential;
-      typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
-#endif
-      using CouplingMetric  = Opm::Amg::Element<pressureEqnIndex,pressureVarIndex>;
-      using CritBase        = Dune::Amg::SymmetricCriterion<Matrix, CouplingMetric>;
-      using Criterion       = Dune::Amg::CoarsenCriterion<CritBase>;
-      using BlackoilAmgType = BlackoilAmgCpr<MatrixAdapter,CprSmootherFine, CprSmootherCoarse, Criterion, POrComm, pressureEqnIndex, pressureVarIndex>;
+        using OperatorParallel = WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true>;
 
     public:
         static void registerParameters()
@@ -88,12 +86,17 @@ namespace Opm
         /// \param[in] parallelInformation In the case of a parallel run
         ///                                with dune-istl the information about the parallelization.
         explicit ISTLSolverEbosCpr(const Simulator& simulator)
-            : SuperClass(simulator)
+            : SuperClass(simulator), oldMat()
         {
+            extractParallelGridInformationToISTL(this->simulator_.vanguard().grid(), this->parallelInformation_);
+            detail::findOverlapRowsAndColumns(this->simulator_.vanguard().grid(), this->overlapRowAndColumns_);
         }
 
         void prepare(const SparseMatrixAdapter& M, Vector& b)
         {
+            if (oldMat != nullptr)
+                std::cout << "old was "<<oldMat<<" new is "<<&M.istlMatrix()<<std::endl;
+            oldMat = &M.istlMatrix();
             int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
             if (newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_)) {
                 SuperClass::matrix_.reset(new Matrix(M.istlMatrix()));
@@ -103,44 +106,68 @@ namespace Opm
             SuperClass::rhs_ = &b;
             SuperClass::scaleSystem();
             const WellModel& wellModel = this->simulator_.problem().wellModel();
-	  
-#if HAVE_MPI			      	  
-            if( this->isParallel() ) {
-#if 0
-                // Copied from superclass.
-                typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true> Operator;
-                auto ebosJacIgnoreOverlap = Matrix(*(this->matrix_));
-                //remove ghost rows in local matrix
-                this->makeOverlapRowsInvalid(ebosJacIgnoreOverlap);
-	      
-                //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
-                //to be certain that correct matrix is used for preconditioning.
-                Operator opA(ebosJacIgnoreOverlap, ebosJacIgnoreOverlap, wellModel,
-                             this->parallelInformation_ );
-                assert( opA.comm() );
-                //SuperClass::solve( opA, x, *(this->rhs_), *(opA.comm()) );
-                Dune::OwnerOverlapCopyCommunication<int,int>* comm = opA.comm();
-                const size_t size = opA.getmat().N();
 
-                const ParallelISTLInformation& info =
+#if HAVE_MPI
+            if( this->isParallel() ) {
+
+                //remove ghost rows in local matrix without doing a copy.
+                this->makeOverlapRowsInvalid(*(this->matrix_));
+
+                if (newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_)) {
+                    //Not sure what actual_mat_for_prec is, so put ebosJacIgnoreOverlap as both variables
+                    //to be certain that correct matrix is used for preconditioning.
+                    opAParallel_.reset(new OperatorParallel(*(this->matrix_), *(this->matrix_), wellModel,
+                                                            this->parallelInformation_ ));
+                }
+
+                typedef  OperatorParallel LinearOperator;
+                using POrComm =  Dune::OwnerOverlapCopyCommunication<int,int>;
+                POrComm* comm = opAParallel_->comm();
+
+                if (newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_)) {
+                    assert(comm->indexSet().size()==0);
+                    const size_t size = opAParallel_->getmat().N();
+
+                    const ParallelISTLInformation& info =
                 	boost::any_cast<const ParallelISTLInformation&>( this->parallelInformation_);
 
-                // As we use a dune-istl with block size np the number of components
-                // per parallel is only one.
-                info.copyValuesTo(comm->indexSet(), comm.remoteIndices(),
-                			size, 1);
-                // Construct operator, scalar product and vectors needed.
-                Dune::InverseOperatorResult result;
-                SuperClass::constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, x, *(this->rhs_), *comm, result);
-                SuperClass::checkConvergence(result);
-#endif // if 0
+                    // As we use a dune-istl with block size np the number of components
+                    // per parallel is only one.
+                    info.copyValuesTo(comm->indexSet(), comm->remoteIndices(),
+                                      size, 1);
+                }
+
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+                constexpr Dune::SolverCategory::Category category=Dune::SolverCategory::overlapping;
+                auto sp = Dune::createScalarProduct<Vector,POrComm>(*comm, category);
+                sp_ = std::move(sp);
+#else
+                constexpr int  category = Dune::SolverCategory::overlapping;
+                typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
+                typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
+                SPPointer sp(ScalarProductChooser::construct(info));
+                sp_ = std::move(sp);
+#endif
+
+                using AMGOperator = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, POrComm>;
+                // If clause is always execute as as Linearoperator is WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false|true>;
+                if( ! std::is_same< LinearOperator, AMGOperator > :: value &&
+                    ( newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_) ) ) {
+                    // create new operator in case linear operator and matrix operator differ
+                    opA_.reset( new AMGOperator( opAParallel_->getmat(), *comm ));
+                }
+
+                prepareSolver(*opAParallel_, *comm);
 
             } else
-#endif	    
+#endif
             {
-                const WellModel& wellModel = this->simulator_.problem().wellModel();
-                opASerial_.reset(new OperatorSerial(*(this->matrix_), *(this->matrix_), wellModel));
-                typedef Dune::Amg::SequentialInformation POrComm;
+
+                if (newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_)) {
+                    opASerial_.reset(new OperatorSerial(*(this->matrix_), *(this->matrix_), wellModel));
+                }
+
+                using POrComm = Dune::Amg::SequentialInformation;
                 POrComm parallelInformation_arg;
                 typedef  OperatorSerial LinearOperator;
 
@@ -154,104 +181,109 @@ namespace Opm
                 typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
                 SPPointer sp(ScalarProductChooser::construct(parallelInformation_arg));
                 sp_ = std::move(sp);
-#endif 
-                Vector& istlb = *(this->rhs_);
-                parallelInformation_arg.copyOwnerToAll(istlb, istlb);
+#endif
 
-                if( ! std::is_same< LinearOperator, MatrixAdapter > :: value ) {
+                // If clause is always execute as as Linearoperator is WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false|true>;
+                if( ! std::is_same< LinearOperator, MatrixAdapter > :: value &&
+                    ( newton_iteration < 1 or not(this->parameters_.cpr_reuse_setup_) ) ) {
                     // create new operator in case linear operator and matrix operator differ
                     opA_.reset( new MatrixAdapter( opASerial_->getmat()));//, parallelInformation_arg ) );
                 }
 
-                const double relax = this->parameters_.ilu_relaxation_;
-                const MILU_VARIANT ilu_milu  = this->parameters_.ilu_milu_;
-                using Matrix         = typename MatrixAdapter::matrix_type;
-                POrComm& comm = parallelInformation_arg;
-                const int verbosity    = ( this->parameters_.cpr_solver_verbose_ &&
-                                           comm.communicator().rank()==0 ) ? 1 : 0;
-
-                // TODO: revise choice of parameters
-                // int coarsenTarget = 4000;
-                int coarsenTarget = 1200;
-                Criterion criterion(15, coarsenTarget);
-                criterion.setDebugLevel( this->parameters_.cpr_solver_verbose_ ); // no debug information, 1 for printing hierarchy information
-                criterion.setDefaultValuesIsotropic(2);
-                criterion.setNoPostSmoothSteps( 1 );
-                criterion.setNoPreSmoothSteps( 1 );
-                //new guesses by hmbn
-                //criterion.setAlpha(0.01); // criterion for connection strong 1/3 is default
-                //criterion.setMaxLevel(2); //
-                //criterion.setGamma(1); //  //1 V cycle 2 WW
-
-                // Since DUNE 2.2 we also need to pass the smoother args instead of steps directly
-                typedef typename BlackoilAmgType::Smoother Smoother;
-                typedef typename BlackoilAmgType::Smoother Smoother;
-                typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
-                SmootherArgs  smootherArgs;
-                smootherArgs.iterations = 1;
-                smootherArgs.relaxationFactor = relax;
-                const Opm::CPRParameter& params(this->parameters_); // strange conversion
-                ISTLUtility::setILUParameters(smootherArgs, ilu_milu);
-	      
-                MatrixAdapter& opARef = *opA_;
-                int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
-                double dt = this->simulator_.timeStepSize();
-                bool update_preconditioner = false;
-	      
-                if (this->parameters_.cpr_reuse_setup_ < 1) {
-                    update_preconditioner = true;
-                }
-                if (this->parameters_.cpr_reuse_setup_ < 2) {
-                    if (newton_iteration < 1) {
-                        update_preconditioner = true;
-                    }
-                }
-                if (this->parameters_.cpr_reuse_setup_ < 3) {
-                    if (this->iterations() > 10) {
-                        update_preconditioner = true;
-                    }
-                }
-	      
-                if ( update_preconditioner or (amg_== 0) ) {
-                    amg_.reset( new BlackoilAmgType( params, this->weights_, opARef, criterion, smootherArgs, comm ) );
-                } else {
-                    if (this->parameters_.cpr_solver_verbose_) {
-                        std::cout << " Only update amg solver " << std::endl;
-                    }
-                    amg_->updatePreconditioner(opARef, smootherArgs, comm);
-                }
-                // Solve.
-                //SuperClass::solve(linearOperator, x, istlb, *sp, *amg, result);
-                //references seems to do something els than refering
-	      
-                int verbosity_linsolve = 0;
-                if (comm.communicator().rank() == 0) {
-                    verbosity_linsolve = this->parameters_.linear_solver_verbosity_;
-                }
-
-                LinearOperator& opASerialRef = *opASerial_;
-                linsolve_.reset(new Dune::BiCGSTABSolver<Vector>(opASerialRef, *sp_, *amg_,
-                                                                 this->parameters_.linear_solver_reduction_,
-                                                                 this->parameters_.linear_solver_maxiter_,
-                                                                 verbosity_linsolve));
+                prepareSolver(*opASerial_, parallelInformation_arg);
             }
         }
-      
+
+        template<typename Operator, typename Comm>
+        void prepareSolver(Operator& wellOpA, Comm& comm)
+        {
+
+            Vector& istlb = *(this->rhs_);
+            comm.copyOwnerToAll(istlb, istlb);
+
+            const double relax = this->parameters_.ilu_relaxation_;
+            const MILU_VARIANT ilu_milu  = this->parameters_.ilu_milu_;
+            using Matrix         = typename MatrixAdapter::matrix_type;
+            const int verbosity    = ( this->parameters_.cpr_solver_verbose_ &&
+                                       comm.communicator().rank()==0 ) ? 1 : 0;
+
+            // TODO: revise choice of parameters
+            // int coarsenTarget = 4000;
+            int coarsenTarget = 1200;
+            Criterion criterion(15, coarsenTarget);
+            criterion.setDebugLevel( this->parameters_.cpr_solver_verbose_ ); // no debug information, 1 for printing hierarchy information
+            criterion.setDefaultValuesIsotropic(2);
+            criterion.setNoPostSmoothSteps( 1 );
+            criterion.setNoPreSmoothSteps( 1 );
+            //new guesses by hmbn
+            //criterion.setAlpha(0.01); // criterion for connection strong 1/3 is default
+            //criterion.setMaxLevel(2); //
+            //criterion.setGamma(1); //  //1 V cycle 2 WW
+
+            // Since DUNE 2.2 we also need to pass the smoother args instead of steps directly
+            using AmgType           = typename std::conditional<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
+                                                                BlackoilAmgType, ParallelBlackoilAmgType>::type;
+            using OperatorType      = typename std::conditional<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
+                                                                MatrixAdapter, ParallelMatrixAdapter>::type;
+            typedef typename AmgType::Smoother Smoother;
+            typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
+            SmootherArgs  smootherArgs;
+            smootherArgs.iterations = 1;
+            smootherArgs.relaxationFactor = relax;
+            const Opm::CPRParameter& params(this->parameters_); // strange conversion
+            ISTLUtility::setILUParameters(smootherArgs, ilu_milu);
+
+            auto& opARef = reinterpret_cast<OperatorType&>(*opA_);
+            int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
+            double dt = this->simulator_.timeStepSize();
+            bool update_preconditioner = false;
+
+            if (this->parameters_.cpr_reuse_setup_ < 1) {
+                update_preconditioner = true;
+            }
+            if (this->parameters_.cpr_reuse_setup_ < 2) {
+                if (newton_iteration < 1) {
+                    update_preconditioner = true;
+                }
+            }
+            if (this->parameters_.cpr_reuse_setup_ < 3) {
+                if (this->iterations() > 10) {
+                    update_preconditioner = true;
+                }
+            }
+
+            if ( update_preconditioner or (amg_== 0) ) {
+                amg_.reset( new AmgType( params, this->weights_, opARef, criterion, smootherArgs, comm ) );
+            } else {
+                if (this->parameters_.cpr_solver_verbose_) {
+                    std::cout << " Only update amg solver " << std::endl;
+                }
+                reinterpret_cast<AmgType*>(amg_.get())->updatePreconditioner(opARef, smootherArgs, comm);
+            }
+            // Solve.
+            //SuperClass::solve(linearOperator, x, istlb, *sp, *amg, result);
+            //references seems to do something els than refering
+
+            int verbosity_linsolve = 0;
+            if (comm.communicator().rank() == 0) {
+                verbosity_linsolve = this->parameters_.linear_solver_verbosity_;
+            }
+
+            linsolve_.reset(new Dune::BiCGSTABSolver<Vector>(wellOpA, *sp_, *amg_,
+                                                             this->parameters_.linear_solver_reduction_,
+                                                             this->parameters_.linear_solver_maxiter_,
+                                                             verbosity_linsolve));
+        }
+
         bool solve(Vector& x)
         {
-            if (this->isParallel()) {
-                // for now only call the superclass
-                bool converged = SuperClass::solve(x);
-                return converged;
-            } else {
-                // Solve system.
-                Dune::InverseOperatorResult result;
-                Vector& istlb = *(this->rhs_);
-                linsolve_->apply(x, istlb, result);
-                SuperClass::checkConvergence(result);
-                if (this->parameters_.scale_linear_system_) {
-                    this->scaleSolution(x);
-                }
+            // Solve system.
+            Dune::InverseOperatorResult result;
+            Vector& istlb = *(this->rhs_);
+            linsolve_->apply(x, istlb, result);
+            SuperClass::checkConvergence(result);
+            if (this->parameters_.scale_linear_system_) {
+                this->scaleSolution(x);
             }
 	    return this->converged_;
         }
@@ -259,21 +291,23 @@ namespace Opm
 
     protected:
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)      
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
       typedef std::shared_ptr< Dune::ScalarProduct<Vector> > SPPointer;
-#else      
+#else
       typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
 #endif
-      std::unique_ptr< MatrixAdapter > opA_;
+      ///! \brief The dune-istl operator (either serial or parallel
+      std::unique_ptr< Dune::LinearOperator<Vector, Vector> > opA_;
+      ///! \brief Serial well matrix adapter
       std::unique_ptr< OperatorSerial > opASerial_;
-      std::unique_ptr< BlackoilAmgType > amg_;
+      ///! \brief Parallel well matrix adapter
+      std::unique_ptr< OperatorParallel > opAParallel_;
+      ///! \brief The preconditoner to use (either serial or parallel CPR with AMG)
+      std::unique_ptr< Preconditioner > amg_;
+        
       SPPointer sp_;
       std::shared_ptr< Dune::BiCGSTABSolver<Vector> > linsolve_;
-      //std::shared_ptr< Dune::LinearOperator<Vector,Vector>  > op_;
-      //std::shared_ptr< Dune::Preconditioner<Vector,Vector>  > prec_;
-      //std::shared_ptr< Dune::ScalarProduct<Vector> > sp_;
-      //Vector solution_;
-      
+        const void* oldMat;
     }; // end ISTLSolver
 
 } // namespace Opm

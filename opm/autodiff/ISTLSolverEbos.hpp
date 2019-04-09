@@ -76,6 +76,7 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 // Implementation for ISTL-matrix based operator
 //=====================================================================
 
+
 /*!
    \brief Adapter to turn a matrix into a linear operator.
 
@@ -167,7 +168,7 @@ public:
 protected:
   const matrix_type& A_ ;
   const matrix_type& A_for_precond_ ;
-  const WellModel& wellMod_;
+  const WellModel& wellMod_;    
   std::unique_ptr< communication_type > comm_;
 };
 
