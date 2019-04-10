@@ -137,11 +137,19 @@ namespace Dune
       /** \copydoc Preconditioner::apply */
       void apply(Domain& v, const Range& d);
 
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
       //! Category of the preconditioner (see SolverCategory::Category)
       virtual SolverCategory::Category category() const
       {
         return category_;
       }
+#else
+      enum {
+            //! \brief The category the preconditioner is part of.
+            category = std::is_same<PI,Dune::Amg::SequentialInformation>::value?
+            Dune::SolverCategory::sequential:Dune::SolverCategory::overlapping
+        };
+#endif
 
       /** \copydoc Preconditioner::post */
       void post(Domain& x);
@@ -299,8 +307,10 @@ namespace Dune
       bool additive;
       bool coarsesolverconverged;
       std::shared_ptr<Smoother> coarseSmoother_;
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
       /** @brief The solver category. */
       SolverCategory::Category category_;
+#endif
       /** @brief The verbosity level. */
       std::size_t verbosity_;
     };
@@ -315,7 +325,9 @@ namespace Dune
       buildHierarchy_(amg.buildHierarchy_),
       additive(amg.additive), coarsesolverconverged(amg.coarsesolverconverged),
       coarseSmoother_(amg.coarseSmoother_),
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
       category_(amg.category_),
+#endif
       verbosity_(amg.verbosity_)
     {
       if(amg.rhs_)
@@ -337,8 +349,10 @@ namespace Dune
         postSteps_(parms.getNoPostSmoothSteps()), buildHierarchy_(false),
         additive(parms.getAdditive()), coarsesolverconverged(true),
         coarseSmoother_(),
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
 // #warning should category be retrieved from matrices?
         category_(SolverCategory::category(*smoothers_->coarsest())),
+#endif
         verbosity_(parms.debugLevel())
     {
       assert(matrices_->isBuilt());
@@ -360,14 +374,15 @@ namespace Dune
         postSteps_(criterion.getNoPostSmoothSteps()), buildHierarchy_(true),
         additive(criterion.getAdditive()), coarsesolverconverged(true),
         coarseSmoother_(),
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
         category_(SolverCategory::category(pinfo)),
+#endif
         verbosity_(criterion.debugLevel())
     {
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
       if(SolverCategory::category(matrix) != SolverCategory::category(pinfo))
         DUNE_THROW(InvalidSolverCategory, "Matrix and Communication must have the same SolverCategory!");
-      // TODO: reestablish compile time checks.
-      //static_assert(static_cast<int>(PI::category)==static_cast<int>(S::category),
-      //             "Matrix and Solver must match in terms of category!");
+#endif
       createHierarchies(criterion, const_cast<Operator&>(matrix), pinfo);
     }
 
@@ -458,7 +473,16 @@ namespace Dune
         }
 
         coarseSmoother_.reset(ConstructionTraits<Smoother>::construct(cargs));
+
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
         scalarProduct_ = createScalarProduct<X>(cargs.getComm(),category());
+#else
+        typedef Dune::ScalarProductChooser<X,ParallelInformation,category>
+          ScalarProductChooser;
+        // the scalar product.
+        scalarProduct_.reset(ScalarProductChooser::construct(cargs.getComm()));
+#endif
+
 
         typedef DirectSolverSelector< typename M::matrix_type, X > SolverSelector;
 
@@ -498,15 +522,23 @@ namespace Dune
               // we have to allocate these types using the rebound allocator
               // in order to ensure that we fulfill the alignement requirements
               solver_.reset(new BiCGSTABSolver<X>(const_cast<M&>(matrices_->matrices().coarsest().getRedistributed()),
-                                                  *scalarProduct_,
+                                                  // Cast needed for Dune <=2.5
+                                                  reinterpret_cast<typename
+                                                                   std::conditional<std::is_same<PI,SequentialInformation>::value,
+                                                                                    Dune::SeqScalarProduct<X>,
+                                                                                    Dune::OverlappingSchwarzScalarProduct<X,PI> >::type&>(*scalarProduct_),
                                                   *coarseSmoother_, 1E-2, 1000, 0));
             else
               solver_.reset();
           }else
           {
               solver_.reset(new BiCGSTABSolver<X>(const_cast<M&>(*matrices_->matrices().coarsest()),
-                  *scalarProduct_,
-                  *coarseSmoother_, 1E-2, 1000, 0));
+                                                  // Cast needed for Dune <=2.5
+                                                  reinterpret_cast<typename
+                                                                   std::conditional<std::is_same<PI,SequentialInformation>::value,
+                                                                                    Dune::SeqScalarProduct<X>,
+                                                                                    Dune::OverlappingSchwarzScalarProduct<X,PI> >::type&>(*scalarProduct_),
+                                                  *coarseSmoother_, 1E-2, 1000, 0));
             // // we have to allocate these types using the rebound allocator
             // // in order to ensure that we fulfill the alignement requirements
             // using Alloc = typename A::template rebind<BiCGSTABSolver<X>>::other;

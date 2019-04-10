@@ -149,7 +149,7 @@ namespace Opm
                 constexpr int  category = Dune::SolverCategory::overlapping;
                 typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
                 typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
-                SPPointer sp(ScalarProductChooser::construct(info));
+                SPPointer sp(ScalarProductChooser::construct(*comm_));
                 sp_ = std::move(sp);
 #endif
 
@@ -227,6 +227,9 @@ namespace Opm
             // Since DUNE 2.2 we also need to pass the smoother args instead of steps directly
             using AmgType           = typename std::conditional<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
                                                                 BlackoilAmgType, ParallelBlackoilAmgType>::type;
+            using SpType            = typename std::conditional<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
+                                                                Dune::SeqScalarProduct<Vector>,
+                                                                Dune::OverlappingSchwarzScalarProduct<Vector, Comm> >::type;
             using OperatorType      = typename std::conditional<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
                                                                 MatrixAdapter, ParallelMatrixAdapter>::type;
             typedef typename AmgType::Smoother Smoother;
@@ -273,7 +276,7 @@ namespace Opm
                 verbosity_linsolve = this->parameters_.linear_solver_verbosity_;
             }
 
-            linsolve_.reset(new Dune::BiCGSTABSolver<Vector>(wellOpA, *sp_, *amg_,
+            linsolve_.reset(new Dune::BiCGSTABSolver<Vector>(wellOpA, reinterpret_cast<SpType&>(*sp_), reinterpret_cast<AmgType&>(*amg_),
                                                              this->parameters_.linear_solver_reduction_,
                                                              this->parameters_.linear_solver_maxiter_,
                                                              verbosity_linsolve));
@@ -295,11 +298,6 @@ namespace Opm
 
     protected:
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
-      typedef std::shared_ptr< Dune::ScalarProduct<Vector> > SPPointer;
-#else
-      typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
-#endif
       ///! \brief The dune-istl operator (either serial or parallel
       std::unique_ptr< Dune::LinearOperator<Vector, Vector> > opA_;
       ///! \brief Serial well matrix adapter
@@ -309,11 +307,12 @@ namespace Opm
       ///! \brief The preconditoner to use (either serial or parallel CPR with AMG)
       std::unique_ptr< Preconditioner > amg_;
         
+      using SPPointer = std::shared_ptr< Dune::ScalarProduct<Vector> >;
       SPPointer sp_;
       std::shared_ptr< Dune::BiCGSTABSolver<Vector> > linsolve_;
-        const void* oldMat;
-        using POrComm =  Dune::OwnerOverlapCopyCommunication<int,int>;
-        std::shared_ptr<POrComm> comm_;
+      const void* oldMat;
+      using POrComm =  Dune::OwnerOverlapCopyCommunication<int,int>;
+      std::shared_ptr<POrComm> comm_;
     }; // end ISTLSolver
 
 } // namespace Opm
