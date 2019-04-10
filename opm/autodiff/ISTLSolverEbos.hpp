@@ -76,6 +76,7 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 // Implementation for ISTL-matrix based operator
 //=====================================================================
 
+
 /*!
    \brief Adapter to turn a matrix into a linear operator.
 
@@ -129,8 +130,16 @@ public:
     }
 #endif
   }
+  WellModelMatrixAdapter (const M& A,
+                          const M& A_for_precond,
+                          const WellModel& wellMod,
+                          std::shared_ptr<communication_type> comm )
+      : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_(comm)
+  {
+  }
 
-  virtual void apply( const X& x, Y& y ) const
+
+  virtual void apply( const X& x, Y& y ) const override
   {
     A_.mv( x, y );
 
@@ -144,7 +153,7 @@ public:
   }
 
   // y += \alpha * A * x
-  virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
+  virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const override
   {
     A_.usmv(alpha,x,y);
 
@@ -157,18 +166,18 @@ public:
 #endif
   }
 
-  virtual const matrix_type& getmat() const { return A_for_precond_; }
+  virtual const matrix_type& getmat() const override { return A_for_precond_; }
 
-  communication_type* comm()
+    std::shared_ptr<communication_type> comm()
   {
-      return comm_.operator->();
+      return comm_;
   }
 
 protected:
   const matrix_type& A_ ;
   const matrix_type& A_for_precond_ ;
-  const WellModel& wellMod_;
-  std::unique_ptr< communication_type > comm_;
+  const WellModel& wellMod_;    
+  std::shared_ptr< communication_type > comm_;
 };
 
     /// This class solves the fully implicit black-oil system by
@@ -178,6 +187,7 @@ protected:
     template <class TypeTag>
     class ISTLSolverEbos
     {
+    protected:
         typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
         typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;

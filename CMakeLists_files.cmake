@@ -118,6 +118,9 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/AquiferCarterTracy.hpp
   opm/autodiff/AquiferFetkovich.hpp
   opm/autodiff/BlackoilAmg.hpp
+  opm/autodiff/BlackoilAmgCpr.hpp
+  opm/autodiff/amgcpr.hh
+  opm/autodiff/twolevelmethodcpr.hh
   opm/autodiff/BlackoilDetails.hpp
   opm/autodiff/BlackoilModelParametersEbos.hpp
   opm/autodiff/BlackoilAquiferModel.hpp
@@ -129,6 +132,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/FlowMainEbos.hpp
   opm/autodiff/GraphColoring.hpp
   opm/autodiff/ISTLSolverEbos.hpp
+  opm/autodiff/ISTLSolverEbosCpr.hpp
   opm/autodiff/IterationReport.hpp
   opm/autodiff/MatrixBlock.hpp
   opm/autodiff/moduleVersion.hpp

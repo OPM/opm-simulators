@@ -23,6 +23,8 @@
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
 #include <opm/autodiff/FlowLinearSolverParameters.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
+#include <opm/autodiff/amgcpr.hh>
+#include <opm/autodiff/twolevelmethodcpr.hh>
 #include <dune/istl/paamg/twolevelmethod.hh>
 #include <dune/istl/paamg/aggregates.hh>
 #include <dune/istl/bvector.hh>
@@ -78,40 +80,30 @@ namespace Detail
 {
 
 /**
- * \brief Creates a MatrixAdapter as an operator
- *
- * The first argument is used to specify the return type using function overloading.
- * \param matrix The matrix to wrap.
- */
-template<class M, class X, class Y, class T>
-Dune::MatrixAdapter<M,X,Y> createOperator(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
-{
-    return Dune::MatrixAdapter<M,X,Y>(matrix);
-}
-
-/**
  * \brief Creates a MatrixAdapter as an operator, storing it in a unique_ptr.
  *
  * The first argument is used to specify the return type using function overloading.
  * \param matrix The matrix to wrap.
  */
 template<class M, class X, class Y, class T>
-std::unique_ptr< Dune::MatrixAdapter<M,X,Y> > createOperatorPtr(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
+std::unique_ptr< Dune::MatrixAdapter<M,X,Y> >
+createOperator(const Dune::MatrixAdapter<M,X,Y>&, const M& matrix, const T&)
 {
     return std::make_unique< Dune::MatrixAdapter<M,X,Y> >(matrix);
 }
+
 /**
- * \brief Creates an OverlappingSchwarzOperator as an operator.
+ * \brief Creates an OverlappingSchwarzOperator as an operator, storing it in a unique_ptr.
  *
  * The first argument is used to specify the return type using function overloading.
  * \param matrix The matrix to wrap.
  * \param comm The object encapsulating the parallelization information.
  */
 template<class M, class X, class Y, class T>
-Dune::OverlappingSchwarzOperator<M,X,Y,T> createOperator(const Dune::OverlappingSchwarzOperator<M,X,Y,T>&,
-                                                         const M& matrix, const T& comm)
+std::unique_ptr< Dune::OverlappingSchwarzOperator<M,X,Y,T> >
+createOperator(const Dune::OverlappingSchwarzOperator<M,X,Y,T>&, const M& matrix, const T& comm)
 {
-    return Dune::OverlappingSchwarzOperator<M,X,Y,T>(matrix, comm);
+    return std::make_unique< Dune::OverlappingSchwarzOperator<M,X,Y,T> >(matrix, comm);
 }
 
 //! \brief Applies diagonal scaling to the discretization Matrix (Scheichl, 2003)
@@ -122,10 +114,9 @@ Dune::OverlappingSchwarzOperator<M,X,Y,T> createOperator(const Dune::Overlapping
 //! \param comm The communication objecte describing the data distribution.
 //! \param pressureEqnIndex The index of the pressure in the matrix block
 //! \retun A pair of the scaled matrix and the associated operator-
-template<class Operator, class Communication, class Vector>
-std::tuple<std::unique_ptr<typename Operator::matrix_type>, Operator>
-scaleMatrixDRS(const Operator& op, const Communication& comm,
-               std::size_t pressureEqnIndex, const Vector& weights, const Opm::CPRParameter& param)
+template<class Operator, class Vector>
+std::unique_ptr<typename Operator::matrix_type>
+scaleMatrixDRS(const Operator& op, std::size_t pressureEqnIndex, const Vector& weights, const Opm::CPRParameter& param)
 {
     using Matrix = typename Operator::matrix_type;
     using Block = typename Matrix::block_type;
@@ -144,7 +135,7 @@ scaleMatrixDRS(const Operator& op, const Communication& comm,
             }
         }
     }
-    return std::make_tuple(std::move(matrix), createOperator(op, *matrix, comm));
+    return matrix;
 }
 
 //! \brief Applies diagonal scaling to the discretization Matrix (Scheichl, 2003)
@@ -356,7 +347,7 @@ public:
     /** @brief The type of the arguments used for constructing the smoother. */
     typedef typename Dune::Amg::SmootherTraits<S>::Arguments SmootherArgs;
     /** @brief The type of the AMG construct on the coarse level.*/
-    typedef Dune::Amg::AMG<Operator,X,Smoother,Communication> AMGType;
+    typedef Dune::Amg::AMGCPR<Operator,X,Smoother,Communication> AMGType;
     /**
      * @brief Constructs the coarse solver policy.
      * @param args The arguments used for constructing the smoother.
@@ -384,7 +375,7 @@ private:
                            const Criterion& crit,
                            const typename AMGType::SmootherArgs& args,
                            const Communication& comm)
-            : param_(param), amg_(), smoother_(), op_(op), comm_(comm)
+            : param_(param), amg_(), smoother_(), op_(op), crit_(crit), comm_(comm)
         {
             if ( param_->cpr_use_amg_ )
             {
@@ -400,6 +391,11 @@ private:
             }
         }
 
+        void updateAmgPreconditioner(typename AMGType::Operator& op)
+        {
+            amg_->updateSolver(crit_, op, comm_);
+        }
+
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
         Dune::SolverCategory::Category category() const override
         {
@@ -408,7 +404,7 @@ private:
         }
 #endif
 
-        void apply(X& x, X& b, double reduction, Dune::InverseOperatorResult& res)
+        void apply(X& x, X& b, double reduction, Dune::InverseOperatorResult& res) override
         {
             DUNE_UNUSED_PARAMETER(reduction);
             DUNE_UNUSED_PARAMETER(res);
@@ -518,7 +514,7 @@ private:
 #endif
         }
 
-        void apply(X& x, X& b, Dune::InverseOperatorResult& res)
+        void apply(X& x, X& b, Dune::InverseOperatorResult& res) override
         {
             return apply(x,b,1e-8,res);
         }
@@ -535,6 +531,7 @@ private:
         std::unique_ptr<AMGType> amg_;
         std::unique_ptr<Smoother> smoother_;
         const typename AMGType::Operator& op_;
+        Criterion crit_;
         const Communication& comm_;
     };
 
@@ -560,8 +557,13 @@ public:
                                                          smootherArgs_,
                                                          transfer.getCoarseLevelCommunication());
 
-        return inv; //std::shared_ptr<InverseOperator<X,X> >(inv);
+        return inv;
+    }
 
+    template<class LTP>
+    void setCoarseOperator(LTP& transferPolicy)
+    {
+        coarseOperator_= transferPolicy.getCoarseLevelOperator();
     }
 
 private:
@@ -706,7 +708,7 @@ void buildCoarseSparseMatrix(M& coarseMatrix, G& fineGraph, const V& visitedMap,
  */
 template<class Operator, class Criterion, class Communication, std::size_t COMPONENT_INDEX, std::size_t VARIABLE_INDEX>
 class OneComponentAggregationLevelTransferPolicy
-    : public Dune::Amg::LevelTransferPolicy<Operator, typename Detail::ScalarType<Operator>::value>
+    : public Dune::Amg::LevelTransferPolicyCpr<Operator, typename Detail::ScalarType<Operator>::value>
 {
     typedef Dune::Amg::AggregatesMap<typename Operator::matrix_type::size_type> AggregatesMap;
 public:
@@ -789,7 +791,7 @@ public:
             {
                 coarseLevelCommunication_->freeGlobalLookup();
             }
-            calculateCoarseEntries(fineOperator.getmat());
+            calculateCoarseEntriesWithAggregatesMap(fineOperator);
         }
         else
         {
@@ -829,10 +831,10 @@ public:
         this->operator_.reset(Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs));
     }
 
-    template<class M>
-    void calculateCoarseEntries(const M& fineMatrix)
+    void calculateCoarseEntriesWithAggregatesMap(const Operator& fineOperator)
     {
-      *coarseLevelMatrix_ = 0;
+        const auto& fineMatrix = fineOperator.getmat();
+        *coarseLevelMatrix_ = 0;
         for(auto row = fineMatrix.begin(), rowEnd = fineMatrix.end();
             row != rowEnd; ++row)
         {
@@ -850,6 +852,23 @@ public:
                 }
             }
         }
+    }
+
+    virtual void calculateCoarseEntries(const Operator& fineOperator)
+    {
+        const auto& fineMatrix = fineOperator.getmat();
+        *coarseLevelMatrix_ = 0;
+        for(auto row = fineMatrix.begin(), rowEnd = fineMatrix.end();
+            row != rowEnd; ++row)
+            {
+                const auto& i = row.index();
+                for(auto entry = row->begin(), entryEnd = row->end();
+                    entry != entryEnd; ++entry)
+                    {
+                        const auto& j = entry.index();
+                        (*coarseLevelMatrix_)[i][j] += (*entry)[COMPONENT_INDEX][VARIABLE_INDEX];
+                    }
+            }
     }
 
     void moveToCoarseLevel(const typename FatherType::FineRangeType& fine)
@@ -980,9 +999,9 @@ protected:
                                              CoarseCriterion,
                                              LevelTransferPolicy>;
     using TwoLevelMethod =
-        Dune::Amg::TwoLevelMethod<Operator,
-                                  CoarseSolverPolicy,
-                                  Smoother>;
+        Dune::Amg::TwoLevelMethodCpr<Operator,
+                                     CoarseSolverPolicy,
+                                     Smoother>;
 public:
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
     Dune::SolverCategory::Category category() const override
@@ -1011,29 +1030,29 @@ public:
                 const SmootherArgs& smargs, const Communication& comm)
         : param_(param),
           weights_(weights),
-          scaledMatrixOperator_(Detail::scaleMatrixDRS(fineOperator, comm,
-                                                       COMPONENT_INDEX, weights, param)),
-          smoother_(Detail::constructSmoother<Smoother>(std::get<1>(scaledMatrixOperator_),
+          scaledMatrix_(Detail::scaleMatrixDRS(fineOperator, COMPONENT_INDEX, weights, param)),
+          scaledMatrixOperator_(Detail::createOperator(fineOperator, *scaledMatrix_, comm)),
+          smoother_(Detail::constructSmoother<Smoother>(*scaledMatrixOperator_,
                                                         smargs, comm)),
           levelTransferPolicy_(criterion, comm, param.cpr_pressure_aggregation_),
           coarseSolverPolicy_(&param, smargs, criterion),
-          twoLevelMethod_(std::get<1>(scaledMatrixOperator_), smoother_,
+          twoLevelMethod_(*scaledMatrixOperator_, smoother_,
                           levelTransferPolicy_, coarseSolverPolicy_, 0, 1)
     {}
 
     void pre(typename TwoLevelMethod::FineDomainType& x,
-             typename TwoLevelMethod::FineRangeType& b)
+             typename TwoLevelMethod::FineRangeType& b) override
     {
         twoLevelMethod_.pre(x,b);
     }
 
-    void post(typename TwoLevelMethod::FineDomainType& x)
+    void post(typename TwoLevelMethod::FineDomainType& x) override
     {
         twoLevelMethod_.post(x);
     }
 
     void apply(typename TwoLevelMethod::FineDomainType& v,
-               const typename TwoLevelMethod::FineRangeType& d)
+               const typename TwoLevelMethod::FineRangeType& d) override
     {
         auto scaledD = d;
         Detail::scaleVectorDRS(scaledD, COMPONENT_INDEX, param_, weights_);
@@ -1042,7 +1061,8 @@ public:
 private:
     const CPRParameter& param_;
     const typename TwoLevelMethod::FineDomainType& weights_;
-    std::tuple<std::unique_ptr<Matrix>, Operator> scaledMatrixOperator_;
+    std::unique_ptr<Matrix> scaledMatrix_;
+    std::unique_ptr<Operator> scaledMatrixOperator_;
     std::shared_ptr<Smoother> smoother_;
     LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;
