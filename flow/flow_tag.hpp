@@ -188,7 +188,7 @@ int mainFlow(int argc, char** argv)
 
       std::shared_ptr<Opm::Deck> deck = std::make_shared< Opm::Deck >( parser.parseFile(deckFilename , parseContext, errorGuard) );
       if ( outputCout ) {
-	Opm::checkDeck(*deck, parser);
+          Opm::checkDeck(*deck, parser, parseContext, errorGuard);
 	Opm::MissingFeatures::checkKeywords(*deck);
       }
       //Opm::Runspec runspec( *deck );
