@@ -75,6 +75,26 @@ namespace Dune
   };
 
 #endif
+
+
+#if HAVE_MPI
+  template<class M, class T>
+  void redistributeMatrixAmg(M&, M&, SequentialInformation&, SequentialInformation&, T&)
+  {
+    // noop
+  }
+
+  template<class M, class PI>
+  typename std::enable_if<!std::is_same<PI,SequentialInformation>::value,void>::type
+  redistributeMatrixAmg(M& mat, M& matRedist, PI& info, PI& infoRedist,
+                        Dune::RedistributeInformation<PI>& redistInfo)
+  {
+    info.buildGlobalLookup(mat.N());
+    redistributeMatrixEntries(mat, matRedist, info, infoRedist, redistInfo);
+    info.freeGlobalLookup();
+  }
+#endif
+
     /**
      * @defgroup ISTL_PAAMG Parallel Algebraic Multigrid
      * @ingroup ISTL_Prec
@@ -227,7 +247,44 @@ namespace Dune
        */
       void recalculateHierarchy()
       {
-        matrices_->recalculateGalerkin(NegateSet<typename PI::OwnerSet>());
+        auto copyFlags = NegateSet<typename PI::OwnerSet>();
+        const auto& matrices =  matrices_->matrices();
+        const auto& aggregatesMapHierarchy = matrices_->aggregatesMaps();
+        const auto& infoHierarchy = matrices_->parallelInformation();
+        const auto& redistInfoHierarchy = matrices_->redistributeInformation();
+        BaseGalerkinProduct productBuilder;
+        auto aggregatesMap = aggregatesMapHierarchy.begin();
+        auto info = infoHierarchy.finest();
+        auto redistInfo = redistInfoHierarchy.begin();
+        auto matrix = matrices.finest();
+        auto coarsestMatrix = matrices.coarsest();
+
+        using Matrix = typename M::matrix_type;
+
+#if HAVE_MPI
+        if(matrix.isRedistributed()) {
+          redistributeMatrixAmg(const_cast<Matrix&>(matrix->getmat()),
+                                const_cast<Matrix&>(matrix.getRedistributed().getmat()),
+                                const_cast<PI&>(*info), const_cast<PI&>(info.getRedistributed()),
+                                const_cast<Dune::RedistributeInformation<PI>&>(*redistInfo));
+        }
+#endif
+
+        for(; matrix!=coarsestMatrix; ++aggregatesMap) {
+          const Matrix& fine = (matrix.isRedistributed() ? matrix.getRedistributed() : *matrix).getmat();
+          ++matrix;
+          ++info;
+          ++redistInfo;
+          productBuilder.calculate(fine, *(*aggregatesMap), const_cast<Matrix&>(matrix->getmat()), *info, copyFlags);
+#if HAVE_MPI
+          if(matrix.isRedistributed()) {
+            redistributeMatrixAmg(const_cast<Matrix&>(matrix->getmat()),
+                                  const_cast<Matrix&>(matrix.getRedistributed().getmat()),
+                                  const_cast<PI&>(*info), const_cast<PI&>(info.getRedistributed()),
+                                  const_cast<Dune::RedistributeInformation<PI>&>(*redistInfo));
+          }
+#endif
+        }
       }
 
       /**
@@ -471,7 +528,7 @@ namespace Dune
       buildHierarchy_= true;
       coarsesolverconverged = true;
       smoothers_.reset(new Hierarchy<Smoother,A>);
-      matrices_->recalculateGalerkin(NegateSet<typename PI::OwnerSet>());
+      recalculateHierarchy();
       matrices_->coarsenSmoother(*smoothers_, smootherArgs_);
       setupCoarseSolver();
       if (verbosity_>0 && matrices_->parallelInformation().finest()->communicator().rank()==0) {
