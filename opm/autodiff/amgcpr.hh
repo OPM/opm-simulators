@@ -23,6 +23,78 @@ namespace Dune
 {
   namespace Amg
   {
+#if !DUNE_VERSION_NEWER(DUNE_ISTL, 2, 5)
+  template<class M, class V>
+  struct DirectSolverSelector
+  {
+#if DISABLE_AMG_DIRECTSOLVER
+    static constexpr bool isDirectSolver = false;
+    using type = void;
+#elif HAVE_SUITESPARSE_UMFPACK
+    using field_type = typename M::field_type;
+    using type = typename std::conditional<std::is_same<double, field_type>::value, UMFPack<M>,
+                                           typename std::conditional<std::is_same<std::complex<double>, field_type>::value,
+                                                                     UMFPack<M>,
+                                                                     void>::type>::type;
+    static constexpr bool isDirectSolver = std::is_same<UMFPack<M>, type>::value;
+#elif HAVE_SUPERLU
+    static constexpr bool isDirectSolver = true;
+    using type = SuperLU<M>;
+#else
+    static constexpr bool isDirectSolver = false;
+    using type = void;
+#endif
+
+    static type* create(const M& mat, bool verbose, bool reusevector )
+    {
+      create(mat, verbose, reusevector, std::integral_constant<bool, isDirectSolver>());
+    }
+    static type* create(const M& mat, bool verbose, bool reusevector, std::integral_constant<bool, false> )
+    {
+      DUNE_THROW(NotImplemented,"DirectSolver not selected");
+      return nullptr;
+    }
+
+    static type* create(const M& mat, bool verbose, bool reusevector, std::integral_constant<bool, true> )
+    {
+      return new type(mat, verbose, reusevector);
+    }
+    static std::string name()
+    {
+      if(std::is_same<type,void>::value)
+        return "None";
+#if HAVE_SUITESPARSE_UMFPACK
+      if(std::is_same<type, UMFPack<M> >::value)
+        return "UMFPack";
+#endif
+#if HAVE_SUPERLU
+      if(std::is_same<type, SuperLU<M> >::value)
+        return "SuperLU";
+#endif
+    }
+  };
+
+#endif
+
+
+#if HAVE_MPI
+  template<class M, class T>
+  void redistributeMatrixAmg(M&, M&, SequentialInformation&, SequentialInformation&, T&)
+  {
+    // noop
+  }
+
+  template<class M, class PI>
+  typename std::enable_if<!std::is_same<PI,SequentialInformation>::value,void>::type
+  redistributeMatrixAmg(M& mat, M& matRedist, PI& info, PI& infoRedist,
+                        Dune::RedistributeInformation<PI>& redistInfo)
+  {
+    info.buildGlobalLookup(mat.N());
+    redistributeMatrixEntries(mat, matRedist, info, infoRedist, redistInfo);
+    info.freeGlobalLookup();
+  }
+#endif
+
     /**
      * @defgroup ISTL_PAAMG Parallel Algebraic Multigrid
      * @ingroup ISTL_Prec
@@ -175,7 +247,44 @@ namespace Dune
        */
       void recalculateHierarchy()
       {
-        matrices_->recalculateGalerkin(NegateSet<typename PI::OwnerSet>());
+        auto copyFlags = NegateSet<typename PI::OwnerSet>();
+        const auto& matrices =  matrices_->matrices();
+        const auto& aggregatesMapHierarchy = matrices_->aggregatesMaps();
+        const auto& infoHierarchy = matrices_->parallelInformation();
+        const auto& redistInfoHierarchy = matrices_->redistributeInformation();
+        BaseGalerkinProduct productBuilder;
+        auto aggregatesMap = aggregatesMapHierarchy.begin();
+        auto info = infoHierarchy.finest();
+        auto redistInfo = redistInfoHierarchy.begin();
+        auto matrix = matrices.finest();
+        auto coarsestMatrix = matrices.coarsest();
+
+        using Matrix = typename M::matrix_type;
+
+#if HAVE_MPI
+        if(matrix.isRedistributed()) {
+          redistributeMatrixAmg(const_cast<Matrix&>(matrix->getmat()),
+                                const_cast<Matrix&>(matrix.getRedistributed().getmat()),
+                                const_cast<PI&>(*info), const_cast<PI&>(info.getRedistributed()),
+                                const_cast<Dune::RedistributeInformation<PI>&>(*redistInfo));
+        }
+#endif
+
+        for(; matrix!=coarsestMatrix; ++aggregatesMap) {
+          const Matrix& fine = (matrix.isRedistributed() ? matrix.getRedistributed() : *matrix).getmat();
+          ++matrix;
+          ++info;
+          ++redistInfo;
+          productBuilder.calculate(fine, *(*aggregatesMap), const_cast<Matrix&>(matrix->getmat()), *info, copyFlags);
+#if HAVE_MPI
+          if(matrix.isRedistributed()) {
+            redistributeMatrixAmg(const_cast<Matrix&>(matrix->getmat()),
+                                  const_cast<Matrix&>(matrix.getRedistributed().getmat()),
+                                  const_cast<PI&>(*info), const_cast<PI&>(info.getRedistributed()),
+                                  const_cast<Dune::RedistributeInformation<PI>&>(*redistInfo));
+          }
+#endif
+        }
       }
 
       /**
@@ -419,7 +528,7 @@ namespace Dune
       buildHierarchy_= true;
       coarsesolverconverged = true;
       smoothers_.reset(new Hierarchy<Smoother,A>);
-      matrices_->recalculateGalerkin(NegateSet<typename PI::OwnerSet>());
+      recalculateHierarchy();
       matrices_->coarsenSmoother(*smoothers_, smootherArgs_);
       setupCoarseSolver();
       if (verbosity_>0 && matrices_->parallelInformation().finest()->communicator().rank()==0) {

@@ -63,18 +63,28 @@ namespace Opm
         using CritBase                  = Dune::Amg::SymmetricCriterion<Matrix, CouplingMetric>;
         using Criterion                 = Dune::Amg::CoarsenCriterion<CritBase>;
 
-        using ParallelMatrixAdapter     = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Dune::OwnerOverlapCopyCommunication<int,int> >;
         using CprSmootherFine           = Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Dune::Amg::SequentialInformation>;
         using CprSmootherCoarse         = CprSmootherFine;
         using BlackoilAmgType           = BlackoilAmgCpr<MatrixAdapter,CprSmootherFine, CprSmootherCoarse, Criterion, Dune::Amg::SequentialInformation,
                                                  pressureEqnIndex, pressureVarIndex>;
-        using ParallelCprSmootherFine   = Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Dune::OwnerOverlapCopyCommunication<int,int> >;
+        using OperatorSerial = WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false>;
+
+#if HAVE_MPI
+        using POrComm                   =  Dune::OwnerOverlapCopyCommunication<int,int>;
+        using ParallelMatrixAdapter     = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, POrComm >;
+        using ParallelCprSmootherFine   = Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, POrComm >;
         using ParallelCprSmootherCoarse = ParallelCprSmootherFine;
         using ParallelBlackoilAmgType   = BlackoilAmgCpr<ParallelMatrixAdapter, ParallelCprSmootherFine, ParallelCprSmootherCoarse, Criterion,
-                                                 Dune::OwnerOverlapCopyCommunication<int,int>, pressureEqnIndex, pressureVarIndex>;
-
-        using OperatorSerial = WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false>;
-        using OperatorParallel = WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true>;
+                                                         POrComm, pressureEqnIndex, pressureVarIndex>;
+        using OperatorParallel          = WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true>;
+        using ParallelScalarProduct     = Dune::OverlappingSchwarzScalarProduct<Vector, POrComm>;
+#else
+        using POrComm                   = Dune::Amg::SequentialInformation;
+        using ParallelBlackoilAmgType   = BlackoilAmgType;
+        using ParallelScalarProduct     = Dune::SeqScalarProduct<Vector>;
+        using ParallelMatrixAdapter     = MatrixAdapter;
+        using OperatorParallel          = OperatorSerial;
+#endif
 
     public:
         static void registerParameters()
@@ -138,8 +148,6 @@ namespace Opm
                                                                 comm_ ));
                     }
                 }
-
-                using POrComm =  Dune::OwnerOverlapCopyCommunication<int,int>;
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 constexpr Dune::SolverCategory::Category category=Dune::SolverCategory::overlapping;
@@ -229,7 +237,7 @@ namespace Opm
                                                                 BlackoilAmgType, ParallelBlackoilAmgType>::type;
             using SpType            = typename std::conditional<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
                                                                 Dune::SeqScalarProduct<Vector>,
-                                                                Dune::OverlappingSchwarzScalarProduct<Vector, Comm> >::type;
+                                                                ParallelScalarProduct >::type;
             using OperatorType      = typename std::conditional<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
                                                                 MatrixAdapter, ParallelMatrixAdapter>::type;
             typedef typename AmgType::Smoother Smoother;
@@ -311,7 +319,6 @@ namespace Opm
       SPPointer sp_;
       std::shared_ptr< Dune::BiCGSTABSolver<Vector> > linsolve_;
       const void* oldMat;
-      using POrComm =  Dune::OwnerOverlapCopyCommunication<int,int>;
       std::shared_ptr<POrComm> comm_;
     }; // end ISTLSolver
 
