@@ -23,6 +23,58 @@ namespace Dune
 {
   namespace Amg
   {
+#if !DUNE_VERSION_NEWER(DUNE_ISTL, 2, 5)
+  template<class M, class V>
+  struct DirectSolverSelector
+  {
+#if DISABLE_AMG_DIRECTSOLVER
+    static constexpr bool isDirectSolver = false;
+    using type = void;
+#elif HAVE_SUITESPARSE_UMFPACK
+    using field_type = typename M::field_type;
+    using type = typename std::conditional<std::is_same<double, field_type>::value, UMFPack<M>,
+                                           typename std::conditional<std::is_same<std::complex<double>, field_type>::value,
+                                                                     UMFPack<M>,
+                                                                     void>::type>::type;
+    static constexpr bool isDirectSolver = std::is_same<UMFPack<M>, type>::value;
+#elif HAVE_SUPERLU
+    static constexpr bool isDirectSolver = true;
+    using type = SuperLU<M>;
+#else
+    static constexpr bool isDirectSolver = false;
+    using type = void;
+#endif
+
+    static type* create(const M& mat, bool verbose, bool reusevector )
+    {
+      create(mat, verbose, reusevector, std::integral_constant<bool, isDirectSolver>());
+    }
+    static type* create(const M& mat, bool verbose, bool reusevector, std::integral_constant<bool, false> )
+    {
+      DUNE_THROW(NotImplemented,"DirectSolver not selected");
+      return nullptr;
+    }
+
+    static type* create(const M& mat, bool verbose, bool reusevector, std::integral_constant<bool, true> )
+    {
+      return new type(mat, verbose, reusevector);
+    }
+    static std::string name()
+    {
+      if(std::is_same<type,void>::value)
+        return "None";
+#if HAVE_SUITESPARSE_UMFPACK
+      if(std::is_same<type, UMFPack<M> >::value)
+        return "UMFPack";
+#endif
+#if HAVE_SUPERLU
+      if(std::is_same<type, SuperLU<M> >::value)
+        return "SuperLU";
+#endif
+    }
+  };
+
+#endif
     /**
      * @defgroup ISTL_PAAMG Parallel Algebraic Multigrid
      * @ingroup ISTL_Prec
