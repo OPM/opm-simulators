@@ -467,6 +467,7 @@ namespace Opm
                             report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, name()});
                         } else if (control_residual > param_.max_residual_allowed_) {
                             report.setWellFailed({ctrltype, CR::Severity::TooLarge, dummy_component, name()});
+                            // TODO: we should distinguish the flux residual or pressure residual here
                         } else if (control_residual > param_.tolerance_wells_) {
                             report.setWellFailed({ctrltype, CR::Severity::Normal, dummy_component, name()});
                         }
@@ -2173,7 +2174,7 @@ namespace Opm
     getWellResiduals(const std::vector<Scalar>& B_avg) const
     {
         assert(int(B_avg.size() ) == num_components_);
-        std::vector<Scalar> residuals(numWellEq, 0.0);
+        std::vector<Scalar> residuals(numWellEq + 1, 0.0);
 
         // TODO: maybe we should distinguish the bhp control or rate control equations here
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
@@ -2182,7 +2183,9 @@ namespace Opm
                 if (eq_idx < num_components_) {
                     residual = std::abs(resWell_[seg][eq_idx]) * B_avg[eq_idx];
                 } else {
-                    residual = std::abs(resWell_[seg][eq_idx]);
+                    if (seg > 0) {
+                        residual = std::abs(resWell_[seg][eq_idx]);
+                    }
                 }
                 if (std::isnan(residual) || std::isinf(residual)) {
                     OPM_THROW(Opm::NumericalIssue, "nan or inf value for residal get for well " << name()
@@ -2193,6 +2196,15 @@ namespace Opm
                     residuals[eq_idx] = residual;
                 }
             }
+        }
+
+        // handling the control equation residual
+        {
+            const double control_residual = std::abs(resWell_[0][numWellEq - 1]);
+            if (std::isnan(control_residual) || std::isinf(control_residual)) {
+               OPM_THROW(Opm::NumericalIssue, "nan or inf value for control residal get for well " << name());
+            }
+            residuals[numWellEq] = control_residual;
         }
 
         return residuals;
@@ -2239,7 +2251,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     getResidualMeasureValue(const std::vector<double>& residuals) const
     {
-        assert(int(residuals.size()) == numWellEq);
+        assert(int(residuals.size()) == numWellEq + 1);
 
         const double rate_tolerance = param_.tolerance_wells_;
         int count = 0;
