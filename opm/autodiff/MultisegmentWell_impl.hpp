@@ -1333,13 +1333,12 @@ namespace Opm
                             int& seg_upwind) const
     {
         // not considering upwinding for the injectors for now
-
-        if ((!upwinding) || (well_type_ == INJECTOR) || (primary_variables_evaluation_[seg][GTotal] <= 0.) ) {
+        if ((!upwinding) || (well_type_ == INJECTOR) || (primary_variables_evaluation_[seg][GTotal] <= 0.) || (seg == 0)) {
             seg_upwind = seg; // using the composition from the seg
             return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg, comp_idx);
         }
 
-        assert( seg != 0); // if top segment flowing towards the wrong direction, we are not handling it
+        // assert( seg != 0); // if top segment flowing towards the wrong direction, we are not handling it
 
         // basically here, it a producer and flow is in the injecting direction
         // we will use the compsotion from the outlet segment
