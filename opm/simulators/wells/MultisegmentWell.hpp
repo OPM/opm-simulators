@@ -259,6 +259,9 @@ namespace Opm
 
         std::vector<double> segment_depth_diffs_;
 
+        // the upwinding segment for each segment based on the flow direction
+        std::vector<int> upwinding_segments_;
+
         void initMatrixAndVectors(const int num_cells) const;
 
         // protected functions
@@ -318,7 +321,7 @@ namespace Opm
 
         EvalWell getSegmentRate(const int seg, const int comp_idx) const;
 
-        EvalWell getSegmentRateUpwinding(const int seg, const int comp_idx, const bool upwinding, int& seg_upwind) const;
+        EvalWell getSegmentRateUpwinding(const int seg, const int comp_idx) const;
 
         EvalWell getSegmentGTotal(const int seg) const;
 
@@ -386,6 +389,8 @@ namespace Opm
 
         void checkConvergenceControlEq(ConvergenceReport& report,
                                        DeferredLogger& deferred_logger) const;
+
+        void updateUpwindingSegments();
 
     };
 

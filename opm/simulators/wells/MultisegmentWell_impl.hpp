@@ -44,6 +44,7 @@ namespace Opm
     , segment_viscosities_(numberOfSegments(), 0.0)
     , segment_mass_rates_(numberOfSegments(), 0.0)
     , segment_depth_diffs_(numberOfSegments(), 0.0)
+    , upwinding_segments_(numberOfSegments(), 0)
     {
         // not handling solvent or polymer for now with multisegment well
         if (has_solvent) {
@@ -1303,24 +1304,9 @@ namespace Opm
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     getSegmentRateUpwinding(const int seg,
-                            const int comp_idx,
-                            const bool upwinding,
-                            int& seg_upwind) const
+                            const int comp_idx) const
     {
-        // not considering upwinding for the injectors for now
-        if ((!upwinding) || (well_type_ == INJECTOR) || (primary_variables_evaluation_[seg][GTotal] <= 0.) || (seg == 0)) {
-            seg_upwind = seg; // using the composition from the seg
-            return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg, comp_idx);
-        }
-
-        // assert( seg != 0); // if top segment flowing towards the wrong direction, we are not handling it
-
-        // basically here, it a producer and flow is in the injecting direction
-        // we will use the compsotion from the outlet segment
-        const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
-        seg_upwind = outlet_segment_index;
-
-        // TODO: we can refactor above code to use the following return
+        const int seg_upwind = upwinding_segments_[seg];
         return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg_upwind, comp_idx);
     }
 
@@ -1870,6 +1856,9 @@ namespace Opm
         // calculate the fluid properties needed.
         computeSegmentFluidProperties(ebosSimulator);
 
+        // update the upwinding segments
+        updateUpwindingSegments();
+
         // clear all entries
         duneB_ = 0.0;
         duneC_ = 0.0;
@@ -1905,11 +1894,9 @@ namespace Opm
             // considering the contributions due to flowing out from the segment
             {
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                    int seg_upwind = -1;
-                    const EvalWell segment_rate = getSegmentRateUpwinding(seg, comp_idx, true, seg_upwind);
+                    const EvalWell segment_rate = getSegmentRateUpwinding(seg, comp_idx);
 
-                    assert(seg_upwind >= 0);
-
+                    const int seg_upwind = upwinding_segments_[seg];
                     resWell_[seg][comp_idx] -= segment_rate.value();
                     duneD_[seg][seg][comp_idx][GTotal] -= segment_rate.derivative(GTotal + numEq);
                     duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + numEq);
@@ -1922,10 +1909,9 @@ namespace Opm
             {
                 for (const int inlet : segment_inlets_[seg]) {
                     for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                        int seg_upwind = -1;
-                        const EvalWell inlet_rate = getSegmentRateUpwinding(inlet, comp_idx, true, seg_upwind);
-                        assert(seg_upwind >= 0);
+                        const EvalWell inlet_rate = getSegmentRateUpwinding(inlet, comp_idx);
 
+                        const int seg_upwind = upwinding_segments_[inlet];
                         resWell_[seg][comp_idx] += inlet_rate.value();
                         duneD_[seg][inlet][comp_idx][GTotal] += inlet_rate.derivative(GTotal + numEq);
                         duneD_[seg][seg_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + numEq);
@@ -2322,4 +2308,34 @@ namespace Opm
             report.setWellFailed({ctrltype, CR::Severity::Normal, dummy_component, name()});
         }
     }
+
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    updateUpwindingSegments()
+    {
+        // not considering upwinding for the injectors for now
+        // but we should
+        // and upwinding segment for top segment is itself
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            if ( (well_type_ == INJECTOR) || (seg == 0) ) {
+                upwinding_segments_[seg] = seg;
+                continue;
+            }
+
+            // for other normal segments
+            if (primary_variables_evaluation_[seg][GTotal] <= 0.) {
+                upwinding_segments_[seg] = seg;
+            } else {
+                const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
+                upwinding_segments_[seg] = outlet_segment_index;
+            }
+        }
+    }
+
 }
