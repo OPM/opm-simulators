@@ -687,8 +687,6 @@ namespace Opm {
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
 
-
-
             std::vector< Scalar > B_avg(numComponents(), Scalar() );
             computeAverageFormationFactor(B_avg);
 
@@ -708,8 +706,9 @@ namespace Opm {
                 // basically, this is a more updated state from the solveWellEq based on fixed
                 // reservoir state, will tihs be a better place to inialize the explict information?
             }
-	    assembleWellEq(B_avg, dt, local_deferredLogger);
-	    
+
+	        assembleWellEq(B_avg, dt, local_deferredLogger);
+
         } catch (std::exception& e) {
             exception_thrown = 1;
         }
@@ -889,7 +888,6 @@ namespace Opm {
         bool converged;
         int exception_thrown = 0;
         do {
-
             try {
                 assembleWellEq(B_avg, dt, deferred_logger);
             } catch (std::exception& e) {

@@ -54,9 +54,9 @@ namespace Opm
             OPM_THROW(std::runtime_error, "polymer is not supported by multisegment well yet");
         }
 
-	if (Base::has_energy) {
+        if (Base::has_energy) {
             OPM_THROW(std::runtime_error, "energy is not supported by multisegment well yet");
-	}
+        }
         // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.
         // for other facilities needed but not available from parser, we need to process them here
 
@@ -556,7 +556,6 @@ namespace Opm
     {
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);
-
         updateWellState(xw, well_state, deferred_logger);
     }
 
@@ -769,7 +768,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
                     WellState& well_state,
-		            Opm::DeferredLogger& deferred_logger,
+                    Opm::DeferredLogger& deferred_logger,
                     const double relaxation_factor) const
     {
         const double dFLimit = param_.dwell_fraction_max_;
@@ -1333,8 +1332,7 @@ namespace Opm
                             const bool upwinding,
                             int& seg_upwind) const
     {
-        // not considering the injectors for now
-
+        // not considering upwinding for the injectors for now
 
         if ((!upwinding) || (well_type_ == INJECTOR) || (primary_variables_evaluation_[seg][GTotal] <= 0.) ) {
             seg_upwind = seg; // using the composition from the seg
