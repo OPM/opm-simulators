@@ -236,7 +236,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    assembleWellEq(const Simulator& ebosSimulator,
+    assembleWellEq(/* const */ Simulator& ebosSimulator,
                    const std::vector<Scalar>& B_avg,
                    const double dt,
                    WellState& well_state,
@@ -1797,7 +1797,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    iterateWellEquations(const Simulator& ebosSimulator,
+    iterateWellEquations(/* const */ Simulator& ebosSimulator,
                          const std::vector<Scalar>& B_avg,
                          const double dt,
                          WellState& well_state,
@@ -1852,6 +1852,9 @@ namespace Opm
             }
 
             updateWellState(dx_well, well_state, deferred_logger, relaxation_factor);
+
+            // TODO: should we do something more if a switching of control happens
+            this->updateWellControl(ebosSimulator, well_state, deferred_logger);
 
             initPrimaryVariablesEvaluation();
         }
