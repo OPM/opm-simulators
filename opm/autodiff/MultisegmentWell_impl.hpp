@@ -39,7 +39,7 @@ namespace Opm
     , cell_perforation_depth_diffs_(number_of_perforations_, 0.0)
     , cell_perforation_pressure_diffs_(number_of_perforations_, 0.0)
     , perforation_segment_depth_diffs_(number_of_perforations_, 0.0)
-    , segment_comp_initial_(numberOfSegments(), std::vector<double>(num_components_, 0.0))
+    , segment_fluid_initial_(numberOfSegments(), std::vector<double>(num_components_, 0.0))
     , segment_densities_(numberOfSegments(), 0.0)
     , segment_viscosities_(numberOfSegments(), 0.0)
     , segment_mass_rates_(numberOfSegments(), 0.0)
@@ -54,18 +54,31 @@ namespace Opm
             OPM_THROW(std::runtime_error, "polymer is not supported by multisegment well yet");
         }
 
-	if (Base::has_energy) {
+        if (Base::has_energy) {
             OPM_THROW(std::runtime_error, "energy is not supported by multisegment well yet");
-	}
+        }
         // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.
         // for other facilities needed but not available from parser, we need to process them here
 
-        // initialize the segment_perforations_
+        // initialize the segment_perforations_ and update perforation_segment_depth_diffs_
         const WellConnections& completion_set = well_ecl_->getConnections(current_step_);
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+        // index of the perforation within wells struct
+        // there might be some perforations not active, which causes the number of the perforations in
+        // well_ecl_ and wells struct different
+        // the current implementation is a temporary solution for now, it should be corrected from the parser
+        // side
+        int i_perf_wells = 0;
+        perf_depth_.resize(number_of_perforations_, 0.);
+        for (size_t perf = 0; perf < completion_set.size(); ++perf) {
             const Connection& connection = completion_set.get(perf);
-            const int segment_index = segmentNumberToIndex(connection.segment());
-            segment_perforations_[segment_index].push_back(perf);
+            if (connection.state() == WellCompletion::OPEN) {
+                const int segment_index = segmentNumberToIndex(connection.segment());
+                segment_perforations_[segment_index].push_back(i_perf_wells);
+                perf_depth_[i_perf_wells] = connection.depth();
+                const double segment_depth = segmentSet()[segment_index].depth();
+                perforation_segment_depth_diffs_[i_perf_wells] = perf_depth_[i_perf_wells] - segment_depth;
+                i_perf_wells++;
+            }
         }
 
         // initialize the segment_inlets_
@@ -77,16 +90,6 @@ namespace Opm
                 const int segment_index = segmentNumberToIndex(segment_number);
                 const int outlet_segment_index = segmentNumberToIndex(outlet_segment_number);
                 segment_inlets_[outlet_segment_index].push_back(segment_index);
-            }
-        }
-
-        // callcuate the depth difference between perforations and their segments
-        perf_depth_.resize(number_of_perforations_, 0.);
-        for (int seg = 0; seg < numberOfSegments(); ++seg) {
-            const double segment_depth = segmentSet()[seg].depth();
-            for (const int perf : segment_perforations_[seg]) {
-                perf_depth_[perf] = completion_set.get(perf).depth();
-                perforation_segment_depth_diffs_[perf] = perf_depth_[perf] - segment_depth;
             }
         }
 
@@ -234,6 +237,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     assembleWellEq(const Simulator& ebosSimulator,
+                   const std::vector<Scalar>& B_avg,
                    const double dt,
                    WellState& well_state,
                    Opm::DeferredLogger& deferred_logger)
@@ -241,7 +245,8 @@ namespace Opm
 
         const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
         if (use_inner_iterations) {
-            iterateWellEquations(ebosSimulator, dt, well_state, deferred_logger);
+
+            iterateWellEquations(ebosSimulator, B_avg, dt, well_state, deferred_logger);
         }
 
         assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, deferred_logger);
@@ -462,6 +467,7 @@ namespace Opm
                             report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, name()});
                         } else if (control_residual > param_.max_residual_allowed_) {
                             report.setWellFailed({ctrltype, CR::Severity::TooLarge, dummy_component, name()});
+                            // TODO: we should distinguish the flux residual or pressure residual here
                         } else if (control_residual > param_.tolerance_wells_) {
                             report.setWellFailed({ctrltype, CR::Severity::Normal, dummy_component, name()});
                         }
@@ -550,7 +556,7 @@ namespace Opm
     {
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);
-        updateWellState(xw, false, well_state, deferred_logger);
+        updateWellState(xw, well_state, deferred_logger);
     }
 
 
@@ -584,7 +590,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& deferred_logger) const
+    updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& /* deferred_logger */) const
     {
         // TODO: to test using rate conversion coefficients to see if it will be better than
         // this default one
@@ -677,7 +683,7 @@ namespace Opm
         // which is why we do not put the assembleWellEq here.
         const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
-        updateWellState(dx_well, false, well_state, deferred_logger);
+        updateWellState(dx_well, well_state, deferred_logger);
     }
 
 
@@ -742,13 +748,13 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeInitialComposition()
+    computeInitialSegmentFluids(const Simulator& ebos_simulator)
     {
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
-            // TODO: probably it should be numWellEq -1 more accurately,
-            // while by meaning it should be num_comp
+            // TODO: trying to reduce the times for the surfaceVolumeFraction calculation
+            const double surface_volume = getSegmentSurfaceVolume(ebos_simulator, seg).value();
             for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                segment_comp_initial_[seg][comp_idx] = surfaceVolumeFraction(seg, comp_idx).value();
+                segment_fluid_initial_[seg][comp_idx] = surface_volume * surfaceVolumeFraction(seg, comp_idx).value();
             }
         }
     }
@@ -761,14 +767,10 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
-                    const bool inner_iteration,
                     WellState& well_state,
-                    Opm::DeferredLogger& deferred_logger) const
+                    Opm::DeferredLogger& deferred_logger,
+                    const double relaxation_factor) const
     {
-        const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
-
-        const double relaxation_factor = (use_inner_iterations && inner_iteration) ? 0.2 : 1.0;
-
         const double dFLimit = param_.dwell_fraction_max_;
         const double max_pressure_change = param_.max_pressure_change_ms_wells_;
         const std::vector<std::array<double, numWellEq> > old_primary_variables = primary_variables_;
@@ -776,13 +778,15 @@ namespace Opm
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 const int sign = dwells[seg][WFrac] > 0. ? 1 : -1;
-                const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]), relaxation_factor * dFLimit);
+                // const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]), relaxation_factor * dFLimit);
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]) * relaxation_factor, dFLimit);
                 primary_variables_[seg][WFrac] = old_primary_variables[seg][WFrac] - dx_limited;
             }
 
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 const int sign = dwells[seg][GFrac] > 0. ? 1 : -1;
-                const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]), relaxation_factor * dFLimit);
+                // const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]), relaxation_factor * dFLimit);
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]) * relaxation_factor, dFLimit);
                 primary_variables_[seg][GFrac] = old_primary_variables[seg][GFrac] - dx_limited;
             }
 
@@ -793,6 +797,7 @@ namespace Opm
             {
                 const int sign = dwells[seg][SPres] > 0.? 1 : -1;
                 const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]), relaxation_factor * max_pressure_change);
+                // const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change);
                 primary_variables_[seg][SPres] = old_primary_variables[seg][SPres] - dx_limited;
             }
 
@@ -814,11 +819,13 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     calculateExplicitQuantities(const Simulator& ebosSimulator,
-                                const WellState& /* well_state */,
+                                const WellState& well_state,
                                 Opm::DeferredLogger& deferred_logger)
     {
+        updatePrimaryVariables(well_state, deferred_logger);
+        initPrimaryVariablesEvaluation();
         computePerfCellPressDiffs(ebosSimulator);
-        computeInitialComposition();
+        computeInitialSegmentFluids(ebosSimulator);
     }
 
 
@@ -1012,7 +1019,7 @@ namespace Opm
         // pressure difference between the perforation and the grid cell
         const double cell_perf_press_diff = cell_perforation_pressure_diffs_[perf];
 
-        perf_press = pressure_cell + cell_perf_press_diff;
+        perf_press = pressure_cell - cell_perf_press_diff;
         // Pressure drawdown (also used to determine direction of flow)
         // TODO: not 100% sure about the sign of the seg_perf_press_diff
         const EvalWell drawdown = perf_press - (segment_pressure + perf_seg_press_diff);
@@ -1276,6 +1283,10 @@ namespace Opm
             segment_densities_[seg] = density / volrat;
 
             // calculate the mass rates
+            // TODO: for now, we are not considering the upwinding for this amount
+            // since how to address the fact that the derivatives is not trivial for now
+            // and segment_mass_rates_ goes a long way with the frictional pressure loss
+            // and accelerational pressure loss, which needs some work to handle
             segment_mass_rates_[seg] = 0.;
             for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 const EvalWell rate = getSegmentRate(seg, comp_idx);
@@ -1307,6 +1318,35 @@ namespace Opm
                    const int comp_idx) const
     {
         return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg, comp_idx);
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getSegmentRateUpwinding(const int seg,
+                            const int comp_idx,
+                            const bool upwinding,
+                            int& seg_upwind) const
+    {
+        // not considering upwinding for the injectors for now
+        if ((!upwinding) || (well_type_ == INJECTOR) || (primary_variables_evaluation_[seg][GTotal] <= 0.) || (seg == 0)) {
+            seg_upwind = seg; // using the composition from the seg
+            return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg, comp_idx);
+        }
+
+        // assert( seg != 0); // if top segment flowing towards the wrong direction, we are not handling it
+
+        // basically here, it a producer and flow is in the injecting direction
+        // we will use the compsotion from the outlet segment
+        const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
+        seg_upwind = outlet_segment_index;
+
+        // TODO: we can refactor above code to use the following return
+        return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg_upwind, comp_idx);
     }
 
 
@@ -1758,40 +1798,83 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     iterateWellEquations(const Simulator& ebosSimulator,
+                         const std::vector<Scalar>& B_avg,
                          const double dt,
                          WellState& well_state,
                          Opm::DeferredLogger& deferred_logger)
     {
-        // basically, it only iterate through the equations.
-        // we update the primary variables
-        // if converged, we can update the well_state.
-        // the function updateWellState() should have a flag to show
-        // if we will update the well state.
         const int max_iter_number = param_.max_inner_iter_ms_wells_;
+        const WellState well_state0 = well_state;
+        const std::vector<Scalar> residuals0 = getWellResiduals(B_avg);
+        std::vector<std::vector<Scalar> > residual_history;
+        std::vector<double> measure_history;
         int it = 0;
+        // relaxation factor
+        double relaxation_factor = 1.;
+        const double min_relaxation_factor = 0.2;
         for (; it < max_iter_number; ++it) {
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, deferred_logger);
 
             const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
-            // TODO: use these small values for now, not intend to reach the convergence
-            // in this stage, but, should we?
-            // We should try to avoid hard-code values in the code.
-            // If we want to use the real one, we need to find a way to get them.
-            // const std::vector<double> B {0.8, 0.8, 0.008};
-            const std::vector<double> B {0.5, 0.5, 0.005};
 
-            const auto report = getWellConvergence(B, deferred_logger);
+            const auto report = getWellConvergence(B_avg, deferred_logger);
             if (report.converged()) {
                 break;
             }
 
-            updateWellState(dx_well, true, well_state, deferred_logger);
+            residual_history.push_back(getWellResiduals(B_avg));
+            measure_history.push_back(getResidualMeasureValue(residual_history[it]));
+
+            bool is_oscillate = false;
+            bool is_stagnate = false;
+
+            detectOscillations(measure_history, it, is_oscillate, is_stagnate);
+            // TODO: maybe we should have more sophiscated strategy to recover the relaxation factor,
+            // for example, to recover it to be bigger
+
+            if (is_oscillate || is_stagnate) {
+                // a factor value to reduce the relaxation_factor
+                const double reduction_mutliplier = 0.9;
+                relaxation_factor = std::max(relaxation_factor * reduction_mutliplier, min_relaxation_factor);
+
+                // debug output
+                std::ostringstream sstr;
+                if (is_stagnate) {
+                    sstr << " well " << name() << " observes stagnation within " << it << "th inner iterations\n";
+                }
+                if (is_oscillate) {
+                    sstr << " well " << name() << " osbserves oscillation within " << it <<"th inner iterations\n";
+                }
+                sstr << " relaxation_factor is " << relaxation_factor << " now\n";
+                deferred_logger.debug(sstr.str());
+            }
+
+            updateWellState(dx_well, well_state, deferred_logger, relaxation_factor);
 
             initPrimaryVariablesEvaluation();
         }
-        // TODO: maybe we should not use these values if they are not converged.
+
+        // TODO: we should decide whether to keep the updated well_state, or recover to use the old well_state
+        if (it < max_iter_number) {
+            std::ostringstream sstr;
+            sstr << " well " << name() << " manage to get converged within " << it << " inner iterations";
+            deferred_logger.debug(sstr.str());
+        } else {
+            std::ostringstream sstr;
+            sstr << " well " << name() << " did not get converged within " << it << " inner iterations \n";
+            sstr << " outputting the residual history for well " << name() << " during inner iterations \n";
+            for (int i = 0; i < it; ++i) {
+                const auto& residual = residual_history[i];
+                sstr << " residual at " << i << "th iteration ";
+                for (const auto& res : residual) {
+                    sstr << " " << res;
+                }
+                sstr << " " << measure_history[i] << " \n";
+            }
+            deferred_logger.debug(sstr.str());
+        }
     }
 
 
@@ -1826,14 +1909,14 @@ namespace Opm
         const int nseg = numberOfSegments();
 
         for (int seg = 0; seg < nseg; ++seg) {
-            // calculating the accumulation term // TODO: without considering the efficiencty factor for now
-            // volume of the segment
+            // calculating the accumulation term
+            // TODO: without considering the efficiencty factor for now
             {
-                const double volume = segmentSet()[seg].volume();
+                const EvalWell segment_surface_volume = getSegmentSurfaceVolume(ebosSimulator, seg);
                 // for each component
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                    EvalWell accumulation_term = volume / dt * (surfaceVolumeFraction(seg, comp_idx) - segment_comp_initial_[seg][comp_idx])
-                                               + getSegmentRate(seg, comp_idx);
+                    const EvalWell accumulation_term = (segment_surface_volume * surfaceVolumeFraction(seg, comp_idx)
+                                                     - segment_fluid_initial_[seg][comp_idx]) / dt;
 
                     resWell_[seg][comp_idx] += accumulation_term.value();
                     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -1841,16 +1924,35 @@ namespace Opm
                     }
                 }
             }
+            // considering the contributions due to flowing out from the segment
+            {
+                for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
+                    int seg_upwind = -1;
+                    const EvalWell segment_rate = getSegmentRateUpwinding(seg, comp_idx, true, seg_upwind);
+
+                    assert(seg_upwind >= 0);
+
+                    resWell_[seg][comp_idx] -= segment_rate.value();
+                    duneD_[seg][seg][comp_idx][GTotal] -= segment_rate.derivative(GTotal + numEq);
+                    duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + numEq);
+                    duneD_[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + numEq);
+                    // pressure derivative should be zero
+                }
+            }
 
             // considering the contributions from the inlet segments
             {
                 for (const int inlet : segment_inlets_[seg]) {
                     for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                        const EvalWell inlet_rate = getSegmentRate(inlet, comp_idx);
-                        resWell_[seg][comp_idx] -= inlet_rate.value();
-                        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                            duneD_[seg][inlet][comp_idx][pv_idx] -= inlet_rate.derivative(pv_idx + numEq);
-                        }
+                        int seg_upwind = -1;
+                        const EvalWell inlet_rate = getSegmentRateUpwinding(inlet, comp_idx, true, seg_upwind);
+                        assert(seg_upwind >= 0);
+
+                        resWell_[seg][comp_idx] += inlet_rate.value();
+                        duneD_[seg][inlet][comp_idx][GTotal] += inlet_rate.derivative(GTotal + numEq);
+                        duneD_[seg][seg_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + numEq);
+                        duneD_[seg][seg_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + numEq);
+                        // pressure derivative should be zero
                     }
                 }
             }
@@ -1880,7 +1982,7 @@ namespace Opm
                     connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
 
                     // subtract sum of phase fluxes in the well equations.
-                    resWell_[seg][comp_idx] -= cq_s_effective.value();
+                    resWell_[seg][comp_idx] += cq_s_effective.value();
 
                     // assemble the jacobians
                     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -1889,17 +1991,14 @@ namespace Opm
                         duneC_[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + numEq); // intput in transformed matrix
 
                         // the index name for the D should be eq_idx / pv_idx
-                        duneD_[seg][seg][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx + numEq);
+                        duneD_[seg][seg][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx + numEq);
                     }
 
                     for (int pv_idx = 0; pv_idx < numEq; ++pv_idx) {
                         // also need to consider the efficiency factor when manipulating the jacobians.
-                        duneB_[seg][cell_idx][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx);
+                        duneB_[seg][cell_idx][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
                     }
                 }
-                // TODO: we should save the perforation pressure and preforation rates?
-                // we do not use it in the simulation for now, while we might need them if
-                // we handle the pressure in SEG mode.
             }
 
             // the fourth dequation, the pressure drop equation
@@ -1936,6 +2035,241 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWaterThroughput(const double dt OPM_UNUSED, WellState& well_state OPM_UNUSED) const
     {
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getSegmentSurfaceVolume(const Simulator& ebos_simulator, const int seg_idx) const
+    {
+        EvalWell temperature;
+        int pvt_region_index;
+        {
+            // using the pvt region of first perforated cell
+            // TODO: it should be a member of the WellInterface, initialized properly
+            const int cell_idx = well_cells_[0];
+            const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+            const auto& fs = intQuants.fluidState();
+            temperature.setValue(fs.temperature(FluidSystem::oilPhaseIdx).value());
+            pvt_region_index = fs.pvtRegionIndex();
+        }
+
+        const EvalWell seg_pressure = getSegmentPressure(seg_idx);
+
+        std::vector<EvalWell> mix_s(num_components_, 0.0);
+        for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
+            mix_s[comp_idx] = surfaceVolumeFraction(seg_idx, comp_idx);
+        }
+
+        std::vector<EvalWell> b(num_components_, 0.);
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+            b[waterCompIdx] =
+                FluidSystem::waterPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+        }
+
+        EvalWell rv(0.0);
+        // gas phase
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                const EvalWell rvmax = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvt_region_index, temperature, seg_pressure);
+                if (mix_s[oilCompIdx] > 0.0) {
+                    if (mix_s[gasCompIdx] > 0.0) {
+                        rv = mix_s[oilCompIdx] / mix_s[gasCompIdx];
+                    }
+
+                    if (rv > rvmax) {
+                        rv = rvmax;
+                    }
+                    b[gasCompIdx] =
+                        FluidSystem::gasPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rv);
+                } else { // no oil exists
+                    b[gasCompIdx] =
+                        FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                }
+            } else { // no Liquid phase
+                // it is the same with zero mix_s[Oil]
+                b[gasCompIdx] =
+                    FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+            }
+        }
+
+        EvalWell rs(0.0);
+        // oil phase
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                const EvalWell rsmax = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvt_region_index, temperature, seg_pressure);
+                if (mix_s[gasCompIdx] > 0.0) {
+                    if (mix_s[oilCompIdx] > 0.0) {
+                        rs = mix_s[gasCompIdx] / mix_s[oilCompIdx];
+                    }
+                    // std::cout << " rs " << rs.value() << " rsmax " << rsmax.value() << std::endl;
+
+                    if (rs > rsmax) {
+                        rs = rsmax;
+                    }
+                    b[oilCompIdx] =
+                        FluidSystem::oilPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rs);
+                } else { // no oil exists
+                    b[oilCompIdx] =
+                        FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                }
+            } else { // no gas phase
+                // it is the same with zero mix_s[Gas]
+                b[oilCompIdx] =
+                    FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+            }
+        }
+
+        std::vector<EvalWell> mix(mix_s);
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+
+            const EvalWell d = 1.0 - rs * rv;
+            if (d <= 0.0 || d > 1.0) {
+                OPM_THROW(Opm::NumericalIssue, "Problematic d value " << d << " obtained for well " << name()
+                                               << " during convertion to surface volume with rs " << rs
+                                               << ", rv " << rv << " and pressure " << seg_pressure
+                                               << " obtaining d " << d);
+            }
+
+            if (rs > 0.0) { // rs > 0.0?
+                mix[gasCompIdx] = (mix_s[gasCompIdx] - mix_s[oilCompIdx] * rs) / d;
+            }
+            if (rv > 0.0) { // rv > 0.0?
+                mix[oilCompIdx] = (mix_s[oilCompIdx] - mix_s[gasCompIdx] * rv) / d;
+            }
+        }
+
+        EvalWell vol_ratio(0.0);
+        for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
+            vol_ratio += mix[comp_idx] / b[comp_idx];
+        }
+
+        // segment volume
+        const double volume = segmentSet()[seg_idx].volume();
+
+        return volume / vol_ratio;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    std::vector<typename MultisegmentWell<TypeTag>::Scalar>
+    MultisegmentWell<TypeTag>::
+    getWellResiduals(const std::vector<Scalar>& B_avg) const
+    {
+        assert(int(B_avg.size() ) == num_components_);
+        std::vector<Scalar> residuals(numWellEq + 1, 0.0);
+
+        // TODO: maybe we should distinguish the bhp control or rate control equations here
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+                double residual = 0.;
+                if (eq_idx < num_components_) {
+                    residual = std::abs(resWell_[seg][eq_idx]) * B_avg[eq_idx];
+                } else {
+                    if (seg > 0) {
+                        residual = std::abs(resWell_[seg][eq_idx]);
+                    }
+                }
+                if (std::isnan(residual) || std::isinf(residual)) {
+                    OPM_THROW(Opm::NumericalIssue, "nan or inf value for residal get for well " << name()
+                                                    << " segment " << seg << " eq_idx " << eq_idx);
+                }
+
+                if (residual > residuals[eq_idx]) {
+                    residuals[eq_idx] = residual;
+                }
+            }
+        }
+
+        // handling the control equation residual
+        {
+            const double control_residual = std::abs(resWell_[0][numWellEq - 1]);
+            if (std::isnan(control_residual) || std::isinf(control_residual)) {
+               OPM_THROW(Opm::NumericalIssue, "nan or inf value for control residal get for well " << name());
+            }
+            residuals[numWellEq] = control_residual;
+        }
+
+        return residuals;
+    }
+
+
+
+
+
+    /// Detect oscillation or stagnation based on the residual measure history
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    detectOscillations(const std::vector<double>& measure_history,
+                       const int it, bool& oscillate, bool& stagnate) const
+    {
+        if ( it < 2 ) {
+            oscillate = false;
+            stagnate = false;
+            return;
+        }
+
+        stagnate = true;
+        const double F0 = measure_history[it];
+        const double F1 = measure_history[it - 1];
+        const double F2 = measure_history[it - 2];
+        const double d1 = std::abs((F0 - F2) / F0);
+        const double d2 = std::abs((F0 - F1) / F0);
+
+        const double oscillaton_rel_tol = 0.2;
+        oscillate = (d1 < oscillaton_rel_tol) && (oscillaton_rel_tol < d2);
+
+        const double stagnation_rel_tol = 1.e-2;
+        stagnate = std::abs((F1 - F2) / F2) <= stagnation_rel_tol;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    double
+    MultisegmentWell<TypeTag>::
+    getResidualMeasureValue(const std::vector<double>& residuals) const
+    {
+        assert(int(residuals.size()) == numWellEq + 1);
+
+        const double rate_tolerance = param_.tolerance_wells_;
+        int count = 0;
+        double sum = 0;
+        for (int eq_idx = 0; eq_idx < numWellEq - 1; ++eq_idx) {
+            if (residuals[eq_idx] > rate_tolerance) {
+                sum += residuals[eq_idx] / rate_tolerance;
+                ++count;
+            }
+        }
+
+        const double pressure_tolerance = param_.tolerance_pressure_ms_wells_;
+        if (residuals[SPres] > pressure_tolerance) {
+            sum += residuals[SPres] / pressure_tolerance;
+            ++count;
+        }
+
+        // if (count == 0), it should be converged.
+        assert(count != 0);
+
+        // return sum / double(count);
+        return sum;
     }
 
 }

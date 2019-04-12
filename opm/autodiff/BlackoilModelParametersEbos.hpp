@@ -63,7 +63,7 @@ SET_SCALAR_PROP(FlowModelParameters, ToleranceCnv,1e-2);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceCnvRelaxed, 1e9);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceWells, 1e-4);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceWellControl, 1e-7);
-SET_INT_PROP(FlowModelParameters, MaxWelleqIter, 15);
+SET_INT_PROP(FlowModelParameters, MaxWelleqIter, 30);
 SET_BOOL_PROP(FlowModelParameters, UseMultisegmentWell, false);
 SET_SCALAR_PROP(FlowModelParameters, MaxSinglePrecisionDays, 20.0);
 SET_INT_PROP(FlowModelParameters, MaxStrictIter, 8);
@@ -74,7 +74,7 @@ SET_BOOL_PROP(FlowModelParameters, MatrixAddWellContributions, false);
 SET_SCALAR_PROP(FlowModelParameters, TolerancePressureMsWells, 0.01 *1e5);
 SET_SCALAR_PROP(FlowModelParameters, MaxPressureChangeMsWells, 2.0 *1e5);
 SET_BOOL_PROP(FlowModelParameters, UseInnerIterationsMsWells, true);
-SET_INT_PROP(FlowModelParameters, MaxInnerIterMsWells, 10);
+SET_INT_PROP(FlowModelParameters, MaxInnerIterMsWells, 100);
 
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP

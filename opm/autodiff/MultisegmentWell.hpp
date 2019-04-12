@@ -113,6 +113,7 @@ namespace Opm
         virtual void initPrimaryVariablesEvaluation() const override;
 
         virtual void assembleWellEq(const Simulator& ebosSimulator,
+                                    const std::vector<Scalar>& B_avg,
                                     const double dt,
                                     WellState& well_state,
                                     Opm::DeferredLogger& deferred_logger) override;
@@ -243,8 +244,8 @@ namespace Opm
         // the segment the perforation belongs to
         std::vector<double> perforation_segment_depth_diffs_;
 
-        // the intial component compistion of segments
-        std::vector<std::vector<double> > segment_comp_initial_;
+        // the intial amount of fluids in each segment under surface condition
+        std::vector<std::vector<double> > segment_fluid_initial_;
 
         // the densities of segment fluids
         // we should not have this member variable
@@ -270,9 +271,10 @@ namespace Opm
 
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
-                             const bool inner_iteration,
                              WellState& well_state,
-                             Opm::DeferredLogger& deferred_logger) const;
+                             Opm::DeferredLogger& deferred_logger,
+                             const double relaxation_factor=1.0) const;
+
 
         // initialize the segment rates with well rates
         // when there is no more accurate way to initialize the segment rates, we initialize
@@ -280,7 +282,7 @@ namespace Opm
         void initSegmentRatesWithWellRates(WellState& well_state) const;
 
         // computing the accumulation term for later use in well mass equations
-        void computeInitialComposition();
+        void computeInitialSegmentFluids(const Simulator& ebos_simulator);
 
         // compute the pressure difference between the perforation and cell center
         void computePerfCellPressDiffs(const Simulator& ebosSimulator);
@@ -315,6 +317,8 @@ namespace Opm
         EvalWell getSegmentPressure(const int seg) const;
 
         EvalWell getSegmentRate(const int seg, const int comp_idx) const;
+
+        EvalWell getSegmentRateUpwinding(const int seg, const int comp_idx, const bool upwinding, int& seg_upwind) const;
 
         EvalWell getSegmentGTotal(const int seg) const;
 
@@ -352,6 +356,7 @@ namespace Opm
 
         // TODO: try to make ebosSimulator const, as it should be
         void iterateWellEquations(const Simulator& ebosSimulator,
+                                  const std::vector<Scalar>& B_avg,
                                   const double dt,
                                   WellState& well_state,
                                   Opm::DeferredLogger& deferred_logger);
@@ -366,6 +371,16 @@ namespace Opm
                                          WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger) override;
 
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
+
+        EvalWell getSegmentSurfaceVolume(const Simulator& ebos_simulator, const int seg_idx) const;
+
+        std::vector<Scalar> getWellResiduals(const std::vector<Scalar>& B_avg) const;
+
+        void detectOscillations(const std::vector<double>& measure_history,
+                                const int it, bool& oscillate, bool& stagnate) const;
+
+        double getResidualMeasureValue(const std::vector<double>& residuals) const;
+
     };
 
 }
