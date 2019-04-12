@@ -665,7 +665,7 @@ namespace Opm
                     // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
                     // that is why I think we should use a well model to initialize the WellState here
                     std::vector<std::vector<int>> segment_perforations(well_nseg);
-                    for (int perf = 0; perf < completion_set.size(); ++perf) {
+                    for (size_t perf = 0; perf < completion_set.size(); ++perf) {
                         const Connection& connection = completion_set.get(perf);
                         if (connection.state() == WellCompletion::OPEN) {
                             const int segment_index = segment_set.segmentNumberToIndex(connection.segment());

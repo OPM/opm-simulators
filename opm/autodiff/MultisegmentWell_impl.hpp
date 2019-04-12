@@ -69,7 +69,7 @@ namespace Opm
         // side
         int i_perf_wells = 0;
         perf_depth_.resize(number_of_perforations_, 0.);
-        for (int perf = 0; perf < completion_set.size(); ++perf) {
+        for (size_t perf = 0; perf < completion_set.size(); ++perf) {
             const Connection& connection = completion_set.get(perf);
             if (connection.state() == WellCompletion::OPEN) {
                 const int segment_index = segmentNumberToIndex(connection.segment());
@@ -2176,7 +2176,7 @@ namespace Opm
         // TODO: maybe we should distinguish the bhp control or rate control equations here
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
-                double residual;
+                double residual = 0.;
                 if (eq_idx < num_components_) {
                     residual = std::abs(resWell_[seg][eq_idx]) * B_avg[eq_idx];
                 } else {
@@ -2225,7 +2225,6 @@ namespace Opm
         }
 
         stagnate = true;
-        int oscillate_eqs = 0;
         const double F0 = measure_history[it];
         const double F1 = measure_history[it - 1];
         const double F2 = measure_history[it - 2];
