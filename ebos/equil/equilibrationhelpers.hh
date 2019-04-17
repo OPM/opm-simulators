@@ -820,6 +820,7 @@ double satFromPc(const MaterialLawManager& materialLawManager,
 
     const int maxIter = 60;
     const double tol = 1e-10;
+    const double tol2 = 1e-5;
 
     // regula falsi with the "Pegasus" method to avoid stagnation
     for (int iter = 0; iter < maxIter; ++ iter) {
@@ -828,7 +829,7 @@ double satFromPc(const MaterialLawManager& materialLawManager,
 
         // adapt the interval
         double fs = f(s);
-        if (fs == 0.0)
+        if (std::abs(fs) < tol2)
             return s;
         else if ((fs > 0.0) == (f0 > 0.0)) {
             // update interval and reverse
@@ -928,6 +929,7 @@ double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
 
     const int maxIter = 60;
     const double tol = 1e-10;
+    const double tol2 = 1e-5;
 
     // regula falsi with the "Pegasus" method to avoid stagnation
     for (int iter = 0; iter < maxIter; ++ iter) {
@@ -936,7 +938,7 @@ double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
 
         // adapt the interval
         double fs = f(s);
-        if (fs == 0.0)
+        if (std::abs(fs) < tol2)
             return s;
         else if ((fs > 0.0) == (f0 > 0.0)) {
             // update interval and reverse
