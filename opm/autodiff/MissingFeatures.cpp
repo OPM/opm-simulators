@@ -87,8 +87,8 @@ namespace MissingFeatures {
             "AQUCON",
             "AQUCT",
             "AQUTAB",
-            "AQUNUM"
-            "CARFIN"
+            "AQUNUM",
+            "CARFIN",
             "COMPDATL",
             "COMPLUMP",
             "CONNECTION",
