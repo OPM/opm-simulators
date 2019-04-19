@@ -106,6 +106,7 @@ namespace MissingFeatures {
             "EXTRAPMS",
             "FILLEPS",
             "FIPNUM",
+            "FLUXTYPE",
             "FULLIMP",
             "GDORIENT",
             "GECON",
