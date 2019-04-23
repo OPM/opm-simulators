@@ -281,7 +281,7 @@ namespace Opm {
             std::vector<bool> is_cell_perforated_;
 
             // create the well container
-            std::vector<WellInterfacePtr > createWellContainer(const int time_step, Opm::DeferredLogger& deferred_logger);
+            std::vector<WellInterfacePtr > createWellContainer(const int time_step, const Wells* wells, const bool allow_closing_opening_wells, Opm::DeferredLogger& deferred_logger);
 
             WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, Opm::DeferredLogger& deferred_logger) const;
 
@@ -337,9 +337,11 @@ namespace Opm {
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
-            void updateWellControls(Opm::DeferredLogger& deferred_logger);
+            void updateWellControls(const std::vector<Scalar>& B_avg,
+                                    Opm::DeferredLogger& deferred_logger);
 
-            void updateGroupControls(Opm::DeferredLogger& deferred_logger);
+            void updateGroupControls(const std::vector<Scalar>& B_avg,
+                                     Opm::DeferredLogger& deferred_logger);
 
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(Opm::DeferredLogger& deferred_logger);
@@ -387,7 +389,8 @@ namespace Opm {
 
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
-            void prepareTimeStep(Opm::DeferredLogger& deferred_logger);
+            void prepareTimeStep(const std::vector<Scalar>& B_avg,
+                                 Opm::DeferredLogger& deferred_logger);
 
             void prepareGroupControl(Opm::DeferredLogger& deferred_logger);
 

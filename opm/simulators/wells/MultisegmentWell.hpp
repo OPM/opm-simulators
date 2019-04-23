@@ -120,8 +120,9 @@ namespace Opm
 
         /// updating the well state based the current control mode
         virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                               const std::vector<Scalar>& B_avg,
                                                WellState& well_state,
-                                               Opm::DeferredLogger& deferred_logger) const override;
+                                               Opm::DeferredLogger& deferred_logger) override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger) const override;
@@ -139,6 +140,7 @@ namespace Opm
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
+                                           const std::vector<Scalar>& B_avg,
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials,
                                            Opm::DeferredLogger& deferred_logger) override;
@@ -305,6 +307,8 @@ namespace Opm
                                      const bool& allow_cf,
                                      std::vector<EvalWell>& cq_s,
                                      EvalWell& perf_press,
+                                     double& perf_dis_gas_rate,
+                                     double& perf_vap_oil_rate,
                                      Opm::DeferredLogger& deferred_logger) const;
 
         // convert a Eval from reservoir to contain the derivative related to wells
@@ -327,6 +331,13 @@ namespace Opm
                          const int perf,
                          std::vector<EvalWell>& mob) const;
 
+        virtual void computeWellRatesWithBhp(const Simulator& ebosSimulator,
+                                             const std::vector<Scalar>& B_avg,
+                                             const double& bhp,
+                                             const bool iterate,
+                                             std::vector<double>& well_flux,
+                                             Opm::DeferredLogger& deferred_logger) override;
+
         void assembleControlEq(Opm::DeferredLogger& deferred_logger) const;
 
         void assemblePressureEq(const int seg) const;
@@ -345,6 +356,7 @@ namespace Opm
         // checking the operability of the well based on current reservoir condition
         // it is not implemented for multisegment well yet
         virtual void checkWellOperability(const Simulator& ebos_simulator,
+                                          const std::vector<Scalar>& B_avg,
                                           const WellState& well_state,
                                           Opm::DeferredLogger& deferred_logger) override;
 
@@ -366,7 +378,7 @@ namespace Opm
                                             WellState& well_state,
                                             Opm::DeferredLogger& deferred_logger);
 
-        virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
+        virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
                                          const double simulation_time, const int report_step,
                                          WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger) override;
 

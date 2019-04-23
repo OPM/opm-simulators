@@ -380,7 +380,7 @@ namespace Opm
     WellInterface<TypeTag>::
     wellHasTHPConstraints() const
     {
-        return getTHPControlIndex() >= 0;
+        return getControlIndex(THP) >= 0;
     }
 
 
@@ -391,7 +391,7 @@ namespace Opm
     WellInterface<TypeTag>::
     getTHPConstraint(Opm::DeferredLogger& deferred_logger) const
     {
-        const int thp_control_index = getTHPControlIndex();
+        const int thp_control_index = getControlIndex(THP);
 
         if (thp_control_index < 0) {
             OPM_DEFLOG_THROW(std::runtime_error, " there is no THP constraint/limit for well " << name()
@@ -407,11 +407,11 @@ namespace Opm
     template<typename TypeTag>
     int
     WellInterface<TypeTag>::
-    getTHPControlIndex() const
+    getControlIndex(const WellControlType& type) const
     {
         const int nwc = well_controls_get_num(well_controls_);
         for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
-            if (well_controls_iget_type(well_controls_, ctrl_index) == THP) {
+            if (well_controls_iget_type(well_controls_, ctrl_index) == type) {
                 return ctrl_index;
             }
         }
@@ -426,6 +426,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     updateWellControl(const Simulator& ebos_simulator,
+                      const std::vector<Scalar>& B_avg,
                       WellState& well_state,
                       Opm::DeferredLogger& deferred_logger) /* const */
     {
@@ -504,7 +505,7 @@ namespace Opm
         }
 
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
-            updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
+            updateWellStateWithTarget(ebos_simulator, B_avg, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
         }
     }
@@ -934,7 +935,7 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    wellTesting(Simulator& simulator, const std::vector<double>& B_avg,
+    wellTesting(const Simulator& simulator, const std::vector<double>& B_avg,
                 const double simulation_time, const int report_step,
                 const WellTestConfig::Reason testing_reason,
                 /* const */ WellState& well_state,
@@ -959,7 +960,7 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    wellTestingEconomic(Simulator& simulator, const std::vector<double>& B_avg,
+    wellTestingEconomic(const Simulator& simulator, const std::vector<double>& B_avg,
                         const double simulation_time, const int report_step,
                         const WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger)
     {
@@ -1166,7 +1167,7 @@ namespace Opm
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
-    solveWellEqUntilConverged(Simulator& ebosSimulator,
+    solveWellEqUntilConverged(const Simulator& ebosSimulator,
                               const std::vector<double>& B_avg,
                               WellState& well_state,
                               Opm::DeferredLogger& deferred_logger)
@@ -1189,7 +1190,7 @@ namespace Opm
             ++it;
             solveEqAndUpdateWellState(well_state, deferred_logger);
 
-            updateWellControl(ebosSimulator, well_state, deferred_logger);
+            updateWellControl(ebosSimulator, B_avg, well_state, deferred_logger);
             initPrimaryVariablesEvaluation();
         } while (it < max_iter);
 
@@ -1238,7 +1239,7 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    solveWellForTesting(Simulator& ebosSimulator, WellState& well_state,
+    solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state,
                         const std::vector<double>& B_avg,
                         Opm::DeferredLogger& deferred_logger)
     {
