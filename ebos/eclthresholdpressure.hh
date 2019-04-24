@@ -172,8 +172,8 @@ public:
                 int cartElem1Idx = vanguard.cartesianIndex(elem1Idx);
                 int cartElem2Idx = vanguard.cartesianIndex(elem2Idx);
 
-                assert(0 <= cartElem1Idx && cartElemFaultIdx_.size() > cartElem1Idx);
-                assert(0 <= cartElem2Idx && cartElemFaultIdx_.size() > cartElem2Idx);
+                assert(0 <= cartElem1Idx && cartElemFaultIdx_.size() > 0U + cartElem1Idx);
+                assert(0 <= cartElem2Idx && cartElemFaultIdx_.size() > 0U + cartElem2Idx);
 
                 int fault1Idx = cartElemFaultIdx_[cartElem1Idx];
                 int fault2Idx = cartElemFaultIdx_[cartElem2Idx];

@@ -1737,7 +1737,7 @@ namespace Opm {
                 const auto& segments = well.segments;
 
                 // \Note: eventually we need to hanlde the situations that some segments are shut
-                assert(int(segment_set.size()) == segments.size());
+                assert( 1u + segment_set.size() == segments.size());
 
                 for (const auto& segment : segments) {
                     const int segment_index = segment_set.segmentNumberToIndex(segment.first);
