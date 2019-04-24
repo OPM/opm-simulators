@@ -215,9 +215,6 @@ namespace Opm
 
             const double relax = this->parameters_.ilu_relaxation_;
             const MILU_VARIANT ilu_milu  = this->parameters_.ilu_milu_;
-            using Matrix         = typename MatrixAdapter::matrix_type;
-            const int verbosity    = ( this->parameters_.cpr_solver_verbose_ &&
-                                       comm.communicator().rank()==0 ) ? 1 : 0;
 
             // TODO: revise choice of parameters
             // int coarsenTarget = 4000;
@@ -250,7 +247,6 @@ namespace Opm
 
             auto& opARef = reinterpret_cast<OperatorType&>(*opA_);
             int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
-            double dt = this->simulator_.timeStepSize();
             bool update_preconditioner = false;
 
             if (this->parameters_.cpr_reuse_setup_ < 1) {
