@@ -103,18 +103,18 @@ namespace Opm
 {
 template<class C2F, class FC, class NTG>
 void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t timeStep,
-                                        const C2F& c2f,
+                                        const C2F& /* c2f */,
                                         const int* cart_dims,
-                                        FC begin_face_centroids,
+                                        FC /* begin_face_centroids */,
                                         int dimensions,
-                                        std::vector<double>& dz,
+                                        std::vector<double>& /* dz */,
                                         std::vector<std::string>& well_names,
                                         std::vector<WellData>& well_data,
                                         std::map<std::string, int>& well_names_to_index,
                                         const PhaseUsage& phaseUsage,
                                         const std::map<int,int>& cartesian_to_compressed,
-                                        const double* permeability,
-                                        const NTG& ntg,
+                                        const double* /* permeability */,
+                                        const NTG& /* ntg */,
                                         std::vector<int>& wells_on_proc,
                                         const std::unordered_set<std::string>& ignored_wells)
 {

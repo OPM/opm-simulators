@@ -259,9 +259,9 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWellStateWithTarget(const Simulator& ebos_simulator,
+    updateWellStateWithTarget(const Simulator& /* ebos_simulator */,
                               WellState& well_state,
-                              Opm::DeferredLogger& deferred_logger) const
+                              Opm::DeferredLogger& /* deferred_logger */) const
     {
         // Updating well state bas on well control
         // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
@@ -768,7 +768,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
                     WellState& well_state,
-                    Opm::DeferredLogger& deferred_logger,
+                    Opm::DeferredLogger& /* deferred_logger */,
                     const double relaxation_factor) const
     {
         const double dFLimit = param_.dwell_fraction_max_;
@@ -2017,9 +2017,9 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
-                        const double simulation_time, const int report_step,
-                        WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger)
+    wellTestingPhysical(Simulator& /* simulator */, const std::vector<double>& /* B_avg */,
+                        const double /* simulation_time */, const int /* report_step */,
+                        WellState& /* well_state */, WellTestState& /* welltest_state */, Opm::DeferredLogger& deferred_logger)
     {
         const std::string msg = "Support of well testing for physical limits for multisegment wells is not "
                                 "implemented yet, wellTestingPhysical() for " + name() + " will do nothing";

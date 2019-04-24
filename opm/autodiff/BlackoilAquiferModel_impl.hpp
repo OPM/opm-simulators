@@ -109,7 +109,7 @@ namespace Opm {
     template <typename TypeTag>
     template <class Restarter>
     void
-    BlackoilAquiferModel<TypeTag>::serialize(Restarter& res)
+    BlackoilAquiferModel<TypeTag>::serialize(Restarter& /* res */)
     {
         // TODO (?)
         throw std::logic_error("BlackoilAquiferModel::serialize() is not yet implemented");
@@ -118,7 +118,7 @@ namespace Opm {
     template<typename TypeTag>
     template <class Restarter>
     void
-    BlackoilAquiferModel<TypeTag>::deserialize(Restarter& res)
+    BlackoilAquiferModel<TypeTag>::deserialize(Restarter& /* res */)
     {
         // TODO (?)
         throw std::logic_error("BlackoilAquiferModel::deserialize() is not yet implemented");

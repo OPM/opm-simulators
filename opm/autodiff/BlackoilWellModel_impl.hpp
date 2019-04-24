@@ -38,7 +38,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    init(const Opm::EclipseState& eclState, const Opm::Schedule& schedule)
+    init(const Opm::EclipseState& eclState, const Opm::Schedule& /* schedule */)
     {
         gravity_ = ebosSimulator_.problem().gravity()[2];
 
