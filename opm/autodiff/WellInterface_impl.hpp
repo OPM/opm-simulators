@@ -186,7 +186,7 @@ namespace Opm
     }
 
     template<typename TypeTag>
-    const int
+    int
     WellInterface<TypeTag>::
     indexOfWell() const
     {

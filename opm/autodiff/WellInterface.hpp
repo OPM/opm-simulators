@@ -127,7 +127,7 @@ namespace Opm
         const std::string& name() const;
 
         /// Index of well in the wells struct and wellState
-        const int indexOfWell() const;
+        int indexOfWell() const;
 
         /// Well cells.
         const std::vector<int>& cells() const {return well_cells_; }
