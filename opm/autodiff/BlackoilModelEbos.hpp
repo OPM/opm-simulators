@@ -795,14 +795,6 @@ namespace Opm {
             auto report = getReservoirConvergence(timer.currentStepLength(), iteration, B_avg, residual_norms);
             report += wellModel().getWellConvergence(B_avg);
 
-            // Throw if any NaN or too large residual found.
-            ConvergenceReport::Severity severity = report.severityOfWorstFailure();
-            if (severity == ConvergenceReport::Severity::NotANumber) {
-                OPM_THROW(Opm::NumericalIssue, "NaN residual found!");
-            } else if (severity == ConvergenceReport::Severity::TooLarge) {
-                OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
-            }
-
             return report;
         }
 
