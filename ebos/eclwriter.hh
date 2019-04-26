@@ -372,9 +372,25 @@ private:
 
     Opm::NNC exportNncStructure_() const
     {
-        Opm::NNC nnc = eclState().getInputNNC();
-        int nx = eclState().getInputGrid().getNX();
-        int ny = eclState().getInputGrid().getNY();
+        std::size_t nx = eclState().getInputGrid().getNX();
+        std::size_t ny = eclState().getInputGrid().getNY();
+        const Opm::NNC& nnc  = eclState().getInputNNC();
+        std::vector<Opm::NNCdata> outputNnc;
+
+        for( const auto& entry : nnc.nncdata() ) {
+            // \todo test vailidity
+            if(entry.cell1 < entry.cell2)
+                outputNnc.emplace_back(entry.cell1, entry.cell2, entry.trans);
+            else
+                outputNnc.emplace_back(entry.cell2, entry.cell1, entry.trans);
+        }
+
+        auto origNncSize = outputNnc.size();
+        auto nncCompare =  []( const Opm::NNCdata& nnc1, const Opm::NNCdata& nnc2){
+                               return nnc1.cell1 < nnc2.cell1 ||
+                                      ( nnc1.cell1 == nnc2.cell1 && nnc1.cell2 < nnc2.cell2);};
+        // Sort for easier search below
+        std::sort(outputNnc.begin(), outputNnc.end(), nncCompare);
 
         const auto& globalGridView = globalGrid_.leafGridView();
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
@@ -419,18 +435,39 @@ private:
                 // TODO (?): use the cartesian index mapper to make this code work
                 // with grids other than Dune::CpGrid. The problem is that we need
                 // the a mapper for the sequential grid, not for the distributed one.
-                int cc1 = globalGrid_.globalCell()[c1];
-                int cc2 = globalGrid_.globalCell()[c2];
+                std::size_t cc1 = globalGrid_.globalCell()[c1];
+                std::size_t cc2 = globalGrid_.globalCell()[c2];
 
-                if (std::abs(cc1 - cc2) != 1 &&
-                    std::abs(cc1 - cc2) != nx &&
-                    std::abs(cc1 - cc2) != nx*ny)
-                {
-                    nnc.addNNC(cc1, cc2, globalTrans->transmissibility(c1, c2));
+                if ( cc2 < cc1 )
+                    std::swap(cc1, cc2);
+
+                auto cellDiff = cc2 - cc1;
+
+                if (cellDiff != 1 &&
+                    cellDiff != nx &&
+                    cellDiff != nx*ny) {
+                    // We need to check whether an NNC for this face was also specified
+                    // via the NNC keyword in the deck (i.e. in the first origNncSize entries.
+                    auto t = globalTrans->transmissibility(c1, c2);
+                    auto end =  outputNnc.begin() + origNncSize;
+                    auto candidate = std::lower_bound(outputNnc.begin(), end, Opm::NNCdata(cc1, cc2, 0.0), nncCompare);
+
+                    if ( candidate != end && candidate->cell1 == cc1
+                         && candidate->cell2 == cc2) {
+                        t -= candidate->trans;
+                        if ( t != 0 )
+                            outputNnc.push_back({cc1, cc2, t});
+                    }
+                    else {
+                        outputNnc.push_back({cc1, cc2, t});
+                    }
                 }
             }
         }
-        return nnc;
+        Opm::NNC ret;
+        for(const auto& nncItem: outputNnc)
+            ret.addNNC(nncItem.cell1, nncItem.cell2, nncItem.trans);
+        return ret;
     }
 
     struct EclWriteTasklet
