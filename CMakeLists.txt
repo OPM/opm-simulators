@@ -149,6 +149,7 @@ opm_add_test(flow
   flow/flow_ebos_gasoil.cpp
   flow/flow_ebos_oilwater.cpp
   flow/flow_ebos_polymer.cpp
+  flow/flow_ebos_foam.cpp
   flow/flow_ebos_solvent.cpp
   flow/flow_ebos_energy.cpp
   flow/flow_ebos_oilwater_polymer.cpp

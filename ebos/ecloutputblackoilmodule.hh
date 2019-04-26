@@ -244,6 +244,8 @@ public:
             sSol_.resize(bufferSize, 0.0);
         if (GET_PROP_VALUE(TypeTag, EnablePolymer))
             cPolymer_.resize(bufferSize, 0.0);
+        if (GET_PROP_VALUE(TypeTag, EnableFoam))
+            cFoam_.resize(bufferSize, 0.0);
 
         if (simulator_.problem().vapparsActive())
             soMax_.resize(bufferSize, 0.0);
@@ -484,6 +486,10 @@ public:
 
             if (cPolymer_.size() > 0) {
                 cPolymer_[globalDofIdx] = intQuants.polymerConcentration().value();
+            }
+
+            if (cFoam_.size() > 0) {
+                cFoam_[globalDofIdx] = intQuants.foamConcentration().value();
             }
 
             if (bubblePointPressure_.size() > 0) {
@@ -877,6 +883,9 @@ public:
         if (cPolymer_.size() > 0)
             sol.insert ("POLYMER", Opm::UnitSystem::measure::identity, std::move(cPolymer_), Opm::data::TargetType::RESTART_SOLUTION);
 
+        if (cFoam_.size() > 0)
+            sol.insert ("FOAM", Opm::UnitSystem::measure::identity, std::move(cFoam_), Opm::data::TargetType::RESTART_SOLUTION);
+
         if (dewPointPressure_.size() > 0)
             sol.insert ("PDEW", Opm::UnitSystem::measure::pressure, std::move(dewPointPressure_), Opm::data::TargetType::RESTART_AUXILIARY);
 
@@ -1053,6 +1062,8 @@ public:
         }
         if (cPolymer_.size() > 0 && sol.has("POLYMER"))
             cPolymer_[elemIdx] = sol.data("POLYMER")[globalDofIndex];
+        if (cFoam_.size() > 0 && sol.has("FOAM"))
+            cFoam_[elemIdx] = sol.data("FOAM")[globalDofIndex];
         if (soMax_.size() > 0 && sol.has("SOMAX"))
             soMax_[elemIdx] = sol.data("SOMAX")[globalDofIndex];
         if (pcSwMdcOw_.size() > 0 &&sol.has("PCSWM_OW"))
@@ -1145,6 +1156,14 @@ public:
     {
         if (cPolymer_.size() > 0)
             return cPolymer_[elemIdx];
+
+        return 0;
+    }
+
+    Scalar getFoamConcentration(unsigned elemIdx) const
+    {
+        if (cFoam_.size() > 0)
+            return cFoam_[elemIdx];
 
         return 0;
     }
@@ -1459,6 +1478,7 @@ private:
     ScalarBuffer relativePermeability_[numPhases];
     ScalarBuffer sSol_;
     ScalarBuffer cPolymer_;
+    ScalarBuffer cFoam_;
     ScalarBuffer soMax_;
     ScalarBuffer pcSwMdcOw_;
     ScalarBuffer krnSwMdcOw_;

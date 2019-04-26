@@ -54,21 +54,24 @@ namespace Opm
         using typename Base::ModelParameters;
         using typename Base::Indices;
         using typename Base::PolymerModule;
+        using typename Base::FoamModule;
         using typename Base::RateConverterType;
 
         using Base::numEq;
 
         using Base::has_solvent;
         using Base::has_polymer;
+        using Base::has_foam;
         using Base::has_energy;
 
         // polymer concentration and temperature are already known by the well, so
         // polymer and energy conservation do not need to be considered explicitly
         static const int numPolymerEq = Indices::numPolymers;
         static const int numEnergyEq = Indices::numEnergy;
+        static const int numFoamEq = Indices::numFoam;
 
         // number of the conservation equations
-        static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq;
+        static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq - numFoamEq;
         // number of the well control equations
         static const int numWellControlEq = 1;
         // number of the well equations that will always be used

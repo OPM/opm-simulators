@@ -1974,7 +1974,7 @@ namespace Opm
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
         // For the polymer case and the energy case, there is one more mass balance equations of reservoir than wells
-        assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy);
+        assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy || has_foam);
 
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;

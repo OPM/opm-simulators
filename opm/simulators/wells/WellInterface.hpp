@@ -49,6 +49,7 @@
 
 #include <ewoms/models/blackoil/blackoilpolymermodules.hh>
 #include <ewoms/models/blackoil/blackoilsolventmodules.hh>
+#include <ewoms/models/blackoil/blackoilfoammodules.hh>
 
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
@@ -98,6 +99,7 @@ namespace Opm
         typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
         typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
+        typedef Ewoms::BlackOilFoamModule<TypeTag> FoamModule;
 
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
@@ -108,6 +110,8 @@ namespace Opm
         static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
         // index for the polymer molecular weight continuity equation
         static const int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;
+
+        static const bool has_foam = GET_PROP_VALUE(TypeTag, EnableFoam);
 
         // For the conversion between the surface volume rate and resrevoir voidage rate
         using RateConverterType = RateConverter::
