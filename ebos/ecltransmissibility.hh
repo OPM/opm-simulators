@@ -28,6 +28,8 @@
 #ifndef EWOMS_ECL_TRANSMISSIBILITY_HH
 #define EWOMS_ECL_TRANSMISSIBILITY_HH
 
+#include <ebos/nncsorter.hpp>
+
 #include <ewoms/common/propertysystem.hh>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -619,49 +621,7 @@ private:
 
         auto nncData = nnc.nncdata();
         auto editnncData = vanguard_.eclState().getInputEDITNNC().data();
-        auto nncLess =
-            [](const Opm::NNCdata& d1, const Opm::NNCdata& d2)
-            {
-                return
-                    (d1.cell1 < d2.cell1)
-                    || (d1.cell1 == d2.cell1 && d1.cell2 < d2.cell2);
-            };
-        std::sort(nncData.begin(), nncData.end(), nncLess);
-        auto candidate = nncData.begin();
-        for (const auto& edit: editnncData) {
-            auto printNncWarning =
-                [](int c1, int c2)
-                {
-                    std::ostringstream sstr;
-                    sstr << "Cannot edit NNC from " << c1 << " to " << c2
-                         << " as it does not exist";
-                    Opm::OpmLog::warning(sstr.str());
-                };
-            if (candidate == nncData.end()) {
-                // no more NNCs left
-                printNncWarning(edit.cell1, edit.cell2);
-                continue;
-            }
-            if (candidate->cell1 != edit.cell1 || candidate->cell2 != edit.cell2) {
-                candidate = std::lower_bound(candidate, nncData.end(), Opm::NNCdata(edit.cell1, edit.cell2, 0), nncLess);
-                if (candidate == nncData.end()) {
-                    // no more NNCs left
-                    printNncWarning(edit.cell1, edit.cell2);
-                    continue;
-                }
-            }
-            auto firstCandidate = candidate;
-            while (candidate != nncData.end()
-                   && candidate->cell1 == edit.cell1
-                   && candidate->cell2 == edit.cell2)
-            {
-                candidate->trans *= edit.trans;
-                ++candidate;
-            }
-            // start with first match in next iteration to catch case where next
-            // EDITNNC is for same pair.
-            candidate = firstCandidate;
-        }
+        sortNncAndApplyEditnnc(nncData, editnncData);
 
         for (const auto& nncEntry : nncData) {
             auto c1 = nncEntry.cell1;

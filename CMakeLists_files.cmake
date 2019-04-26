@@ -23,6 +23,7 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
+  ebos/nncsorter.cpp
   opm/autodiff/ExtractParallelGridInformationToISTL.cpp
   opm/autodiff/moduleVersion.cpp
   opm/autodiff/MPIUtilities.cpp
