@@ -619,9 +619,7 @@ private:
         if (!nnc.hasNNC())
             return make_tuple(processedNnc, unprocessedNnc);
 
-        auto nncData = nnc.nncdata();
-        auto editnncData = vanguard_.eclState().getInputEDITNNC().data();
-        sortNncAndApplyEditnnc(nncData, editnncData);
+        auto nncData = sortNncAndApplyEditnnc(nnc.nncdata(), vanguard_.eclState().getInputEDITNNC().data());
 
         for (const auto& nncEntry : nncData) {
             auto c1 = nncEntry.cell1;
