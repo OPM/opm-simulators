@@ -455,12 +455,10 @@ private:
                     if ( candidate != end && candidate->cell1 == cc1
                          && candidate->cell2 == cc2) {
                         t -= candidate->trans;
-                        if ( t != 0 )
-                            outputNnc.push_back({cc1, cc2, t});
                     }
-                    else {
+
+                    if ( t != 0 ) // eclipse definitely ignores NNCs with zero transmissibility (or is it < 1e-5?)
                         outputNnc.push_back({cc1, cc2, t});
-                    }
                 }
             }
         }
