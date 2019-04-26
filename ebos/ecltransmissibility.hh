@@ -390,7 +390,7 @@ public:
             int cartElemIdx = vanguard_.cartesianIndexMapper().cartesianIndex(elemIdx);
             globalToLocal[cartElemIdx] = elemIdx;
         }
-        applyEditNncToGridTrans_(elemMapper, globalToLocal);
+        applyEditNncToGridTrans_(globalToLocal);
         applyNncToGridTrans_(globalToLocal);
 
         //remove very small non-neighbouring transmissibilities
@@ -703,8 +703,7 @@ private:
     }
 
     /// \brief Multiplies the grid transmissibilities according to EDITNNC.
-    void applyEditNncToGridTrans_(const ElementMapper& elementMapper,
-                                  const std::vector<int>& globalToLocal)
+    void applyEditNncToGridTrans_(const std::vector<int>& globalToLocal)
     {
         const auto& editNnc = vanguard_.eclState().getInputEDITNNC();
         if (editNnc.empty())

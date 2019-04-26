@@ -360,7 +360,7 @@ namespace Opm {
         /// Called once after each time step.
         /// In this class, this function does nothing.
         /// \param[in] timer                  simulation timer
-        void afterStep(const SimulatorTimerInterface& OPM_UNUSED timer)
+        void afterStep(const SimulatorTimerInterface& timer OPM_UNUSED)
         {
             ebosSimulator_.problem().endTimeStep();
         }
@@ -369,7 +369,7 @@ namespace Opm {
         /// \param[in]      reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        SimulatorReport assembleReservoir(const SimulatorTimerInterface& timer,
+        SimulatorReport assembleReservoir(const SimulatorTimerInterface& /* timer */,
                                           const int iterationIdx)
         {
             // -------- Mass balance equations --------

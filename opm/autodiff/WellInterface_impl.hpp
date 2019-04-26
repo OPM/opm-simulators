@@ -186,7 +186,7 @@ namespace Opm
     }
 
     template<typename TypeTag>
-    const int
+    int
     WellInterface<TypeTag>::
     indexOfWell() const
     {
@@ -774,7 +774,7 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateWellTestStatePhysical(const WellState& well_state,
+    updateWellTestStatePhysical(const WellState& /* well_state */,
                                 const double simulation_time,
                                 const bool write_message_to_opmlog,
                                 WellTestState& well_test_state,

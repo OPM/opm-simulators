@@ -490,7 +490,7 @@ protected:
         template <class C, class LinearOperator, class MatrixOperator, class POrComm, class AMG >
         void
         constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax,
-                            const MILU_VARIANT milu ) const
+                            const MILU_VARIANT /* milu */ ) const
         {
             ISTLUtility::template createAMGPreconditionerPointer<C>( *opA, relax,
                                                                      comm, amg, parameters_, weights_ );

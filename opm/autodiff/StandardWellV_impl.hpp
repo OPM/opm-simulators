@@ -922,7 +922,7 @@ namespace Opm
     void
     StandardWellV<TypeTag>::
     updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                                 const WellState& well_state) const
+                                 const WellState& /* well_state */) const
     {
         const double dFLimit = param_.dwell_fraction_max_;
 
@@ -1433,7 +1433,7 @@ namespace Opm
     void
     StandardWellV<TypeTag>::
     updateWellOperability(const Simulator& ebos_simulator,
-                          const WellState& well_state,
+                          const WellState& /* well_state */,
                           Opm::DeferredLogger& deferred_logger)
     {
         this->operability_status_.reset();
@@ -1509,7 +1509,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWellV<TypeTag>::
-    checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger)
+    checkOperabilityUnderTHPLimitProducer(const Simulator& /* ebos_simulator */, Opm::DeferredLogger& deferred_logger)
     {
         const double obtain_bhp =  calculateBHPWithTHPTargetIPR(deferred_logger);
 
@@ -2892,7 +2892,7 @@ namespace Opm
     void
     StandardWellV<TypeTag>::
     wellTestingPhysical(Simulator& ebos_simulator, const std::vector<double>& B_avg,
-                        const double simulation_time, const int report_step,
+                        const double /* simulation_time */ , const int /* report_step */,
                         WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger)
     {
         deferred_logger.debug(" well " + name() + " is being tested for physical limits");

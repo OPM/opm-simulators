@@ -138,7 +138,7 @@ namespace Opm {
             /////////////
 
             template <class Restarter>
-            void deserialize(Restarter& res)
+            void deserialize(Restarter& /* res */)
             {
                 // TODO (?)
             }
@@ -148,13 +148,13 @@ namespace Opm {
              *        to the harddisk.
              */
             template <class Restarter>
-            void serialize(Restarter& res)
+            void serialize(Restarter& /* res*/)
             {
                 // TODO (?)
             }
 
-            void beginEpisode(const Opm::EclipseState& eclState,
-                              const Opm::Schedule& schedule,
+            void beginEpisode(const Opm::EclipseState& /* eclState */,
+                              const Opm::Schedule& /* schedule */,
                               bool isRestart)
             {
                 size_t episodeIdx = ebosSimulator_.episodeIndex();

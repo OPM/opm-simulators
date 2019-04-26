@@ -161,9 +161,9 @@ namespace Opm
     }
 
     template<class faceCellType, class ugridType>
-    inline const double getFaceArea(const faceCellType& faceCells, const ugridType& ugrid,
-                                    const int faceIdx, const int idx,
-                                    const Aquancon::AquanconOutput& connection) const
+    inline double getFaceArea(const faceCellType& faceCells, const ugridType& ugrid,
+                              const int faceIdx, const int idx,
+                              const Aquancon::AquanconOutput& connection) const
     {
       // Check now if the face is outside of the reservoir, or if it adjoins an inactive cell
       // Do not make the connection if the product of the two cellIdx > 0. This is because the
