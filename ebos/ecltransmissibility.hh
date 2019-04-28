@@ -663,7 +663,7 @@ private:
             candidate = firstCandidate;
         }
 
-        for (const auto& nncEntry : nnc.nncdata()) {
+        for (const auto& nncEntry : nncData) {
             auto c1 = nncEntry.cell1;
             auto c2 = nncEntry.cell2;
             auto low = cartesianToCompressed[c1];
