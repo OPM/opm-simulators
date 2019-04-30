@@ -56,7 +56,7 @@ void sortNncAndApplyEditnnc(std::vector<Opm::NNCdata>& nncData, std::vector<Opm:
             continue;
         }
         if (candidate->cell1 != edit.cell1 || candidate->cell2 != edit.cell2) {
-            candidate = std::lower_bound(candidate, nncData.end(), Opm::NNCdata(edit.cell1, edit.cell2, 0), nncLess);
+            candidate = std::lower_bound(nncData.begin(), nncData.end(), Opm::NNCdata(edit.cell1, edit.cell2, 0), nncLess);
             if (candidate == nncData.end() && log) {
                 // no more NNCs left
                 printNncWarning(edit.cell1, edit.cell2);
