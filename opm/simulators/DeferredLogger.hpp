@@ -60,7 +60,12 @@ namespace Opm
         void debug(const std::string& message);
         void note(const std::string& message);
 
+        /// Log all messages to the OpmLog backends,
+        /// and clear the message container.
         void logMessages();
+
+        /// Clear the message container without logging them.
+        void clearMessages();
 
     private:
         std::vector<Message> messages_;
