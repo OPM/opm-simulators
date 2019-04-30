@@ -63,6 +63,10 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
     if (terminal_output) {
         global_deferredLogger.logMessages();
     }
+    // Now that all messages have been logged, they are automatically
+    // cleared from the global logger, but we must also clear them
+    // from the local logger.
+    deferred_logger.clearMessages();
     const auto& cc = Dune::MPIHelper::getCollectiveCommunication();
     if (cc.max(exception_thrown) == 1) {
         throw std::logic_error(message);
