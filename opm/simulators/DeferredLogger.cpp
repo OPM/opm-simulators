@@ -86,6 +86,12 @@ namespace Opm
         for (const auto& m : messages_) {
             OpmLog::addTaggedMessage(m.flag, m.tag, m.text);
         }
+        messages_.clear();
+    }
+
+    void DeferredLogger::clearMessages()
+    {
+        messages_.clear();
     }
 
 } // namespace Opm
