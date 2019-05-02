@@ -16,7 +16,7 @@ TEST_ARGS="$@"
 
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-opm-rst-file=true --output-dir=${RESULT_PATH}
+${BINPATH}/${EXE_NAME} ${TEST_ARGS} --output-dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
 cd ..
 
