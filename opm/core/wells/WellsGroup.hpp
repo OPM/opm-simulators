@@ -25,7 +25,7 @@
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/props/BlackoilPhases.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
 
 #include <string>
@@ -541,7 +541,7 @@ namespace Opm
     /// \param[in] well the Well to construct object for
     /// \param[in] timeStep the time step in question
     /// \param[in] the phase usage
-    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(const Well* well, size_t timeStep,
+    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(const Well2& well, size_t timeStep,
                                                               const PhaseUsage& phase_usage );
 
     /// Creates the WellsGroupInterface for the given Group

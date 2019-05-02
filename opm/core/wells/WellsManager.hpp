@@ -167,12 +167,12 @@ namespace Opm
         WellsManager(const WellsManager& other);
         WellsManager& operator=(const WellsManager& other);
         static void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed );
-        void setupWellControls(std::vector<const Well*>& wells, size_t timeStep,
+        void setupWellControls(const std::vector<Well2>& wells, size_t timeStep,
                                std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,
                                const std::vector<int>& wells_on_proc);
 
         template<class C2F, class FC, class NTG>
-        void createWellsFromSpecs( std::vector<const Well*>& wells, size_t timeStep,
+        void createWellsFromSpecs( const std::vector<Well2>& wells, size_t timeStep,
                                    const C2F& cell_to_faces,
                                    const int* cart_dims,
                                    FC begin_face_centroids,
@@ -188,7 +188,7 @@ namespace Opm
                                    std::vector<int>& wells_on_proc,
                                    const std::unordered_set<std::string>& deactivated_wells);
 
-        void setupGuideRates(std::vector<const Well*>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index);
+        void setupGuideRates(const std::vector<Well2>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index);
 
         // Data
         Wells* w_;

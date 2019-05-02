@@ -28,7 +28,7 @@ namespace Opm
 
     template <typename TypeTag>
     MultisegmentWell<TypeTag>::
-    MultisegmentWell(const Well* well, const int time_step, const Wells* wells,
+    MultisegmentWell(const Well2& well, const int time_step, const Wells* wells,
                      const ModelParameters& param,
                      const RateConverterType& rate_converter,
                      const int pvtRegionIdx,
@@ -61,7 +61,7 @@ namespace Opm
         // for other facilities needed but not available from parser, we need to process them here
 
         // initialize the segment_perforations_ and update perforation_segment_depth_diffs_
-        const WellConnections& completion_set = well_ecl_->getConnections(current_step_);
+        const WellConnections& completion_set = well_ecl_.getConnections();
         // index of the perforation within wells struct
         // there might be some perforations not active, which causes the number of the perforations in
         // well_ecl_ and wells struct different
@@ -812,7 +812,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     segmentSet() const
     {
-        return well_ecl_->getWellSegments(current_step_);
+        return well_ecl_.getSegments();
     }
 
 

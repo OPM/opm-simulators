@@ -102,7 +102,7 @@ getCubeDim(const C2F& c2f,
 namespace Opm
 {
 template<class C2F, class FC, class NTG>
-void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t timeStep,
+void WellsManager::createWellsFromSpecs(const std::vector<Well2>& wells, size_t timeStep,
                                         const C2F& /* c2f */,
                                         const int* cart_dims,
                                         FC /* begin_face_centroids */,
@@ -134,13 +134,13 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
     // the index of the well according to the eclipse state
     int active_well_index = 0;
     for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
-        const auto* well = (*wellIter);
+        const auto& well = (*wellIter);
 
-        if (well->getStatus(timeStep) == WellCommon::SHUT) {
+        if (well.getStatus() == WellCommon::SHUT) {
             continue;
         }
 
-        if ( ignored_wells.find(well->name()) != ignored_wells.end() ) {
+        if ( ignored_wells.find(well.name()) != ignored_wells.end() ) {
             wells_on_proc[ wellIter - wells.begin() ] = 0;
             continue;
         }
@@ -148,7 +148,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
         {   // COMPDAT handling
             // shut completions and open ones stored in this process will have 1 others 0.
 
-            for(const auto& completion : well->getConnections(timeStep)) {
+            for(const auto& completion : well.getConnections()) {
                 if (completion.state() == WellCompletion::OPEN) {
                     const int i = completion.getI();
                     const int j = completion.getJ();
@@ -159,7 +159,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                     const std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
                     if (cgit == cartesian_to_compressed.end()) {
                         const std::string msg = ("Cell with i,j,k indices " + std::to_string(i) + " " + std::to_string(j)
-                                    + " " + std::to_string(k)  +  " not found in grid (well = " +  well->name() + ").");
+                                    + " " + std::to_string(k)  +  " not found in grid (well = " +  well.name() + ").");
                         OPM_THROW(std::runtime_error, msg);
                     }
                     else
@@ -181,25 +181,25 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
 
         if (wellperf_data[active_well_index].empty()) {
             const std::string msg = " there is no perforations associated with the well "
-                                  + well->name() + ", the well is ignored for the report step "
+                                  + well.name() + ", the well is ignored for the report step "
                                   + std::to_string(timeStep);
             OpmLog::warning(msg);
             wells_on_proc[wellIter - wells.begin()] = 0;
             continue;
         }
         {   // WELSPECS handling
-            well_names_to_index[well->name()] = active_well_index;
-            well_names.push_back(well->name());
+            well_names_to_index[well.name()] = active_well_index;
+            well_names.push_back(well.name());
             {
                 WellData wd;
-                wd.reference_bhp_depth = well->getRefDepth( timeStep );
+                wd.reference_bhp_depth = well.getRefDepth( );
                 wd.welspecsline = -1;
-                if (well->isInjector( timeStep ))
+                if (well.isInjector( ))
                     wd.type = INJECTOR;
                 else
                     wd.type = PRODUCER;
 
-                wd.allowCrossFlow = well->getAllowCrossFlow();
+                wd.allowCrossFlow = well.getAllowCrossFlow();
                 well_data.push_back(wd);
             }
         }
@@ -325,7 +325,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
     // For easy lookup:
     std::map<std::string, int> well_names_to_index;
 
-    auto wells           = schedule.getWells(timeStep);
+    const auto wells = schedule.getWells2(timeStep);
     std::vector<int> wells_on_proc;
 
     well_names.reserve(wells.size());
@@ -348,7 +348,6 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
             dz[cell] = eclGrid.getCellThicknes(gc[cell]);
         }
     }
-
 
     std::vector<double> interleavedPerm;
     RockFromDeck::extractInterleavedPermeability(eclipseState,

@@ -27,7 +27,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
 
@@ -114,7 +114,7 @@ namespace Opm
         SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
 
         /// Constructor
-        WellInterface(const Well* well, const int time_step, const Wells* wells,
+        WellInterface(const Well2& well, const int time_step, const Wells* wells,
                       const ModelParameters& param,
                       const RateConverterType& rate_converter,
                       const int pvtRegionIdx,
@@ -231,11 +231,11 @@ namespace Opm
 
         void closeCompletions(WellTestState& wellTestState);
 
-        const Well* wellEcl() const;
+        const Well2* wellEcl() const;
 
         // TODO: theoretically, it should be a const function
         // Simulator is not const is because that assembleWellEq is non-const Simulator
-        void wellTesting(Simulator& simulator, const std::vector<double>& B_avg,
+        void wellTesting(Simulator& simulator, const std::vector<double>& Bavg,
                          const double simulation_time, const int report_step,
                          const WellTestConfig::Reason testing_reason,
                          /* const */ WellState& well_state, WellTestState& welltest_state,
@@ -262,7 +262,7 @@ namespace Opm
         // to indicate a invalid completion
         static const int INVALIDCOMPLETION = INT_MAX;
 
-        const Well* well_ecl_;
+        const Well2 well_ecl_;
 
         const int current_step_;
 

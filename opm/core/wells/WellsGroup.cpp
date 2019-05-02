@@ -1588,12 +1588,12 @@ namespace Opm
       'CMODE_UNDEFINED' - we do not carry that over the specification
       objects here.
      */
-    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(const Well* well, size_t timeStep, const PhaseUsage& phase_usage )
+    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(const Well2& well, size_t timeStep, const PhaseUsage& phase_usage )
     {
         InjectionSpecification injection_specification;
         ProductionSpecification production_specification;
-        if (well->isInjector(timeStep)) {
-            const WellInjectionProperties& properties = well->getInjectionProperties(timeStep);
+        if (well.isInjector()) {
+            const WellInjectionProperties& properties = well.getInjectionProperties();
             injection_specification.BHP_limit_ = properties.BHPLimit;
             injection_specification.injector_type_ = toInjectorType(WellInjector::Type2String(properties.injectorType));
             injection_specification.surface_flow_max_rate_ = properties.surfaceInjectionRate;
@@ -1603,8 +1603,8 @@ namespace Opm
                 injection_specification.control_mode_ = toInjectionControlMode(WellInjector::ControlMode2String(properties.controlMode));
             }
         }
-        else if (well->isProducer(timeStep)) {
-            const WellProductionProperties& properties = well->getProductionProperties(timeStep);
+        else if (well.isProducer()) {
+            const WellProductionProperties& properties = well.getProductionProperties();
             production_specification.BHP_limit_ = properties.BHPLimit;
             production_specification.reservoir_flow_max_rate_ = properties.ResVRate;
             production_specification.oil_max_rate_ = properties.OilRate;
@@ -1615,8 +1615,8 @@ namespace Opm
             }
         }
         // Efficiency factor given specified with WEFAC
-        const double efficiency_factor = well->getEfficiencyFactor(timeStep);
-        std::shared_ptr<WellsGroupInterface> wells_group(new WellNode(well->name(), efficiency_factor, production_specification, injection_specification, phase_usage));
+        const double efficiency_factor = well.getEfficiencyFactor();
+        std::shared_ptr<WellsGroupInterface> wells_group(new WellNode(well.name(), efficiency_factor, production_specification, injection_specification, phase_usage));
         return wells_group;
     }
 

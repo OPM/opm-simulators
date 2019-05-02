@@ -74,18 +74,18 @@ namespace {
         };
 
         state.init(wmgr.c_wells(), cpress, setup.sched,
-                   setup.sched.getWells(timeStep),
+                   setup.sched.getWells2(timeStep),
                    timeStep, nullptr, setup.pu);
 
         state.initWellStateMSWell(wmgr.c_wells(),
-                                  setup.sched.getWells(timeStep),
+                                  setup.sched.getWells2(timeStep),
                                   timeStep, setup.pu, nullptr);
 
         return state;
     }
 
 
-    void setSegPress(const std::vector<const Opm::Well*>& wells,
+    void setSegPress(const std::vector<Opm::Well2>& wells,
                      const std::size_t                    tstep,
                      Opm::WellStateFullyImplicitBlackoil& wstate)
     {
@@ -94,7 +94,7 @@ namespace {
         auto& segPress = wstate.segPress();
 
         for (auto wellID = 0*nWell; wellID < nWell; ++wellID) {
-            const auto* well     = wells[wellID];
+            const auto& well     = wells[wellID];
             const auto  topSegIx = wstate.topSegmentIndex(wellID);
             const auto  pressTop = 100.0 * wellID;
 
@@ -102,11 +102,11 @@ namespace {
 
             press[0] = pressTop;
 
-            if (! well->isMultiSegment(tstep)) {
+            if (! well.isMultiSegment()) {
                 continue;
             }
 
-            const auto& segSet = well->getWellSegments(tstep);
+            const auto& segSet = well.getSegments();
             const auto  nSeg   = segSet.size();
 
             for (auto segID = 0*nSeg + 1; segID < nSeg; ++segID) {
@@ -118,7 +118,7 @@ namespace {
     }
 
 
-    void setSegRates(const std::vector<const Opm::Well*>& wells,
+  void setSegRates(const std::vector<Opm::Well2>& wells,
                      const std::size_t                    tstep,
                      const Opm::PhaseUsage&               pu,
                      Opm::WellStateFullyImplicitBlackoil& wstate)
@@ -139,7 +139,7 @@ namespace {
         auto& segRates = wstate.segRates();
 
         for (auto wellID = 0*nWell; wellID < nWell; ++wellID) {
-            const auto* well     = wells[wellID];
+            const auto& well     = wells[wellID];
             const auto  topSegIx = wstate.topSegmentIndex(wellID);
             const auto  rateTop  = 1000.0 * wellID;
 
@@ -147,11 +147,11 @@ namespace {
             if (oil) { segRates[np*topSegIx + io] = rateTop; }
             if (gas) { segRates[np*topSegIx + ig] = rateTop; }
 
-            if (! well->isMultiSegment(tstep)) {
+            if (! well.isMultiSegment()) {
                 continue;
             }
 
-            const auto& segSet = well->getWellSegments(tstep);
+            const auto& segSet = well.getSegments();
             const auto  nSeg   = segSet.size();
 
             for (auto segID = 0*nSeg + 1; segID < nSeg; ++segID) {
@@ -181,10 +181,10 @@ BOOST_AUTO_TEST_CASE(Linearisation)
 
     BOOST_CHECK_EQUAL(wstate.numSegment(), 6 + 1);
 
-    const auto& wells = setup.sched.getWells(tstep);
+    const auto& wells = setup.sched.getWells2atEnd();
     BOOST_CHECK_EQUAL(wells.size(), 2);
 
-    const auto prod01_first = wells[0]->name() == "PROD01";
+    const auto prod01_first = wells[0].name() == "PROD01";
 
     BOOST_CHECK_EQUAL(wstate.topSegmentIndex(0), 0);
     BOOST_CHECK_EQUAL(wstate.topSegmentIndex(1),
@@ -200,8 +200,8 @@ BOOST_AUTO_TEST_CASE(Pressure)
 
     auto wstate = buildWellState(setup, tstep);
 
-    const auto& wells = setup.sched.getWells(tstep);
-    const auto prod01_first = wells[0]->name() == "PROD01";
+    const auto& wells = setup.sched.getWells2(tstep);
+    const auto prod01_first = wells[0].name() == "PROD01";
 
     setSegPress(wells, tstep, wstate);
 
@@ -244,8 +244,8 @@ BOOST_AUTO_TEST_CASE(Rates)
 
     auto wstate = buildWellState(setup, tstep);
 
-    const auto& wells = setup.sched.getWells(tstep);
-    const auto prod01_first = wells[0]->name() == "PROD01";
+    const auto wells = setup.sched.getWells2(tstep);
+    const auto prod01_first = wells[0].name() == "PROD01";
 
     const auto& pu = setup.pu;
 
