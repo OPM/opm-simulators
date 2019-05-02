@@ -291,34 +291,34 @@ namespace Opm
 
 
 
-    void WellsManager::setupWellControls(std::vector< const Well* >& wells, size_t timeStep,
+    void WellsManager::setupWellControls(const std::vector<Well2>& wells, size_t timeStep,
                                          std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,
                                          const std::vector<int>& wells_on_proc) {
         int well_index = 0;
         auto well_on_proc = wells_on_proc.begin();
 
-        for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter, ++well_on_proc) {
+        for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter, ++well_on_proc) {
             if( ! *well_on_proc )
             {
                 // Wells not stored on the process are not in the list
                 continue;
             }
 
-            const auto* well = (*wellIter);
+            const auto& well = (*wellIter);
 
-            if (well->getStatus(timeStep) == WellCommon::SHUT) {
+            if (well.getStatus() == WellCommon::SHUT) {
                 //SHUT wells are not added to the well list
                 continue;
             }
 
-            if (well->getStatus(timeStep) == WellCommon::STOP) {
+            if (well.getStatus() == WellCommon::STOP) {
                 // Stopped wells are kept in the well list but marked as stopped.
                 well_controls_stop_well(w_->ctrls[well_index]);
             }
 
 
-            if (well->isInjector(timeStep)) {
-                const WellInjectionProperties& injectionProperties = well->getInjectionProperties(timeStep);
+            if (well.isInjector()) {
+                const WellInjectionProperties& injectionProperties = well.getInjectionProperties( );
                 int ok = 1;
                 int control_pos[5] = { -1, -1, -1, -1, -1 };
                                 
@@ -430,11 +430,11 @@ namespace Opm
                 }
             }
 
-            if (well->isProducer(timeStep)) {
+            if (well.isProducer( )) {
                 // Add all controls that are present in well.
                 // First we must clear existing controls, in case the
                 // current WCONPROD line is modifying earlier controls.
-                const WellProductionProperties& productionProperties = well->getProductionProperties(timeStep);
+                const WellProductionProperties& productionProperties = well.getProductionProperties( );
                 int control_pos[9] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
                 int ok = 1;
                 
@@ -564,7 +564,7 @@ namespace Opm
                 // Set well component fraction to match preferred phase for the well.
                 double cf[3] = { 0.0, 0.0, 0.0 };
                 {
-                    switch (well->getPreferredPhase()) {
+                    switch (well.getPreferredPhase()) {
                     case Phase::WATER:
                         if (!phaseUsage.phase_used[BlackoilPhases::Aqua]) {
                             OPM_THROW(std::runtime_error, "Water phase not used, yet found water-preferring well.");
@@ -584,7 +584,7 @@ namespace Opm
                         cf[phaseUsage.phase_pos[BlackoilPhases::Vapour]] = 1.0;
                         break;
                     default:
-                        OPM_THROW(std::logic_error, "Unknown preferred phase: " << well->getPreferredPhase());
+                        OPM_THROW(std::logic_error, "Unknown preferred phase: " << well.getPreferredPhase());
                     }
                     std::copy(cf, cf + phaseUsage.num_phases, w_->comp_frac + well_index*phaseUsage.num_phases);
                 }
@@ -595,39 +595,39 @@ namespace Opm
     }
 
     // only handle the guide rates from the keyword WGRUPCON
-    void WellsManager::setupGuideRates(std::vector< const Well* >& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index)
+    void WellsManager::setupGuideRates(const std::vector<Well2>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index)
     {
         for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
-            const auto* well = *wellIter;
+            const auto& well = *wellIter;
 
-            if (well->getStatus(timeStep) == WellCommon::SHUT) {
+            if (well.getStatus() == WellCommon::SHUT) {
                 //SHUT wells does not need guide rates
                 continue;
             }
 
-            const int wix = well_names_to_index[well->name()];
+            const int wix = well_names_to_index[well.name()];
             WellNode& wellnode = *well_collection_.getLeafNodes()[wix];
 
             // TODO: looks like only handling OIL phase guide rate for producers
-            if (well->getGuideRatePhase(timeStep) != GuideRate::UNDEFINED && well->getGuideRate(timeStep) >= 0.) {
+            if (well.getGuideRatePhase() != GuideRate::UNDEFINED && well.getGuideRate() >= 0.) {
                 if (well_data[wix].type == PRODUCER) {
-                    wellnode.prodSpec().guide_rate_ = well->getGuideRate(timeStep);
-                    if (well->getGuideRatePhase(timeStep) == GuideRate::OIL) {
+                    wellnode.prodSpec().guide_rate_ = well.getGuideRate();
+                    if (well.getGuideRatePhase() == GuideRate::OIL) {
                         wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::OIL;
                     } else {
-                        OPM_THROW(std::runtime_error, "Guide rate type " << GuideRate::GuideRatePhaseEnum2String(well->getGuideRatePhase(timeStep)) << " specified for producer "
-                                  << well->name() << " in WGRUPCON, cannot handle.");
+                        OPM_THROW(std::runtime_error, "Guide rate type " << GuideRate::GuideRatePhaseEnum2String(well.getGuideRatePhase()) << " specified for producer "
+                                  << well.name() << " in WGRUPCON, cannot handle.");
                     }
                 } else if (well_data[wix].type == INJECTOR) {
-                    wellnode.injSpec().guide_rate_ = well->getGuideRate(timeStep);
-                    if (well->getGuideRatePhase(timeStep) == GuideRate::RAT) {
+                    wellnode.injSpec().guide_rate_ = well.getGuideRate();
+                    if (well.getGuideRatePhase() == GuideRate::RAT) {
                         wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
                     } else {
-                        OPM_THROW(std::runtime_error, "Guide rate type " << GuideRate::GuideRatePhaseEnum2String(well->getGuideRatePhase(timeStep)) << " specified for injector "
-                                  << well->name() << " in WGRUPCON, cannot handle.");
+                        OPM_THROW(std::runtime_error, "Guide rate type " << GuideRate::GuideRatePhaseEnum2String(well.getGuideRatePhase()) << " specified for injector "
+                                  << well.name() << " in WGRUPCON, cannot handle.");
                     }
                 } else {
-                    OPM_THROW(std::runtime_error, "Unknown well type " << well_data[wix].type << " for well " << well->name());
+                    OPM_THROW(std::runtime_error, "Unknown well type " << well_data[wix].type << " for well " << well.name());
                 }
             } else {
                 wellnode.setIsGuideRateWellPotential(true);

@@ -268,7 +268,7 @@ namespace Opm {
 
             Simulator& ebosSimulator_;
             std::unique_ptr<WellsManager> wells_manager_;
-            std::vector< const Well* > wells_ecl_;
+            std::vector< Well2 > wells_ecl_;
 
             bool wells_active_;
 
@@ -422,7 +422,7 @@ namespace Opm {
             // whether there exists any multisegment well open on this process
             bool anyMSWellOpenLocal(const Wells* wells, const int report_step) const;
 
-            const Well* getWellEcl(const std::string& well_name) const;
+            const Well2& getWellEcl(const std::string& well_name) const;
         };
 
 

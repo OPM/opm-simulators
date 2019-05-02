@@ -113,7 +113,7 @@ namespace Opm
         typedef Dune::FieldVector<Scalar, numWellEq> VectorBlockWellType;
         typedef Dune::BlockVector<VectorBlockWellType> BVectorWell;
 
-        // the matrix type for the diagonal matrix D
+        // the matrix type for the diagonal matrix D l
         typedef Dune::FieldMatrix<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
         typedef Dune::BCRSMatrix <DiagMatrixBlockWellType> DiagMatWell;
 
@@ -127,7 +127,7 @@ namespace Opm
         using Base::contiPolymerEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
-        StandardWell(const Well* well, const int time_step, const Wells* wells,
+        StandardWell(const Well2& well, const int time_step, const Wells* wells,
                      const ModelParameters& param,
                      const RateConverterType& rate_converter,
                      const int pvtRegionIdx,

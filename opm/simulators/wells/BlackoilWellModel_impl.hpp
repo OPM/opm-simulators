@@ -83,16 +83,15 @@ namespace Opm {
         }
 
         // Create cartesian to compressed mapping
-        int last_time_step = schedule().getTimeMap().size() - 1;
-        const auto& schedule_wells = schedule().getWells();
+        const auto& schedule_wells = schedule().getWells2atEnd();
         const auto& cartesianSize = Opm::UgGridHelpers::cartDims(grid());
 
         // initialize the additional cell connections introduced by wells.
-        for (const auto well : schedule_wells)
+        for (const auto& well : schedule_wells)
         {
             std::vector<int> wellCells;
             // All possible connections of the well
-            const auto& connectionSet = well->getConnections(last_time_step);
+            const auto& connectionSet = well.getConnections();
             wellCells.reserve(connectionSet.size());
 
             for ( size_t c=0; c < connectionSet.size(); c++ )
@@ -213,7 +212,7 @@ namespace Opm {
         const Grid& grid = ebosSimulator_.vanguard().grid();
         const auto& defunct_well_names = ebosSimulator_.vanguard().defunctWellNames();
         const auto& eclState = ebosSimulator_.vanguard().eclState();
-        wells_ecl_ = schedule().getWells(timeStepIdx);
+        wells_ecl_ = schedule().getWells2(timeStepIdx);
 
         // Create wells and well state.
         wells_manager_.reset( new WellsManager (eclState,
@@ -532,7 +531,7 @@ namespace Opm {
                 const int nw_wells_ecl = wells_ecl_.size();
                 int index_well = 0;
                 for (; index_well < nw_wells_ecl; ++index_well) {
-                    if (well_name == wells_ecl_[index_well]->name()) {
+                    if (well_name == wells_ecl_[index_well].name()) {
                         break;
                     }
                 }
@@ -542,7 +541,7 @@ namespace Opm {
                     OPM_DEFLOG_THROW(std::runtime_error, "Could not find well " + well_name + " in wells_ecl ", deferred_logger);
                 }
 
-                const Well* well_ecl = wells_ecl_[index_well];
+                const Well2& well_ecl = wells_ecl_[index_well];
 
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
                 if ( wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL ) ) {
@@ -565,7 +564,7 @@ namespace Opm {
                 // something like wellTestState_.hasWell(well_name)?
                 if ( wellTestState_.hasWell(well_name, WellTestConfig::Reason::ECONOMIC) ||
                      wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL) ) {
-                    if( well_ecl->getAutomaticShutIn() ) {
+                    if( well_ecl.getAutomaticShutIn() ) {
                         // shut wells are not added to the well container
                         // TODO: make a function from well_state side to handle the following
                         well_state_.thp()[w] = 0.;
@@ -586,8 +585,8 @@ namespace Opm {
                 const int well_cell_top = wells()->well_cells[wells()->well_connpos[w]];
                 const int pvtreg = pvt_region_idx_[well_cell_top];
 
-                if ( !well_ecl->isMultiSegment(time_step) || !param_.use_multisegment_well_) {
-                    if ( GET_PROP_VALUE(TypeTag, EnablePolymerMW) && well_ecl->isInjector(time_step) ) {
+                if ( !well_ecl.isMultiSegment() || !param_.use_multisegment_well_) {
+                    if ( GET_PROP_VALUE(TypeTag, EnablePolymerMW) && well_ecl.isInjector() ) {
                         well_container.emplace_back(new StandardWellV<TypeTag>(well_ecl, time_step, wells(),
                                                     param_, *rateConverter_, pvtreg, numComponents() ) );
                     } else {
@@ -619,7 +618,7 @@ namespace Opm {
         const int nw_wells_ecl = wells_ecl_.size();
         int index_well_ecl = 0;
         for (; index_well_ecl < nw_wells_ecl; ++index_well_ecl) {
-            if (well_name == wells_ecl_[index_well_ecl]->name()) {
+          if (well_name == wells_ecl_[index_well_ecl].name()) {
                 break;
             }
         }
@@ -628,7 +627,7 @@ namespace Opm {
             OPM_DEFLOG_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ", deferred_logger);
         }
 
-        const Well* well_ecl = wells_ecl_[index_well_ecl];
+        const Well2& well_ecl = wells_ecl_[index_well_ecl];
 
         // Finding the location of the well in wells struct.
         const int nw = numWells();
@@ -648,7 +647,7 @@ namespace Opm {
         const int well_cell_top = wells()->well_cells[wells()->well_connpos[well_index_wells]];
         const int pvtreg = pvt_region_idx_[well_cell_top];
 
-        if ( !well_ecl->isMultiSegment(report_step) || !param_.use_multisegment_well_) {
+        if ( !well_ecl.isMultiSegment() || !param_.use_multisegment_well_) {
              return WellInterfacePtr(new StandardWell<TypeTag>(well_ecl, report_step, wells(),
                                                  param_, *rateConverter_, pvtreg, numComponents() ) );
         } else {
@@ -1641,8 +1640,8 @@ namespace Opm {
                             if (i == wmap.end()) {
                                 OPM_DEFLOG_THROW(std::logic_error, "Failed to find the well " << wells()->name[*rp] << " in wmap.", deferred_logger);
                             }
-                            const auto* wp = i->second;
-                            const WellProductionProperties& production_properties = wp->getProductionProperties(step);
+                            const auto& wp = i->second;
+                            const WellProductionProperties& production_properties = wp.getProductionProperties();
                             // historical phase rates
                             std::vector<double> hrates(np);
                             SimFIBODetails::historyRates(phase_usage_, production_properties, hrates);
@@ -1730,10 +1729,9 @@ namespace Opm {
             if (handle_ms_well && !well.segments.empty()) {
                 // we need the well_ecl_ information
                 const std::string& well_name = wm.first;
-                const Well* well_ecl = getWellEcl(well_name);
-                assert(well_ecl);
+                const Well2& well_ecl = getWellEcl(well_name);
 
-                const WellSegments& segment_set = well_ecl->getWellSegments(report_step);
+                const WellSegments& segment_set = well_ecl.getSegments();
 
                 const int top_segment_index = state.topSegmentIndex(well_index);
                 const auto& segments = well.segments;
@@ -1771,9 +1769,9 @@ namespace Opm {
         for (int w = 0; w < nw; ++w) {
             const std::string well_name = std::string(wells->name[w]);
 
-            const Well* well_ecl = getWellEcl(well_name);
+            const Well2& well_ecl = getWellEcl(well_name);
 
-            if (well_ecl->isMultiSegment(report_step) ) {
+            if (well_ecl.isMultiSegment() ) {
                 any_ms_well_open = true;
                 break;
             }
@@ -1786,15 +1784,15 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    const Well*
+    const Well2&
     BlackoilWellModel<TypeTag>::
     getWellEcl(const std::string& well_name) const
     {
         // finding the iterator of the well in wells_ecl
         auto well_ecl = std::find_if(wells_ecl_.begin(),
                                      wells_ecl_.end(),
-                                     [&well_name](const Well* elem)->bool {
-                                         return elem->name() == well_name;
+                                     [&well_name](const Well2& elem)->bool {
+                                         return elem.name() == well_name;
                                      });
 
         assert(well_ecl != wells_ecl_.end());

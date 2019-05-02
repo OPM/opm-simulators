@@ -37,7 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/output/data/Wells.hpp>
 #include <opm/material/common/Exceptions.hpp>
@@ -108,11 +108,11 @@ public:
         // create the wells which intersect with the current process' grid
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule.numWells(); ++deckWellIdx)
         {
-            const Opm::Well* deckWell = deckSchedule.getWells()[deckWellIdx];
-            const std::string& wellName = deckWell->name();
+            const Opm::Well2 deckWell = deckSchedule.getWells2atEnd()[deckWellIdx];
+            const std::string& wellName = deckWell.name();
             Scalar wellTemperature = 273.15 + 15.56; // [K]
-            if (deckWell->isInjector(/*timeStep=*/0))
-                wellTemperature = deckWell->getInjectionProperties(/*timeStep=*/0).temperature;
+            if (deckWell.isInjector())
+                wellTemperature = deckWell.getInjectionProperties().temperature;
 
             // set the name of the well but not much else. (i.e., if it is not completed,
             // the well primarily serves as a placeholder.) The big rest of the well is
@@ -147,20 +147,18 @@ public:
         // linearized system of equations
         updateWellParameters_(episodeIdx, wellCompMap);
 
-        const std::vector<const Opm::Well*>& deckWells = deckSchedule.getWells(episodeIdx);
+        const std::vector<Opm::Well2>& deckWells = deckSchedule.getWells2(episodeIdx);
         // set the injection data for the respective wells.
-        for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
-            const Opm::Well* deckWell = deckWells[deckWellIdx];
-
-            if (!hasWell(deckWell->name()))
+        for (const auto& deckWell : deckWells) {
+            if (!hasWell(deckWell.name()))
                 continue;
 
-            auto well = this->well(deckWell->name());
+            auto well = this->well(deckWell.name());
 
-            if (deckWell->isInjector(episodeIdx))
-                well->setTemperature(deckWell->getInjectionProperties(episodeIdx).temperature);
+            if (deckWell.isInjector( ))
+                well->setTemperature(deckWell.getInjectionProperties( ).temperature);
 
-            Opm::WellCommon::StatusEnum deckWellStatus = deckWell->getStatus(episodeIdx);
+            Opm::WellCommon::StatusEnum deckWellStatus = deckWell.getStatus( );
             switch (deckWellStatus) {
             case Opm::WellCommon::AUTO:
                 // TODO: for now, auto means open...
@@ -178,14 +176,14 @@ public:
             // make sure that the well is either an injector or a
             // producer for the current episode. (it is not allowed to
             // be neither or to be both...)
-            assert((deckWell->isInjector(episodeIdx)?1:0) +
-                   (deckWell->isProducer(episodeIdx)?1:0) == 1);
+            assert((deckWell.isInjector( )?1:0) +
+                   (deckWell.isProducer( )?1:0) == 1);
 
-            if (deckWell->isInjector(episodeIdx)) {
+            if (deckWell.isInjector( )) {
                 well->setWellType(Well::Injector);
 
                 const Opm::WellInjectionProperties& injectProperties =
-                    deckWell->getInjectionProperties(episodeIdx);
+                    deckWell.getInjectionProperties( );
 
                 switch (injectProperties.injectorType) {
                 case Opm::WellInjector::WATER:
@@ -254,11 +252,11 @@ public:
                 //well->setTargetTubingHeadPressure(injectProperties.THPLimit);
             }
 
-            if (deckWell->isProducer(episodeIdx)) {
+            if (deckWell.isProducer( )) {
                 well->setWellType(Well::Producer);
 
                 const Opm::WellProductionProperties& producerProperties =
-                    deckWell->getProductionProperties(episodeIdx);
+                    deckWell.getProductionProperties( );
 
                 switch (producerProperties.controlMode) {
                 case Opm::WellProducer::ORAT:
@@ -715,10 +713,9 @@ protected:
 
         // compute the mapping from logically Cartesian indices to the well the
         // respective connection.
-        const std::vector<const Opm::Well*>& deckWells = deckSchedule.getWells(reportStepIdx);
-        for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
-            const Opm::Well* deckWell = deckWells[deckWellIdx];
-            const std::string& wellName = deckWell->name();
+        const auto deckWells = deckSchedule.getWells2(reportStepIdx);
+        for (const auto& deckWell : deckWells) {
+            const std::string& wellName = deckWell.name();
 
             if (!hasWell(wellName))
             {
@@ -735,7 +732,7 @@ protected:
 
             std::array<int, 3> cartesianCoordinate;
             // set the well parameters defined by the current set of connections
-            const auto& connectionSet = deckWell->getConnections(reportStepIdx);
+            const auto& connectionSet = deckWell.getConnections();
             for (size_t connIdx = 0; connIdx < connectionSet.size(); connIdx ++) {
                 const auto& connection = connectionSet.get(connIdx);
                 cartesianCoordinate[ 0 ] = connection.getI();
@@ -756,17 +753,16 @@ protected:
     void updateWellParameters_(unsigned reportStepIdx, const WellConnectionsMap& wellConnections)
     {
         const auto& deckSchedule = simulator_.vanguard().schedule();
-        const std::vector<const Opm::Well*>& deckWells = deckSchedule.getWells(reportStepIdx);
+        const auto deckWells = deckSchedule.getWells2(reportStepIdx);
 
         // set the reference depth for all wells
-        for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
-            const Opm::Well* deckWell = deckWells[deckWellIdx];
-            const std::string& wellName = deckWell->name();
+        for (const auto& deckWell : deckWells) {
+            const std::string& wellName = deckWell.name();
 
             if( hasWell( wellName ) )
             {
                 wells_[wellIndex(wellName)]->clear();
-                wells_[wellIndex(wellName)]->setReferenceDepth(deckWell->getRefDepth());
+                wells_[wellIndex(wellName)]->setReferenceDepth(deckWell.getRefDepth());
             }
         }
 

@@ -26,7 +26,7 @@ namespace Opm
 
     template<typename TypeTag>
     StandardWell<TypeTag>::
-    StandardWell(const Well* well, const int time_step, const Wells* wells,
+    StandardWell(const Well2& well, const int time_step, const Wells* wells,
                  const ModelParameters& param,
                  const RateConverterType& rate_converter,
                  const int pvtRegionIdx,
@@ -531,8 +531,6 @@ namespace Opm
             if (has_energy) {
 
                 auto fs = intQuants.fluidState();
-                const int reportStepIdx = ebosSimulator.episodeIndex();
-
                 for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
                     if (!FluidSystem::phaseIsActive(phaseIdx)) {
                         continue;
@@ -566,7 +564,7 @@ namespace Opm
 
                     // change temperature for injecting fluids
                     if (well_type_ == INJECTOR && cq_s[activeCompIdx] > 0.0){
-                        const auto& injProps = this->well_ecl_->getInjectionProperties(reportStepIdx);
+                        const auto& injProps = this->well_ecl_.getInjectionProperties();
                         fs.setTemperature(injProps.temperature);
                         typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
                         typename FluidSystem::template ParameterCache<FsScalar> paramCache;
@@ -698,7 +696,7 @@ namespace Opm
                 const double target_rate = well_controls_get_current_target(well_controls_); // surface rate target
                 if (well_type_ == INJECTOR) {
                     // only handles single phase injection now
-                    assert(well_ecl_->getInjectionProperties(current_step_).injectorType != WellInjector::MULTI);
+                    assert(well_ecl_.getInjectionProperties().injectorType != WellInjector::MULTI);
                     control_eq = getWQTotal() - target_rate;
                 } else if (well_type_ == PRODUCER) {
                     if (target_rate != 0.) {
@@ -743,7 +741,7 @@ namespace Opm
                 const double target_rate = well_controls_get_current_target(well_controls_); // reservoir rate target
                 if (well_type_ == INJECTOR) {
                     // only handles single phase injection now
-                    assert(well_ecl_->getInjectionProperties(current_step_).injectorType != WellInjector::MULTI);
+                    assert(well_ecl_.getInjectionProperties().injectorType != WellInjector::MULTI);
                     const double* distr = well_controls_get_current_distr(well_controls_);
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
                         if (distr[phase] > 0.0) {
@@ -2521,15 +2519,15 @@ namespace Opm
 
         double thp = 0.0;
         if (well_type_ == INJECTOR) {
-            const int table_id = well_ecl_->getInjectionProperties(current_step_).VFPTableNumber;
+            const int table_id = well_ecl_.getInjectionProperties().VFPTableNumber;
             const double vfp_ref_depth = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
 
             thp = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp + dp);
         }
         else if (well_type_ == PRODUCER) {
-            const int table_id = well_ecl_->getProductionProperties(current_step_).VFPTableNumber;
-            const double alq = well_ecl_->getProductionProperties(current_step_).ALQValue;
+            const int table_id = well_ecl_.getProductionProperties().VFPTableNumber;
+            const double alq = well_ecl_.getProductionProperties().ALQValue;
             const double vfp_ref_depth = vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
 
