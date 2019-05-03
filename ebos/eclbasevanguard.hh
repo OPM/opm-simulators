@@ -31,6 +31,10 @@
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/GridHelpers.hpp>
+#include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
+
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
@@ -68,6 +72,7 @@ NEW_PROP_TAG(EnableOpmRstFile);
 NEW_PROP_TAG(EclStrictParsing);
 NEW_PROP_TAG(EclOutputInterval);
 NEW_PROP_TAG(IgnoreKeywords);
+NEW_PROP_TAG(EnableExperiments);
 
 SET_STRING_PROP(EclBaseVanguard, IgnoreKeywords, "");
 SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
@@ -91,6 +96,8 @@ class EclBaseVanguard : public BaseVanguard<TypeTag>
     typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Implementation;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+
+    enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
 
 public:
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
@@ -257,6 +264,9 @@ public:
             internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName , parseContext, errorGuard)));
             internalEclState_.reset(new Opm::EclipseState(*internalDeck_, parseContext, errorGuard));
 
+            if (enableExperiments && myRank == 0)
+                Opm::checkDeck(*internalDeck_, parser, parseContext, errorGuard);
+
             deck_ = &(*internalDeck_);
             eclState_ = &(*internalEclState_);
         }
@@ -310,6 +320,11 @@ public:
         asImp_().filterConnections_();
         asImp_().updateOutputDir_();
         asImp_().finalizeInit_();
+
+        if (enableExperiments) {
+            Opm::RelpermDiagnostics relpermDiagnostics;
+            relpermDiagnostics.diagnosis(*internalEclState_, *internalDeck_, asImp_().grid());
+        }
     }
 
     /*!
