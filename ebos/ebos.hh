@@ -56,6 +56,11 @@ SET_BOOL_PROP(EbosTypeTag, EnableExperiments, true);
 // use flow's well model for now
 SET_TYPE_PROP(EbosTypeTag, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
 
+// currently, ebos uses the non-multisegment well model by default to avoid
+// regressions. the --use-multisegment-well=true|false command line parameter is still
+// available in ebos, but hidden from view.
+SET_BOOL_PROP(EbosTypeTag, UseMultisegmentWell, false);
+
 // set some properties that are only required by the well model
 SET_BOOL_PROP(EbosTypeTag, MatrixAddWellContributions, true);
 SET_BOOL_PROP(EbosTypeTag, EnableTerminalOutput, false);
