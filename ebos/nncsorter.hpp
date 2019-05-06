@@ -25,7 +25,7 @@
 #define EWOMS_EBOS_NNCSORTER_HPP
 namespace Ewoms
 {
-void sortNncAndApplyEditnnc(std::vector<Opm::NNCdata>& nncData, std::vector<Opm::NNCdata>& editnncData,
-                            bool log = true);
+std::vector<Opm::NNCdata> sortNncAndApplyEditnnc(const std::vector<Opm::NNCdata>& nncData, std::vector<Opm::NNCdata> editnncData,
+                                                 bool log = true);
 }
 #endif

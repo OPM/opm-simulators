@@ -378,19 +378,16 @@ private:
     {
         std::size_t nx = eclState().getInputGrid().getNX();
         std::size_t ny = eclState().getInputGrid().getNY();
-        auto nncData = eclState().getInputNNC().nncdata();
-        auto editnncData = eclState().getInputEDITNNC().data();
+        auto nncData = sortNncAndApplyEditnnc(eclState().getInputNNC().nncdata(),
+                                              eclState().getInputEDITNNC().data());
         const auto& unitSystem = simulator_.vanguard().deck().getActiveUnitSystem();
-        auto edited = Detail::sortNncAndApplyEditnnc(nncData, editnncData);
         std::vector<Opm::NNCdata> outputNnc;
         std::size_t index = 0;
 
-        for( auto& entry : nncData ) {
+        for( const auto& entry : nncData ) {
             // test whether NNC is not a neighboring connection
-
-            if( entry.cell2 < entry.cell1 )
-                std::swap(entry.cell1, entry.cell2);
-
+            // cell2>=cell1 holds due to sortNncAndApplyEditnnc
+            assert( entry.cell2 >= entry.cell1 );
             auto cellDiff = entry.cell2 - entry.cell1;
 
             if (cellDiff != 1 && cellDiff != nx && cellDiff != nx*ny) {
