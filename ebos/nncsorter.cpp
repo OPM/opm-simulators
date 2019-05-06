@@ -30,8 +30,8 @@
 #include <iostream>
 namespace Ewoms
 {
-void sortNncAndApplyEditnnc(std::vector<Opm::NNCdata>& nncData, std::vector<Opm::NNCdata>& editnncData,
-                            bool log )
+std::vector<Opm::NNCdata> sortNncAndApplyEditnnc(const std::vector<Opm::NNCdata>& nncDataIn, std::vector<Opm::NNCdata> editnncData,
+                                                 bool log )
 {
     auto nncLess =
         [](const Opm::NNCdata& d1, const Opm::NNCdata& d2) {
@@ -39,6 +39,21 @@ void sortNncAndApplyEditnnc(std::vector<Opm::NNCdata>& nncData, std::vector<Opm:
                 (d1.cell1 < d2.cell1)
                 || (d1.cell1 == d2.cell1 && d1.cell2 < d2.cell2);
         };
+
+    auto makeCell1LessCell2 =
+        [](const Opm::NNCdata& entry) {
+            if ( entry.cell2 < entry.cell1)
+                return Opm::NNCdata(entry.cell2, entry.cell1, entry.trans);
+            else
+                return entry;
+        };
+
+    // We need to make sure that for each entry cell1<=cell2 holds. Otherwise sorting
+    // will not make the search more accurate if the engineer chooses to define NNCs
+    // differently.
+    std::vector<Opm::NNCdata> nncData(nncDataIn);
+    std::transform(nncData.begin(), nncData.end(), nncData.begin(), makeCell1LessCell2);
+    std::transform(editnncData.begin(), editnncData.end(), editnncData.begin(), makeCell1LessCell2);
     std::sort(nncData.begin(), nncData.end(), nncLess);
     auto candidate = nncData.begin();
 
@@ -75,5 +90,6 @@ void sortNncAndApplyEditnnc(std::vector<Opm::NNCdata>& nncData, std::vector<Opm:
         // EDITNNC is for same pair.
         candidate = firstCandidate;
     }
+    return nncData;
 }
 } // end namespace Ewoms
