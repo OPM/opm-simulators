@@ -22,6 +22,8 @@
 #include <ebos/nncsorter.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 
+#include <cmath>
+
 BOOST_AUTO_TEST_CASE(Test1) {
     std::vector<Opm::NNCdata> nncDataIn =
         { {9, 8, 10.0 }, { 1, 2, 3.0 }, { 3, 4, 2.0 }, { 2, 1, 5.0 } };
