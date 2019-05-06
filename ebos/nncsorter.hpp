@@ -31,6 +31,11 @@
 
 namespace Ewoms
 {
+/// \brief Scale NNC data wit informtion form EDITNNC and sort it.
+/// \param nncData The NNC data as provided by the deck.
+/// \param editnncData The EDITNNC data as provided by the deck.
+/// \return A lexicographically sorted vector of the scaled NNC data.
+///         For each entry entry.cell1<entry.cell2 will hold for convenience.
 std::vector<Opm::NNCdata> sortNncAndApplyEditnnc(const std::vector<Opm::NNCdata>& nncData, std::vector<Opm::NNCdata> editnncData,
                                                  bool log = true);
 }
