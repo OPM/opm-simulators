@@ -20,12 +20,12 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
+#include <config.h>
+#include <ebos/nncsorter.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 
 #include <sstream>
-#include <vector>
 #include <algorithm>
 #include <iostream>
 namespace Ewoms

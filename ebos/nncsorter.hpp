@@ -23,6 +23,12 @@
 
 #ifndef EWOMS_EBOS_NNCSORTER_HPP
 #define EWOMS_EBOS_NNCSORTER_HPP
+
+
+#include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+
+#include <vector>
+
 namespace Ewoms
 {
 std::vector<Opm::NNCdata> sortNncAndApplyEditnnc(const std::vector<Opm::NNCdata>& nncData, std::vector<Opm::NNCdata> editnncData,
