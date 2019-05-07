@@ -232,13 +232,14 @@ public:
                 report.output_write_time += perfTimer.stop();
             }
 
-            ebosSimulator_.setEpisodeIndex(timer.currentStepNum());
-
             // Run a multiple steps of the solver depending on the time step control.
             solverTimer.start();
 
             auto solver = createSolver(wellModel_());
 
+            ebosSimulator_.startNextEpisode(ebosSimulator_.startTime() + schedule().getTimeMap().getTimePassedUntil(timer.currentStepNum()),
+                                            timer.currentStepLength());
+            ebosSimulator_.setEpisodeIndex(timer.currentStepNum());
             solver->model().beginReportStep(firstRestartStep);
             firstRestartStep = false;
 
