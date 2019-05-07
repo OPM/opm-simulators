@@ -328,7 +328,7 @@ public:
                                               const Evaluation& temperature,
                                               const Evaluation& pressure,
                                               const Evaluation& oilSaturation,
-                                              Scalar maxOilSaturation) const
+                                              const Evaluation& maxOilSaturation) const
     { return isothermalPvt_->saturatedOilVaporizationFactor(regionIdx, temperature, pressure, oilSaturation, maxOilSaturation); }
 
     /*!
