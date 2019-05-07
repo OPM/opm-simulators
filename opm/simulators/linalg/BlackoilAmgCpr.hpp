@@ -141,12 +141,12 @@ namespace Opm
                                   const Communication& comm)
         {
             *scaledMatrix_ = *Detail::scaleMatrixDRS(fineOperator, COMPONENT_INDEX, weights_, param_);
-            smoother_.reset(Detail::constructSmoother<Smoother>(*scaledMatrixOperator_, smargs, comm));
+            smoother_ = Detail::constructSmoother<Smoother>(*scaledMatrixOperator_, smargs, comm);
             twoLevelMethod_.updatePreconditioner(*scaledMatrixOperator_,
                                                  smoother_,
                                                  coarseSolverPolicy_);
         }
-    
+
         void pre(typename TwoLevelMethod::FineDomainType& x,
                  typename TwoLevelMethod::FineRangeType& b) override
         {

@@ -290,7 +290,7 @@ namespace Dune
       /**
        * @brief Update the coarse solver and the hierarchies.
        */
-      template<class C>  
+      template<class C>
       void updateSolver(C& criterion, Operator& /* matrix */, const PI& pinfo);
 
       /**
@@ -306,9 +306,26 @@ namespace Dune
        * @param matrix The fine level matrix operator.
        * @param pinfo The fine level parallel information.
        */
+#if DUNE_VERSION_NEWER( DUNE_ISTL, 2, 7 )
+      template<class C>
+      void createHierarchies(C& criterion, Operator& matrix,
+                             const PI& pinfo)
+      {
+        // create shared_ptr with empty deleter
+        std::shared_ptr< Operator > op( &matrix, []( Operator* ) {});
+        std::shared_ptr< PI > pifo( const_cast< PI* > (&pinfo), []( PI * ) {});
+        createHierarchies( criterion, op, pifo);
+      }
+
+      template<class C>
+      void createHierarchies(C& criterion, std::shared_ptr< Operator > matrix,
+                             std::shared_ptr< PI > pinfo );
+
+#else
       template<class C>
       void createHierarchies(C& criterion, Operator& matrix,
                              const PI& pinfo);
+#endif
 
       void setupCoarseSolver();
 
@@ -397,11 +414,11 @@ namespace Dune
       /** @brief The solver of the coarsest level. */
       std::shared_ptr<CoarseSolver> solver_;
       /** @brief The right hand side of our problem. */
-      Hierarchy<Range,A>* rhs_;
+      std::shared_ptr< Hierarchy<Range,A> > rhs_;
       /** @brief The left approximate solution of our problem. */
-      Hierarchy<Domain,A>* lhs_;
+      std::shared_ptr< Hierarchy<Domain,A> > lhs_;
       /** @brief The total update for the outer solver. */
-      Hierarchy<Domain,A>* update_;
+      std::shared_ptr< Hierarchy<Domain,A> > update_;
       /** @brief The type of the scalar product for the coarse solver. */
       using ScalarProduct = Dune::ScalarProduct<X>;
       /** @brief Scalar product on the coarse level. */
@@ -440,11 +457,11 @@ namespace Dune
       verbosity_(amg.verbosity_)
     {
       if(amg.rhs_)
-        rhs_=new Hierarchy<Range,A>(*amg.rhs_);
+        rhs_.reset( new Hierarchy<Range,A>(*amg.rhs_) );
       if(amg.lhs_)
-        lhs_=new Hierarchy<Domain,A>(*amg.lhs_);
+        lhs_.reset( new Hierarchy<Domain,A>(*amg.lhs_) );
       if(amg.update_)
-        update_=new Hierarchy<Domain,A>(*amg.update_);
+        update_.reset( new Hierarchy<Domain,A>(*amg.update_) );
     }
 
     template<class M, class X, class S, class PI, class A>
@@ -495,7 +512,6 @@ namespace Dune
       createHierarchies(criterion, const_cast<Operator&>(matrix), pinfo);
     }
 
-
     template<class M, class X, class S, class PI, class A>
     AMGCPR<M,X,S,PI,A>::~AMGCPR()
     {
@@ -505,15 +521,6 @@ namespace Dune
         if(coarseSmoother_)
           coarseSmoother_.reset();
       }
-      if(lhs_)
-        delete lhs_;
-      lhs_=nullptr;
-      if(update_)
-        delete update_;
-      update_=nullptr;
-      if(rhs_)
-        delete rhs_;
-      rhs_=nullptr;
     }
 
     template<class M, class X, class S, class PI, class A>
@@ -539,8 +546,12 @@ namespace Dune
 
     template<class M, class X, class S, class PI, class A>
     template<class C>
-    void AMGCPR<M,X,S,PI,A>::createHierarchies(C& criterion, Operator& matrix,
-                                            const PI& pinfo)
+#if DUNE_VERSION_NEWER( DUNE_ISTL, 2, 7)
+    void AMGCPR<M,X,S,PI,A>::createHierarchies(C& criterion, std::shared_ptr< Operator > matrix,
+                                               std::shared_ptr< PI > pinfo )
+#else
+    void AMGCPR<M,X,S,PI,A>::createHierarchies(C& criterion, Operator& matrix, const PI& pinfo )
+#endif
     {
       Timer watch;
       matrices_.reset(new OperatorHierarchy(matrix, pinfo));
@@ -581,7 +592,11 @@ namespace Dune
           cargs.setComm(*matrices_->parallelInformation().coarsest());
         }
 
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+        coarseSmoother_ = ConstructionTraits<Smoother>::construct(cargs);
+#else
         coarseSmoother_.reset(ConstructionTraits<Smoother>::construct(cargs));
+#endif
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
         scalarProduct_ = createScalarProduct<X>(cargs.getComm(),category());
@@ -704,18 +719,24 @@ namespace Dune
       else
         // No smoother to make x consistent! Do it by hand
         matrices_->parallelInformation().coarsest()->copyOwnerToAll(x,x);
-      Range* copy = new Range(b);
-      if(rhs_)
-        delete rhs_;
-      rhs_ = new Hierarchy<Range,A>(copy);
-      Domain* dcopy = new Domain(x);
-      if(lhs_)
-        delete lhs_;
-      lhs_ = new Hierarchy<Domain,A>(dcopy);
-      dcopy = new Domain(x);
-      if(update_)
-        delete update_;
-      update_ = new Hierarchy<Domain,A>(dcopy);
+
+
+#if DUNE_VERSION_NEWER( DUNE_ISTL, 2, 7)
+      typedef std::shared_ptr< Range  >  RangePtr ;
+      typedef std::shared_ptr< Domain >  DomainPtr;
+#else
+      typedef Range*  RangePtr;
+      typedef Domain* DomainPtr;
+#endif
+
+      // Hierarchy takes ownership of pointers
+      RangePtr copy( new Range(b) );
+      rhs_.reset( new Hierarchy<Range,A>(copy) );
+      DomainPtr dcopy( new Domain(x) );
+      lhs_.reset( new Hierarchy<Domain,A>(dcopy) );
+      DomainPtr dcopy2( new Domain(x) );
+      update_.reset( new Hierarchy<Domain,A>(dcopy2) );
+
       matrices_->coarsenVector(*rhs_);
       matrices_->coarsenVector(*lhs_);
       matrices_->coarsenVector(*update_);
@@ -1024,14 +1045,11 @@ namespace Dune
         smoother->post(*lhs);
       }
       //delete &(*lhs_->finest());
-      delete lhs_;
-      lhs_=nullptr;
+      lhs_.reset();
       //delete &(*update_->finest());
-      delete update_;
-      update_=nullptr;
+      update_.reset();
       //delete &(*rhs_->finest());
-      delete rhs_;
-      rhs_=nullptr;
+      rhs_.reset();
     }
 
     template<class M, class X, class S, class PI, class A>
