@@ -160,11 +160,11 @@ public:
         // output using eclWriter if enabled
         Opm::data::Wells localWellData = simulator_.problem().wellModel().wellData();
 
-        int episodeIdx = simulator_.episodeIndex() + 1;
+        int reportStepNum = simulator_.episodeIndex() + 1;
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
-        eclOutputModule_.allocBuffers(numElements, episodeIdx, isSubStep, log);
+        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log);
 
         ElementContext elemCtx(simulator_);
         ElementIterator elemIt = gridView.template begin</*codim=*/0>();
@@ -184,7 +184,7 @@ public:
 
         // add cell data to perforations for Rft output
         if (!isSubStep)
-            eclOutputModule_.addRftDataToWells(localWellData, episodeIdx);
+            eclOutputModule_.addRftDataToWells(localWellData, reportStepNum);
 
         if (collectToIORank_.isParallel())
             collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(), localWellData);
@@ -221,7 +221,7 @@ public:
 
             // first, create a tasklet to write the data for the current time step to disk
             auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(*eclIO_,
-                                                                     episodeIdx,
+                                                                     reportStepNum,
                                                                      isSubStep,
                                                                      curTime,
                                                                      restartValue,
@@ -437,7 +437,7 @@ private:
         : public TaskletInterface
     {
         Opm::EclipseIO& eclIO_;
-        int episodeIdx_;
+        int reportStepNum_;
         bool isSubStep_;
         double secondsElapsed_;
         Opm::RestartValue restartValue_;
@@ -447,7 +447,7 @@ private:
         bool writeDoublePrecision_;
 
         explicit EclWriteTasklet(Opm::EclipseIO& eclIO,
-                                 int episodeIdx,
+                                 int reportStepNum,
                                  bool isSubStep,
                                  double secondsElapsed,
                                  Opm::RestartValue restartValue,
@@ -456,7 +456,7 @@ private:
                                  const std::map<std::pair<std::string, int>, double>& blockSummaryValues,
                                  bool writeDoublePrecision)
             : eclIO_(eclIO)
-            , episodeIdx_(episodeIdx)
+            , reportStepNum_(reportStepNum)
             , isSubStep_(isSubStep)
             , secondsElapsed_(secondsElapsed)
             , restartValue_(restartValue)
@@ -469,7 +469,7 @@ private:
         // callback to eclIO serial writeTimeStep method
         void run()
         {
-            eclIO_.writeTimeStep(episodeIdx_,
+            eclIO_.writeTimeStep(reportStepNum_,
                                  isSubStep_,
                                  secondsElapsed_,
                                  restartValue_,

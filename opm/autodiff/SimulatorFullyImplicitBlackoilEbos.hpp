@@ -133,6 +133,8 @@ public:
     {
         failureReport_ = SimulatorReport();
 
+        ebosSimulator_.setEpisodeIndex(-1);
+
         // handle restarts
         std::unique_ptr<RestartValue> restartValues;
         if (isRestart()) {
@@ -164,6 +166,21 @@ public:
 
             double suggestedStepSize = -1.0;
             if (isRestart()) {
+                // Set the start time of the simulation
+                const auto& schedule = ebosSimulator_.vanguard().schedule();
+                const auto& eclState = ebosSimulator_.vanguard().eclState();
+                const auto& timeMap = schedule.getTimeMap();
+                const auto& initconfig = eclState.getInitConfig();
+                int episodeIdx = initconfig.getRestartStep() - 1;
+
+                ebosSimulator_.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
+                ebosSimulator_.setTime(timeMap.getTimePassedUntil(episodeIdx));
+
+                ebosSimulator_.startNextEpisode(ebosSimulator_.startTime() + ebosSimulator_.time(),
+                                                timeMap.getTimeStepLength(episodeIdx));
+                ebosSimulator_.setEpisodeIndex(episodeIdx);
+
+
                 // This is a restart, determine the time step size from the restart data
                 if (restartValues->hasExtra("OPMEXTRA")) {
                     std::vector<double> opmextra = restartValues->getExtra("OPMEXTRA");
@@ -206,11 +223,17 @@ public:
                 Dune::Timer perfTimer;
                 perfTimer.start();
 
+                ebosSimulator_.setEpisodeIndex(-1);
+                ebosSimulator_.setEpisodeLength(0.0);
+                ebosSimulator_.setTimeStepSize(0.0);
+
                 wellModel_().beginReportStep(timer.currentStepNum());
                 ebosSimulator_.problem().writeOutput(false);
 
                 report.output_write_time += perfTimer.stop();
             }
+
+            ebosSimulator_.setEpisodeIndex(timer.currentStepNum());
 
             // Run a multiple steps of the solver depending on the time step control.
             solverTimer.start();
@@ -265,6 +288,14 @@ public:
                 }
             }
 
+            // write simulation state at the report stage
+            Dune::Timer perfTimer;
+            perfTimer.start();
+            const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
+            ebosSimulator_.problem().setNextTimeStepSize(nextstep);
+            ebosSimulator_.problem().writeOutput(false);
+            report.output_write_time += perfTimer.stop();
+
             solver->model().endReportStep();
 
             // take time that was used to solve system for this reportStep
@@ -283,14 +314,6 @@ public:
                     outputTimestampFIP(timer, version);
                 }
             }
-
-            // write simulation state at the report stage
-            Dune::Timer perfTimer;
-            perfTimer.start();
-            const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
-            ebosSimulator_.problem().setNextTimeStepSize(nextstep);
-            ebosSimulator_.problem().writeOutput(false);
-            report.output_write_time += perfTimer.stop();
 
             if (terminalOutput_) {
                 std::string msg =

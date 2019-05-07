@@ -91,10 +91,6 @@ public:
         enableThresholdPressure_ = false;
     }
 
-
-    void setFromRestart(const std::vector<Scalar>& values)
-    { thpres_ = values; }
-
     /*!
      * \brief Actually compute the threshold pressures over a face as a pre-compute step.
      */
@@ -201,10 +197,21 @@ public:
         return thpres_[equilRegion1Idx*numEquilRegions_ + equilRegion2Idx];
     }
 
-    const std::vector<Scalar>& data() const {
-        return thpres_;
-    }
+    /*!
+     * \brief Return the raw array with the threshold pressures
+     *
+     * This is used for the restart capability.
+     */
+    const std::vector<Scalar>& data() const
+    { return thpres_; }
 
+    /*!
+     * \brief Set the threshold pressures from a raw array
+     *
+     * This is used for the restart capability.
+     */
+    void setFromRestart(const std::vector<Scalar>& values)
+    { thpres_ = values; }
 
 private:
     // compute the defaults of the threshold pressures using the initial condition

@@ -131,6 +131,7 @@ void test_summary()
     simulator->model().applyInitialSolution();
     Opm::data::Wells dw;
     bool substep = false;
+    simulator->startNextEpisode(0.0, 1e30);
     simulator->setEpisodeIndex(0);
     eclWriter->writeOutput(substep);
     simulator->setEpisodeIndex(1);

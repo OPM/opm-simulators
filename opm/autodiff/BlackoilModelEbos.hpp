@@ -182,7 +182,6 @@ namespace Opm {
         /// \param[in] timer                  simulation timer
         void prepareStep(const SimulatorTimerInterface& timer)
         {
-
             // update the solution variables in ebos
             if ( timer.lastStepFailed() ) {
                 ebosSimulator_.model().updateFailed();
@@ -194,13 +193,8 @@ namespace Opm {
             // know the report step/episode index because of timing dependend data
             // despide the fact that flow uses its own time stepper. (The length of the
             // episode does not matter, though.)
-            Scalar t = timer.simulationTimeElapsed();
-            ebosSimulator_.startNextEpisode(/*episodeStartTime=*/t, /*episodeLength=*/1e30);
-            ebosSimulator_.setEpisodeIndex(timer.reportStepNum());
-            ebosSimulator_.setTime(t);
+            ebosSimulator_.setTime(timer.simulationTimeElapsed());
             ebosSimulator_.setTimeStepSize(timer.currentStepLength());
-            ebosSimulator_.setTimeStepIndex(ebosSimulator_.timeStepIndex() + 1);
-
             ebosSimulator_.problem().beginTimeStep();
 
             unsigned numDof = ebosSimulator_.model().numGridDof();
