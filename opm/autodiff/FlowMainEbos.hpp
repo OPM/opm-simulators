@@ -25,12 +25,12 @@
 
 #include <sys/utsname.h>
 
-#include <opm/simulators/ParallelFileMerger.hpp>
+#include <opm/simulators/utils/ParallelFileMerger.hpp>
 
 #include <opm/autodiff/BlackoilModelEbos.hpp>
 #include <opm/autodiff/MissingFeatures.hpp>
-#include <opm/autodiff/moduleVersion.hpp>
-#include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
+#include <opm/simulators/utils/moduleVersion.hpp>
+#include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
@@ -382,7 +382,7 @@ namespace Opm
         void printPRTHeader()
         {
           if (output_cout_) {
-              const std::string version = moduleVersionName();
+              const std::string version = moduleVersion();
               const double megabyte = 1024 * 1024;
               unsigned num_cpu = std::thread::hardware_concurrency();
               struct utsname arch;

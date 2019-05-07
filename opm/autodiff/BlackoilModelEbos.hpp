@@ -31,14 +31,14 @@
 
 #include <opm/autodiff/NonlinearSolverEbos.hpp>
 #include <opm/autodiff/BlackoilModelParametersEbos.hpp>
-#include <opm/autodiff/BlackoilWellModel.hpp>
-#include <opm/autodiff/BlackoilAquiferModel.hpp>
-#include <opm/autodiff/WellConnectionAuxiliaryModule.hpp>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
+#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+#include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
-#include <opm/core/linalg/ParallelIstlInformation.hpp>
+#include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
@@ -49,7 +49,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
-#include <opm/autodiff/ISTLSolverEbos.hpp>
+#include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 #include <opm/common/data/SimulationDataContainer.hpp>
 
 #include <dune/istl/owneroverlapcopy.hh>

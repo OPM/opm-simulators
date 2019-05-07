@@ -30,9 +30,9 @@
 
 #include "eclproblem.hh"
 
-#include <opm/autodiff/BlackoilWellModel.hpp>
-#include <opm/autodiff/BlackoilAquiferModel.hpp>
-#include <opm/autodiff/ISTLSolverEbos.hpp>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
+#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+#include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
 #include <ewoms/common/start.hh>
 
