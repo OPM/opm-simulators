@@ -335,6 +335,16 @@ public:
             }
         }
 
+        // ROCKC
+        if (rstKeywords["ROCKC"] > 0) {
+            rstKeywords["ROCKC"] = 0;
+            rockCompPorvMultiplier_.resize(bufferSize, 0.0);
+            rockCompTransMultiplier_.resize(bufferSize, 0.0);
+            swMax_.resize(bufferSize, 0.0);
+            minimumOilPressure_.resize(bufferSize, 0.0);
+            overburdenPressure_.resize(bufferSize, 0.0);
+        }
+
         //Warn for any unhandled keyword
         if (log) {
             for (auto& keyValue: rstKeywords) {
@@ -367,6 +377,7 @@ public:
         if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
             return;
 
+        const auto& problem = elemCtx.simulator().problem();
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
@@ -495,9 +506,30 @@ public:
             }
 
             if (soMax_.size() > 0)
-                soMax_[globalDofIdx] = elemCtx.simulator().problem().maxOilSaturation(globalDofIdx);
+                soMax_[globalDofIdx] =
+                    std::max(Opm::getValue(fs.saturation(oilPhaseIdx)),
+                             problem.maxOilSaturation(globalDofIdx));
 
-            const auto& matLawManager = elemCtx.simulator().problem().materialLawManager();
+            if (swMax_.size() > 0)
+                swMax_[globalDofIdx] =
+                    std::max(Opm::getValue(fs.saturation(waterPhaseIdx)),
+                             problem.maxWaterSaturation(globalDofIdx));
+
+            if (minimumOilPressure_.size() > 0)
+                minimumOilPressure_[globalDofIdx] =
+                    std::min(Opm::getValue(fs.pressure(oilPhaseIdx)),
+                             problem.minOilPressure(globalDofIdx));
+
+            if (overburdenPressure_.size() > 0)
+                overburdenPressure_[globalDofIdx] = problem.overburdenPressure(globalDofIdx);
+
+            if (rockCompPorvMultiplier_.size() > 0)
+                rockCompPorvMultiplier_[globalDofIdx] = problem.template rockCompPoroMultiplier<Scalar>(intQuants, globalDofIdx);
+
+            if (rockCompTransMultiplier_.size() > 0)
+                rockCompTransMultiplier_[globalDofIdx] = problem.template rockCompTransMultiplier<Scalar>(intQuants, globalDofIdx);
+
+            const auto& matLawManager = problem.materialLawManager();
             if (matLawManager->enableHysteresis()) {
                 if (pcSwMdcOw_.size() > 0 && krnSwMdcOw_.size() > 0) {
                     matLawManager->oilWaterHysteresisParams(
@@ -525,7 +557,7 @@ public:
             // This can be removed when ebos has 100% controll over output
             if (elemCtx.simulator().episodeIndex() < 0 && FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
 
-                const auto& fsInitial = elemCtx.simulator().problem().initialFluidState(globalDofIdx);
+                const auto& fsInitial = problem.initialFluidState(globalDofIdx);
 
                 // use initial rs and rv values
                 if (rv_.size() > 0)
@@ -832,6 +864,23 @@ public:
 
         if (bubblePointPressure_.size() > 0)
             sol.insert ("PBUB", Opm::UnitSystem::measure::pressure, std::move(bubblePointPressure_), Opm::data::TargetType::RESTART_AUXILIARY);
+
+
+        if (swMax_.size() > 0)
+            sol.insert ("SWMAX", Opm::UnitSystem::measure::identity, std::move(swMax_), Opm::data::TargetType::RESTART_SOLUTION);
+
+        if (minimumOilPressure_.size() > 0)
+            sol.insert ("PRESROCC", Opm::UnitSystem::measure::pressure, std::move(minimumOilPressure_), Opm::data::TargetType::RESTART_SOLUTION);
+
+        if (overburdenPressure_.size() > 0)
+            sol.insert ("PRES_OVB", Opm::UnitSystem::measure::pressure, std::move(overburdenPressure_), Opm::data::TargetType::RESTART_SOLUTION);
+
+        if (rockCompPorvMultiplier_.size() > 0)
+            sol.insert ("PORV_RC", Opm::UnitSystem::measure::identity, std::move(rockCompPorvMultiplier_), Opm::data::TargetType::RESTART_SOLUTION);
+
+        if (rockCompTransMultiplier_.size() > 0)
+            sol.insert ("TMULT_RC", Opm::UnitSystem::measure::identity, std::move(rockCompTransMultiplier_), Opm::data::TargetType::RESTART_SOLUTION);
+
 
         // Fluid in place
         for (int i = 0; i<FipDataType::numFipValues; i++) {
@@ -1400,6 +1449,12 @@ private:
     ScalarBuffer ppcw_;
     ScalarBuffer bubblePointPressure_;
     ScalarBuffer dewPointPressure_;
+    ScalarBuffer rockCompPorvMultiplier_;
+    ScalarBuffer rockCompTransMultiplier_;
+    ScalarBuffer swMax_;
+    ScalarBuffer overburdenPressure_;
+    ScalarBuffer minimumOilPressure_;
+
     std::vector<int> failedCellsPb_;
     std::vector<int> failedCellsPd_;
     std::vector<int> fipnum_;

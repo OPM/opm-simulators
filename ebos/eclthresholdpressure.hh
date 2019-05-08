@@ -252,9 +252,9 @@ private:
                     continue;
 
                 // don't include connections with negligible flow
-                const Scalar& trans = simulator_.problem().transmissibility(elemCtx, i, j);
-                const Scalar& faceArea = face.area();
-                if ( std::abs(faceArea * trans) < 1e-18)
+                const Evaluation& trans = simulator_.problem().transmissibility(elemCtx, i, j);
+                Scalar faceArea = face.area();
+                if (std::abs(faceArea*Opm::getValue(trans)) < 1e-18)
                     continue;
 
                 // determine the maximum difference of the pressure of any phase over the
