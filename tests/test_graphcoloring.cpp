@@ -4,7 +4,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/paamg/graph.hh>
 
-#include <opm/autodiff/GraphColoring.hpp>
+#include <opm/simulators/linalg/GraphColoring.hpp>
 
 #define BOOST_TEST_MODULE GraphColoringTest
 #define BOOST_TEST_MAIN

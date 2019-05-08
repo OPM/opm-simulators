@@ -9,7 +9,7 @@
 #include<dune/istl/bvector.hh>
 #include<dune/common/fmatrix.hh>
 #include<dune/common/fvector.hh>
-#include<opm/autodiff/ParallelOverlappingILU0.hpp>
+#include<opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/floating_point_comparison.hpp>

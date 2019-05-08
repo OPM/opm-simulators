@@ -21,7 +21,7 @@
 
 #define BOOST_TEST_MODULE InvertSpecializationTest
 #include <boost/test/unit_test.hpp>
-#include <opm/autodiff/MatrixBlock.hpp>
+#include <opm/simulators/linalg/MatrixBlock.hpp>
 
 
 void checkIdentity(Dune::FieldMatrix<double, 4, 4> M) {

@@ -21,7 +21,7 @@
 #include "config.h"
 #include "flow/flow_tag.hpp"
 //#include <opm/linearsolvers/amgclsolverbackend.hh>
-#include  <opm/autodiff/ISTLSolverEbosCpr.hpp>
+#include  <opm/simulators/linalg/ISTLSolverEbosCpr.hpp>
 //#include <ewoms/linear/superlubackend.hh>
 
 BEGIN_PROPERTIES

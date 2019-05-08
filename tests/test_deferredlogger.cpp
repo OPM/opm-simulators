@@ -24,7 +24,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "opm/simulators/DeferredLogger.hpp"
+#include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/LogBackend.hpp>

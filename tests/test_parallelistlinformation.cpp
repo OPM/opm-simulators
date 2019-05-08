@@ -26,7 +26,7 @@
 #define BOOST_TEST_MODULE OPM-ParallelIstlInformation
 #include <boost/test/unit_test.hpp>
 #include "DuneIstlTestHelpers.hpp"
-#include <opm/core/linalg/ParallelIstlInformation.hpp>
+#include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <functional>
 #ifdef HAVE_DUNE_ISTL
 

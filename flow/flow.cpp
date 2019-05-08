@@ -31,7 +31,7 @@
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
-#include <opm/autodiff/moduleVersion.hpp>
+#include <opm/simulators/utils/moduleVersion.hpp>
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 #include <opm/autodiff/MissingFeatures.hpp>

@@ -25,7 +25,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <opm/simulators/gatherDeferredLogger.hpp>
+#include <opm/simulators/utils/gatherDeferredLogger.hpp>
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
