@@ -36,8 +36,6 @@
 #include <ewoms/io/baseoutputwriter.hh>
 #include <ewoms/parallel/tasklets.hh>
 
-#include <ebos/nncsorter.hpp>
-
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
@@ -58,6 +56,7 @@ BEGIN_PROPERTIES
 NEW_PROP_TAG(EnableEclOutput);
 NEW_PROP_TAG(EnableAsyncEclOutput);
 NEW_PROP_TAG(EclOutputDoublePrecision);
+NEW_PROP_TAG(TransmissibilityCalculator);
 
 END_PROPERTIES
 
@@ -94,6 +93,8 @@ class EclWriter
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef typename GET_PROP_TYPE(TypeTag, TransmissibilityCalculator) TransmissibilityCalculator;
+
     typedef typename GridView::template Codim<0>::Entity Element;
     typedef typename GridView::template Codim<0>::Iterator ElementIterator;
 
@@ -378,8 +379,9 @@ private:
     {
         std::size_t nx = eclState().getInputGrid().getNX();
         std::size_t ny = eclState().getInputGrid().getNY();
-        auto nncData = sortNncAndApplyEditnnc(eclState().getInputNNC().nncdata(),
-                                              eclState().getInputEDITNNC().data());
+        const auto& nncData =
+            TransmissibilityCalculator::sortNncAndApplyEditnnc(eclState().getInputNNC().nncdata(),
+                                                               eclState().getInputEDITNNC().data());
         const auto& unitSystem = simulator_.vanguard().deck().getActiveUnitSystem();
         std::vector<Opm::NNCdata> outputNnc;
         std::size_t index = 0;
@@ -399,14 +401,14 @@ private:
             ++index;
         }
 
-        auto nncCompare =  []( const Opm::NNCdata& nnc1, const Opm::NNCdata& nnc2){
-                               return nnc1.cell1 < nnc2.cell1 ||
-                                      ( nnc1.cell1 == nnc2.cell1 && nnc1.cell2 < nnc2.cell2);};
-        // Sort the nncData values from the deck as they need to be
-        // Checked when writing NNC transmissibilities from the simulation.
-        std::sort(nncData.begin(), nncData.end(), nncCompare);
+        auto nncCompare =
+            []( const Opm::NNCdata& nnc1, const Opm::NNCdata& nnc2)
+            {
+                return nnc1.cell1 < nnc2.cell1 ||
+                       ( nnc1.cell1 == nnc2.cell1 && nnc1.cell2 < nnc2.cell2);
+            };
 
-        const auto& globalGridView = globalGrid_.leafGridView();
+const auto& globalGridView = globalGrid_.leafGridView();
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
         ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());

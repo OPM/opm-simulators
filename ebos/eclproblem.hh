@@ -158,6 +158,9 @@ NEW_PROP_TAG(EclRestartShrinkFactor);
 NEW_PROP_TAG(EclMaxFails);
 NEW_PROP_TAG(EclEnableTuning);
 
+// the class which computes the transmissibilities in an ECL-compatible way
+NEW_PROP_TAG(TransmissibilityCalculator);
+
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 
@@ -225,6 +228,9 @@ public:
                                /*needIntegrationPos=*/false,
                                /*needNormal=*/false> type;
 };
+
+// by default, use the Ewoms;;EclTransmissibility class to compute the transmissibilities
+SET_TYPE_PROP(EclBaseProblem, TransmissibilityCalculator, Ewoms::EclTransmissibility<TypeTag>);
 
 // by default use the dummy aquifer "model"
 SET_TYPE_PROP(EclBaseProblem, EclAquiferModel, Ewoms::EclBaseAquiferModel<TypeTag>);
@@ -428,6 +434,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
     typedef typename GET_PROP_TYPE(TypeTag, EclWellModel) EclWellModel;
     typedef typename GET_PROP_TYPE(TypeTag, EclAquiferModel) EclAquiferModel;
+    typedef typename GET_PROP_TYPE(TypeTag, TransmissibilityCalculator) TransmissibilityCalculator;
 
     typedef BlackOilSolventModule<TypeTag> SolventModule;
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
@@ -1063,7 +1070,7 @@ public:
     /*!
      * \brief Return a reference to the object that handles the "raw" transmissibilities.
      */
-    const EclTransmissibility<TypeTag>& eclTransmissibilities() const
+    const TransmissibilityCalculator& eclTransmissibilities() const
     { return transmissibilities_; }
 
     /*!
@@ -3089,7 +3096,7 @@ private:
 
     std::array<std::vector<Scalar>, 2> referencePorosity_;
     std::vector<Scalar> elementCenterDepth_;
-    EclTransmissibility<TypeTag> transmissibilities_;
+    TransmissibilityCalculator transmissibilities_;
 
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;
     std::shared_ptr<EclThermalLawManager> thermalLawManager_;

@@ -73,6 +73,7 @@ NEW_PROP_TAG(EclStrictParsing);
 NEW_PROP_TAG(EclOutputInterval);
 NEW_PROP_TAG(IgnoreKeywords);
 NEW_PROP_TAG(EnableExperiments);
+NEW_PROP_TAG(TransmissibilityCalculator);
 
 SET_STRING_PROP(EclBaseVanguard, IgnoreKeywords, "");
 SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
@@ -96,6 +97,7 @@ class EclBaseVanguard : public BaseVanguard<TypeTag>
     typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Implementation;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef typename GET_PROP_TYPE(TypeTag, TransmissibilityCalculator) TransmissibilityCalculator;
 
     enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
 

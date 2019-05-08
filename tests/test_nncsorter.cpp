@@ -17,9 +17,11 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
+
 #define BOOST_TEST_MODULE NNCSortTest
+#include <ebos/ebos.hh>
 #include <boost/test/unit_test.hpp>
-#include <ebos/nncsorter.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 
 #include <cmath>
@@ -34,7 +36,9 @@ BOOST_AUTO_TEST_CASE(Test1) {
     std::vector<Opm::NNCdata> nncDataOut2 =
         { { 1, 2, 0.5 }, { 1, 2, 0.3 }, { 3, 4, 0.4 }, { 8, 9, 10.0 } };
 
-    auto nncDataProcessed = Ewoms::sortNncAndApplyEditnnc(nncDataIn, editnncData);
+    typedef typename GET_PROP_TYPE(TTAG(EbosTypeTag), TransmissibilityCalculator) TC;
+
+    auto nncDataProcessed = TC::sortNncAndApplyEditnnc(nncDataIn, editnncData);
     BOOST_CHECK(nncDataProcessed.size() == nncDataOut1.size());
     auto expectedNnc1 = nncDataOut1.begin();
     auto expectedNnc2 = nncDataOut2.begin();

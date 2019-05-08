@@ -76,6 +76,7 @@ public:
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, EquilGrid) EquilGrid;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef typename GET_PROP_TYPE(TypeTag, TransmissibilityCalculator) TransmissibilityCalculator;
 
 private:
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
@@ -154,7 +155,7 @@ public:
             // transmissibilities are relatively expensive to compute, we only do it if
             // more than a single process is involved in the simulation.
             cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
-            globalTrans_ = new EclTransmissibility<TypeTag>(*this);
+            globalTrans_ = new TransmissibilityCalculator(*this);
             globalTrans_->update();
 
             // convert to transmissibility for faces
@@ -233,7 +234,7 @@ public:
     std::unordered_set<std::string> defunctWellNames() const
     { return defunctWellNames_; }
 
-    const EclTransmissibility<TypeTag>& globalTransmissibility() const
+    const TransmissibilityCalculator& globalTransmissibility() const
     { return *globalTrans_; }
 
     void releaseGlobalTransmissibility()
@@ -283,7 +284,7 @@ protected:
     CartesianIndexMapper* cartesianIndexMapper_;
     CartesianIndexMapper* equilCartesianIndexMapper_;
 
-    EclTransmissibility<TypeTag>* globalTrans_;
+    TransmissibilityCalculator* globalTrans_;
     std::unordered_set<std::string> defunctWellNames_;
 };
 
