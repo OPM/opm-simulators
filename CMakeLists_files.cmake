@@ -23,6 +23,7 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
+  ebos/nncsorter.cpp
   opm/autodiff/MPIUtilities.cpp
   opm/autodiff/MissingFeatures.cpp
   opm/core/props/rock/RockFromDeck.cpp
@@ -58,6 +59,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_vfpproperties.cpp
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
+  tests/test_nncsorter.cpp
   tests/test_wellmodel.cpp
   tests/test_deferredlogger.cpp
   tests/test_timer.cpp

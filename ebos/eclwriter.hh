@@ -36,6 +36,8 @@
 #include <ewoms/io/baseoutputwriter.hh>
 #include <ewoms/parallel/tasklets.hh>
 
+#include <ebos/nncsorter.hpp>
+
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
@@ -44,6 +46,8 @@
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Exceptions.hpp>
+
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <list>
 #include <utility>
@@ -372,9 +376,35 @@ private:
 
     Opm::NNC exportNncStructure_() const
     {
-        Opm::NNC nnc = eclState().getInputNNC();
-        int nx = eclState().getInputGrid().getNX();
-        int ny = eclState().getInputGrid().getNY();
+        std::size_t nx = eclState().getInputGrid().getNX();
+        std::size_t ny = eclState().getInputGrid().getNY();
+        auto nncData = sortNncAndApplyEditnnc(eclState().getInputNNC().nncdata(),
+                                              eclState().getInputEDITNNC().data());
+        const auto& unitSystem = simulator_.vanguard().deck().getActiveUnitSystem();
+        std::vector<Opm::NNCdata> outputNnc;
+        std::size_t index = 0;
+
+        for( const auto& entry : nncData ) {
+            // test whether NNC is not a neighboring connection
+            // cell2>=cell1 holds due to sortNncAndApplyEditnnc
+            assert( entry.cell2 >= entry.cell1 );
+            auto cellDiff = entry.cell2 - entry.cell1;
+
+            if (cellDiff != 1 && cellDiff != nx && cellDiff != nx*ny) {
+                auto tt = unitSystem.from_si(Opm::UnitSystem::measure::transmissibility, entry.trans);
+                // Eclipse ignores NNCs (with EDITNNC applied) that are small. Seems like the threshold is 1.0e-6
+                if ( tt >= 1.0e-6 )
+                    outputNnc.emplace_back(entry.cell1, entry.cell2, entry.trans);
+            }
+            ++index;
+        }
+
+        auto nncCompare =  []( const Opm::NNCdata& nnc1, const Opm::NNCdata& nnc2){
+                               return nnc1.cell1 < nnc2.cell1 ||
+                                      ( nnc1.cell1 == nnc2.cell1 && nnc1.cell2 < nnc2.cell2);};
+        // Sort the nncData values from the deck as they need to be
+        // Checked when writing NNC transmissibilities from the simulation.
+        std::sort(nncData.begin(), nncData.end(), nncCompare);
 
         const auto& globalGridView = globalGrid_.leafGridView();
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
@@ -419,18 +449,40 @@ private:
                 // TODO (?): use the cartesian index mapper to make this code work
                 // with grids other than Dune::CpGrid. The problem is that we need
                 // the a mapper for the sequential grid, not for the distributed one.
-                int cc1 = globalGrid_.globalCell()[c1];
-                int cc2 = globalGrid_.globalCell()[c2];
+                std::size_t cc1 = globalGrid_.globalCell()[c1];
+                std::size_t cc2 = globalGrid_.globalCell()[c2];
 
-                if (std::abs(cc1 - cc2) != 1 &&
-                    std::abs(cc1 - cc2) != nx &&
-                    std::abs(cc1 - cc2) != nx*ny)
-                {
-                    nnc.addNNC(cc1, cc2, globalTrans->transmissibility(c1, c2));
+                if ( cc2 < cc1 )
+                    std::swap(cc1, cc2);
+
+                auto cellDiff = cc2 - cc1;
+
+                if (cellDiff != 1 &&
+                    cellDiff != nx &&
+                    cellDiff != nx*ny) {
+                    // We need to check whether an NNC for this face was also specified
+                    // via the NNC keyword in the deck (i.e. in the first origNncSize entries.
+                    auto t = globalTrans->transmissibility(c1, c2);
+                    auto candidate = std::lower_bound(nncData.begin(), nncData.end(), Opm::NNCdata(cc1, cc2, 0.0), nncCompare);
+
+                    while ( candidate != nncData.end() && candidate->cell1 == cc1
+                         && candidate->cell2 == cc2) {
+                        t -= candidate->trans;
+                        ++candidate;
+                    }
+                    // eclipse ignores NNCs with zero transmissibility (different threshold than for NNC
+                    // with corresponding EDITNNC above). In addition we do set small transmissibilties
+                    // to zero when setting up the simulator. These will be ignored here, too.
+                    auto tt = unitSystem.from_si(Opm::UnitSystem::measure::transmissibility, std::abs(t));
+                    if ( tt > 1e-12 )
+                        outputNnc.push_back({cc1, cc2, t});
                 }
             }
         }
-        return nnc;
+        Opm::NNC ret;
+        for(const auto& nncItem: outputNnc)
+            ret.addNNC(nncItem.cell1, nncItem.cell2, nncItem.trans);
+        return ret;
     }
 
     struct EclWriteTasklet
