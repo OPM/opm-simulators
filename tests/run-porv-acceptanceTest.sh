@@ -20,7 +20,7 @@ TEST_ARGS="$@"
 rm -Rf  ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-opm-rst-file=true --enable-dry-run=true --output-dir=${RESULT_PATH}
+${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-dry-run=true --output-dir=${RESULT_PATH}
 cd ..
 
 

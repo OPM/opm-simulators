@@ -28,13 +28,13 @@ then
 else
   CMD_PREFIX=""
 fi
- ${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --enable-adaptive-time-stepping=false --enable-opm-rst-file=true --output-dir=${RESULT_PATH}
+ ${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --enable-adaptive-time-stepping=false --output-dir=${RESULT_PATH}
 
 test $? -eq 0 || exit 1
 
 ${OPM_PACK_COMMAND} -o ${BASE_NAME} ${TEST_ARGS}_RESTART.DATA
 
-${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${BASE_NAME} --enable-adaptive-time-stepping=false --enable-opm-rst-file=true --output-dir=${RESULT_PATH}
+${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${BASE_NAME} --enable-adaptive-time-stepping=false --output-dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
 
 ecode=0
