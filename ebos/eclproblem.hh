@@ -2447,10 +2447,10 @@ private:
                                    timeMap.getTimeStepLength(episodeIdx));
         simulator.setEpisodeIndex(episodeIdx);
 
+        eclWriter_->beginRestart();
+
         Scalar dt = std::min(eclWriter_->restartTimeStepSize(), simulator.episodeLength());
         simulator.setTimeStepSize(dt);
-
-        eclWriter_->beginRestart();
 
         size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
