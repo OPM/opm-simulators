@@ -465,6 +465,9 @@ namespace Opm
                                                Opm::DeferredLogger& deferred_logger);
 
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
+
+        void checkConvergenceControlEq(ConvergenceReport& report,
+                                       DeferredLogger& deferred_logger) const;
     };
 
 }
