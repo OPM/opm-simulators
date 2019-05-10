@@ -190,7 +190,7 @@ namespace Opm
                                                WellState& well_state,
                                                Opm::DeferredLogger& deferred_logger) const = 0;
 
-        void updateWellControl(/* const */ Simulator& ebos_simulator,
+        void updateWellControl(const Simulator& ebos_simulator,
                                WellState& well_state,
                                Opm::DeferredLogger& deferred_logger) /* const */;
 
