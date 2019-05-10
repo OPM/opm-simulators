@@ -212,11 +212,13 @@ namespace Opm {
         const Grid& grid = ebosSimulator_.vanguard().grid();
         const auto& defunct_well_names = ebosSimulator_.vanguard().defunctWellNames();
         const auto& eclState = ebosSimulator_.vanguard().eclState();
+        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         wells_ecl_ = schedule().getWells2(timeStepIdx);
 
         // Create wells and well state.
         wells_manager_.reset( new WellsManager (eclState,
                                                 schedule(),
+                                                summaryState,
                                                 timeStepIdx,
                                                 Opm::UgGridHelpers::numCells(grid),
                                                 Opm::UgGridHelpers::globalCell(grid),
@@ -482,6 +484,7 @@ namespace Opm {
 
         WellsManager wellsmanager(eclState(),
                                   schedule(),
+                                  ebosSimulator_.vanguard().summaryState(),
                                   report_step,
                                   Opm::UgGridHelpers::numCells(grid()),
                                   Opm::UgGridHelpers::globalCell(grid()),
@@ -1587,7 +1590,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeRESV(const std::size_t step, Opm::DeferredLogger& deferred_logger)
     {
-
         const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells());
 
         int global_number_resv_wells = resv_wells.size();
@@ -1641,16 +1643,16 @@ namespace Opm {
                                 OPM_DEFLOG_THROW(std::logic_error, "Failed to find the well " << wells()->name[*rp] << " in wmap.", deferred_logger);
                             }
                             const auto& wp = i->second;
-                            const WellProductionProperties& production_properties = wp.getProductionProperties();
+                            const auto& summaryState = ebosSimulator_.vanguard().summaryState();
+                            const auto production_controls = wp.productionControls(summaryState);
                             // historical phase rates
                             std::vector<double> hrates(np);
-                            SimFIBODetails::historyRates(phase_usage_, production_properties, hrates);
+                            SimFIBODetails::historyRates(phase_usage_, production_controls , hrates);
 
                             std::vector<double> hrates_resv(np);
                             rateConverter_->calcReservoirVoidageRates(fipreg, pvtreg, hrates, hrates_resv);
 
                             const double target = -std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
-
                             well_controls_iset_target(ctrl, rctrl, target);
                         }
                     }

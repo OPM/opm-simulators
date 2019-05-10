@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/GroupTree.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
@@ -52,6 +53,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
+    SummaryState summaryState;
 
    PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
@@ -59,7 +61,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
 
     for (size_t i=0; i<wells.size(); i++) {
         const auto& well = wells[i];
-        std::shared_ptr<WellsGroupInterface> wellsGroup = createWellWellsGroup(well, 2, pu);
+        std::shared_ptr<WellsGroupInterface> wellsGroup = createWellWellsGroup(well, summaryState, 2, pu);
         BOOST_CHECK_EQUAL(well.name(), wellsGroup->name());
         if (well.isInjector()) {
             const WellInjectionProperties& properties = well.getInjectionProperties();
@@ -72,7 +74,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
             const WellProductionProperties& properties = well.getProductionProperties();
             BOOST_CHECK_EQUAL(properties.ResVRate, wellsGroup->prodSpec().reservoir_flow_max_rate_);
             BOOST_CHECK_EQUAL(properties.BHPLimit, wellsGroup->prodSpec().BHP_limit_);
-            BOOST_CHECK_EQUAL(properties.OilRate, wellsGroup->prodSpec().oil_max_rate_);
+            BOOST_CHECK_EQUAL(properties.OilRate.get<double>(), wellsGroup->prodSpec().oil_max_rate_);
             BOOST_CHECK_EQUAL(properties.WaterRate, wellsGroup->prodSpec().water_max_rate_);
             BOOST_CHECK_EQUAL(0.0, wellsGroup->injSpec().guide_rate_);
         }

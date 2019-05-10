@@ -32,6 +32,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
@@ -87,12 +88,14 @@ struct SetupTest {
         // Create material law manager.
         std::vector<int> compressed_to_cartesianIdx;
         Opm::createGlobalCellArray(grid, compressed_to_cartesianIdx);
+        Opm::SummaryState summaryState;
 
         current_timestep = 0;
 
         // Create wells.
         wells_manager.reset(new Opm::WellsManager(*ecl_state,
                                                   *schedule,
+                                                  summaryState,
                                                   current_timestep,
                                                   Opm::UgGridHelpers::numCells(grid),
                                                   Opm::UgGridHelpers::globalCell(grid),

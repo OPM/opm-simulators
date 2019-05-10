@@ -29,6 +29,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/GroupTree.hpp>
 
@@ -45,7 +46,7 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Runspec runspec(deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
-
+    Opm::SummaryState summaryState;
 
     WellCollection collection;
 
@@ -64,7 +65,7 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     WellCollection wellCollection;
     const auto wells = sched.getWells2atEnd();
     for (size_t i=0; i<wells.size(); i++) {
-        collection.addWell(wells[i], 2, pu);
+      collection.addWell(wells[i], summaryState, 2, pu);
     }
 
     BOOST_CHECK_EQUAL("G1", collection.findNode("INJ1")->getParent()->name());
@@ -84,6 +85,7 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Runspec runspec(deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
+    SummaryState summaryState;
 
     size_t timestep = 2;
     WellCollection collection;
@@ -100,7 +102,7 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     // Add wells to WellCollection
     const auto wells1 = sched.getWells2(timestep);
     for (size_t i=0; i<wells1.size(); i++) {
-        collection.addWell(wells1[i], timestep, pu);
+        collection.addWell(wells1[i], summaryState, timestep, pu);
     }
 
     // 0.5(inj1) * 0.8(G1)

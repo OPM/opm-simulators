@@ -1588,30 +1588,30 @@ namespace Opm
       'CMODE_UNDEFINED' - we do not carry that over the specification
       objects here.
      */
-    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(const Well2& well, size_t timeStep, const PhaseUsage& phase_usage )
+    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(const Well2& well, const SummaryState& summaryState, size_t timeStep, const PhaseUsage& phase_usage )
     {
         InjectionSpecification injection_specification;
         ProductionSpecification production_specification;
         if (well.isInjector()) {
-            const WellInjectionProperties& properties = well.getInjectionProperties();
-            injection_specification.BHP_limit_ = properties.BHPLimit;
-            injection_specification.injector_type_ = toInjectorType(WellInjector::Type2String(properties.injectorType));
-            injection_specification.surface_flow_max_rate_ = properties.surfaceInjectionRate;
-            injection_specification.reservoir_flow_max_rate_ = properties.reservoirInjectionRate;
+            const auto injectionControls = well.injectionControls(summaryState);
+            injection_specification.BHP_limit_ = injectionControls.bhp_limit;
+            injection_specification.injector_type_ = toInjectorType(WellInjector::Type2String(injectionControls.injector_type));
+            injection_specification.surface_flow_max_rate_ = injectionControls.surface_rate;
+            injection_specification.reservoir_flow_max_rate_ = injectionControls.reservoir_rate;
             production_specification.guide_rate_ = 0.0; // We know we're not a producer
-            if (properties.controlMode != WellInjector::CMODE_UNDEFINED) {
-                injection_specification.control_mode_ = toInjectionControlMode(WellInjector::ControlMode2String(properties.controlMode));
+            if (injectionControls.cmode != WellInjector::CMODE_UNDEFINED) {
+                injection_specification.control_mode_ = toInjectionControlMode(WellInjector::ControlMode2String(injectionControls.cmode));
             }
         }
         else if (well.isProducer()) {
-            const WellProductionProperties& properties = well.getProductionProperties();
-            production_specification.BHP_limit_ = properties.BHPLimit;
-            production_specification.reservoir_flow_max_rate_ = properties.ResVRate;
-            production_specification.oil_max_rate_ = properties.OilRate;
-            production_specification.water_max_rate_ = properties.WaterRate;
+            const auto productionControls = well.productionControls(summaryState);
+            production_specification.BHP_limit_ = productionControls.bhp_limit;
+            production_specification.reservoir_flow_max_rate_ = productionControls.resv_rate;
+            production_specification.oil_max_rate_ = productionControls.oil_rate;
+            production_specification.water_max_rate_ = productionControls.water_rate;
             injection_specification.guide_rate_ = 0.0; // we know we're not an injector
-            if (properties.controlMode != WellProducer::CMODE_UNDEFINED) {
-                production_specification.control_mode_ = toProductionControlMode(WellProducer::ControlMode2String(properties.controlMode));
+            if (productionControls.cmode != WellProducer::CMODE_UNDEFINED) {
+                production_specification.control_mode_ = toProductionControlMode(WellProducer::ControlMode2String(productionControls.cmode));
             }
         }
         // Efficiency factor given specified with WEFAC

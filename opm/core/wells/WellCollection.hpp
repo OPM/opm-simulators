@@ -31,6 +31,7 @@
 
 namespace Opm
 {
+    class SummaryState;
 
     class WellCollection
     {
@@ -38,7 +39,7 @@ namespace Opm
 
         void addField(const Group& fieldGroup, size_t timeStep, const PhaseUsage& phaseUsage);
 
-        void addWell(const Well2& wellChild, size_t timeStep, const PhaseUsage& phaseUsage);
+        void addWell(const Well2& wellChild, const SummaryState& summaryState, size_t timeStep, const PhaseUsage& phaseUsage);
 
         void addGroup(const Group& groupChild, std::string parent_name,
                       size_t timeStep, const PhaseUsage& phaseUsage);

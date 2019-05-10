@@ -28,6 +28,7 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <opm/core/props/BlackoilPhases.hpp>
@@ -57,6 +58,7 @@ struct Setup
     Opm::PhaseUsage   pu;
     Opm::GridManager  grid;
     Opm::Schedule     sched;
+    Opm::SummaryState st;
 };
 
 namespace {
@@ -69,9 +71,7 @@ namespace {
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
                                 100.0*Opm::unit::barsa);
 
-        const Opm::WellsManager wmgr{
-            setup.es, setup.sched, timeStep, *setup.grid.c_grid()
-        };
+        const Opm::WellsManager wmgr{setup.es, setup.sched, setup.st, timeStep, *setup.grid.c_grid()};
 
         state.init(wmgr.c_wells(), cpress, setup.sched,
                    setup.sched.getWells2(timeStep),
