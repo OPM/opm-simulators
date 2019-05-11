@@ -217,6 +217,18 @@ public:
                 OpmLog::debug(ss.str());
             }
 
+            if (terminalOutput_) {
+                std::ostringstream stepMsg;
+                boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+                stepMsg.imbue(std::locale(std::locale::classic(), facet));
+                stepMsg << "\nReport step " << std::setw(2) <<timer.currentStepNum()
+                         << "/" << timer.numSteps()
+                         << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
+                         << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
+                         << ", date = " << timer.currentDateTime();
+                OpmLog::info(stepMsg.str());
+            }
+
             // write the inital state at the report stage
             if (timer.initialStep()) {
                 Dune::Timer perfTimer;
@@ -242,17 +254,6 @@ public:
             solver->model().beginReportStep(firstRestartStep);
             firstRestartStep = false;
 
-            if (terminalOutput_) {
-                std::ostringstream stepMsg;
-                boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-                stepMsg.imbue(std::locale(std::locale::classic(), facet));
-                stepMsg << "\nReport step " << std::setw(2) <<timer.currentStepNum()
-                         << "/" << timer.numSteps()
-                         << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
-                         << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
-                         << ", date = " << timer.currentDateTime();
-                OpmLog::info(stepMsg.str());
-            }
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge
