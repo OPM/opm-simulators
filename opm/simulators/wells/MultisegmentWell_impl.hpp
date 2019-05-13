@@ -1853,6 +1853,9 @@ namespace Opm
 
             updateWellState(dx_well, well_state, deferred_logger, relaxation_factor);
 
+            // TODO: should we do something more if a switching of control happens
+            this->updateWellControl(ebosSimulator, well_state, deferred_logger);
+
             initPrimaryVariablesEvaluation();
         }
 

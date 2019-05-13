@@ -430,7 +430,7 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateWellControl(/* const */ Simulator& ebos_simulator,
+    updateWellControl(const Simulator& ebos_simulator,
                       WellState& well_state,
                       Opm::DeferredLogger& deferred_logger) /* const */
     {
