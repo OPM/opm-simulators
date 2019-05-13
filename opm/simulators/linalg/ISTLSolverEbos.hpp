@@ -176,7 +176,7 @@ public:
 protected:
   const matrix_type& A_ ;
   const matrix_type& A_for_precond_ ;
-  const WellModel& wellMod_;    
+  const WellModel& wellMod_;
   std::shared_ptr< communication_type > comm_;
 };
 
@@ -246,7 +246,7 @@ protected:
         void scaleSystem()
         {
             const bool matrix_cont_added = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-	    
+
             if (matrix_cont_added) {
                 bool form_cpr = true;
                 if (parameters_.system_strategy_ == "quasiimpes") {
@@ -663,7 +663,7 @@ protected:
         // conservation equations, ignoring all other terms.
         Vector getStorageWeights() const
         {
-            Vector weights(rhs_->size()); 
+            Vector weights(rhs_->size());
             BlockVector rhs(0.0);
             rhs[pressureVarIndex] = 1.0;
             int index = 0;
@@ -830,7 +830,7 @@ protected:
                 }
             }
         }
-      
+
         static void multBlocksVector(Vector& ebosResid_cp, const MatrixBlockType& leftTrans)
         {
             for (auto& bvec : ebosResid_cp) {

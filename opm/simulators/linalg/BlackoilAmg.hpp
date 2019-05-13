@@ -127,7 +127,7 @@ scaleMatrixDRS(const Operator& op, std::size_t pressureEqnIndex, const Vector& w
         for (auto i = matrix->begin(); i != endi; ++i) {
             const BlockVector& bw = weights[i.index()];
             const auto endj = (*i).end();
-            for (auto j = (*i).begin(); j != endj; ++j) {  
+            for (auto j = (*i).begin(); j != endj; ++j) {
                 Block& block = *j;
                 BlockVector& bvec = block[pressureEqnIndex];
                 // should introduce limits which also change the weights
@@ -387,7 +387,11 @@ private:
                 cargs.setMatrix(op.getmat());
                 cargs.setComm(comm);
                 cargs.setArgs(args);
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+                smoother_ = Dune::Amg::ConstructionTraits<Smoother>::construct(cargs);
+#else
                 smoother_.reset(Dune::Amg::ConstructionTraits<Smoother>::construct(cargs));
+#endif
             }
         }
 
@@ -484,7 +488,7 @@ private:
                 Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
                                          tolerance, maxit, verbosity);
                 solver.apply(x,b,res);
-#else	      
+#else
                 if ( !amg_ )
                 {
                   Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
@@ -529,7 +533,7 @@ private:
         const CPRParameter* param_;
         X x_;
         std::unique_ptr<AMGType> amg_;
-        std::unique_ptr<Smoother> smoother_;
+        std::shared_ptr<Smoother> smoother_;
         const typename AMGType::Operator& op_;
         Criterion crit_;
         const Communication& comm_;
@@ -578,15 +582,18 @@ private:
 };
 
 template<class Smoother, class Operator, class Communication>
-Smoother* constructSmoother(const Operator& op,
-                            const typename Dune::Amg::SmootherTraits<Smoother>::Arguments& smargs,
-                            const Communication& comm)
+std::shared_ptr< Smoother >
+constructSmoother(const Operator& op,
+                  const typename Dune::Amg::SmootherTraits<Smoother>::Arguments& smargs,
+                  const Communication& comm)
 {
     typename Dune::Amg::ConstructionTraits<Smoother>::Arguments args;
     args.setMatrix(op.getmat());
     args.setComm(comm);
     args.setArgs(smargs);
-    return Dune::Amg::ConstructionTraits<Smoother>::construct(args);
+    // for DUNE < 2.7 ConstructionTraits<Smoother>::construct returns a raw
+    // pointer, therefore std::make_shared cannot be used here
+    return std::shared_ptr< Smoother > (Dune::Amg::ConstructionTraits<Smoother>::construct(args));
 }
 
 template<class G, class C, class S>
@@ -755,7 +762,11 @@ public:
 
             using CommunicationArgs = typename Dune::Amg::ConstructionTraits<Communication>::Arguments;
             CommunicationArgs commArgs(communication_->communicator(), communication_->getSolverCategory());
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+            coarseLevelCommunication_ = Dune::Amg::ConstructionTraits<Communication>::construct(commArgs);
+#else
             coarseLevelCommunication_.reset(Dune::Amg::ConstructionTraits<Communication>::construct(commArgs));
+#endif
             using Iterator = typename std::vector<bool>::iterator;
             using std::get;
             auto visitedMap = get(Dune::Amg::VertexVisitedTag(), *(get<1>(graphs)));
@@ -828,7 +839,11 @@ public:
         this->rhs_.resize(this->coarseLevelMatrix_->N());
         using OperatorArgs = typename Dune::Amg::ConstructionTraits<CoarseOperator>::Arguments;
         OperatorArgs oargs(*coarseLevelMatrix_, *coarseLevelCommunication_);
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+        this->operator_ = Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs);
+#else
         this->operator_.reset(Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs));
+#endif
     }
 
     void calculateCoarseEntriesWithAggregatesMap(const Operator& fineOperator)
@@ -1032,13 +1047,13 @@ public:
           weights_(weights),
           scaledMatrix_(Detail::scaleMatrixDRS(fineOperator, COMPONENT_INDEX, weights, param)),
           scaledMatrixOperator_(Detail::createOperator(fineOperator, *scaledMatrix_, comm)),
-          smoother_(Detail::constructSmoother<Smoother>(*scaledMatrixOperator_,
-                                                        smargs, comm)),
+          smoother_( Detail::constructSmoother<Smoother>(*scaledMatrixOperator_, smargs, comm)),
           levelTransferPolicy_(criterion, comm, param.cpr_pressure_aggregation_),
           coarseSolverPolicy_(&param, smargs, criterion),
           twoLevelMethod_(*scaledMatrixOperator_, smoother_,
                           levelTransferPolicy_, coarseSolverPolicy_, 0, 1)
-    {}
+    {
+    }
 
     void pre(typename TwoLevelMethod::FineDomainType& x,
              typename TwoLevelMethod::FineRangeType& b) override

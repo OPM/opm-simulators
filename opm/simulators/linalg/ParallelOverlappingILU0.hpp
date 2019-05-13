@@ -127,19 +127,30 @@ struct ConstructionTraits<Opm::ParallelOverlappingILU0<Matrix,Domain,Range,Paral
 {
     typedef Opm::ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfo> T;
     typedef DefaultParallelConstructionArgs<T,ParallelInfo> Arguments;
-    static inline Opm::ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfo>* construct(Arguments& args)
+
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+    typedef std::shared_ptr< T > ParallelOverlappingILU0Pointer;
+#else
+    typedef T*                   ParallelOverlappingILU0Pointer;
+#endif
+
+    static inline ParallelOverlappingILU0Pointer construct(Arguments& args)
     {
-        return new T(args.getMatrix(),
-                     args.getComm(),
-                     args.getArgs().getN(),
-                     args.getArgs().relaxationFactor,
-                     args.getArgs().getMilu());
+        return ParallelOverlappingILU0Pointer(
+                new T(args.getMatrix(),
+                      args.getComm(),
+                      args.getArgs().getN(),
+                      args.getArgs().relaxationFactor,
+                      args.getArgs().getMilu()) );
     }
 
+#if ! DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+    // this method is not needed anymore in 2.7 since std::shared_ptr is used
     static inline void deconstruct(T* bp)
     {
         delete bp;
     }
+#endif
 
 };
 
@@ -400,7 +411,7 @@ namespace Opm
                 newRow[ordering[col.index()]] = *col;
             }
         }
-        // call decomposition on pattern        
+        // call decomposition on pattern
         switch ( milu )
         {
         case MILU_VARIANT::MILU_1:
