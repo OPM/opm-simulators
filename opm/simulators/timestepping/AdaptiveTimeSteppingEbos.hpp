@@ -322,7 +322,7 @@ namespace Opm {
                         Opm::time::StopWatch perfTimer;
                         perfTimer.start();
 
-                        ebosProblem.writeOutput(/*isSubStep=*/true);
+                        ebosProblem.writeOutput();
 
                         report.output_write_time += perfTimer.secsSinceStart();
                     }
