@@ -227,7 +227,19 @@ namespace Opm
                 setupOutput();
                 setupEbosSimulator();
                 setupLogging();
-                printPRTHeader();
+                auto unknownKeyWords = printPRTHeader();
+
+                if ( unknownKeyWords )
+                {
+#if HAVE_MPI
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+#else
+                    exit(EXIT_FAILURE);
+#endif
+                }
+#if HAVE_MPI
+                MPI_Barrier(MPI_COMM_WORLD);
+#endif
                 runDiagnostics();
                 createSimulator();
 
@@ -379,8 +391,11 @@ namespace Opm
         }
 
         // Print an ASCII-art header to the PRT and DEBUG files.
-        void printPRTHeader()
+        // \return Whether unkown keywords were seen during parsing.
+        bool printPRTHeader()
         {
+          std::list<std::string> unknownKeywords;
+
           if (output_cout_) {
               const std::string version = moduleVersion();
               const double megabyte = 1024 * 1024;
@@ -415,10 +430,29 @@ namespace Opm
               ss << "Simulation started on " << tmstr << " hrs\n";
 
               ss << "Parameters used by Flow:\n";
-              Ewoms::Parameters::printValues<TypeTag>(ss);
+              unknownKeywords = Ewoms::Parameters::printValues<TypeTag>(ss);
 
               OpmLog::note(ss.str());
-            }
+          }
+          else if ( mpi_rank_ == 0 ) // Prevent multiple messages in parallel
+          {
+              std::list<std::string> runtimeKeyListDummy;
+              std::tie(runtimeKeyListDummy, runtimeKeyListDummy, unknownKeywords) = Ewoms::Parameters::getParsedKeywords<TypeTag>();
+          }
+
+          if ( unknownKeywords.size() > 0 )
+          {
+              std::cerr << std::endl << "Unknown keywords used:" << std::endl;
+              for ( const auto& keyword: unknownKeywords )
+              {
+                  std::cerr<<keyword<<" ";
+              }
+              std::cerr << std::endl << std::endl
+                        << "Please consider running \"flow --help\" to get a list of supported keywords"
+                        << std::endl<<std::endl;
+              return true;
+          }
+          return false;
         }
 
         void mergeParallelLogFiles()
