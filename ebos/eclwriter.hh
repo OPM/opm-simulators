@@ -266,10 +266,16 @@ public:
         std::vector<Opm::RestartKey> extraKeys = {{"OPMEXTRA", Opm::UnitSystem::measure::identity, false},
                                                   {"THRESHPR", Opm::UnitSystem::measure::pressure, inputThpres.active()}};
 
-        unsigned episodeIdx = simulator_.episodeIndex();
+        // The episodeIndex is rewined one back before beginRestart is called
+        // and can not be used here.
+        // We just ask the initconfig directly to be sure that we use the correct
+        // index.
+        const auto& initconfig = simulator_.vanguard().eclState().getInitConfig();
+        int restartStepIdx = initconfig.getRestartStep();
+
         const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
-        eclOutputModule_.allocBuffers(numElements, episodeIdx, /*isSubStep=*/false, /*log=*/false);
+        eclOutputModule_.allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false);
 
         auto restartValues = eclIO_->loadRestart(solutionKeys, extraKeys);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
