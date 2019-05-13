@@ -99,12 +99,12 @@ namespace detail
     // the call is intercepted by this function which will print "flow $version"
     // on stdout and exit(0).
     void handleVersionCmdLine(int argc, char** argv) {
-        if (argc != 2)
-            return;
-
-        if (std::strcmp(argv[1], "--version") == 0) {
-            std::cout << "flow " << Opm::moduleVersionName() << std::endl;
-            std::exit(EXIT_SUCCESS);
+        for ( int i = 1; i < argc; ++i )
+        {
+            if (std::strcmp(argv[i], "--version") == 0) {
+                std::cout << "flow " << Opm::moduleVersionName() << std::endl;
+                std::exit(EXIT_SUCCESS);
+            }
         }
     }
 
