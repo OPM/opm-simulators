@@ -44,6 +44,8 @@
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
+
 
 #if HAVE_MPI
 #include <mpi.h>
@@ -379,6 +381,21 @@ public:
     static void setExternalSummaryConfig(Opm::SummaryConfig* summaryConfig)
     { externalEclSummaryConfig_ = summaryConfig; }
 
+
+    /*!
+    * \brief Returns the summary state
+    *
+    * The summary state is a small container object for
+    * computed, ready to use summary values. The values will typically be used by
+    * the UDQ, WTEST and ACTIONX calculations.
+    */
+    const Opm::SummaryState& summaryState() const
+    { return summaryState_; }
+
+    Opm::SummaryState& summaryState()
+    { return summaryState_; }
+
+
     /*!
      * \brief Returns the name of the case.
      *
@@ -515,6 +532,9 @@ private:
 
     Opm::Schedule* eclSchedule_;
     Opm::SummaryConfig* eclSummaryConfig_;
+
+    Opm::SummaryState summaryState_;
+
 };
 
 template <class TypeTag>
