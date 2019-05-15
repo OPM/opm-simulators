@@ -2151,7 +2151,6 @@ namespace Opm
         assert(int(B_avg.size() ) == num_components_);
         std::vector<Scalar> residuals(numWellEq + 1, 0.0);
 
-        // TODO: maybe we should distinguish the bhp control or rate control equations here
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
                 double residual = 0.;
@@ -2238,18 +2237,21 @@ namespace Opm
             }
         }
 
-        const double control_tolerance = getControlTolerance(deferred_logger);
+        const double pressure_tolerance = param_.tolerance_pressure_ms_wells_;
+        if (residuals[SPres] > pressure_tolerance) {
+            sum += residuals[SPres] / pressure_tolerance;
+            ++count;
+        }
 
-        // const double pressure_tolerance = param_.tolerance_pressure_ms_wells_;
-        if (residuals[SPres] > control_tolerance) {
-            sum += residuals[SPres] / control_tolerance;
+        const double control_tolerance = getControlTolerance(deferred_logger);
+        if (residuals[SPres + 1] > control_tolerance) {
+            sum += residuals[SPres + 1] / control_tolerance;
             ++count;
         }
 
         // if (count == 0), it should be converged.
         assert(count != 0);
 
-        // return sum / double(count);
         return sum;
     }
 
@@ -2266,11 +2268,11 @@ namespace Opm
         switch(well_controls_get_current_type(well_controls_) ) {
             case BHP:
             case THP:
-                control_tolerance = param_.tolerance_wells_;
+                control_tolerance = param_.tolerance_pressure_ms_wells_;
                 break;
             case RESERVOIR_RATE:
             case SURFACE_RATE:
-                control_tolerance = param_.tolerance_pressure_ms_wells_;
+                control_tolerance = param_.tolerance_wells_;
                 break;
             default:
                 OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
