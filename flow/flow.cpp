@@ -162,7 +162,11 @@ int main(int argc, char** argv)
         deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
     }
     catch (const std::exception& e) {
-        std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
+        if ( mpiRank == 0 )
+            std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
+#if HAVE_MPI
+        MPI_Finalize();
+#endif
         return 1;
     }
 
