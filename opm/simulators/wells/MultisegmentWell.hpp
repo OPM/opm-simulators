@@ -379,7 +379,13 @@ namespace Opm
         void detectOscillations(const std::vector<double>& measure_history,
                                 const int it, bool& oscillate, bool& stagnate) const;
 
-        double getResidualMeasureValue(const std::vector<double>& residuals) const;
+        double getResidualMeasureValue(const std::vector<double>& residuals,
+                                       DeferredLogger& deferred_logger) const;
+
+        double getControlTolerance(DeferredLogger& deferred_logger) const;
+
+        void checkConvergenceControlEq(ConvergenceReport& report,
+                                       DeferredLogger& deferred_logger) const;
 
     };
 

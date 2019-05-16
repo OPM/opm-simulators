@@ -2029,40 +2029,12 @@ namespace Opm
             }
         }
 
-        // processing the residual of the well control equation
-        const double well_control_residual = res[numWellEq_ - 1];
-        // TODO: we should have better way to specify the control equation tolerance
-        double control_tolerance = 0.;
-        switch(well_controls_get_current_type(well_controls_)) {
-            case THP:
-                type = CR::WellFailure::Type::ControlTHP;
-                control_tolerance = 1.e4; // 0.1 bar
-                break;
-            case BHP:  // pressure type of control
-                type = CR::WellFailure::Type::ControlBHP;
-                control_tolerance = 1.e3; // 0.01 bar
-                break;
-            case RESERVOIR_RATE:
-            case SURFACE_RATE:
-                type = CR::WellFailure::Type::ControlRate;
-                control_tolerance = 1.e-4; // smaller tolerance for rate control
-                break;
-            default:
-                OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " +  name(), deferred_logger);
-        }
-
-        const int dummy_component = -1;
-        if (std::isnan(well_control_residual)) {
-            report.setWellFailed({type, CR::Severity::NotANumber, dummy_component, name()});
-        } else if (well_control_residual > maxResidualAllowed * 10.) {
-            report.setWellFailed({type, CR::Severity::TooLarge, dummy_component, name()});
-        } else if ( well_control_residual > control_tolerance) {
-            report.setWellFailed({type, CR::Severity::Normal, dummy_component, name()});
-        }
+        checkConvergenceControlEq(report, deferred_logger);
 
         if (this->has_polymermw && well_type_ == INJECTOR) {
             //  checking the convergence of the perforation rates
             const double wat_vel_tol = 1.e-8;
+            const int dummy_component = -1;
             const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 const double wat_vel_residual = res[Bhp + 1 + perf];
@@ -3111,5 +3083,50 @@ namespace Opm
         for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
             duneB_[0][cell_idx][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx);
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWellV<TypeTag>::
+    checkConvergenceControlEq(ConvergenceReport& report,
+                              DeferredLogger& deferred_logger) const
+    {
+        double control_tolerance = 0.;
+        using CR = ConvergenceReport;
+        CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
+        switch(well_controls_get_current_type(well_controls_)) {
+            case THP:
+                ctrltype = CR::WellFailure::Type::ControlTHP;
+                control_tolerance = 1.e4; // 0.1 bar
+                break;
+            case BHP:  // pressure type of control
+                ctrltype = CR::WellFailure::Type::ControlBHP;
+                control_tolerance = 1.e3; // 0.01 bar
+                break;
+            case RESERVOIR_RATE:
+            case SURFACE_RATE:
+                ctrltype = CR::WellFailure::Type::ControlRate;
+                control_tolerance = 1.e-4; // smaller tolerance for rate control
+                break;
+            default:
+                OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
+        }
+        assert(ctrltype != CR::WellFailure::Type::Invalid);
+
+        const double well_control_residual = std::abs(resWell_[0][Bhp]);
+        const int dummy_component = -1;
+        const double max_residual_allowed = param_.max_residual_allowed_;
+        if (std::isnan(well_control_residual)) {
+            report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, name()});
+        } else if (well_control_residual > max_residual_allowed * 10.) {
+            report.setWellFailed({ctrltype, CR::Severity::TooLarge, dummy_component, name()});
+        } else if ( well_control_residual > control_tolerance) {
+            report.setWellFailed({ctrltype, CR::Severity::Normal, dummy_component, name()});
+        }
+
     }
 }

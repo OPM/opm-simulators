@@ -429,28 +429,9 @@ namespace Opm
             }
         }
 
-        using CR = ConvergenceReport;
-        CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
-        switch(well_controls_get_current_type(well_controls_)) {
-            case THP:
-                ctrltype = CR::WellFailure::Type::ControlTHP;
-                break;
-            case BHP:
-                ctrltype = CR::WellFailure::Type::ControlBHP;
-                break;
-            case RESERVOIR_RATE:
-            case SURFACE_RATE:
-                ctrltype = CR::WellFailure::Type::ControlRate;
-                break;
-            default:
-                OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
-        }
-        assert(ctrltype != CR::WellFailure::Type::Invalid);
-
         std::vector<double> maximum_residual(numWellEq, 0.0);
 
         ConvergenceReport report;
-        const int dummy_component = -1;
         // TODO: the following is a little complicated, maybe can be simplified in some way?
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             for (int seg = 0; seg < numberOfSegments(); ++seg) {
@@ -460,18 +441,8 @@ namespace Opm
                         maximum_residual[eq_idx] = flux_residual;
                     }
                 } else { // pressure or control equation
-                    if (seg == 0) {
-                        // Control equation
-                        const double control_residual = abs_residual[seg][eq_idx];
-                        if (std::isnan(control_residual)) {
-                            report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, name()});
-                        } else if (control_residual > param_.max_residual_allowed_) {
-                            report.setWellFailed({ctrltype, CR::Severity::TooLarge, dummy_component, name()});
-                            // TODO: we should distinguish the flux residual or pressure residual here
-                        } else if (control_residual > param_.tolerance_wells_) {
-                            report.setWellFailed({ctrltype, CR::Severity::Normal, dummy_component, name()});
-                        }
-                    } else {
+                    // for the top segment (seg == 0), it is control equation, will be checked later separately
+                    if (seg > 0) {
                         // Pressure equation
                         const double pressure_residual = abs_residual[seg][eq_idx];
                         if (pressure_residual > maximum_residual[eq_idx]) {
@@ -482,6 +453,7 @@ namespace Opm
             }
         }
 
+        using CR = ConvergenceReport;
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             if (eq_idx < num_components_) { // phase or component mass equations
                 const double flux_residual = maximum_residual[eq_idx];
@@ -495,6 +467,7 @@ namespace Opm
                 }
             } else { // pressure equation
                 const double pressure_residual = maximum_residual[eq_idx];
+                const int dummy_component = -1;
                 if (std::isnan(pressure_residual)) {
                     report.setWellFailed({CR::WellFailure::Type::Pressure, CR::Severity::NotANumber, dummy_component, name()});
                 } else if (std::isinf(pressure_residual)) {
@@ -504,6 +477,8 @@ namespace Opm
                 }
             }
         }
+
+        checkConvergenceControlEq(report, deferred_logger);
 
         return report;
     }
@@ -1825,7 +1800,7 @@ namespace Opm
             }
 
             residual_history.push_back(getWellResiduals(B_avg));
-            measure_history.push_back(getResidualMeasureValue(residual_history[it]));
+            measure_history.push_back(getResidualMeasureValue(residual_history[it], deferred_logger) );
 
             bool is_oscillate = false;
             bool is_stagnate = false;
@@ -2176,7 +2151,6 @@ namespace Opm
         assert(int(B_avg.size() ) == num_components_);
         std::vector<Scalar> residuals(numWellEq + 1, 0.0);
 
-        // TODO: maybe we should distinguish the bhp control or rate control equations here
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
                 double residual = 0.;
@@ -2248,7 +2222,8 @@ namespace Opm
     template<typename TypeTag>
     double
     MultisegmentWell<TypeTag>::
-    getResidualMeasureValue(const std::vector<double>& residuals) const
+    getResidualMeasureValue(const std::vector<double>& residuals,
+                            DeferredLogger& deferred_logger) const
     {
         assert(int(residuals.size()) == numWellEq + 1);
 
@@ -2268,11 +2243,83 @@ namespace Opm
             ++count;
         }
 
+        const double control_tolerance = getControlTolerance(deferred_logger);
+        if (residuals[SPres + 1] > control_tolerance) {
+            sum += residuals[SPres + 1] / control_tolerance;
+            ++count;
+        }
+
         // if (count == 0), it should be converged.
         assert(count != 0);
 
-        // return sum / double(count);
         return sum;
     }
 
+
+
+
+
+    template<typename TypeTag>
+    double
+    MultisegmentWell<TypeTag>::
+    getControlTolerance(DeferredLogger& deferred_logger) const
+    {
+        double control_tolerance = 0.;
+        switch(well_controls_get_current_type(well_controls_) ) {
+            case BHP:
+                control_tolerance = param_.tolerance_wells_;
+                break;
+            case THP:
+                control_tolerance = param_.tolerance_pressure_ms_wells_;
+                break;
+            case RESERVOIR_RATE:
+            case SURFACE_RATE:
+                control_tolerance = param_.tolerance_wells_;
+                break;
+            default:
+                OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
+        }
+
+        return control_tolerance;
+    }
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    checkConvergenceControlEq(ConvergenceReport& report,
+                              DeferredLogger& deferred_logger) const
+    {
+        using CR = ConvergenceReport;
+        CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
+        switch(well_controls_get_current_type(well_controls_)) {
+            case THP:
+                ctrltype = CR::WellFailure::Type::ControlTHP;
+                break;
+            case BHP:
+                ctrltype = CR::WellFailure::Type::ControlBHP;
+                break;
+            case RESERVOIR_RATE:
+            case SURFACE_RATE:
+                ctrltype = CR::WellFailure::Type::ControlRate;
+                break;
+            default:
+                OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
+        }
+        assert(ctrltype != CR::WellFailure::Type::Invalid);
+
+        const double control_residual = std::abs(resWell_[0][SPres]);
+        const double control_tolerance = getControlTolerance(deferred_logger);
+
+        const int dummy_component = -1;
+        if (std::isnan(control_residual)) {
+            report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, name()});
+        } else if (control_residual > param_.max_residual_allowed_) {
+            report.setWellFailed({ctrltype, CR::Severity::TooLarge, dummy_component, name()});
+        } else if (control_residual > control_tolerance) {
+            report.setWellFailed({ctrltype, CR::Severity::Normal, dummy_component, name()});
+        }
+    }
 }
