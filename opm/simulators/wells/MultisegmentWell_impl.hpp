@@ -2267,6 +2267,8 @@ namespace Opm
         double control_tolerance = 0.;
         switch(well_controls_get_current_type(well_controls_) ) {
             case BHP:
+                control_tolerance = param_.tolerance_wells_;
+                break;
             case THP:
                 control_tolerance = param_.tolerance_pressure_ms_wells_;
                 break;
