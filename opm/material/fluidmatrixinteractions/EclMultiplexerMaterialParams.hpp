@@ -44,7 +44,8 @@ enum EclMultiplexerApproach {
     EclDefaultApproach,
     EclStone1Approach,
     EclStone2Approach,
-    EclTwoPhaseApproach
+    EclTwoPhaseApproach,
+    EclOnePhaseApproach
 };
 
 /*!
@@ -124,6 +125,10 @@ public:
 
         case EclTwoPhaseApproach:
             realParams_ = ParamPointerType(new TwoPhaseParams, Deleter< TwoPhaseParams > () );
+            break;
+
+        case EclOnePhaseApproach:
+            // Do nothing, no parameters.
             break;
         }
     }

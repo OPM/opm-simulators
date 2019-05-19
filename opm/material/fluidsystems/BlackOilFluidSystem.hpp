@@ -199,7 +199,7 @@ public:
         setReservoirTemperature(eclState.getTableManager().rtemp());
 
         // this fluidsystem only supports two or three phases
-        assert(numActivePhases_ >= 2 && numActivePhases_ <= 3);
+        assert(numActivePhases_ >= 1 && numActivePhases_ <= 3);
 
         setEnableDissolvedGas(deck.hasKeyword("DISGAS"));
         setEnableVaporizedOil(deck.hasKeyword("VAPOIL"));

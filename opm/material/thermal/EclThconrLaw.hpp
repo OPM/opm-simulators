@@ -57,11 +57,14 @@ public:
     {
         // THCONR + THCONSF approach.
         Scalar lambdaRef = params.referenceTotalThermalConductivity();
-        Scalar alpha = params.dTotalThermalConductivity_dSg();
-
         static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
-        const Evaluation& Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
-        return lambdaRef*(1.0 - alpha*Sg);
+        if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+            Scalar alpha = params.dTotalThermalConductivity_dSg();
+            const Evaluation& Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+            return lambdaRef*(1.0 - alpha*Sg);
+        } else {
+            return lambdaRef;
+        }
     }
 };
 } // namespace Opm

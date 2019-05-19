@@ -155,6 +155,10 @@ public:
                                                  params.template getRealParams<EclTwoPhaseApproach>(),
                                                  fluidState);
             break;
+
+        case EclOnePhaseApproach:
+            values[0] = 0.0;
+            break;
         }
     }
 
@@ -187,6 +191,10 @@ public:
         case EclTwoPhaseApproach:
             TwoPhaseMaterial::oilWaterHysteresisParams(pcSwMdc, krnSwMdc,
                                      params.template getRealParams<EclTwoPhaseApproach>());
+            break;
+
+        case EclOnePhaseApproach:
+            // Do nothing.
             break;
         }
     }
@@ -221,6 +229,10 @@ public:
             TwoPhaseMaterial::setOilWaterHysteresisParams(pcSwMdc, krnSwMdc,
                                      params.template getRealParams<EclTwoPhaseApproach>());
             break;
+
+        case EclOnePhaseApproach:
+            // Do nothing.
+            break;
         }
     }
 
@@ -254,6 +266,10 @@ public:
             TwoPhaseMaterial::gasOilHysteresisParams(pcSwMdc, krnSwMdc,
                                      params.template getRealParams<EclTwoPhaseApproach>());
             break;
+
+        case EclOnePhaseApproach:
+            // Do nothing.
+            break;
         }
     }
 
@@ -286,6 +302,10 @@ public:
         case EclTwoPhaseApproach:
             TwoPhaseMaterial::setGasOilHysteresisParams(pcSwMdc, krnSwMdc,
                                      params.template getRealParams<EclTwoPhaseApproach>());
+            break;
+
+        case EclOnePhaseApproach:
+            // Do nothing.
             break;
         }
     }
@@ -407,7 +427,16 @@ public:
                                                      params.template getRealParams<EclTwoPhaseApproach>(),
                                                      fluidState);
             break;
+
+        case EclOnePhaseApproach:
+            values[0] = 1.0;
+            break;
+
+        default:
+            throw std::logic_error("Not implemented: relativePermeabilities() option for unknown EclMultiplexerApproach (="
+                                   + std::to_string(params.approach()) + ")");
         }
+        
     }
 
     /*!
