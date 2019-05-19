@@ -83,16 +83,16 @@ public:
     BlackOilRateVector(Scalar value) : ParentType(Toolbox::createConstant(value))
     {}
 
-    template <class Eval = Evaluation>
-    BlackOilRateVector(const typename std::enable_if<std::is_same<Eval, Evaluation>::value, Evaluation>::type& value) : ParentType(value)
-    {}
+    // template <class Eval = Evaluation>
+    // BlackOilRateVector(const typename std::enable_if<std::is_same<Eval, Evaluation>::value, Evaluation>::type& value) : ParentType(value)
+    // {}
 
     /*!
      * \copydoc ImmiscibleRateVector::ImmiscibleRateVector(const
      * ImmiscibleRateVector& )
      */
-    BlackOilRateVector(const BlackOilRateVector& value) : ParentType(value)
-    {}
+    // BlackOilRateVector(const BlackOilRateVector& value) : ParentType(value)
+    // {}
 
     /*!
      * \copydoc ImmiscibleRateVector::setMassRate
