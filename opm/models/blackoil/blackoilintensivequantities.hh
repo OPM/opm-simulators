@@ -128,9 +128,13 @@ public:
 
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
-        if (waterEnabled)
-            Sw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
-
+        if (waterEnabled){
+            if(priVars.primaryVarsMeaning() == PrimaryVariables::px){
+                Sw = 1.0;
+            }else{
+                Sw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
+            }
+        }
         Evaluation Sg = 0.0;
         if (compositionSwitchEnabled)
         {
@@ -257,8 +261,8 @@ public:
             else
                 fluidState_.setRv(0.0);
         }
-        else {
-            assert(priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv);
+        else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
+            //assert(priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv);
 
             const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
             fluidState_.setRv(Rv);
@@ -277,6 +281,8 @@ public:
             }
             else
                 fluidState_.setRs(0.0);
+        }else{
+            assert(priVars.primaryVarsMeaning() == PrimaryVariables::px);
         }
 
         typename FluidSystem::template ParameterCache<Evaluation> paramCache;
@@ -338,7 +344,12 @@ public:
         Scalar rockCompressibility = problem.rockCompressibility(elemCtx, dofIdx, timeIdx);
         if (rockCompressibility > 0.0) {
             Scalar rockRefPressure = problem.rockReferencePressure(elemCtx, dofIdx, timeIdx);
-            Evaluation x = rockCompressibility*(fluidState_.pressure(oilPhaseIdx) - rockRefPressure);
+            Evaluation x;
+            if(FluidSystem::phaseIsActive(oilPhaseIdx)){
+                x = rockCompressibility*(fluidState_.pressure(oilPhaseIdx) - rockRefPressure);
+            }else{
+                x = rockCompressibility*(fluidState_.pressure(waterPhaseIdx) - rockRefPressure);
+            }
             porosity_ *= 1.0 + x + 0.5*x*x;
         }
 
