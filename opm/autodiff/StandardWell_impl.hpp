@@ -290,7 +290,12 @@ namespace Opm
                     Opm::DeferredLogger& deferred_logger) const
     {
         const auto& fs = intQuants.fluidState();
-        const EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
+        EvalWell pressure;
+	if(FluidSystem::numActivePhases()==1){
+	  pressure = extendEval(fs.pressure(FluidSystem::waterPhaseIdx));
+	}else{
+	  pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
+	}
         const EvalWell rs = extendEval(fs.Rs());
         const EvalWell rv = extendEval(fs.Rv());
         std::vector<EvalWell> b_perfcells_dense(num_components_, 0.0);
@@ -624,7 +629,12 @@ namespace Opm
                         || (pu.phase_pos[Gas] == p && summaryConfig.hasSummaryKey("WPIG:" + name()))) {
 
                     const unsigned int compIdx = flowPhaseToEbosCompIdx(p);
-                    const double drawdown = well_state.perfPress()[first_perf_ + perf] - intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx).value();
+		    double drawdown;
+		    if(FluidSystem::numActivePhases() ==1){
+		      drawdown = well_state.perfPress()[first_perf_ + perf] - intQuants.fluidState().pressure(FluidSystem::waterPhaseIdx).value();
+		    }else{
+		      drawdown = well_state.perfPress()[first_perf_ + perf] - intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx).value();
+		    }
                     const bool new_well = schedule.hasWellEvent(name(), ScheduleEvents::NEW_WELL, current_step_);
                     double productivity_index = cq_s[compIdx].value() / drawdown;
                     scaleProductivityIndex(perf, productivity_index, new_well, deferred_logger);
@@ -899,7 +909,9 @@ namespace Opm
             primary_variables_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
         }
 
-        processFractions();
+	if(FluidSystem::numActivePhases()>1){
+	  processFractions();
+	}
 
         // updating the total rates Q_t
         const double relaxation_factor_rate = relaxationFactorRate(old_primary_variables, dwells);
@@ -1005,11 +1017,18 @@ namespace Opm
     updateWellStateFromPrimaryVariables(WellState& well_state, Opm::DeferredLogger& deferred_logger) const
     {
         const PhaseUsage& pu = phaseUsage();
-        assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
-        const int oil_pos = pu.phase_pos[Oil];
+        //assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
+        int oil_pos;// = pu.phase_pos[Oil];
 
         std::vector<double> F(number_of_phases_, 0.0);
-        F[oil_pos] = 1.0;
+	if ( FluidSystem::numActivePhases() ==1 ) {
+	  F[0] =1;
+	}
+	
+	if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
+	  oil_pos = pu.phase_pos[Oil];
+	  F[oil_pos] = 1.0;
+	}
 
         if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
             const int water_pos = pu.phase_pos[Water];
@@ -1249,7 +1268,12 @@ namespace Opm
             const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             const auto& fs = int_quantities.fluidState();
             // the pressure of the reservoir grid block the well connection is in
-            const double p_r = fs.pressure(FluidSystem::oilPhaseIdx).value();
+	    double p_r;
+	    if(FluidSystem::numActivePhases()==1){
+	      p_r = fs.pressure(FluidSystem::waterPhaseIdx).value();
+	    }else{
+	      p_r = fs.pressure(FluidSystem::oilPhaseIdx).value();
+	    }
 
             // calculating the b for the connection
             std::vector<double> b_perf(num_components_);
@@ -1478,7 +1502,12 @@ namespace Opm
             const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
 
-            const double pressure = (fs.pressure(FluidSystem::oilPhaseIdx)).value();
+	    double pressure;
+	    if(FluidSystem::numActivePhases()==1){
+	      pressure = (fs.pressure(FluidSystem::waterPhaseIdx)).value();
+	    }else{
+	      pressure = (fs.pressure(FluidSystem::oilPhaseIdx)).value();
+	    }
             const double bhp = getBhp().value();
 
             // Pressure drawdown (also used to determine direction of flow)
@@ -1683,6 +1712,7 @@ namespace Opm
             // TODO: to check why should be perf - 1
             const double p_above = perf == 0 ? well_state.bhp()[w] : well_state.perfPress()[first_perf_ + perf - 1];
             const double p_avg = (well_state.perfPress()[first_perf_ + perf] + p_above)/2;
+	    // strange choice
             const double temperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
 
             if (waterPresent) {
@@ -2715,7 +2745,7 @@ namespace Opm
         // 0.95 is a experimental value, which remains to be optimized
         double relaxation_factor = 1.0;
 
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && (FluidSystem::numActivePhases() > 1)) {
             const double relaxation_factor_w = relaxationFactorFraction(primary_variables[WFrac], dwells[0][WFrac]);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
         }
