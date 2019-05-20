@@ -276,6 +276,23 @@ namespace Opm
 
 
 
+  template<typename TypeTag>
+  typename StandardWell<TypeTag>::Eval
+  StandardWell<TypeTag>::getPerfPressure(const typename StandardWell<TypeTag>::FluidState& fs) const{
+    Eval pressure;
+    if(Indices::oilEnabled){  
+      pressure = fs.pressure(FluidSystem::oilPhaseIdx);
+    }else{
+      if(Indices::waterEnabled){
+	    pressure = fs.pressure(FluidSystem::waterPhaseIdx);
+      }else{
+	pressure = fs.pressure(FluidSystem::gasPhaseIdx);
+      }
+    }
+    return pressure; 
+  }
+
+  
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
@@ -290,13 +307,8 @@ namespace Opm
                     Opm::DeferredLogger& deferred_logger) const
     {
         const auto& fs = intQuants.fluidState();
-        EvalWell pressure;
-	if(FluidSystem::numActivePhases()==1){
-	  pressure = extendEval(fs.pressure(FluidSystem::waterPhaseIdx));
-	}else{
-	  pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
-	}
-        const EvalWell rs = extendEval(fs.Rs());
+	const EvalWell pressure = extendEval(getPerfPressure(fs));
+	const EvalWell rs = extendEval(fs.Rs());
         const EvalWell rv = extendEval(fs.Rv());
         std::vector<EvalWell> b_perfcells_dense(num_components_, 0.0);
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
@@ -629,12 +641,9 @@ namespace Opm
                         || (pu.phase_pos[Gas] == p && summaryConfig.hasSummaryKey("WPIG:" + name()))) {
 
                     const unsigned int compIdx = flowPhaseToEbosCompIdx(p);
-		    double drawdown;
-		    if(FluidSystem::numActivePhases() ==1){
-		      drawdown = well_state.perfPress()[first_perf_ + perf] - intQuants.fluidState().pressure(FluidSystem::waterPhaseIdx).value();
-		    }else{
-		      drawdown = well_state.perfPress()[first_perf_ + perf] - intQuants.fluidState().pressure(FluidSystem::oilPhaseIdx).value();
-		    }
+		    const auto& fs = intQuants.fluidState();
+		    Eval perf_pressure = getPerfPressure(fs);
+		    const double drawdown  = well_state.perfPress()[first_perf_ + perf] - perf_pressure.value();
                     const bool new_well = schedule.hasWellEvent(name(), ScheduleEvents::NEW_WELL, current_step_);
                     double productivity_index = cq_s[compIdx].value() / drawdown;
                     scaleProductivityIndex(perf, productivity_index, new_well, deferred_logger);
@@ -1023,7 +1032,7 @@ namespace Opm
         std::vector<double> F(number_of_phases_, 0.0);
 	if ( FluidSystem::numActivePhases() ==1 ) {
 	  F[0] =1;
-	}
+	}else{
 	
 	if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
 	  oil_pos = pu.phase_pos[Oil];
@@ -1067,6 +1076,7 @@ namespace Opm
             F[pu.phase_pos[Gas]] += F_solvent;
         }
 
+	}
         well_state.bhp()[index_of_well_] = primary_variables_[Bhp];
 
         // calculate the phase rates based on the primary variables
@@ -1268,13 +1278,9 @@ namespace Opm
             const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             const auto& fs = int_quantities.fluidState();
             // the pressure of the reservoir grid block the well connection is in
-	    double p_r;
-	    if(FluidSystem::numActivePhases()==1){
-	      p_r = fs.pressure(FluidSystem::waterPhaseIdx).value();
-	    }else{
-	      p_r = fs.pressure(FluidSystem::oilPhaseIdx).value();
-	    }
-
+	    Eval perf_pressure = getPerfPressure(fs); 
+	    double p_r = perf_pressure.value();
+	    
             // calculating the b for the connection
             std::vector<double> b_perf(num_components_);
             for (size_t phase = 0; phase < FluidSystem::numPhases; ++phase) {
@@ -1501,13 +1507,9 @@ namespace Opm
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
-
-	    double pressure;
-	    if(FluidSystem::numActivePhases()==1){
-	      pressure = (fs.pressure(FluidSystem::waterPhaseIdx)).value();
-	    }else{
-	      pressure = (fs.pressure(FluidSystem::oilPhaseIdx)).value();
-	    }
+	    Eval perf_pressure = getPerfPressure(fs);
+	    const double pressure = perf_pressure.value();
+	    
             const double bhp = getBhp().value();
 
             // Pressure drawdown (also used to determine direction of flow)

@@ -50,6 +50,7 @@ namespace Opm
         using typename Base::Indices;
         using typename Base::PolymerModule;
         using typename Base::RateConverterType;
+        using typename Base::FluidState;
 
         using Base::numEq;
 
@@ -276,6 +277,10 @@ namespace Opm
         EvalWell wellSurfaceVolumeFraction(const int phase) const;
 
         EvalWell extendEval(const Eval& in) const;
+
+      
+      Eval
+      getPerfPressure(const FluidState& fs) const;
 
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
