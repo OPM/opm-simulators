@@ -67,7 +67,7 @@ do
       $configuration/build-opm-simulators/tests/results/$binary+$tname/ \
       $OPM_TESTS_ROOT/$dirname/opm-simulation-reference/$binary \
       $casename \
-      EGRID INIT SMSPEC UNRST UNSMRY
+      EGRID INIT RFT SMSPEC UNRST UNSMRY
   test $? -eq 0 && changed_tests="$changed_tests $test_name"
 done
 
