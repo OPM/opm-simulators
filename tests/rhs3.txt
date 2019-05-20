@@ -1,0 +1,12 @@
+%%MatrixMarket matrix array real general
+% ISTL_STRUCT blocked 3 1
+9 1
+-4.48332e-07
+3.53746e-07
+4.31812e-05
+1.48051e-07
+-5.76325e-07
+-0.000243496
+-3.81652e-08
+1.21761e-06
+-9.97615e-05

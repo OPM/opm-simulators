@@ -37,6 +37,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/wells/well_controls.c
   opm/core/wells/wells.c
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
+  opm/simulators/linalg/setupPropertyTree.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
@@ -55,6 +56,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_ecl_output.cc
   tests/test_blackoil_amg.cpp
   tests/test_convergencereport.cpp
+  tests/test_flexiblesolver.cpp
   tests/test_graphcoloring.cpp
   tests/test_vfpproperties.cpp
   tests/test_milu.cpp
@@ -110,6 +112,9 @@ list (APPEND TEST_DATA_FILES
   tests/relpermDiagnostics.DATA
   tests/norne_pvt.data
   tests/wells_no_perforation.data
+  tests/matr33.txt
+  tests/rhs3.txt
+  tests/options_flexiblesolver.json
   )
 
 
@@ -155,14 +160,23 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/twolevelmethodcpr.hh
   opm/simulators/linalg/CPRPreconditioner.hpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp
+  opm/simulators/linalg/FlexibleSolver.hpp
   opm/simulators/linalg/FlowLinearSolverParameters.hpp
+  opm/simulators/linalg/GetQuasiImpesWeights.hpp
   opm/simulators/linalg/GraphColoring.hpp
   opm/simulators/linalg/ISTLSolverEbos.hpp
   opm/simulators/linalg/ISTLSolverEbosCpr.hpp
+  opm/simulators/linalg/ISTLSolverEbosFlexible.hpp
   opm/simulators/linalg/MatrixBlock.hpp
+  opm/simulators/linalg/MatrixMarketUtils.hpp
+  opm/simulators/linalg/OwningTwolevelPreconditioner.hpp
   opm/simulators/linalg/ParallelOverlappingILU0.hpp
   opm/simulators/linalg/ParallelRestrictedAdditiveSchwarz.hpp
   opm/simulators/linalg/ParallelIstlInformation.hpp
+  opm/simulators/linalg/PressureSolverPolicy.hpp
+  opm/simulators/linalg/PressureTransferPolicy.hpp
+  opm/simulators/linalg/makePreconditioner.hpp
+  opm/simulators/linalg/setupPropertyTree.hpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
   opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp
   opm/simulators/timestepping/ConvergenceReport.hpp

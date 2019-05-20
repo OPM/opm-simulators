@@ -1,5 +1,5 @@
 /*
-  Copyright 2013, 2014, 2015 SINTEF ICT, Applied Mathematics.
+  Copyright 2013, 2014, 2015, 2019 SINTEF Digital, Mathematics and Cybernetics.
   Copyright 2014 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2015, 2017 IRIS AS
 
@@ -21,7 +21,7 @@
 #include "config.h"
 #include "flow/flow_tag.hpp"
 //#include <opm/linearsolvers/amgclsolverbackend.hh>
-#include  <opm/simulators/linalg/ISTLSolverEbosCpr.hpp>
+#include  <opm/simulators/linalg/ISTLSolverEbosFlexible.hpp>
 //#include <ewoms/linear/superlubackend.hh>
 
 BEGIN_PROPERTIES
@@ -48,8 +48,8 @@ SET_PROP(EclFlowProblemSimple, FluidState)
 
 SET_BOOL_PROP(EclFlowProblemSimple,MatrixAddWellContributions,true);
 SET_INT_PROP(EclFlowProblemSimple,LinearSolverVerbosity,0);
-SET_SCALAR_PROP(EclFlowProblemSimple, LinearSolverReduction, 1e-4);
-SET_INT_PROP(EclFlowProblemSimple, LinearSolverMaxIter, 20);
+SET_SCALAR_PROP(EclFlowProblemSimple, LinearSolverReduction, 1e-2);
+SET_INT_PROP(EclFlowProblemSimple, LinearSolverMaxIter, 100);
 SET_BOOL_PROP(EclFlowProblemSimple, UseAmg, true);//probably not used
 SET_BOOL_PROP(EclFlowProblemSimple, UseCpr, true);
 SET_INT_PROP(EclFlowProblemSimple, CprMaxEllIter, 1);
@@ -79,7 +79,7 @@ namespace Ewoms {
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::ParallelBiCGStabSolverBackend<TypeTag>);//not work
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::SuperLUBackend<TypeTag>)//not work
     //SET_TAG_PROP(EclFlowProblem, FluidState, Opm::BlackOilFluidState);
-    SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbosCpr<TypeTag>);
+    SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbosFlexible<TypeTag>);
     SET_BOOL_PROP(EclFlowProblemSimple, EnableStorageCache, true);
     SET_BOOL_PROP(EclFlowProblemSimple, EnableIntensiveQuantityCache, true);
     
