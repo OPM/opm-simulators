@@ -395,7 +395,7 @@ private:
             }
         }
 
-        void updateAmgPreconditioner(typename AMGType::Operator& op)
+        void updatePreconditioner(typename AMGType::Operator& op)
         {
             amg_->updateSolver(crit_, op, comm_);
         }

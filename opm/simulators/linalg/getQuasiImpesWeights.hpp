@@ -43,7 +43,7 @@ namespace Details
 namespace Amg
 {
     template <class Matrix, class Vector>
-    void getQuasiImpesWeights(const Matrix& matrix, const int pressureVarIndex, Vector& weights, bool transpose = false)
+    void getQuasiImpesWeights(const Matrix& matrix, const int pressureVarIndex, const bool transpose, Vector& weights)
     {
         using VectorBlockType = typename Vector::block_type;
         using MatrixBlockType = typename Matrix::block_type;
@@ -76,10 +76,10 @@ namespace Amg
     }
 
     template <class Matrix, class Vector>
-    Vector getQuasiImpesWeights(const Matrix& matrix, const int pressureVarIndex, bool transpose = false)
+    Vector getQuasiImpesWeights(const Matrix& matrix, const int pressureVarIndex, const bool transpose)
     {
         Vector weights(matrix.N());
-        getQuasiImpesWeights(matrix, pressureVarIndex, weights, transpose);
+        getQuasiImpesWeights(matrix, pressureVarIndex, transpose, weights);
         return weights;
     }
 

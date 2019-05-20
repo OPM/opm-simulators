@@ -22,11 +22,12 @@
 #define BOOST_TEST_MODULE OPM_test_FlexibleSolver
 #include <boost/test/unit_test.hpp>
 
+#include <opm/simulators/linalg/FlexibleSolver.hpp>
+
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <fstream>
 #include <iostream>
-#include <opm/simulators/linalg/FlexibleSolver.hpp>
 
 
 template <int bz>

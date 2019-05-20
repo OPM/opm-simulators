@@ -6,7 +6,8 @@
 // NOTE: This file is a modified version of dune/istl/paamg/amg.hh from
 // dune-istl release 2.6.0. Modifications have been kept as minimal as possible.
 
-#include <memory>
+#include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
+
 #include <dune/common/exceptions.hh>
 #include <dune/istl/paamg/smoother.hh>
 #include <dune/istl/paamg/transfer.hh>
@@ -18,6 +19,8 @@
 #include <dune/istl/solvertype.hh>
 #include <dune/common/typetraits.hh>
 #include <dune/common/exceptions.hh>
+
+#include <memory>
 
 namespace Dune
 {
@@ -130,7 +133,7 @@ namespace Dune
      */
     template<class M, class X, class S, class PI=SequentialInformation,
         class A=std::allocator<X> >
-    class AMGCPR : public Preconditioner<X,X>
+    class AMGCPR : public PreconditionerWithUpdate<X,X>
     {
       template<class M1, class X1, class S1, class P1, class K1, class A1>
       friend class KAMG;
@@ -292,6 +295,11 @@ namespace Dune
        */
       template<class C>
       void updateSolver(C& criterion, Operator& /* matrix */, const PI& pinfo);
+
+      /**
+       * @brief Update the coarse solver and the hierarchies.
+       */
+      virtual void update();
 
       /**
        * @brief Check whether the coarse solver used is a direct solver.
@@ -526,6 +534,12 @@ namespace Dune
     template<class M, class X, class S, class PI, class A>
     template<class C>
     void AMGCPR<M,X,S,PI,A>::updateSolver(C& /* criterion */, Operator& /* matrix */, const PI& /* pinfo */)
+    {
+      update();
+    }
+
+    template<class M, class X, class S, class PI, class A>
+    void AMGCPR<M,X,S,PI,A>::update()
     {
       Timer watch;
       smoothers_.reset(new Hierarchy<Smoother,A>);

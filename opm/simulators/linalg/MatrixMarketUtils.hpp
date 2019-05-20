@@ -22,6 +22,7 @@
 #define OPM_MATRIXMARKETUTILS_HEADER_INCLUDED
 
 #include <dune/istl/matrixmarket.hh>
+
 #include <cstddef>
 
 namespace Dune

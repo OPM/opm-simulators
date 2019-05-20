@@ -16,6 +16,7 @@
 #include<dune/istl/solver.hh>
 
 #include<dune/common/unused.hh>
+#include<dune/common/version.hh>
 
 /**
  * @addtogroup ISTL_PAAMG
@@ -455,12 +456,18 @@ public:
                             std::shared_ptr<SmootherType> smoother,
                             CoarseLevelSolverPolicy& coarsePolicy)
   {
+    updatePreconditioner(smoother, coarsePolicy);
+  }
+
+  void updatePreconditioner(std::shared_ptr<SmootherType> smoother,
+                            CoarseLevelSolverPolicy& coarsePolicy)
+  {
     //assume new matrix is not reallocated the new precondition should anyway be made
     smoother_ = smoother;
     if (coarseSolver_) {
       policy_->calculateCoarseEntries(*operator_);
       coarsePolicy.setCoarseOperator(*policy_);
-      coarseSolver_->updateAmgPreconditioner(*(policy_->getCoarseLevelOperator()));
+      coarseSolver_->updatePreconditioner();
     } else {
       // we should probably not be heere
       policy_->createCoarseLevelSystem(*operator_);

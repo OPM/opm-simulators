@@ -34,17 +34,32 @@ namespace Dune
 {
 
 
+template <class X, class Y>
+class SolverWithUpdate : public Dune::InverseOperator<X, Y>
+{
+public:
+    virtual void updatePreconditioner() = 0;
+};
+
 
 template <class MatrixTypeT, class VectorTypeT>
-class FlexibleSolver : Dune::InverseOperator<VectorTypeT, VectorTypeT>
+class FlexibleSolver : public Dune::SolverWithUpdate<VectorTypeT, VectorTypeT>
 {
 public:
     using MatrixType = MatrixTypeT;
     using VectorType = VectorTypeT;
 
+    /// Create a sequential solver.
     FlexibleSolver(const boost::property_tree::ptree& prm, const MatrixType& matrix)
     {
-        makeSolver(prm, matrix);
+        init(prm, matrix, Dune::Amg::SequentialInformation());
+    }
+
+    /// Create a parallel solver (if Comm is e.g. OwnerOverlapCommunication).
+    template <class Comm>
+    FlexibleSolver(const boost::property_tree::ptree& prm, const MatrixType& matrix, const Comm& comm)
+    {
+        init(prm, matrix, comm);
     }
 
     virtual void apply(VectorType& x, VectorType& rhs, Dune::InverseOperatorResult& res) override
@@ -57,28 +72,61 @@ public:
         linsolver_->apply(x, rhs, reduction, res);
     }
 
+    virtual void updatePreconditioner() override
+    {
+        preconditioner_->update();
+    }
+
     virtual Dune::SolverCategory::Category category() const override
     {
-        return Dune::SolverCategory::sequential;
+        return linearoperator_->category();
     }
 
 private:
-    void makeSolver(const boost::property_tree::ptree& prm, const MatrixType& matrix)
+
+    using AbstractOperatorType = Dune::AssembledLinearOperator<MatrixType, VectorType, VectorType>;
+    using AbstractPrecondType = Dune::PreconditionerWithUpdate<VectorType, VectorType>;
+    using AbstractScalarProductType = Dune::ScalarProduct<VectorType>;
+    using AbstractSolverType = Dune::InverseOperator<VectorType, VectorType>;
+
+    // Machinery for making sequential or parallel operators/preconditioners/scalar products.
+    template <class Comm>
+    void initOpPrecSp(const MatrixType& matrix, const boost::property_tree::ptree& prm, const Comm& comm)
+    {
+        // Parallel case.
+        using ParOperatorType = Dune::OverlappingSchwarzOperator<MatrixType, VectorType, VectorType, Comm>;
+        auto linop = std::make_shared<ParOperatorType>(matrix, comm);
+        linearoperator_ = linop;
+        preconditioner_ = Dune::makePreconditioner<ParOperatorType, VectorType, Comm>(*linop, prm, comm);
+        scalarproduct_ = Dune::createScalarProduct<VectorType, Comm>(comm, linearoperator_->category());
+    }
+    template <>
+    void initOpPrecSp<Dune::Amg::SequentialInformation>(const MatrixType& matrix, const boost::property_tree::ptree& prm, const Dune::Amg::SequentialInformation&)
+    {
+        // Sequential case.
+        using SeqOperatorType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
+        auto linop = std::make_shared<SeqOperatorType>(matrix);
+        linearoperator_ = linop;
+        preconditioner_ = Dune::makePreconditioner<SeqOperatorType, VectorType>(*linop, prm);
+        scalarproduct_ = std::make_shared<Dune::SeqScalarProduct<VectorType>>();
+    }
+
+    void initSolver(const boost::property_tree::ptree& prm)
     {
         const double tol = prm.get<double>("tol");
         const int maxiter = prm.get<int>("maxiter");
-        linearoperator_.reset(new Dune::MatrixAdapter<MatrixType, VectorType, VectorType>(matrix));
-        preconditioner_ = Dune::makePreconditioner<MatrixType, VectorType>(*linearoperator_, prm);
-        int verbosity = prm.get<int>("verbosity");
-        std::string solver_type = prm.get<std::string>("solver");
+        const int verbosity = prm.get<int>("verbosity");
+        const std::string solver_type = prm.get<std::string>("solver");
         if (solver_type == "bicgstab") {
             linsolver_.reset(new Dune::BiCGSTABSolver<VectorType>(*linearoperator_,
+                                                                  *scalarproduct_,
                                                                   *preconditioner_,
                                                                   tol, // desired residual reduction factor
                                                                   maxiter, // maximum number of iterations
                                                                   verbosity));
         } else if (solver_type == "loopsolver") {
             linsolver_.reset(new Dune::LoopSolver<VectorType>(*linearoperator_,
+                                                              *scalarproduct_,
                                                               *preconditioner_,
                                                               tol, // desired residual reduction factor
                                                               maxiter, // maximum number of iterations
@@ -86,6 +134,7 @@ private:
         } else if (solver_type == "gmres") {
             int restart = prm.get<int>("restart");
             linsolver_.reset(new Dune::RestartedGMResSolver<VectorType>(*linearoperator_,
+                                                                        *scalarproduct_,
                                                                         *preconditioner_,
                                                                         tol,
                                                                         restart, // desired residual reduction factor
@@ -103,9 +152,20 @@ private:
         }
     }
 
-    std::shared_ptr<Dune::Preconditioner<VectorType, VectorType>> preconditioner_;
-    std::shared_ptr<Dune::MatrixAdapter<MatrixType, VectorType, VectorType>> linearoperator_;
-    std::shared_ptr<Dune::InverseOperator<VectorType, VectorType>> linsolver_;
+
+    // Main initialization routine.
+    // Call with Comm == Dune::Amg::SequentialInformation to get a serial solver.
+    template <class Comm>
+    void init(const boost::property_tree::ptree& prm, const MatrixType& matrix, const Comm& comm)
+    {
+        initOpPrecSp(matrix, prm, comm);
+        initSolver(prm);
+    }
+
+    std::shared_ptr<AbstractOperatorType> linearoperator_;
+    std::shared_ptr<AbstractPrecondType> preconditioner_;
+    std::shared_ptr<AbstractScalarProductType> scalarproduct_;
+    std::shared_ptr<AbstractSolverType> linsolver_;
 };
 
 } // namespace Dune

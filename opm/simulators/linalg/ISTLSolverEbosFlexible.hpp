@@ -58,9 +58,11 @@ class ISTLSolverEbosFlexible
     using VectorType = typename GET_PROP_TYPE(TypeTag, GlobalEqVector);
     using Simulator = typename GET_PROP_TYPE(TypeTag, Simulator);
     using MatrixType = typename SparseMatrixAdapter::IstlMatrix;
-    using POrComm = Dune::Amg::SequentialInformation;
-    using MatrixAdapterType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
+#if HAVE_MPI
+    using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
+#endif
     using SolverType = Dune::FlexibleSolver<MatrixType, VectorType>;
+
 
 public:
     static void registerParameters()
@@ -70,8 +72,19 @@ public:
 
     explicit ISTLSolverEbosFlexible(const Simulator& simulator)
         : simulator_(simulator)
+        , comm_(nullptr)
     {
         parameters_.template init<TypeTag>();
+        prm_ = setupPropertyTree(parameters_);
+        extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
+#if HAVE_MPI
+        if (parallelInformation_.type() == typeid(ParallelISTLInformation)) {
+            // Parallel case.
+            const ParallelISTLInformation* parinfo = boost::any_cast<ParallelISTLInformation>(&parallelInformation_);
+            assert(parinfo);
+            comm_.reset(new Communication(parinfo->communicator()));
+        }
+#endif
     }
 
     void eraseMatrix()
@@ -80,9 +93,47 @@ public:
 
     void prepare(const SparseMatrixAdapter& mat, VectorType& b)
     {
-        boost::property_tree::ptree prm = setupPropertyTree(parameters_);
-        solver_.reset(new SolverType(prm, mat.istlMatrix()));
-        rhs_ = b;
+#if HAVE_MPI
+        static bool firstcall = true;
+        if (firstcall && parallelInformation_.type() == typeid(ParallelISTLInformation)) {
+            // Parallel case.
+            const ParallelISTLInformation* parinfo = boost::any_cast<ParallelISTLInformation>(&parallelInformation_);
+            assert(parinfo);
+            const size_t size = mat.istlMatrix().N();
+            parinfo->copyValuesTo(comm_->indexSet(), comm_->remoteIndices(), size, 1);
+            firstcall = false;
+        }
+#endif
+        // Decide if we should recreate the solver or just do
+        // a minimal preconditioner update.
+        const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
+        bool recreate_solver = false;
+        if (this->parameters_.cpr_reuse_setup_ == 0) {
+            recreate_solver = true;
+        } else if (this->parameters_.cpr_reuse_setup_ == 1) {
+            if (newton_iteration == 0) {
+                recreate_solver = true;
+            }
+        } else if (this->parameters_.cpr_reuse_setup_ == 2) {
+            if (this->iterations() > 10) {
+                recreate_solver = true;
+            }
+        } else {
+            assert(this->parameters_.cpr_reuse_setup_ == 3);
+            assert(recreate_solver == false);
+        }
+
+        if (recreate_solver || !solver_) {
+            if (isParallel()) {
+                solver_.reset(new SolverType(prm_, mat.istlMatrix(), *comm_));
+            } else {
+                solver_.reset(new SolverType(prm_, mat.istlMatrix()));
+            }
+            rhs_ = b;
+        } else {
+            solver_->updatePreconditioner();
+            rhs_ = b;
+        }
     }
 
     bool solve(VectorType& x)
@@ -91,9 +142,13 @@ public:
         return res_.converged;
     }
 
-    bool isParallel()
+    bool isParallel() const
     {
+#if HAVE_MPI
+        return parallelInformation_.type() == typeid(ParallelISTLInformation);
+#else
         return false;
+#endif
     }
 
     int iterations() const
@@ -116,8 +171,11 @@ protected:
 
     std::unique_ptr<SolverType> solver_;
     FlowLinearSolverParameters parameters_;
+    boost::property_tree::ptree prm_;
     VectorType rhs_;
     Dune::InverseOperatorResult res_;
+    boost::any parallelInformation_;
+    std::unique_ptr<Communication> comm_;
 }; // end ISTLSolverEbosFlexible
 
 } // namespace Opm

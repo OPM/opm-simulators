@@ -22,17 +22,17 @@
 #define OPM_PRESSURE_TRANSFER_POLICY_HEADER_INCLUDED
 
 
-#include <dune/istl/paamg/twolevelmethod.hh>
+#include <opm/simulators/linalg/twolevelmethodcpr.hh>
 
 
 namespace Opm
 {
 
 template <class FineOperator, class CoarseOperator, class Communication, bool transpose = false>
-class PressureTransferPolicy : public Dune::Amg::LevelTransferPolicy<FineOperator, CoarseOperator>
+class PressureTransferPolicy : public Dune::Amg::LevelTransferPolicyCpr<FineOperator, CoarseOperator>
 {
 public:
-    typedef Dune::Amg::LevelTransferPolicy<FineOperator, CoarseOperator> FatherType;
+    typedef Dune::Amg::LevelTransferPolicyCpr<FineOperator, CoarseOperator> ParentType;
     typedef Communication ParallelInformation;
     typedef typename FineOperator::domain_type FineVectorType;
 
@@ -44,7 +44,7 @@ public:
     {
     }
 
-    void createCoarseLevelSystem(const FineOperator& fineOperator)
+    virtual void createCoarseLevelSystem(const FineOperator& fineOperator) override
     {
         using CoarseMatrix = typename CoarseOperator::matrix_type;
         const auto& fineLevelMatrix = fineOperator.getmat();
@@ -68,7 +68,7 @@ public:
         this->operator_.reset(Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs));
     }
 
-    void calculateCoarseEntries(const FineOperator& fineOperator)
+    virtual void calculateCoarseEntries(const FineOperator& fineOperator) override
     {
         const auto& fineMatrix = fineOperator.getmat();
         *coarseLevelMatrix_ = 0;
@@ -96,7 +96,7 @@ public:
         assert(rowCoarse == coarseLevelMatrix_->end());
     }
 
-    void moveToCoarseLevel(const typename FatherType::FineRangeType& fine)
+    virtual void moveToCoarseLevel(const typename ParentType::FineRangeType& fine) override
     {
         // Set coarse vector to zero
         this->rhs_ = 0;
@@ -119,7 +119,7 @@ public:
         this->lhs_ = 0;
     }
 
-    void moveToFineLevel(typename FatherType::FineDomainType& fine)
+    virtual void moveToFineLevel(typename ParentType::FineDomainType& fine) override
     {
         auto end = fine.end(), begin = fine.begin();
 
@@ -135,7 +135,7 @@ public:
         }
     }
 
-    PressureTransferPolicy* clone() const
+    virtual PressureTransferPolicy* clone() const override
     {
         return new PressureTransferPolicy(*this);
     }

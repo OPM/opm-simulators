@@ -24,7 +24,8 @@
 namespace Opm
 {
 
-boost::property_tree::ptree setupPropertyTree(const FlowLinearSolverParameters& p)
+boost::property_tree::ptree
+setupPropertyTree(const FlowLinearSolverParameters& p)
 {
     boost::property_tree::ptree prm;
     if (p.linear_solver_configuration_json_file_ != "none") {

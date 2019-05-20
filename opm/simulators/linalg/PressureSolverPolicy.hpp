@@ -20,6 +20,8 @@
 #ifndef OPM_PRESSURE_SOLVER_POLICY_HEADER_INCLUDED
 #define OPM_PRESSURE_SOLVER_POLICY_HEADER_INCLUDED
 
+#include <opm/simulators/linalg/PressureTransferPolicy.hpp>
+
 #include <boost/property_tree/ptree.hpp>
 
 #include <dune/istl/solver.hh>
@@ -30,7 +32,7 @@ namespace Amg
 {
     namespace pt = boost::property_tree;
 
-    template <class OperatorType, class Solver>
+    template <class OperatorType, class Solver, class LevelTransferPolicy>
     class PressureSolverPolicy
     {
     public:
@@ -54,10 +56,15 @@ namespace Amg
          * the coarse level system.
          */
         struct PressureInverseOperator : public Dune::InverseOperator<X, X> {
-            PressureInverseOperator(Operator& op, const boost::property_tree::ptree& prm)
+            template <class Comm>
+            PressureInverseOperator(Operator& op, const boost::property_tree::ptree& prm, const Comm& comm)
                 : linsolver_()
             {
-                linsolver_.reset(new Solver(prm, op.getmat()));
+                if (op.category() == Dune::SolverCategory::overlapping) {
+                    linsolver_.reset(new Solver(prm, op.getmat(), comm));
+                } else {
+                    linsolver_.reset(new Solver(prm, op.getmat()));
+                }
             }
 
             Dune::SolverCategory::Category category() const override
@@ -73,6 +80,11 @@ namespace Amg
             void apply(X& x, X& b, Dune::InverseOperatorResult& res) override
             {
                 linsolver_->apply(x, b, res);
+            }
+
+            void updatePreconditioner()
+            {
+                linsolver_->updatePreconditioner();
             }
 
         private:
@@ -98,7 +110,9 @@ namespace Amg
         CoarseLevelSolver* createCoarseLevelSolver(LTP& transferPolicy)
         {
             coarseOperator_ = transferPolicy.getCoarseLevelOperator();
-            PressureInverseOperator* inv = new PressureInverseOperator(*coarseOperator_, prm_);
+            auto& tp = dynamic_cast<LevelTransferPolicy&>(transferPolicy); // TODO: make this unnecessary.
+            PressureInverseOperator* inv
+                = new PressureInverseOperator(*coarseOperator_, prm_, tp.getCoarseLevelCommunication());
             return inv;
         }
 
