@@ -348,7 +348,11 @@ public:
             if(FluidSystem::phaseIsActive(oilPhaseIdx)){
                 x = rockCompressibility*(fluidState_.pressure(oilPhaseIdx) - rockRefPressure);
             }else{
-                x = rockCompressibility*(fluidState_.pressure(waterPhaseIdx) - rockRefPressure);
+                if(FluidSystem::phaseIsActive(waterPhaseIdx)){
+                    x = rockCompressibility*(fluidState_.pressure(waterPhaseIdx) - rockRefPressure);
+                }else{
+                    x = rockCompressibility*(fluidState_.pressure(gasPhaseIdx) - rockRefPressure);
+                }
             }
             porosity_ *= 1.0 + x + 0.5*x*x;
         }
