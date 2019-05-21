@@ -353,6 +353,9 @@ public:
         // the IntensiveQuantities). The reason is that most intensive quantities are not
         // required to be able to decide if the primary variables needs to be switched or
         // not, so it would be a waste to compute them.
+        if (primaryVarsMeaning() == px){
+            return false;
+        }
         Scalar Sw = 0.0;
         if (waterEnabled)
             Sw = (*this)[Indices::waterSaturationIdx];
