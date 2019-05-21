@@ -208,6 +208,10 @@ namespace Opm
     StandardWell<TypeTag>::
     wellVolumeFraction(const unsigned compIdx) const
     {
+      if (FluidSystem::numActivePhases()==1){
+	return 1;
+      }
+      
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
             return primary_variables_evaluation_[WFrac];
         }
@@ -897,7 +901,7 @@ namespace Opm
         const double relaxation_factor_fractions = (well_type_ == PRODUCER) ?
                                          relaxationFactorFractionsProducer(old_primary_variables, dwells)
                                        : 1.0;
-
+	if(FluidSystem::numActivePhases()>1){
         // update the second and third well variable (The flux fractions)
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
@@ -918,8 +922,8 @@ namespace Opm
             primary_variables_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
         }
 
-	if(FluidSystem::numActivePhases()>1){
-	  processFractions();
+	
+	processFractions();
 	}
 
         // updating the total rates Q_t
@@ -934,6 +938,9 @@ namespace Opm
             // 1e5 to make sure bhp will not be below 1bar
             primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
         }
+	for(int i=0; i< primary_variables_.size();++i){
+	  assert(Opm::isfinite(primary_variables_[i]));
+	}
     }
 
 
@@ -1246,6 +1253,9 @@ namespace Opm
 
             break;
         } // end of switch
+	for(int i=0; i< primary_variables_.size();++i){
+	  assert(Opm::isfinite(primary_variables_[i]));
+	}
     }
 
 
@@ -2451,6 +2461,7 @@ namespace Opm
         const double* distr = well_controls_get_current_distr(wc);
         const auto pu = phaseUsage();
 
+	if(FluidSystem::numActivePhases()>1){
         if(std::abs(total_well_rate) > 0.) {
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / total_well_rate;
@@ -2498,10 +2509,13 @@ namespace Opm
                 OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well", deferred_logger);
             }
         }
-
+	}
 
         // BHP
         primary_variables_[Bhp] = well_state.bhp()[index_of_well_];
+	for(int i=0; i< primary_variables_.size();++i){
+	  assert(Opm::isfinite(primary_variables_[i]));
+	}
     }
 
 
