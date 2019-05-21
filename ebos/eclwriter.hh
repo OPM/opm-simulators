@@ -43,6 +43,7 @@
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/grid/GridHelpers.hpp>
+#include <opm/grid/utility/cartesianToCompressed.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Exceptions.hpp>
@@ -68,6 +69,55 @@ class EclWriter;
 
 template <class TypeTag>
 class EclOutputBlackOilModule;
+
+/*!
+ * \brief Detect whether two cells are direct vertical neighbours.
+ *
+ * I.e. have the same i and j index and all cartesian cells between them
+ * along the vertical column are inactive.
+ *
+ * \tparam CM The type of the cartesian index mapper.
+ * \param cartMapper The mapper onto cartesian indices.
+ * \param cartesianToActive The mapping of cartesian indices to active indices.
+ * \param smallGlobalIndex The cartesian cell index of the cell with smaller index
+ * \param largeGlobalIndex The cartesian cell index of the cell with larger index
+ * \return True if the cells have the same i and j indices and all cartesian cells
+ *         between them are inactive.
+ */
+inline
+bool directVerticalNeighbors(const std::array<int, 3>& cartDims,
+                             const std::unordered_map<int,int>& cartesianToActive,
+                             int smallGlobalIndex, int largeGlobalIndex)
+{
+    assert(smallGlobalIndex <= largeGlobalIndex);
+    std::array<int, 3> ijk1, ijk2;
+    auto globalToIjk = [cartDims](int gc) {
+                           std::array<int, 3> ijk;
+                           ijk[0] = gc % cartDims[0];
+                           gc /= cartDims[0];
+                           ijk[1] = gc % cartDims[1];
+                           ijk[2] = gc / cartDims[1];
+                           return ijk;
+                       };
+    ijk1 = globalToIjk(smallGlobalIndex);
+    ijk2 = globalToIjk(largeGlobalIndex);
+    assert(ijk2[2]>=ijk1[2]);
+
+    if ( ijk1[0] == ijk2[0] && ijk1[1] == ijk2[1] && (ijk2[2] - ijk1[2]) > 1)
+    {
+        assert((largeGlobalIndex-smallGlobalIndex)%(cartDims[0]*cartDims[1])==0);
+        for ( int gi = smallGlobalIndex + cartDims[0] * cartDims[1]; gi < largeGlobalIndex;
+              gi += cartDims[0] * cartDims[1] )
+        {
+            if ( cartesianToActive.find( gi ) != cartesianToActive.end() )
+            {
+                return false;
+            }
+        }
+        return true;
+    } else
+        return false;
+}
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -145,7 +195,9 @@ public:
             std::map<std::string, std::vector<int> > integerVectors;
             if (collectToIORank_.isParallel())
                 integerVectors.emplace("MPI_RANK", collectToIORank_.globalRanks());
-            eclIO_->writeInitial(computeTrans_(), integerVectors, exportNncStructure_());
+            auto cartMap = Opm::cartesianToCompressed(globalGrid_.size(0),
+                                                      Opm::UgGridHelpers::globalCell(globalGrid_));
+            eclIO_->writeInitial(computeTrans_(cartMap), integerVectors, exportNncStructure_(cartMap));
         }
     }
 
@@ -305,7 +357,7 @@ private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
 
-    Opm::data::Solution computeTrans_() const
+    Opm::data::Solution computeTrans_(const std::unordered_map<int,int>& cartesianToActive) const
     {
         const auto& cartMapper = simulator_.vanguard().cartesianIndexMapper();
         const auto& cartDims = cartMapper.cartesianDimensions();
@@ -361,16 +413,23 @@ private:
                 if (c1 > c2)
                     continue; // we only need to handle each connection once, thank you.
 
-
+                // Ordering of compressed and uncompressed index should be the same
+                assert(cartesianCellIdx[c1] <= cartesianCellIdx[c2]);
                 int gc1 = std::min(cartesianCellIdx[c1], cartesianCellIdx[c2]);
                 int gc2 = std::max(cartesianCellIdx[c1], cartesianCellIdx[c2]);
-                if (gc2 - gc1 == 1)
+
+                if (gc2 - gc1 == 1) {
                     tranx.data[gc1] = globalTrans->transmissibility(c1, c2);
+                    continue; // skip other if clauses as they are false, last one needs some computation
+                }
 
-                if (gc2 - gc1 == cartDims[0])
+                if (gc2 - gc1 == cartDims[0]) {
                     trany.data[gc1] = globalTrans->transmissibility(c1, c2);
+                    continue; // skipt next if clause as it needs some computation
+                }
 
-                if (gc2 - gc1 == cartDims[0]*cartDims[1])
+                if ( gc2 - gc1 == cartDims[0]*cartDims[1] ||
+                     directVerticalNeighbors(cartDims, cartesianToActive, gc1, gc2))
                     tranz.data[gc1] = globalTrans->transmissibility(c1, c2);
             }
         }
@@ -380,7 +439,7 @@ private:
                 {"TRANZ", tranz}};
     }
 
-    Opm::NNC exportNncStructure_() const
+    Opm::NNC exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive) const
     {
         std::size_t nx = eclState().getInputGrid().getNX();
         std::size_t ny = eclState().getInputGrid().getNY();
@@ -433,6 +492,7 @@ private:
             globalTrans = &simulator_.problem().eclTransmissibilities();
         }
 
+        auto cartDims = simulator_.vanguard().cartesianIndexMapper().cartesianDimensions();
         auto elemIt = globalGridView.template begin</*codim=*/0>();
         const auto& elemEndIt = globalGridView.template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++ elemIt) {
@@ -465,7 +525,8 @@ private:
 
                 if (cellDiff != 1 &&
                     cellDiff != nx &&
-                    cellDiff != nx*ny) {
+                    cellDiff != nx*ny &&
+                    ! directVerticalNeighbors(cartDims, cartesianToActive, cc1, cc2)) {
                     // We need to check whether an NNC for this face was also specified
                     // via the NNC keyword in the deck (i.e. in the first origNncSize entries.
                     auto t = globalTrans->transmissibility(c1, c2);
