@@ -104,7 +104,7 @@ public:
     void init()
     {
         const Opm::Schedule& deckSchedule = simulator_.vanguard().schedule();
-
+        Opm::SummaryState summaryState;
         // create the wells which intersect with the current process' grid
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule.numWells(); ++deckWellIdx)
         {
@@ -112,7 +112,7 @@ public:
             const std::string& wellName = deckWell.name();
             Scalar wellTemperature = 273.15 + 15.56; // [K]
             if (deckWell.isInjector())
-                wellTemperature = deckWell.getInjectionProperties().temperature;
+                wellTemperature = deckWell.injectionControls(summaryState).temperature;
 
             // set the name of the well but not much else. (i.e., if it is not completed,
             // the well primarily serves as a placeholder.) The big rest of the well is
@@ -136,7 +136,7 @@ public:
         const Opm::EclipseState& eclState = simulator_.vanguard().eclState();
         const Opm::Schedule& deckSchedule = simulator_.vanguard().schedule();
         unsigned episodeIdx = simulator_.episodeIndex();
-
+        Opm::SummaryState summaryState;
         WellConnectionsMap wellCompMap;
         computeWellConnectionsMap_(episodeIdx, wellCompMap);
 
@@ -156,7 +156,7 @@ public:
             auto well = this->well(deckWell.name());
 
             if (deckWell.isInjector( ))
-                well->setTemperature(deckWell.getInjectionProperties( ).temperature);
+                well->setTemperature(deckWell.injectionControls(summaryState).temperature);
 
             Opm::WellCommon::StatusEnum deckWellStatus = deckWell.getStatus( );
             switch (deckWellStatus) {
@@ -181,11 +181,8 @@ public:
 
             if (deckWell.isInjector( )) {
                 well->setWellType(Well::Injector);
-
-                const Opm::WellInjectionProperties& injectProperties =
-                    deckWell.getInjectionProperties( );
-
-                switch (injectProperties.injectorType) {
+                const auto controls = deckWell.injectionControls(summaryState);
+                switch (controls.injector_type) {
                 case Opm::WellInjector::WATER:
                     well->setInjectedPhaseIndex(FluidSystem::waterPhaseIdx);
                     break;
@@ -199,7 +196,7 @@ public:
                     throw std::runtime_error("Not implemented: Multi-phase injector wells");
                 }
 
-                switch (injectProperties.controlMode) {
+                switch (controls.cmode) {
                 case Opm::WellInjector::RATE:
                     well->setControlMode(Well::ControlMode::VolumetricSurfaceRate);
                     break;
@@ -226,7 +223,7 @@ public:
                     continue;
                 }
 
-                switch (injectProperties.injectorType) {
+                switch (controls.injector_type) {
                 case Opm::WellInjector::WATER:
                     well->setVolumetricPhaseWeights(/*oil=*/0.0, /*gas=*/0.0, /*water=*/1.0);
                     break;
@@ -243,44 +240,42 @@ public:
                     throw std::runtime_error("Not implemented: Multi-phase injection wells");
                 }
 
-                well->setMaximumSurfaceRate(injectProperties.surfaceInjectionRate);
-                well->setMaximumReservoirRate(injectProperties.reservoirInjectionRate);
-                well->setTargetBottomHolePressure(injectProperties.BHPLimit);
+                well->setMaximumSurfaceRate(controls.surface_rate);
+                well->setMaximumReservoirRate(controls.reservoir_rate);
+                well->setTargetBottomHolePressure(controls.bhp_limit);
 
                 // TODO
                 well->setTargetTubingHeadPressure(1e30);
-                //well->setTargetTubingHeadPressure(injectProperties.THPLimit);
+                //well->setTargetTubingHeadPressure(controls.thp_limit);
             }
 
             if (deckWell.isProducer( )) {
                 well->setWellType(Well::Producer);
+                const auto controls = deckWell.productionControls(summaryState);
 
-                const Opm::WellProductionProperties& producerProperties =
-                    deckWell.getProductionProperties( );
-
-                switch (producerProperties.controlMode) {
+                switch (controls.cmode) {
                 case Opm::WellProducer::ORAT:
                     well->setControlMode(Well::ControlMode::VolumetricSurfaceRate);
                     well->setVolumetricPhaseWeights(/*oil=*/1.0, /*gas=*/0.0, /*water=*/0.0);
-                    well->setMaximumSurfaceRate(producerProperties.OilRate);
+                    well->setMaximumSurfaceRate(controls.oil_rate);
                     break;
 
                 case Opm::WellProducer::GRAT:
                     well->setControlMode(Well::ControlMode::VolumetricSurfaceRate);
                     well->setVolumetricPhaseWeights(/*oil=*/0.0, /*gas=*/1.0, /*water=*/0.0);
-                    well->setMaximumSurfaceRate(producerProperties.GasRate);
+                    well->setMaximumSurfaceRate(controls.gas_rate);
                     break;
 
                 case Opm::WellProducer::WRAT:
                     well->setControlMode(Well::ControlMode::VolumetricSurfaceRate);
                     well->setVolumetricPhaseWeights(/*oil=*/0.0, /*gas=*/0.0, /*water=*/1.0);
-                    well->setMaximumSurfaceRate(producerProperties.WaterRate);
+                    well->setMaximumSurfaceRate(controls.water_rate);
                     break;
 
                 case Opm::WellProducer::LRAT:
                     well->setControlMode(Well::ControlMode::VolumetricSurfaceRate);
                     well->setVolumetricPhaseWeights(/*oil=*/1.0, /*gas=*/0.0, /*water=*/1.0);
-                    well->setMaximumSurfaceRate(producerProperties.LiquidRate);
+                    well->setMaximumSurfaceRate(controls.liquid_rate);
                     break;
 
                 case Opm::WellProducer::CRAT:
@@ -289,7 +284,7 @@ public:
                 case Opm::WellProducer::RESV:
                     well->setControlMode(Well::ControlMode::VolumetricReservoirRate);
                     well->setVolumetricPhaseWeights(/*oil=*/1.0, /*gas=*/1.0, /*water=*/1.0);
-                    well->setMaximumSurfaceRate(producerProperties.ResVRate);
+                    well->setMaximumSurfaceRate(controls.resv_rate);
                     break;
 
                 case Opm::WellProducer::BHP:
@@ -312,11 +307,11 @@ public:
                     continue;
                 }
 
-                well->setTargetBottomHolePressure(producerProperties.BHPLimit);
+                well->setTargetBottomHolePressure(controls.bhp_limit);
 
                 // TODO
                 well->setTargetTubingHeadPressure(-1e30);
-                //well->setTargetTubingHeadPressure(producerProperties.THPLimit);
+                //well->setTargetTubingHeadPressure(controls.thp_limit);
             }
         }
     }

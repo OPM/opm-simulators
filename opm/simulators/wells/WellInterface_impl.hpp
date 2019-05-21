@@ -284,8 +284,9 @@ namespace Opm
             return 0.0;
         }
 
-        WellInjectionProperties injection = well_ecl_.getInjectionProperties();
-        if (injection.injectorType == WellInjector::GAS) {
+        SummaryState summaryState;
+        const auto controls = well_ecl_.injectionControls(summaryState);
+        if (controls.injector_type == WellInjector::GAS) {
             double solvent_fraction = well_ecl_.getSolventFraction();
             return solvent_fraction;
         } else {
@@ -307,10 +308,11 @@ namespace Opm
             return 0.0;
         }
 
-        WellInjectionProperties injection = well_ecl_.getInjectionProperties();
+        SummaryState summaryState;
+        const auto controls = well_ecl_.injectionControls(summaryState);
         WellPolymerProperties polymer = well_ecl_.getPolymerProperties();
 
-        if (injection.injectorType == WellInjector::WATER) {
+        if (controls.injector_type == WellInjector::WATER) {
             const double polymer_injection_concentration = polymer.m_polymerConcentration;
             return polymer_injection_concentration;
         } else {
@@ -518,20 +520,7 @@ namespace Opm
     WellInterface<TypeTag>::
     underPredictionMode(Opm::DeferredLogger& deferred_logger) const
     {
-        bool under_prediction_mode = false;
-
-        switch( well_type_ ) {
-        case PRODUCER:
-            under_prediction_mode = well_ecl_.getProductionProperties().predictionMode;
-            break;
-        case INJECTOR:
-            under_prediction_mode = well_ecl_.getInjectionProperties().predictionMode;
-            break;
-        default:
-            OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name(), deferred_logger);
-        }
-
-        return under_prediction_mode;
+        return well_ecl_.predictionMode();
     }
 
 
@@ -1130,9 +1119,11 @@ namespace Opm
         // we need to get the table number through the parser, in case THP constraint/target is not there.
         // When THP control/limit is not active, if available VFP table is provided, we will still need to
         // update THP value. However, it will only used for output purpose.
+        SummaryState summaryState;
 
         if (well_type_ == PRODUCER) { // producer
-          const int table_id = well_ecl_.getProductionProperties().VFPTableNumber;
+            const auto controls = well_ecl_.productionControls(summaryState);
+            const int table_id = controls.vfp_table_number;
             if (table_id <= 0) {
                 return false;
             } else {
@@ -1145,7 +1136,8 @@ namespace Opm
             }
 
         } else { // injector
-            const int table_id = well_ecl_.getInjectionProperties().VFPTableNumber;
+            const auto controls = well_ecl_.injectionControls(summaryState);
+            const int table_id = controls.vfp_table_number;
             if (table_id <= 0) {
                 return false;
             } else {
