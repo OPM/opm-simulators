@@ -491,6 +491,7 @@ namespace Opm {
             std::ostringstream msg;
             msg << "    Excessive chopping detected in report step "
                 << sr.back().report_step << ", substep " << sr.back().current_step << "\n";
+            assert(!sr.back().report.empty());
             const auto& wfs = sr.back().report.back().wellFailures();
             for (const auto& wf : wfs) {
                 msg << "        Well that failed: " << wf.wellName() << "\n";

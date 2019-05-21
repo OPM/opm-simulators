@@ -31,14 +31,14 @@
 
 #include <opm/autodiff/NonlinearSolverEbos.hpp>
 #include <opm/autodiff/BlackoilModelParametersEbos.hpp>
-#include <opm/autodiff/BlackoilWellModel.hpp>
-#include <opm/autodiff/BlackoilAquiferModel.hpp>
-#include <opm/autodiff/WellConnectionAuxiliaryModule.hpp>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
+#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+#include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
-#include <opm/core/linalg/ParallelIstlInformation.hpp>
+#include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
@@ -49,7 +49,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
-#include <opm/autodiff/ISTLSolverEbos.hpp>
+#include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 #include <opm/common/data/SimulationDataContainer.hpp>
 
 #include <dune/istl/owneroverlapcopy.hh>
@@ -182,7 +182,6 @@ namespace Opm {
         /// \param[in] timer                  simulation timer
         void prepareStep(const SimulatorTimerInterface& timer)
         {
-
             // update the solution variables in ebos
             if ( timer.lastStepFailed() ) {
                 ebosSimulator_.model().updateFailed();
@@ -194,13 +193,8 @@ namespace Opm {
             // know the report step/episode index because of timing dependend data
             // despide the fact that flow uses its own time stepper. (The length of the
             // episode does not matter, though.)
-            Scalar t = timer.simulationTimeElapsed();
-            ebosSimulator_.startNextEpisode(/*episodeStartTime=*/t, /*episodeLength=*/1e30);
-            ebosSimulator_.setEpisodeIndex(timer.reportStepNum());
-            ebosSimulator_.setTime(t);
+            ebosSimulator_.setTime(timer.simulationTimeElapsed());
             ebosSimulator_.setTimeStepSize(timer.currentStepLength());
-            ebosSimulator_.setTimeStepIndex(ebosSimulator_.timeStepIndex() + 1);
-
             ebosSimulator_.problem().beginTimeStep();
 
             unsigned numDof = ebosSimulator_.model().numGridDof();
@@ -360,7 +354,7 @@ namespace Opm {
         /// Called once after each time step.
         /// In this class, this function does nothing.
         /// \param[in] timer                  simulation timer
-        void afterStep(const SimulatorTimerInterface& OPM_UNUSED timer)
+        void afterStep(const SimulatorTimerInterface& timer OPM_UNUSED)
         {
             ebosSimulator_.problem().endTimeStep();
         }
@@ -369,7 +363,7 @@ namespace Opm {
         /// \param[in]      reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        SimulatorReport assembleReservoir(const SimulatorTimerInterface& timer,
+        SimulatorReport assembleReservoir(const SimulatorTimerInterface& /* timer */,
                                           const int iterationIdx)
         {
             // -------- Mass balance equations --------
@@ -597,7 +591,7 @@ namespace Opm {
                 const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
-                const double pvValue = ebosProblem.porosity(cell_idx) * ebosModel.dofTotalVolume( cell_idx );
+                const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
                 pvSumLocal += pvValue;
 
                 for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
@@ -794,14 +788,6 @@ namespace Opm {
             std::vector<Scalar> B_avg(numEq, 0.0);
             auto report = getReservoirConvergence(timer.currentStepLength(), iteration, B_avg, residual_norms);
             report += wellModel().getWellConvergence(B_avg);
-
-            // Throw if any NaN or too large residual found.
-            ConvergenceReport::Severity severity = report.severityOfWorstFailure();
-            if (severity == ConvergenceReport::Severity::NotANumber) {
-                OPM_THROW(Opm::NumericalIssue, "NaN residual found!");
-            } else if (severity == ConvergenceReport::Severity::TooLarge) {
-                OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
-            }
 
             return report;
         }

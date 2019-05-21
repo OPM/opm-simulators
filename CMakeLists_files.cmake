@@ -23,11 +23,8 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
-  opm/autodiff/ExtractParallelGridInformationToISTL.cpp
-  opm/autodiff/moduleVersion.cpp
+  ebos/nncsorter.cpp
   opm/autodiff/MPIUtilities.cpp
-  opm/autodiff/VFPProdProperties.cpp
-  opm/autodiff/VFPInjProperties.cpp
   opm/autodiff/MissingFeatures.cpp
   opm/core/props/rock/RockFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
@@ -39,12 +36,16 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/wells/WellsManager.cpp
   opm/core/wells/well_controls.c
   opm/core/wells/wells.c
-  opm/simulators/DeferredLogger.cpp
+  opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
   opm/simulators/timestepping/gatherConvergenceReport.cpp
-  opm/simulators/gatherDeferredLogger.cpp
+  opm/simulators/utils/DeferredLogger.cpp
+  opm/simulators/utils/gatherDeferredLogger.cpp
+  opm/simulators/utils/moduleVersion.cpp
+  opm/simulators/wells/VFPProdProperties.cpp
+  opm/simulators/wells/VFPInjProperties.cpp
   )
 
 # originally generated with the command:
@@ -58,6 +59,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_vfpproperties.cpp
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
+  tests/test_nncsorter.cpp
   tests/test_wellmodel.cpp
   tests/test_deferredlogger.cpp
   tests/test_timer.cpp
@@ -114,55 +116,19 @@ list (APPEND TEST_DATA_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
-  opm/autodiff/AquiferInterface.hpp
-  opm/autodiff/AquiferCarterTracy.hpp
-  opm/autodiff/AquiferFetkovich.hpp
-  opm/autodiff/BlackoilAmg.hpp
-  opm/autodiff/BlackoilAmgCpr.hpp
-  opm/autodiff/amgcpr.hh
-  opm/autodiff/twolevelmethodcpr.hh
   opm/autodiff/BlackoilDetails.hpp
+  opm/autodiff/BlackoilModelEbos.hpp
   opm/autodiff/BlackoilModelParametersEbos.hpp
-  opm/autodiff/BlackoilAquiferModel.hpp
-  opm/autodiff/BlackoilAquiferModel_impl.hpp
-  opm/autodiff/CPRPreconditioner.hpp
   opm/autodiff/createGlobalCellArray.hpp
-  opm/autodiff/ExtractParallelGridInformationToISTL.hpp
-  opm/autodiff/FlowLinearSolverParameters.hpp
   opm/autodiff/FlowMainEbos.hpp
-  opm/autodiff/GraphColoring.hpp
-  opm/autodiff/ISTLSolverEbos.hpp
-  opm/autodiff/ISTLSolverEbosCpr.hpp
+  opm/autodiff/GridInit.hpp
   opm/autodiff/IterationReport.hpp
-  opm/autodiff/MatrixBlock.hpp
-  opm/autodiff/moduleVersion.hpp
   opm/autodiff/MPIUtilities.hpp
   opm/autodiff/NonlinearSolverEbos.hpp
-  opm/autodiff/ParallelOverlappingILU0.hpp
-  opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp
   opm/autodiff/RateConverter.hpp
   opm/autodiff/SimFIBODetails.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp
-  opm/autodiff/WellConnectionAuxiliaryModule.hpp
-  opm/autodiff/WellStateFullyImplicitBlackoil.hpp
-  opm/autodiff/VFPProperties.hpp
-  opm/autodiff/VFPHelpers.hpp
-  opm/autodiff/VFPInjProperties.hpp
-  opm/autodiff/VFPProdProperties.hpp
-  opm/autodiff/WellHelpers.hpp
-  opm/autodiff/WellInterface.hpp
-  opm/autodiff/WellInterface_impl.hpp
-  opm/autodiff/StandardWell.hpp
-  opm/autodiff/StandardWell_impl.hpp
-  opm/autodiff/MultisegmentWell.hpp
-  opm/autodiff/MultisegmentWell_impl.hpp
-  opm/autodiff/StandardWellV.hpp
-  opm/autodiff/StandardWellV_impl.hpp
-  opm/autodiff/MSWellHelpers.hpp
-  opm/autodiff/BlackoilWellModel.hpp
-  opm/autodiff/BlackoilWellModel_impl.hpp
   opm/autodiff/MissingFeatures.hpp
-  opm/core/linalg/ParallelIstlInformation.hpp
   opm/core/props/BlackoilPhases.hpp
   opm/core/props/phaseUsageFromDeck.hpp
   opm/core/props/rock/RockFromDeck.hpp
@@ -178,9 +144,25 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/core/wells/WellsGroup.hpp
   opm/core/wells/WellsManager.hpp
   opm/core/wells/WellsManager_impl.hpp
-  opm/simulators/ParallelFileMerger.hpp
-  opm/simulators/DeferredLoggingErrorHelpers.hpp
-  opm/simulators/DeferredLogger.hpp
+  opm/simulators/aquifers/AquiferInterface.hpp
+  opm/simulators/aquifers/AquiferCarterTracy.hpp
+  opm/simulators/aquifers/AquiferFetkovich.hpp
+  opm/simulators/aquifers/BlackoilAquiferModel.hpp
+  opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp
+  opm/simulators/linalg/BlackoilAmg.hpp
+  opm/simulators/linalg/BlackoilAmgCpr.hpp
+  opm/simulators/linalg/amgcpr.hh
+  opm/simulators/linalg/twolevelmethodcpr.hh
+  opm/simulators/linalg/CPRPreconditioner.hpp
+  opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp
+  opm/simulators/linalg/FlowLinearSolverParameters.hpp
+  opm/simulators/linalg/GraphColoring.hpp
+  opm/simulators/linalg/ISTLSolverEbos.hpp
+  opm/simulators/linalg/ISTLSolverEbosCpr.hpp
+  opm/simulators/linalg/MatrixBlock.hpp
+  opm/simulators/linalg/ParallelOverlappingILU0.hpp
+  opm/simulators/linalg/ParallelRestrictedAdditiveSchwarz.hpp
+  opm/simulators/linalg/ParallelIstlInformation.hpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
   opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp
   opm/simulators/timestepping/ConvergenceReport.hpp
@@ -189,5 +171,27 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/SimulatorTimer.hpp
   opm/simulators/timestepping/SimulatorTimerInterface.hpp
   opm/simulators/timestepping/gatherConvergenceReport.hpp
-  opm/simulators/gatherDeferredLogger.hpp
+  opm/simulators/utils/ParallelFileMerger.hpp
+  opm/simulators/utils/DeferredLoggingErrorHelpers.hpp
+  opm/simulators/utils/DeferredLogger.hpp
+  opm/simulators/utils/gatherDeferredLogger.hpp
+  opm/simulators/utils/moduleVersion.hpp
+  opm/simulators/wells/WellConnectionAuxiliaryModule.hpp
+  opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp
+  opm/simulators/wells/VFPProperties.hpp
+  opm/simulators/wells/VFPHelpers.hpp
+  opm/simulators/wells/VFPInjProperties.hpp
+  opm/simulators/wells/VFPProdProperties.hpp
+  opm/simulators/wells/WellHelpers.hpp
+  opm/simulators/wells/WellInterface.hpp
+  opm/simulators/wells/WellInterface_impl.hpp
+  opm/simulators/wells/StandardWell.hpp
+  opm/simulators/wells/StandardWell_impl.hpp
+  opm/simulators/wells/MultisegmentWell.hpp
+  opm/simulators/wells/MultisegmentWell_impl.hpp
+  opm/simulators/wells/StandardWellV.hpp
+  opm/simulators/wells/StandardWellV_impl.hpp
+  opm/simulators/wells/MSWellHelpers.hpp
+  opm/simulators/wells/BlackoilWellModel.hpp
+  opm/simulators/wells/BlackoilWellModel_impl.hpp
   )

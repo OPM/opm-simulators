@@ -28,6 +28,8 @@
 #ifndef EWOMS_ECL_TRANSMISSIBILITY_HH
 #define EWOMS_ECL_TRANSMISSIBILITY_HH
 
+#include <ebos/nncsorter.hpp>
+
 #include <ewoms/common/propertysystem.hh>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -390,7 +392,7 @@ public:
             int cartElemIdx = vanguard_.cartesianIndexMapper().cartesianIndex(elemIdx);
             globalToLocal[cartElemIdx] = elemIdx;
         }
-        applyEditNncToGridTrans_(elemMapper, globalToLocal);
+        applyEditNncToGridTrans_(globalToLocal);
         applyNncToGridTrans_(globalToLocal);
 
         //remove very small non-neighbouring transmissibilities
@@ -617,53 +619,9 @@ private:
         if (!nnc.hasNNC())
             return make_tuple(processedNnc, unprocessedNnc);
 
-        auto nncData = nnc.nncdata();
-        auto editnncData = vanguard_.eclState().getInputEDITNNC().data();
-        auto nncLess =
-            [](const Opm::NNCdata& d1, const Opm::NNCdata& d2)
-            {
-                return
-                    (d1.cell1 < d2.cell1)
-                    || (d1.cell1 == d2.cell1 && d1.cell2 < d2.cell2);
-            };
-        std::sort(nncData.begin(), nncData.end(), nncLess);
-        auto candidate = nncData.begin();
-        for (const auto& edit: editnncData) {
-            auto printNncWarning =
-                [](int c1, int c2)
-                {
-                    std::ostringstream sstr;
-                    sstr << "Cannot edit NNC from " << c1 << " to " << c2
-                         << " as it does not exist";
-                    Opm::OpmLog::warning(sstr.str());
-                };
-            if (candidate == nncData.end()) {
-                // no more NNCs left
-                printNncWarning(edit.cell1, edit.cell2);
-                continue;
-            }
-            if (candidate->cell1 != edit.cell1 || candidate->cell2 != edit.cell2) {
-                candidate = std::lower_bound(candidate, nncData.end(), Opm::NNCdata(edit.cell1, edit.cell2, 0), nncLess);
-                if (candidate == nncData.end()) {
-                    // no more NNCs left
-                    printNncWarning(edit.cell1, edit.cell2);
-                    continue;
-                }
-            }
-            auto firstCandidate = candidate;
-            while (candidate != nncData.end()
-                   && candidate->cell1 == edit.cell1
-                   && candidate->cell2 == edit.cell2)
-            {
-                candidate->trans *= edit.trans;
-                ++candidate;
-            }
-            // start with first match in next iteration to catch case where next
-            // EDITNNC is for same pair.
-            candidate = firstCandidate;
-        }
+        auto nncData = sortNncAndApplyEditnnc(nnc.nncdata(), vanguard_.eclState().getInputEDITNNC().data());
 
-        for (const auto& nncEntry : nnc.nncdata()) {
+        for (const auto& nncEntry : nncData) {
             auto c1 = nncEntry.cell1;
             auto c2 = nncEntry.cell2;
             auto low = cartesianToCompressed[c1];
@@ -703,8 +661,7 @@ private:
     }
 
     /// \brief Multiplies the grid transmissibilities according to EDITNNC.
-    void applyEditNncToGridTrans_(const ElementMapper& elementMapper,
-                                  const std::vector<int>& globalToLocal)
+    void applyEditNncToGridTrans_(const std::vector<int>& globalToLocal)
     {
         const auto& editNnc = vanguard_.eclState().getInputEDITNNC();
         if (editNnc.empty())

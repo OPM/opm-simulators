@@ -131,6 +131,7 @@ void test_summary()
     simulator->model().applyInitialSolution();
     Opm::data::Wells dw;
     bool substep = false;
+    simulator->startNextEpisode(0.0, 1e30);
     simulator->setEpisodeIndex(0);
     eclWriter->writeOutput(substep);
     simulator->setEpisodeIndex(1);
@@ -211,14 +212,14 @@ void test_readWriteWells()
      *  the connection keys (active indices) and well names correspond to the
      *  input deck. All other entries in the well structures are arbitrary.
      */
-    w1.connections.push_back( { 88, rc1, 30.45, 123.45, 0.0, 0.0, 0.0 } );
-    w1.connections.push_back( { 288, rc2, 33.19, 67.89, 0.0, 0.0, 0.0 } );
+    w1.connections.push_back( { 88, rc1, 30.45, 123.45, 0.0, 0.0, 0.0, 0.0 } );
+    w1.connections.push_back( { 288, rc2, 33.19, 67.89, 0.0, 0.0, 0.0, 0.0 } );
 
     w2.rates = r2;
     w2.bhp = 2.34;
     w2.temperature = 4.56;
     w2.control = 2;
-    w2.connections.push_back( { 188, rc3, 36.22, 19.28, 0.0, 0.0, 0.0 } );
+    w2.connections.push_back( { 188, rc3, 36.22, 19.28, 0.0, 0.0, 0.0, 0.0 } );
 
     Opm::data::Wells wellRates;
 

@@ -20,7 +20,7 @@
 
 #include <config.h>
 #include <boost/any.hpp>
-#include <opm/core/linalg/ParallelIstlInformation.hpp>
+#include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 
 namespace Opm
 {

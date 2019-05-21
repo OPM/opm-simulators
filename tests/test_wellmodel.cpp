@@ -49,8 +49,8 @@
 #include <ebos/eclproblem.hh>
 #include <ewoms/common/start.hh>
 
-#include <opm/autodiff/StandardWell.hpp>
-#include <opm/autodiff/BlackoilWellModel.hpp>
+#include <opm/simulators/wells/StandardWell.hpp>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>

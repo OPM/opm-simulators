@@ -31,6 +31,10 @@
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/GridHelpers.hpp>
+#include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
+
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
@@ -40,6 +44,8 @@
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
+
 
 #if HAVE_MPI
 #include <mpi.h>
@@ -68,6 +74,7 @@ NEW_PROP_TAG(EnableOpmRstFile);
 NEW_PROP_TAG(EclStrictParsing);
 NEW_PROP_TAG(EclOutputInterval);
 NEW_PROP_TAG(IgnoreKeywords);
+NEW_PROP_TAG(EnableExperiments);
 
 SET_STRING_PROP(EclBaseVanguard, IgnoreKeywords, "");
 SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
@@ -91,6 +98,8 @@ class EclBaseVanguard : public BaseVanguard<TypeTag>
     typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Implementation;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+
+    enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
 
 public:
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
@@ -257,6 +266,9 @@ public:
             internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName , parseContext, errorGuard)));
             internalEclState_.reset(new Opm::EclipseState(*internalDeck_, parseContext, errorGuard));
 
+            if (enableExperiments && myRank == 0)
+                Opm::checkDeck(*internalDeck_, parser, parseContext, errorGuard);
+
             deck_ = &(*internalDeck_);
             eclState_ = &(*internalEclState_);
         }
@@ -310,6 +322,11 @@ public:
         asImp_().filterConnections_();
         asImp_().updateOutputDir_();
         asImp_().finalizeInit_();
+
+        if (enableExperiments) {
+            Opm::RelpermDiagnostics relpermDiagnostics;
+            relpermDiagnostics.diagnosis(*internalEclState_, *internalDeck_, asImp_().grid());
+        }
     }
 
     /*!
@@ -363,6 +380,21 @@ public:
      */
     static void setExternalSummaryConfig(Opm::SummaryConfig* summaryConfig)
     { externalEclSummaryConfig_ = summaryConfig; }
+
+
+    /*!
+    * \brief Returns the summary state
+    *
+    * The summary state is a small container object for
+    * computed, ready to use summary values. The values will typically be used by
+    * the UDQ, WTEST and ACTIONX calculations.
+    */
+    const Opm::SummaryState& summaryState() const
+    { return summaryState_; }
+
+    Opm::SummaryState& summaryState()
+    { return summaryState_; }
+
 
     /*!
      * \brief Returns the name of the case.
@@ -500,6 +532,9 @@ private:
 
     Opm::Schedule* eclSchedule_;
     Opm::SummaryConfig* eclSummaryConfig_;
+
+    Opm::SummaryState summaryState_;
+
 };
 
 template <class TypeTag>

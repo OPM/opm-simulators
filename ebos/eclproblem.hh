@@ -79,12 +79,17 @@
 #include <opm/material/fluidsystems/blackoilpvt/DeadOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
+#include <opm/material/common/IntervalTabulated2DFunction.hpp>
+#include <opm/material/common/UniformXTabulated2DFunction.hpp>
+
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/RockwnodTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/OverburdTable.hpp>
 #include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
 
@@ -420,6 +425,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
     typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
     typedef typename GET_PROP_TYPE(TypeTag, EclWellModel) EclWellModel;
     typedef typename GET_PROP_TYPE(TypeTag, EclAquiferModel) EclAquiferModel;
 
@@ -436,6 +442,8 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef EclTracerModel<TypeTag> TracerModel;
 
     typedef typename GridView::template Codim<0>::Iterator ElementIterator;
+
+    typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
 
     struct RockParams {
         Scalar referencePressure;
@@ -582,14 +590,16 @@ public:
         const auto& vanguard = simulator.vanguard();
         SolventModule::initFromDeck(vanguard.deck(), vanguard.eclState());
         PolymerModule::initFromDeck(vanguard.deck(), vanguard.eclState());
-        if (EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput))
-            // create the ECL writer
-            eclWriter_.reset(new EclWriterType(simulator));
+
+        // create the ECL writer
+        eclWriter_.reset(new EclWriterType(simulator));
 
         if (enableExperiments)
             enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
         else
             enableDriftCompensation_ = false;
+
+        enableEclOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
 
         enableTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableTuning);
         initialTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
@@ -608,6 +618,19 @@ public:
         ParentType::finishInit();
 
         auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
+        const auto& schedule = simulator.vanguard().schedule();
+        const auto& timeMap = schedule.getTimeMap();
+
+        // Set the start time of the simulation
+        simulator.setStartTime(timeMap.getStartTime(/*reportStepIdx=*/0));
+
+        // We want the episode index to be the same as the report step index to make
+        // things simpler, so we have to set the episode index to -1 because it is
+        // incremented by endEpisode(). The size of the initial time step and
+        // length of the initial episode is set to zero for the same reason.
+        simulator.setEpisodeIndex(-1);
+        simulator.setEpisodeLength(0.0);
 
         // the "NOGRAV" keyword from Frontsim or setting the EnableGravity to false
         // disables gravity, else the standard value of the gravity constant at sea level
@@ -632,7 +655,6 @@ public:
         }
 
         // deal with DRSDT
-        const auto& eclState = simulator.vanguard().eclState();
         unsigned ntpvt = eclState.runspec().tabdims().getNumPVTTables();
         maxDRs_.resize(ntpvt, 1e30);
         dRsDtOnlyFreeGas_.resize(ntpvt, false);
@@ -649,19 +671,7 @@ public:
         readThermalParameters_();
         transmissibilities_.finishInit();
 
-        const auto& timeMap = simulator.vanguard().schedule().getTimeMap();
-
         readInitialCondition_();
-        // Set the start time of the simulation
-        simulator.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
-
-        // We want the episode index to be the same as the report step index to make
-        // things simpler, so we have to set the episode index to -1 because it is
-        // incremented inside beginEpisode(). The size of the initial time step and
-        // length of the initial episode is set to zero for the same reason.
-        simulator.setEpisodeIndex(-1);
-        simulator.setEpisodeLength(0.0);
-        simulator.setTimeStepSize(0.0);
 
         updatePffDofData_();
 
@@ -670,11 +680,6 @@ public:
             const auto& gridView = vanguard.gridView();
             int numElements = gridView.size(/*codim=*/0);
             maxPolymerAdsorption_.resize(numElements, 0.0);
-        }
-
-        if (eclWriter_) {
-            eclWriter_->writeInit();
-            this->simulator().vanguard().releaseGlobalTransmissibilities();
         }
 
         tracerModel_.init();
@@ -689,6 +694,16 @@ public:
         if (enableExperiments)
             checkDeckCompatibility_();
 
+        // write the static output files (EGRID, INIT, SMSPEC, etc.)
+        if (enableEclOutput_)
+            eclWriter_->writeInit();
+
+        simulator.vanguard().releaseGlobalTransmissibilities();
+
+        // after finishing the initialization and writing the initial solution, we move
+        // to the first "real" episode/report step
+        simulator.startNextEpisode(timeMap.getTimeStepLength(0));
+        simulator.setEpisodeIndex(0);
     }
 
     void prefetch(const Element& elem) const
@@ -737,82 +752,55 @@ public:
     void beginEpisode(bool isOnRestart = false)
     {
         // Proceed to the next report step
-        Simulator& simulator = this->simulator();
-        auto& eclState = this->simulator().vanguard().eclState();
-        const auto& schedule = this->simulator().vanguard().schedule();
+        auto& simulator = this->simulator();
+        auto& eclState = simulator.vanguard().eclState();
+        const auto& schedule = simulator.vanguard().schedule();
         const auto& events = schedule.getEvents();
         const auto& timeMap = schedule.getTimeMap();
+        int episodeIdx = simulator.episodeIndex();
 
-        // The first thing to do in the morning of an episode is update update the
-        // eclState and the deck if they need to be changed.
-        int nextEpisodeIdx = simulator.episodeIndex();
+        if (episodeIdx >= 0 && events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER, episodeIdx)) {
+            // bring the contents of the keywords to the current state of the SCHEDULE
+            // section.
+            //
+            // TODO (?): make grid topology changes possible (depending on what exactly
+            // has changed, the grid may need be re-created which has some serious
+            // implications on e.g., the solution of the simulation.)
+            const auto& miniDeck = schedule.getModifierDeck(episodeIdx);
+            eclState.applyModifierDeck(miniDeck);
 
-        if (enableExperiments && this->gridView().comm().rank() == 0) {
+            // re-compute all quantities which may possibly be affected.
+            transmissibilities_.update();
+            referencePorosity_[1] = referencePorosity_[0];
+            updateReferencePorosity_();
+            updatePffDofData_();
+        }
+
+        if (enableExperiments && this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
+            // print some useful information in experimental mode. (the production
+            // simulator does this externally.)
             boost::posix_time::ptime curDateTime =
-                boost::posix_time::from_time_t(timeMap.getStartTime(nextEpisodeIdx+1));
-            std::cout << "Report step " << nextEpisodeIdx + 2
+                boost::posix_time::from_time_t(timeMap.getStartTime(episodeIdx));
+            std::cout << "Report step " << episodeIdx + 1
                       << "/" << timeMap.numTimesteps()
-                      << " at day " << timeMap.getTimePassedUntil(nextEpisodeIdx+1)/(24*3600)
+                      << " at day " << timeMap.getTimePassedUntil(episodeIdx)/(24*3600)
                       << "/" << timeMap.getTotalTime()/(24*3600)
                       << ", date = " << curDateTime.date()
                       << "\n ";
         }
 
-        if (nextEpisodeIdx > 0 &&
-            events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER, nextEpisodeIdx))
-        {
-            // bring the contents of the keywords to the current state of the SCHEDULE
-            // section
-            //
-            // TODO (?): make grid topology changes possible (depending on what exactly
-            // has changed, the grid may need be re-created which has some serious
-            // implications on e.g., the solution of the simulation.)
-            const auto& miniDeck = schedule.getModifierDeck(nextEpisodeIdx);
-            eclState.applyModifierDeck(miniDeck);
-
-            // re-compute all quantities which may possibly be affected.
-            transmissibilities_.update();
-            updatePorosity_();
-            updatePffDofData_();
-        }
-
-        // Opm::TimeMap deals with points in time, so the number of time intervals (i.e.,
-        // report steps) is one less!
-        int numReportSteps = timeMap.size() - 1;
-
-        // start the next episode if there are additional report steps, else finish the
-        // simulation
-        while (nextEpisodeIdx < numReportSteps &&
-               simulator.time() >= timeMap.getTimePassedUntil(nextEpisodeIdx + 1)*(1 - 1e-10))
-        {
-            ++ nextEpisodeIdx;
-        }
-
         // react to TUNING changes
         bool tuningEvent = false;
-        if (nextEpisodeIdx > 0
-            && enableTuning_
-            && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, nextEpisodeIdx))
+        if (episodeIdx > 0 && enableTuning_ && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, episodeIdx))
         {
             const auto& tuning = schedule.getTuning();
-            initialTimeStepSize_ = tuning.getTSINIT(nextEpisodeIdx);
-            maxTimeStepAfterWellEvent_ = tuning.getTMAXWC(nextEpisodeIdx);
-            maxTimeStepSize_ = tuning.getTSMAXZ(nextEpisodeIdx);
-            restartShrinkFactor_ = 1./tuning.getTSFCNV(nextEpisodeIdx);
-            minTimeStepSize_ = tuning.getTSMINZ(nextEpisodeIdx);
+            initialTimeStepSize_ = tuning.getTSINIT(episodeIdx);
+            maxTimeStepAfterWellEvent_ = tuning.getTMAXWC(episodeIdx);
+            maxTimeStepSize_ = tuning.getTSMAXZ(episodeIdx);
+            restartShrinkFactor_ = 1./tuning.getTSFCNV(episodeIdx);
+            minTimeStepSize_ = tuning.getTSMINZ(episodeIdx);
             tuningEvent = true;
         }
-
-        Scalar episodeLength = timeMap.getTimeStepLength(nextEpisodeIdx);
-        simulator.startNextEpisode(episodeLength);
-
-        Scalar dt = limitNextTimeStepSize_(episodeLength);
-        if (nextEpisodeIdx == 0 || tuningEvent)
-            // allow the size of the initial time step to be set via an external parameter
-            // if TUNING is enabled, also limit the time step size after a tuning event to TSINIT
-            dt = std::min(dt, initialTimeStepSize_);
-
-        simulator.setTimeStepSize(dt);
 
         const bool invalidateFromHyst = updateHysteresis_();
         const bool invalidateFromMaxOilSat = updateMaxOilSaturation_();
@@ -822,13 +810,18 @@ public:
             updateMaxPolymerAdsorption_();
 
         // set up the wells for the next episode.
-        //
-        // TODO: the first two arguments seem to be unnecessary
-        wellModel_.beginEpisode(this->simulator().vanguard().eclState(),
-                                this->simulator().vanguard().schedule(),
-                                isOnRestart);
+        wellModel_.beginEpisode();
 
+        // set up the aquifers for the next episode.
         aquiferModel_.beginEpisode();
+
+        // set the size of the initial time step of the episode
+        Scalar dt = limitNextTimeStepSize_(simulator.episodeLength());
+        if (episodeIdx == 0 || tuningEvent)
+            // allow the size of the initial time step to be set via an external parameter
+            // if TUNING is enabled, also limit the time step size after a tuning event to TSINIT
+            dt = std::min(dt, initialTimeStepSize_);
+        simulator.setTimeStepSize(dt);
 
         if (doInvalidate)
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
@@ -839,17 +832,30 @@ public:
      */
     void beginTimeStep()
     {
-        int epsiodeIdx = this->simulator().episodeIndex();
-        const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const auto& simulator = this->simulator();
+        int epsiodeIdx = simulator.episodeIndex();
+	bool invalidateIntensiveQuantities = false;
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         if (drsdtActive_())
             // DRSDT is enabled
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
-                maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*this->simulator().timeStepSize();
+                maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*simulator.timeStepSize();
 
         if (drvdtActive_())
             // DRVDT is enabled
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
                 maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
+
+        if (enableExperiments) {
+            // update maximum water saturation and minimum pressure
+            // used when ROCKCOMP is activated
+            const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
+            const bool invalidateFromMinPressure = updateMinPressure_();
+            invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure;
+        }
+
+        if (invalidateIntensiveQuantities)
+            this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
 
         wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
@@ -862,10 +868,11 @@ public:
      *        term for the solution of the previous time step.
      *
      * For quite technical reasons, the storage term cannot be recycled if either DRSDT
-     * or DRVDT are active in ebos.
+     * or DRVDT are active in ebos. Nor if the porosity is changes between timesteps
+     * using a pore volume multiplier (i.e., poreVolumeMultiplier() != 1.0)
      */
     bool recycleFirstIterationStorage() const
-    { return !drsdtActive_() && !drvdtActive_(); }
+    { return !drsdtActive_() && !drvdtActive_() && rockCompPoroMult_.empty();  }
 
     /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
@@ -896,10 +903,13 @@ public:
             // the right thing (i.e., the mass change inside the whole reservoir must be
             // equivalent to the fluxes over the grid's boundaries plus the source rates
             // specified by the problem)
+            std::cout << "checking conservativeness of solution\n";
             this->model().checkConservativeness(/*tolerance=*/-1, /*verbose=*/true);
+            std::cout << "solution is sufficiently conservative\n";
         }
 #endif // NDEBUG
 
+        const auto& simulator = this->simulator();
         wellModel_.endTimeStep();
         aquiferModel_.endTimeStep();
         tracerModel_.endTimeStep();
@@ -911,7 +921,7 @@ public:
             const auto& residual = this->model().linearizer().residual();
             for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); globalDofIdx ++) {
                 drift_[globalDofIdx] = residual[globalDofIdx];
-                drift_[globalDofIdx] *= this->simulator().timeStepSize();
+                drift_[globalDofIdx] *= simulator.timeStepSize();
                 if (GET_PROP_VALUE(TypeTag, UseVolumetricResidual))
                     drift_[globalDofIdx] *= this->model().dofTotalVolume(globalDofIdx);
             }
@@ -925,15 +935,18 @@ public:
     {
         auto& simulator = this->simulator();
         const auto& schedule = simulator.vanguard().schedule();
+        const auto& timeMap = schedule.getTimeMap();
 
         int episodeIdx = simulator.episodeIndex();
 
-        const auto& timeMap = schedule.getTimeMap();
-        int numReportSteps = timeMap.size() - 1;
-        if (episodeIdx + 1 >= numReportSteps) {
+        // check if we're finished ...
+        if (episodeIdx + 1 >= static_cast<int>(timeMap.numTimesteps())) {
             simulator.setFinished(true);
             return;
         }
+
+        // .. if we're not yet done, start the next episode (report step)
+        simulator.startNextEpisode(timeMap.getTimeStepLength(episodeIdx + 1));
     }
 
     /*!
@@ -945,27 +958,25 @@ public:
      */
     bool shouldWriteOutput() const
     {
-        if (this->simulator().timeStepIndex() < 0)
+        const auto& simulator = this->simulator();
+        if (simulator.timeStepIndex() < 0)
             // always write the initial solution
             return true;
 
         if (EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions))
             return true;
 
-        return this->simulator().episodeWillBeOver();
+        return simulator.episodeWillBeOver();
     }
 
     /*!
      * \brief Returns true if an eWoms restart file should be written to disk.
+     *
+     * The EclProblem does not write any restart files using the ad-hoc format, only ones
+     * using the ECL format.
      */
     bool shouldWriteRestartFile() const
-    {
-        unsigned n = EWOMS_GET_PARAM(TypeTag, unsigned, RestartWritingInterval);
-        unsigned i = this->simulator().timeStepIndex();
-        if (i > 0 && (i%n) == 0)
-            return true; // we don't write a restart file for the initial condition
-        return false;
-    }
+    { return false; }
 
     /*!
      * \brief Write the requested quantities of the current solution into the output
@@ -973,14 +984,14 @@ public:
      */
     void writeOutput(bool isSubStep, bool verbose = true)
     {
+        assert(!this->simulator().episodeWillBeOver() == isSubStep);
+
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
         ParentType::writeOutput(isSubStep, verbose);
 
-        if (!eclWriter_)
-            return;
-
-        eclWriter_->writeOutput(isSubStep);
+        if (enableEclOutput_)
+            eclWriter_->writeOutput(isSubStep);
     }
 
     /*!
@@ -1074,23 +1085,30 @@ public:
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
+     *
+     * For the EclProblem, this method is identical to referencePorosity(). The intensive
+     * quantities object may apply various multipliers (e.g. ones which model rock
+     * compressibility and water induced rock compaction) to it which depend on the
+     * current physical conditions.
      */
     template <class Context>
     Scalar porosity(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return porosity_[globalSpaceIdx];
+        return referencePorosity_[timeIdx][globalSpaceIdx];
     }
 
     /*!
      * \brief Returns the porosity of an element
      *
-     * Note that this method is *not* part of the generic eWoms problem API because it
-     * would bake the assumption that only the elements are the degrees of freedom into
-     * the interface.
+     * The reference porosity of an element is the porosity of the medium before modified
+     * by the current solution. Note that this method is *not* part of the generic eWoms
+     * problem API because it would bake the assumption that only the elements are the
+     * degrees of freedom into the interface.
      */
-    Scalar porosity(unsigned elementIdx) const
-    { return porosity_[elementIdx]; }
+    Scalar referencePorosity(unsigned elementIdx, unsigned timeIdx) const
+    { return referencePorosity_[timeIdx][elementIdx]; }
+
 
     /*!
      * \brief Returns the depth of an degree of freedom [m]
@@ -1443,20 +1461,19 @@ public:
      */
     void initialSolutionApplied()
     {
-        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
+        const auto& eclState = vanguard.eclState();
 
         // initialize the wells. Note that this needs to be done after initializing the
         // intrinsic permeabilities and the after applying the initial solution because
         // the well model uses these...
-        wellModel_.init(eclState, this->simulator().vanguard().schedule());
+        wellModel_.init();
 
         // let the object for threshold pressures initialize itself. this is done only at
         // this point, because determining the threshold pressures may require to access
         // the initial solution.
         thresholdPressures_.finishInit();
-
-        // release the memory of the EQUIL grid since it's no longer needed after this point
-        this->simulator().vanguard().releaseEquilGrid();
 
         updateCompositionChangeLimits_();
 
@@ -1564,8 +1581,10 @@ public:
     }
 
     /*!
-     * \brief Returns an element's maximum oil phase saturation observed during the
-     *        simulation.
+     * \brief Returns an element's historic maximum oil phase saturation that was
+     *        observed during the simulation.
+     *
+     * In this context, "historic" means the the time before the current timestep began.
      *
      * This is a bit of a hack from the conceptional point of view, but it is required to
      * match the results of the 'flow' and ECLIPSE 100 simulators.
@@ -1582,6 +1601,8 @@ public:
      * \brief Sets an element's maximum oil phase saturation observed during the
      *        simulation.
      *
+     * In this context, "historic" means the the time before the current timestep began.
+     *
      * This a hack on top of the maxOilSaturation() hack but it is currently required to
      * do restart externally. i.e. from the flow code.
      */
@@ -1592,6 +1613,43 @@ public:
 
         maxOilSaturation_[globalDofIdx] = value;
     }
+
+
+    /*!
+     * \brief Returns an element's historic maximum water phase saturation that was
+     *        observed during the simulation.
+     *
+     * In this context, "historic" means the the time before the current timestep began.
+     *
+     * This is used for output of the maximum water saturation used as input
+     * for water induced rock compation ROCK2D/ROCK2DTR.
+     */
+    Scalar maxWaterSaturation(unsigned globalDofIdx) const
+    {
+        if (maxWaterSaturation_.empty())
+            return 0.0;
+
+        return maxWaterSaturation_[globalDofIdx];
+    }
+
+
+    /*!
+     * \brief Returns an element's historic minimum pressure of the oil phase that was
+     *        observed during the simulation.
+     *
+     * In this context, "historic" means the the time before the current timestep began.
+     *
+     * This is used for output of the minimum pressure used as input
+     * for the irreversible rock compation option.
+     */
+    Scalar minOilPressure(unsigned globalDofIdx) const
+    {
+        if (minOilPressure_.empty())
+            return 0.0;
+
+        return minOilPressure_[globalDofIdx];
+    }
+
 
     /*!
      * \brief Returns a reference to the ECL well manager used by the problem.
@@ -1613,8 +1671,9 @@ public:
 
     bool vapparsActive() const
     {
-        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0);
-        const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const auto& simulator = this->simulator();
+        int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         return (oilVaporizationControl.getType() == Opm::OilVaporizationEnum::VAPPARS);
     }
 
@@ -1633,7 +1692,8 @@ public:
         if (this->nextTimeStepSize_ > 0.0)
             return this->nextTimeStepSize_;
 
-        int episodeIdx = this->simulator().episodeIndex();
+        const auto& simulator = this->simulator();
+        int episodeIdx = simulator.episodeIndex();
 
         // for the initial episode, we use a fixed time step size
         if (episodeIdx < 0)
@@ -1643,7 +1703,6 @@ public:
         // well the previous time step converged. After that, apply the runtime time
         // stepping constraints.
         const auto& newtonMethod = this->model().newtonMethod();
-        const auto& simulator = this->simulator();
         return limitNextTimeStepSize_(newtonMethod.suggestTimeStepSize(simulator.timeStepSize()));
     }
 
@@ -1684,6 +1743,83 @@ public:
         throw std::runtime_error("Newton solver didn't converge after "
                                  +std::to_string(maxFails_)+" time-step divisions. dt="
                                  +std::to_string(double(simulator.timeStepSize())));
+    }
+
+    /*!
+     * \brief Calculate the porosity multiplier due to water induced rock compaction.
+     *
+     * TODO: The API of this is a bit ad-hoc, it would be better to use context objects.
+     */
+    template <class LhsEval>
+    LhsEval rockCompPoroMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
+    {
+        if (!enableExperiments || rockCompPoroMult_.size() == 0)
+            return 1.0;
+
+        unsigned tableIdx = 0;
+        if (!rockTableIdx_.empty())
+            tableIdx = rockTableIdx_[elementIdx];
+
+        const auto& fs = intQuants.fluidState();
+        LhsEval SwMax = Opm::max(Opm::decay<LhsEval>(fs.saturation(waterPhaseIdx)), maxWaterSaturation_[elementIdx]);
+        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+        LhsEval effectiveOilPressure = Opm::decay<LhsEval>(fs.pressure(oilPhaseIdx));
+
+        if (!minOilPressure_.empty())
+            // The pore space change is irreversible
+            effectiveOilPressure =
+                Opm::min(Opm::decay<LhsEval>(fs.pressure(oilPhaseIdx)),
+                         minOilPressure_[elementIdx]);
+
+        if (!overburdenPressure_.empty())
+            effectiveOilPressure -= overburdenPressure_[elementIdx];
+
+        return rockCompPoroMult_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
+    }
+
+    /*!
+     * \brief Calculate the transmissibility multiplier due to water induced rock compaction.
+     *
+     * TODO: The API of this is a bit ad-hoc, it would be better to use context objects.
+     */
+    template <class LhsEval>
+    LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
+    {
+        if (!enableExperiments || rockCompTransMult_.size() == 0)
+            return 1.0;
+
+        unsigned tableIdx = 0;
+        if (!rockTableIdx_.empty())
+            tableIdx = rockTableIdx_[elementIdx];
+
+        const auto& fs = intQuants.fluidState();
+        LhsEval SwMax = Opm::max(Opm::decay<LhsEval>(fs.saturation(waterPhaseIdx)), maxWaterSaturation_[elementIdx]);
+        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+        LhsEval effectiveOilPressure = Opm::decay<LhsEval>(fs.pressure(oilPhaseIdx));
+
+        if (!minOilPressure_.empty())
+            // The pore space change is irreversible
+            effectiveOilPressure =
+                Opm::min(Opm::decay<LhsEval>(fs.pressure(oilPhaseIdx)),
+                         minOilPressure_[elementIdx]);
+
+        if (overburdenPressure_.size() > 0)
+            effectiveOilPressure -= overburdenPressure_[elementIdx];
+
+        return rockCompTransMult_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
+    }
+
+    /*!
+     * \brief Get the pressure of the overburden.
+     *
+     * This method is mainly for output.
+     */
+    Scalar overburdenPressure(unsigned elementIdx) const
+    {
+        if (!enableExperiments || overburdenPressure_.size() == 0)
+            return 0.0;
+
+        return overburdenPressure_[elementIdx];
     }
 
 
@@ -1745,15 +1881,17 @@ private:
 
     bool drsdtActive_() const
     {
-        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0);
-        const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const auto& simulator = this->simulator();
+        int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         return (oilVaporizationControl.drsdtActive());
     }
 
     bool drvdtActive_() const
     {
-        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0);
-        const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const auto& simulator = this->simulator();
+        int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         return (oilVaporizationControl.drvdtActive());
 
     }
@@ -1774,7 +1912,8 @@ private:
 
     void updateElementDepths_()
     {
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
         const auto& gridView = vanguard.gridView();
         const auto& elemMapper = this->elementMapper();;
 
@@ -1796,12 +1935,13 @@ private:
     {
         // update the "last Rs" values for all elements, including the ones in the ghost
         // and overlap regions
-        int epsiodeIdx = std::max(this->simulator().episodeIndex(), 0);
-        const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const auto& simulator = this->simulator();
+        int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
 
         if (oilVaporizationControl.drsdtActive()) {
-            ElementContext elemCtx(this->simulator());
-            const auto& vanguard = this->simulator().vanguard();
+            ElementContext elemCtx(simulator);
+            const auto& vanguard = simulator.vanguard();
             auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
             const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++elemIt) {
@@ -1830,8 +1970,8 @@ private:
         // update the "last Rv" values for all elements, including the ones in the ghost
         // and overlap regions
         if (drvdtActive_()) {
-            ElementContext elemCtx(this->simulator());
-            const auto& vanguard = this->simulator().vanguard();
+            ElementContext elemCtx(simulator);
+            const auto& vanguard = simulator.vanguard();
             auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
             const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++elemIt) {
@@ -1856,10 +1996,12 @@ private:
 
     bool updateMaxOilSaturation_()
     {
+        const auto& simulator = this->simulator();
+
         // we use VAPPARS
         if (vapparsActive()) {
-            ElementContext elemCtx(this->simulator());
-            const auto& vanguard = this->simulator().vanguard();
+            ElementContext elemCtx(simulator);
+            const auto& vanguard = simulator.vanguard();
             auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
             const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++elemIt) {
@@ -1885,26 +2027,85 @@ private:
         return false;
     }
 
+    bool updateMaxWaterSaturation_()
+    {
+        // water compaction is activated in ROCKCOMP
+        if (maxWaterSaturation_.size()== 0)
+            return false;
+
+        maxWaterSaturation_[/*timeIdx=*/1] = maxWaterSaturation_[/*timeIdx=*/0];
+        ElementContext elemCtx(this->simulator());
+        const auto& vanguard = this->simulator().vanguard();
+        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = iq.fluidState();
+
+            Scalar Sw = Opm::decay<Scalar>(fs.saturation(waterPhaseIdx));
+            maxWaterSaturation_[compressedDofIdx] = std::max(maxWaterSaturation_[compressedDofIdx], Sw);
+        }
+
+        return true;
+    }
+
+    bool updateMinPressure_()
+    {
+        // IRREVERS option is used in ROCKCOMP
+        if (minOilPressure_.size() == 0)
+            return false;
+
+        ElementContext elemCtx(this->simulator());
+        const auto& vanguard = this->simulator().vanguard();
+        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = iq.fluidState();
+
+            minOilPressure_[compressedDofIdx] =
+                std::min(minOilPressure_[compressedDofIdx],
+                         Opm::getValue(fs.pressure(oilPhaseIdx)));
+        }
+
+        return true;
+    }
+
     void readRockParameters_()
     {
-        const auto& deck = this->simulator().vanguard().deck();
-        const auto& eclState = this->simulator().vanguard().eclState();
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& deck = simulator.vanguard().deck();
+        const auto& eclState = simulator.vanguard().eclState();
+        const auto& vanguard = simulator.vanguard();
 
-        // the ROCK keyword has not been specified, so we don't need
-        // to read rock parameters
-        if (!deck.hasKeyword("ROCK"))
-            return;
-
-        const auto& rockKeyword = deck.getKeyword("ROCK");
-        rockParams_.resize(rockKeyword.size());
-        for (size_t rockRecordIdx = 0; rockRecordIdx < rockKeyword.size(); ++ rockRecordIdx) {
-            const auto& rockRecord = rockKeyword.getRecord(rockRecordIdx);
-            rockParams_[rockRecordIdx].referencePressure =
-                rockRecord.getItem("PREF").getSIDouble(0);
-            rockParams_[rockRecordIdx].compressibility =
-                rockRecord.getItem("COMPRESSIBILITY").getSIDouble(0);
+        // read the rock compressibility parameters
+        if (deck.hasKeyword("ROCK")) {
+            const auto& rockKeyword = deck.getKeyword("ROCK");
+            rockParams_.resize(rockKeyword.size());
+            for (size_t rockRecordIdx = 0; rockRecordIdx < rockKeyword.size(); ++ rockRecordIdx) {
+                const auto& rockRecord = rockKeyword.getRecord(rockRecordIdx);
+                rockParams_[rockRecordIdx].referencePressure =
+                        rockRecord.getItem("PREF").getSIDouble(0);
+                rockParams_[rockRecordIdx].compressibility =
+                        rockRecord.getItem("COMPRESSIBILITY").getSIDouble(0);
+            }
         }
+
+        // read the parameters for water-induced rock compaction
+        if (enableExperiments)
+            readRockCompactionParameters_();
 
         // check the kind of region which is supposed to be used by checking the ROCKOPTS
         // keyword. note that for some funny reason, the ROCK keyword uses PVTNUM by
@@ -1926,26 +2127,151 @@ private:
             }
         }
 
+        // If ROCKCOMP is used and ROCKNUM is specified ROCK2D ROCK2DTR ROCKTAB etc. uses ROCKNUM
+        // to give the correct table index.
+        if (deck.hasKeyword("ROCKCOMP") && eclState.get3DProperties().hasDeckIntGridProperty("ROCKNUM"))
+            propName = "ROCKNUM";
+
         // the deck does not specify the selected keyword, so everything uses the first
         // record of ROCK.
-        if (!eclState.get3DProperties().hasDeckIntGridProperty(propName))
+        if (eclState.get3DProperties().hasDeckIntGridProperty(propName)) {
+            const std::vector<int>& tablenumData =
+                    eclState.get3DProperties().getIntGridProperty(propName).getData();
+            unsigned numElem = vanguard.gridView().size(0);
+            rockTableIdx_.resize(numElem);
+            for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
+                unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
+
+                // reminder: Eclipse uses FORTRAN-style indices
+                rockTableIdx_[elemIdx] = tablenumData[cartElemIdx] - 1;
+            }
+        }
+
+        // Store overburden pressure pr element
+        const auto& overburdTables = eclState.getTableManager().getOverburdTables();
+        if (!overburdTables.empty()) {
+            unsigned numElem = vanguard.gridView().size(0);
+            overburdenPressure_.resize(numElem,0.0);
+
+            const auto& rockcomp = deck.getKeyword("ROCKCOMP");
+            const auto& rockcompRecord = rockcomp.getRecord(0);
+            size_t numRocktabTables = rockcompRecord.getItem("NTROCC").template get< int >(0);
+
+            if (overburdTables.size() != numRocktabTables)
+                throw std::runtime_error(std::to_string(numRocktabTables) +" OVERBURD tables is expected, but " + std::to_string(overburdTables.size()) +" is provided");
+
+            std::vector<Opm::Tabulated1DFunction<Scalar>> overburdenTables(numRocktabTables);
+            for (size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
+                const Opm::OverburdTable& overburdTable =  overburdTables.template getTable<Opm::OverburdTable>(regionIdx);
+                overburdenTables[regionIdx].setXYContainers(overburdTable.getDepthColumn(),overburdTable.getOverburdenPressureColumn());
+            }
+
+            for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
+                unsigned tableIdx = 0;
+                if (!rockTableIdx_.empty()) {
+                    tableIdx = rockTableIdx_[elemIdx];
+                }
+                overburdenPressure_[elemIdx] = overburdenTables[tableIdx].eval(elementCenterDepth_[elemIdx], /*extrapolation=*/true);
+            }
+        }
+
+    }
+
+    void readRockCompactionParameters_()
+    {
+        const auto& vanguard = this->simulator().vanguard();
+        const auto& deck = vanguard.deck();
+        const auto& eclState = vanguard.eclState();
+
+        if (!deck.hasKeyword("ROCKCOMP"))
+            return; // deck does not enable rock compaction
+
+        const auto& rockcomp = deck.getKeyword("ROCKCOMP");
+        //for (size_t rockRecordIdx = 0; rockRecordIdx < rockcomp.size(); ++ rockRecordIdx) {
+        assert(rockcomp.size() == 1);
+        const auto& rockcompRecord = rockcomp.getRecord(0);
+        const auto& option = rockcompRecord.getItem("HYSTERESIS").getTrimmedString(0);
+        if (option == "REVERS") {
+            // interpolate the porv volume multiplier using the pressure in the cell
+        }
+        else if (option == "IRREVERS") {
+            // interpolate the porv volume multiplier using the minimum pressure in the cell
+            // i.e. don't allow re-inflation.
+            unsigned numElem = vanguard.gridView().size(0);
+            minOilPressure_.resize(numElem, 1e99);
+        }
+        else if (option == "NO")
+            // rock compaction turned on but disabled by ROCKCOMP option
             return;
+        else
+            throw std::runtime_error("ROCKCOMP option " + option + " not supported for item 1");
 
-        const std::vector<int>& tablenumData =
-            eclState.get3DProperties().getIntGridProperty(propName).getData();
-        unsigned numElem = vanguard.gridView().size(0);
-        rockTableIdx_.resize(numElem);
-        for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
-            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
+        size_t numRocktabTables = rockcompRecord.getItem("NTROCC").template get<int>(0);
+        const auto& waterCompactionItem = rockcompRecord.getItem("WATER_COMPACTION").getTrimmedString(0);
+        bool waterCompaction = false;
+        if (waterCompactionItem == "YES") {
+            waterCompaction = true;
+            unsigned numElem = vanguard.gridView().size(0);
+            maxWaterSaturation_.resize(numElem, 0.0);
+        }
+        else
+            throw std::runtime_error("ROCKCOMP option " + waterCompactionItem + " not supported for item 3. Only YES is supported");
 
-            // reminder: Eclipse uses FORTRAN-style indices
-            rockTableIdx_[elemIdx] = tablenumData[cartElemIdx] - 1;
+        if (waterCompaction) {
+            const auto& rock2dTables = eclState.getTableManager().getRock2dTables();
+            const auto& rock2dtrTables = eclState.getTableManager().getRock2dtrTables();
+            const auto& rockwnodTables = eclState.getTableManager().getRockwnodTables();
+
+            if (rock2dTables.size() != numRocktabTables)
+                throw std::runtime_error("Water compation option is selected in ROCKCOMP." + std::to_string(numRocktabTables)
+                                         +" ROCK2D tables is expected, but " + std::to_string(rock2dTables.size()) +" is provided");
+
+            if (rockwnodTables.size() != numRocktabTables)
+                throw std::runtime_error("Water compation option is selected in ROCKCOMP." + std::to_string(numRocktabTables)
+                                         +" ROCKWNOD tables is expected, but " + std::to_string(rockwnodTables.size()) +" is provided");
+            //TODO check size match
+            rockCompPoroMult_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::Vertical));
+            for (size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
+                const Opm::RockwnodTable& rockwnodTable =  rockwnodTables.template getTable<Opm::RockwnodTable>(regionIdx);
+                const auto& rock2dTable = rock2dTables[regionIdx];
+
+                if (rockwnodTable.getSaturationColumn().size() != rock2dTable.sizeMultValues())
+                    throw std::runtime_error("Number of entries in ROCKWNOD and ROCK2D needs to match.");
+
+                for (size_t xIdx = 0; xIdx < rock2dTable.size(); ++xIdx) {
+                    rockCompPoroMult_[regionIdx].appendXPos(rock2dTable.getPressureValue(xIdx));
+                    for (size_t yIdx = 0; yIdx < rockwnodTable.getSaturationColumn().size(); ++yIdx)
+                        rockCompPoroMult_[regionIdx].appendSamplePoint(xIdx,
+                                                                           rockwnodTable.getSaturationColumn()[yIdx],
+                                                                           rock2dTable.getPvmultValue(xIdx, yIdx));
+                }
+            }
+
+            if (!rock2dtrTables.empty()) {
+                rockCompTransMult_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::Vertical));
+                for (size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
+                    const Opm::RockwnodTable& rockwnodTable =  rockwnodTables.template getTable<Opm::RockwnodTable>(regionIdx);
+                    const auto& rock2dtrTable = rock2dtrTables[regionIdx];
+
+                    if (rockwnodTable.getSaturationColumn().size() != rock2dtrTable.sizeMultValues())
+                        throw std::runtime_error("Number of entries in ROCKWNOD and ROCK2DTR needs to match.");
+
+                    for (size_t xIdx = 0; xIdx < rock2dtrTable.size(); ++xIdx) {
+                        rockCompTransMult_[regionIdx].appendXPos(rock2dtrTable.getPressureValue(xIdx));
+                        for (size_t yIdx = 0; yIdx < rockwnodTable.getSaturationColumn().size(); ++yIdx)
+                            rockCompTransMult_[regionIdx].appendSamplePoint(xIdx,
+                                                                                     rockwnodTable.getSaturationColumn()[yIdx],
+                                                                                     rock2dtrTable.getTransMultValue(xIdx, yIdx));
+                    }
+                }
+            }
         }
     }
 
     void readMaterialParameters_()
     {
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
         const auto& deck = vanguard.deck();
         const auto& eclState = vanguard.eclState();
 
@@ -1960,7 +2286,8 @@ private:
 
         ////////////////////////////////
         // porosity
-        updatePorosity_();
+        updateReferencePorosity_();
+        referencePorosity_[1] = referencePorosity_[0];
         ////////////////////////////////
 
         ////////////////////////////////
@@ -1980,7 +2307,8 @@ private:
         if (!enableEnergy)
             return;
 
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
         const auto& deck = vanguard.deck();
         const auto& eclState = vanguard.eclState();
 
@@ -1994,16 +2322,17 @@ private:
         thermalLawManager_->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
     }
 
-    void updatePorosity_()
+    void updateReferencePorosity_()
     {
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
         const auto& eclGrid = eclState.getInputGrid();
         const auto& props = eclState.get3DProperties();
 
         size_t numDof = this->model().numGridDof();
 
-        porosity_.resize(numDof);
+        referencePorosity_[/*timeIdx=*/0].resize(numDof);
 
         const std::vector<double>& porvData =
             props.getDoubleGridProperty("PORV").getData();
@@ -2044,23 +2373,25 @@ private:
             // we define the porosity as the accumulated pore volume divided by the
             // geometric volume of the element. Note that -- in pathetic cases -- it can
             // be larger than 1.0!
-            Scalar dofVolume = this->simulator().model().dofTotalVolume(dofIdx);
+            Scalar dofVolume = simulator.model().dofTotalVolume(dofIdx);
             assert(dofVolume > 0.0);
-            porosity_[dofIdx] = poreVolume/dofVolume;
+            referencePorosity_[/*timeIdx=*/0][dofIdx] = poreVolume/dofVolume;
         }
     }
 
     void initFluidSystem_()
     {
-        const auto& deck = this->simulator().vanguard().deck();
-        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& simulator = this->simulator();
+        const auto& deck = simulator.vanguard().deck();
+        const auto& eclState = simulator.vanguard().eclState();
 
         FluidSystem::initFromDeck(deck, eclState);
    }
 
     void readInitialCondition_()
     {
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
 
         const auto& deck = vanguard.deck();
         if (!deck.hasKeyword("EQUIL"))
@@ -2070,13 +2401,28 @@ private:
 
         readBlackoilExtentionsInitialConditions_();
 
+        //initialize min/max values
+        size_t numElems = this->model().numGridDof();
+        for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            const auto& fs = initialFluidStates_[elemIdx];
+            if(maxWaterSaturation_.size() > 0)
+                maxWaterSaturation_[elemIdx] = std::max(maxWaterSaturation_[elemIdx], fs.saturation(waterPhaseIdx));
+            if(maxOilSaturation_.size() > 0)
+                maxOilSaturation_[elemIdx] = std::max(maxOilSaturation_[elemIdx], fs.saturation(oilPhaseIdx));
+            if(minOilPressure_.size() > 0)
+                minOilPressure_[elemIdx] = std::min(minOilPressure_[elemIdx], fs.pressure(oilPhaseIdx));
+        }
+
+
     }
 
     void readEquilInitialCondition_()
     {
+        const auto& simulator = this->simulator();
+
         // initial condition corresponds to hydrostatic conditions.
         typedef Ewoms::EclEquilInitializer<TypeTag> EquilInitializer;
-        EquilInitializer equilInitializer(this->simulator(), *materialLawManager_);
+        EquilInitializer equilInitializer(simulator, *materialLawManager_);
 
         size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
@@ -2089,19 +2435,24 @@ private:
     void readEclRestartSolution_()
     {
         // Set the start time of the simulation
-        const auto& schedule = this->simulator().vanguard().schedule();
-        const auto& eclState = this->simulator().vanguard().eclState();
+        auto& simulator = this->simulator();
+        const auto& schedule = simulator.vanguard().schedule();
+        const auto& eclState = simulator.vanguard().eclState();
         const auto& timeMap = schedule.getTimeMap();
         const auto& initconfig = eclState.getInitConfig();
         int episodeIdx = initconfig.getRestartStep() - 1;
 
-        this->simulator().setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
-        this->simulator().setTime(timeMap.getTimePassedUntil(episodeIdx));
-        this->simulator().setEpisodeIndex(episodeIdx);
-        this->simulator().setEpisodeLength(timeMap.getTimeStepLength(episodeIdx));
-        this->simulator().setTimeStepSize(eclWriter_->restartTimeStepSize());
+        simulator.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
+        simulator.setTime(timeMap.getTimePassedUntil(episodeIdx));
+
+        simulator.startNextEpisode(simulator.startTime() + simulator.time(),
+                                   timeMap.getTimeStepLength(episodeIdx));
+        simulator.setEpisodeIndex(episodeIdx);
 
         eclWriter_->beginRestart();
+
+        Scalar dt = std::min(eclWriter_->restartTimeStepSize(), simulator.episodeLength());
+        simulator.setTimeStepSize(dt);
 
         size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
@@ -2125,7 +2476,7 @@ private:
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
             elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
-            eclWriter_->eclOutputModule().initHysteresisParams(this->simulator(), elemIdx);
+            eclWriter_->eclOutputModule().initHysteresisParams(simulator, elemIdx);
             eclWriter_->eclOutputModule().assignToFluidState(elemFluidState, elemIdx);
 
             processRestartSaturations_(elemFluidState);
@@ -2139,17 +2490,17 @@ private:
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
 
-        const int epsiodeIdx = this->simulator().episodeIndex();
-        const auto& oilVaporizationControl = this->simulator().vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const int epsiodeIdx = simulator.episodeIndex();
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         if (drsdtActive_())
             // DRSDT is enabled
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
-                maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*this->simulator().timeStepSize();
+                maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*simulator.timeStepSize();
 
         if (drvdtActive_())
             // DRVDT is enabled
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
-                maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
+                maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*simulator.timeStepSize();
 
         if (tracerModel().numTracers() > 0)
             std::cout << "Warning: Restart is not implemented for the tracer model, it will initialize with initial tracer concentration" << std::endl;
@@ -2159,7 +2510,7 @@ private:
         // need to be correct for stuff like boundary conditions.
         auto& sol = this->model().solution(/*timeIdx=*/0);
         const auto& gridView = this->gridView();
-        ElementContext elemCtx(this->simulator());
+        ElementContext elemCtx(simulator);
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
@@ -2183,7 +2534,7 @@ private:
         initialFluidStates_ = tmpInitialFs;
         // make sure that the stuff which needs to be done at the beginning of an episode
         // is run.
-        this->beginEpisode(/*isOnRestart=*/true);
+        this->beginEpisode();
 
         eclWriter_->endRestart();
     }
@@ -2215,7 +2566,8 @@ private:
 
     void readExplicitInitialCondition_()
     {
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
         const auto& eclProps = eclState.get3DProperties();
 
@@ -2241,7 +2593,7 @@ private:
 
         initialFluidStates_.resize(numDof);
 
-        const auto& cartSize = this->simulator().vanguard().cartesianDimensions();
+        const auto& cartSize = simulator.vanguard().cartesianDimensions();
         size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
 
         std::vector<double> waterSaturationData;
@@ -2359,7 +2711,8 @@ private:
 
     void readBlackoilExtentionsInitialConditions_()
     {
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
         size_t numDof = this->model().numGridDof();
 
@@ -2405,8 +2758,9 @@ private:
 
         // we need to update the hysteresis data for _all_ elements (i.e., not just the
         // interior ones) to avoid desynchronization of the processes in the parallel case!
-        ElementContext elemCtx(this->simulator());
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        ElementContext elemCtx(simulator);
+        const auto& vanguard = simulator.vanguard();
         auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
@@ -2425,8 +2779,9 @@ private:
     void updateMaxPolymerAdsorption_()
     {
         // we need to update the max polymer adsoption data for all elements
-        ElementContext elemCtx(this->simulator());
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        ElementContext elemCtx(simulator);
+        const auto& vanguard = simulator.vanguard();
         auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
@@ -2444,14 +2799,15 @@ private:
 
     void updatePvtnum_()
     {
-        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         if (!eclProps.hasDeckIntGridProperty("PVTNUM"))
             return;
 
         const auto& pvtnumData = eclProps.getIntGridProperty("PVTNUM").getData();
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& vanguard = simulator.vanguard();
 
         unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         pvtnum_.resize(numElems);
@@ -2463,14 +2819,15 @@ private:
 
     void updateSatnum_()
     {
-        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         if (!eclProps.hasDeckIntGridProperty("SATNUM"))
             return;
 
         const auto& satnumData = eclProps.getIntGridProperty("SATNUM").getData();
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& vanguard = simulator.vanguard();
 
         unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         satnum_.resize(numElems);
@@ -2482,14 +2839,15 @@ private:
 
     void updateMiscnum_()
     {
-        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         if (!eclProps.hasDeckIntGridProperty("MISCNUM"))
             return;
 
         const auto& miscnumData = eclProps.getIntGridProperty("MISCNUM").getData();
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& vanguard = simulator.vanguard();
 
         unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         miscnum_.resize(numElems);
@@ -2501,14 +2859,15 @@ private:
 
     void updatePlmixnum_()
     {
-        const auto& eclState = this->simulator().vanguard().eclState();
+        const auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
         const auto& eclProps = eclState.get3DProperties();
 
         if (!eclProps.hasDeckIntGridProperty("PLMIXNUM"))
             return;
 
         const auto& plmixnumData = eclProps.getIntGridProperty("PLMIXNUM").getData();
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& vanguard = simulator.vanguard();
 
         unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         plmixnum_.resize(numElems);
@@ -2551,7 +2910,8 @@ private:
     void readBoundaryConditions_()
     {
         nonTrivialBoundaryConditions_ = false;
-        const auto& vanguard = this->simulator().vanguard();
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
 
         if (vanguard.deck().hasKeyword("BC")) {
             nonTrivialBoundaryConditions_ = true;
@@ -2684,11 +3044,15 @@ private:
     }
 
     // this method applies the runtime constraints specified via the deck and/or command
-    // line parameters for the size of the next time step size.
+    // line parameters for the size of the next time step.
     Scalar limitNextTimeStepSize_(Scalar dtNext) const
     {
-        const auto& events = this->simulator().vanguard().schedule().getEvents();
-        int episodeIdx = this->simulator().episodeIndex();
+        if (!enableExperiments)
+            return dtNext;
+
+        const auto& simulator = this->simulator();
+        const auto& events = simulator.vanguard().schedule().getEvents();
+        int episodeIdx = simulator.episodeIndex();
 
         // first thing in the morning, limit the time step size to the maximum size
         dtNext = std::min(dtNext, maxTimeStepSize_);
@@ -2698,17 +3062,13 @@ private:
             dtNext = 1.01 * maxTimeStepSize_/2.0;
 
         Scalar remainingEpisodeTime =
-            this->simulator().episodeStartTime()
-            + this->simulator().episodeLength()
-            - this->simulator().time()
-            - this->simulator().timeStepSize();
-
-        // limit the time step size to the remaining time of the episode
-        dtNext = std::min(dtNext, remainingEpisodeTime);
+            simulator.episodeStartTime() + simulator.episodeLength()
+            - (simulator.startTime() + simulator.time());
+        assert(remainingEpisodeTime >= 0.0);
 
         // if we would have a small amount of time left over in the current episode, make
         // two equal time steps instead of a big and a small one
-        if (dtNext < remainingEpisodeTime*(1.0 - 1e-5) && dtNext*1.25 > remainingEpisodeTime)
+        if (remainingEpisodeTime/2.0 < dtNext && dtNext < remainingEpisodeTime*(1.0 - 1e-5))
             // note: limiting to the maximum time step size here is probably not strictly
             // necessary, but it should not hurt and is more fool-proof
             dtNext = std::min(maxTimeStepSize_, remainingEpisodeTime/2.0);
@@ -2729,7 +3089,7 @@ private:
 
     static std::string briefDescription_;
 
-    std::vector<Scalar> porosity_;
+    std::array<std::vector<Scalar>, 2> referencePorosity_;
     std::vector<Scalar> elementCenterDepth_;
     EclTransmissibility<TypeTag> transmissibilities_;
 
@@ -2762,12 +3122,20 @@ private:
     std::vector<Scalar> maxDRv_;
     constexpr static Scalar freeGasMinSaturation_ = 1e-7;
     std::vector<Scalar> maxOilSaturation_;
+    std::vector<Scalar> maxWaterSaturation_;
+    std::vector<Scalar> overburdenPressure_;
+    std::vector<Scalar> minOilPressure_;
+
+    std::vector<TabulatedTwoDFunction> rockCompPoroMult_;
+    std::vector<TabulatedTwoDFunction> rockCompTransMult_;
 
     bool enableDriftCompensation_;
     GlobalEqVector drift_;
 
     EclWellModel wellModel_;
     EclAquiferModel aquiferModel_;
+
+    bool enableEclOutput_;
     std::unique_ptr<EclWriterType> eclWriter_;
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;

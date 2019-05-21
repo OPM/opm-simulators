@@ -21,7 +21,7 @@
 
 #define BOOST_TEST_MODULE MultMatrixTransposed
 #include <boost/test/unit_test.hpp>
-#include <opm/autodiff/MatrixBlock.hpp>
+#include <opm/simulators/linalg/MatrixBlock.hpp>
 
 using namespace Dune;
 using namespace Opm::Detail;

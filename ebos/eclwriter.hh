@@ -36,14 +36,19 @@
 #include <ewoms/io/baseoutputwriter.hh>
 #include <ewoms/parallel/tasklets.hh>
 
+#include <ebos/nncsorter.hpp>
+
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/grid/GridHelpers.hpp>
+#include <opm/grid/utility/cartesianToCompressed.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Exceptions.hpp>
+
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <list>
 #include <utility>
@@ -64,6 +69,55 @@ class EclWriter;
 
 template <class TypeTag>
 class EclOutputBlackOilModule;
+
+/*!
+ * \brief Detect whether two cells are direct vertical neighbours.
+ *
+ * I.e. have the same i and j index and all cartesian cells between them
+ * along the vertical column are inactive.
+ *
+ * \tparam CM The type of the cartesian index mapper.
+ * \param cartMapper The mapper onto cartesian indices.
+ * \param cartesianToActive The mapping of cartesian indices to active indices.
+ * \param smallGlobalIndex The cartesian cell index of the cell with smaller index
+ * \param largeGlobalIndex The cartesian cell index of the cell with larger index
+ * \return True if the cells have the same i and j indices and all cartesian cells
+ *         between them are inactive.
+ */
+inline
+bool directVerticalNeighbors(const std::array<int, 3>& cartDims,
+                             const std::unordered_map<int,int>& cartesianToActive,
+                             int smallGlobalIndex, int largeGlobalIndex)
+{
+    assert(smallGlobalIndex <= largeGlobalIndex);
+    std::array<int, 3> ijk1, ijk2;
+    auto globalToIjk = [cartDims](int gc) {
+                           std::array<int, 3> ijk;
+                           ijk[0] = gc % cartDims[0];
+                           gc /= cartDims[0];
+                           ijk[1] = gc % cartDims[1];
+                           ijk[2] = gc / cartDims[1];
+                           return ijk;
+                       };
+    ijk1 = globalToIjk(smallGlobalIndex);
+    ijk2 = globalToIjk(largeGlobalIndex);
+    assert(ijk2[2]>=ijk1[2]);
+
+    if ( ijk1[0] == ijk2[0] && ijk1[1] == ijk2[1] && (ijk2[2] - ijk1[2]) > 1)
+    {
+        assert((largeGlobalIndex-smallGlobalIndex)%(cartDims[0]*cartDims[1])==0);
+        for ( int gi = smallGlobalIndex + cartDims[0] * cartDims[1]; gi < largeGlobalIndex;
+              gi += cartDims[0] * cartDims[1] )
+        {
+            if ( cartesianToActive.find( gi ) != cartesianToActive.end() )
+            {
+                return false;
+            }
+        }
+        return true;
+    } else
+        return false;
+}
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -141,7 +195,9 @@ public:
             std::map<std::string, std::vector<int> > integerVectors;
             if (collectToIORank_.isParallel())
                 integerVectors.emplace("MPI_RANK", collectToIORank_.globalRanks());
-            eclIO_->writeInitial(computeTrans_(), integerVectors, exportNncStructure_());
+            auto cartMap = Opm::cartesianToCompressed(globalGrid_.size(0),
+                                                      Opm::UgGridHelpers::globalCell(globalGrid_));
+            eclIO_->writeInitial(computeTrans_(cartMap), integerVectors, exportNncStructure_(cartMap));
         }
     }
 
@@ -160,11 +216,11 @@ public:
         // output using eclWriter if enabled
         Opm::data::Wells localWellData = simulator_.problem().wellModel().wellData();
 
-        int episodeIdx = simulator_.episodeIndex() + 1;
+        int reportStepNum = simulator_.episodeIndex() + 1;
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
-        eclOutputModule_.allocBuffers(numElements, episodeIdx, isSubStep, log);
+        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log);
 
         ElementContext elemCtx(simulator_);
         ElementIterator elemIt = gridView.template begin</*codim=*/0>();
@@ -184,7 +240,7 @@ public:
 
         // add cell data to perforations for Rft output
         if (!isSubStep)
-            eclOutputModule_.addRftDataToWells(localWellData, episodeIdx);
+            eclOutputModule_.addRftDataToWells(localWellData, reportStepNum);
 
         if (collectToIORank_.isParallel())
             collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(), localWellData);
@@ -221,7 +277,7 @@ public:
 
             // first, create a tasklet to write the data for the current time step to disk
             auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(*eclIO_,
-                                                                     episodeIdx,
+                                                                     reportStepNum,
                                                                      isSubStep,
                                                                      curTime,
                                                                      restartValue,
@@ -262,10 +318,16 @@ public:
         std::vector<Opm::RestartKey> extraKeys = {{"OPMEXTRA", Opm::UnitSystem::measure::identity, false},
                                                   {"THRESHPR", Opm::UnitSystem::measure::pressure, inputThpres.active()}};
 
-        unsigned episodeIdx = simulator_.episodeIndex();
+        // The episodeIndex is rewined one back before beginRestart is called
+        // and can not be used here.
+        // We just ask the initconfig directly to be sure that we use the correct
+        // index.
+        const auto& initconfig = simulator_.vanguard().eclState().getInitConfig();
+        int restartStepIdx = initconfig.getRestartStep();
+
         const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
-        eclOutputModule_.allocBuffers(numElements, episodeIdx, /*isSubStep=*/false, /*log=*/false);
+        eclOutputModule_.allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false);
 
         auto restartValues = eclIO_->loadRestart(solutionKeys, extraKeys);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
@@ -295,7 +357,7 @@ private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
 
-    Opm::data::Solution computeTrans_() const
+    Opm::data::Solution computeTrans_(const std::unordered_map<int,int>& cartesianToActive) const
     {
         const auto& cartMapper = simulator_.vanguard().cartesianIndexMapper();
         const auto& cartDims = cartMapper.cartesianDimensions();
@@ -351,16 +413,23 @@ private:
                 if (c1 > c2)
                     continue; // we only need to handle each connection once, thank you.
 
-
+                // Ordering of compressed and uncompressed index should be the same
+                assert(cartesianCellIdx[c1] <= cartesianCellIdx[c2]);
                 int gc1 = std::min(cartesianCellIdx[c1], cartesianCellIdx[c2]);
                 int gc2 = std::max(cartesianCellIdx[c1], cartesianCellIdx[c2]);
-                if (gc2 - gc1 == 1)
+
+                if (gc2 - gc1 == 1) {
                     tranx.data[gc1] = globalTrans->transmissibility(c1, c2);
+                    continue; // skip other if clauses as they are false, last one needs some computation
+                }
 
-                if (gc2 - gc1 == cartDims[0])
+                if (gc2 - gc1 == cartDims[0]) {
                     trany.data[gc1] = globalTrans->transmissibility(c1, c2);
+                    continue; // skipt next if clause as it needs some computation
+                }
 
-                if (gc2 - gc1 == cartDims[0]*cartDims[1])
+                if ( gc2 - gc1 == cartDims[0]*cartDims[1] ||
+                     directVerticalNeighbors(cartDims, cartesianToActive, gc1, gc2))
                     tranz.data[gc1] = globalTrans->transmissibility(c1, c2);
             }
         }
@@ -370,11 +439,37 @@ private:
                 {"TRANZ", tranz}};
     }
 
-    Opm::NNC exportNncStructure_() const
+    Opm::NNC exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive) const
     {
-        Opm::NNC nnc = eclState().getInputNNC();
-        int nx = eclState().getInputGrid().getNX();
-        int ny = eclState().getInputGrid().getNY();
+        std::size_t nx = eclState().getInputGrid().getNX();
+        std::size_t ny = eclState().getInputGrid().getNY();
+        auto nncData = sortNncAndApplyEditnnc(eclState().getInputNNC().nncdata(),
+                                              eclState().getInputEDITNNC().data());
+        const auto& unitSystem = simulator_.vanguard().deck().getActiveUnitSystem();
+        std::vector<Opm::NNCdata> outputNnc;
+        std::size_t index = 0;
+
+        for( const auto& entry : nncData ) {
+            // test whether NNC is not a neighboring connection
+            // cell2>=cell1 holds due to sortNncAndApplyEditnnc
+            assert( entry.cell2 >= entry.cell1 );
+            auto cellDiff = entry.cell2 - entry.cell1;
+
+            if (cellDiff != 1 && cellDiff != nx && cellDiff != nx*ny) {
+                auto tt = unitSystem.from_si(Opm::UnitSystem::measure::transmissibility, entry.trans);
+                // Eclipse ignores NNCs (with EDITNNC applied) that are small. Seems like the threshold is 1.0e-6
+                if ( tt >= 1.0e-6 )
+                    outputNnc.emplace_back(entry.cell1, entry.cell2, entry.trans);
+            }
+            ++index;
+        }
+
+        auto nncCompare =  []( const Opm::NNCdata& nnc1, const Opm::NNCdata& nnc2){
+                               return nnc1.cell1 < nnc2.cell1 ||
+                                      ( nnc1.cell1 == nnc2.cell1 && nnc1.cell2 < nnc2.cell2);};
+        // Sort the nncData values from the deck as they need to be
+        // Checked when writing NNC transmissibilities from the simulation.
+        std::sort(nncData.begin(), nncData.end(), nncCompare);
 
         const auto& globalGridView = globalGrid_.leafGridView();
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
@@ -397,6 +492,7 @@ private:
             globalTrans = &simulator_.problem().eclTransmissibilities();
         }
 
+        auto cartDims = simulator_.vanguard().cartesianIndexMapper().cartesianDimensions();
         auto elemIt = globalGridView.template begin</*codim=*/0>();
         const auto& elemEndIt = globalGridView.template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++ elemIt) {
@@ -419,25 +515,48 @@ private:
                 // TODO (?): use the cartesian index mapper to make this code work
                 // with grids other than Dune::CpGrid. The problem is that we need
                 // the a mapper for the sequential grid, not for the distributed one.
-                int cc1 = globalGrid_.globalCell()[c1];
-                int cc2 = globalGrid_.globalCell()[c2];
+                std::size_t cc1 = globalGrid_.globalCell()[c1];
+                std::size_t cc2 = globalGrid_.globalCell()[c2];
 
-                if (std::abs(cc1 - cc2) != 1 &&
-                    std::abs(cc1 - cc2) != nx &&
-                    std::abs(cc1 - cc2) != nx*ny)
-                {
-                    nnc.addNNC(cc1, cc2, globalTrans->transmissibility(c1, c2));
+                if ( cc2 < cc1 )
+                    std::swap(cc1, cc2);
+
+                auto cellDiff = cc2 - cc1;
+
+                if (cellDiff != 1 &&
+                    cellDiff != nx &&
+                    cellDiff != nx*ny &&
+                    ! directVerticalNeighbors(cartDims, cartesianToActive, cc1, cc2)) {
+                    // We need to check whether an NNC for this face was also specified
+                    // via the NNC keyword in the deck (i.e. in the first origNncSize entries.
+                    auto t = globalTrans->transmissibility(c1, c2);
+                    auto candidate = std::lower_bound(nncData.begin(), nncData.end(), Opm::NNCdata(cc1, cc2, 0.0), nncCompare);
+
+                    while ( candidate != nncData.end() && candidate->cell1 == cc1
+                         && candidate->cell2 == cc2) {
+                        t -= candidate->trans;
+                        ++candidate;
+                    }
+                    // eclipse ignores NNCs with zero transmissibility (different threshold than for NNC
+                    // with corresponding EDITNNC above). In addition we do set small transmissibilties
+                    // to zero when setting up the simulator. These will be ignored here, too.
+                    auto tt = unitSystem.from_si(Opm::UnitSystem::measure::transmissibility, std::abs(t));
+                    if ( tt > 1e-12 )
+                        outputNnc.push_back({cc1, cc2, t});
                 }
             }
         }
-        return nnc;
+        Opm::NNC ret;
+        for(const auto& nncItem: outputNnc)
+            ret.addNNC(nncItem.cell1, nncItem.cell2, nncItem.trans);
+        return ret;
     }
 
     struct EclWriteTasklet
         : public TaskletInterface
     {
         Opm::EclipseIO& eclIO_;
-        int episodeIdx_;
+        int reportStepNum_;
         bool isSubStep_;
         double secondsElapsed_;
         Opm::RestartValue restartValue_;
@@ -447,7 +566,7 @@ private:
         bool writeDoublePrecision_;
 
         explicit EclWriteTasklet(Opm::EclipseIO& eclIO,
-                                 int episodeIdx,
+                                 int reportStepNum,
                                  bool isSubStep,
                                  double secondsElapsed,
                                  Opm::RestartValue restartValue,
@@ -456,7 +575,7 @@ private:
                                  const std::map<std::pair<std::string, int>, double>& blockSummaryValues,
                                  bool writeDoublePrecision)
             : eclIO_(eclIO)
-            , episodeIdx_(episodeIdx)
+            , reportStepNum_(reportStepNum)
             , isSubStep_(isSubStep)
             , secondsElapsed_(secondsElapsed)
             , restartValue_(restartValue)
@@ -469,7 +588,7 @@ private:
         // callback to eclIO serial writeTimeStep method
         void run()
         {
-            eclIO_.writeTimeStep(episodeIdx_,
+            eclIO_.writeTimeStep(reportStepNum_,
                                  isSubStep_,
                                  secondsElapsed_,
                                  restartValue_,

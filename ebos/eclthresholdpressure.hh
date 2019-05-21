@@ -91,10 +91,6 @@ public:
         enableThresholdPressure_ = false;
     }
 
-
-    void setFromRestart(const std::vector<Scalar>& values)
-    { thpres_ = values; }
-
     /*!
      * \brief Actually compute the threshold pressures over a face as a pre-compute step.
      */
@@ -172,8 +168,8 @@ public:
                 int cartElem1Idx = vanguard.cartesianIndex(elem1Idx);
                 int cartElem2Idx = vanguard.cartesianIndex(elem2Idx);
 
-                assert(0 <= cartElem1Idx && cartElemFaultIdx_.size() > cartElem1Idx);
-                assert(0 <= cartElem2Idx && cartElemFaultIdx_.size() > cartElem2Idx);
+                assert(0 <= cartElem1Idx && cartElemFaultIdx_.size() > 0U + cartElem1Idx);
+                assert(0 <= cartElem2Idx && cartElemFaultIdx_.size() > 0U + cartElem2Idx);
 
                 int fault1Idx = cartElemFaultIdx_[cartElem1Idx];
                 int fault2Idx = cartElemFaultIdx_[cartElem2Idx];
@@ -201,10 +197,21 @@ public:
         return thpres_[equilRegion1Idx*numEquilRegions_ + equilRegion2Idx];
     }
 
-    const std::vector<Scalar>& data() const {
-        return thpres_;
-    }
+    /*!
+     * \brief Return the raw array with the threshold pressures
+     *
+     * This is used for the restart capability.
+     */
+    const std::vector<Scalar>& data() const
+    { return thpres_; }
 
+    /*!
+     * \brief Set the threshold pressures from a raw array
+     *
+     * This is used for the restart capability.
+     */
+    void setFromRestart(const std::vector<Scalar>& values)
+    { thpres_ = values; }
 
 private:
     // compute the defaults of the threshold pressures using the initial condition
@@ -245,9 +252,9 @@ private:
                     continue;
 
                 // don't include connections with negligible flow
-                const Scalar& trans = simulator_.problem().transmissibility(elemCtx, i, j);
-                const Scalar& faceArea = face.area();
-                if ( std::abs(faceArea * trans) < 1e-18)
+                const Evaluation& trans = simulator_.problem().transmissibility(elemCtx, i, j);
+                Scalar faceArea = face.area();
+                if (std::abs(faceArea*Opm::getValue(trans)) < 1e-18)
                     continue;
 
                 // determine the maximum difference of the pressure of any phase over the

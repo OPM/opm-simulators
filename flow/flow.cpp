@@ -31,7 +31,7 @@
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
-#include <opm/autodiff/moduleVersion.hpp>
+#include <opm/simulators/utils/moduleVersion.hpp>
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 #include <opm/autodiff/MissingFeatures.hpp>
@@ -99,12 +99,12 @@ namespace detail
     // the call is intercepted by this function which will print "flow $version"
     // on stdout and exit(0).
     void handleVersionCmdLine(int argc, char** argv) {
-        if (argc != 2)
-            return;
-
-        if (std::strcmp(argv[1], "--version") == 0) {
-            std::cout << "flow " << Opm::moduleVersionName() << std::endl;
-            std::exit(EXIT_SUCCESS);
+        for ( int i = 1; i < argc; ++i )
+        {
+            if (std::strcmp(argv[i], "--version") == 0) {
+                std::cout << "flow " << Opm::moduleVersionName() << std::endl;
+                std::exit(EXIT_SUCCESS);
+            }
         }
     }
 
@@ -162,7 +162,11 @@ int main(int argc, char** argv)
         deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
     }
     catch (const std::exception& e) {
-        std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
+        if ( mpiRank == 0 )
+            std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
+#if HAVE_MPI
+        MPI_Finalize();
+#endif
         return 1;
     }
 

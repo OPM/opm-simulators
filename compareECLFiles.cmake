@@ -229,15 +229,13 @@ add_test_compareECLFiles(CASENAME msw_2d_h
                          FILENAME 2D_H__
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --use-multisegment-well=true)
+                         REL_TOL ${coarse_rel_tol})
 
 add_test_compareECLFiles(CASENAME msw_3d_hfa
                          FILENAME 3D_MSW
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         TEST_ARGS --use-multisegment-well=true)
+                         REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME polymer_oilwater
                          FILENAME 2D_OILWATER_POLYMER
@@ -276,8 +274,7 @@ add_test_compareECLFiles(CASENAME msw_model_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR model1
-                         TEST_ARGS --use-multisegment-well=true)
+                         DIR model1)
 
 add_test_compareECLFiles(CASENAME base_model_1
                          FILENAME BASE_MODEL_1
