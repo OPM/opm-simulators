@@ -205,9 +205,13 @@ public:
         // update the Saturation functions for the blackoil solvent module.
         asImp_().solventPostSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
 
-        const Evaluation& SoMax =
-            Opm::max(fluidState_.saturation(oilPhaseIdx),
-                     elemCtx.problem().maxOilSaturation(globalSpaceIdx));
+        Evaluation SoMax=0;
+        //const Evaluation&
+        if(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
+            SoMax =
+                Opm::max(fluidState_.saturation(oilPhaseIdx),
+                         elemCtx.problem().maxOilSaturation(globalSpaceIdx));
+        }
 
         // take the meaning of the switiching primary variable into account for the gas
         // and oil phase compositions
@@ -287,7 +291,9 @@ public:
 
         typename FluidSystem::template ParameterCache<Evaluation> paramCache;
         paramCache.setRegionIndex(pvtRegionIdx);
-        paramCache.setMaxOilSat(SoMax);
+        if(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
+            paramCache.setMaxOilSat(SoMax);
+        }
         paramCache.updateAll(fluidState_);
 
         // compute the phase densities and transform the phase permeabilities into mobilities
