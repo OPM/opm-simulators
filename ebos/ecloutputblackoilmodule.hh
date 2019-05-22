@@ -1231,7 +1231,7 @@ private:
                 // Gas dissolved in oil and vaporized oil
                 Scalar gasInPlaceLiquid = Opm::getValue(fs.Rs()) * fip[oilPhaseIdx];
                 Scalar oilInPlaceGas = Opm::getValue(fs.Rv()) * fip[gasPhaseIdx];
-                if (fip_[FipDataType::GasInPlaceInGasPhase].size() > 0)
+                if (fip_[FipDataType::GasInPlaceInLiquidPhase].size() > 0)
                     fip_[FipDataType::GasInPlaceInLiquidPhase][globalDofIdx] = gasInPlaceLiquid;
                 if (fip_[FipDataType::OilInPlaceInGasPhase].size() > 0)
                     fip_[FipDataType::OilInPlaceInGasPhase][globalDofIdx] = oilInPlaceGas;
