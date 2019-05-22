@@ -134,9 +134,9 @@ BOOST_GLOBAL_FIXTURE(GlobalFixture);
 BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     const SetupTest setup_test;
     const Wells* wells = setup_test.wells_manager->c_wells();
-    const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
+    const auto& wells_ecl = setup_test.schedule->getWells2(setup_test.current_timestep);
     BOOST_CHECK_EQUAL( wells_ecl.size(), 2);
-    const Opm::Well* well = wells_ecl[1];
+    const Opm::Well2& well = wells_ecl[1];
     const Opm::BlackoilModelParametersEbos<TTAG(EclFlowProblem) > param;
 
     // For the conversion between the surface volume rate and resrevoir voidage rate
@@ -154,7 +154,6 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     const int num_comp = wells->number_of_phases;
 
     BOOST_CHECK_THROW( StandardWell( well, -1, wells, param, *rateConverter, pvtIdx, num_comp), std::invalid_argument);
-    BOOST_CHECK_THROW( StandardWell( nullptr, 4, wells , param, *rateConverter, pvtIdx, num_comp), std::invalid_argument);
     BOOST_CHECK_THROW( StandardWell( well, 4, nullptr , param, *rateConverter, pvtIdx, num_comp), std::invalid_argument);
 }
 
@@ -162,7 +161,7 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
 BOOST_AUTO_TEST_CASE(TestBehavoir) {
     const SetupTest setup_test;
     const Wells* wells_struct = setup_test.wells_manager->c_wells();
-    const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
+    const auto& wells_ecl = setup_test.schedule->getWells2(setup_test.current_timestep);
     const int current_timestep = setup_test.current_timestep;
     std::vector<std::unique_ptr<const StandardWell> >  wells;
 
@@ -175,7 +174,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
 
             size_t index_well = 0;
             for (; index_well < wells_ecl.size(); ++index_well) {
-                if (well_name == wells_ecl[index_well]->name()) {
+                if (well_name == wells_ecl[index_well].name()) {
                     break;
                 }
             }

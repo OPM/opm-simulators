@@ -57,11 +57,11 @@ public:
 
         for ( auto cell = begin, end= globalCell.end(); cell != end; ++cell )
         {
-            cartesianToCompressed[ *cell ] = cell - begin;
+          cartesianToCompressed[ *cell ] = cell - begin;
         }
 
         int last_time_step = schedule.getTimeMap().size() - 1;
-        const auto& schedule_wells = schedule.getWells();
+        const auto& schedule_wells = schedule.getWells2atEnd();
         wells_.reserve(schedule_wells.size());
 
         // initialize the additional cell connections introduced by wells.
@@ -69,7 +69,7 @@ public:
         {
             std::vector<int> compressed_well_perforations;
             // All possible completions of the well
-            const auto& completionSet = well->getConnections(last_time_step);
+            const auto& completionSet = well.getConnections();
             compressed_well_perforations.reserve(completionSet.size());
 
             for ( size_t c=0; c < completionSet.size(); c++ )

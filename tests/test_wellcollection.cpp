@@ -27,7 +27,7 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/GroupTree.hpp>
@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
 
     // Add wells to WellCollection
     WellCollection wellCollection;
-    auto wells = sched.getWells();
+    const auto wells = sched.getWells2atEnd();
     for (size_t i=0; i<wells.size(); i++) {
         collection.addWell(wells[i], 2, pu);
     }
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     BOOST_CHECK_EQUAL(1.0, collection.findNode("G2")->getParent()->efficiencyFactor());
 
     // Add wells to WellCollection
-    auto wells1 = sched.getWells(timestep);
+    const auto wells1 = sched.getWells2(timestep);
     for (size_t i=0; i<wells1.size(); i++) {
         collection.addWell(wells1[i], timestep, pu);
     }

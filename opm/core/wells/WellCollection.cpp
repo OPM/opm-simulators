@@ -20,7 +20,7 @@
 #include "config.h"
 #include <opm/core/wells/WellCollection.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
 
 #include <boost/lexical_cast.hpp>
@@ -68,22 +68,22 @@ namespace Opm
         child->setParent(parent);
     }
 
-    void WellCollection::addWell(const Well* wellChild, size_t timeStep, const PhaseUsage& phaseUsage) {
-        if (wellChild->getStatus(timeStep) == WellCommon::SHUT) {
+    void WellCollection::addWell(const Well2& wellChild, size_t timeStep, const PhaseUsage& phaseUsage) {
+        if (wellChild.getStatus() == WellCommon::SHUT) {
             //SHUT wells are not added to the well collection
             return;
         }
 
-        WellsGroupInterface* parent = findNode(wellChild->getGroupName(timeStep));
+        WellsGroupInterface* parent = findNode(wellChild.groupName());
         if (!parent) {
-            OPM_THROW(std::runtime_error, "Trying to add well " << wellChild->name() << " Step: " << boost::lexical_cast<std::string>(timeStep) << " to group named " << wellChild->getGroupName(timeStep) << ", but this group does not exist in the WellCollection.");
+            OPM_THROW(std::runtime_error, "Trying to add well " << wellChild.name() << " Step: " << boost::lexical_cast<std::string>(timeStep) << " to group named " << wellChild.groupName() << ", but this group does not exist in the WellCollection.");
         }
 
         std::shared_ptr<WellsGroupInterface> child = createWellWellsGroup(wellChild, timeStep, phaseUsage);
 
         WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
         if (!parent_as_group) {
-            OPM_THROW(std::runtime_error, "Trying to add well to group named " << wellChild->getGroupName(timeStep) << ", but it's not a group.");
+            OPM_THROW(std::runtime_error, "Trying to add well to group named " << wellChild.groupName() << ", but it's not a group.");
         }
         parent_as_group->addChild(child);
 

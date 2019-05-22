@@ -37,7 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/GroupTree.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 using namespace Opm;
@@ -55,21 +55,21 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
 
    PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
-    auto wells = sched.getWells();
+   auto wells = sched.getWells2atEnd();
 
     for (size_t i=0; i<wells.size(); i++) {
-        const auto* well = wells[i];
+        const auto& well = wells[i];
         std::shared_ptr<WellsGroupInterface> wellsGroup = createWellWellsGroup(well, 2, pu);
-        BOOST_CHECK_EQUAL(well->name(), wellsGroup->name());
-        if (well->isInjector(2)) {
-            const WellInjectionProperties& properties = well->getInjectionProperties(2);
+        BOOST_CHECK_EQUAL(well.name(), wellsGroup->name());
+        if (well.isInjector()) {
+            const WellInjectionProperties& properties = well.getInjectionProperties();
             BOOST_CHECK_EQUAL(properties.surfaceInjectionRate, wellsGroup->injSpec().surface_flow_max_rate_);
             BOOST_CHECK_EQUAL(properties.BHPLimit, wellsGroup->injSpec().BHP_limit_);
             BOOST_CHECK_EQUAL(properties.reservoirInjectionRate, wellsGroup->injSpec().reservoir_flow_max_rate_);
             BOOST_CHECK_EQUAL(0.0, wellsGroup->prodSpec().guide_rate_);
         }
-        if (well->isProducer(2)) {
-            const WellProductionProperties& properties = well->getProductionProperties(2);
+        if (well.isProducer()) {
+            const WellProductionProperties& properties = well.getProductionProperties();
             BOOST_CHECK_EQUAL(properties.ResVRate, wellsGroup->prodSpec().reservoir_flow_max_rate_);
             BOOST_CHECK_EQUAL(properties.BHPLimit, wellsGroup->prodSpec().BHP_limit_);
             BOOST_CHECK_EQUAL(properties.OilRate, wellsGroup->prodSpec().oil_max_rate_);

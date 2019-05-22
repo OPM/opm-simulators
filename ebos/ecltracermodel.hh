@@ -477,15 +477,15 @@ protected:
 
         // Wells
         const int episodeIdx = simulator_.episodeIndex();
-        const auto& wells = simulator_.vanguard().schedule().getWells(episodeIdx);
-        for (auto well : wells) {
+        const auto& wells = simulator_.vanguard().schedule().getWells2(episodeIdx);
+        for (const auto& well : wells) {
 
-            if (well->getStatus(episodeIdx) == Opm::WellCommon::SHUT)
+            if (well.getStatus() == Opm::WellCommon::SHUT)
                 continue;
 
-            const double wtracer = well->getTracerProperties(episodeIdx).getConcentration(tracerNames_[tracerIdx]);
+            const double wtracer = well.getTracerProperties().getConcentration(tracerNames_[tracerIdx]);
             std::array<int, 3> cartesianCoordinate;
-            for (auto& connection : well->getConnections(episodeIdx)) {
+            for (auto& connection : well.getConnections()) {
 
                 if (connection.state() == Opm::WellCompletion::SHUT)
                     continue;
@@ -495,7 +495,7 @@ protected:
                 cartesianCoordinate[2] = connection.getK();
                 const size_t cartIdx = simulator_.vanguard().cartesianIndex(cartesianCoordinate);
                 const int I = cartToGlobal_[cartIdx];
-                Scalar rate = simulator_.problem().wellModel().well(well->name())->volumetricSurfaceRateForConnection(I, tracerPhaseIdx_[tracerIdx]);
+                Scalar rate = simulator_.problem().wellModel().well(well.name())->volumetricSurfaceRateForConnection(I, tracerPhaseIdx_[tracerIdx]);
                 if (rate > 0)
                     tracerResidual_[I][0] -= rate*wtracer;
                 else if (rate < 0)

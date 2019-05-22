@@ -30,18 +30,16 @@
 namespace Opm
 {
     namespace SimFIBODetails {
-        typedef std::unordered_map<std::string, const Well* > WellMap;
+        typedef std::unordered_map<std::string, Well2 > WellMap;
 
         inline WellMap
-        mapWells(const std::vector< const Well* >& wells)
+        mapWells(const std::vector< Well2 >& wells)
         {
             WellMap wmap;
 
-            for (std::vector< const Well* >::const_iterator
-                     w = wells.begin(), e = wells.end();
-                 w != e; ++w)
+            for (const auto& w : wells)
             {
-                wmap.insert(std::make_pair((*w)->name(), *w));
+                wmap.insert(std::make_pair(w.name(), w));
             }
 
             return wmap;

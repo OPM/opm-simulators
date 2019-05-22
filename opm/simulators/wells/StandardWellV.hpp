@@ -128,7 +128,7 @@ namespace Opm
         using Base::contiPolymerEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
-        StandardWellV(const Well* well, const int time_step, const Wells* wells,
+        StandardWellV(const Well2& well, const int time_step, const Wells* wells,
                       const ModelParameters& param,
                       const RateConverterType& rate_converter,
                       const int pvtRegionIdx,

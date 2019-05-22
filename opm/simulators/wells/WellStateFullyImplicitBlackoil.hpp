@@ -27,7 +27,7 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 
@@ -66,10 +66,13 @@ namespace Opm
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
-        void init(const Wells* wells, const std::vector<double>& cellPressures,
+        void init(const Wells* wells,
+                  const std::vector<double>& cellPressures,
                   const Schedule& schedule,
-                  const std::vector<const Well*>& wells_ecl, const int report_step,
-                  const WellStateFullyImplicitBlackoil* prevState, const PhaseUsage& pu)
+                  const std::vector<Well2>& wells_ecl,
+                  const int report_step,
+                  const WellStateFullyImplicitBlackoil* prevState,
+                  const PhaseUsage& pu)
         {
             // call init on base class
             BaseType :: init(wells, cellPressures);
@@ -109,7 +112,7 @@ namespace Opm
                     int index_well_ecl = 0;
                     const std::string well_name(wells->name[w]);
                     for (; index_well_ecl < nw_wells_ecl; ++index_well_ecl) {
-                        if (well_name == wells_ecl[index_well_ecl]->name()) {
+                        if (well_name == wells_ecl[index_well_ecl].name()) {
                             break;
                         }
                     }
@@ -293,7 +296,7 @@ namespace Opm
         }
 
 
-        void resize(const Wells* wells, const std::vector<const Well*>& wells_ecl, const Schedule& schedule,
+        void resize(const Wells* wells, const std::vector<Well2>& wells_ecl, const Schedule& schedule,
                     const bool handle_ms_well, const int report_step, const size_t numCells,
                     const PhaseUsage& pu)
         {
@@ -605,7 +608,7 @@ namespace Opm
 
 
         /// init the MS well related.
-        void initWellStateMSWell(const Wells* wells, const std::vector<const Well*>& wells_ecl,
+        void initWellStateMSWell(const Wells* wells, const std::vector<Well2>& wells_ecl,
                                  const int time_step, const PhaseUsage& pu, const WellStateFullyImplicitBlackoil* prev_well_state)
         {
             // still using the order in wells
@@ -630,7 +633,7 @@ namespace Opm
                 int index_well_ecl = 0;
                 const std::string well_name(wells->name[w]);
                 for (; index_well_ecl < nw_wells_ecl; ++index_well_ecl) {
-                    if (well_name == wells_ecl[index_well_ecl]->name()) {
+                    if (well_name == wells_ecl[index_well_ecl].name()) {
                         break;
                     }
                 }
@@ -640,9 +643,9 @@ namespace Opm
                     OPM_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ");
                 }
 
-                const Well* well_ecl = wells_ecl[index_well_ecl];
+                const auto& well_ecl = wells_ecl[index_well_ecl];
                 top_segment_index_.push_back(nseg_);
-                if ( !well_ecl->isMultiSegment(time_step) ) { // not multi-segment well
+                if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
                     nseg_ += 1;
                     seg_number_.push_back(1); // Assign single segment (top) as number 1.
                     segpress_.push_back(bhp()[w]);
@@ -651,9 +654,9 @@ namespace Opm
                         segrates_.push_back(wellRates()[np * w + p]);
                     }
                 } else { // it is a multi-segment well
-                    const WellSegments& segment_set = well_ecl->getWellSegments(time_step);
+                    const WellSegments& segment_set = well_ecl.getSegments();
                     // assuming the order of the perforations in well_ecl is the same with Wells
-                    const WellConnections& completion_set = well_ecl->getConnections(time_step);
+                    const WellConnections& completion_set = well_ecl.getConnections();
                     // number of segment for this single well
                     const int well_nseg = segment_set.size();
                     // const int nperf = completion_set.size();

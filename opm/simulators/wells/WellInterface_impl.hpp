@@ -27,22 +27,18 @@ namespace Opm
 
     template<typename TypeTag>
     WellInterface<TypeTag>::
-    WellInterface(const Well* well, const int time_step, const Wells* wells,
+    WellInterface(const Well2& well, const int time_step, const Wells* wells,
                   const ModelParameters& param,
                   const RateConverterType& rate_converter,
                   const int pvtRegionIdx,
                   const int num_components)
-    : well_ecl_(well)
-    , current_step_(time_step)
-    , param_(param)
-    , rateConverter_(rate_converter)
-    , pvtRegionIdx_(pvtRegionIdx)
-    , num_components_(num_components)
+      : well_ecl_(well)
+      , current_step_(time_step)
+      , param_(param)
+      , rateConverter_(rate_converter)
+      , pvtRegionIdx_(pvtRegionIdx)
+      , num_components_(num_components)
     {
-        if (!well) {
-            OPM_THROW(std::invalid_argument, "Null pointer of Well is used to construct WellInterface");
-        }
-
         if (time_step < 0) {
             OPM_THROW(std::invalid_argument, "Negtive time step is used to construct WellInterface");
         }
@@ -51,7 +47,7 @@ namespace Opm
             OPM_THROW(std::invalid_argument, "Null pointer of Wells is used to construct WellInterface");
         }
 
-        const std::string& well_name = well->name();
+        const std::string& well_name = well.name();
 
         // looking for the location of the well in the wells struct
         int index_well;
@@ -158,7 +154,7 @@ namespace Opm
     WellInterface<TypeTag>::
     name() const
     {
-        return well_ecl_->name();
+        return well_ecl_.name();
     }
 
 
@@ -172,7 +168,6 @@ namespace Opm
     {
         return well_type_;
     }
-
 
 
 
@@ -203,7 +198,7 @@ namespace Opm
     WellInterface<TypeTag>::
     getAllowCrossFlow() const
     {
-        return well_ecl_->getAllowCrossFlow();
+        return well_ecl_.getAllowCrossFlow();
     }
 
 
@@ -220,11 +215,11 @@ namespace Opm
 
 
     template<typename TypeTag>
-    const Well*
+    const Well2*
     WellInterface<TypeTag>::
     wellEcl() const
     {
-        return well_ecl_;
+      return std::addressof(well_ecl_);
     }
 
 
@@ -289,9 +284,9 @@ namespace Opm
             return 0.0;
         }
 
-        WellInjectionProperties injection = well_ecl_->getInjectionProperties(current_step_);
+        WellInjectionProperties injection = well_ecl_.getInjectionProperties();
         if (injection.injectorType == WellInjector::GAS) {
-            double solvent_fraction = well_ecl_->getSolventFraction(current_step_);
+            double solvent_fraction = well_ecl_.getSolventFraction();
             return solvent_fraction;
         } else {
             // Not a gas injection well => no solvent.
@@ -312,8 +307,8 @@ namespace Opm
             return 0.0;
         }
 
-        WellInjectionProperties injection = well_ecl_->getInjectionProperties(current_step_);
-        WellPolymerProperties polymer = well_ecl_->getPolymerProperties(current_step_);
+        WellInjectionProperties injection = well_ecl_.getInjectionProperties();
+        WellPolymerProperties polymer = well_ecl_.getPolymerProperties();
 
         if (injection.injectorType == WellInjector::WATER) {
             const double polymer_injection_concentration = polymer.m_polymerConcentration;
@@ -527,10 +522,10 @@ namespace Opm
 
         switch( well_type_ ) {
         case PRODUCER:
-            under_prediction_mode = well_ecl_->getProductionProperties(current_step_).predictionMode;
+            under_prediction_mode = well_ecl_.getProductionProperties().predictionMode;
             break;
         case INJECTOR:
-            under_prediction_mode = well_ecl_->getInjectionProperties(current_step_).predictionMode;
+            under_prediction_mode = well_ecl_.getInjectionProperties().predictionMode;
             break;
         default:
             OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name(), deferred_logger);
@@ -644,8 +639,8 @@ namespace Opm
                     water_cut_perf[perf] = 0.;
                 }
             }
-            const auto& completions = well_ecl_->getCompletions(current_step_);
-            const auto& connections = well_ecl_->getConnections(current_step_);
+            const auto& completions = well_ecl_.getCompletions();
+            const auto& connections = well_ecl_.getConnections();
 
             int complnumIdx = 0;
             std::vector<double> water_cut_in_completions(completions.size(), 0.0);
@@ -805,7 +800,7 @@ namespace Opm
                                 WellTestState& well_test_state,
                                 Opm::DeferredLogger& deferred_logger) const
     {
-        const WellEconProductionLimits& econ_production_limits = well_ecl_->getEconProductionLimits(current_step_);
+        const WellEconProductionLimits& econ_production_limits = well_ecl_.getEconLimits();
 
         // if no limit is effective here, then continue to the next well
         if ( !econ_production_limits.onAnyEffectiveLimit() ) {
@@ -843,7 +838,7 @@ namespace Opm
 
             well_test_state.addClosedWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
             if (write_message_to_opmlog) {
-                if (well_ecl_->getAutomaticShutIn()) {
+                if (well_ecl_.getAutomaticShutIn()) {
                     const std::string msg = std::string("well ") + name() + std::string(" will be shut due to rate economic limit");
                     deferred_logger.info(msg);
                 } else {
@@ -885,7 +880,7 @@ namespace Opm
                     }
 
                     bool allCompletionsClosed = true;
-                    const auto& connections = well_ecl_->getConnections(current_step_);
+                    const auto& connections = well_ecl_.getConnections();
                     for (const auto& connection : connections) {
                         if (!well_test_state.hasCompletion(name(), connection.complnum())) {
                             allCompletionsClosed = false;
@@ -895,7 +890,7 @@ namespace Opm
                     if (allCompletionsClosed) {
                         well_test_state.addClosedWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
                         if (write_message_to_opmlog) {
-                            if (well_ecl_->getAutomaticShutIn()) {
+                            if (well_ecl_.getAutomaticShutIn()) {
                                 const std::string msg = name() + std::string(" will be shut due to last completion closed");
                             	deferred_logger.info(msg);
                             } else {
@@ -910,7 +905,7 @@ namespace Opm
                 {
                 well_test_state.addClosedWell(name(), WellTestConfig::Reason::ECONOMIC, 0);
                 if (write_message_to_opmlog) {
-                    if (well_ecl_->getAutomaticShutIn()) {
+                    if (well_ecl_.getAutomaticShutIn()) {
                         // tell the controll that the well is closed
                         const std::string msg = name() + std::string(" will be shut due to ratio economic limit");
                         deferred_logger.info(msg);
@@ -1005,7 +1000,7 @@ namespace Opm
             deferred_logger.info(msg);
 
             // also reopen completions
-            for (auto& completion : well_ecl_->getCompletions(report_step)) {
+            for (auto& completion : well_ecl_.getCompletions()) {
                 if (!welltest_state_temp.hasCompletion(name(), completion.first)) {
                     welltest_state.dropCompletion(name(), completion.first);
                 }
@@ -1040,7 +1035,7 @@ namespace Opm
         bore_diameters_.reserve(nperf);
 
         // COMPDAT handling
-        const auto& connectionSet = well_ecl_->getConnections(current_step_);
+        const auto& connectionSet = well_ecl_.getConnections();
         for (size_t c=0; c<connectionSet.size(); c++) {
             const auto& connection = connectionSet.get(c);
             if (connection.state() == WellCompletion::OPEN) {
@@ -1137,7 +1132,7 @@ namespace Opm
         // update THP value. However, it will only used for output purpose.
 
         if (well_type_ == PRODUCER) { // producer
-            const int table_id = well_ecl_->getProductionProperties(current_step_).VFPTableNumber;
+          const int table_id = well_ecl_.getProductionProperties().VFPTableNumber;
             if (table_id <= 0) {
                 return false;
             } else {
@@ -1150,7 +1145,7 @@ namespace Opm
             }
 
         } else { // injector
-            const int table_id = well_ecl_->getInjectionProperties(current_step_).VFPTableNumber;
+            const int table_id = well_ecl_.getInjectionProperties().VFPTableNumber;
             if (table_id <= 0) {
                 return false;
             } else {
@@ -1230,7 +1225,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::closeCompletions(WellTestState& wellTestState)
     {
-        const auto& connections = well_ecl_->getConnections(current_step_);
+        const auto& connections = well_ecl_.getConnections();
         int perfIdx = 0;
         for (const auto& connection : connections) {
             if (wellTestState.hasCompletion(name(), connection.complnum())) {
@@ -1264,8 +1259,8 @@ namespace Opm
     void
     WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger)
     {
-        const auto& connection = well_ecl_->getConnections(current_step_)[perfIdx];
-        if (well_ecl_->getDrainageRadius(current_step_) < 0) {
+        const auto& connection = well_ecl_.getConnections()[perfIdx];
+        if (well_ecl_.getDrainageRadius() < 0) {
             if (new_well && perfIdx == 0) {
                 deferred_logger.warning("PRODUCTIVITY_INDEX_WARNING", "Negative drainage radius not supported. The productivity index is set to zero");
             }
@@ -1273,7 +1268,7 @@ namespace Opm
             return;
         }
 
-        if (connection.r0() > well_ecl_->getDrainageRadius(current_step_)) {
+        if (connection.r0() > well_ecl_.getDrainageRadius()) {
             if (new_well && well_productivity_index_logger_counter_ < 1) {
                 deferred_logger.info("PRODUCTIVITY_INDEX_INFO", "The effective radius is larger than the well drainage radius for well " + name() +
                              " They are set to equal in the well productivity index calculations");
@@ -1283,7 +1278,7 @@ namespace Opm
         }
 
         // For zero drainage radius the productivity index is just the transmissibility times the mobility
-        if (well_ecl_->getDrainageRadius(current_step_) == 0) {
+        if (well_ecl_.getDrainageRadius() == 0) {
             return;
         }
 
@@ -1291,7 +1286,7 @@ namespace Opm
         // Assumes steady radial flow only valied for horizontal wells
         productivity_index *=
         (std::log(connection.r0() / connection.rw()) + connection.skinFactor()) /
-        (std::log(well_ecl_->getDrainageRadius(current_step_) / connection.rw()) + connection.skinFactor());
+        (std::log(well_ecl_.getDrainageRadius() / connection.rw()) + connection.skinFactor());
     }
 
     template<typename TypeTag>
