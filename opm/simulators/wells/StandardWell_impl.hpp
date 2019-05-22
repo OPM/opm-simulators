@@ -658,21 +658,26 @@ namespace Opm
 
         }
 
-
+	
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {
             // TODO: following the development in MSW, we need to convert the volume of the wellbore to be surface volume
             // since all the rates are under surface condition
-            EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
+	   
+	   EvalWell resWell_loc = 0;
+	   if(FluidSystem::numActivePhases()>1){
+	     assert(dt>0);
+	     resWell_loc += (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
+	   }
             resWell_loc -= getQs(componentIdx) * well_efficiency_factor_;
             for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
             resWell_[0][componentIdx] += resWell_loc.value();
         }
-
+	
         assembleControlEq(deferred_logger);
-
+	
         // do the local inversion of D.
         try {
             Dune::ISTLUtility::invertMatrix(invDuneD_[0][0]);

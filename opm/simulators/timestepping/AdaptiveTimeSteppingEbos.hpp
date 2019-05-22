@@ -287,10 +287,11 @@ namespace Opm {
                         : substepReport.total_linear_iterations;
                     double dtEstimate = timeStepControl_->computeTimeStepSize(dt, iterations, relativeChange,
                                                                                substepTimer.simulationTimeElapsed());
-
+		    
+		    assert(dtEstimate>0);
                     // limit the growth of the timestep size by the growth factor
                     dtEstimate = std::min(dtEstimate, double(maxGrowth_ * dt));
-
+		    assert(dtEstimate>0);
                     // further restrict time step size growth after convergence problems
                     if (restarts > 0) {
                         dtEstimate = std::min(growthFactor_ * dt, dtEstimate);
@@ -304,7 +305,7 @@ namespace Opm {
                         const double maxPredictionTHPTimestep = 16.0 * unit::day;
                         dtEstimate = std::min(dtEstimate, maxPredictionTHPTimestep);
                     }
-
+		    assert(dtEstimate>0);
                     if (timestepVerbose_) {
                         std::ostringstream ss;
                         substepReport.reportStep(ss);

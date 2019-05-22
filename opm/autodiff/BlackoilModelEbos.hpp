@@ -419,6 +419,7 @@ namespace Opm {
 
                 Scalar saturationsOld[FluidSystem::numPhases] = { 0.0 };
                 Scalar oilSaturationOld = 1.0;
+		if(FluidSystem::numActivePhases()>1){
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     saturationsOld[FluidSystem::waterPhaseIdx] = priVarsOld[Indices::waterSaturationIdx];
                     oilSaturationOld -= saturationsOld[FluidSystem::waterPhaseIdx];
@@ -432,16 +433,20 @@ namespace Opm {
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                     saturationsOld[FluidSystem::oilPhaseIdx] = oilSaturationOld;
                 }
-
+		for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
+                    Scalar tmp = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
+                    resultDelta += tmp*tmp;
+                    resultDenom += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
+		    assert(std::isfinite(resultDelta));
+		    assert(std::isfinite(resultDenom));
+                }
+		}
+		// NB fix mee! adding pressures changes to satutation changes do not make sense
                 Scalar tmp = pressureNew - pressureOld;
                 resultDelta += tmp*tmp;
                 resultDenom += pressureNew*pressureNew;
 
-                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
-                    Scalar tmp = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
-                    resultDelta += tmp*tmp;
-                    resultDenom += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
-                }
+                
             }
 
             resultDelta = gridView.comm().sum(resultDelta);
