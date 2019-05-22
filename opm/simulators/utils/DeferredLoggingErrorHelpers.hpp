@@ -53,7 +53,7 @@ inline void checkForExceptionsAndThrow(int exception_thrown, const std::string& 
 {
     const auto& cc = Dune::MPIHelper::getCollectiveCommunication();
     if (cc.max(exception_thrown) == 1) {
-        throw std::logic_error(message);
+        throw std::runtime_error(message);
     }
 }
 
@@ -69,7 +69,7 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
     deferred_logger.clearMessages();
     const auto& cc = Dune::MPIHelper::getCollectiveCommunication();
     if (cc.max(exception_thrown) == 1) {
-        throw std::logic_error(message);
+        throw std::runtime_error(message);
     }
 }
 
