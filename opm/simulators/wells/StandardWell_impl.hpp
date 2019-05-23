@@ -208,9 +208,9 @@ namespace Opm
     StandardWell<TypeTag>::
     wellVolumeFraction(const unsigned compIdx) const
     {
-      if (FluidSystem::numActivePhases()==1){
-	return 1;
-      }
+	if (FluidSystem::numActivePhases()==1){
+	    return 1;
+	}
       
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
             return primary_variables_evaluation_[WFrac];
@@ -280,21 +280,21 @@ namespace Opm
 
 
 
-  template<typename TypeTag>
-  typename StandardWell<TypeTag>::Eval
-  StandardWell<TypeTag>::getPerfPressure(const typename StandardWell<TypeTag>::FluidState& fs) const{
-    Eval pressure;
-    if(Indices::oilEnabled){  
-      pressure = fs.pressure(FluidSystem::oilPhaseIdx);
-    }else{
-      if(Indices::waterEnabled){
-	    pressure = fs.pressure(FluidSystem::waterPhaseIdx);
-      }else{
-	pressure = fs.pressure(FluidSystem::gasPhaseIdx);
-      }
+    template<typename TypeTag>
+    typename StandardWell<TypeTag>::Eval
+    StandardWell<TypeTag>::getPerfPressure(const typename StandardWell<TypeTag>::FluidState& fs) const{
+	Eval pressure;
+	if(Indices::oilEnabled){  
+	    pressure = fs.pressure(FluidSystem::oilPhaseIdx);
+	}else{
+	    if(Indices::waterEnabled){
+		pressure = fs.pressure(FluidSystem::waterPhaseIdx);
+	    }else{
+		pressure = fs.pressure(FluidSystem::gasPhaseIdx);
+	    }
+	}
+	return pressure; 
     }
-    return pressure; 
-  }
 
   
     template<typename TypeTag>
@@ -664,11 +664,11 @@ namespace Opm
             // TODO: following the development in MSW, we need to convert the volume of the wellbore to be surface volume
             // since all the rates are under surface condition
 	   
-	   EvalWell resWell_loc = 0;
-	   if(FluidSystem::numActivePhases()>1){
-	     assert(dt>0);
-	     resWell_loc += (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
-	   }
+	    EvalWell resWell_loc = 0;
+	    if(FluidSystem::numActivePhases()>1){
+		assert(dt>0);
+		resWell_loc += (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
+	    }
             resWell_loc -= getQs(componentIdx) * well_efficiency_factor_;
             for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
@@ -907,29 +907,28 @@ namespace Opm
         const double relaxation_factor_fractions = (well_type_ == PRODUCER) ?
                                          relaxationFactorFractionsProducer(old_primary_variables, dwells)
                                        : 1.0;
-	if(FluidSystem::numActivePhases()>1){
-        // update the second and third well variable (The flux fractions)
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
-            const double dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac] * relaxation_factor_fractions), dFLimit);
-            // primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
-            primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
-        }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            const int sign3 = dwells[0][GFrac] > 0 ? 1: -1;
-            const double dx3_limited = sign3 * std::min(std::abs(dwells[0][GFrac] * relaxation_factor_fractions), dFLimit);
-            primary_variables_[GFrac] = old_primary_variables[GFrac] - dx3_limited;
-        }
-
-        if (has_solvent) {
-            const int sign4 = dwells[0][SFrac] > 0 ? 1: -1;
-            const double dx4_limited = sign4 * std::min(std::abs(dwells[0][SFrac]) * relaxation_factor_fractions, dFLimit);
-            primary_variables_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
-        }
-
-	
-	processFractions();
+	if( FluidSystem::numActivePhases()>1 ){
+	    // update the second and third well variable (The flux fractions)
+	    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+		const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
+		const double dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac] * relaxation_factor_fractions), dFLimit);
+		// primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
+		primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
+	    }
+	    
+	    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+		const int sign3 = dwells[0][GFrac] > 0 ? 1: -1;
+		const double dx3_limited = sign3 * std::min(std::abs(dwells[0][GFrac] * relaxation_factor_fractions), dFLimit);
+		primary_variables_[GFrac] = old_primary_variables[GFrac] - dx3_limited;
+	    }
+	    
+	    if (has_solvent) {
+		const int sign4 = dwells[0][SFrac] > 0 ? 1: -1;
+		const double dx4_limited = sign4 * std::min(std::abs(dwells[0][SFrac]) * relaxation_factor_fractions, dFLimit);
+		primary_variables_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
+	    }
+	    
+	    processFractions();
 	}
 
         // updating the total rates Q_t
@@ -945,7 +944,7 @@ namespace Opm
             primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
         }
 	for(int i=0; i< primary_variables_.size();++i){
-	  assert(Opm::isfinite(primary_variables_[i]));
+	    assert(Opm::isfinite(primary_variables_[i]));
 	}
     }
 
@@ -1044,51 +1043,50 @@ namespace Opm
 
         std::vector<double> F(number_of_phases_, 0.0);
 	if ( FluidSystem::numActivePhases() ==1 ) {
-	  F[0] =1;
-	}else{
-	
-	if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
-	  oil_pos = pu.phase_pos[Oil];
-	  F[oil_pos] = 1.0;
-	}
+	    F[0] =1;
+	}else{	    
+	    if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
+		oil_pos = pu.phase_pos[Oil];
+		F[oil_pos] = 1.0;
+	    }
 
-        if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
-            const int water_pos = pu.phase_pos[Water];
-            F[water_pos] = primary_variables_[WFrac];
-            F[oil_pos] -= F[water_pos];
-        }
+	    if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
+		const int water_pos = pu.phase_pos[Water];
+		F[water_pos] = primary_variables_[WFrac];
+		F[oil_pos] -= F[water_pos];
+	    }
+	    
+	    if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
+		const int gas_pos = pu.phase_pos[Gas];
+		F[gas_pos] = primary_variables_[GFrac];
+		F[oil_pos] -= F[gas_pos];
+	    }
 
-        if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
-            const int gas_pos = pu.phase_pos[Gas];
-            F[gas_pos] = primary_variables_[GFrac];
-            F[oil_pos] -= F[gas_pos];
-        }
+	    double F_solvent = 0.0;
+	    if (has_solvent) {
+		F_solvent = primary_variables_[SFrac];
+		F[oil_pos] -= F_solvent;
+	    }
 
-        double F_solvent = 0.0;
-        if (has_solvent) {
-            F_solvent = primary_variables_[SFrac];
-            F[oil_pos] -= F_solvent;
-        }
+	    // convert the fractions to be Q_p / G_total to calculate the phase rates
+	    for (int p = 0; p < number_of_phases_; ++p) {
+		const double scal = scalingFactor(p);
+		// for injection wells, there should only one non-zero scaling factor
+		if (scal > 0) {
+		    F[p] /= scal ;
+		} else {
+		    // this should only happens to injection wells
+		    F[p] = 0.;
+		}
+	    }
 
-        // convert the fractions to be Q_p / G_total to calculate the phase rates
-        for (int p = 0; p < number_of_phases_; ++p) {
-            const double scal = scalingFactor(p);
-            // for injection wells, there should only one non-zero scaling factor
-            if (scal > 0) {
-                F[p] /= scal ;
-            } else {
-                // this should only happens to injection wells
-                F[p] = 0.;
-            }
-        }
-
-        // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
-        // More testing is needed to make sure this is correct for well groups and THP.
-        if (has_solvent){
-            F_solvent /= scalingFactor(contiSolventEqIdx);
-            F[pu.phase_pos[Gas]] += F_solvent;
-        }
-
+	    // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
+	    // More testing is needed to make sure this is correct for well groups and THP.
+	    if (has_solvent){
+		F_solvent /= scalingFactor(contiSolventEqIdx);
+		F[pu.phase_pos[Gas]] += F_solvent;
+	    }
+	    
 	}
         well_state.bhp()[index_of_well_] = primary_variables_[Bhp];
 
@@ -1260,7 +1258,7 @@ namespace Opm
             break;
         } // end of switch
 	for(int i=0; i< primary_variables_.size();++i){
-	  assert(Opm::isfinite(primary_variables_[i]));
+	    assert(Opm::isfinite(primary_variables_[i]));
 	}
     }
 
@@ -2439,60 +2437,60 @@ namespace Opm
         const double* distr = well_controls_get_current_distr(wc);
         const auto pu = phaseUsage();
 
-	if(FluidSystem::numActivePhases()>1){
-        if(std::abs(total_well_rate) > 0.) {
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / total_well_rate;
-            }
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]] - well_state.solventWellRate(well_index)) / total_well_rate ;
-            }
-            if (has_solvent) {
-                primary_variables_[SFrac] = scalingFactor(pu.phase_pos[Gas]) * well_state.solventWellRate(well_index) / total_well_rate ;
-            }
-        } else { // total_well_rate == 0
-            if (well_type_ == INJECTOR) {
-                // only single phase injection handled
-                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    if (distr[Water] > 0.0) {
-                        primary_variables_[WFrac] = 1.0;
-                    } else {
-                        primary_variables_[WFrac] = 0.0;
-                    }
-                }
-
-                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    if (distr[pu.phase_pos[Gas]] > 0.0) {
-                        primary_variables_[GFrac] = 1.0 - wsolvent();
-                        if (has_solvent) {
-                            primary_variables_[SFrac] = wsolvent();
-                        }
-                    } else {
-                        primary_variables_[GFrac] = 0.0;
-                    }
-                }
-
-                // TODO: it is possible to leave injector as a oil well,
-                // when F_w and F_g both equals to zero, not sure under what kind of circumstance
-                // this will happen.
-            } else if (well_type_ == PRODUCER) { // producers
-                // TODO: the following are not addressed for the solvent case yet
-                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    primary_variables_[WFrac] = 1.0 / np;
-                }
-                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    primary_variables_[GFrac] = 1.0 / np;
-                }
-            } else {
-                OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well", deferred_logger);
-            }
-        }
+	if( FluidSystem::numActivePhases()>1 ){
+	    if(std::abs(total_well_rate) > 0.) {
+		if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+		    primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / total_well_rate;
+		}
+		if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+		    primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]] - well_state.solventWellRate(well_index)) / total_well_rate ;
+		}
+		if (has_solvent) {
+		    primary_variables_[SFrac] = scalingFactor(pu.phase_pos[Gas]) * well_state.solventWellRate(well_index) / total_well_rate ;
+		}
+	    } else { // total_well_rate == 0
+		if (well_type_ == INJECTOR) {
+		    // only single phase injection handled
+		    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+			if (distr[Water] > 0.0) {
+			    primary_variables_[WFrac] = 1.0;
+			} else {
+			    primary_variables_[WFrac] = 0.0;
+			}
+		    }
+		    
+		    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+			if (distr[pu.phase_pos[Gas]] > 0.0) {
+			    primary_variables_[GFrac] = 1.0 - wsolvent();
+			    if (has_solvent) {
+				primary_variables_[SFrac] = wsolvent();
+			    }
+			} else {
+			    primary_variables_[GFrac] = 0.0;
+			}
+		    }
+		    
+		    // TODO: it is possible to leave injector as a oil well,
+		    // when F_w and F_g both equals to zero, not sure under what kind of circumstance
+		    // this will happen.
+		} else if (well_type_ == PRODUCER) { // producers
+		    // TODO: the following are not addressed for the solvent case yet
+		    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+			primary_variables_[WFrac] = 1.0 / np;
+		    }
+		    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+			primary_variables_[GFrac] = 1.0 / np;
+		    }
+		} else {
+		    OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well", deferred_logger);
+		}
+	    }
 	}
 
         // BHP
         primary_variables_[Bhp] = well_state.bhp()[index_of_well_];
 	for(int i=0; i< primary_variables_.size();++i){
-	  assert(Opm::isfinite(primary_variables_[i]));
+	    assert(Opm::isfinite(primary_variables_[i]));
 	}
     }
 
@@ -2741,30 +2739,32 @@ namespace Opm
         // 0.95 is a experimental value, which remains to be optimized
         double relaxation_factor = 1.0;
 
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && (FluidSystem::numActivePhases() > 1)) {
-            const double relaxation_factor_w = relaxationFactorFraction(primary_variables[WFrac], dwells[0][WFrac]);
-            relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
-        }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            const double relaxation_factor_g = relaxationFactorFraction(primary_variables[GFrac], dwells[0][GFrac]);
-            relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
-        }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            // We need to make sure the even with the relaxation_factor, the sum of F_w and F_g is below one, so there will
-            // not be negative oil fraction later
-            const double original_sum = primary_variables[WFrac] + primary_variables[GFrac];
-            const double relaxed_update = (dwells[0][WFrac] + dwells[0][GFrac]) * relaxation_factor;
-            const double possible_updated_sum = original_sum - relaxed_update;
-
-            if (possible_updated_sum > 1.0) {
-                assert(relaxed_update != 0.);
-
-                const double further_relaxation_factor = std::abs((1. - original_sum) / relaxed_update) * 0.95;
-                relaxation_factor *= further_relaxation_factor;
-            }
-        }
+	if( FluidSystem::numActivePhases() > 1){
+	    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
+		const double relaxation_factor_w = relaxationFactorFraction(primary_variables[WFrac], dwells[0][WFrac]);
+		relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
+	    }
+	    
+	    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+		const double relaxation_factor_g = relaxationFactorFraction(primary_variables[GFrac], dwells[0][GFrac]);
+		relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
+	    }
+	    
+	    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+		// We need to make sure the even with the relaxation_factor, the sum of F_w and F_g is below one, so there will
+		// not be negative oil fraction later
+		const double original_sum = primary_variables[WFrac] + primary_variables[GFrac];
+		const double relaxed_update = (dwells[0][WFrac] + dwells[0][GFrac]) * relaxation_factor;
+		const double possible_updated_sum = original_sum - relaxed_update;
+		
+		if (possible_updated_sum > 1.0) {
+		    assert(relaxed_update != 0.);
+		    
+		    const double further_relaxation_factor = std::abs((1. - original_sum) / relaxed_update) * 0.95;
+		    relaxation_factor *= further_relaxation_factor;
+		}
+	    }
+	}
 
         assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
 

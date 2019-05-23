@@ -258,13 +258,13 @@ namespace Opm {
 	    // exept for value
 	    double perf_pressure=0.0;
 	    if(Indices::oilEnabled){  
-	      perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
+		perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
 	    }else{
-	      if(Indices::waterEnabled){
-		perf_pressure = fs.pressure(FluidSystem::waterPhaseIdx).value();
-	      }else{
-		perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
-	      }
+		if(Indices::waterEnabled){
+		    perf_pressure = fs.pressure(FluidSystem::waterPhaseIdx).value();
+		}else{
+		    perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
+		}
 	    }
             cellPressures[cellIdx] = perf_pressure;
         }
