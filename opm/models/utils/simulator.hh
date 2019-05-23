@@ -401,10 +401,7 @@ public:
      */
     void setTimeStepSize(Scalar value)
     {
-        if( not(value>0)){
-            std::cout << "Time step set to zero" << std::endl;
-        }
-        timeStepSize_ = value;
+         timeStepSize_ = value;
     }
 
     /*!
@@ -448,7 +445,7 @@ public:
      */
     bool finished() const
     {
-        assert(timeStepSize_ > 0.0);
+        assert(timeStepSize_ >= 0.0);
         Scalar eps =
             std::max(Scalar(std::abs(this->time())), timeStepSize())
             *std::numeric_limits<Scalar>::epsilon()*1e3;
@@ -765,7 +762,7 @@ public:
                 else
                     // ask the problem to provide the next time step size
                     dt = std::min(maxTimeStepSize(), problem_->nextTimeStepSize());
-
+                assert(dt>0);
                 setTimeStepSize(dt);
             }
             prePostProcessTimer_.stop();

@@ -140,6 +140,7 @@ public:
         {
             if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg)
                 // -> threephase case
+                assert( not(priVars.primaryVarsMeaning() == PrimaryVariables::px) )
                 Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
             else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
                 // -> gas-water case
@@ -206,7 +207,6 @@ public:
         asImp_().solventPostSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
 
         Evaluation SoMax=0;
-        //const Evaluation&
         if(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
             SoMax =
                 Opm::max(fluidState_.saturation(oilPhaseIdx),
@@ -266,11 +266,9 @@ public:
                 fluidState_.setRv(0.0);
         }
         else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
-            //assert(priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv);
-
             const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
             fluidState_.setRv(Rv);
-
+            
             if (FluidSystem::enableDissolvedGas()) {
                 // the oil phase is not present, but we need to compute its "composition" for
                 // the gravity correction anyway
@@ -280,12 +278,12 @@ public:
                                                             oilPhaseIdx,
                                                             pvtRegionIdx,
                                                             SoMax);
-
+                
                 fluidState_.setRs(Opm::min(RsMax, RsSat));
-            }
-            else
+            } else {
                 fluidState_.setRs(0.0);
-        }else{
+            }
+        } else {
             assert(priVars.primaryVarsMeaning() == PrimaryVariables::px);
         }
 
@@ -353,12 +351,10 @@ public:
             Evaluation x;
             if(FluidSystem::phaseIsActive(oilPhaseIdx)){
                 x = rockCompressibility*(fluidState_.pressure(oilPhaseIdx) - rockRefPressure);
+            }else if( FluidSystem::phaseIsActive(waterPhaseIdx) ){
+                x = rockCompressibility*(fluidState_.pressure(waterPhaseIdx) - rockRefPressure);
             }else{
-                if(FluidSystem::phaseIsActive(waterPhaseIdx)){
-                    x = rockCompressibility*(fluidState_.pressure(waterPhaseIdx) - rockRefPressure);
-                }else{
-                    x = rockCompressibility*(fluidState_.pressure(gasPhaseIdx) - rockRefPressure);
-                }
+                x = rockCompressibility*(fluidState_.pressure(gasPhaseIdx) - rockRefPressure);
             }
             porosity_ *= 1.0 + x + 0.5*x*x;
         }

@@ -37,13 +37,13 @@ namespace Ewoms {
  *
  * \brief The primary variable and equation indices for the black-oil model.
  */
-template <unsigned numSolventsV, unsigned numPolymersV, unsigned numEnergyV, unsigned PVOffset, unsigned enableCanonicalCompIdx>
+template <unsigned numSolventsV, unsigned numPolymersV, unsigned numEnergyV, unsigned PVOffset, unsigned canonicalCompIdx>
 struct BlackOilOnePhaseIndices
 {
     //! Is phase enabled or not
-    static const bool oilEnabled = (enableCanonicalCompIdx == 0);
-    static const bool waterEnabled = (enableCanonicalCompIdx == 1);
-    static const bool gasEnabled = (enableCanonicalCompIdx == 2);
+    static const bool oilEnabled = (canonicalCompIdx == 0);
+    static const bool waterEnabled = (canonicalCompIdx == 1);
+    static const bool gasEnabled = (canonicalCompIdx == 2);
 
     //! Are solvents involved?
     static const bool enableSolvent = numSolventsV > 0;
@@ -116,7 +116,7 @@ struct BlackOilOnePhaseIndices
     static unsigned activeToCanonicalComponentIndex(unsigned compIdx)
     {
         // assumes canonical oil = 0, water = 1, gas = 2;
-        assert(compIdx < 2);
+        assert(compIdx == 0);
         if(gasEnabled) {
             return 2;
         } else if (waterEnabled) {
