@@ -293,7 +293,7 @@ int main(int argc, char** argv)
             std::cerr << "Failed to create valid EclipseState object." << std::endl;
             std::cerr << "Exception caught: " << e.what() << std::endl;
         }
-        throw;
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;
