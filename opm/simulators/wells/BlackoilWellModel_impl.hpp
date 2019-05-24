@@ -681,17 +681,17 @@ namespace Opm {
 
         int exception_thrown = 0;
         try {
-            std::vector< Scalar > B_avg(numComponents(), Scalar() );
-            computeAverageFormationFactor(B_avg);
-
             if (iterationIdx == 0) {
                 calculateExplicitQuantities(local_deferredLogger);
-                prepareTimeStep(B_avg, local_deferredLogger);
+                prepareTimeStep(local_deferredLogger);
             }
 
-            updateWellControls(B_avg, local_deferredLogger);
+            updateWellControls(local_deferredLogger);
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
+
+            std::vector< Scalar > B_avg(numComponents(), Scalar() );
+            computeAverageFormationFactor(B_avg);
 
             if (param_.solve_welleq_initially_ && iterationIdx == 0) {
                 // solve the well equations as a pre-processing step
@@ -701,7 +701,7 @@ namespace Opm {
                 if (initial_step_) {
                     // update the explicit quantities to get the initial fluid distribution in the well correct.
                     calculateExplicitQuantities(local_deferredLogger);
-                    prepareTimeStep(B_avg, local_deferredLogger);
+                    prepareTimeStep(local_deferredLogger);
                     last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
                     initial_step_ = false;
                 }
@@ -923,7 +923,7 @@ namespace Opm {
                 // are active wells anywhere in the global domain.
                 if( wellsActive() )
                 {
-                    updateWellControls(B_avg, deferred_logger);
+                    updateWellControls(deferred_logger);
                     initPrimaryVariablesEvaluation();
                 }
             } catch (std::exception& e) {
@@ -1027,8 +1027,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateWellControls(const std::vector<Scalar>& B_avg,
-                       Opm::DeferredLogger& deferred_logger)
+    updateWellControls(Opm::DeferredLogger& deferred_logger)
     {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
@@ -1036,10 +1035,10 @@ namespace Opm {
         if( !wellsActive() ) return ;
 
         for (const auto& well : well_container_) {
-            well->updateWellControl(ebosSimulator_, B_avg, well_state_, deferred_logger);
+            well->updateWellControl(ebosSimulator_, well_state_, deferred_logger);
         }
 
-        updateGroupControls(B_avg, deferred_logger);
+        updateGroupControls(deferred_logger);
 
     }
 
@@ -1171,8 +1170,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    prepareTimeStep(const std::vector<Scalar>& B_avg,
-                    Opm::DeferredLogger& deferred_logger)
+    prepareTimeStep(Opm::DeferredLogger& deferred_logger)
     {
 
         if ( wellCollection().havingVREPGroups() ) {
@@ -1193,7 +1191,7 @@ namespace Opm {
         int exception_thrown = 0;
         try {
             for (const auto& well : well_container_) {
-                well->checkWellOperability(ebosSimulator_, B_avg, well_state_, deferred_logger);
+                well->checkWellOperability(ebosSimulator_, well_state_, deferred_logger);
             }
             // since the controls are all updated, we should update well_state accordingly
             for (const auto& well : well_container_) {
@@ -1205,7 +1203,7 @@ namespace Opm {
                 if (!well->isOperable() ) continue;
 
                 if (well_state_.effectiveEventsOccurred(w) ) {
-                        well->updateWellStateWithTarget(ebosSimulator_, B_avg, well_state_, deferred_logger);
+                        well->updateWellStateWithTarget(ebosSimulator_, well_state_, deferred_logger);
                 }
 
                 // there is no new well control change input within a report step,
@@ -1433,8 +1431,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateGroupControls(const std::vector<Scalar>& B_avg,
-                        Opm::DeferredLogger& deferred_logger)
+    updateGroupControls(Opm::DeferredLogger& deferred_logger)
     {
 
         if (wellCollection().groupControlActive()) {
@@ -1461,7 +1458,7 @@ namespace Opm {
 
             // TODO: we should only do the well is involved in the update group targets
             for (auto& well : well_container_) {
-                well->updateWellStateWithTarget(ebosSimulator_, B_avg, well_state_, deferred_logger);
+                well->updateWellStateWithTarget(ebosSimulator_, well_state_, deferred_logger);
                 well->updatePrimaryVariables(well_state_, deferred_logger);
             }
         }

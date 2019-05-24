@@ -337,11 +337,9 @@ namespace Opm {
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
-            void updateWellControls(const std::vector<Scalar>& B_avg,
-                                    Opm::DeferredLogger& deferred_logger);
+            void updateWellControls(Opm::DeferredLogger& deferred_logger);
 
-            void updateGroupControls(const std::vector<Scalar>& B_avg,
-                                     Opm::DeferredLogger& deferred_logger);
+            void updateGroupControls(Opm::DeferredLogger& deferred_logger);
 
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(Opm::DeferredLogger& deferred_logger);
@@ -389,8 +387,7 @@ namespace Opm {
 
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
-            void prepareTimeStep(const std::vector<Scalar>& B_avg,
-                                 Opm::DeferredLogger& deferred_logger);
+            void prepareTimeStep(Opm::DeferredLogger& deferred_logger);
 
             void prepareGroupControl(Opm::DeferredLogger& deferred_logger);
 

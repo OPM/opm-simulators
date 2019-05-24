@@ -188,12 +188,10 @@ namespace Opm
                                            Opm::DeferredLogger& deferred_logger) = 0;
 
         virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
-                                               const std::vector<Scalar>& B_avg,
                                                WellState& well_state,
-                                               Opm::DeferredLogger& deferred_logger) = 0;
+                                               Opm::DeferredLogger& deferred_logger) const = 0;
 
         void updateWellControl(const Simulator& ebos_simulator,
-                               const std::vector<Scalar>& B_avg,
                                WellState& well_state,
                                Opm::DeferredLogger& deferred_logger) /* const */;
 
@@ -246,10 +244,7 @@ namespace Opm
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
-        virtual void checkWellOperability(const Simulator& ebos_simulator,
-                                          const std::vector<Scalar>& B_avg,
-                                          const WellState& well_state,
-                                          Opm::DeferredLogger& deferred_logger) = 0;
+        virtual void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state, Opm::DeferredLogger& deferred_logger) = 0;
 
         // whether the well is operable
         bool isOperable() const;
@@ -421,14 +416,6 @@ namespace Opm
                                        Opm::DeferredLogger& deferred_logger);
 
         void scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger);
-
-        virtual void computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                                             const std::vector<Scalar>& B_avg,
-                                             const double& bhp,
-                                             const bool iterate,
-                                             std::vector<double>& well_flux,
-                                             Opm::DeferredLogger& deferred_logger) = 0;
-
 
         // count the number of times an output log message is created in the productivity
         // index calculations

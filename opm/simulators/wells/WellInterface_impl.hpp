@@ -426,7 +426,6 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     updateWellControl(const Simulator& ebos_simulator,
-                      const std::vector<Scalar>& B_avg,
                       WellState& well_state,
                       Opm::DeferredLogger& deferred_logger) /* const */
     {
@@ -505,7 +504,7 @@ namespace Opm
         }
 
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
-            updateWellStateWithTarget(ebos_simulator, B_avg, well_state, deferred_logger);
+            updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
         }
     }
@@ -1190,7 +1189,7 @@ namespace Opm
             ++it;
             solveEqAndUpdateWellState(well_state, deferred_logger);
 
-            updateWellControl(ebosSimulator, B_avg, well_state, deferred_logger);
+            updateWellControl(ebosSimulator, well_state, deferred_logger);
             initPrimaryVariablesEvaluation();
         } while (it < max_iter);
 

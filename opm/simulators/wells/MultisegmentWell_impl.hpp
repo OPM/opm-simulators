@@ -260,9 +260,8 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     updateWellStateWithTarget(const Simulator& /* ebos_simulator */,
-                              const std::vector<Scalar>& B_avg,
                               WellState& well_state,
-                              Opm::DeferredLogger& /* deferred_logger */)
+                              Opm::DeferredLogger& /* deferred_logger */) const
     {
         // Updating well state bas on well control
         // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
@@ -564,7 +563,7 @@ namespace Opm
         if ( !Base::wellHasTHPConstraints() ) {
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
 
-            computeWellRatesWithBhp(ebosSimulator, B_avg, bhp, /*iterate=*/ true, well_potentials, deferred_logger);
+            computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
         } else {
 
             const std::string msg = std::string("Well potential calculation is not supported for thp controlled multisegment wells \n")
@@ -582,23 +581,29 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                            const std::vector<Scalar>& B_avg,
-                            const double& bhp,
-                            const bool iterate,
-                            std::vector<double>& well_flux,
-                            Opm::DeferredLogger& deferred_logger)
+    computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
+                                     const std::vector<Scalar>& B_avg,
+                                     const double& bhp,
+                                     std::vector<double>& well_flux,
+                                     Opm::DeferredLogger& deferred_logger)
     {
+
+        WellControls* wc = well_controls_;
+        const int bhp_index = Base::getControlIndex(BHP);
+        const double orig_bhp = well_controls_iget_target(wc, bhp_index);
+        const auto orig_current = well_controls_get_current(wc);
+
+        well_controls_iset_target(wc, bhp_index, bhp);
+        well_controls_set_current(wc, bhp_index);
+
         // store a copy of the well state, we don't want to update the real well state
         WellState copy = ebosSimulator.problem().wellModel().wellState();
 
         initPrimaryVariablesEvaluation();
 
-        if (iterate) {
-            const double dt = ebosSimulator.timeStepSize();
-            // iterate to get a solution that satisfies the bhp potential.
-            iterateWellEquations(ebosSimulator, B_avg, dt, copy, deferred_logger);
-        }
+        const double dt = ebosSimulator.timeStepSize();
+        // iterate to get a solution that satisfies the bhp potential.
+        iterateWellEquations(ebosSimulator, B_avg, dt, copy, deferred_logger);
 
         // compute the potential and store in the flux vector.
         const int np = number_of_phases_;
@@ -607,6 +612,10 @@ namespace Opm
             const EvalWell rate = getSegmentRate(0, compIdx);
             well_flux[ebosCompIdxToFlowCompIdx(compIdx)] += rate.value();
         }
+
+        // reset bhp limit
+        well_controls_iset_target(wc, bhp_index, orig_bhp);
+        well_controls_set_current(wc, orig_current);
 
     }
 
@@ -1748,7 +1757,6 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     checkWellOperability(const Simulator& /* ebos_simulator */,
-                         const std::vector<Scalar>& /*B_avg */,
                          const WellState& /* well_state */,
                          Opm::DeferredLogger& deferred_logger)
     {
@@ -1905,7 +1913,7 @@ namespace Opm
             updateWellState(dx_well, well_state, deferred_logger, relaxation_factor);
 
             // TODO: should we do something more if a switching of control happens
-            this->updateWellControl(ebosSimulator, B_avg, well_state, deferred_logger);
+            this->updateWellControl(ebosSimulator, well_state, deferred_logger);
 
             initPrimaryVariablesEvaluation();
         }

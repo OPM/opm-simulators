@@ -120,9 +120,8 @@ namespace Opm
 
         /// updating the well state based the current control mode
         virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
-                                               const std::vector<Scalar>& B_avg,
                                                WellState& well_state,
-                                               Opm::DeferredLogger& deferred_logger) override;
+                                               Opm::DeferredLogger& deferred_logger) const override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger) const override;
@@ -331,12 +330,11 @@ namespace Opm
                          const int perf,
                          std::vector<EvalWell>& mob) const;
 
-        virtual void computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                                             const std::vector<Scalar>& B_avg,
-                                             const double& bhp,
-                                             const bool iterate,
-                                             std::vector<double>& well_flux,
-                                             Opm::DeferredLogger& deferred_logger) override;
+        void computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
+                                              const std::vector<Scalar>& B_avg,
+                                              const double& bhp,
+                                              std::vector<double>& well_flux,
+                                              Opm::DeferredLogger& deferred_logger);
 
         void assembleControlEq(Opm::DeferredLogger& deferred_logger) const;
 
@@ -356,7 +354,6 @@ namespace Opm
         // checking the operability of the well based on current reservoir condition
         // it is not implemented for multisegment well yet
         virtual void checkWellOperability(const Simulator& ebos_simulator,
-                                          const std::vector<Scalar>& B_avg,
                                           const WellState& well_state,
                                           Opm::DeferredLogger& deferred_logger) override;
 
