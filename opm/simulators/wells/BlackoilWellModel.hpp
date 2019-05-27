@@ -281,7 +281,7 @@ namespace Opm {
             std::vector<bool> is_cell_perforated_;
 
             // create the well container
-            std::vector<WellInterfacePtr > createWellContainer(const int time_step, Opm::DeferredLogger& deferred_logger);
+            std::vector<WellInterfacePtr > createWellContainer(const int time_step, const Wells* wells, const bool allow_closing_opening_wells, Opm::DeferredLogger& deferred_logger);
 
             WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, Opm::DeferredLogger& deferred_logger) const;
 

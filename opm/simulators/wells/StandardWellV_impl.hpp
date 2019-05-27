@@ -1478,7 +1478,7 @@ namespace Opm
                 // option 2: stick with the above IPR curve
                 // we use IPR here
                 std::vector<double> well_rates_bhp_limit;
-                computeWellRatesWithBhp(ebos_simulator, EvalWell(numWellEq_ + numEq, bhp_limit), well_rates_bhp_limit, deferred_logger);
+                computeWellRatesWithBhp(ebos_simulator, bhp_limit, well_rates_bhp_limit, deferred_logger);
 
                 const double thp = calculateThpFromBhp(well_rates_bhp_limit, bhp_limit, deferred_logger);
                 const double thp_limit = this->getTHPConstraint(deferred_logger);
@@ -1667,7 +1667,7 @@ namespace Opm
         initPrimaryVariablesEvaluation();
 
         std::vector<double> rates;
-        computeWellRatesWithBhp(ebos_simulator, EvalWell(numWellEq_ + numEq, bhp), rates, deferred_logger);
+        computeWellRatesWithBhp(ebos_simulator, bhp, rates, deferred_logger);
 
         // TODO: double checke the obtained rates
         // this is another places we might obtain negative rates
@@ -1690,7 +1690,7 @@ namespace Opm
     calculateBHPWithTHPTargetIPR(Opm::DeferredLogger& deferred_logger) const
     {
         const double thp_target = this->getTHPConstraint(deferred_logger);
-        const double thp_control_index = this->getTHPControlIndex();
+        const double thp_control_index = this->getControlIndex(THP);
         const  int thp_table_id = well_controls_iget_vfp(well_controls_, thp_control_index);
         const double alq = well_controls_iget_alq(well_controls_, thp_control_index);
 
@@ -2263,10 +2263,11 @@ namespace Opm
     void
     StandardWellV<TypeTag>::
     computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                            const EvalWell& bhp,
+                            const double& bhp,
                             std::vector<double>& well_flux,
                             Opm::DeferredLogger& deferred_logger) const
     {
+
         const int np = number_of_phases_;
         well_flux.resize(np, 0.0);
 
@@ -2278,11 +2279,13 @@ namespace Opm
             // flux for each perforation
             std::vector<EvalWell> mob(num_components_, {numWellEq_ + numEq, 0.});
             getMobility(ebosSimulator, perf, mob, deferred_logger);
+            //double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
+            //const double Tw = well_index_[perf] * trans_mult;
 
             std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.});
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            computePerfRate(intQuants, mob, bhp, perf, allow_cf,
+            computePerfRate(intQuants, mob, EvalWell(numWellEq_ + numEq, bhp), perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
             for(int p = 0; p < np; ++p) {
@@ -2293,15 +2296,60 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
+    void
+    StandardWellV<TypeTag>::
+    computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
+                            const std::vector<Scalar>& B_avg,
+                            const double& bhp,
+                            std::vector<double>& well_flux,
+                            Opm::DeferredLogger& deferred_logger)
+    {
+
+        WellControls* wc = well_controls_;
+        const int bhp_index = Base::getControlIndex(BHP);
+        const double orig_bhp = well_controls_iget_target(wc, bhp_index);
+        const auto orig_current = well_controls_get_current(wc);
+
+        well_controls_iset_target(wc, bhp_index, bhp);
+        well_controls_set_current(wc, bhp_index);
+
+        // iterate to get a more accurate well density
+        // create a copy of the well_state to use. If the operability checking is sucessful, we use this one
+        // to replace the original one
+        WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
+        well_state_copy.currentControls()[index_of_well_] = bhp_index;
+
+        bool converged = this->solveWellEqUntilConverged(ebosSimulator, B_avg, well_state_copy, deferred_logger);
+
+        if (!converged) {
+            const std::string msg = " well " + name() + " did not get converged during well potential calculations "
+                                                        "returning zero values for the potential";
+            deferred_logger.debug(msg);
+            return;
+        }
+        updatePrimaryVariables(well_state_copy, deferred_logger);
+        computeWellConnectionPressures(ebosSimulator, well_state_copy);
+        initPrimaryVariablesEvaluation();
+
+
+        computeWellRatesWithBhp(ebosSimulator, bhp, well_flux, deferred_logger);
+
+        // reset bhp limit
+        well_controls_iset_target(wc, bhp_index, orig_bhp);
+        well_controls_set_current(wc, orig_current);
+    }
+
 
 
     template<typename TypeTag>
     std::vector<double>
     StandardWellV<TypeTag>::
     computeWellPotentialWithTHP(const Simulator& ebosSimulator,
+                                const std::vector<Scalar>& B_avg,
                                 const double initial_bhp, // bhp from BHP constraints
                                 const std::vector<double>& initial_potential,
-                                Opm::DeferredLogger& deferred_logger) const
+                                Opm::DeferredLogger& deferred_logger)
     {
         // TODO: pay attention to the situation that finally the potential is calculated based on the bhp control
         // TODO: should we consider the bhp constraints during the iterative process?
@@ -2365,7 +2413,7 @@ namespace Opm
 
             converged = std::abs(old_bhp - bhp) < bhp_tolerance;
 
-            computeWellRatesWithBhp(ebosSimulator, EvalWell(numWellEq_ + numEq, bhp), potentials, deferred_logger);
+            computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, potentials, deferred_logger);
 
             // checking whether the potentials have valid values
             for (const double value : potentials) {
@@ -2403,6 +2451,7 @@ namespace Opm
     void
     StandardWellV<TypeTag>::
     computeWellPotentials(const Simulator& ebosSimulator,
+                          const std::vector<Scalar>& B_avg,
                           const WellState& well_state,
                           std::vector<double>& well_potentials,
                           Opm::DeferredLogger& deferred_logger) // const
@@ -2424,7 +2473,7 @@ namespace Opm
         if ( !wellHasTHPConstraints() ) {
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
 
-            computeWellRatesWithBhp(ebosSimulator, EvalWell(numWellEq_ + numEq, bhp), well_potentials, deferred_logger);
+            computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
         } else {
             // the well has a THP related constraint
             // checking whether a well is newly added, it only happens at the beginning of the report step
@@ -2436,7 +2485,7 @@ namespace Opm
                 }
             } else {
                 // We need to generate a reasonable rates to start the iteration process
-                computeWellRatesWithBhp(ebosSimulator, EvalWell(numWellEq_ + numEq, bhp), well_potentials, deferred_logger);
+                computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
                 for (double& value : well_potentials) {
                     // make the value a little safer in case the BHP limits are default ones
                     // TODO: a better way should be a better rescaling based on the investigation of the VFP table.
@@ -2445,7 +2494,7 @@ namespace Opm
                 }
             }
 
-            well_potentials = computeWellPotentialWithTHP(ebosSimulator, bhp, well_potentials, deferred_logger);
+            well_potentials = computeWellPotentialWithTHP(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
         }
     }
 
@@ -2861,7 +2910,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWellV<TypeTag>::
-    wellTestingPhysical(Simulator& ebos_simulator, const std::vector<double>& B_avg,
+    wellTestingPhysical(const Simulator& ebos_simulator, const std::vector<double>& B_avg,
                         const double /* simulation_time */ , const int /* report_step */,
                         WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger)
     {

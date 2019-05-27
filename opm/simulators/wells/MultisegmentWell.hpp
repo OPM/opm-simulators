@@ -139,6 +139,7 @@ namespace Opm
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
+                                           const std::vector<Scalar>& B_avg,
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials,
                                            Opm::DeferredLogger& deferred_logger) override;
@@ -305,6 +306,8 @@ namespace Opm
                                      const bool& allow_cf,
                                      std::vector<EvalWell>& cq_s,
                                      EvalWell& perf_press,
+                                     double& perf_dis_gas_rate,
+                                     double& perf_vap_oil_rate,
                                      Opm::DeferredLogger& deferred_logger) const;
 
         // convert a Eval from reservoir to contain the derivative related to wells
@@ -326,6 +329,12 @@ namespace Opm
         void getMobility(const Simulator& ebosSimulator,
                          const int perf,
                          std::vector<EvalWell>& mob) const;
+
+        void computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
+                                              const std::vector<Scalar>& B_avg,
+                                              const double& bhp,
+                                              std::vector<double>& well_flux,
+                                              Opm::DeferredLogger& deferred_logger);
 
         void assembleControlEq(Opm::DeferredLogger& deferred_logger) const;
 
@@ -366,7 +375,7 @@ namespace Opm
                                             WellState& well_state,
                                             Opm::DeferredLogger& deferred_logger);
 
-        virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
+        virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
                                          const double simulation_time, const int report_step,
                                          WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger) override;
 

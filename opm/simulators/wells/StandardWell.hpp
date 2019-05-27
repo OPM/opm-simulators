@@ -168,6 +168,7 @@ namespace Opm
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
+                                           const std::vector<Scalar>& B_avg,
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials,
                                            Opm::DeferredLogger& deferred_logger) /* const */ override;
@@ -327,17 +328,22 @@ namespace Opm
                              double& perf_vap_oil_rate,
                              Opm::DeferredLogger& deferred_logger) const;
 
-        // TODO: maybe we should provide a light version of computePerfRate, which does not include the
-        // calculation of the derivatives
         void computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                                     const EvalWell& bhp,
-                                     std::vector<double>& well_flux,
-                                     Opm::DeferredLogger& deferred_logger) const;
+                                             const double& bhp,
+                                             std::vector<double>& well_flux,
+                                             Opm::DeferredLogger& deferred_logger) const;
+
+        void computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
+                                              const std::vector<Scalar>& B_avg,
+                                              const double& bhp,
+                                              std::vector<double>& well_flux,
+                                              Opm::DeferredLogger& deferred_logger);
 
         std::vector<double> computeWellPotentialWithTHP(const Simulator& ebosSimulator,
+                                                        const std::vector<Scalar>& B_avg,
                                                         const double initial_bhp, // bhp from BHP constraints
                                                         const std::vector<double>& initial_potential,
-                                                        Opm::DeferredLogger& deferred_logger) const;
+                                                        Opm::DeferredLogger& deferred_logger);
 
         template <class ValueType>
         ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const int control_index, Opm::DeferredLogger& deferred_logger) const;
@@ -433,7 +439,7 @@ namespace Opm
         static double relaxationFactorRate(const std::vector<double>& primary_variables,
                                            const BVectorWell& dwells);
 
-        virtual void wellTestingPhysical(Simulator& simulator, const std::vector<double>& B_avg,
+        virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
                                          const double simulation_time, const int report_step,
                                          WellState& well_state, WellTestState& welltest_state,
                                          Opm::DeferredLogger& deferred_logger) override;
