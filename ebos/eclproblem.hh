@@ -671,7 +671,11 @@ public:
         readThermalParameters_();
         transmissibilities_.finishInit();
 
-        readInitialCondition_();
+        const auto& initconfig = eclState.getInitConfig();
+        if (initconfig.restartRequested())
+            readEclRestartSolution_();
+        else
+            readInitialCondition_();
 
         updatePffDofData_();
 
@@ -695,15 +699,18 @@ public:
             checkDeckCompatibility_();
 
         // write the static output files (EGRID, INIT, SMSPEC, etc.)
-        if (enableEclOutput_)
+        if (enableEclOutput_ && !initconfig.restartRequested())
             eclWriter_->writeInit();
 
         simulator.vanguard().releaseGlobalTransmissibilities();
 
         // after finishing the initialization and writing the initial solution, we move
         // to the first "real" episode/report step
-        simulator.startNextEpisode(timeMap.getTimeStepLength(0));
-        simulator.setEpisodeIndex(0);
+        // for restart the episode index and start is already set
+        if (!initconfig.restartRequested()) {
+            simulator.startNextEpisode(timeMap.getTimeStepLength(0));
+            simulator.setEpisodeIndex(0);
+        }
     }
 
     void prefetch(const Element& elem) const
@@ -1461,10 +1468,6 @@ public:
      */
     void initialSolutionApplied()
     {
-        const auto& simulator = this->simulator();
-        const auto& vanguard = simulator.vanguard();
-        const auto& eclState = vanguard.eclState();
-
         // initialize the wells. Note that this needs to be done after initializing the
         // intrinsic permeabilities and the after applying the initial solution because
         // the well model uses these...
@@ -1478,10 +1481,6 @@ public:
         updateCompositionChangeLimits_();
 
         aquiferModel_.initialSolutionApplied();
-
-        const auto& initconfig = eclState.getInitConfig();
-        if (initconfig.restartRequested())
-            readEclRestartSolution_();
     }
 
     /*!
@@ -2440,7 +2439,7 @@ private:
         const auto& eclState = simulator.vanguard().eclState();
         const auto& timeMap = schedule.getTimeMap();
         const auto& initconfig = eclState.getInitConfig();
-        int episodeIdx = initconfig.getRestartStep() - 1;
+        int episodeIdx = initconfig.getRestartStep();
 
         simulator.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
         simulator.setTime(timeMap.getTimePassedUntil(episodeIdx));
@@ -2469,9 +2468,6 @@ private:
             Opm::OpmLog::warning("NO_POLYMW_RESTART", msg);
             polymerMoleWeight_.resize(numElems, 0.0);
         }
-
-        // this is a hack to preserve the initial fluid states
-        auto tmpInitialFs = initialFluidStates_;
 
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
@@ -2529,12 +2525,6 @@ private:
         // 100% correctly for such elements, let's play safe and explicitly synchronize
         // using message passing.
         this->model().syncOverlap();
-
-        // this is a hack to preserve the initial fluid states
-        initialFluidStates_ = tmpInitialFs;
-        // make sure that the stuff which needs to be done at the beginning of an episode
-        // is run.
-        this->beginEpisode();
 
         eclWriter_->endRestart();
     }
@@ -2915,6 +2905,7 @@ private:
 
         if (vanguard.deck().hasKeyword("BC")) {
             nonTrivialBoundaryConditions_ = true;
+
             size_t numCartDof = vanguard.cartesianSize();
             unsigned numElems = vanguard.gridView().size(/*codim=*/0);
             std::vector<int> cartesianToCompressedElemIdx(numCartDof);
@@ -3034,6 +3025,12 @@ private:
                                     (*data)[elemIdx] = true;
                                 }
                             }
+                        }
+                        // TODO: either the real initial solution needs to be computed or read from the restart file
+                        const auto& eclState = simulator.vanguard().eclState();
+                        const auto& initconfig = eclState.getInitConfig();
+                        if (initconfig.restartRequested()) {
+                            throw std::logic_error("restart is not compatible with using free boundary conditions");
                         }
                     } else {
                         throw std::logic_error("invalid type for BC. Use FREE or RATE");

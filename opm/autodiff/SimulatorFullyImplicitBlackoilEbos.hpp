@@ -165,21 +165,6 @@ public:
 
             double suggestedStepSize = -1.0;
             if (isRestart()) {
-                // Set the start time of the simulation
-                const auto& schedule = ebosSimulator_.vanguard().schedule();
-                const auto& eclState = ebosSimulator_.vanguard().eclState();
-                const auto& timeMap = schedule.getTimeMap();
-                const auto& initconfig = eclState.getInitConfig();
-                int episodeIdx = initconfig.getRestartStep() - 1;
-
-                ebosSimulator_.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
-                ebosSimulator_.setTime(timeMap.getTimePassedUntil(episodeIdx));
-
-                ebosSimulator_.startNextEpisode(ebosSimulator_.startTime() + ebosSimulator_.time(),
-                                                timeMap.getTimeStepLength(episodeIdx));
-                ebosSimulator_.setEpisodeIndex(episodeIdx);
-
-
                 // This is a restart, determine the time step size from the restart data
                 if (restartValues->hasExtra("OPMEXTRA")) {
                     std::vector<double> opmextra = restartValues->getExtra("OPMEXTRA");
@@ -201,6 +186,20 @@ public:
         SimulatorReport stepReport;
 
         if (isRestart()) {
+            // Set the start time of the simulation
+            const auto& schedule = ebosSimulator_.vanguard().schedule();
+            const auto& eclState = ebosSimulator_.vanguard().eclState();
+            const auto& timeMap = schedule.getTimeMap();
+            const auto& initconfig = eclState.getInitConfig();
+            int episodeIdx = initconfig.getRestartStep() - 1;
+
+            ebosSimulator_.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
+            ebosSimulator_.setTime(timeMap.getTimePassedUntil(episodeIdx));
+
+            ebosSimulator_.startNextEpisode(ebosSimulator_.startTime() + ebosSimulator_.time(),
+                                            timeMap.getTimeStepLength(episodeIdx));
+            ebosSimulator_.setEpisodeIndex(episodeIdx);
+            wellModel_().beginEpisode();
             wellModel_().initFromRestartFile(*restartValues);
         }
 
