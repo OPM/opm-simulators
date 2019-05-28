@@ -43,11 +43,11 @@ namespace Dune
 // must be broken, accomplished by forward-declaration here.
 template <class OperatorType, class VectorType>
 std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
-makePreconditioner(OperatorType& linearoperator, const boost::property_tree::ptree& prm);
+makePreconditioner(const OperatorType& linearoperator, const boost::property_tree::ptree& prm);
 
 template <class OperatorType, class VectorType, class Comm>
 std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
-makePreconditioner(OperatorType& linearoperator, const boost::property_tree::ptree& prm, const Comm& comm);
+makePreconditioner(const OperatorType& linearoperator, const boost::property_tree::ptree& prm, const Comm& comm);
 
 
 // Must forward-declare FlexibleSolver as we want to use it as solver for the pressure system.
@@ -64,7 +64,7 @@ public:
     using pt = boost::property_tree::ptree;
     using MatrixType = typename OperatorType::matrix_type;
 
-    OwningTwoLevelPreconditioner(OperatorType& linearoperator, pt& prm)
+    OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm)
         : linear_operator_(linearoperator)
         , finesmoother_(makePreconditioner<OperatorType, VectorType>(linearoperator, prm.get_child("finesmoother")))
         , comm_(nullptr)
@@ -89,7 +89,7 @@ public:
         }
     }
 
-    OwningTwoLevelPreconditioner(OperatorType& linearoperator, pt& prm, const Communication& comm)
+    OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm, const Communication& comm)
         : linear_operator_(linearoperator)
         , finesmoother_(makePreconditioner<OperatorType, VectorType, Communication>(
               linearoperator, prm.get_child("finesmoother"), comm))
@@ -176,7 +176,7 @@ private:
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
     }
 
-    OperatorType& linear_operator_;
+    const OperatorType& linear_operator_;
     std::shared_ptr<Dune::Preconditioner<VectorType, VectorType>> finesmoother_;
     const Communication* comm_;
     VectorType weights_;

@@ -40,16 +40,20 @@ std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
 makeSeqPreconditioner(const OperatorType& linearoperator, const boost::property_tree::ptree& prm)
 {
     using MatrixType = typename OperatorType::matrix_type;
-    auto& matrix = linearoperator.getmat();
-    double w = prm.get<double>("w");
-    int n = prm.get<int>("n");
-    std::string precond(prm.get<std::string>("preconditioner"));
+    const MatrixType& matrix = linearoperator.getmat();
+    const double w = prm.get<double>("relaxation"); // Used by all the preconditioners.
+    const std::string& precond(prm.get<std::string>("type"));
     if (precond == "ILU0") {
         return wrapPreconditioner<Dune::SeqILU0<MatrixType, VectorType, VectorType>>(matrix, w);
     } else if (precond == "ParOverILU0") {
         return wrapPreconditioner<Opm::ParallelOverlappingILU0<MatrixType, VectorType, VectorType>>(
-            matrix, n, w, Opm::MILU_VARIANT::ILU);
-    } else if (precond == "Jac") {
+            matrix, 0, w, Opm::MILU_VARIANT::ILU);
+    } else if (precond == "ILUn") {
+        const int n = prm.get<int>("ilulevel");
+        return wrapPreconditioner<Dune::SeqILUn<MatrixType, VectorType, VectorType>>(matrix, n, w);
+    }
+    const int n = prm.get<int>("repeats");
+    if (precond == "Jac") {
         return wrapPreconditioner<Dune::SeqJac<MatrixType, VectorType, VectorType>>(matrix, n, w);
     } else if (precond == "GS") {
         return wrapPreconditioner<Dune::SeqGS<MatrixType, VectorType, VectorType>>(matrix, n, w);
@@ -57,8 +61,6 @@ makeSeqPreconditioner(const OperatorType& linearoperator, const boost::property_
         return wrapPreconditioner<Dune::SeqSOR<MatrixType, VectorType, VectorType>>(matrix, n, w);
     } else if (precond == "SSOR") {
         return wrapPreconditioner<Dune::SeqSSOR<MatrixType, VectorType, VectorType>>(matrix, n, w);
-    } else if (precond == "ILUn") {
-        return wrapPreconditioner<Dune::SeqILUn<MatrixType, VectorType, VectorType>>(matrix, n, w);
     } else {
         std::string msg("No such preconditioner : ");
         msg += precond;
@@ -70,11 +72,10 @@ template <class OperatorType, class VectorType, class Comm>
 std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
 makeParPreconditioner(const OperatorType& linearoperator, const boost::property_tree::ptree& prm, const Comm& comm)
 {
-    auto& matrix = linearoperator.getmat();
     using MatrixType = typename OperatorType::matrix_type;
-    double w = prm.get<double>("w");
-    int n = prm.get<int>("n");
-    std::string precond(prm.get<std::string>("preconditioner"));
+    const MatrixType& matrix = linearoperator.getmat();
+    const double w = prm.get<double>("relaxation"); // Used by all the preconditioners.
+    const std::string& precond(prm.get<std::string>("type"));
     if (precond == "ILU0") {
         return wrapBlockPreconditioner<DummyUpdatePreconditioner<Dune::SeqILU0<MatrixType, VectorType, VectorType>>>(
             comm, matrix, w);
@@ -82,8 +83,20 @@ makeParPreconditioner(const OperatorType& linearoperator, const boost::property_
         // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
         return wrapPreconditioner<
             DummyUpdatePreconditioner<Opm::ParallelOverlappingILU0<MatrixType, VectorType, VectorType, Comm>>>(
+            matrix, comm, 0, w, Opm::MILU_VARIANT::ILU);
+    } else if (precond == "ParOverILUn") {
+        // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
+        const int n = prm.get<int>("ilulevel");
+        return wrapPreconditioner<
+            DummyUpdatePreconditioner<Opm::ParallelOverlappingILU0<MatrixType, VectorType, VectorType, Comm>>>(
             matrix, comm, n, w, Opm::MILU_VARIANT::ILU);
-    } else if (precond == "Jac") {
+    } else if (precond == "ILUn") {
+        const int n = prm.get<int>("ilulevel");
+        return wrapBlockPreconditioner<DummyUpdatePreconditioner<Dune::SeqILUn<MatrixType, VectorType, VectorType>>>(
+            comm, matrix, n, w);
+    }
+    const int n = prm.get<int>("repeats");
+    if (precond == "Jac") {
         return wrapBlockPreconditioner<DummyUpdatePreconditioner<Dune::SeqJac<MatrixType, VectorType, VectorType>>>(
             comm, matrix, n, w);
     } else if (precond == "GS") {
@@ -95,9 +108,6 @@ makeParPreconditioner(const OperatorType& linearoperator, const boost::property_
     } else if (precond == "SSOR") {
         return wrapBlockPreconditioner<DummyUpdatePreconditioner<Dune::SeqSSOR<MatrixType, VectorType, VectorType>>>(
             comm, matrix, n, w);
-    } else if (precond == "ILUn") {
-        return wrapBlockPreconditioner<DummyUpdatePreconditioner<Dune::SeqILUn<MatrixType, VectorType, VectorType>>>(
-            comm, matrix, n, w);
     } else {
         std::string msg("No such preconditioner : ");
         msg += precond;
@@ -107,9 +117,8 @@ makeParPreconditioner(const OperatorType& linearoperator, const boost::property_
 
 template <class Smoother, class OperatorType, class VectorType>
 std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
-makeAmgPreconditioner(OperatorType& linearoperator, const boost::property_tree::ptree& global_prm)
+makeAmgPreconditioner(const OperatorType& linearoperator, const boost::property_tree::ptree& prm)
 {
-    boost::property_tree::ptree prm = global_prm.get_child("amg");
     using MatrixType = typename OperatorType::matrix_type;
     using CriterionBase
         = Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<MatrixType, Dune::Amg::FirstDiagonal>>;
@@ -123,7 +132,7 @@ makeAmgPreconditioner(OperatorType& linearoperator, const boost::property_tree::
     criterion.setMaxLevel(ml);
     criterion.setSkipIsolated(false);
     criterion.setDebugLevel(prm.get<int>("verbosity"));
-    if (global_prm.get<std::string>("preconditioner") == "famg") {
+    if (prm.get<std::string>("type") == "famg") {
         Dune::Amg::Parameters parms;
         parms.setNoPreSmoothSteps(1);
         parms.setNoPostSmoothSteps(1);
@@ -131,11 +140,11 @@ makeAmgPreconditioner(OperatorType& linearoperator, const boost::property_tree::
     } else {
         typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments SmootherArgs;
         SmootherArgs smootherArgs;
-        smootherArgs.iterations = prm.get<int>("n");
+        smootherArgs.iterations = prm.get<int>("iterations");
         // smootherArgs.overlap=SmootherArgs::vertex;
         // smootherArgs.overlap=SmootherArgs::none;
         // smootherArgs.overlap=SmootherArgs::aggregate;
-        smootherArgs.relaxationFactor = prm.get<double>("w");
+        smootherArgs.relaxationFactor = prm.get<double>("relaxation");
         return std::make_shared<Dune::Amg::AMGCPR<OperatorType, VectorType, Smoother>>(
             linearoperator, criterion, smootherArgs);
     }
@@ -144,9 +153,8 @@ makeAmgPreconditioner(OperatorType& linearoperator, const boost::property_tree::
 
 template <class Smoother, class OperatorType, class VectorType, class Comm>
 std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
-makeParAmgPreconditioner(OperatorType& linearoperator, const boost::property_tree::ptree& global_prm, const Comm& comm)
+makeParAmgPreconditioner(const OperatorType& linearoperator, const boost::property_tree::ptree& prm, const Comm& comm)
 {
-    boost::property_tree::ptree prm = global_prm.get_child("amg");
     using MatrixType = typename OperatorType::matrix_type;
     using CriterionBase
         = Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<MatrixType, Dune::Amg::FirstDiagonal>>;
@@ -160,16 +168,16 @@ makeParAmgPreconditioner(OperatorType& linearoperator, const boost::property_tre
     criterion.setMaxLevel(ml);
     criterion.setSkipIsolated(false);
     criterion.setDebugLevel(prm.get<int>("verbosity"));
-    if (global_prm.get<std::string>("preconditioner") == "famg") {
+    if (prm.get<std::string>("type") == "famg") {
         throw std::runtime_error("The FastAMG preconditioner cannot be used in parallel.");
     } else {
         typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments SmootherArgs;
         SmootherArgs smootherArgs;
-        smootherArgs.iterations = prm.get<int>("n");
+        smootherArgs.iterations = prm.get<int>("iterations");
         // smootherArgs.overlap=SmootherArgs::vertex;
         // smootherArgs.overlap=SmootherArgs::none;
         // smootherArgs.overlap=SmootherArgs::aggregate;
-        smootherArgs.relaxationFactor = prm.get<double>("w");
+        smootherArgs.relaxationFactor = prm.get<double>("relaxation");
         return std::make_shared<Dune::Amg::AMGCPR<OperatorType, VectorType, Smoother, Comm>>(
             linearoperator, criterion, smootherArgs, comm);
     }
@@ -181,16 +189,16 @@ makeParAmgPreconditioner(OperatorType& linearoperator, const boost::property_tre
 
 template <class OperatorType, class VectorType>
 std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
-makeAmgPreconditioners(OperatorType& linearoperator, const boost::property_tree::ptree& prm)
+makeAmgPreconditioners(const OperatorType& linearoperator, const boost::property_tree::ptree& prm)
 {
     using MatrixType = typename OperatorType::matrix_type;
-    if (prm.get<std::string>("preconditioner") == "famg") {
+    if (prm.get<std::string>("type") == "famg") {
         // smoother type should not be used
         return makeAmgPreconditioner<Dune::SeqILU0<MatrixType, VectorType, VectorType>, OperatorType, VectorType>(
             linearoperator, prm);
     }
 
-    std::string precond = prm.get<std::string>("amg.smoother");
+    std::string precond = prm.get<std::string>("smoother");
     if (precond == "ILU0") {
         return makeAmgPreconditioner<Dune::SeqILU0<MatrixType, VectorType, VectorType>, OperatorType, VectorType>(
             linearoperator, prm);
@@ -219,14 +227,14 @@ makeAmgPreconditioners(OperatorType& linearoperator, const boost::property_tree:
 
 template <class OperatorType, class VectorType, class Comm>
 std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
-makeParAmgPreconditioners(OperatorType& linearoperator, const boost::property_tree::ptree& prm, const Comm& comm)
+makeParAmgPreconditioners(const OperatorType& linearoperator, const boost::property_tree::ptree& prm, const Comm& comm)
 {
-    if (prm.get<std::string>("preconditioner") == "famg") {
+    if (prm.get<std::string>("type") == "famg") {
         throw std::runtime_error("The FastAMG preconditioner cannot be used in parallel.");
     }
 
     using MatrixType = typename OperatorType::matrix_type;
-    std::string precond = prm.get<std::string>("amg.smoother");
+    std::string precond = prm.get<std::string>("smoother");
     if (precond == "ILU0") {
         using SmootherType = Opm::ParallelOverlappingILU0<MatrixType, VectorType, VectorType, Comm>;
         return makeParAmgPreconditioner<SmootherType, OperatorType, VectorType, Comm>(linearoperator, prm, comm);
@@ -260,12 +268,11 @@ makeParAmgPreconditioners(OperatorType& linearoperator, const boost::property_tr
 
 template <class OperatorType, class VectorType>
 std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
-makeTwoLevelPreconditioner(OperatorType& linearoperator, const boost::property_tree::ptree& global_prm)
+makeTwoLevelPreconditioner(const OperatorType& linearoperator, const boost::property_tree::ptree& prm)
 {
-    boost::property_tree::ptree prm = global_prm.get_child("cpr");
-    if (global_prm.get<std::string>("preconditioner") == "cpr") {
+    if (prm.get<std::string>("type") == "cpr") {
         return std::make_shared<OwningTwoLevelPreconditioner<OperatorType, VectorType, false>>(linearoperator, prm);
-    } else if (global_prm.get<std::string>("preconditioner") == "cprt") {
+    } else if (prm.get<std::string>("type") == "cprt") {
         return std::make_shared<OwningTwoLevelPreconditioner<OperatorType, VectorType, true>>(linearoperator, prm);
     } else {
         std::string msg("Wrong cpr Should not happen");
@@ -275,15 +282,14 @@ makeTwoLevelPreconditioner(OperatorType& linearoperator, const boost::property_t
 
 template <class OperatorType, class VectorType, class Comm>
 std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
-makeParTwoLevelPreconditioner(OperatorType& linearoperator,
-                              const boost::property_tree::ptree& global_prm,
+makeParTwoLevelPreconditioner(const OperatorType& linearoperator,
+                              const boost::property_tree::ptree& prm,
                               const Comm& comm)
 {
-    boost::property_tree::ptree prm = global_prm.get_child("cpr");
-    if (global_prm.get<std::string>("preconditioner") == "cpr") {
+    if (prm.get<std::string>("type") == "cpr") {
         return std::make_shared<OwningTwoLevelPreconditioner<OperatorType, VectorType, false, Comm>>(
             linearoperator, prm, comm);
-    } else if (global_prm.get<std::string>("preconditioner") == "cprt") {
+    } else if (prm.get<std::string>("type") == "cprt") {
         return std::make_shared<OwningTwoLevelPreconditioner<OperatorType, VectorType, true, Comm>>(
             linearoperator, prm, comm);
     } else {
@@ -294,12 +300,12 @@ makeParTwoLevelPreconditioner(OperatorType& linearoperator,
 
 template <class OperatorType, class VectorType>
 std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
-makePreconditioner(OperatorType& linearoperator, const boost::property_tree::ptree& prm)
+makePreconditioner(const OperatorType& linearoperator, const boost::property_tree::ptree& prm)
 {
-    if ((prm.get<std::string>("preconditioner") == "famg") or (prm.get<std::string>("preconditioner") == "amg")) {
+    if ((prm.get<std::string>("type") == "famg") or (prm.get<std::string>("type") == "amg")) {
         return makeAmgPreconditioners<OperatorType, VectorType>(linearoperator, prm);
-    } else if ((prm.get<std::string>("preconditioner") == "cpr")
-               or (prm.get<std::string>("preconditioner") == "cprt")) {
+    } else if ((prm.get<std::string>("type") == "cpr")
+               or (prm.get<std::string>("type") == "cprt")) {
         return makeTwoLevelPreconditioner<OperatorType, VectorType>(linearoperator, prm);
     } else {
         return makeSeqPreconditioner<OperatorType, VectorType>(linearoperator, prm);
@@ -308,12 +314,12 @@ makePreconditioner(OperatorType& linearoperator, const boost::property_tree::ptr
 
 template <class OperatorType, class VectorType, class Comm>
 std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
-makePreconditioner(OperatorType& linearoperator, const boost::property_tree::ptree& prm, const Comm& comm)
+makePreconditioner(const OperatorType& linearoperator, const boost::property_tree::ptree& prm, const Comm& comm)
 {
-    if ((prm.get<std::string>("preconditioner") == "famg") or (prm.get<std::string>("preconditioner") == "amg")) {
+    if ((prm.get<std::string>("type") == "famg") or (prm.get<std::string>("type") == "amg")) {
         return makeParAmgPreconditioners<OperatorType, VectorType, Comm>(linearoperator, prm, comm);
-    } else if ((prm.get<std::string>("preconditioner") == "cpr")
-               or (prm.get<std::string>("preconditioner") == "cprt")) {
+    } else if ((prm.get<std::string>("type") == "cpr")
+               or (prm.get<std::string>("type") == "cprt")) {
         return makeParTwoLevelPreconditioner<OperatorType, VectorType, Comm>(linearoperator, prm, comm);
     } else {
         return makeParPreconditioner<OperatorType, VectorType, Comm>(linearoperator, prm, comm);

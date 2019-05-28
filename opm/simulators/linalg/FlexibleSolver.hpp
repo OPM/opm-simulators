@@ -97,7 +97,7 @@ private:
         using ParOperatorType = Dune::OverlappingSchwarzOperator<MatrixType, VectorType, VectorType, Comm>;
         auto linop = std::make_shared<ParOperatorType>(matrix, comm);
         linearoperator_ = linop;
-        preconditioner_ = Dune::makePreconditioner<ParOperatorType, VectorType, Comm>(*linop, prm, comm);
+        preconditioner_ = Dune::makePreconditioner<ParOperatorType, VectorType, Comm>(*linop, prm.get_child("preconditioner"), comm);
         scalarproduct_ = Dune::createScalarProduct<VectorType, Comm>(comm, linearoperator_->category());
     }
     template <>
@@ -107,7 +107,7 @@ private:
         using SeqOperatorType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
         auto linop = std::make_shared<SeqOperatorType>(matrix);
         linearoperator_ = linop;
-        preconditioner_ = Dune::makePreconditioner<SeqOperatorType, VectorType>(*linop, prm);
+        preconditioner_ = Dune::makePreconditioner<SeqOperatorType, VectorType>(*linop, prm.get_child("preconditioner"));
         scalarproduct_ = std::make_shared<Dune::SeqScalarProduct<VectorType>>();
     }
 
