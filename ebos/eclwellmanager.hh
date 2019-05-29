@@ -104,7 +104,7 @@ public:
     void init()
     {
         const Opm::Schedule& deckSchedule = simulator_.vanguard().schedule();
-        Opm::SummaryState summaryState;
+        const auto& summaryState = simulator_.vanguard().summaryState();
         // create the wells which intersect with the current process' grid
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule.numWells(); ++deckWellIdx)
         {
@@ -135,8 +135,8 @@ public:
     {
         const Opm::EclipseState& eclState = simulator_.vanguard().eclState();
         const Opm::Schedule& deckSchedule = simulator_.vanguard().schedule();
+        const auto& summaryState = simulator_.vanguard().summaryState();
         unsigned episodeIdx = simulator_.episodeIndex();
-        Opm::SummaryState summaryState;
         WellConnectionsMap wellCompMap;
         computeWellConnectionsMap_(episodeIdx, wellCompMap);
 
