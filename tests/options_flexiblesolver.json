@@ -1,29 +1,25 @@
 {
     "tol": "0.5",
     "maxiter": "20",
-    "preconditioner": "cpr",
-    "w": "1",
-    "n": "1",
-    "amg": "",
-    "cpr": {
+    "preconditioner": {
+        "type": "cpr",
         "finesmoother": {
-            "preconditioner": "ILU0",
-            "w": "1",
-            "n": "1"
+            "type": "ILU0",
+            "relaxation": "1.0"
         },
         "coarsesolver": {
             "tol": "0.5",
             "maxiter": "20",
-            "preconditioner": "amg",
-            "amg": {
+            "preconditioner": {
+                "type": "amg",
                 "maxlevel": "5",
                 "coarsenTarget": "1000",
                 "smoother": "ILU0",
                 "alpha": "0.2",
                 "beta": "0.0001",
                 "verbosity": "0",
-                "n": "1",
-                "w": "1"
+                "iterations": "1",
+                "relaxation": "1"
             },
             "verbosity": "0",
             "solver": "bicgstab"
@@ -33,6 +29,5 @@
         "pressure_var_index" : "1"
     },
     "verbosity": "10",
-    "solver": "bicgstab",
-    "restart": "20"
+    "solver": "bicgstab"
 }
