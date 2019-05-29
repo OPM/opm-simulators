@@ -51,12 +51,14 @@ struct Setup
         , pu   (Opm::phaseUsageFromDeck(es))
         , grid (es.getInputGrid())
         , sched(deck, es)
+        , st()
     {}
 
     Opm::EclipseState es;
     Opm::PhaseUsage   pu;
     Opm::GridManager  grid;
     Opm::Schedule     sched;
+    Opm::SummaryState st;
 };
 
 namespace {
@@ -69,9 +71,7 @@ namespace {
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
                                 100.0*Opm::unit::barsa);
 
-        const Opm::WellsManager wmgr{
-            setup.es, setup.sched, timeStep, *setup.grid.c_grid()
-        };
+        const Opm::WellsManager wmgr{setup.es, setup.sched, setup.st, timeStep, *setup.grid.c_grid()};
 
         state.init(wmgr.c_wells(), cpress, setup.sched,
                    setup.sched.getWells2(timeStep),

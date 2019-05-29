@@ -85,6 +85,7 @@ namespace Opm
         template<class F2C, class FC>
         WellsManager(const Opm::EclipseState& eclipseState,
                      const Opm::Schedule& schedule,
+                     const SummaryState& summaryState,
                      const size_t timeStep,
                      int num_cells,
                      const int* global_cell,
@@ -97,6 +98,7 @@ namespace Opm
 
         WellsManager(const Opm::EclipseState& eclipseState,
                      const Opm::Schedule& schedule,
+                     const Opm::SummaryState& summaryState,
                      const size_t timeStep,
                      const UnstructuredGrid& grid);
         /// Destructor.
