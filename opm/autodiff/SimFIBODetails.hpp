@@ -85,10 +85,10 @@ namespace Opm
 
         inline void
         historyRates(const PhaseUsage&               pu,
-                     const WellProductionProperties& p,
+                     const ProductionControls& p,
                      std::vector<double>&            rates)
         {
-            assert (! p.predictionMode);
+            assert (! p.prediction_mode);
             assert (rates.size() ==
                     std::vector<double>::size_type(pu.num_phases));
 
@@ -96,21 +96,21 @@ namespace Opm
                 const std::vector<double>::size_type
                     i = pu.phase_pos[ BlackoilPhases::Aqua ];
 
-                rates[i] = p.WaterRate;
+                rates[i] = p.water_rate;
             }
 
             if (pu.phase_used[ BlackoilPhases::Liquid ]) {
                 const std::vector<double>::size_type
                     i = pu.phase_pos[ BlackoilPhases::Liquid ];
 
-                rates[i] = p.OilRate;
+                rates[i] = p.oil_rate;
             }
 
             if (pu.phase_used[ BlackoilPhases::Vapour ]) {
                 const std::vector<double>::size_type
                     i = pu.phase_pos[ BlackoilPhases::Vapour ];
 
-                rates[i] = p.GasRate;
+                rates[i] = p.gas_rate;
             }
         }
     } // namespace SimFIBODetails

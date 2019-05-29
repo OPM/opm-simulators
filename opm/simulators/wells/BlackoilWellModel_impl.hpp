@@ -1648,6 +1648,7 @@ namespace Opm {
     {
 
         const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells());
+        Opm::SummaryState summaryState;
 
         int global_number_resv_wells = resv_wells.size();
         global_number_resv_wells = ebosSimulator_.gridView().comm().sum(global_number_resv_wells);
@@ -1700,10 +1701,10 @@ namespace Opm {
                                 OPM_DEFLOG_THROW(std::logic_error, "Failed to find the well " << wells()->name[*rp] << " in wmap.", deferred_logger);
                             }
                             const auto& wp = i->second;
-                            const WellProductionProperties& production_properties = wp.getProductionProperties();
+                            const auto production_controls = wp.productionControls(summaryState);
                             // historical phase rates
                             std::vector<double> hrates(np);
-                            SimFIBODetails::historyRates(phase_usage_, production_properties, hrates);
+                            SimFIBODetails::historyRates(phase_usage_, production_controls, hrates);
 
                             std::vector<double> hrates_resv(np);
                             rateConverter_->calcReservoirVoidageRates(fipreg, pvtreg, hrates, hrates_resv);

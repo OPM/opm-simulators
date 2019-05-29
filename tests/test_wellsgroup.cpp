@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
-
+    SummaryState summaryState;
    PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
    auto wells = sched.getWells2atEnd();
@@ -62,18 +62,18 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
         std::shared_ptr<WellsGroupInterface> wellsGroup = createWellWellsGroup(well, 2, pu);
         BOOST_CHECK_EQUAL(well.name(), wellsGroup->name());
         if (well.isInjector()) {
-            const WellInjectionProperties& properties = well.getInjectionProperties();
-            BOOST_CHECK_EQUAL(properties.surfaceInjectionRate, wellsGroup->injSpec().surface_flow_max_rate_);
-            BOOST_CHECK_EQUAL(properties.BHPLimit, wellsGroup->injSpec().BHP_limit_);
-            BOOST_CHECK_EQUAL(properties.reservoirInjectionRate, wellsGroup->injSpec().reservoir_flow_max_rate_);
+            const auto controls = well.injectionControls(summaryState);
+            BOOST_CHECK_EQUAL(controls.surface_rate, wellsGroup->injSpec().surface_flow_max_rate_);
+            BOOST_CHECK_EQUAL(controls.bhp_limit, wellsGroup->injSpec().BHP_limit_);
+            BOOST_CHECK_EQUAL(controls.reservoir_rate, wellsGroup->injSpec().reservoir_flow_max_rate_);
             BOOST_CHECK_EQUAL(0.0, wellsGroup->prodSpec().guide_rate_);
         }
         if (well.isProducer()) {
-            const WellProductionProperties& properties = well.getProductionProperties();
-            BOOST_CHECK_EQUAL(properties.ResVRate, wellsGroup->prodSpec().reservoir_flow_max_rate_);
-            BOOST_CHECK_EQUAL(properties.BHPLimit, wellsGroup->prodSpec().BHP_limit_);
-            BOOST_CHECK_EQUAL(properties.OilRate, wellsGroup->prodSpec().oil_max_rate_);
-            BOOST_CHECK_EQUAL(properties.WaterRate, wellsGroup->prodSpec().water_max_rate_);
+            const auto controls = well.productionControls(summaryState);
+            BOOST_CHECK_EQUAL(controls.resv_rate, wellsGroup->prodSpec().reservoir_flow_max_rate_);
+            BOOST_CHECK_EQUAL(controls.bhp_limit, wellsGroup->prodSpec().BHP_limit_);
+            BOOST_CHECK_EQUAL(controls.oil_rate, wellsGroup->prodSpec().oil_max_rate_);
+            BOOST_CHECK_EQUAL(controls.water_rate, wellsGroup->prodSpec().water_max_rate_);
             BOOST_CHECK_EQUAL(0.0, wellsGroup->injSpec().guide_rate_);
         }
     }
