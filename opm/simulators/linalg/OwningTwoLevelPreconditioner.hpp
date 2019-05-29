@@ -38,22 +38,22 @@
 namespace Dune
 {
 
-// Circular dependency between makePreconditioner() [which can make an OwningTwoLevelPreconditioner]
-// and OwningTwoLevelPreconditioner [which uses makePreconditioner() to choose the fine-level smoother]
+// Circular dependency between PreconditionerFactory [which can make an OwningTwoLevelPreconditioner]
+// and OwningTwoLevelPreconditioner [which uses PreconditionerFactory to choose the fine-level smoother]
 // must be broken, accomplished by forward-declaration here.
-template <class OperatorType, class VectorType>
-std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
-makePreconditioner(const OperatorType& linearoperator, const boost::property_tree::ptree& prm);
-
-template <class OperatorType, class VectorType, class Comm>
-std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>>
-makePreconditioner(const OperatorType& linearoperator, const boost::property_tree::ptree& prm, const Comm& comm);
+template <class Operator, class Comm = Dune::Amg::SequentialInformation>
+class PreconditionerFactory;
 
 
 // Must forward-declare FlexibleSolver as we want to use it as solver for the pressure system.
 template <class MatrixTypeT, class VectorTypeT>
 class FlexibleSolver;
 
+
+/// A version of the two-level preconditioner that is:
+/// - Self-contained, because it owns its policy components.
+/// - Flexible, because it uses the runtime-flexible solver
+///   and preconditioner factory.
 template <class OperatorType,
           class VectorType,
           bool transpose = false,
@@ -63,10 +63,11 @@ class OwningTwoLevelPreconditioner : public Dune::PreconditionerWithUpdate<Vecto
 public:
     using pt = boost::property_tree::ptree;
     using MatrixType = typename OperatorType::matrix_type;
+    using PrecFactory = PreconditionerFactory<OperatorType, Communication>;
 
     OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm)
         : linear_operator_(linearoperator)
-        , finesmoother_(makePreconditioner<OperatorType, VectorType>(linearoperator, prm.get_child("finesmoother")))
+        , finesmoother_(PrecFactory::create(linearoperator, prm.get_child("finesmoother")))
         , comm_(nullptr)
         , weights_(Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
               linearoperator.getmat(), prm.get<int>("pressure_var_index"), transpose))
@@ -91,8 +92,7 @@ public:
 
     OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm, const Communication& comm)
         : linear_operator_(linearoperator)
-        , finesmoother_(makePreconditioner<OperatorType, VectorType, Communication>(
-              linearoperator, prm.get_child("finesmoother"), comm))
+        , finesmoother_(PrecFactory::create(linearoperator, prm.get_child("finesmoother"), comm))
         , comm_(&comm)
         , weights_(Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
               linearoperator.getmat(), prm.get<int>("pressure_var_index"), transpose))
@@ -158,13 +158,12 @@ private:
     using TwoLevelMethod
         = Dune::Amg::TwoLevelMethodCpr<OperatorType, CoarseSolverPolicy, Dune::Preconditioner<VectorType, VectorType>>;
 
-    // Handling parallel vs serial instantiation of makePreconditioner().
+    // Handling parallel vs serial instantiation of preconditioner factory.
     template <class Comm>
     void updateImpl()
     {
         // Parallel case.
-        finesmoother_ = makePreconditioner<OperatorType, VectorType, Communication>(
-            linear_operator_, prm_.get_child("finesmoother"), *comm_);
+        finesmoother_ = PrecFactory::create(linear_operator_, prm_.get_child("finesmoother"), *comm_);
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
     }
 
@@ -172,7 +171,7 @@ private:
     void updateImpl<Dune::Amg::SequentialInformation>()
     {
         // Serial case.
-        finesmoother_ = makePreconditioner<OperatorType, VectorType>(linear_operator_, prm_.get_child("finesmoother"));
+        finesmoother_ = PrecFactory::create(linear_operator_, prm_.get_child("finesmoother"));
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
     }
 

@@ -57,6 +57,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_blackoil_amg.cpp
   tests/test_convergencereport.cpp
   tests/test_flexiblesolver.cpp
+  tests/test_preconditionerfactory.cpp
   tests/test_graphcoloring.cpp
   tests/test_vfpproperties.cpp
   tests/test_milu.cpp
@@ -115,6 +116,7 @@ list (APPEND TEST_DATA_FILES
   tests/matr33.txt
   tests/rhs3.txt
   tests/options_flexiblesolver.json
+  tests/options_flexiblesolver_simple.json
   )
 
 
@@ -176,8 +178,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/ParallelIstlInformation.hpp
   opm/simulators/linalg/PressureSolverPolicy.hpp
   opm/simulators/linalg/PressureTransferPolicy.hpp
+  opm/simulators/linalg/PreconditionerFactory.hpp
   opm/simulators/linalg/PreconditionerWithUpdate.hpp
-  opm/simulators/linalg/makePreconditioner.hpp
   opm/simulators/linalg/setupPropertyTree.hpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
   opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp

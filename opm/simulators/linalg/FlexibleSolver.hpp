@@ -21,7 +21,7 @@
 #ifndef OPM_FLEXIBLE_SOLVER_HEADER_INCLUDED
 #define OPM_FLEXIBLE_SOLVER_HEADER_INCLUDED
 
-#include <opm/simulators/linalg/makePreconditioner.hpp>
+#include <opm/simulators/linalg/PreconditionerFactory.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -83,7 +83,6 @@ public:
     }
 
 private:
-
     using AbstractOperatorType = Dune::AssembledLinearOperator<MatrixType, VectorType, VectorType>;
     using AbstractPrecondType = Dune::PreconditionerWithUpdate<VectorType, VectorType>;
     using AbstractScalarProductType = Dune::ScalarProduct<VectorType>;
@@ -97,17 +96,20 @@ private:
         using ParOperatorType = Dune::OverlappingSchwarzOperator<MatrixType, VectorType, VectorType, Comm>;
         auto linop = std::make_shared<ParOperatorType>(matrix, comm);
         linearoperator_ = linop;
-        preconditioner_ = Dune::makePreconditioner<ParOperatorType, VectorType, Comm>(*linop, prm.get_child("preconditioner"), comm);
+        preconditioner_
+            = Dune::PreconditionerFactory<ParOperatorType, Comm>::create(*linop, prm.get_child("preconditioner"), comm);
         scalarproduct_ = Dune::createScalarProduct<VectorType, Comm>(comm, linearoperator_->category());
     }
     template <>
-    void initOpPrecSp<Dune::Amg::SequentialInformation>(const MatrixType& matrix, const boost::property_tree::ptree& prm, const Dune::Amg::SequentialInformation&)
+    void initOpPrecSp<Dune::Amg::SequentialInformation>(const MatrixType& matrix,
+                                                        const boost::property_tree::ptree& prm,
+                                                        const Dune::Amg::SequentialInformation&)
     {
         // Sequential case.
         using SeqOperatorType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
         auto linop = std::make_shared<SeqOperatorType>(matrix);
         linearoperator_ = linop;
-        preconditioner_ = Dune::makePreconditioner<SeqOperatorType, VectorType>(*linop, prm.get_child("preconditioner"));
+        preconditioner_ = Dune::PreconditionerFactory<SeqOperatorType>::create(*linop, prm.get_child("preconditioner"));
         scalarproduct_ = std::make_shared<Dune::SeqScalarProduct<VectorType>>();
     }
 

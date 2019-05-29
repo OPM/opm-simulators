@@ -48,17 +48,17 @@ public:
     using X = typename OriginalPreconditioner::domain_type;
     using Y = typename OriginalPreconditioner::range_type;
 
-    virtual void pre (X& x, Y& b) override
+    virtual void pre(X& x, Y& b) override
     {
         orig_precond_.pre(x, b);
     }
 
-    virtual void apply (X& v, const Y& d) override
+    virtual void apply(X& v, const Y& d) override
     {
         orig_precond_.apply(v, d);
     }
 
-    virtual void post (X& x) override
+    virtual void post(X& x) override
     {
         orig_precond_.post(x);
     }
