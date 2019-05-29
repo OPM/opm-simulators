@@ -1092,7 +1092,7 @@ namespace Opm {
         computeAverageFormationFactor(B_avg);
 
         const Opm::SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
-        Opm::SummaryState summaryState;
+        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         int exception_thrown = 0;
         try {
             for (const auto& well : well_container_copy) {
@@ -1653,7 +1653,7 @@ namespace Opm {
     {
 
         const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells());
-        Opm::SummaryState summaryState;
+        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
 
         int global_number_resv_wells = resv_wells.size();
         global_number_resv_wells = ebosSimulator_.gridView().comm().sum(global_number_resv_wells);
