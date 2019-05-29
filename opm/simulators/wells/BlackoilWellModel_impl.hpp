@@ -1088,6 +1088,7 @@ namespace Opm {
         computeAverageFormationFactor(B_avg);
 
         const Opm::SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
+        Opm::SummaryState summaryState;
         int exception_thrown = 0;
         try {
             for (const auto& well : well_container_copy) {
@@ -1098,28 +1099,28 @@ namespace Opm {
                 well_controls_clear(wc);
                 well_controls_assert_number_of_phases( wc , np);
                 if (well->wellType() == INJECTOR) {
-                    const auto& injectionProperties = well->wellEcl()->getInjectionProperties();
+                    const auto controls = well->wellEcl()->injectionControls(summaryState);
 
-                    if (injectionProperties.hasInjectionControl(WellInjector::THP)) {
-                        const double thp_limit  = injectionProperties.THPLimit;
-                        const int    vfp_number = injectionProperties.VFPTableNumber;
+                    if (controls.hasControl(WellInjector::THP)) {
+                        const double thp_limit  = controls.thp_limit;
+                        const int    vfp_number = controls.vfp_table_number;
                         well_controls_add_new(THP, thp_limit, invalid_alq, vfp_number, NULL, wc);
                     }
 
                     // we always have a bhp limit
-                    const double bhp_limit = injectionProperties.BHPLimit;
+                    const double bhp_limit = controls.bhp_limit;
                     well_controls_add_new(BHP, bhp_limit, invalid_alq, invalid_vfp, NULL, wc);
                 } else {
-                    const auto& productionProperties = well->wellEcl()->getProductionProperties();
-                    if (productionProperties.hasProductionControl(WellProducer::THP)) {
-                        const double thp_limit  = productionProperties.THPLimit;
-                        const double alq_value  = productionProperties.ALQValue;
-                        const int    vfp_number = productionProperties.VFPTableNumber;
+                    const auto controls = well->wellEcl()->productionControls(summaryState);
+                    if (controls.hasControl(WellProducer::THP)) {
+                        const double thp_limit  = controls.thp_limit;
+                        const double alq_value  = controls.alq_value;
+                        const int    vfp_number = controls.vfp_table_number;
                         well_controls_add_new(THP, thp_limit, alq_value, vfp_number, NULL, wc);
                     }
 
                     // we always have a bhp limit
-                    const double bhp_limit = productionProperties.BHPLimit;
+                    const double bhp_limit = controls.bhp_limit;
                     well_controls_add_new(BHP, bhp_limit, invalid_alq, invalid_vfp, NULL, wc);
 
                     well->setVFPProperties(vfp_properties_.get());
