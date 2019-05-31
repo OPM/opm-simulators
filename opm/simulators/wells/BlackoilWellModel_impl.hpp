@@ -1695,6 +1695,7 @@ namespace Opm {
                         well_controls_iset_distr(ctrl, rctrl, & distr[0]);
 
                         // for the WCONHIST wells, we need to calculate the RESV rates since it can not be specified directly
+                        // for the WCONPROD wells, the rates are specified already, it is not necessary to update
                         if (is_producer) {
                             const WellMap::const_iterator i = wmap.find(wells()->name[*rp]);
 
@@ -1703,21 +1704,23 @@ namespace Opm {
                             }
                             const auto& wp = i->second;
                             const auto production_controls = wp.productionControls(summaryState);
-                            // historical phase rates
-                            std::vector<double> hrates(np);
-                            SimFIBODetails::historyRates(phase_usage_, production_controls, hrates);
+                            if ( !production_controls.prediction_mode ) {
+                                // historical phase rates
+                                std::vector<double> hrates(np);
+                                SimFIBODetails::historyRates(phase_usage_, production_controls, hrates);
 
-                            std::vector<double> hrates_resv(np);
-                            rateConverter_->calcReservoirVoidageRates(fipreg, pvtreg, hrates, hrates_resv);
+                                std::vector<double> hrates_resv(np);
+                                rateConverter_->calcReservoirVoidageRates(fipreg, pvtreg, hrates, hrates_resv);
 
-                            const double target = -std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
+                                const double target = -std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
 
-                            well_controls_iset_target(ctrl, rctrl, target);
-                        }
-                    }
+                                well_controls_iset_target(ctrl, rctrl, target);
+                            }
+                        } // end of if (is_producer)
+                    } // end of if if (0 <= rctrl)
                 }
-            }
-        }
+            } // end of for loop
+        } // end of if (! resv_wells.empty())
     }
 
 
