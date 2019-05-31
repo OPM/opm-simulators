@@ -1391,10 +1391,14 @@ namespace Opm
                             const int comp_idx) const
     {
         const int seg_upwind = upwinding_segments_[seg];
-        // the result will contain the derivative against GTotal in segment seg,
-        // and the derivatives against WFrac GFrac in segment seg_upwind.
-        // the derivative against SPres should be zero.
-        return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg_upwind, comp_idx);
+        // the result will contain the derivative with resepct to GTotal in segment seg,
+        // and the derivatives with respect to WFrac GFrac in segment seg_upwind.
+        // the derivative with respect to SPres should be zero.
+        const EvalWell segment_rate = primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg_upwind, comp_idx);
+
+        assert(segment_rate.derivative(SPres + numEq) == 0.);
+
+        return segment_rate;
     }
 
 
@@ -1987,7 +1991,7 @@ namespace Opm
                     const EvalWell segment_rate = getSegmentRateUpwinding(seg, comp_idx);
 
                     const int seg_upwind = upwinding_segments_[seg];
-                    // segment_rate contains the derivatives against GTotal in seg,
+                    // segment_rate contains the derivatives with respect to GTotal in seg,
                     // and WFrac and GFrac in seg_upwind
                     resWell_[seg][comp_idx] -= segment_rate.value();
                     duneD_[seg][seg][comp_idx][GTotal] -= segment_rate.derivative(GTotal + numEq);
@@ -2004,7 +2008,7 @@ namespace Opm
                         const EvalWell inlet_rate = getSegmentRateUpwinding(inlet, comp_idx);
 
                         const int inlet_upwind = upwinding_segments_[inlet];
-                        // inlet_rate contains the derivatives against GTotal in inlet,
+                        // inlet_rate contains the derivatives with respect to GTotal in inlet,
                         // and WFrac and GFrac in inlet_upwind
                         resWell_[seg][comp_idx] += inlet_rate.value();
                         duneD_[seg][inlet][comp_idx][GTotal] += inlet_rate.derivative(GTotal + numEq);
