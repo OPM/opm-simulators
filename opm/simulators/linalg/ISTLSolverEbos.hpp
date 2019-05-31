@@ -57,6 +57,19 @@ NEW_PROP_TAG(Indices);
 NEW_PROP_TAG(Simulator);
 NEW_PROP_TAG(EclWellModel);
 
+//! Set the type of a global jacobian matrix for linear solvers that are based on
+//! dune-istl.
+SET_PROP(FlowIstlSolver, SparseMatrixAdapter)
+{
+private:
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    typedef Ewoms::MatrixBlock<Scalar, numEq, numEq> Block;
+
+public:
+    typedef typename Ewoms::Linear::IstlSparseMatrixAdapter<Block> type;
+};
+
 END_PROPERTIES
 
 namespace Opm
