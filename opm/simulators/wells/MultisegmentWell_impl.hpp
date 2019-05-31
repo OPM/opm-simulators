@@ -1391,6 +1391,9 @@ namespace Opm
                             const int comp_idx) const
     {
         const int seg_upwind = upwinding_segments_[seg];
+        // the result will contain the derivative against GTotal in segment seg,
+        // and the derivatives against WFrac GFrac in segment seg_upwind.
+        // the derivative against SPres should be zero.
         return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg_upwind, comp_idx);
     }
 
@@ -1984,6 +1987,8 @@ namespace Opm
                     const EvalWell segment_rate = getSegmentRateUpwinding(seg, comp_idx);
 
                     const int seg_upwind = upwinding_segments_[seg];
+                    // segment_rate contains the derivatives against GTotal in seg,
+                    // and WFrac and GFrac in seg_upwind
                     resWell_[seg][comp_idx] -= segment_rate.value();
                     duneD_[seg][seg][comp_idx][GTotal] -= segment_rate.derivative(GTotal + numEq);
                     duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + numEq);
@@ -1998,11 +2003,13 @@ namespace Opm
                     for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                         const EvalWell inlet_rate = getSegmentRateUpwinding(inlet, comp_idx);
 
-                        const int seg_upwind = upwinding_segments_[inlet];
+                        const int inlet_upwind = upwinding_segments_[inlet];
+                        // inlet_rate contains the derivatives against GTotal in inlet,
+                        // and WFrac and GFrac in inlet_upwind
                         resWell_[seg][comp_idx] += inlet_rate.value();
                         duneD_[seg][inlet][comp_idx][GTotal] += inlet_rate.derivative(GTotal + numEq);
-                        duneD_[seg][seg_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + numEq);
-                        duneD_[seg][seg_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + numEq);
+                        duneD_[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + numEq);
+                        duneD_[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + numEq);
                         // pressure derivative should be zero
                     }
                 }
