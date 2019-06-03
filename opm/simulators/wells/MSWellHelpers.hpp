@@ -148,7 +148,7 @@ namespace mswellhelpers
             return 0.0;
         }
 
-        const ValueType re_value1 = 200.;
+        const ValueType re_value1 = 2000.;
         const ValueType re_value2 = 4000.;
 
         if (re < re_value1) {
