@@ -238,7 +238,7 @@ public:
                 ebosSimulator_.setTimeStepSize(0.0);
 
                 wellModel_().beginReportStep(timer.currentStepNum());
-                ebosSimulator_.problem().writeOutput(false);
+                ebosSimulator_.problem().writeOutput();
 
                 report.output_write_time += perfTimer.stop();
             }
@@ -293,7 +293,7 @@ public:
             perfTimer.start();
             const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
             ebosSimulator_.problem().setNextTimeStepSize(nextstep);
-            ebosSimulator_.problem().writeOutput(false);
+            ebosSimulator_.problem().writeOutput();
             report.output_write_time += perfTimer.stop();
 
             solver->model().endReportStep();
