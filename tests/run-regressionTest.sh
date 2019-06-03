@@ -20,14 +20,8 @@ ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --output-dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
 cd ..
 
+
 ecode=0
-echo "=== Executing comparison for summary file ==="
-${COMPARE_ECL_COMMAND} -t SMRY ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}
-if [ $? -ne 0 ]
-then
-  ecode=1
-  ${COMPARE_ECL_COMMAND} -a -t SMRY ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}
-fi
 
 ignore_extra_kw=""
 if grep -q "ignore_extra" <<< $ghprbCommentBody
@@ -35,20 +29,12 @@ then
     ignore_extra_kw="-x"
 fi
 
-echo "=== Executing comparison for restart file ==="
-${COMPARE_ECL_COMMAND}  ${ignore_extra_kw} ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}
+echo "=== Executing comparison for EGRID, INIT, UNRST and RFT files if these exists in refrece folder ==="
+${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} ${RESULT_PATH}/${FILENAME} ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
   ecode=1
-  ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} -a ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}
-fi
-
-echo "=== Executing comparison for init file ==="
-${COMPARE_ECL_COMMAND} ${ignore_extra_kw} -t INIT ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}
-if [ $? -ne 0 ]
-then
-  ecode=1
-  ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} -a -t INIT ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}
+  ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} -a  ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} ${RESULT_PATH}/${FILENAME} ${ABS_TOL} ${REL_TOL}
 fi
 
 exit $ecode
