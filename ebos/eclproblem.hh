@@ -910,9 +910,12 @@ public:
             // the right thing (i.e., the mass change inside the whole reservoir must be
             // equivalent to the fluxes over the grid's boundaries plus the source rates
             // specified by the problem)
-            std::cout << "checking conservativeness of solution\n";
+            int rank = this->simulator().gridView().comm().rank();
+            if (rank == 0)
+                std::cout << "checking conservativeness of solution\n";
             this->model().checkConservativeness(/*tolerance=*/-1, /*verbose=*/true);
-            std::cout << "solution is sufficiently conservative\n";
+            if (rank == 0)
+                std::cout << "solution is sufficiently conservative\n";
         }
 #endif // NDEBUG
 
