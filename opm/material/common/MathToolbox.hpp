@@ -205,6 +205,10 @@ public:
     static Scalar exp(Scalar arg)
     { return std::exp(arg); }
 
+    //! The 10 logarithm of a value
+    static Scalar log10(Scalar arg)
+    { return std::log10(arg); }
+
     //! The natural logarithm of a value
     static Scalar log(Scalar arg)
     { return std::log(arg); }
@@ -318,6 +322,10 @@ Evaluation exp(const Evaluation& value)
 template <class Evaluation>
 Evaluation log(const Evaluation& value)
 { return Opm::MathToolbox<Evaluation>::log(value); }
+
+template <class Evaluation>
+Evaluation log10(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::log10(value); }
 
 template <class Evaluation1, class Evaluation2>
 typename ReturnEval_<Evaluation1, Evaluation2>::type

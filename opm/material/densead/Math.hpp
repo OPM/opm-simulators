@@ -399,6 +399,24 @@ Evaluation<ValueType, numVars, staticSize> log(const Evaluation<ValueType, numVa
     return result;
 }
 
+
+template <class ValueType, int numVars, unsigned staticSize>
+Evaluation<ValueType, numVars, staticSize> log10(const Evaluation<ValueType, numVars, staticSize>& x)
+{
+    typedef MathToolbox<ValueType> ValueTypeToolbox;
+
+    Evaluation<ValueType, numVars, staticSize> result(x);
+
+    result.setValue(ValueTypeToolbox::log10(x.value()));
+
+    // derivatives use the chain rule
+    const ValueType& df_dx = 1/x.value() * ValueTypeToolbox::log10(ValueTypeToolbox::exp(1.0));
+    for (int curVarIdx = 0; curVarIdx < result.size(); ++curVarIdx)
+        result.setDerivative(curVarIdx, df_dx*x.derivative(curVarIdx));
+
+    return result;
+}
+
 } // namespace DenseAd
 
 // a kind of traits class for the automatic differentiation case. (The toolbox for the
@@ -512,6 +530,9 @@ public:
 
     static Evaluation log(const Evaluation& arg)
     { return Opm::DenseAd::log(arg); }
+
+    static Evaluation log10(const Evaluation& arg)
+    { return Opm::DenseAd::log10(arg); }
 
     template <class RhsValueType>
     static Evaluation pow(const Evaluation& arg1, const RhsValueType& arg2)

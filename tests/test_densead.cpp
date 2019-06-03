@@ -572,6 +572,11 @@ struct TestEnvBase
                        static_cast<Scalar (*)(Scalar)>(std::log),
                        1e-6, 1e9);
 
+        std::cout << "  Testing log10()\n";
+        test1DFunction(Opm::DenseAd::log10<Scalar, numVars, staticSize>,
+                       static_cast<Scalar (*)(Scalar)>(std::log10),
+                       1e-6, 1e9);
+
         while (false) {
             Scalar val1 OPM_UNUSED = 0.0;
             Scalar val2 OPM_UNUSED = 1.0;
@@ -622,6 +627,8 @@ struct TestEnvBase
             resultEval = Opm::sqrt(eval1);
             resultEval = Opm::exp(eval1);
             resultEval = Opm::log(eval1);
+            resultEval = Opm::log10(eval1);
+
         }
     }
 
