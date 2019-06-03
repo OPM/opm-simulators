@@ -152,6 +152,9 @@ NEW_PROP_TAG(EnableApiTracking);
 // The class which deals with ECL aquifers
 NEW_PROP_TAG(EclAquiferModel);
 
+// In experimental mode, decides if the aquifer model should be enabled or not
+NEW_PROP_TAG(EclEnableAquifers);
+
 // time stepping parameters
 NEW_PROP_TAG(EclMaxTimeStepSizeAfterWellEvent);
 NEW_PROP_TAG(EclRestartShrinkFactor);
@@ -231,6 +234,9 @@ SET_TYPE_PROP(EclBaseProblem, EclAquiferModel, Ewoms::EclBaseAquiferModel<TypeTa
 
 // use the built-in proof of concept well model by default
 SET_TYPE_PROP(EclBaseProblem, EclWellModel, EclWellManager<TypeTag>);
+
+// Enable aquifers by default in experimental mode
+SET_BOOL_PROP(EclBaseProblem, EclEnableAquifers, true);
 
 // Enable gravity
 SET_BOOL_PROP(EclBaseProblem, EnableGravity, true);
@@ -475,6 +481,9 @@ public:
         if (enableExperiments)
             EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableDriftCompensation,
                                  "Enable partial compensation of systematic mass losses via the source term of the next time step");
+        if (enableExperiments)
+            EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableAquifers,
+                                 "Enable analytic and numeric aquifer models");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent,
                              "Maximum time step size after an well event");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclRestartShrinkFactor,
@@ -600,6 +609,11 @@ public:
             enableDriftCompensation_ = false;
 
         enableEclOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
+
+        if (enableExperiments)
+            enableAquifers_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableAquifers);
+        else
+            enableAquifers_ = true;
 
         enableTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableTuning);
         initialTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
@@ -736,8 +750,9 @@ public:
         // deserialize the wells
         wellModel_.deserialize(res);
 
-        // deserialize the aquifer
-        aquiferModel_.deserialize(res);
+        if (enableAquifers_)
+            // deserialize the aquifer
+            aquiferModel_.deserialize(res);
     }
 
     /*!
@@ -750,7 +765,9 @@ public:
     void serialize(Restarter& res)
     {
         wellModel_.serialize(res);
-        aquiferModel_.serialize(res);
+
+        if (enableAquifers_)
+            aquiferModel_.serialize(res);
     }
 
     /*!
@@ -820,7 +837,9 @@ public:
         wellModel_.beginEpisode();
 
         // set up the aquifers for the next episode.
-        aquiferModel_.beginEpisode();
+        if (enableAquifers_)
+            // set up the aquifers for the next episode.
+            aquiferModel_.beginEpisode();
 
         // set the size of the initial time step of the episode
         Scalar dt = limitNextTimeStepSize_(simulator.episodeLength());
@@ -865,7 +884,8 @@ public:
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
 
         wellModel_.beginTimeStep();
-        aquiferModel_.beginTimeStep();
+        if (enableAquifers_)
+            aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
 
     }
@@ -887,7 +907,8 @@ public:
     void beginIteration()
     {
         wellModel_.beginIteration();
-        aquiferModel_.beginIteration();
+        if (enableAquifers_)
+            aquiferModel_.beginIteration();
     }
 
     /*!
@@ -896,7 +917,8 @@ public:
     void endIteration()
     {
         wellModel_.endIteration();
-        aquiferModel_.endIteration();
+        if (enableAquifers_)
+            aquiferModel_.endIteration();
     }
 
     /*!
@@ -921,7 +943,8 @@ public:
 
         const auto& simulator = this->simulator();
         wellModel_.endTimeStep();
-        aquiferModel_.endTimeStep();
+        if (enableAquifers_)
+            aquiferModel_.endTimeStep();
         tracerModel_.endTimeStep();
 
         // deal with DRSDT and DRVDT
@@ -1481,7 +1504,8 @@ public:
 
         updateCompositionChangeLimits_();
 
-        aquiferModel_.initialSolutionApplied();
+        if (enableAquifers_)
+            aquiferModel_.initialSolutionApplied();
     }
 
     /*!
@@ -1509,7 +1533,8 @@ public:
             assert(Opm::isfinite(rate[eqIdx]));
         }
 
-        aquiferModel_.addToSource(rate, context, spaceIdx, timeIdx);
+        if (enableAquifers_)
+            aquiferModel_.addToSource(rate, context, spaceIdx, timeIdx);
 
         // if requested, compensate systematic mass loss for cells which were "well
         // behaved" in the last time step
@@ -1827,7 +1852,8 @@ private:
     void checkDeckCompatibility_() const
     {
         const auto& deck = this->simulator().vanguard().deck();
-        bool beVerbose = this->simulator().gridView().comm().rank() == 0;
+        const auto& comm = this->simulator().gridView().comm();
+        bool beVerbose = comm.rank() == 0;
 
         if (enableApiTracking)
             throw std::logic_error("API tracking is not yet implemented but requested at compile time.");
@@ -3133,6 +3159,7 @@ private:
     GlobalEqVector drift_;
 
     EclWellModel wellModel_;
+    bool enableAquifers_;
     EclAquiferModel aquiferModel_;
 
     bool enableEclOutput_;
