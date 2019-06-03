@@ -26,7 +26,7 @@
  * \copydoc Ewoms::TracerVdTable
  */
 #ifndef EWOMS_TRACER_VD_TABLE_HH
-#define	EWOMS_TRACER_VD_TABLE_HH
+#define EWOMS_TRACER_VD_TABLE_HH
 
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 

@@ -607,25 +607,25 @@ public:
                         val.second = Opm::getValue(fs.saturation(waterPhaseIdx));
                     else if (key.first == "BGSAT")
                         val.second = Opm::getValue(fs.saturation(gasPhaseIdx));
-		    else if (key.first == "BOSAT")
+                    else if (key.first == "BOSAT")
                         val.second = 1. - Opm::getValue(fs.saturation(gasPhaseIdx)) - Opm::getValue(fs.saturation(waterPhaseIdx));
                     else if (key.first == "BPR")
                         val.second = Opm::getValue(fs.pressure(oilPhaseIdx));
-		    else if (key.first == "BWKR" || key.first == "BKRW")
+                    else if (key.first == "BWKR" || key.first == "BKRW")
                         val.second = Opm::getValue(intQuants.relativePermeability(waterPhaseIdx));
-		    else if (key.first == "BGKR" || key.first == "BKRG")
+                    else if (key.first == "BGKR" || key.first == "BKRG")
                         val.second = Opm::getValue(intQuants.relativePermeability(gasPhaseIdx));
-		    else if (key.first == "BOKR" || key.first == "BKRO")
+                    else if (key.first == "BOKR" || key.first == "BKRO")
                         val.second = Opm::getValue(intQuants.relativePermeability(oilPhaseIdx));
-		    else if (key.first == "BWPC")
+                    else if (key.first == "BWPC")
                         val.second = Opm::getValue(fs.pressure(oilPhaseIdx)) - Opm::getValue(fs.pressure(waterPhaseIdx));
-		    else if (key.first == "BGPC")
+                    else if (key.first == "BGPC")
                         val.second = Opm::getValue(fs.pressure(gasPhaseIdx)) - Opm::getValue(fs.pressure(oilPhaseIdx));
-		    else if (key.first == "BVWAT" || key.first == "BWVIS")
+                    else if (key.first == "BVWAT" || key.first == "BWVIS")
                         val.second = Opm::getValue(fs.viscosity(waterPhaseIdx));
-		    else if (key.first == "BVGAS" || key.first == "BGVIS")
+                    else if (key.first == "BVGAS" || key.first == "BGVIS")
                         val.second = Opm::getValue(fs.viscosity(gasPhaseIdx));
-		    else if (key.first == "BVOIL" || key.first == "BOVIS")
+                    else if (key.first == "BVOIL" || key.first == "BOVIS")
                         val.second = Opm::getValue(fs.viscosity(oilPhaseIdx));
                     else {
                         std::string logstring = "Keyword '";
@@ -1020,7 +1020,7 @@ public:
 
     }
 
-    void setRestart(const Opm::data::Solution& sol, unsigned elemIdx, unsigned globalDofIndex) 
+    void setRestart(const Opm::data::Solution& sol, unsigned elemIdx, unsigned globalDofIndex)
     {
         Scalar so = 1.0;
         if (saturation_[waterPhaseIdx].size() > 0 && sol.has("SWAT")) {

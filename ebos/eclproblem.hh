@@ -841,7 +841,7 @@ public:
     {
         const auto& simulator = this->simulator();
         int epsiodeIdx = simulator.episodeIndex();
-	bool invalidateIntensiveQuantities = false;
+        bool invalidateIntensiveQuantities = false;
         const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
         if (drsdtActive_())
             // DRSDT is enabled
