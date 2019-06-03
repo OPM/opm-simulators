@@ -2499,8 +2499,10 @@ private:
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
                 maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*simulator.timeStepSize();
 
-        if (tracerModel().numTracers() > 0)
-            std::cout << "Warning: Restart is not implemented for the tracer model, it will initialize with initial tracer concentration" << std::endl;
+        if (tracerModel().numTracers() > 0 && this->gridView().comm().rank() == 0)
+            std::cout << "Warning: Restart is not implemented for the tracer model, it will initialize itself "
+                      << "with the initial tracer concentration.\n"
+                      << std::flush;
 
         // assign the restart solution to the current solution. note that we still need
         // to compute real initial solution after this because the initial fluid states

@@ -101,17 +101,22 @@ public:
             return; // tracer treatment is supposed to be disabled
 
         if (!EWOMS_GET_PARAM(TypeTag, bool, EnableTracerModel)) {
-            std::cout << "Warning: Tracer model is disabled but the deck contatins the TRACERS keyword \n";
-            std::cout << "The tracer model must be activated using --enable-tracer-model=true "<< std::endl;
+            if (simulator_.gridView().comm().rank() == 0) {
+                std::cout << "Warning: Tracer model is disabled but the deck contains the TRACERS keyword\n"
+                          << "The tracer model must be explictly activated using --enable-tracer-model=true\n"
+                          << std::flush;
+            }
             return; // Tracer transport must be enabled by the user
         }
 
         if (!deck.hasKeyword("TRACER"))
-            throw std::runtime_error("the deck does not contain the TRACER keyword");
+            throw std::runtime_error("The deck does not contain the TRACER keyword");
 
         if (simulator_.gridView().comm().size() > 1) {
             tracerNames_.resize(0);
-            std::cout << "Warning: Tracer model is not compatible with mpi run"  << std::endl;
+            if (simulator_.gridView().comm().rank() == 0)
+                std::cout << "Warning: The tracer model currently does not work for parallel runs\n"
+                          << std::flush;
             return;
         }
 
