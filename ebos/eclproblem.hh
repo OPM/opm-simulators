@@ -699,7 +699,7 @@ public:
             checkDeckCompatibility_();
 
         // write the static output files (EGRID, INIT, SMSPEC, etc.)
-        if (enableEclOutput_ && !initconfig.restartRequested())
+        if (enableEclOutput_)
             eclWriter_->writeInit();
 
         simulator.vanguard().releaseGlobalTransmissibilities();
