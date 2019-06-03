@@ -238,6 +238,7 @@ public:
         tmp.emplace_back(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
         tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
         tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
+        tmp.emplace_back(Opm::ParseContext::PARSE_EXTRA_RECORDS, Opm::InputError::WARN);
         Opm::ParseContext parseContext(tmp);
         Opm::ErrorGuard errorGuard;
 
