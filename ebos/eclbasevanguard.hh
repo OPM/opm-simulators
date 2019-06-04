@@ -390,12 +390,8 @@ public:
     * computed, ready to use summary values. The values will typically be used by
     * the UDQ, WTEST and ACTIONX calculations.
     */
-    const Opm::SummaryState& summaryState() const
+    Opm::SummaryState& summaryState() 
     { return summaryState_; }
-
-    Opm::SummaryState& summaryState()
-    { return summaryState_; }
-
 
     /*!
      * \brief Returns the name of the case.
