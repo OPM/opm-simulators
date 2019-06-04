@@ -93,6 +93,7 @@ struct SetupTest {
         // Create wells.
         wells_manager.reset(new Opm::WellsManager(*ecl_state,
                                                   *schedule,
+                                                  summaryState,
                                                   current_timestep,
                                                   Opm::UgGridHelpers::numCells(grid),
                                                   Opm::UgGridHelpers::globalCell(grid),
@@ -108,6 +109,7 @@ struct SetupTest {
     std::unique_ptr<const Opm::WellsManager> wells_manager;
     std::unique_ptr<const Opm::EclipseState> ecl_state;
     std::unique_ptr<const Opm::Schedule> schedule;
+    Opm::SummaryState summaryState;
     int current_timestep;
 };
 

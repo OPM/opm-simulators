@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
-
+    Opm::SummaryState summaryState;
 
     double target_surfacerate_inj;
     double target_surfacerate_prod;
@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
 
     // Both wells are open in the first schedule step
     {
-    Opm::WellsManager wellsManager(eclipseState , sched, 0, *vanguard.c_grid());
+    Opm::WellsManager wellsManager(eclipseState , sched, summaryState, 0, *vanguard.c_grid());
     const Wells* wells = wellsManager.c_wells();
     const struct WellControls* ctrls0 = wells->ctrls[0];
     const struct WellControls* ctrls1 = wells->ctrls[1];
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
 
     // The injector is stopped
     {
-    Opm::WellsManager wellsManager(eclipseState, sched, 1 , *vanguard.c_grid());
+    Opm::WellsManager wellsManager(eclipseState, sched, summaryState, 1 , *vanguard.c_grid());
     const Wells* wells = wellsManager.c_wells();
     const struct WellControls* ctrls0 = wells->ctrls[0];
     const struct WellControls* ctrls1 = wells->ctrls[1];

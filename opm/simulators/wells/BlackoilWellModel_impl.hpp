@@ -212,11 +212,13 @@ namespace Opm {
         const Grid& grid = ebosSimulator_.vanguard().grid();
         const auto& defunct_well_names = ebosSimulator_.vanguard().defunctWellNames();
         const auto& eclState = ebosSimulator_.vanguard().eclState();
+        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         wells_ecl_ = schedule().getWells2(timeStepIdx);
 
         // Create wells and well state.
         wells_manager_.reset( new WellsManager (eclState,
                                                 schedule(),
+                                                summaryState,
                                                 timeStepIdx,
                                                 Opm::UgGridHelpers::numCells(grid),
                                                 Opm::UgGridHelpers::globalCell(grid),
@@ -478,9 +480,11 @@ namespace Opm {
         // will not be present in a restart file. Use the previous time step to retrieve
         // wells that have information written to the restart file.
         const int report_step = std::max(eclState().getInitConfig().getRestartStep() - 1, 0);
+        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
 
         WellsManager wellsmanager(eclState(),
                                   schedule(),
+                                  summaryState,
                                   report_step,
                                   Opm::UgGridHelpers::numCells(grid()),
                                   Opm::UgGridHelpers::globalCell(grid()),
@@ -1088,7 +1092,7 @@ namespace Opm {
         computeAverageFormationFactor(B_avg);
 
         const Opm::SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
-        Opm::SummaryState summaryState;
+        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         int exception_thrown = 0;
         try {
             for (const auto& well : well_container_copy) {
@@ -1649,7 +1653,7 @@ namespace Opm {
     {
 
         const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells());
-        Opm::SummaryState summaryState;
+        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
 
         int global_number_resv_wells = resv_wells.size();
         global_number_resv_wells = ebosSimulator_.gridView().comm().sum(global_number_resv_wells);

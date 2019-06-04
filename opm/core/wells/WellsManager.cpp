@@ -200,6 +200,7 @@ namespace Opm
     /// Construct wells from deck.
     WellsManager::WellsManager(const Opm::EclipseState& eclipseState,
                                const Opm::Schedule& schedule,
+                               const SummaryState& summaryState,
                                const size_t timeStep,
                                const UnstructuredGrid& grid)
         : w_(create_wells(0,0,0)), is_parallel_run_(false)

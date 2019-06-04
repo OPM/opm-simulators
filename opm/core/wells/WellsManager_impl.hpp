@@ -267,6 +267,7 @@ template <class C2F, class FC>
 WellsManager::
 WellsManager(const Opm::EclipseState& eclipseState,
              const Opm::Schedule& schedule,
+             const Opm::SummaryState& summaryState,
              const size_t                    timeStep,
              int                             number_of_cells,
              const int*                      global_cell,
