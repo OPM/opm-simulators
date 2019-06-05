@@ -106,7 +106,6 @@ namespace MissingFeatures {
             "EXCEL",
             "EXTRAPMS",
             "FILLEPS",
-            "FIPNUM",
             "FLUXTYPE",
             "FULLIMP",
             "GCONSALE",
