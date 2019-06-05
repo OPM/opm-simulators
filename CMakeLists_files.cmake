@@ -164,7 +164,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp
   opm/simulators/linalg/FlexibleSolver.hpp
   opm/simulators/linalg/FlowLinearSolverParameters.hpp
-  opm/simulators/linalg/GetQuasiImpesWeights.hpp
   opm/simulators/linalg/GraphColoring.hpp
   opm/simulators/linalg/ISTLSolverEbos.hpp
   opm/simulators/linalg/ISTLSolverEbosCpr.hpp
@@ -172,7 +171,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/MatrixBlock.hpp
   opm/simulators/linalg/MatrixMarketUtils.hpp
   opm/simulators/linalg/OwningBlockPreconditioner.hpp
-  opm/simulators/linalg/OwningTwolevelPreconditioner.hpp
+  opm/simulators/linalg/OwningTwoLevelPreconditioner.hpp
   opm/simulators/linalg/ParallelOverlappingILU0.hpp
   opm/simulators/linalg/ParallelRestrictedAdditiveSchwarz.hpp
   opm/simulators/linalg/ParallelIstlInformation.hpp
@@ -180,6 +179,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/PressureTransferPolicy.hpp
   opm/simulators/linalg/PreconditionerFactory.hpp
   opm/simulators/linalg/PreconditionerWithUpdate.hpp
+  opm/simulators/linalg/getQuasiImpesWeights.hpp
   opm/simulators/linalg/setupPropertyTree.hpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
   opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp

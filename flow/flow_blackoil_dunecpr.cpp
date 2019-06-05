@@ -20,9 +20,12 @@
 */
 #include "config.h"
 #include "flow/flow_tag.hpp"
-//#include <opm/linearsolvers/amgclsolverbackend.hh>
+
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
 #include  <opm/simulators/linalg/ISTLSolverEbosFlexible.hpp>
-//#include <ewoms/linear/superlubackend.hh>
+#else
+#include  <opm/simulators/linalg/ISTLSolverEbosCpr.hpp>
+#endif
 
 BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
@@ -46,8 +49,8 @@ SET_PROP(EclFlowProblemSimple, FluidState)
        typedef Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  Indices::numPhases > type;
 };
 
-SET_BOOL_PROP(EclFlowProblemSimple,MatrixAddWellContributions,true);
-SET_INT_PROP(EclFlowProblemSimple,LinearSolverVerbosity,0);
+SET_BOOL_PROP(EclFlowProblemSimple, MatrixAddWellContributions, true);
+SET_INT_PROP(EclFlowProblemSimple, LinearSolverVerbosity,0);
 SET_SCALAR_PROP(EclFlowProblemSimple, LinearSolverReduction, 1e-2);
 SET_INT_PROP(EclFlowProblemSimple, LinearSolverMaxIter, 100);
 SET_BOOL_PROP(EclFlowProblemSimple, UseAmg, true);//probably not used
@@ -79,7 +82,11 @@ namespace Ewoms {
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::ParallelBiCGStabSolverBackend<TypeTag>);//not work
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::SuperLUBackend<TypeTag>)//not work
     //SET_TAG_PROP(EclFlowProblem, FluidState, Opm::BlackOilFluidState);
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
     SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbosFlexible<TypeTag>);
+#else
+    SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbosCpr<TypeTag>);
+#endif
     SET_BOOL_PROP(EclFlowProblemSimple, EnableStorageCache, true);
     SET_BOOL_PROP(EclFlowProblemSimple, EnableIntensiveQuantityCache, true);
     

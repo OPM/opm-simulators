@@ -22,6 +22,10 @@
 #define BOOST_TEST_MODULE OPM_test_PreconditionerFactory
 #include <boost/test/unit_test.hpp>
 
+#include <dune/common/version.hh>
+
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 
@@ -213,3 +217,13 @@ BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
     // Test with 3x3 block solvers.
     test3(prm);
 }
+
+#else
+
+// Do nothing if we do not have at least Dune 2.6.
+BOOST_AUTO_TEST_CASE(DummyTest)
+{
+    BOOST_REQUIRE(true);
+}
+
+#endif

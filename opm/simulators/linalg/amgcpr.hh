@@ -50,9 +50,9 @@ namespace Dune
 
     static type* create(const M& mat, bool verbose, bool reusevector )
     {
-      create(mat, verbose, reusevector, std::integral_constant<bool, isDirectSolver>());
+      return create(mat, verbose, reusevector, std::integral_constant<bool, isDirectSolver>());
     }
-    static type* create(const M& mat, bool verbose, bool reusevector, std::integral_constant<bool, false> )
+    static type* create(const M& /* mat */, bool /* verbose */, bool /* reusevector */, std::integral_constant<bool, false> )
     {
       DUNE_THROW(NotImplemented,"DirectSolver not selected");
       return nullptr;
@@ -294,7 +294,7 @@ namespace Dune
        * @brief Update the coarse solver and the hierarchies.
        */
       template<class C>
-      void updateSolver(C& criterion, Operator& /* matrix */, const PI& pinfo);
+      void updateSolver(C& criterion, const Operator& /* matrix */, const PI& pinfo);
 
       /**
        * @brief Update the coarse solver and the hierarchies.
@@ -533,7 +533,7 @@ namespace Dune
 
     template<class M, class X, class S, class PI, class A>
     template<class C>
-    void AMGCPR<M,X,S,PI,A>::updateSolver(C& /* criterion */, Operator& /* matrix */, const PI& /* pinfo */)
+    void AMGCPR<M,X,S,PI,A>::updateSolver(C& /* criterion */, const Operator& /* matrix */, const PI& /* pinfo */)
     {
       update();
     }

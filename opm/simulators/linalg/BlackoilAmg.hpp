@@ -395,9 +395,9 @@ private:
             }
         }
 
-        void updatePreconditioner(typename AMGType::Operator& op)
+        void updatePreconditioner()
         {
-            amg_->updateSolver(crit_, op, comm_);
+            amg_->updateSolver(crit_, op_, comm_);
         }
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)

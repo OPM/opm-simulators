@@ -22,6 +22,10 @@
 #define BOOST_TEST_MODULE OPM_test_FlexibleSolver
 #include <boost/test/unit_test.hpp>
 
+#include <dune/common/version.hh>
+
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 
 #include <boost/property_tree/json_parser.hpp>
@@ -107,3 +111,13 @@ BOOST_AUTO_TEST_CASE(TestFlexibleSolver)
         }
     }
 }
+
+#else
+
+// Do nothing if we do not have at least Dune 2.6.
+BOOST_AUTO_TEST_CASE(DummyTest)
+{
+    BOOST_REQUIRE(true);
+}
+
+#endif
