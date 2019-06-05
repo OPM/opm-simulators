@@ -21,6 +21,7 @@
 #define OPM_ISTLSOLVEREBOSFLEXIBLE_HEADER_INCLUDED
 
 #include <ewoms/linear/matrixblock.hh>
+#include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
@@ -57,6 +58,7 @@ class ISTLSolverEbosFlexible
     using SparseMatrixAdapter = typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter);
     using VectorType = typename GET_PROP_TYPE(TypeTag, GlobalEqVector);
     using Simulator = typename GET_PROP_TYPE(TypeTag, Simulator);
+    using Scalar = typename GET_PROP_TYPE(TypeTag, Scalar);
     using MatrixType = typename SparseMatrixAdapter::IstlMatrix;
 #if HAVE_MPI
     using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
@@ -77,6 +79,7 @@ public:
         parameters_.template init<TypeTag>();
         prm_ = setupPropertyTree(parameters_);
         extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
+        detail::findOverlapRowsAndColumns(simulator_.vanguard().grid(), overlapRowAndColumns_);
 #if HAVE_MPI
         if (parallelInformation_.type() == typeid(ParallelISTLInformation)) {
             // Parallel case.
@@ -91,7 +94,7 @@ public:
     {
     }
 
-    void prepare(const SparseMatrixAdapter& mat, VectorType& b)
+    void prepare(SparseMatrixAdapter& mat, VectorType& b)
     {
 #if HAVE_MPI
         static bool firstcall = true;
@@ -103,6 +106,7 @@ public:
             parinfo->copyValuesTo(comm_->indexSet(), comm_->remoteIndices(), size, 1);
             firstcall = false;
         }
+        makeOverlapRowsInvalid(mat.istlMatrix());
 #endif
         // Decide if we should recreate the solver or just do
         // a minimal preconditioner update.
@@ -167,6 +171,32 @@ public:
     }
 
 protected:
+    /// Zero out off-diagonal blocks on rows corresponding to overlap cells
+    /// Diagonal blocks on ovelap rows are set to diag(1e100).
+    void makeOverlapRowsInvalid(MatrixType& matrix) const
+    {
+        // Value to set on diagonal
+        const int numEq = MatrixType::block_type::rows;
+        typename MatrixType::block_type diag_block(0.0);
+        for (int eq = 0; eq < numEq; ++eq)
+            diag_block[eq][eq] = 1.0e100;
+
+        // loop over precalculated overlap rows and columns
+        for (auto row = overlapRowAndColumns_.begin(); row != overlapRowAndColumns_.end(); row++) {
+            int lcell = row->first;
+            // diagonal block set to large value diagonal
+            matrix[lcell][lcell] = diag_block;
+
+            // loop over off diagonal blocks in overlap row
+            for (auto col = row->second.begin(); col != row->second.end(); ++col) {
+                int ncell = *col;
+                // zero out block
+                matrix[lcell][ncell] = 0.0;
+            }
+        }
+    }
+
+
     const Simulator& simulator_;
 
     std::unique_ptr<SolverType> solver_;
@@ -176,6 +206,7 @@ protected:
     Dune::InverseOperatorResult res_;
     boost::any parallelInformation_;
     std::unique_ptr<Communication> comm_;
+    std::vector<std::pair<int, std::vector<int>>> overlapRowAndColumns_;
 }; // end ISTLSolverEbosFlexible
 
 } // namespace Opm
