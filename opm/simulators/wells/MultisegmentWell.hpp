@@ -115,6 +115,7 @@ namespace Opm
         virtual void assembleWellEq(const Simulator& ebosSimulator,
                                     const std::vector<Scalar>& B_avg,
                                     const double dt,
+                                    const bool checking_operability,
                                     WellState& well_state,
                                     Opm::DeferredLogger& deferred_logger) override;
 
@@ -146,7 +147,9 @@ namespace Opm
 
         virtual void updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& deferred_logger) const override;
 
-        virtual void solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger) override; // const?
+        virtual void solveEqAndUpdateWellState(const bool checking_oprability,
+                                               WellState& well_state,
+                                               Opm::DeferredLogger& deferred_logger) override; // const?
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state,
@@ -359,6 +362,7 @@ namespace Opm
         // it is not implemented for multisegment well yet
         virtual void checkWellOperability(const Simulator& ebos_simulator,
                                           const WellState& well_state,
+                                          const std::vector<double>& B_avg,
                                           Opm::DeferredLogger& deferred_logger) override;
 
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;

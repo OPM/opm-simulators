@@ -480,17 +480,20 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     assembleWellEq(const Simulator& ebosSimulator,
-                   const std::vector<Scalar>& /* B_avg */,
+                   const std::vector<Scalar>& B_avg,
                    const double dt,
+                   const bool checking_operability,
                    WellState& well_state,
                    Opm::DeferredLogger& deferred_logger)
     {
         // TODO: only_wells should be put back to save some computation
         // for example, the matrices B C does not need to update if only_wells
 
-        checkWellOperability(ebosSimulator, well_state, deferred_logger);
+        if (checking_operability) {
+            checkWellOperability(ebosSimulator, well_state, B_avg, deferred_logger);
 
-        if (!this->isOperable()) return;
+            if (!this->isOperable()) return;
+        }
 
         // clear all entries
         duneB_ = 0.0;
@@ -890,10 +893,11 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
+                    const bool checking_operability,
                     WellState& well_state,
                     Opm::DeferredLogger& deferred_logger) const
     {
-        if (!this->isOperable()) return;
+        if (checking_operability && !this->isOperable()) return;
 
         updatePrimaryVariablesNewton(dwells, well_state);
 
@@ -944,15 +948,21 @@ namespace Opm
 
         // updating the total rates Q_t
         const double relaxation_factor_rate = relaxationFactorRate(old_primary_variables, dwells);
-        primary_variables_[WQTotal] = old_primary_variables[WQTotal] - dwells[0][WQTotal] * relaxation_factor_rate;
+        primary_variables_[WQTotal] = old_primary_variables[WQTotal] - dwells[0][WQTotal]; // * relaxation_factor_rate;
 
         // updating the bottom hole pressure
         {
             const double dBHPLimit = param_.dbhp_max_rel_;
             const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;
-            const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]), std::abs(old_primary_variables[Bhp]) * dBHPLimit);
+            const double dbhp_limit = std::max(5.e5, std::abs(old_primary_variables[Bhp]) * dBHPLimit);
+            // const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]), std::abs(old_primary_variables[Bhp]) * dBHPLimit);
+            const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]), dbhp_limit);
             // 1e5 to make sure bhp will not be below 1bar
-            primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
+            // primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
+            primary_variables_[Bhp] = old_primary_variables[Bhp] - dx1_limited;
+            if (primary_variables_[Bhp] < 1.e5) {
+                std::cout << " well " << name() << " bhp is " << primary_variables_[Bhp] << std::endl;
+            }
         }
 
         updateExtraPrimaryVariables(dwells);
@@ -1399,6 +1409,7 @@ namespace Opm
     StandardWell<TypeTag>::
     checkWellOperability(const Simulator& ebos_simulator,
                          const WellState& well_state,
+                         const std::vector<double>& B_avg,
                          Opm::DeferredLogger& deferred_logger)
     {
         // focusing on PRODUCER for now
@@ -1410,9 +1421,10 @@ namespace Opm
             return;
         }
 
+
         const bool old_well_operable = this->operability_status_.isOperable();
 
-        updateWellOperability(ebos_simulator, well_state, deferred_logger);
+        updateWellOperability(ebos_simulator, well_state, B_avg, deferred_logger);
 
         const bool well_operable = this->operability_status_.isOperable();
 
@@ -1432,6 +1444,7 @@ namespace Opm
     StandardWell<TypeTag>::
     updateWellOperability(const Simulator& ebos_simulator,
                           const WellState& /* well_state */,
+                          const std::vector<double>& B_avg,
                           Opm::DeferredLogger& deferred_logger)
     {
         this->operability_status_.reset();
@@ -1439,7 +1452,7 @@ namespace Opm
         updateIPR(ebos_simulator, deferred_logger);
 
         // checking the BHP limit related
-        checkOperabilityUnderBHPLimitProducer(ebos_simulator, deferred_logger);
+        checkOperabilityUnderBHPLimitProducer(ebos_simulator, B_avg, deferred_logger);
 
         // checking whether the well can operate under the THP constraints.
         if (this->wellHasTHPConstraints()) {
@@ -1454,9 +1467,21 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    checkOperabilityUnderBHPLimitProducer(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger)
+    checkOperabilityUnderBHPLimitProducer(const Simulator& ebos_simulator,
+                                          const std::vector<double>& B_avg,
+                                          Opm::DeferredLogger& deferred_logger)
     {
         const double bhp_limit = mostStrictBhpFromBhpLimits(deferred_logger);
+
+
+        const double bhp_for_zero_rate = solveForBhpUnderZeroRate(ebos_simulator, B_avg, deferred_logger);
+
+        if (bhp_for_zero_rate <= bhp_limit + 1.e-5) {
+            this->operability_status_.operable_under_only_bhp_limit = false;
+        } else {
+            this->operability_status_.operable_under_only_bhp_limit = true;
+        }
+        /*
         // Crude but works: default is one atmosphere.
         // TODO: a better way to detect whether the BHP is defaulted or not
         const bool bhp_limit_not_defaulted = bhp_limit > 1.5 * unit::barsa;
@@ -1497,7 +1522,79 @@ namespace Opm
             // when operating under defaulted BHP limit.
             this->operability_status_.operable_under_only_bhp_limit = true;
             this->operability_status_.obey_thp_limit_under_bhp_limit = false;
+        } */
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    double
+    StandardWell<TypeTag>::
+    solveForBhpUnderZeroRate(const Simulator& ebos_simulator,
+                             const std::vector<double>& B_avg,
+                             DeferredLogger& deferred_logger) const
+    {
+        StandardWell<TypeTag> well(*this);
+        well.well_controls_ =  well_controls_create();
+
+        WellControls* wc = well.well_controls_;
+        // this function is static
+        // well_controls_reserve(2, wc);
+        well_controls_assert_number_of_phases(wc, number_of_phases_);
+
+        std::vector<double> distr(number_of_phases_);
+        const int fipreg = 0;
+        this->rateConverter_.calcCoeff(fipreg, this->pvtRegionIdx_, distr);
+        const double invalid_alq = -1.e100;
+        const int invalid_vfp = -1;
+        bool ok = false;
+        ok = well_controls_add_new(RESERVOIR_RATE, 0., invalid_alq, invalid_vfp, distr.data(), wc);
+
+        if (!ok) {
+            std::cout << " well " << name() << " failed in adding RESERVOIR_RATE limit in solveForBhpUnderZeroRate " << std::endl;
         }
+
+        const double bhp_limit = mostStrictBhpFromBhpLimits(deferred_logger);
+        ok = well_controls_add_new(BHP, bhp_limit, invalid_alq, invalid_vfp, NULL, wc);
+        if (!ok) {
+            std::cout << " well " << name() << " failed in adding BHP limit in solveForBhpUnderZeroRate " << std::endl;
+        }
+
+        assert(well_controls_get_num(wc) == 2);
+        well_controls_set_current(wc, 0);
+        // assert(well_controls_get_current_type(wc) == RESERVOIR_RATE);
+        // assert(well_controls_get_current_type(wc) == BHP);
+
+        // TODO: it is not good to hack the well_state this way
+        WellState well_state_copy = ebos_simulator.problem().wellModel().wellState();
+        well_state_copy.currentControls()[well.index_of_well_] = 0; // rate control
+
+        well.updateWellStateWithTarget(ebos_simulator, well_state_copy, deferred_logger);
+        well.updatePrimaryVariables(well_state_copy, deferred_logger);
+        well.initPrimaryVariablesEvaluation();
+        const bool converged = well.solveWellEqUntilConverged(ebos_simulator, B_avg, false, well_state_copy, deferred_logger);
+
+        if (!converged) {
+            std::cout << " well " << name() << " solveWellEqUntilConverged NOT converged " << std::endl;
+        }
+
+        double bhp_for_zero_rate = 0;
+
+        if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
+            std::cout << " well " << name() << " is under RESERVOIR_RATE control after solveForBhpUnderZeroRate " << std::endl;
+        } else if (well_controls_get_current_type(wc) == BHP) {
+            std::cout << " well " << name() << " is under BHP control after solve solveForBhpUnderZeroRate with bhp_limit " << bhp_limit/1.e5 << std::endl;
+        }
+        bhp_for_zero_rate = well_state_copy.bhp()[index_of_well_];
+        std::cout << " well " << name() << " bhp_for_zero_rate " << bhp_for_zero_rate/1.e5 << " bhp_limit " << bhp_limit/1.e5 << std::endl;
+        std::cout << " well rates " << well_state_copy.wellRates()[number_of_phases_ * index_of_well_] << " "
+                                    << well_state_copy.wellRates()[number_of_phases_ * index_of_well_ + 1] << " "
+                                    << well_state_copy.wellRates()[number_of_phases_ * index_of_well_ + 2] << std::endl;
+
+        well_controls_destroy(wc);
+        return bhp_for_zero_rate;
     }
 
 
@@ -2095,9 +2192,11 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger)
+    solveEqAndUpdateWellState(const bool checking_operability,
+                              WellState& well_state,
+                              Opm::DeferredLogger& deferred_logger)
     {
-        if (!this->isOperable()) return;
+        if (checking_operability && !this->isOperable()) return;
 
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
@@ -2105,7 +2204,7 @@ namespace Opm
         dx_well[0].resize(numWellEq_);
         invDuneD_.mv(resWell_, dx_well);
 
-        updateWellState(dx_well, well_state, deferred_logger);
+        updateWellState(dx_well, checking_operability, well_state, deferred_logger);
     }
 
 
@@ -2223,7 +2322,7 @@ namespace Opm
         xw[0].resize(numWellEq_);
 
         recoverSolutionWell(x, xw);
-        updateWellState(xw, well_state, deferred_logger);
+        updateWellState(xw, true, well_state, deferred_logger);
     }
 
 
@@ -2290,7 +2389,8 @@ namespace Opm
         WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
         well_state_copy.currentControls()[index_of_well_] = bhp_index;
 
-        bool converged = this->solveWellEqUntilConverged(ebosSimulator, B_avg, well_state_copy, deferred_logger);
+        // TODO: not sure about the correct way, while true will not change the behavoir
+        bool converged = this->solveWellEqUntilConverged(ebosSimulator, B_avg, true, well_state_copy, deferred_logger);
 
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well potential calculations "
@@ -2907,9 +3007,9 @@ namespace Opm
         // we should be able to provide a better initialization
         calculateExplicitQuantities(ebos_simulator, well_state_copy, deferred_logger);
 
-        updateWellOperability(ebos_simulator, well_state_copy, deferred_logger);
+        updateWellOperability(ebos_simulator, well_state_copy, B_avg, deferred_logger);
 
-        if ( !this->isOperable() ) {
+        /* if ( !this->isOperable() ) {
             const std::string msg = " well " + name() + " is not operable during well testing for physical reason";
             deferred_logger.debug(msg);
             return;
@@ -2921,13 +3021,13 @@ namespace Opm
         updatePrimaryVariables(well_state_copy, deferred_logger);
         initPrimaryVariablesEvaluation();
 
-        const bool converged = this->solveWellEqUntilConverged(ebos_simulator, B_avg, well_state_copy, deferred_logger);
+        const bool converged = this->solveWellEqUntilConverged(ebos_simulator, B_avg, true, well_state_copy, deferred_logger);
 
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well testing for physical reason";
             deferred_logger.debug(msg);
             return;
-        }
+        } */
 
         if (this->isOperable() ) {
             welltest_state.openWell(name(), WellTestConfig::PHYSICAL );

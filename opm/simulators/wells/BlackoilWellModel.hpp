@@ -357,7 +357,7 @@ namespace Opm {
 
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
-            void prepareTimeStep(Opm::DeferredLogger& deferred_logger);
+            void prepareTimeStep(const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger);
 
             void prepareGroupControl(Opm::DeferredLogger& deferred_logger);
 

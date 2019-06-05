@@ -1281,6 +1281,7 @@ namespace Opm
     WellInterface<TypeTag>::
     solveWellEqUntilConverged(const Simulator& ebosSimulator,
                               const std::vector<double>& B_avg,
+                              const bool checking_operability,
                               WellState& well_state,
                               Opm::DeferredLogger& deferred_logger)
     {
@@ -1288,9 +1289,9 @@ namespace Opm
         int it = 0;
         const double dt = 1.0; //not used for the well tests
         bool converged;
-        WellState well_state0 = well_state;
+        // WellState well_state0 = well_state;
         do {
-            assembleWellEq(ebosSimulator, B_avg, dt, well_state, deferred_logger);
+            assembleWellEq(ebosSimulator, B_avg, dt, checking_operability, well_state, deferred_logger);
 
             auto report = getWellConvergence(B_avg, deferred_logger);
 
@@ -1300,10 +1301,20 @@ namespace Opm
             }
 
             ++it;
-            solveEqAndUpdateWellState(well_state, deferred_logger);
+            if (it > 5) {
+                std::cout << " well " << name() << " it " << it  << std::endl;
+            }
+            solveEqAndUpdateWellState(checking_operability, well_state, deferred_logger);
 
             updateWellControl(ebosSimulator, well_state, deferred_logger);
             initPrimaryVariablesEvaluation();
+            std::cout << " well " << name() << " it " << it  << std::endl;
+            // assert(well_controls_get_current_type(well_controls_) == RESERVOIR_RATE);
+            // assert(well_controls_get_current_type(well_controls_) == BHP);
+            std::cout << " well " << name() << " bhp " << well_state.bhp()[index_of_well_] / 1.e5 << std::endl;
+            std::cout << " well rates " << well_state.wellRates()[number_of_phases_ * index_of_well_] << " "
+                                        << well_state.wellRates()[number_of_phases_ * index_of_well_ + 1] << " "
+                                        << well_state.wellRates()[number_of_phases_ * index_of_well_ + 2] << std::endl;
         } while (it < max_iter);
 
         return converged;
@@ -1357,7 +1368,7 @@ namespace Opm
     {
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
-        const bool converged = solveWellEqUntilConverged(ebosSimulator, B_avg, well_state, deferred_logger);
+        const bool converged = solveWellEqUntilConverged(ebosSimulator, B_avg, true, well_state, deferred_logger);
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + name() +  " converged");
         } else {

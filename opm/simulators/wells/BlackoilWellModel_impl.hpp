@@ -412,13 +412,13 @@ namespace Opm {
         updateWellTestState(simulationTime, wellTestState_);
 
         // calculate the well potentials for output
-        try {
+        /* try {
             std::vector<double> well_potentials;
             computeWellPotentials(well_potentials, local_deferredLogger);
         } catch ( std::runtime_error& e ) {
             const std::string msg = "A zero well potential is returned for output purposes. ";
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
-        }
+        } */
         previous_well_state_ = well_state_;
 
         Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
@@ -676,17 +676,18 @@ namespace Opm {
 
         int exception_thrown = 0;
         try {
+            std::vector< Scalar > B_avg(numComponents(), Scalar() );
+            computeAverageFormationFactor(B_avg);
+
             if (iterationIdx == 0) {
                 calculateExplicitQuantities(local_deferredLogger);
-                prepareTimeStep(local_deferredLogger);
+                prepareTimeStep(B_avg, local_deferredLogger);
             }
 
             updateWellControls(local_deferredLogger);
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
 
-            std::vector< Scalar > B_avg(numComponents(), Scalar() );
-            computeAverageFormationFactor(B_avg);
 
             if (param_.solve_welleq_initially_ && iterationIdx == 0) {
                 // solve the well equations as a pre-processing step
@@ -696,7 +697,7 @@ namespace Opm {
                 if (initial_step_) {
                     // update the explicit quantities to get the initial fluid distribution in the well correct.
                     calculateExplicitQuantities(local_deferredLogger);
-                    prepareTimeStep(local_deferredLogger);
+                    prepareTimeStep(B_avg, local_deferredLogger);
                     last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
                     initial_step_ = false;
                 }
@@ -721,7 +722,7 @@ namespace Opm {
     assembleWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger)
     {
         for (auto& well : well_container_) {
-            well->assembleWellEq(ebosSimulator_, B_avg, dt, well_state_, deferred_logger);
+            well->assembleWellEq(ebosSimulator_, B_avg, dt, true, well_state_, deferred_logger);
         }
     }
 
@@ -910,7 +911,7 @@ namespace Opm {
                 if( localWellsActive() )
                 {
                     for (auto& well : well_container_) {
-                        well->solveEqAndUpdateWellState(well_state_, deferred_logger);
+                        well->solveEqAndUpdateWellState(true, well_state_, deferred_logger);
                     }
                 }
                 // updateWellControls uses communication
@@ -1168,12 +1169,14 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    prepareTimeStep(Opm::DeferredLogger& deferred_logger)
+    prepareTimeStep(const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger)
     {
 
-        if ( wellCollection().havingVREPGroups() ) {
+        // TODO: we should make rateConverter_ has a bool function to see whether the state is defined
+        // here, for testing purpose, we always defineState 
+//        if ( wellCollection().havingVREPGroups() ) {
             rateConverter_->template defineState<ElementContext>(ebosSimulator_);
-        }
+//         }
 
         // after restarting, the well_controls can be modified while
         // the well_state still uses the old control index
@@ -1189,7 +1192,7 @@ namespace Opm {
         int exception_thrown = 0;
         try {
             for (const auto& well : well_container_) {
-                well->checkWellOperability(ebosSimulator_, well_state_, deferred_logger);
+                well->checkWellOperability(ebosSimulator_, well_state_, B_avg, deferred_logger);
             }
             // since the controls are all updated, we should update well_state accordingly
             for (const auto& well : well_container_) {
@@ -1263,7 +1266,7 @@ namespace Opm {
                 }
             }
 
-            if (wellCollection().requireWellPotentials()) {
+            /* if (wellCollection().requireWellPotentials()) {
 
                 // calculate the well potentials
                 std::vector<double> well_potentials;
@@ -1273,7 +1276,7 @@ namespace Opm {
                 // TODO: this is one of two places that still need Wells struct. In this function, only the well names
                 // well types are used, probably the order of the wells to locate the correct values in well_potentials.
                 wellCollection().setGuideRatesWithPotentials(wells(), phase_usage_, well_potentials);
-            }
+            } */
 
             applyVREPGroupControl();
 
