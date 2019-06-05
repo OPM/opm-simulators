@@ -1493,6 +1493,10 @@ namespace Opm
             }
             case SURFACE_RATE:
             {
+            if (well_type_ == INJECTOR) {
+                const double target_rate = well_controls_get_current_target(well_controls_);
+                control_eq = getSegmentGTotal(0) - target_rate;
+            } else {
                 // finding if it is a single phase control or combined phase control
                 int number_phases_under_control = 0;
                 const double* distr = well_controls_get_current_distr(well_controls_);
@@ -1525,6 +1529,7 @@ namespace Opm
                     // TODO: maybe the following equation can be scaled a little bit for gas phase
                     control_eq = rate_for_control - target_rate;
                 }
+            }
                 break;
             }
             case RESERVOIR_RATE:
