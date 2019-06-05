@@ -119,10 +119,10 @@ namespace mswellhelpers
 
 
 
-
-    inline double haalandFormular(const double re, const double diameter, const double roughness)
+    template <typename ValueType>
+    inline ValueType haalandFormular(const ValueType& re, const double diameter, const double roughness)
     {
-        const double value = -3.6 * std::log10(6.9 / re + std::pow(roughness / (3.7 * diameter), 10. / 9.) );
+        const ValueType value = -3.6 * Opm::log10(6.9 / re + std::pow(roughness / (3.7 * diameter), 10. / 9.) );
 
         // sqrt(1/f) should be non-positive
         assert(value >= 0.0);
@@ -133,14 +133,14 @@ namespace mswellhelpers
 
 
 
-
-    inline double calculateFrictionFactor(const double area, const double diameter,
-                                          const double w, const double roughness, const double mu)
+    template <typename ValueType>
+    inline ValueType calculateFrictionFactor(const double area, const double diameter,
+                                          const ValueType& w, const double roughness, const ValueType& mu)
     {
 
-        double f = 0.;
+        ValueType f = 0.;
         // Reynolds number
-        const double re = std::abs(diameter * w / (area * mu));
+        const ValueType re = Opm::abs( diameter * w / (area * mu));
 
         if ( re == 0.0 ) {
             // make sure it is because the mass rate is zero
@@ -148,16 +148,16 @@ namespace mswellhelpers
             return 0.0;
         }
 
-        const double re_value1 = 200.;
-        const double re_value2 = 4000.;
+        const ValueType re_value1 = 2000.;
+        const ValueType re_value2 = 4000.;
 
         if (re < re_value1) {
             f = 16. / re;
         } else if (re > re_value2){
             f = haalandFormular(re, diameter, roughness);
         } else { // in between
-            const double f1 = 16. / re_value1;
-            const double f2 = haalandFormular(re_value2, diameter, roughness);
+            const ValueType f1 = 16. / re_value1;
+            const ValueType f2 = haalandFormular(re_value2, diameter, roughness);
 
             f = (f2 - f1) / (re_value2 - re_value1) * (re - re_value1) + f1;
         }
@@ -181,7 +181,7 @@ namespace mswellhelpers
     ValueType frictionPressureLoss(const double l, const double diameter, const double area, const double roughness,
                                    const ValueType& density, const ValueType& w, const ValueType& mu)
     {
-        const double f = calculateFrictionFactor(area, diameter, w.value(), roughness, mu.value());
+        const ValueType f = calculateFrictionFactor(area, diameter, w, roughness, mu);
         // \Note: a factor of 2 needs to be here based on the dimensional analysis
         return 2. * f * l * w * w / (area * area * diameter * density);
     }
