@@ -475,8 +475,14 @@ namespace Opm
 
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
 
+        // checking the convergence of the well control equations
         void checkConvergenceControlEq(ConvergenceReport& report,
                                        DeferredLogger& deferred_logger) const;
+
+        // checking convergence of extra equations, if there are any
+        void checkConvergenceExtraEqs(const std::vector<double>& res,
+                                      ConvergenceReport& report,
+                                      DeferredLogger& deferred_logger) const;
 
     };
 

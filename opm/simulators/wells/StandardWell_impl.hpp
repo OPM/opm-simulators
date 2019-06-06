@@ -2032,36 +2032,7 @@ namespace Opm
 
         checkConvergenceControlEq(report, deferred_logger);
 
-        if (this->has_polymermw && well_type_ == INJECTOR) {
-            //  checking the convergence of the perforation rates
-            const double wat_vel_tol = 1.e-8;
-            const int dummy_component = -1;
-            const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
-            for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                const double wat_vel_residual = res[Bhp + 1 + perf];
-                if (std::isnan(wat_vel_residual)) {
-                    report.setWellFailed({wat_vel_failure_type, CR::Severity::NotANumber, dummy_component, name()});
-                } else if (wat_vel_residual > maxResidualAllowed * 10.) {
-                    report.setWellFailed({wat_vel_failure_type, CR::Severity::TooLarge, dummy_component, name()});
-                } else if (wat_vel_residual > wat_vel_tol) {
-                    report.setWellFailed({wat_vel_failure_type, CR::Severity::Normal, dummy_component, name()});
-                }
-            }
-
-            // checking the convergence of the skin pressure
-            const double pskin_tol = 1000.; // 1000 pascal
-            const auto pskin_failure_type = CR::WellFailure::Type::Pressure;
-            for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                const double pskin_residual = res[Bhp + 1 + perf + number_of_perforations_];
-                if (std::isnan(pskin_residual)) {
-                    report.setWellFailed({pskin_failure_type, CR::Severity::NotANumber, dummy_component, name()});
-                } else if (pskin_residual > maxResidualAllowed * 10.) {
-                    report.setWellFailed({pskin_failure_type, CR::Severity::TooLarge, dummy_component, name()});
-                } else if (pskin_residual > pskin_tol) {
-                    report.setWellFailed({pskin_failure_type, CR::Severity::Normal, dummy_component, name()});
-                }
-            }
-        }
+        checkConvergenceExtraEqs(res, report, deferred_logger);
 
         return report;
     }
@@ -3184,6 +3155,54 @@ namespace Opm
             report.setWellFailed({ctrltype, CR::Severity::TooLarge, dummy_component, name()});
         } else if ( well_control_residual > control_tolerance) {
             report.setWellFailed({ctrltype, CR::Severity::Normal, dummy_component, name()});
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    checkConvergenceExtraEqs(const std::vector<double>& res,
+                             ConvergenceReport& report,
+                             DeferredLogger& deferred_logger) const
+    {
+        // if different types of extra equations are involved, this function needs to be refactored further
+
+        // checking the convergence of the extra equations related to polymer injectivity
+        if (this->has_polymermw && well_type_ == INJECTOR) {
+            //  checking the convergence of the perforation rates
+            const double wat_vel_tol = 1.e-8;
+            const int dummy_component = -1;
+            const double maxResidualAllowed = param_.max_residual_allowed_;
+            using CR = ConvergenceReport;
+            const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const double wat_vel_residual = res[Bhp + 1 + perf];
+                if (std::isnan(wat_vel_residual)) {
+                    report.setWellFailed({wat_vel_failure_type, CR::Severity::NotANumber, dummy_component, name()});
+                } else if (wat_vel_residual > maxResidualAllowed * 10.) {
+                    report.setWellFailed({wat_vel_failure_type, CR::Severity::TooLarge, dummy_component, name()});
+                } else if (wat_vel_residual > wat_vel_tol) {
+                    report.setWellFailed({wat_vel_failure_type, CR::Severity::Normal, dummy_component, name()});
+                }
+            }
+
+            // checking the convergence of the skin pressure
+            const double pskin_tol = 1000.; // 1000 pascal
+            const auto pskin_failure_type = CR::WellFailure::Type::Pressure;
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const double pskin_residual = res[Bhp + 1 + perf + number_of_perforations_];
+                if (std::isnan(pskin_residual)) {
+                    report.setWellFailed({pskin_failure_type, CR::Severity::NotANumber, dummy_component, name()});
+                } else if (pskin_residual > maxResidualAllowed * 10.) {
+                    report.setWellFailed({pskin_failure_type, CR::Severity::TooLarge, dummy_component, name()});
+                } else if (pskin_residual > pskin_tol) {
+                    report.setWellFailed({pskin_failure_type, CR::Severity::Normal, dummy_component, name()});
+                }
+            }
         }
     }
 }
