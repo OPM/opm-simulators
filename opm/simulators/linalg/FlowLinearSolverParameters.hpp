@@ -66,6 +66,7 @@ NEW_PROP_TAG(CprUseDrs);
 NEW_PROP_TAG(CprMaxEllIter);
 NEW_PROP_TAG(CprEllSolvetype);
 NEW_PROP_TAG(CprReuseSetup);
+NEW_PROP_TAG(LinearSolverConfigurationJsonFile);
 
 SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
 SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
@@ -90,6 +91,7 @@ SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
 SET_INT_PROP(FlowIstlSolverParams, CprMaxEllIter, 20);
 SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
 SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 0);
+SET_STRING_PROP(FlowIstlSolverParams, LinearSolverConfigurationJsonFile, "none");
 
 
 
@@ -160,6 +162,7 @@ namespace Opm
         bool   use_cpr_;
         std::string system_strategy_;
         bool scale_linear_system_;
+        std::string linear_solver_configuration_json_file_;
 
         template <class TypeTag>
         void init()
@@ -186,6 +189,7 @@ namespace Opm
             cpr_max_ell_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxEllIter);
             cpr_ell_solvetype_  =  EWOMS_GET_PARAM(TypeTag, int, CprEllSolvetype);
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
+            linear_solver_configuration_json_file_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolverConfigurationJsonFile);
         }
 
         template <class TypeTag>
@@ -212,6 +216,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxEllIter, "MaxIterations of the elliptic pressure part of the cpr solver");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "Solver type of elliptic pressure solve (0: bicgstab, 1: cg, 2: only amg preconditioner)");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse Amg Setup");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfigurationJsonFile, "Filename of JSON configuration for flexible linear solver system.");
         }
 
         FlowLinearSolverParameters() { reset(); }
