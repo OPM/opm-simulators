@@ -100,10 +100,8 @@ private:
             = Dune::PreconditionerFactory<ParOperatorType, Comm>::create(*linop, prm.get_child("preconditioner"), comm);
         scalarproduct_ = Dune::createScalarProduct<VectorType, Comm>(comm, linearoperator_->category());
     }
-    template <>
-    void initOpPrecSp<Dune::Amg::SequentialInformation>(const MatrixType& matrix,
-                                                        const boost::property_tree::ptree& prm,
-                                                        const Dune::Amg::SequentialInformation&)
+
+    void initOpPrecSp(const MatrixType& matrix, const boost::property_tree::ptree& prm, const Dune::Amg::SequentialInformation&)
     {
         // Sequential case.
         using SeqOperatorType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;

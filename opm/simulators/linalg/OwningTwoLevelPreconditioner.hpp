@@ -134,7 +134,7 @@ public:
     {
         Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
             linear_operator_.getmat(), prm_.get<int>("pressure_var_index"), transpose, weights_);
-        updateImpl<Communication>();
+        updateImpl(comm_);
     }
 
     virtual Dune::SolverCategory::Category category() const override
@@ -160,15 +160,14 @@ private:
 
     // Handling parallel vs serial instantiation of preconditioner factory.
     template <class Comm>
-    void updateImpl()
+    void updateImpl(const Comm*)
     {
         // Parallel case.
         finesmoother_ = PrecFactory::create(linear_operator_, prm_.get_child("finesmoother"), *comm_);
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
     }
 
-    template <>
-    void updateImpl<Dune::Amg::SequentialInformation>()
+    void updateImpl(const Dune::Amg::SequentialInformation*)
     {
         // Serial case.
         finesmoother_ = PrecFactory::create(linear_operator_, prm_.get_child("finesmoother"));

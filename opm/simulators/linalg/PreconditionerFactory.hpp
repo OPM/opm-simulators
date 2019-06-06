@@ -146,7 +146,7 @@ private:
     // This is the default template, used for parallel preconditioners.
     // (Serial specialization below).
     template <class CommArg>
-    void addStandardPreconditioners()
+    void addStandardPreconditioners(const CommArg*)
     {
         using namespace Dune;
         using O = Operator;
@@ -212,8 +212,7 @@ private:
 
     // Add a useful default set of preconditioners to the factory.
     // This is the specialization for the serial case.
-    template <>
-    void addStandardPreconditioners<Dune::Amg::SequentialInformation>()
+    void addStandardPreconditioners(const Dune::Amg::SequentialInformation*)
     {
         using namespace Dune;
         using O = Operator;
@@ -303,7 +302,8 @@ private:
     // Private constructor, to keep users from creating a PreconditionerFactory.
     PreconditionerFactory()
     {
-        addStandardPreconditioners<Comm>();
+        Comm* dummy = nullptr;
+        addStandardPreconditioners(dummy);
     }
 
     // Actually creates the product object.
