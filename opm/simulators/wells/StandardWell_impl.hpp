@@ -969,6 +969,18 @@ namespace Opm
             primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
         }
 
+        updateExtraPrimaryVariables(dwells);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateExtraPrimaryVariables(const BVectorWell& dwells) const
+    {
         // for the water velocity and skin pressure
         if (this->has_polymermw && well_type_ == INJECTOR) {
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
