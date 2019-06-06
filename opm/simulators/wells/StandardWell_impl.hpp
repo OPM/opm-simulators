@@ -643,30 +643,7 @@ namespace Opm
                 connectionRates_[perf][contiPolymerEqIdx] = Base::restrictEval(cq_s_poly);
 
                 if (this->has_polymermw) {
-                    // the source term related to transport of molecular weight
-                    EvalWell cq_s_polymw = cq_s_poly;
-                    if (well_type_ == INJECTOR) {
-                        const int wat_vel_index = Bhp + 1 + perf;
-                        const EvalWell water_velocity = primary_variables_evaluation_[wat_vel_index];
-                        if (water_velocity > 0.) { // injecting
-                            const double throughput = well_state.perfThroughput()[first_perf_ + perf];
-                            const EvalWell molecular_weight = wpolymermw(throughput, water_velocity, deferred_logger);
-                            cq_s_polymw *= molecular_weight;
-                        } else {
-                            // we do not consider the molecular weight from the polymer
-                            // going-back to the wellbore through injector
-                            cq_s_polymw *= 0.;
-                        }
-                    } else if (well_type_ == PRODUCER) {
-                        if (cq_s_polymw < 0.) {
-                            cq_s_polymw *= extendEval(intQuants.polymerMoleWeight() );
-                        } else {
-                            // we do not consider the molecular weight from the polymer
-                            // re-injecting back through producer
-                            cq_s_polymw *= 0.;
-                        }
-                    }
-                    connectionRates_[perf][this->contiPolymerMWEqIdx] = Base::restrictEval(cq_s_polymw);
+                    updateConnectionRatePolyMW(cq_s_poly, intQuants, well_state, perf, deferred_logger);
                 }
             }
 
@@ -3216,5 +3193,44 @@ namespace Opm
                 }
             }
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateConnectionRatePolyMW(const EvalWell& cq_s_poly,
+                               const IntensiveQuantities& int_quants,
+                               const WellState& well_state,
+                               const int perf,
+                               DeferredLogger& deferred_logger)
+    {
+        // the source term related to transport of molecular weight
+        EvalWell cq_s_polymw = cq_s_poly;
+        if (well_type_ == INJECTOR) {
+            const int wat_vel_index = Bhp + 1 + perf;
+            const EvalWell water_velocity = primary_variables_evaluation_[wat_vel_index];
+            if (water_velocity > 0.) { // injecting
+                const double throughput = well_state.perfThroughput()[first_perf_ + perf];
+                const EvalWell molecular_weight = wpolymermw(throughput, water_velocity, deferred_logger);
+                cq_s_polymw *= molecular_weight;
+            } else {
+                // we do not consider the molecular weight from the polymer
+                // going-back to the wellbore through injector
+                cq_s_polymw *= 0.;
+            }
+        } else if (well_type_ == PRODUCER) {
+            if (cq_s_polymw < 0.) {
+                cq_s_polymw *= extendEval(int_quants.polymerMoleWeight() );
+            } else {
+                // we do not consider the molecular weight from the polymer
+                // re-injecting back through producer
+                cq_s_polymw *= 0.;
+            }
+        }
+        connectionRates_[perf][this->contiPolymerMWEqIdx] = Base::restrictEval(cq_s_polymw);
     }
 }

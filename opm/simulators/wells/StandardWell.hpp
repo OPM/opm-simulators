@@ -488,6 +488,13 @@ namespace Opm
                                       ConvergenceReport& report,
                                       DeferredLogger& deferred_logger) const;
 
+        // updating the connectionRates_ related polymer molecular weight
+        void updateConnectionRatePolyMW(const EvalWell& cq_s_poly,
+                                        const IntensiveQuantities& int_quants,
+                                        const WellState& well_state,
+                                        const int perf,
+                                        DeferredLogger& deferred_logger);
+
     };
 
 }
