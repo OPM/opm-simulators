@@ -484,11 +484,9 @@ namespace Opm
                    WellState& well_state,
                    Opm::DeferredLogger& deferred_logger)
     {
-<<<<<<< 6cd9751a394b4d8f839c1b3b7201e4ddc2bcf664:opm/simulators/wells/StandardWell_impl.hpp
-        SummaryState summaryState;
-=======
         // TODO: only_wells should be put back to save some computation
->>>>>>> removing StandardWellV:opm/autodiff/StandardWell_impl.hpp
+        // for example, the matrices B C does not need to update if only_wells
+        SummaryState summaryState;
 
         checkWellOperability(ebosSimulator, well_state, deferred_logger);
 
@@ -1482,7 +1480,7 @@ namespace Opm
                 // option 2: stick with the above IPR curve
                 // we use IPR here
                 std::vector<double> well_rates_bhp_limit;
-                computeWellRatesWithBhp(ebos_simulator, EvalWell(numWellEq_ + numEq, bhp_limit), well_rates_bhp_limit, deferred_logger);
+                computeWellRatesWithBhp(ebos_simulator, bhp_limit, well_rates_bhp_limit, deferred_logger);
 
                 const double thp = calculateThpFromBhp(well_rates_bhp_limit, bhp_limit, deferred_logger);
                 const double thp_limit = this->getTHPConstraint(deferred_logger);
@@ -1671,7 +1669,7 @@ namespace Opm
         initPrimaryVariablesEvaluation();
 
         std::vector<double> rates;
-        computeWellRatesWithBhp(ebos_simulator, EvalWell(numWellEq_ + numEq, bhp), rates, deferred_logger);
+        computeWellRatesWithBhp(ebos_simulator, bhp, rates, deferred_logger);
 
         // TODO: double checke the obtained rates
         // this is another places we might obtain negative rates
@@ -1987,7 +1985,7 @@ namespace Opm
     ConvergenceReport
     StandardWell<TypeTag>::
     getWellConvergence(const std::vector<double>& B_avg,
-		       Opm::DeferredLogger& deferred_logger) const
+                       Opm::DeferredLogger& deferred_logger) const
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
         // For the polymer case and the energy case, there is one more mass balance equations of reservoir than wells
@@ -2032,44 +2030,12 @@ namespace Opm
             }
         }
 
-<<<<<<< 6cd9751a394b4d8f839c1b3b7201e4ddc2bcf664:opm/simulators/wells/StandardWell_impl.hpp
         checkConvergenceControlEq(report, deferred_logger);
-=======
-        // processing the residual of the well control equation
-        const double well_control_residual = res[numWellEq_ - 1];
-        // TODO: we should have better way to specify the control equation tolerance
-        double control_tolerance = 0.;
-        switch(well_controls_get_current_type(well_controls_)) {
-            case THP:
-                type = CR::WellFailure::Type::ControlTHP;
-                control_tolerance = 1.e4; // 0.1 bar
-                break;
-            case BHP:  // pressure type of control
-                type = CR::WellFailure::Type::ControlBHP;
-                control_tolerance = 1.e3; // 0.01 bar
-                break;
-            case RESERVOIR_RATE:
-            case SURFACE_RATE:
-                type = CR::WellFailure::Type::ControlRate;
-                control_tolerance = 1.e-4; // smaller tolerance for rate control
-                break;
-            default:
-                OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " +  name(), deferred_logger);
-        }
-
-        const int dummy_component = -1;
-        if (std::isnan(well_control_residual)) {
-            report.setWellFailed({type, CR::Severity::NotANumber, dummy_component, name()});
-        } else if (well_control_residual > maxResidualAllowed * 10.) {
-            report.setWellFailed({type, CR::Severity::TooLarge, dummy_component, name()});
-        } else if ( well_control_residual > control_tolerance) {
-            report.setWellFailed({type, CR::Severity::Normal, dummy_component, name()});
-        }
->>>>>>> removing StandardWellV:opm/autodiff/StandardWell_impl.hpp
 
         if (this->has_polymermw && well_type_ == INJECTOR) {
             //  checking the convergence of the perforation rates
             const double wat_vel_tol = 1.e-8;
+            const int dummy_component = -1;
             const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 const double wat_vel_residual = res[Bhp + 1 + perf];
@@ -2450,11 +2416,7 @@ namespace Opm
 
             converged = std::abs(old_bhp - bhp) < bhp_tolerance;
 
-<<<<<<< 6cd9751a394b4d8f839c1b3b7201e4ddc2bcf664:opm/simulators/wells/StandardWell_impl.hpp
             computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, potentials, deferred_logger);
-=======
-            computeWellRatesWithBhp(ebosSimulator, EvalWell(numWellEq_ + numEq, bhp), potentials, deferred_logger);
->>>>>>> removing StandardWellV:opm/autodiff/StandardWell_impl.hpp
 
             // checking whether the potentials have valid values
             for (const double value : potentials) {
@@ -2517,12 +2479,7 @@ namespace Opm
         // does the well have a THP related constraint?
         if ( !wellHasTHPConstraints() ) {
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
-<<<<<<< 6cd9751a394b4d8f839c1b3b7201e4ddc2bcf664:opm/simulators/wells/StandardWell_impl.hpp
             computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
-=======
-
-            computeWellRatesWithBhp(ebosSimulator, EvalWell(numWellEq_ + numEq, bhp), well_potentials, deferred_logger);
->>>>>>> removing StandardWellV:opm/autodiff/StandardWell_impl.hpp
         } else {
             // the well has a THP related constraint
             // checking whether a well is newly added, it only happens at the beginning of the report step
@@ -2534,11 +2491,7 @@ namespace Opm
                 }
             } else {
                 // We need to generate a reasonable rates to start the iteration process
-<<<<<<< 6cd9751a394b4d8f839c1b3b7201e4ddc2bcf664:opm/simulators/wells/StandardWell_impl.hpp
                 computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
-=======
-                computeWellRatesWithBhp(ebosSimulator, EvalWell(numWellEq_ + numEq, bhp), well_potentials, deferred_logger);
->>>>>>> removing StandardWellV:opm/autodiff/StandardWell_impl.hpp
                 for (double& value : well_potentials) {
                     // make the value a little safer in case the BHP limits are default ones
                     // TODO: a better way should be a better rescaling based on the investigation of the VFP table.
@@ -2643,7 +2596,7 @@ namespace Opm
         // BHP
         primary_variables_[Bhp] = well_state.bhp()[index_of_well_];
 
-        // other primary variables related to polymer injectio
+        // other primary variables related to polymer injection
         if (this->has_polymermw && well_type_ == INJECTOR) {
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 primary_variables_[Bhp + 1 + perf] = well_state.perfWaterVelocity()[first_perf_ + perf];
@@ -2970,7 +2923,7 @@ namespace Opm
     wellTestingPhysical(const Simulator& ebos_simulator, const std::vector<double>& B_avg,
                         const double /* simulation_time */, const int /* report_step */,
                         WellState& well_state, WellTestState& welltest_state,
-			Opm::DeferredLogger& deferred_logger)
+                        Opm::DeferredLogger& deferred_logger)
     {
         deferred_logger.debug(" well " + name() + " is being tested for physical limits");
 
@@ -3039,7 +2992,7 @@ namespace Opm
             OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
                                           "while injecting skin pressure is requested for well " << name(), deferred_logger);
         }
-        const int water_table_id = well_ecl_->getPolymerProperties(current_step_).m_skprwattable;
+        const int water_table_id = well_ecl_.getPolymerProperties().m_skprwattable;
         if (water_table_id <= 0) {
             OPM_DEFLOG_THROW(std::runtime_error, "Unused SKPRWAT table id used for well " << name(), deferred_logger);
         }
@@ -3072,7 +3025,7 @@ namespace Opm
         if (poly_inj_conc == 0.) {
             return sign * pskinwater(throughput, water_velocity_abs, deferred_logger);
         }
-        const int polymer_table_id = well_ecl_->getPolymerProperties(current_step_).m_skprpolytable;
+        const int polymer_table_id = well_ecl_.getPolymerProperties().m_skprpolytable;
         if (polymer_table_id <= 0) {
             OPM_DEFLOG_THROW(std::runtime_error, "Unavailable SKPRPOLY table id used for well " << name(), deferred_logger);
         }
@@ -3106,7 +3059,7 @@ namespace Opm
             OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
                                           "while injecting polymer molecular weight is requested for well " << name(), deferred_logger);
         }
-        const int table_id = well_ecl_->getPolymerProperties(current_step_).m_plymwinjtable;
+        const int table_id = well_ecl_.getPolymerProperties().m_plymwinjtable;
         const auto& table_func = PolymerModule::getPlymwinjTable(table_id);
         const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
         EvalWell molecular_weight(numWellEq_ + numEq, 0.);
@@ -3222,7 +3175,7 @@ namespace Opm
         }
         assert(ctrltype != CR::WellFailure::Type::Invalid);
 
-        const double well_control_residual = std::abs(resWell_[0][numWellEq -1]);
+        const double well_control_residual = std::abs(resWell_[0][Bhp]);
         const int dummy_component = -1;
         const double max_residual_allowed = param_.max_residual_allowed_;
         if (std::isnan(well_control_residual)) {

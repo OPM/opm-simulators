@@ -154,7 +154,7 @@ namespace Opm
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg,
-					             Opm::DeferredLogger& deferred_logger) const override;
+                                                     Opm::DeferredLogger& deferred_logger) const override;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const override;
@@ -445,7 +445,7 @@ namespace Opm
         virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
                                          const double simulation_time, const int report_step,
                                          WellState& well_state, WellTestState& welltest_state,
-					 Opm::DeferredLogger& deferred_logger) override;
+                                         Opm::DeferredLogger& deferred_logger) override;
 
         // calculate the skin pressure based on water velocity, throughput and polymer concentration.
         // throughput is used to describe the formation damage during water/polymer injection.

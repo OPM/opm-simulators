@@ -591,9 +591,9 @@ namespace Opm {
                 const int well_cell_top = wells->well_cells[wells->well_connpos[w]];
                 const int pvtreg = pvt_region_idx_[well_cell_top];
 
-                if ( !well_ecl->isMultiSegment(time_step) || !param_.use_multisegment_well_) {
-		    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
-		                                param_, *rateConverter_, pvtreg, numComponents() ) );
+                if ( !well_ecl.isMultiSegment() || !param_.use_multisegment_well_) {
+                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells,
+                                                param_, *rateConverter_, pvtreg, numComponents() ) );
                 } else {
                     well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells,
                                                 param_, *rateConverter_, pvtreg, numComponents() ) );
