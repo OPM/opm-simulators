@@ -2247,7 +2247,7 @@ namespace Opm
             std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.});
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            computePerfRate(intQuants, mob, EvalWell(bhp), Tw, perf, allow_cf,
+            computePerfRate(intQuants, mob, EvalWell(numWellEq_ + numEq, bhp), Tw, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
             for(int p = 0; p < np; ++p) {
