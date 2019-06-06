@@ -243,8 +243,12 @@ namespace Opm
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
-        virtual void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state,
-                                          const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger) = 0;
+        // checking the operability status of the well is operable under the current reservoir condition
+        // mostly related to BHP limit and THP limit
+        void checkWellOperability(const Simulator& ebos_simulator,
+                                  const WellState& well_state,
+                                  const std::vector<double>& B_avg,
+                                  Opm::DeferredLogger& deferred_logger);
 
         // whether the well is operable
         bool isOperable() const;
@@ -450,6 +454,13 @@ namespace Opm
         void scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger);
 
         void initCompletions();
+
+        // check whether the well is operable under the current reservoir condition
+        // mostly related to BHP limit and THP limit
+        virtual void updateWellOperability(const Simulator& ebos_simulator,
+                                           const WellState& well_state,
+                                           const std::vector<double>& B_avg,
+                                           Opm::DeferredLogger& deferred_logger) = 0;
 
         // count the number of times an output log message is created in the productivity
         // index calculations

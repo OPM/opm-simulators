@@ -399,23 +399,16 @@ namespace Opm
         // updating the inflow based on the current reservoir condition
         void updateIPR(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) const;
 
-        // update the operability status of the well is operable under the current reservoir condition
-        // mostly related to BHP limit and THP limit
-        virtual void checkWellOperability(const Simulator& ebos_simulator,
-                                          const WellState& well_state,
-                                          const std::vector<double>& B_avg,
-                                          Opm::DeferredLogger& deferred_logger) override;
-
         double solveForBhpUnderZeroRate(const Simulator& ebos_simulator,
                                         const std::vector<double>& B_avg,
                                         Opm::DeferredLogger& deferred_logger) const;
 
         // check whether the well is operable under the current reservoir condition
         // mostly related to BHP limit and THP limit
-        void updateWellOperability(const Simulator& ebos_simulator,
-                                   const WellState& well_state,
-                                   const std::vector<double>& B_avg,
-                                   Opm::DeferredLogger& deferred_logger);
+        virtual void updateWellOperability(const Simulator& ebos_simulator,
+                                           const WellState& well_state,
+                                           const std::vector<double>& B_avg,
+                                           Opm::DeferredLogger& deferred_logger) override;
 
         // check whether the well is operable under BHP limit with current reservoir condition
         void checkOperabilityUnderBHPLimitProducer(const Simulator& ebos_simulator,

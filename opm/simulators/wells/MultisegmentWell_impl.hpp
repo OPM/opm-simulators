@@ -1787,23 +1787,6 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    checkWellOperability(const Simulator& /* ebos_simulator */,
-                         const WellState& /* well_state */,
-                         const std::vector<double>& B_avg,
-                         Opm::DeferredLogger& deferred_logger)
-    {
-        const std::string msg = "Support of well operability checking for multisegment wells is not implemented "
-                                "yet, checkWellOperability() for " + name() + " will do nothing";
-        deferred_logger.warning("NO_OPERATABILITY_CHECKING_MS_WELLS", msg);
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
     updateWellStateFromPrimaryVariables(WellState& well_state) const
     {
         const PhaseUsage& pu = phaseUsage();
@@ -2489,6 +2472,21 @@ namespace Opm
                 upwinding_segments_[seg] = outlet_segment_index;
             }
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    updateWellOperability(const Simulator& ebos_simulator,
+                          const WellState& well_state,
+                          const std::vector<double>& B_avg,
+                          Opm::DeferredLogger& deferred_logger)
+    {
+        // TODO: to finish
     }
 
 }

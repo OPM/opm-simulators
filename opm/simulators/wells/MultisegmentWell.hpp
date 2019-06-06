@@ -358,13 +358,6 @@ namespace Opm
         // handling the overshooting and undershooting of the fractions
         void processFractions(const int seg) const;
 
-        // checking the operability of the well based on current reservoir condition
-        // it is not implemented for multisegment well yet
-        virtual void checkWellOperability(const Simulator& ebos_simulator,
-                                          const WellState& well_state,
-                                          const std::vector<double>& B_avg,
-                                          Opm::DeferredLogger& deferred_logger) override;
-
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;
 
         bool frictionalPressureLossConsidered() const;
@@ -405,6 +398,13 @@ namespace Opm
                                        DeferredLogger& deferred_logger) const;
 
         void updateUpwindingSegments();
+
+        // check whether the well is operable under the current reservoir condition
+        // mostly related to BHP limit and THP limit
+        virtual void updateWellOperability(const Simulator& ebos_simulator,
+                                           const WellState& well_state,
+                                           const std::vector<double>& B_avg,
+                                           Opm::DeferredLogger& deferred_logger) override;
 
     };
 
