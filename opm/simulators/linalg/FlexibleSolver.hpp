@@ -34,16 +34,12 @@ namespace Dune
 {
 
 
-template <class X, class Y>
-class SolverWithUpdate : public Dune::InverseOperator<X, Y>
-{
-public:
-    virtual void updatePreconditioner() = 0;
-};
-
-
+/// A solver class that encapsulates all needed objects for a linear solver
+/// (operator, scalar product, iterative solver and preconditioner) and sets
+/// them up based on runtime parameters, using the PreconditionerFactory for
+/// setting up preconditioners.
 template <class MatrixTypeT, class VectorTypeT>
-class FlexibleSolver : public Dune::SolverWithUpdate<VectorTypeT, VectorTypeT>
+class FlexibleSolver : public Dune::InverseOperator<VectorTypeT, VectorTypeT>
 {
 public:
     using MatrixType = MatrixTypeT;
@@ -72,9 +68,13 @@ public:
         linsolver_->apply(x, rhs, reduction, res);
     }
 
-    virtual void updatePreconditioner() override
+    /// Type of the contained preconditioner.
+    using AbstractPrecondType = Dune::PreconditionerWithUpdate<VectorType, VectorType>;
+
+    /// Access the contained preconditioner.
+    AbstractPrecondType& preconditioner()
     {
-        preconditioner_->update();
+        return *preconditioner_;
     }
 
     virtual Dune::SolverCategory::Category category() const override
@@ -84,7 +84,6 @@ public:
 
 private:
     using AbstractOperatorType = Dune::AssembledLinearOperator<MatrixType, VectorType, VectorType>;
-    using AbstractPrecondType = Dune::PreconditionerWithUpdate<VectorType, VectorType>;
     using AbstractScalarProductType = Dune::ScalarProduct<VectorType>;
     using AbstractSolverType = Dune::InverseOperator<VectorType, VectorType>;
 
