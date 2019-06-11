@@ -64,7 +64,8 @@ void flowEbosGasOilSetDeck(double setupTime, Deck &deck, EclipseState& eclState,
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalSetupTime(setupTime);
-    Vanguard::setExternalDeck(&deck, &eclState);
+    Vanguard::setExternalDeck(&deck);
+    Vanguard::setExternalEclState(&eclState);
     Vanguard::setExternalSchedule(&schedule);
     Vanguard::setExternalSummaryConfig(&summaryConfig);
 }

@@ -52,8 +52,26 @@ public:
 
 END_PROPERTIES
 
-int main(int argc, char **argv)
+namespace Ewoms {
+
+void ebosOilWaterSetDeck(Opm::Deck* deck,
+                         Opm::ParseContext* parseContext,
+                         Opm::ErrorGuard* errorGuard,
+                         double externalSetupTime)
+{
+    typedef TTAG(EbosOilWaterTypeTag) ProblemTypeTag;
+    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+
+    Vanguard::setExternalSetupTime(externalSetupTime);
+    Vanguard::setExternalParseContext(parseContext);
+    Vanguard::setExternalErrorGuard(errorGuard);
+    Vanguard::setExternalDeck(deck);
+}
+
+int ebosOilWaterMain(int argc, char **argv)
 {
     typedef TTAG(EbosOilWaterTypeTag) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
+}
+
 }

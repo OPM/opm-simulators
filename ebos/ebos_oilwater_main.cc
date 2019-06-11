@@ -23,15 +23,15 @@
 /*!
  * \file
  *
- * \brief The main file for ebos, a general-purpose simulator for ECL decks for research
- *        purposes.
+ * \brief The main function for the stand alone oil-water variant of ebos.
+ *
+ * This only calls the ebosOilWaterMain() function.
  */
 #include "config.h"
 
-#include "ebos.hh"
+#include "ebos_oilwater.hh"
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-    typedef TTAG(EbosTypeTag) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Ewoms::ebosOilWaterMain(argc, argv);
 }
