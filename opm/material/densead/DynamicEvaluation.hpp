@@ -168,6 +168,14 @@ public:
     static Evaluation createBlank(const Evaluation& x)
     { return Evaluation(x.size()); }
 
+    // create an Evaluation with value and all the derivatives to be zero
+    static Evaluation createConstantZero(const Evaluation& x)
+    { return Evaluation(x.size(), 0.0); }
+
+    // create an Evaluation with value to be one and all the derivatives to be zero
+    static Evaluation createConstantOne(const Evaluation& x)
+    { return Evaluation(x.size(), 1.); }
+
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
     template <class RhsValueType>
     static Evaluation createVariable(int nVars, const RhsValueType& value, int varPos)

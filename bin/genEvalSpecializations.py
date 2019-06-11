@@ -310,6 +310,24 @@ public:
     { return Evaluation(); }
 {% endif %}\
 
+    // create an Evaluation with value and all the derivatives to be zero
+{% if numDerivs < 0 %}\
+    static Evaluation createConstantZero(const Evaluation& x)
+    { return Evaluation(x.size(), 0.0); }
+{% else %}\
+    static Evaluation createConstantZero(const Evaluation& x OPM_UNUSED)
+    { return Evaluation(0.); }
+{% endif %}\
+
+    // create an Evaluation with value to be one and all the derivatives to be zero
+{% if numDerivs < 0 %}\
+    static Evaluation createConstantOne(const Evaluation& x)
+    { return Evaluation(x.size(), 1.); }
+{% else %}\
+    static Evaluation createConstantOne(const Evaluation& x OPM_UNUSED)
+    { return Evaluation(1.); }
+{% endif %}\
+
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
 {% if numDerivs < 0 %}\
     template <class RhsValueType>
