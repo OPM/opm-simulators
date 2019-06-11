@@ -162,7 +162,10 @@ public:
                              "Write the ECL-formated results in a non-blocking way (i.e., using a separate thread).");
     }
 
-    EclWriter(const Simulator& simulator)
+    // The Simulator object should preferably have been const - the
+    // only reason that is not the case is due to the SummaryState
+    // object owned deep down by the vanguard.
+    EclWriter(Simulator& simulator)
         : simulator_(simulator)
         , collectToIORank_(simulator_.vanguard())
         , eclOutputModule_(simulator, collectToIORank_)
@@ -276,7 +279,10 @@ public:
                 restartValue.addExtra("THRESHPR", Opm::UnitSystem::measure::pressure, simulator_.problem().thresholdPressure().data());
 
             // first, create a tasklet to write the data for the current time step to disk
-            auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(*eclIO_,
+            auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(summaryState(),
+                                                                     eclState,
+                                                                     schedule(),
+                                                                     *eclIO_,
                                                                      reportStepNum,
                                                                      isSubStep,
                                                                      curTime,
@@ -329,18 +335,32 @@ public:
         unsigned numElements = gridView.size(/*codim=*/0);
         eclOutputModule_.allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false);
 
-        auto restartValues = eclIO_->loadRestart(solutionKeys, extraKeys);
-        for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-            unsigned globalIdx = collectToIORank_.localIdxToGlobalIdx(elemIdx);
-            eclOutputModule_.setRestart(restartValues.solution, elemIdx, globalIdx);
+        {
+            /*
+              When running a restarted simulation the restart file is loaded
+              twice, first here as part of the state initialization and then
+              subsequently in the Simulator::run() method. The global
+              SummaryState instance is accumulates total variables like FOPT, if
+              the same instance is used twice when loading the restart file, the
+              cumulatives will be counted doubly, we therefor use a temporary
+              SummaryState instance in this call to loadRestart().
+            */
+            Opm::SummaryState summaryState;
+            auto restartValues = eclIO_->loadRestart(summaryState, solutionKeys, extraKeys);
+
+            for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
+                unsigned globalIdx = collectToIORank_.localIdxToGlobalIdx(elemIdx);
+                eclOutputModule_.setRestart(restartValues.solution, elemIdx, globalIdx);
+            }
+
+            if (inputThpres.active()) {
+                Simulator& mutableSimulator = const_cast<Simulator&>(simulator_);
+                auto& thpres = mutableSimulator.problem().thresholdPressure();
+                const auto& thpresValues = restartValues.getExtra("THRESHPR");
+                thpres.setFromRestart(thpresValues);
+            }
+            restartTimeStepSize_ = restartValues.getExtra("OPMEXTRA")[0];
         }
-        if (inputThpres.active()) {
-            Simulator& mutableSimulator = const_cast<Simulator&>(simulator_);
-            auto& thpres = mutableSimulator.problem().thresholdPressure();
-            const auto& thpresValues = restartValues.getExtra("THRESHPR");
-            thpres.setFromRestart(thpresValues);
-        }
-        restartTimeStepSize_ = restartValues.getExtra("OPMEXTRA")[0];
     }
 
     void endRestart()
@@ -555,6 +575,9 @@ private:
     struct EclWriteTasklet
         : public TaskletInterface
     {
+        Opm::SummaryState& summaryState;
+        const Opm::EclipseState& eclState;
+        const Opm::Schedule& schedule;
         Opm::EclipseIO& eclIO_;
         int reportStepNum_;
         bool isSubStep_;
@@ -565,7 +588,10 @@ private:
         std::map<std::pair<std::string, int>, double> blockSummaryValues_;
         bool writeDoublePrecision_;
 
-        explicit EclWriteTasklet(Opm::EclipseIO& eclIO,
+        explicit EclWriteTasklet(Opm::SummaryState& summaryState,
+                                 const Opm::EclipseState& eclState,
+                                 const Opm::Schedule& schedule,
+                                 Opm::EclipseIO& eclIO,
                                  int reportStepNum,
                                  bool isSubStep,
                                  double secondsElapsed,
@@ -574,7 +600,10 @@ private:
                                  const std::map<std::string, std::vector<double>>& regionSummaryValues,
                                  const std::map<std::pair<std::string, int>, double>& blockSummaryValues,
                                  bool writeDoublePrecision)
-            : eclIO_(eclIO)
+            : summaryState(summaryState)
+            , eclState(eclState)
+            , schedule(schedule)
+            , eclIO_(eclIO)
             , reportStepNum_(reportStepNum)
             , isSubStep_(isSubStep)
             , secondsElapsed_(secondsElapsed)
@@ -588,7 +617,38 @@ private:
         // callback to eclIO serial writeTimeStep method
         void run()
         {
-            eclIO_.writeTimeStep(reportStepNum_,
+            const auto& summary = eclIO_.summary();
+
+            /*
+              The summary data is not evaluated for timestep 0, that is
+              implemented with a:
+
+                 if (time_step == 0)
+                     return;
+
+              check somewhere in the summary code. When the summary code was
+              split in separate methods Summary::eval() and
+              Summary::add_timestep() it was necessary to pull this test out
+              here to ensure that the well and group related keywords in the
+              restart file, like XWEL and XGRP were "correct" also in the
+              initial report step.
+
+              "Correct" in this context means unchanged behavior, might very
+              well be more correct to actually remove this if test.
+            */
+            if (reportStepNum_ > 0)
+                summary.eval(summaryState,
+                             reportStepNum_,
+                             secondsElapsed_,
+                             eclState,
+                             schedule,
+                             restartValue_.wells,
+                             singleSummaryValues_,
+                             regionSummaryValues_,
+                             blockSummaryValues_);
+
+            eclIO_.writeTimeStep(summaryState,
+                                 reportStepNum_,
                                  isSubStep_,
                                  secondsElapsed_,
                                  restartValue_,
@@ -602,7 +662,13 @@ private:
     const Opm::EclipseState& eclState() const
     { return simulator_.vanguard().eclState(); }
 
-    const Simulator& simulator_;
+    Opm::SummaryState& summaryState()
+    { return simulator_.vanguard().summaryState(); }
+
+    const Opm::Schedule& schedule() const
+    { return simulator_.vanguard().schedule(); }
+
+    Simulator& simulator_;
     CollectDataToIORankType collectToIORank_;
     EclOutputBlackOilModule<TypeTag> eclOutputModule_;
     std::unique_ptr<Opm::EclipseIO> eclIO_;

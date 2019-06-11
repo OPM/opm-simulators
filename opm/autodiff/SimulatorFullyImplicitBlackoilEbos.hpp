@@ -137,12 +137,13 @@ public:
         // handle restarts
         std::unique_ptr<RestartValue> restartValues;
         if (isRestart()) {
+            Opm::SummaryState& summaryState = ebosSimulator_.vanguard().summaryState();
             std::vector<RestartKey> extraKeys = {
                 {"OPMEXTRA" , Opm::UnitSystem::measure::identity, false}
             };
 
             std::vector<RestartKey> solutionKeys = {};
-            restartValues.reset(new RestartValue(ebosSimulator_.problem().eclIO().loadRestart(solutionKeys, extraKeys)));
+            restartValues.reset(new RestartValue(ebosSimulator_.problem().eclIO().loadRestart(summaryState, solutionKeys, extraKeys)));
         }
 
         // Create timers and file for writing timing info.
