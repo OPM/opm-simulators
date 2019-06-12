@@ -668,6 +668,98 @@ namespace Opm
     template<typename TypeTag>
     typename WellInterface<TypeTag>::RatioCheckTuple
     WellInterface<TypeTag>::
+    checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
+                     const WellState& well_state) const
+    {
+        bool gor_limit_violated = false;
+        int worst_offending_completion = INVALIDCOMPLETION;
+        double violation_extent = -1.0;
+
+        const int np = number_of_phases_;
+        const Opm::PhaseUsage& pu = phaseUsage();
+
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+
+        const double oil_rate = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Oil ] ];
+        const double gas_rate = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Gas ] ];
+        double gas_oil_ratio;
+        if (oil_rate != 0.) {
+            gas_oil_ratio = gas_rate / oil_rate;
+        } else {
+            if (gas_rate != 0.) {
+                gas_oil_ratio = 1.e100; // big value to mark it as violated
+            } else {
+                gas_oil_ratio = 0.0;
+            }
+        }
+
+        const double max_gor_limit = econ_production_limits.maxGasOilRatio();
+        if (gas_oil_ratio > max_gor_limit) {
+            gor_limit_violated = true;
+        }
+
+        if (gor_limit_violated) {
+            // need to handle the worst_offending_connection
+            const int perf_start = first_perf_;
+            const int perf_number = number_of_perforations_;
+
+            std::vector<double> gor_perf(perf_number);
+            for (int perf = 0; perf < perf_number; ++perf) {
+                const int i_perf = perf_start + perf;
+                const double oil_perf_rate = well_state.perfPhaseRates()[i_perf * np + pu.phase_pos[ Oil ] ];
+                const double gas_perf_rate = well_state.perfPhaseRates()[i_perf * np + pu.phase_pos[ Water ] ];
+                if (oil_perf_rate != 0.) {
+                    gor_perf[perf] = gas_perf_rate / oil_perf_rate;
+                } else {
+                    if (gas_perf_rate != 0.) {
+                        gor_perf[perf] = 1.e100;
+                    } else {
+                        gor_perf[perf] = 0.;
+                    }
+                }
+            }
+            const auto& completions = well_ecl_.getCompletions();
+            const auto& connections = well_ecl_.getConnections();
+
+            int complnumIdx = 0;
+            std::vector<double> gor_in_completions(completions.size(), 0.0);
+            for (const auto& completion : completions) {
+                int complnum = completion.first;
+                for (int perf = 0; perf < perf_number; ++perf) {
+                    if (complnum == connections.get ( perf ).complnum()) {
+                        gor_in_completions[complnumIdx] +=  gor_perf[perf];
+                    }
+                }
+                complnumIdx++;
+            }
+
+            // TODO: some refactoring needs to be done to distinguish completions and perforations here
+            double max_gor_perf = 0.;
+            complnumIdx = 0;
+            for (const auto& completion : completions) {
+                if (gor_in_completions[complnumIdx] > max_gor_perf) {
+                    worst_offending_completion = completion.first;
+                    max_gor_perf = gor_in_completions[complnumIdx];
+                }
+                complnumIdx++;
+            }
+
+            assert(max_gor_perf != 0. && max_gor_perf >= max_gor_limit);
+            assert(worst_offending_completion != INVALIDCOMPLETION);
+            violation_extent = max_gor_perf / max_gor_limit;
+        }
+
+        return std::make_tuple(gor_limit_violated, worst_offending_completion, violation_extent);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename WellInterface<TypeTag>::RatioCheckTuple
+    WellInterface<TypeTag>::
     checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                          const WellState& well_state,
                          Opm::DeferredLogger& deferred_logger) const
@@ -698,7 +790,16 @@ namespace Opm
         }
 
         if (econ_production_limits.onMaxGasOilRatio()) {
-            deferred_logger.warning("NOT_SUPPORTING_MAX_GOR", "the support for max Gas-Oil ratio is not implemented yet!");
+            const RatioCheckTuple gor_return = checkMaxGORLimit(econ_production_limits, well_state);
+            const bool gor_limit_violated = std::get<0>(gor_return);
+            if (gor_limit_violated) {
+                any_limit_violated = true;
+                const double violation_extent_gor = std::get<2>(gor_return);
+                if (violation_extent_gor > violation_extent) {
+                    violation_extent = violation_extent_gor;
+                    worst_offending_completion = std::get<1>(gor_return);
+                }
+            }
         }
 
         if (econ_production_limits.onMaxWaterGasRatio()) {

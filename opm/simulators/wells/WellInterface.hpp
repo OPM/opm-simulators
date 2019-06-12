@@ -373,6 +373,9 @@ namespace Opm
         RatioCheckTuple checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                                               const WellState& well_state) const;
 
+        RatioCheckTuple checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
+                                         const WellState& well_state) const;
+
         RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                                              const WellState& well_state,
                                              Opm::DeferredLogger& deferred_logger) const;
