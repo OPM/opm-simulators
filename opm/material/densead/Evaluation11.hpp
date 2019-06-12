@@ -206,7 +206,7 @@ public:
     // "evaluate" a constant function (i.e. a function that does not depend on the set of
     // relevant variables, f(x) = c).
     template <class RhsValueType>
-    static Evaluation createConstant(const Evaluation& x, const RhsValueType& value)
+    static Evaluation createConstant(const Evaluation& x OPM_UNUSED, const RhsValueType& value)
     {
         return Evaluation(value);
     }
