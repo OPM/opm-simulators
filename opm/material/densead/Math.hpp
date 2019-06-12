@@ -443,6 +443,12 @@ public:
     static Evaluation createConstant(ValueType value)
     { return Evaluation::createConstant(value); }
 
+    static Evaluation createConstant(unsigned numDeriv, const ValueType value)
+    { return Evaluation::createConstant(numDeriv, value); }
+
+    static Evaluation createConstant(const Evaluation& x, const ValueType value)
+    { return Evaluation::createConstant(x, value); }
+
     static Evaluation createVariable(ValueType value, int varIdx)
     { return Evaluation::createVariable(value, varIdx); }
 
