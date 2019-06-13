@@ -38,8 +38,26 @@ SET_BOOL_PROP(EbosThermalTypeTag, EnableEnergy, true);
 
 END_PROPERTIES
 
-int main(int argc, char **argv)
+namespace Ewoms {
+
+void ebosThermalSetDeck(Opm::Deck* deck,
+                         Opm::ParseContext* parseContext,
+                         Opm::ErrorGuard* errorGuard,
+                         double externalSetupTime)
+{
+    typedef TTAG(EbosThermalTypeTag) ProblemTypeTag;
+    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+
+    Vanguard::setExternalSetupTime(externalSetupTime);
+    Vanguard::setExternalParseContext(parseContext);
+    Vanguard::setExternalErrorGuard(errorGuard);
+    Vanguard::setExternalDeck(deck);
+}
+
+int ebosThermalMain(int argc, char **argv)
 {
     typedef TTAG(EbosThermalTypeTag) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
+}
+
 }

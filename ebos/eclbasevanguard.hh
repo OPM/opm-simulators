@@ -158,6 +158,43 @@ public:
     }
 
     /*!
+     * \brief Creates an Opm::parseContext object assuming that the parameters are ready.
+     */
+    static std::unique_ptr<Opm::ParseContext> createParseContext()
+    {
+        typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
+        typedef std::vector<ParseModePair> ParseModePairs;
+        ParseModePairs tmp;
+        tmp.emplace_back(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
+        tmp.emplace_back(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
+        tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
+        tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
+        tmp.emplace_back(Opm::ParseContext::PARSE_EXTRA_RECORDS, Opm::InputError::WARN);
+
+        std::unique_ptr<Opm::ParseContext> parseContext(new Opm::ParseContext(tmp));
+
+        const std::string ignoredKeywords = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
+        if (ignoredKeywords.size() > 0) {
+            size_t pos;
+            size_t offset = 0;
+            while (true) {
+                pos = ignoredKeywords.find(':', offset);
+                if (pos == std::string::npos) {
+                    parseContext->ignoreKeyword(ignoredKeywords.substr(offset));
+                    break;
+                }
+                parseContext->ignoreKeyword(ignoredKeywords.substr(offset, pos - offset));
+                offset = pos + 1;
+            }
+        }
+
+        if (EWOMS_GET_PARAM(TypeTag, bool, EclStrictParsing))
+            parseContext->update(Opm::InputError::DELAYED_EXIT1);
+
+        return parseContext;
+    }
+
+    /*!
      * \brief Set the wall time which was spend externally to set up the external data structures
      *
      * i.e., the objects specified via the other setExternal*() methods.
@@ -172,8 +209,20 @@ public:
     { return externalSetupTime_; }
 
     /*!
-     * \brief Set the Opm::EclipseState and the Opm::Deck object which ought to be used
-     *        when the simulator vanguard is instantiated.
+     * \brief Set the Opm::ParseContext object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
+     */
+    static void setExternalParseContext(Opm::ParseContext* parseContext)
+    { externalParseContext_ = parseContext; }
+
+    /*!
+     * \brief Set the Opm::ErrorGuard object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
+     */
+    static void setExternalErrorGuard(Opm::ErrorGuard* errorGuard)
+    { externalErrorGuard_ = errorGuard; }
+
+    /*!
+     * \brief Set the Opm::Deck object which ought to be used when the simulator vanguard
+     *        is instantiated.
      *
      * This is basically an optimization: In cases where the ECL input deck must be
      * examined to decide which simulator ought to be used, this avoids having to parse
@@ -181,11 +230,15 @@ public:
      * management of these two objects, i.e., they are not allowed to be deleted as long
      * as the simulator vanguard object is alive.
      */
-    static void setExternalDeck(Opm::Deck* deck, Opm::EclipseState* eclState)
-    {
-        externalDeck_ = deck;
-        externalEclState_ = eclState;
-    }
+    static void setExternalDeck(Opm::Deck* deck)
+    { externalDeck_ = deck; }
+
+    /*!
+     * \brief Set the Opm::EclipseState object which ought to be used when the simulator
+     *        vanguard is instantiated.
+     */
+    static void setExternalEclState(Opm::EclipseState* eclState)
+    { externalEclState_ = eclState; }
 
     /*!
      * \brief Create the grid for problem data files which use the ECL file format.
@@ -231,47 +284,42 @@ public:
         caseName_ = rawCaseName;
         std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
 
-        typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
-        typedef std::vector<ParseModePair> ParseModePairs;
-        ParseModePairs tmp;
-        tmp.emplace_back(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
-        tmp.emplace_back(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
-        tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
-        tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
-        tmp.emplace_back(Opm::ParseContext::PARSE_EXTRA_RECORDS, Opm::InputError::WARN);
-        Opm::ParseContext parseContext(tmp);
-        Opm::ErrorGuard errorGuard;
-
-        const std::string ignoredKeywords = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
-        if (ignoredKeywords.size() > 0) {
-            size_t pos, offset = 0;
-            while (true) {
-                pos = ignoredKeywords.find(':', offset);
-                if (pos == std::string::npos) {
-                    parseContext.ignoreKeyword(ignoredKeywords.substr(offset));
-                    break;
-                }
-                parseContext.ignoreKeyword(ignoredKeywords.substr(offset, pos - offset));
-                offset = pos + 1;
-            }
+        // create the parser objects for the deck or use their externally specified
+        // versions (if desired)
+        if (!externalParseContext_) {
+            internalParseContext_ = createParseContext();
+            parseContext_ = internalParseContext_.get();
         }
+        else
+            parseContext_ = externalParseContext_;
 
-        if (EWOMS_GET_PARAM(TypeTag, bool , EclStrictParsing))
-            parseContext.update(Opm::InputError::DELAYED_EXIT1);
+        if (!externalParseContext_) {
+            internalErrorGuard_.reset(new Opm::ErrorGuard);
+            errorGuard_ = internalErrorGuard_.get();
+        }
+        else
+            errorGuard_ = externalErrorGuard_;
 
         if (!externalDeck_) {
             if (myRank == 0)
                 std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
 
             Opm::Parser parser;
-            internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName , parseContext, errorGuard)));
-            internalEclState_.reset(new Opm::EclipseState(*internalDeck_, parseContext, errorGuard));
+            internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName, *parseContext_, *errorGuard_)));
+            deck_ = internalDeck_.get();
 
             if (enableExperiments && myRank == 0)
-                Opm::checkDeck(*internalDeck_, parser, parseContext, errorGuard);
+                Opm::checkDeck(*deck_, parser,  *parseContext_, *errorGuard_);
+        }
+        else {
+            assert(externalDeck_);
 
-            deck_ = &(*internalDeck_);
-            eclState_ = &(*internalEclState_);
+            deck_ = externalDeck_;
+        }
+
+        if (!externalEclState_) {
+            internalEclState_.reset(new Opm::EclipseState(*deck_, *parseContext_, *errorGuard_));
+            eclState_ = internalEclState_.get();
         }
         else {
             assert(externalDeck_);
@@ -285,8 +333,8 @@ public:
             // create the schedule object. Note that if eclState is supposed to represent
             // the internalized version of the deck, this constitutes a layering
             // violation.
-            internalEclSchedule_.reset(new Opm::Schedule(*deck_, *eclState_, parseContext, errorGuard));
-            eclSchedule_ = &(*internalEclSchedule_);
+            internalEclSchedule_.reset(new Opm::Schedule(*deck_, *eclState_, *parseContext_, *errorGuard_));
+            eclSchedule_ = internalEclSchedule_.get();
         }
         else
             eclSchedule_ = externalEclSchedule_;
@@ -298,17 +346,17 @@ public:
             internalEclSummaryConfig_.reset(new Opm::SummaryConfig(*deck_,
                                                                    *eclSchedule_,
                                                                    eclState_->getTableManager(),
-                                                                   parseContext,
-                                                                   errorGuard));
+                                                                   *parseContext_,
+                                                                   *errorGuard_));
 
-            eclSummaryConfig_ = &(*internalEclSummaryConfig_);
+            eclSummaryConfig_ = internalEclSummaryConfig_.get();
         }
         else
             eclSummaryConfig_ = externalEclSummaryConfig_;
 
-        if (errorGuard) {
-            errorGuard.dump();
-            errorGuard.clear();
+        if (*errorGuard_) {
+            errorGuard_->dump();
+            errorGuard_->clear();
 
             throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
         }
@@ -326,7 +374,7 @@ public:
 
         if (enableExperiments) {
             Opm::RelpermDiagnostics relpermDiagnostics;
-            relpermDiagnostics.diagnosis(*internalEclState_, *internalDeck_, asImp_().grid());
+            relpermDiagnostics.diagnosis(*eclState_, *deck_, asImp_().grid());
         }
     }
 
@@ -513,20 +561,27 @@ private:
     std::string caseName_;
 
     static Scalar externalSetupTime_;
+
+    static Opm::ParseContext* externalParseContext_;
+    static Opm::ErrorGuard* externalErrorGuard_;
     static Opm::Deck* externalDeck_;
     static Opm::EclipseState* externalEclState_;
     static Opm::Schedule* externalEclSchedule_;
     static Opm::SummaryConfig* externalEclSummaryConfig_;
+
+    std::unique_ptr<Opm::ParseContext> internalParseContext_;
+    std::unique_ptr<Opm::ErrorGuard> internalErrorGuard_;
     std::unique_ptr<Opm::Deck> internalDeck_;
     std::unique_ptr<Opm::EclipseState> internalEclState_;
     std::unique_ptr<Opm::Schedule> internalEclSchedule_;
     std::unique_ptr<Opm::SummaryConfig> internalEclSummaryConfig_;
 
-    // these two attributes point either to the internal or to the external version of the
-    // Deck and EclipsState objects.
+    // these attributes point  either to the internal  or to the external version of the
+    // parser objects.
+    Opm::ParseContext* parseContext_;
+    Opm::ErrorGuard* errorGuard_;
     Opm::Deck* deck_;
     Opm::EclipseState* eclState_;
-
     Opm::Schedule* eclSchedule_;
     Opm::SummaryConfig* eclSummaryConfig_;
 
@@ -536,6 +591,12 @@ private:
 
 template <class TypeTag>
 typename EclBaseVanguard<TypeTag>::Scalar EclBaseVanguard<TypeTag>::externalSetupTime_ = 0.0;
+
+template <class TypeTag>
+Opm::ParseContext* EclBaseVanguard<TypeTag>::externalParseContext_ = nullptr;
+
+template <class TypeTag>
+Opm::ErrorGuard* EclBaseVanguard<TypeTag>::externalErrorGuard_ = nullptr;
 
 template <class TypeTag>
 Opm::Deck* EclBaseVanguard<TypeTag>::externalDeck_ = nullptr;

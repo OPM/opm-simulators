@@ -23,41 +23,22 @@
 /*!
  * \file
  *
- * \brief A general-purpose simulator for ECL decks using the black-oil model.
+ * \brief The function prototypes required to start the polymer variant of ebos
  */
-#include "config.h"
+#ifndef EBOS_POLYMER_HH
+#define EBOS_POLYMER_HH
 
-#include "ebos.hh"
-
-BEGIN_PROPERTIES
-
-NEW_TYPE_TAG(EbosPolymerTypeTag, INHERITS_FROM(EbosTypeTag));
-
-// enable the polymer extension of the black oil model
-SET_BOOL_PROP(EbosPolymerTypeTag, EnablePolymer, true);
-
-END_PROPERTIES
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
+#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 
 namespace Ewoms {
-
 void ebosPolymerSetDeck(Opm::Deck* deck,
                          Opm::ParseContext* parseContext,
                          Opm::ErrorGuard* errorGuard,
-                         double externalSetupTime)
-{
-    typedef TTAG(EbosPolymerTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+                         double externalSetupTime);
 
-    Vanguard::setExternalSetupTime(externalSetupTime);
-    Vanguard::setExternalParseContext(parseContext);
-    Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
+int ebosPolymerMain(int argc, char** argv);
 }
 
-int ebosPolymerMain(int argc, char **argv)
-{
-    typedef TTAG(EbosPolymerTypeTag) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
-}
-
-}
+#endif
