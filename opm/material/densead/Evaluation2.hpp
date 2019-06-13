@@ -145,6 +145,14 @@ public:
     static Evaluation createBlank(const Evaluation& x OPM_UNUSED)
     { return Evaluation(); }
 
+    // create an Evaluation with value and all the derivatives to be zero
+    static Evaluation createConstantZero(const Evaluation& x OPM_UNUSED)
+    { return Evaluation(0.); }
+
+    // create an Evaluation with value to be one and all the derivatives to be zero
+    static Evaluation createConstantOne(const Evaluation& x OPM_UNUSED)
+    { return Evaluation(1.); }
+
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
     template <class RhsValueType>
     static Evaluation createVariable(const RhsValueType& value, int varPos)

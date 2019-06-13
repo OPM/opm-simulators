@@ -440,6 +440,12 @@ public:
     static Evaluation createBlank(const Evaluation& x)
     { return Evaluation::createBlank(x); }
 
+    static Evaluation createConstantZero(const Evaluation& x)
+    { return Evaluation::createConstantZero(x); }
+
+    static Evaluation createConstantOne(const Evaluation& x)
+    { return Evaluation::createConstantOne(x); }
+
     static Evaluation createConstant(ValueType value)
     { return Evaluation::createConstant(value); }
 
