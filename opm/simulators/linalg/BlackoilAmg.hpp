@@ -838,10 +838,11 @@ public:
         this->lhs_.resize(this->coarseLevelMatrix_->M());
         this->rhs_.resize(this->coarseLevelMatrix_->N());
         using OperatorArgs = typename Dune::Amg::ConstructionTraits<CoarseOperator>::Arguments;
-        OperatorArgs oargs(*coarseLevelMatrix_, *coarseLevelCommunication_);
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+        OperatorArgs oargs(coarseLevelMatrix_, *coarseLevelCommunication_);
         this->operator_ = Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs);
 #else
+        OperatorArgs oargs(*coarseLevelMatrix_, *coarseLevelCommunication_);
         this->operator_.reset(Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs));
 #endif
     }

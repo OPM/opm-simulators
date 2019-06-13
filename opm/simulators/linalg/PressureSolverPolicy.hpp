@@ -69,7 +69,7 @@ namespace Amg
 
             Dune::SolverCategory::Category category() const override
             {
-                return Dune::SolverCategory::sequential;
+                return linsolver_->category();
             }
 
             void apply(X& x, X& b, double reduction, Dune::InverseOperatorResult& res) override
@@ -84,7 +84,7 @@ namespace Amg
 
             void updatePreconditioner()
             {
-                linsolver_->updatePreconditioner();
+                linsolver_->preconditioner().update();
             }
 
         private:
