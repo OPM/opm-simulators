@@ -1394,6 +1394,11 @@ namespace Opm
         // the result will contain the derivative with resepct to GTotal in segment seg,
         // and the derivatives with respect to WFrac GFrac in segment seg_upwind.
         // the derivative with respect to SPres should be zero.
+        if (seg == 0 && well_type_ == INJECTOR) {
+            const double* distr = well_controls_get_current_distr(well_controls_);
+            return primary_variables_evaluation_[seg][GTotal] * distr[ebosCompIdxToFlowCompIdx(comp_idx)];
+        }
+
         const EvalWell segment_rate = primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg_upwind, comp_idx);
 
         assert(segment_rate.derivative(SPres + numEq) == 0.);
@@ -2431,11 +2436,19 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateUpwindingSegments()
     {
-        // not considering upwinding for the injectors for now
-        // but we should
-        // and upwinding segment for top segment is itself
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
-            if ( (well_type_ == INJECTOR) || (seg == 0) ) {
+            // special treatment is needed for segment 0
+            if (seg == 0) {
+                if ( (well_type_ == INJECTOR)) {
+                    // maybe it is safer to return -1 to make sure that we don't return the wrong segment number
+                    // for injectors
+                    upwinding_segments_[seg] = seg;
+                    assert(primary_variables_evaluation_[seg][GTotal] >= 0.);
+                    continue;
+                }
+
+                // we don't handle injecting producers.
+                assert(primary_variables_evaluation_[seg][GTotal] <= 0.);
                 upwinding_segments_[seg] = seg;
                 continue;
             }
