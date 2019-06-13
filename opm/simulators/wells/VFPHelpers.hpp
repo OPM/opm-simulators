@@ -64,7 +64,7 @@ inline EvalWell zeroIfNanInf(const EvalWell& value) {
 
     using Toolbox = MathToolbox<EvalWell>;
 
-    return nan_or_inf ? Toolbox::createBlank(value) : value;
+    return nan_or_inf ? Toolbox::createConstantZero(value) : value;
 }
 
 
