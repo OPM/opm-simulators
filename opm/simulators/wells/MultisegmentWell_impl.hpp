@@ -837,8 +837,17 @@ namespace Opm
             }
 
             // update the total rate // TODO: should we have a limitation of the total rate change?
-            {
+            {               
                 primary_variables_[seg][GTotal] = old_primary_variables[seg][GTotal] - relaxation_factor * dwells[seg][GTotal];
+
+                // make sure that no injector produce and no producer inject
+                if (seg == 0) {
+                    if (well_type_ == INJECTOR) {
+                        primary_variables_[seg][GTotal] = std::max( primary_variables_[seg][GTotal], 0.0);
+                    } else {
+                        primary_variables_[seg][GTotal] = std::min( primary_variables_[seg][GTotal], 0.0);
+                    }
+                }
             }
 
         }
@@ -1396,7 +1405,9 @@ namespace Opm
         // the derivative with respect to SPres should be zero.
         if (seg == 0 && well_type_ == INJECTOR) {
             const double* distr = well_controls_get_current_distr(well_controls_);
-            return primary_variables_evaluation_[seg][GTotal] * distr[ebosCompIdxToFlowCompIdx(comp_idx)];
+            if (distr[ebosCompIdxToFlowCompIdx(comp_idx)] > 0)
+                return primary_variables_evaluation_[seg][GTotal] / scalingFactor(ebosCompIdxToFlowCompIdx(comp_idx));
+            return 0.0;
         }
 
         const EvalWell segment_rate = primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg_upwind, comp_idx);
@@ -1484,6 +1495,7 @@ namespace Opm
     assembleControlEq(Opm::DeferredLogger& deferred_logger) const
     {
         EvalWell control_eq(0.0);
+        const std::vector<double> g = {1.0, 1.0, 0.01};
 
         switch (well_controls_get_current_type(well_controls_)) {
             case THP: // not handling this one for now
@@ -1498,24 +1510,28 @@ namespace Opm
             }
             case SURFACE_RATE:
             {
+            // finding if it is a single phase control or combined phase control
+            int number_phases_under_control = 0;
+            const double* distr = well_controls_get_current_distr(well_controls_);
+            for (int phase = 0; phase < number_of_phases_; ++phase) {
+                if (distr[phase] > 0.0) {
+                    ++number_phases_under_control;
+                }
+            }
+            assert(number_phases_under_control > 0);
+            const double target_rate = well_controls_get_current_target(well_controls_);
+
             if (well_type_ == INJECTOR) {
-                const double target_rate = well_controls_get_current_target(well_controls_);
-                control_eq = getSegmentGTotal(0) - target_rate;
-            } else {
-                // finding if it is a single phase control or combined phase control
-                int number_phases_under_control = 0;
-                const double* distr = well_controls_get_current_distr(well_controls_);
+                assert(number_phases_under_control == 1);
+                // only support single component injection
                 for (int phase = 0; phase < number_of_phases_; ++phase) {
-                    if (distr[phase] > 0.0) {
-                        ++number_phases_under_control;
+                    if (distr[phase] > 0.) { // under the control of this phase
+                        control_eq = getSegmentGTotal(0) - g[phase] * target_rate;
+                        break;
                     }
                 }
-                assert(number_phases_under_control > 0);
-
-                const std::vector<double> g = {1.0, 1.0, 0.01};
-                const double target_rate = well_controls_get_current_target(well_controls_);
+            } else {
                 // TODO: the two situations below should be able to be merged to be handled as one situation
-
                 if (number_phases_under_control == 1) { // single phase control
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
                         if (distr[phase] > 0.) { // under the control of this phase
