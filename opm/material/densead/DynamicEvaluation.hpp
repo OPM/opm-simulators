@@ -178,11 +178,26 @@ public:
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
     template <class RhsValueType>
+    static Evaluation createVariable(const RhsValueType& value OPM_UNUSED, int varPos OPM_UNUSED)
+    {
+        throw std::logic_error("Dynamically sized evaluations require that the number of "
+                               "derivatives is specified when creating an evaluation");
+    }
+
+    template <class RhsValueType>
     static Evaluation createVariable(int nVars, const RhsValueType& value, int varPos)
     {
         // copy function value and set all derivatives to 0, except for the variable
         // which is represented by the value (which is set to 1.0)
         return Evaluation(nVars, value, varPos);
+    }
+
+    template <class RhsValueType>
+    static Evaluation createVariable(const Evaluation& x, const RhsValueType& value, int varPos)
+    {
+        // copy function value and set all derivatives to 0, except for the variable
+        // which is represented by the value (which is set to 1.0)
+        return Evaluation(x.size(), value, varPos);
     }
 
 
@@ -192,6 +207,22 @@ public:
     static Evaluation createConstant(int nVars, const RhsValueType& value)
     {
         return Evaluation(nVars, value);
+    }
+
+    // "evaluate" a constant function (i.e. a function that does not depend on the set of
+    // relevant variables, f(x) = c).
+    template <class RhsValueType>
+    static Evaluation createConstant(const RhsValueType& value)
+    {
+        throw std::logic_error("Dynamically-sized evaluation objects require to specify the number of derivatives.");
+    }
+
+    // "evaluate" a constant function (i.e. a function that does not depend on the set of
+    // relevant variables, f(x) = c).
+    template <class RhsValueType>
+    static Evaluation createConstant(const Evaluation& x, const RhsValueType& value)
+    {
+        return Evaluation(x.size(), value);
     }
 
     // print the value and the derivatives of the function evaluation

@@ -37,6 +37,7 @@
 #include <cmath>
 #include <algorithm>
 #include <type_traits>
+#include <stdexcept>
 
 namespace Opm {
 /*
@@ -113,14 +114,51 @@ public:
     { return value; }
 
     /*!
+     * \brief Given a scalar value, return an evaluation of a constant function that
+     *        features a given number of derivatives
+     *
+     * For this toolbox, an evaluation is the value, so this method is the identity
+     * function. In general, this returns an evaluation object for which all derivatives
+     * are zero.
+     */
+    static Scalar createConstant(unsigned numDerivatives, Scalar value)
+    {
+        if (numDerivatives != 0)
+            throw std::logic_error("Plain floating point objects cannot represent any derivatives");
+        return value;
+    }
+
+    /*!
+     * \brief Given a scalar value, return an evaluation of a constant function that is
+     *        compatible to a "template" variable.
+     *
+     * For this toolbox, an evaluation is the value, so this method is the identity
+     * function. In general, this returns an evaluation object for which all derivatives
+     * are zero.
+     */
+    static Scalar createConstant(Scalar x OPM_UNUSED, Scalar value)
+    { return value; }
+
+    /*!
      * \brief Given a scalar value, return an evaluation of a linear function.
      *
      * i.e., Create an evaluation which represents f(x) = x and the derivatives with
      * regard to x. For scalars (which do not consider derivatives), this method does
      * nothing.
      */
-    static Scalar createVariable(Scalar value, unsigned /*varIdx*/)
-    { return value; }
+    static Scalar createVariable(Scalar value OPM_UNUSED, unsigned varIdx OPM_UNUSED)
+    { throw std::logic_error("Plain floating point objects cannot represent variables"); }
+
+    /*!
+     * \brief Given a scalar value, return an evaluation of a linear function that is
+     *        compatible with a "template" evaluation.
+     *
+     * i.e., Create an evaluation which represents f(x) = x and the derivatives with
+     * regard to x. For scalars (which do not consider derivatives), this method does
+     * nothing.
+     */
+    static Scalar createVariable(Scalar x OPM_UNUSED, Scalar value OPM_UNUSED, unsigned varIdx OPM_UNUSED)
+    { throw std::logic_error("Plain floating point objects cannot represent variables"); }
 
     /*!
      * \brief Given a function evaluation, constrain it to its value (if necessary).
@@ -248,6 +286,22 @@ Evaluation blank(const Evaluation& x)
 template <class Evaluation, class Scalar>
 Evaluation constant(const Scalar& value)
 { return Opm::MathToolbox<Evaluation>::createConstant(value); }
+
+template <class Evaluation, class Scalar>
+Evaluation constant(unsigned numDeriv, const Scalar& value)
+{ return Opm::MathToolbox<Evaluation>::createConstant(numDeriv, value); }
+
+template <class Evaluation, class Scalar>
+Evaluation constant(const Evaluation& x, const Scalar& value)
+{ return Opm::MathToolbox<Evaluation>::createConstant(x, value); }
+
+template <class Evaluation, class Scalar>
+Evaluation variable(unsigned numDeriv, const Scalar& value, unsigned idx)
+{ return Opm::MathToolbox<Evaluation>::createVariable(numDeriv, value, idx); }
+
+template <class Evaluation, class Scalar>
+Evaluation variable(const Evaluation& x, const Scalar& value, unsigned idx)
+{ return Opm::MathToolbox<Evaluation>::createVariable(x, value, idx); }
 
 template <class Evaluation, class Scalar>
 Evaluation variable(const Scalar& value, unsigned idx)
