@@ -34,8 +34,6 @@ namespace Opm
     : Base(well, time_step, wells, param, rate_converter, pvtRegionIdx, num_components)
     , perf_densities_(number_of_perforations_)
     , perf_pressure_diffs_(number_of_perforations_)
-    , primary_variables_(numWellEq, 0.0)
-    , primary_variables_evaluation_(numWellEq) // the number of the primary variables
     , F0_(numWellConservationEq)
     , ipr_a_(number_of_phases_)
     , ipr_b_(number_of_phases_)
@@ -67,6 +65,18 @@ namespace Opm
             perf_depth_[perf] = depth_arg[cell_idx];
         }
 
+        // counting/updating primary variable numbers
+        if (this->has_polymermw && well_type_ == INJECTOR) {
+            // adding a primary variable for water perforation rate per connection
+            numWellEq_ += number_of_perforations_;
+            // adding a primary variable for skin pressure per connection
+            numWellEq_ += number_of_perforations_;
+        }
+
+        // with the updated numWellEq_, we can initialize the primary variables and matrices now
+        primary_variables_.resize(numWellEq_, 0.0);
+        primary_variables_evaluation_.resize(numWellEq_, EvalWell{numWellEq_ + numEq, 0.0});
+
         // setup sparsity pattern for the matrices
         //[A C^T    [x    =  [ res
         // B D] x_well]      res_well]
@@ -79,12 +89,20 @@ namespace Opm
             // Add nonzeros for diagonal
             row.insert(row.index());
         }
+        // the block size is run-time determined now
+        invDuneD_[0][0].resize(numWellEq_, numWellEq_);
 
         for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
             for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
                 const int cell_idx = well_cells_[perf];
                 row.insert(cell_idx);
             }
+        }
+
+        for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
+            const int cell_idx = well_cells_[perf];
+             // the block size is run-time determined now
+             duneB_[0][cell_idx].resize(numWellEq_, numEq);
         }
 
         // make the C^T matrix
@@ -95,11 +113,25 @@ namespace Opm
             }
         }
 
+        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+            const int cell_idx = well_cells_[perf];
+            duneC_[0][cell_idx].resize(numWellEq_, numEq);
+        }
+
         resWell_.resize(1);
+        // the block size of resWell_ is also run-time determined now
+        resWell_[0].resize(numWellEq_);
 
         // resize temporary class variables
         Bx_.resize( duneB_.N() );
+        for (unsigned i = 0; i < duneB_.N(); ++i) {
+            Bx_[i].resize(numWellEq_);
+        }
+
         invDrw_.resize( invDuneD_.N() );
+        for (unsigned i = 0; i < invDuneD_.N(); ++i) {
+            invDrw_[i].resize(numWellEq_);
+        }
     }
 
 
@@ -110,12 +142,9 @@ namespace Opm
     void StandardWell<TypeTag>::
     initPrimaryVariablesEvaluation() const
     {
-        for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
-            assert( (size_t)eqIdx < primary_variables_.size() );
-
-            primary_variables_evaluation_[eqIdx] = 0.0;
-            primary_variables_evaluation_[eqIdx].setValue(primary_variables_[eqIdx]);
-            primary_variables_evaluation_[eqIdx].setDerivative(numEq + eqIdx, 1.0);
+        for (int eqIdx = 0; eqIdx < numWellEq_; ++eqIdx) {
+            primary_variables_evaluation_[eqIdx] =
+                EvalWell::createVariable(numWellEq_ + numEq, primary_variables_[eqIdx], numEq + eqIdx);
         }
     }
 
@@ -221,7 +250,7 @@ namespace Opm
         }
 
         // Oil fraction
-        EvalWell well_fraction = 1.0;
+        EvalWell well_fraction(numWellEq_ + numEq, 1.0);
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             well_fraction -= primary_variables_evaluation_[WFrac];
         }
@@ -245,7 +274,7 @@ namespace Opm
     wellSurfaceVolumeFraction(const int compIdx) const
     {
 
-        EvalWell sum_volume_fraction_scaled = 0.;
+        EvalWell sum_volume_fraction_scaled(numWellEq_ + numEq, 0.);
         for (int idx = 0; idx < num_components_; ++idx) {
             sum_volume_fraction_scaled += wellVolumeFractionScaled(idx);
         }
@@ -264,8 +293,7 @@ namespace Opm
     StandardWell<TypeTag>::
     extendEval(const Eval& in) const
     {
-        EvalWell out = 0.0;
-        out.setValue(in.value());
+        EvalWell out(numWellEq_ + numEq, in.value());
         for(int eqIdx = 0; eqIdx < numEq;++eqIdx) {
             out.setDerivative(eqIdx, in.derivative(eqIdx));
         }
@@ -290,11 +318,12 @@ namespace Opm
                     double& perf_vap_oil_rate,
                     Opm::DeferredLogger& deferred_logger) const
     {
+
         const auto& fs = intQuants.fluidState();
         const EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
         const EvalWell rs = extendEval(fs.Rs());
         const EvalWell rv = extendEval(fs.Rv());
-        std::vector<EvalWell> b_perfcells_dense(num_components_, 0.0);
+        std::vector<EvalWell> b_perfcells_dense(num_components_, EvalWell{numWellEq_ + numEq, 0.0});
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -309,7 +338,13 @@ namespace Opm
 
         // Pressure drawdown (also used to determine direction of flow)
         const EvalWell well_pressure = bhp + perf_pressure_diffs_[perf];
-        const EvalWell drawdown = pressure - well_pressure;
+        EvalWell drawdown = pressure - well_pressure;
+
+        if (this->has_polymermw && well_type_ == INJECTOR) {
+            const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
+            const EvalWell& skin_pressure = primary_variables_evaluation_[pskin_index];
+            drawdown += skin_pressure;
+        }
 
         // producing perforations
         if ( drawdown.value() > 0 )  {
@@ -358,13 +393,13 @@ namespace Opm
             const EvalWell cqt_i = - Tw * (total_mob_dense * drawdown);
 
             // surface volume fraction of fluids within wellbore
-            std::vector<EvalWell> cmix_s(num_components_, 0.);
+            std::vector<EvalWell> cmix_s(num_components_, EvalWell{numWellEq_ + numEq});
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 cmix_s[componentIdx] = wellSurfaceVolumeFraction(componentIdx);
             }
 
             // compute volume ratio between connection at standard conditions
-            EvalWell volumeRatio = 0.0;
+            EvalWell volumeRatio(numWellEq_ + numEq, 0.);
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
                 volumeRatio += cmix_s[waterCompIdx] / b_perfcells_dense[waterCompIdx];
@@ -378,7 +413,7 @@ namespace Opm
                 const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                 // Incorporate RS/RV factors if both oil and gas active
-                const EvalWell d = 1.0 - rv * rs;
+                const EvalWell d = EvalWell(numWellEq_ + numEq, 1.0) - rv * rs;
 
                 if (d.value() == 0.0) {
                     OPM_DEFLOG_THROW(Opm::NumericalIssue, "Zero d value obtained for well " << name() << " during flux calcuation"
@@ -449,6 +484,8 @@ namespace Opm
                    WellState& well_state,
                    Opm::DeferredLogger& deferred_logger)
     {
+        // TODO: only_wells should be put back to save some computation
+        // for example, the matrices B C does not need to update if only_wells
         SummaryState summaryState;
 
         checkWellOperability(ebosSimulator, well_state, deferred_logger);
@@ -481,16 +518,21 @@ namespace Opm
 
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
-            std::vector<EvalWell> mob(num_components_, 0.0);
+            std::vector<EvalWell> mob(num_components_, {numWellEq_ + numEq, 0.});
             getMobility(ebosSimulator, perf, mob, deferred_logger);
 
-            std::vector<EvalWell> cq_s(num_components_, 0.0);
+            std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.});
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
             computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+
+            // better way to do here is that use the cq_s and then replace the cq_s_water here?
+            if (has_polymer && this->has_polymermw && well_type_ == INJECTOR) {
+                handleInjectivityRateAndEquations(intQuants, well_state, perf, cq_s, deferred_logger);
+            }
 
             // updating the solution gas rate and solution oil rate
             if (well_type_ == PRODUCER) {
@@ -512,7 +554,7 @@ namespace Opm
                 resWell_[0][componentIdx] += cq_s_effective.value();
 
                 // assemble the jacobians
-                for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+                for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
                     // also need to consider the efficiency factor when manipulating the jacobians.
                     duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
                     invDuneD_[0][0][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
@@ -539,7 +581,7 @@ namespace Opm
 
                     const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
                     // convert to reservoar conditions
-                    EvalWell cq_r_thermal = 0.0;
+                    EvalWell cq_r_thermal(numWellEq_ + numEq, 0.);
                     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
 
                         if(FluidSystem::waterPhaseIdx == phaseIdx)
@@ -601,17 +643,7 @@ namespace Opm
                 connectionRates_[perf][contiPolymerEqIdx] = Base::restrictEval(cq_s_poly);
 
                 if (this->has_polymermw) {
-                    if (well_type_ == PRODUCER) {
-                        EvalWell cq_s_polymw = cq_s_poly;
-                        if (cq_s_polymw < 0.) {
-                            cq_s_polymw *= extendEval(intQuants.polymerMoleWeight() );
-                        } else {
-                            // we do not consider the molecular weight from the polymer
-                            // re-injecting back through producer
-                            cq_s_polymw *= 0.;
-                        }
-                        connectionRates_[perf][this->contiPolymerMWEqIdx] = Base::restrictEval(cq_s_polymw);
-                    }
+                    updateConnectionRatePolyMW(cq_s_poly, intQuants, well_state, perf, deferred_logger);
                 }
             }
 
@@ -645,7 +677,7 @@ namespace Opm
             // since all the rates are under surface condition
             EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
             resWell_loc -= getQs(componentIdx) * well_efficiency_factor_;
-            for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+            for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
             resWell_[0][componentIdx] += resWell_loc.value();
@@ -672,11 +704,11 @@ namespace Opm
     StandardWell<TypeTag>::
     assembleControlEq(Opm::DeferredLogger& deferred_logger)
     {
-        EvalWell control_eq(0.0);
+        EvalWell control_eq(numWellEq_ + numEq, 0.);
         switch (well_controls_get_current_type(well_controls_)) {
             case THP:
             {
-                std::vector<EvalWell> rates(3, 0.);
+                std::vector<EvalWell> rates(3, {numWellEq_ + numEq, 0.});
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     rates[ Water ] = getQs(flowPhaseToEbosCompIdx(Water));
                 }
@@ -703,7 +735,7 @@ namespace Opm
                     control_eq = getWQTotal() - target_rate;
                 } else if (well_type_ == PRODUCER) {
                     if (target_rate != 0.) {
-                        EvalWell rate_for_control(0.);
+                        EvalWell rate_for_control(numWellEq_ + numEq, 0.);
                         const EvalWell& g_total = getWQTotal();
                         // a variable to check if we are producing any targeting fluids
                         double sum_fraction = 0.;
@@ -752,7 +784,7 @@ namespace Opm
                     }
                 } else {
                     const EvalWell& g_total = getWQTotal();
-                    EvalWell rate_for_control(0.0); // reservoir rate
+                    EvalWell rate_for_control(numWellEq_ + numEq, 0.); // reservoir rate
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
                         rate_for_control += g_total * wellVolumeFraction( flowPhaseToEbosCompIdx(phase) );
                     }
@@ -767,7 +799,7 @@ namespace Opm
         // using control_eq to update the matrix and residuals
         // TODO: we should use a different index system for the well equations
         resWell_[0][Bhp] = control_eq.value();
-        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+        for (int pv_idx = 0; pv_idx < numWellEq_; ++pv_idx) {
             invDuneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + numEq);
         }
     }
@@ -912,6 +944,33 @@ namespace Opm
             const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]), std::abs(old_primary_variables[Bhp]) * dBHPLimit);
             // 1e5 to make sure bhp will not be below 1bar
             primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
+        }
+
+        updateExtraPrimaryVariables(dwells);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateExtraPrimaryVariables(const BVectorWell& dwells) const
+    {
+        // for the water velocity and skin pressure
+        if (this->has_polymermw && well_type_ == INJECTOR) {
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const int wat_vel_index = Bhp + 1 + perf;
+                const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
+
+                const double relaxation_factor = 0.9;
+                const double dx_wat_vel = dwells[0][wat_vel_index];
+                primary_variables_[wat_vel_index] -= relaxation_factor * dx_wat_vel;
+
+                const double dx_pskin = dwells[0][pskin_index];
+                primary_variables_[pskin_index] -= relaxation_factor * dx_pskin;
+            }
         }
     }
 
@@ -1067,6 +1126,14 @@ namespace Opm
         }
 
         updateThp(well_state, deferred_logger);
+
+        // other primary variables related to polymer injectivity study
+        if (this->has_polymermw && well_type_ == INJECTOR) {
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                well_state.perfWaterVelocity()[first_perf_ + perf] = primary_variables_[Bhp + 1 + perf];
+                well_state.perfSkinPressure()[first_perf_ + perf] = primary_variables_[Bhp + 1 + number_of_perforations_ + perf];
+            }
+        }
     }
 
 
@@ -1121,7 +1188,6 @@ namespace Opm
                               WellState& well_state,
                               Opm::DeferredLogger& deferred_logger) const
     {
-        
         // number of phases
         const int np = number_of_phases_;
         const int well_index = index_of_well_;
@@ -1241,7 +1307,7 @@ namespace Opm
         std::fill(ipr_b_.begin(), ipr_b_.end(), 0.);
 
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
-            std::vector<EvalWell> mob(num_components_, 0.0);
+            std::vector<EvalWell> mob(num_components_, {numWellEq_ + numEq, 0.0});
             // TODO: mabye we should store the mobility somewhere, so that we only need to calculate it one per iteration
             getMobility(ebos_simulator, perf, mob, deferred_logger);
 
@@ -1324,8 +1390,7 @@ namespace Opm
     StandardWell<TypeTag>::
     checkWellOperability(const Simulator& ebos_simulator,
                          const WellState& well_state,
-                         Opm::DeferredLogger& deferred_logger
-                         )
+                         Opm::DeferredLogger& deferred_logger)
     {
         // focusing on PRODUCER for now
         if (well_type_ == INJECTOR) {
@@ -1358,8 +1423,7 @@ namespace Opm
     StandardWell<TypeTag>::
     updateWellOperability(const Simulator& ebos_simulator,
                           const WellState& /* well_state */,
-                          Opm::DeferredLogger& deferred_logger
-                          )
+                          Opm::DeferredLogger& deferred_logger)
     {
         this->operability_status_.reset();
 
@@ -1506,8 +1570,7 @@ namespace Opm
     StandardWell<TypeTag>::
     canProduceInjectWithCurrentBhp(const Simulator& ebos_simulator,
                                    const WellState& well_state,
-                                   Opm::DeferredLogger& deferred_logger
-                                   )
+                                   Opm::DeferredLogger& deferred_logger)
     {
         const double bhp = well_state.bhp()[index_of_well_];
         std::vector<double> well_rates;
@@ -1920,8 +1983,8 @@ namespace Opm
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;
 
-        std::vector<double> res(numWellEq);
-        for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+        std::vector<double> res(numWellEq_);
+        for (int eq_idx = 0; eq_idx < numWellEq_; ++eq_idx) {
             // magnitude of the residual matters
             res[eq_idx] = std::abs(resWell_[0][eq_idx]);
         }
@@ -1957,6 +2020,8 @@ namespace Opm
         }
 
         checkConvergenceControlEq(report, deferred_logger);
+
+        checkConvergenceExtraEqs(res, report, deferred_logger);
 
         return report;
     }
@@ -2029,6 +2094,7 @@ namespace Opm
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         BVectorWell dx_well(1);
+        dx_well[0].resize(numWellEq_);
         invDuneD_.mv(resWell_, dx_well);
 
         updateWellState(dx_well, well_state, deferred_logger);
@@ -2146,6 +2212,8 @@ namespace Opm
         if (!this->isOperable()) return;
 
         BVectorWell xw(1);
+        xw[0].resize(numWellEq_);
+
         recoverSolutionWell(x, xw);
         updateWellState(xw, well_state, deferred_logger);
     }
@@ -2171,15 +2239,15 @@ namespace Opm
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             // flux for each perforation
-            std::vector<EvalWell> mob(num_components_, 0.0);
+            std::vector<EvalWell> mob(num_components_, {numWellEq_ + numEq, 0.});
             getMobility(ebosSimulator, perf, mob, deferred_logger);
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
 
-            std::vector<EvalWell> cq_s(num_components_, 0.0);
+            std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.});
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
-            computePerfRate(intQuants, mob, EvalWell(bhp), Tw, perf, allow_cf,
+            computePerfRate(intQuants, mob, EvalWell(numWellEq_ + numEq, bhp), Tw, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
             for(int p = 0; p < np; ++p) {
@@ -2355,7 +2423,6 @@ namespace Opm
                           std::vector<double>& well_potentials,
                           Opm::DeferredLogger& deferred_logger) // const
     {
-
         updatePrimaryVariables(well_state, deferred_logger);
         computeWellConnectionPressures(ebosSimulator, well_state);
 
@@ -2406,7 +2473,6 @@ namespace Opm
     StandardWell<TypeTag>::
     updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& deferred_logger) const
     {
-
         if (!this->isOperable()) return;
 
         const int well_index = index_of_well_;
@@ -2489,6 +2555,14 @@ namespace Opm
 
         // BHP
         primary_variables_[Bhp] = well_state.bhp()[index_of_well_];
+
+        // other primary variables related to polymer injection
+        if (this->has_polymermw && well_type_ == INJECTOR) {
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                primary_variables_[Bhp + 1 + perf] = well_state.perfWaterVelocity()[first_perf_ + perf];
+                primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = well_state.perfSkinPressure()[first_perf_ + perf];
+            }
+        }
     }
 
 
@@ -2523,26 +2597,23 @@ namespace Opm
         // TODO: it is possible it should be a Evaluation
         const double rho = perf_densities_[0];
 
-        ValueType bhp = 0.;
         if (well_type_ == INJECTOR) {
             const double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
 
             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
 
-            bhp = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
+            return vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
          }
          else if (well_type_ == PRODUCER) {
              const double vfp_ref_depth = vfp_properties_->getProd()->getTable(vfp)->getDatumDepth();
 
              const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
 
-             bhp = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
+             return vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
          }
          else {
              OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well", deferred_logger);
          }
-
-         return bhp;
     }
 
 
@@ -2604,6 +2675,11 @@ namespace Opm
                                    std::vector<EvalWell>& mob,
                                    Opm::DeferredLogger& deferred_logger) const
     {
+        // for the cases related to polymer molecular weight, we assume fully mixing
+        // as a result, the polymer and water share the same viscosity
+        if (this->has_polymermw) {
+            return;
+        }
         const int cell_idx = well_cells_[perf];
         const auto& int_quant = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
         const EvalWell polymer_concentration = extendEval(int_quant.polymerConcentration());
@@ -2628,7 +2704,7 @@ namespace Opm
             const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebos_simulator);
             const EvalWell& bhp = getBhp();
 
-            std::vector<EvalWell> cq_s(num_components_,0.0);
+            std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.});
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
             double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quant, cell_idx);
@@ -2684,9 +2760,9 @@ namespace Opm
                 while ( col != row.end() && col.index() < col_index ) ++col;
                 assert(col != row.end() && col.index() == col_index);
 
-                Dune::FieldMatrix<Scalar, numWellEq, numEq> tmp;
+                Dune::DynamicMatrix<Scalar> tmp;
+                Detail::multMatrix(invDuneD_[0][0],  (*colB), tmp);
                 typename Mat::block_type tmp1;
-                Dune::FMatrixHelp::multMatrix(invDuneD_[0][0],  (*colB), tmp);
                 Detail::multMatrixTransposed((*colC), tmp, tmp1);
                 (*col) -= tmp1;
             }
@@ -2866,10 +2942,165 @@ namespace Opm
 
 
     template<typename TypeTag>
+    typename StandardWell<TypeTag>::EvalWell
+    StandardWell<TypeTag>::
+    pskinwater(const double throughput,
+               const EvalWell& water_velocity,
+              Opm::DeferredLogger& deferred_logger) const
+    {
+        if (!this->has_polymermw) {
+            OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
+                                          "while injecting skin pressure is requested for well " << name(), deferred_logger);
+        }
+        const int water_table_id = well_ecl_.getPolymerProperties().m_skprwattable;
+        if (water_table_id <= 0) {
+            OPM_DEFLOG_THROW(std::runtime_error, "Unused SKPRWAT table id used for well " << name(), deferred_logger);
+        }
+        const auto& water_table_func = PolymerModule::getSkprwatTable(water_table_id);
+        const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
+        // the skin pressure when injecting water, which also means the polymer concentration is zero
+        EvalWell pskin_water(numWellEq_ + numEq, 0.0);
+        pskin_water = water_table_func.eval(throughput_eval, water_velocity);
+        return pskin_water;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename StandardWell<TypeTag>::EvalWell
+    StandardWell<TypeTag>::
+    pskin(const double throughput,
+              const EvalWell& water_velocity,
+              const EvalWell& poly_inj_conc,
+              Opm::DeferredLogger& deferred_logger) const
+    {
+        if (!this->has_polymermw) {
+            OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
+                                          "while injecting skin pressure is requested for well " << name(), deferred_logger);
+        }
+        const double sign = water_velocity >= 0. ? 1.0 : -1.0;
+        const EvalWell water_velocity_abs = Opm::abs(water_velocity);
+        if (poly_inj_conc == 0.) {
+            return sign * pskinwater(throughput, water_velocity_abs, deferred_logger);
+        }
+        const int polymer_table_id = well_ecl_.getPolymerProperties().m_skprpolytable;
+        if (polymer_table_id <= 0) {
+            OPM_DEFLOG_THROW(std::runtime_error, "Unavailable SKPRPOLY table id used for well " << name(), deferred_logger);
+        }
+        const auto& skprpolytable = PolymerModule::getSkprpolyTable(polymer_table_id);
+        const double reference_concentration = skprpolytable.refConcentration;
+        const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
+        // the skin pressure when injecting water, which also means the polymer concentration is zero
+        EvalWell pskin_poly(numWellEq_ + numEq, 0.0);
+        pskin_poly = skprpolytable.table_func.eval(throughput_eval, water_velocity_abs);
+        if (poly_inj_conc == reference_concentration) {
+            return sign * pskin_poly;
+        }
+        // poly_inj_conc != reference concentration of the table, then some interpolation will be required
+        const EvalWell pskin_water = pskinwater(throughput, water_velocity_abs, deferred_logger);
+        const EvalWell pskin = pskin_water + (pskin_poly - pskin_water) / reference_concentration * poly_inj_conc;
+        return sign * pskin;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename StandardWell<TypeTag>::EvalWell
+    StandardWell<TypeTag>::
+    wpolymermw(const double throughput,
+               const EvalWell& water_velocity,
+              Opm::DeferredLogger& deferred_logger) const
+    {
+        if (!this->has_polymermw) {
+            OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
+                                          "while injecting polymer molecular weight is requested for well " << name(), deferred_logger);
+        }
+        const int table_id = well_ecl_.getPolymerProperties().m_plymwinjtable;
+        const auto& table_func = PolymerModule::getPlymwinjTable(table_id);
+        const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
+        EvalWell molecular_weight(numWellEq_ + numEq, 0.);
+        if (wpolymer() == 0.) { // not injecting polymer
+            return molecular_weight;
+        }
+        molecular_weight = table_func.eval(throughput_eval, Opm::abs(water_velocity));
+        return molecular_weight;
+    }
+
+
+
+
+
+    template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWaterThroughput(const double dt OPM_UNUSED, WellState& well_state OPM_UNUSED) const
+    updateWaterThroughput(const double dt, WellState &well_state) const
     {
+        if (this->has_polymermw && well_type_ == INJECTOR) {
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const double perf_water_vel = primary_variables_[Bhp + 1 + perf];
+                // we do not consider the formation damage due to water flowing from reservoir into wellbore
+                if (perf_water_vel > 0.) {
+                    well_state.perfThroughput()[first_perf_ + perf] += perf_water_vel * dt;
+                }
+            }
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    handleInjectivityRateAndEquations(const IntensiveQuantities& int_quants,
+                                      const WellState& well_state,
+                                      const int perf,
+                                      std::vector<EvalWell>& cq_s,
+                                      Opm::DeferredLogger& deferred_logger)
+    {
+        const unsigned water_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        const EvalWell& water_flux_s = cq_s[water_comp_idx];
+        const auto& fs = int_quants.fluidState();
+        const EvalWell b_w = extendEval(fs.invB(FluidSystem::waterPhaseIdx));
+        const EvalWell water_flux_r = water_flux_s / b_w;
+        const double area = M_PI * bore_diameters_[perf] * perf_length_[perf];
+        const EvalWell water_velocity = water_flux_r / area;
+        const int wat_vel_index = Bhp + 1 + perf;
+
+        // equation for the water velocity
+        const EvalWell eq_wat_vel = primary_variables_evaluation_[wat_vel_index] - water_velocity;
+        resWell_[0][wat_vel_index] = eq_wat_vel.value();
+
+        const double throughput = well_state.perfThroughput()[first_perf_ + perf];
+        const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
+
+        EvalWell poly_conc(numWellEq_ + numEq, 0.0);
+        poly_conc.setValue(wpolymer());
+
+        // equation for the skin pressure
+        const EvalWell eq_pskin = primary_variables_evaluation_[pskin_index]
+                                  - pskin(throughput, primary_variables_evaluation_[wat_vel_index], poly_conc, deferred_logger);
+
+        resWell_[0][pskin_index] = eq_pskin.value();
+        for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
+            invDuneD_[0][0][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx+numEq);
+            invDuneD_[0][0][pskin_index][pvIdx] = eq_pskin.derivative(pvIdx+numEq);
+        }
+
+        // water rate is update to use the form from water velocity, since water velocity is
+        // a primary variable now
+        cq_s[water_comp_idx] = area * primary_variables_evaluation_[wat_vel_index] * b_w;
+
+        // the water velocity is impacted by the reservoir primary varaibles. It needs to enter matrix B
+        const int cell_idx = well_cells_[perf];
+        for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
+            duneB_[0][cell_idx][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx);
+        }
     }
 
 
@@ -2904,7 +3135,7 @@ namespace Opm
         }
         assert(ctrltype != CR::WellFailure::Type::Invalid);
 
-        const double well_control_residual = std::abs(resWell_[0][numWellEq -1]);
+        const double well_control_residual = std::abs(resWell_[0][Bhp]);
         const int dummy_component = -1;
         const double max_residual_allowed = param_.max_residual_allowed_;
         if (std::isnan(well_control_residual)) {
@@ -2914,5 +3145,92 @@ namespace Opm
         } else if ( well_control_residual > control_tolerance) {
             report.setWellFailed({ctrltype, CR::Severity::Normal, dummy_component, name()});
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    checkConvergenceExtraEqs(const std::vector<double>& res,
+                             ConvergenceReport& report,
+                             DeferredLogger& deferred_logger) const
+    {
+        // if different types of extra equations are involved, this function needs to be refactored further
+
+        // checking the convergence of the extra equations related to polymer injectivity
+        if (this->has_polymermw && well_type_ == INJECTOR) {
+            //  checking the convergence of the perforation rates
+            const double wat_vel_tol = 1.e-8;
+            const int dummy_component = -1;
+            const double maxResidualAllowed = param_.max_residual_allowed_;
+            using CR = ConvergenceReport;
+            const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const double wat_vel_residual = res[Bhp + 1 + perf];
+                if (std::isnan(wat_vel_residual)) {
+                    report.setWellFailed({wat_vel_failure_type, CR::Severity::NotANumber, dummy_component, name()});
+                } else if (wat_vel_residual > maxResidualAllowed * 10.) {
+                    report.setWellFailed({wat_vel_failure_type, CR::Severity::TooLarge, dummy_component, name()});
+                } else if (wat_vel_residual > wat_vel_tol) {
+                    report.setWellFailed({wat_vel_failure_type, CR::Severity::Normal, dummy_component, name()});
+                }
+            }
+
+            // checking the convergence of the skin pressure
+            const double pskin_tol = 1000.; // 1000 pascal
+            const auto pskin_failure_type = CR::WellFailure::Type::Pressure;
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const double pskin_residual = res[Bhp + 1 + perf + number_of_perforations_];
+                if (std::isnan(pskin_residual)) {
+                    report.setWellFailed({pskin_failure_type, CR::Severity::NotANumber, dummy_component, name()});
+                } else if (pskin_residual > maxResidualAllowed * 10.) {
+                    report.setWellFailed({pskin_failure_type, CR::Severity::TooLarge, dummy_component, name()});
+                } else if (pskin_residual > pskin_tol) {
+                    report.setWellFailed({pskin_failure_type, CR::Severity::Normal, dummy_component, name()});
+                }
+            }
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateConnectionRatePolyMW(const EvalWell& cq_s_poly,
+                               const IntensiveQuantities& int_quants,
+                               const WellState& well_state,
+                               const int perf,
+                               DeferredLogger& deferred_logger)
+    {
+        // the source term related to transport of molecular weight
+        EvalWell cq_s_polymw = cq_s_poly;
+        if (well_type_ == INJECTOR) {
+            const int wat_vel_index = Bhp + 1 + perf;
+            const EvalWell water_velocity = primary_variables_evaluation_[wat_vel_index];
+            if (water_velocity > 0.) { // injecting
+                const double throughput = well_state.perfThroughput()[first_perf_ + perf];
+                const EvalWell molecular_weight = wpolymermw(throughput, water_velocity, deferred_logger);
+                cq_s_polymw *= molecular_weight;
+            } else {
+                // we do not consider the molecular weight from the polymer
+                // going-back to the wellbore through injector
+                cq_s_polymw *= 0.;
+            }
+        } else if (well_type_ == PRODUCER) {
+            if (cq_s_polymw < 0.) {
+                cq_s_polymw *= extendEval(int_quants.polymerMoleWeight() );
+            } else {
+                // we do not consider the molecular weight from the polymer
+                // re-injecting back through producer
+                cq_s_polymw *= 0.;
+            }
+        }
+        connectionRates_[perf][this->contiPolymerMWEqIdx] = Base::restrictEval(cq_s_polymw);
     }
 }
