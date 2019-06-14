@@ -983,24 +983,10 @@ public:
     }
 
     /*!
-     * \brief Returns true if the current solution should be written
-     *        to disk for visualization.
-     *
-     * For the ECL simulator we only write at the end of
-     * episodes/report steps...
+     * \brief Always returns true. The ecl output writer takes care of the rest
      */
     bool shouldWriteOutput() const
-    {
-        const auto& simulator = this->simulator();
-        if (simulator.timeStepIndex() < 0)
-            // always write the initial solution
-            return true;
-
-        if (EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions))
-            return true;
-
-        return simulator.episodeWillBeOver();
-    }
+    { return true; }
 
     /*!
      * \brief Returns true if an eWoms restart file should be written to disk.
@@ -1021,8 +1007,10 @@ public:
         // write the desired VTK files.
         ParentType::writeOutput(verbose);
 
+        bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
+
         if (enableEclOutput_)
-            eclWriter_->writeOutput(/*isSubStep=*/!this->simulator().episodeWillBeOver());
+            eclWriter_->writeOutput(isSubStep);
     }
 
     /*!
