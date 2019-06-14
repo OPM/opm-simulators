@@ -652,9 +652,6 @@ private:
                                  isSubStep_,
                                  secondsElapsed_,
                                  restartValue_,
-                                 singleSummaryValues_,
-                                 regionSummaryValues_,
-                                 blockSummaryValues_,
                                  writeDoublePrecision_);
         }
     };
