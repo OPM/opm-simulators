@@ -132,11 +132,17 @@ void test_summary()
     Opm::data::Wells dw;
     bool substep = false;
     simulator->startNextEpisode(0.0, 1e30);
+
     simulator->setEpisodeIndex(0);
+    eclWriter->evalSummaryState(substep);
     eclWriter->writeOutput(substep);
+
     simulator->setEpisodeIndex(1);
+    eclWriter->evalSummaryState(substep);
     eclWriter->writeOutput(substep);
+
     simulator->setEpisodeIndex(2);
+    eclWriter->evalSummaryState(substep);
     eclWriter->writeOutput(substep);
 
     auto res = readsum( casename );

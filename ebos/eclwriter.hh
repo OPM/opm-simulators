@@ -54,6 +54,10 @@
 #include <utility>
 #include <string>
 
+#ifdef HAVE_MPI
+#include <mpi.h>
+#endif
+
 BEGIN_PROPERTIES
 
 NEW_PROP_TAG(EnableEclOutput);
@@ -207,13 +211,109 @@ public:
     /*!
      * \brief collect and pass data and pass it to eclIO writer
      */
-    void writeOutput(bool isSubStep)
+
+    void evalSummaryState(bool isSubStep)
     {
+        int reportStepNum = simulator_.episodeIndex() + 1;
+        /*
+          The summary data is not evaluated for timestep 0, that is
+          implemented with a:
+
+             if (time_step == 0)
+                 return;
+
+          check somewhere in the summary code. When the summary code was
+          split in separate methods Summary::eval() and
+          Summary::add_timestep() it was necessary to pull this test out
+          here to ensure that the well and group related keywords in the
+          restart file, like XWEL and XGRP were "correct" also in the
+          initial report step.
+
+          "Correct" in this context means unchanged behavior, might very
+          well be more correct to actually remove this if test.
+        */
+        if (reportStepNum == 0)
+            return;
+
+        const auto& summary = eclIO_->summary();
         Scalar curTime = simulator_.time() + simulator_.timeStepSize();
         Scalar totalCpuTime =
             simulator_.executionTimer().realTimeElapsed() +
             simulator_.setupTimer().realTimeElapsed() +
             simulator_.vanguard().externalSetupTime();
+
+        Opm::data::Wells localWellData = simulator_.problem().wellModel().wellData();
+
+        const auto& gridView = simulator_.vanguard().gridView();
+        int numElements = gridView.size(/*codim=*/0);
+        bool log = collectToIORank_.isIORank();
+        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log);
+
+        ElementContext elemCtx(simulator_);
+        ElementIterator elemIt = gridView.template begin</*codim=*/0>();
+        const ElementIterator& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            eclOutputModule_.processElement(elemCtx);
+        }
+
+        if (collectToIORank_.isParallel())
+            collectToIORank_.collect({}, eclOutputModule_.getBlockData(), localWellData);
+
+        std::map<std::string, double> miscSummaryData;
+        std::map<std::string, std::vector<double>> regionData;
+        eclOutputModule_.outputFipLog(miscSummaryData, regionData, isSubStep);
+
+        std::vector<char> buffer;
+        if (collectToIORank_.isIORank()) {
+            const auto& eclState = simulator_.vanguard().eclState();
+
+            // Add TCPU
+            if (totalCpuTime != 0.0)
+                miscSummaryData["TCPU"] = totalCpuTime;
+
+            const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
+
+            const std::map<std::pair<std::string, int>, double>& blockData
+                = collectToIORank_.isParallel()
+                ? collectToIORank_.globalBlockData()
+                : eclOutputModule_.getBlockData();
+
+            summary.eval(summaryState(),
+                         reportStepNum,
+                         curTime,
+                         eclState,
+                         schedule(),
+                         wellData,
+                         miscSummaryData,
+                         regionData,
+                         blockData);
+            buffer = summaryState().serialize();
+        }
+
+        if (collectToIORank_.isParallel()) {
+            unsigned long buffer_size = buffer.size();
+
+#ifdef HAVE_MPI
+            MPI_Bcast(&buffer_size, 1, MPI_UNSIGNED_LONG, collectToIORank_.ioRank, MPI_COMM_WORLD);
+            if (!collectToIORank_.isIORank())
+                buffer.resize( buffer_size );
+
+            MPI_Bcast(buffer.data(), buffer_size, MPI_CHAR, collectToIORank_.ioRank, MPI_COMM_WORLD);
+            if (!collectToIORank_.isIORank()) {
+                Opm::SummaryState& st = summaryState();
+                st.deserialize(buffer);
+            }
+#endif
+        }
+    }
+
+
+    void writeOutput(bool isSubStep)
+    {
+        Scalar curTime = simulator_.time() + simulator_.timeStepSize();
         Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
 
         // output using eclWriter if enabled
@@ -248,48 +348,30 @@ public:
         if (collectToIORank_.isParallel())
             collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(), localWellData);
 
-        std::map<std::string, double> miscSummaryData;
-        std::map<std::string, std::vector<double>> regionData;
-        eclOutputModule_.outputFipLog(miscSummaryData, regionData, isSubStep);
 
-        // write output on I/O rank
         if (collectToIORank_.isIORank()) {
             const auto& eclState = simulator_.vanguard().eclState();
             const auto& simConfig = eclState.getSimulationConfig();
-
-            // Add TCPU
-            if (totalCpuTime != 0.0)
-                miscSummaryData["TCPU"] = totalCpuTime;
 
             bool enableDoublePrecisionOutput = EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
             const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
             const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
             Opm::RestartValue restartValue(cellData, wellData);
 
-            const std::map<std::pair<std::string, int>, double>& blockData
-                = collectToIORank_.isParallel()
-                ? collectToIORank_.globalBlockData()
-                : eclOutputModule_.getBlockData();
+            if (simConfig.useThresholdPressure())
+                restartValue.addExtra("THRESHPR", Opm::UnitSystem::measure::pressure, simulator_.problem().thresholdPressure().data());
 
             // Add suggested next timestep to extra data.
             if (!isSubStep)
                 restartValue.addExtra("OPMEXTRA", std::vector<double>(1, nextStepSize));
 
-            if (simConfig.useThresholdPressure())
-                restartValue.addExtra("THRESHPR", Opm::UnitSystem::measure::pressure, simulator_.problem().thresholdPressure().data());
-
             // first, create a tasklet to write the data for the current time step to disk
             auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(summaryState(),
-                                                                     eclState,
-                                                                     schedule(),
                                                                      *eclIO_,
                                                                      reportStepNum,
                                                                      isSubStep,
                                                                      curTime,
                                                                      restartValue,
-                                                                     miscSummaryData,
-                                                                     regionData,
-                                                                     blockData,
                                                                      enableDoublePrecisionOutput);
 
             // then, make sure that the previous I/O request has been completed and the
@@ -575,79 +657,34 @@ private:
     struct EclWriteTasklet
         : public TaskletInterface
     {
-        Opm::SummaryState& summaryState;
-        const Opm::EclipseState& eclState;
-        const Opm::Schedule& schedule;
+        Opm::SummaryState summaryState_;
         Opm::EclipseIO& eclIO_;
         int reportStepNum_;
         bool isSubStep_;
         double secondsElapsed_;
         Opm::RestartValue restartValue_;
-        std::map<std::string, double> singleSummaryValues_;
-        std::map<std::string, std::vector<double>> regionSummaryValues_;
-        std::map<std::pair<std::string, int>, double> blockSummaryValues_;
         bool writeDoublePrecision_;
 
-        explicit EclWriteTasklet(Opm::SummaryState& summaryState,
-                                 const Opm::EclipseState& eclState,
-                                 const Opm::Schedule& schedule,
+        explicit EclWriteTasklet(const Opm::SummaryState& summaryState,
                                  Opm::EclipseIO& eclIO,
                                  int reportStepNum,
                                  bool isSubStep,
                                  double secondsElapsed,
                                  Opm::RestartValue restartValue,
-                                 const std::map<std::string, double>& singleSummaryValues,
-                                 const std::map<std::string, std::vector<double>>& regionSummaryValues,
-                                 const std::map<std::pair<std::string, int>, double>& blockSummaryValues,
                                  bool writeDoublePrecision)
-            : summaryState(summaryState)
-            , eclState(eclState)
-            , schedule(schedule)
+            : summaryState_(summaryState)
             , eclIO_(eclIO)
             , reportStepNum_(reportStepNum)
             , isSubStep_(isSubStep)
             , secondsElapsed_(secondsElapsed)
             , restartValue_(restartValue)
-            , singleSummaryValues_(singleSummaryValues)
-            , regionSummaryValues_(regionSummaryValues)
-            , blockSummaryValues_(blockSummaryValues)
             , writeDoublePrecision_(writeDoublePrecision)
         { }
 
         // callback to eclIO serial writeTimeStep method
         void run()
         {
-            const auto& summary = eclIO_.summary();
-
-            /*
-              The summary data is not evaluated for timestep 0, that is
-              implemented with a:
-
-                 if (time_step == 0)
-                     return;
-
-              check somewhere in the summary code. When the summary code was
-              split in separate methods Summary::eval() and
-              Summary::add_timestep() it was necessary to pull this test out
-              here to ensure that the well and group related keywords in the
-              restart file, like XWEL and XGRP were "correct" also in the
-              initial report step.
-
-              "Correct" in this context means unchanged behavior, might very
-              well be more correct to actually remove this if test.
-            */
-            if (reportStepNum_ > 0)
-                summary.eval(summaryState,
-                             reportStepNum_,
-                             secondsElapsed_,
-                             eclState,
-                             schedule,
-                             restartValue_.wells,
-                             singleSummaryValues_,
-                             regionSummaryValues_,
-                             blockSummaryValues_);
-
-            eclIO_.writeTimeStep(summaryState,
+            eclIO_.writeTimeStep(summaryState_,
                                  reportStepNum_,
                                  isSubStep_,
                                  secondsElapsed_,
