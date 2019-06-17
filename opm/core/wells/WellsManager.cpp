@@ -205,7 +205,7 @@ namespace Opm
                                const UnstructuredGrid& grid)
         : w_(create_wells(0,0,0)), is_parallel_run_(false)
     {
-        init(eclipseState, schedule, timeStep, UgGridHelpers::numCells(grid),
+        init(eclipseState, schedule, summaryState, timeStep, UgGridHelpers::numCells(grid),
              UgGridHelpers::globalCell(grid), UgGridHelpers::cartDims(grid),
              UgGridHelpers::dimensions(grid),
              UgGridHelpers::cell2Faces(grid), UgGridHelpers::beginFaceCentroids(grid),
@@ -292,12 +292,14 @@ namespace Opm
 
 
 
-    void WellsManager::setupWellControls(const std::vector<Well2>& wells, size_t timeStep,
-                                         std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,
+    void WellsManager::setupWellControls(const std::vector<Well2>& wells,
+                                         const SummaryState& summaryState,
+                                         size_t timeStep,
+                                         std::vector<std::string>& well_names,
+                                         const PhaseUsage& phaseUsage,
                                          const std::vector<int>& wells_on_proc) {
         int well_index = 0;
         auto well_on_proc = wells_on_proc.begin();
-        SummaryState summaryState;
 
         for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter, ++well_on_proc) {
             if( ! *well_on_proc )

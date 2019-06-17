@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
 
     for (size_t i=0; i<wells.size(); i++) {
         const auto& well = wells[i];
-        std::shared_ptr<WellsGroupInterface> wellsGroup = createWellWellsGroup(well, 2, pu);
+        std::shared_ptr<WellsGroupInterface> wellsGroup = createWellWellsGroup(well, summaryState, 2, pu);
         BOOST_CHECK_EQUAL(well.name(), wellsGroup->name());
         if (well.isInjector()) {
             const auto controls = well.injectionControls(summaryState);

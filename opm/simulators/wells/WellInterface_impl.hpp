@@ -284,9 +284,8 @@ namespace Opm
             return 0.0;
         }
 
-        SummaryState summaryState;
-        const auto controls = well_ecl_.injectionControls(summaryState);
-        if (controls.injector_type == WellInjector::GAS) {
+        auto injectorType = well_ecl_.injectorType();
+        if (injectorType == WellInjector::GAS) {
             double solvent_fraction = well_ecl_.getSolventFraction();
             return solvent_fraction;
         } else {
@@ -308,11 +307,10 @@ namespace Opm
             return 0.0;
         }
 
-        SummaryState summaryState;
-        const auto controls = well_ecl_.injectionControls(summaryState);
-        WellPolymerProperties polymer = well_ecl_.getPolymerProperties();
+        auto injectorType = well_ecl_.injectorType();
 
-        if (controls.injector_type == WellInjector::WATER) {
+        if (injectorType == WellInjector::WATER) {
+            WellPolymerProperties polymer = well_ecl_.getPolymerProperties();
             const double polymer_injection_concentration = polymer.m_polymerConcentration;
             return polymer_injection_concentration;
         } else {
@@ -1119,11 +1117,8 @@ namespace Opm
         // we need to get the table number through the parser, in case THP constraint/target is not there.
         // When THP control/limit is not active, if available VFP table is provided, we will still need to
         // update THP value. However, it will only used for output purpose.
-        SummaryState summaryState;
-
         if (well_type_ == PRODUCER) { // producer
-            const auto controls = well_ecl_.productionControls(summaryState);
-            const int table_id = controls.vfp_table_number;
+            const int table_id = well_ecl_.vfp_table_number();
             if (table_id <= 0) {
                 return false;
             } else {
@@ -1136,8 +1131,7 @@ namespace Opm
             }
 
         } else { // injector
-            const auto controls = well_ecl_.injectionControls(summaryState);
-            const int table_id = controls.vfp_table_number;
+            const int table_id = well_ecl_.vfp_table_number();
             if (table_id <= 0) {
                 return false;
             } else {

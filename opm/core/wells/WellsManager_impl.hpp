@@ -279,7 +279,7 @@ WellsManager(const Opm::EclipseState& eclipseState,
              const std::unordered_set<std::string>&    deactivated_wells)
     : w_(create_wells(0,0,0)), is_parallel_run_(is_parallel_run)
 {
-  init(eclipseState, schedule, timeStep, number_of_cells, global_cell,
+  init(eclipseState, schedule, summaryState, timeStep, number_of_cells, global_cell,
          cart_dims, dimensions,
          cell_to_faces, begin_face_centroids, deactivated_wells);
 }
@@ -289,6 +289,7 @@ template <class C2F, class FC>
 void
 WellsManager::init(const Opm::EclipseState& eclipseState,
                    const Opm::Schedule& schedule,
+                   const Opm::SummaryState& summaryState,
                    const size_t                    timeStep,
                    int                             number_of_cells,
                    const int*                      global_cell,
@@ -367,7 +368,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
                          pu, cartesian_to_compressed, interleavedPerm.data(), ntg,
                          wells_on_proc, deactivated_wells);
 
-    setupWellControls(wells, timeStep, well_names, pu, wells_on_proc);
+    setupWellControls(wells, summaryState, timeStep, well_names, pu, wells_on_proc);
 
     {
         const auto& fieldGroup = schedule.getGroup( "FIELD" );
@@ -392,7 +393,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
     for (size_t i = 0; i < wells_on_proc.size(); ++i) {
         // wells_on_proc is a vector of flag to indicate whether a well is on the process
         if (wells_on_proc[i]) {
-            well_collection_.addWell(wells[i], timeStep, pu);
+            well_collection_.addWell(wells[i], summaryState, timeStep, pu);
         }
     }
 
