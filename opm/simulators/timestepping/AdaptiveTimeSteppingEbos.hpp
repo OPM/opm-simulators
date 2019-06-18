@@ -219,8 +219,13 @@ namespace Opm {
                 const double dt = substepTimer.currentStepLength() ;
                 if (timestepVerbose_) {
                     std::ostringstream ss;
+                    boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+                    ss.imbue(std::locale(std::locale::classic(), facet));
                     ss <<"\nTime step " << substepTimer.currentStepNum() << ", stepsize "
-                       << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " days.";
+                       << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " days,"
+                       << " at day " << (double)unit::convert::to(substepTimer.simulationTimeElapsed(), unit::day)
+                       << "/" << (double)unit::convert::to(substepTimer.totalTime(), unit::day)
+                       << ", date = " << substepTimer.currentDateTime();
                     OpmLog::info(ss.str());
                 }
 
