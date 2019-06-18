@@ -83,8 +83,6 @@ SET_BOOL_PROP(TestEclOutputTypeTag, EnableAsyncEclOutput, false);
 
 END_PROPERTIES
 
-static const int day = 24 * 60 * 60;
-
 template <class TypeTag>
 std::unique_ptr<typename GET_PROP_TYPE(TypeTag, Simulator)>
 initSimulator(const char *filename)
