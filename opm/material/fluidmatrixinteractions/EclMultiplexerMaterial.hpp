@@ -436,7 +436,6 @@ public:
             throw std::logic_error("Not implemented: relativePermeabilities() option for unknown EclMultiplexerApproach (="
                                    + std::to_string(params.approach()) + ")");
         }
-        
     }
 
     /*!
@@ -499,6 +498,8 @@ public:
         case EclTwoPhaseApproach:
             TwoPhaseMaterial::updateHysteresis(params.template getRealParams<EclTwoPhaseApproach>(),
                                                fluidState);
+            break;
+        case EclOnePhaseApproach:
             break;
         }
     }
