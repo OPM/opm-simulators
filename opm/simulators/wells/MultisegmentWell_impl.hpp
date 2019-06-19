@@ -837,7 +837,7 @@ namespace Opm
             }
 
             // update the total rate // TODO: should we have a limitation of the total rate change?
-            {               
+            {
                 primary_variables_[seg][GTotal] = old_primary_variables[seg][GTotal] - relaxation_factor * dwells[seg][GTotal];
 
                 // make sure that no injector produce and no producer inject
@@ -1495,7 +1495,6 @@ namespace Opm
     assembleControlEq(Opm::DeferredLogger& deferred_logger) const
     {
         EvalWell control_eq(0.0);
-        const std::vector<double> g = {1.0, 1.0, 0.01};
 
         switch (well_controls_get_current_type(well_controls_)) {
             case THP: // not handling this one for now
@@ -1510,47 +1509,48 @@ namespace Opm
             }
             case SURFACE_RATE:
             {
-            // finding if it is a single phase control or combined phase control
-            int number_phases_under_control = 0;
-            const double* distr = well_controls_get_current_distr(well_controls_);
-            for (int phase = 0; phase < number_of_phases_; ++phase) {
-                if (distr[phase] > 0.0) {
-                    ++number_phases_under_control;
-                }
-            }
-            assert(number_phases_under_control > 0);
-            const double target_rate = well_controls_get_current_target(well_controls_);
-
-            if (well_type_ == INJECTOR) {
-                assert(number_phases_under_control == 1);
-                // only support single component injection
+                // finding if it is a single phase control or combined phase control
+                int number_phases_under_control = 0;
+                const double* distr = well_controls_get_current_distr(well_controls_);
                 for (int phase = 0; phase < number_of_phases_; ++phase) {
-                    if (distr[phase] > 0.) { // under the control of this phase
-                        control_eq = getSegmentGTotal(0) - g[phase] * target_rate;
-                        break;
+                    if (distr[phase] > 0.0) {
+                        ++number_phases_under_control;
                     }
                 }
-            } else {
-                // TODO: the two situations below should be able to be merged to be handled as one situation
-                if (number_phases_under_control == 1) { // single phase control
+                assert(number_phases_under_control > 0);
+                const double target_rate = well_controls_get_current_target(well_controls_);
+                const std::vector<double> g = {1.0, 1.0, 0.01};
+
+                if (well_type_ == INJECTOR) {
+                    assert(number_phases_under_control == 1);
+                    // only support single component injection
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
                         if (distr[phase] > 0.) { // under the control of this phase
-                            control_eq = getSegmentGTotal(0) * volumeFraction(0, flowPhaseToEbosCompIdx(phase)) - g[phase] * target_rate;
+                            control_eq = getSegmentGTotal(0) - g[phase] * target_rate;
                             break;
                         }
                     }
-                } else { // multiphase rate control
-                    EvalWell rate_for_control(0.0);
-                    const EvalWell G_total = getSegmentGTotal(0);
-                    for (int phase = 0; phase < number_of_phases_; ++phase) {
-                        if (distr[phase] > 0.) {
-                            rate_for_control += G_total * volumeFractionScaled(0, flowPhaseToEbosCompIdx(phase));
+                } else {
+                    // TODO: the two situations below should be able to be merged to be handled as one situation
+                    if (number_phases_under_control == 1) { // single phase control
+                        for (int phase = 0; phase < number_of_phases_; ++phase) {
+                            if (distr[phase] > 0.) { // under the control of this phase
+                                control_eq = getSegmentGTotal(0) * volumeFraction(0, flowPhaseToEbosCompIdx(phase)) - g[phase] * target_rate;
+                                break;
+                            }
                         }
+                    } else { // multiphase rate control
+                        EvalWell rate_for_control(0.0);
+                        const EvalWell G_total = getSegmentGTotal(0);
+                        for (int phase = 0; phase < number_of_phases_; ++phase) {
+                            if (distr[phase] > 0.) {
+                                rate_for_control += G_total * volumeFractionScaled(0, flowPhaseToEbosCompIdx(phase));
+                            }
+                        }
+                        // TODO: maybe the following equation can be scaled a little bit for gas phase
+                        control_eq = rate_for_control - target_rate;
                     }
-                    // TODO: maybe the following equation can be scaled a little bit for gas phase
-                    control_eq = rate_for_control - target_rate;
                 }
-            }
                 break;
             }
             case RESERVOIR_RATE:
@@ -1569,8 +1569,6 @@ namespace Opm
             default:
                 OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
         }
-
-
         // using control_eq to update the matrix and residuals
 
         resWell_[0][SPres] = control_eq.value();
@@ -2455,16 +2453,9 @@ namespace Opm
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             // special treatment is needed for segment 0
             if (seg == 0) {
-                if ( (well_type_ == INJECTOR)) {
-                    // maybe it is safer to return -1 to make sure that we don't return the wrong segment number
-                    // for injectors
-                    upwinding_segments_[seg] = seg;
-                    assert(primary_variables_evaluation_[seg][GTotal] >= 0.);
-                    continue;
-                }
-
-                // we don't handle injecting producers.
-                assert(primary_variables_evaluation_[seg][GTotal] <= 0.);
+                // we are not supposed to have injecting producers and producing injectors
+                assert( ! (well_type_ == PRODUCER && primary_variables_evaluation_[seg][GTotal] > 0.) );
+                assert( ! (well_type_ == INJECTOR && primary_variables_evaluation_[seg][GTotal] < 0.) );
                 upwinding_segments_[seg] = seg;
                 continue;
             }
