@@ -21,7 +21,7 @@
 #define OPM_ISTLSOLVEREBOSFLEXIBLE_HEADER_INCLUDED
 
 #include <ewoms/linear/matrixblock.hh>
-#include <opm/autodiff/BlackoilDetails.hpp>
+#include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
@@ -32,7 +32,6 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(FlowIstlSolverFlexible, INHERITS_FROM(FlowIstlSolverParams));
 
-NEW_PROP_TAG(LinearSolverConfiguration);
 NEW_PROP_TAG(GlobalEqVector);
 NEW_PROP_TAG(SparseMatrixAdapter);
 NEW_PROP_TAG(Simulator);
