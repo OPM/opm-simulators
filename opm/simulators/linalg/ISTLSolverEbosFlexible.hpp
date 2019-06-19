@@ -74,7 +74,6 @@ public:
 
     explicit ISTLSolverEbosFlexible(const Simulator& simulator)
         : simulator_(simulator)
-        , comm_(nullptr)
     {
         parameters_.template init<TypeTag>();
         prm_ = setupPropertyTree(parameters_);
@@ -133,7 +132,9 @@ public:
 
         if (recreate_solver || !solver_) {
             if (isParallel()) {
+#if HAVE_MPI
                 solver_.reset(new SolverType(prm_, mat.istlMatrix(), *comm_));
+#endif
             } else {
                 solver_.reset(new SolverType(prm_, mat.istlMatrix()));
             }
@@ -209,7 +210,9 @@ protected:
     VectorType rhs_;
     Dune::InverseOperatorResult res_;
     boost::any parallelInformation_;
+#if HAVE_MPI
     std::unique_ptr<Communication> comm_;
+#endif
     std::vector<std::pair<int, std::vector<int>>> overlapRowAndColumns_;
 }; // end ISTLSolverEbosFlexible
 
