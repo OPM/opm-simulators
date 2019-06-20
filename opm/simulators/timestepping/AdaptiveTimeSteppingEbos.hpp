@@ -6,7 +6,7 @@
 #include <iostream>
 #include <utility>
 
-#include <opm/core/simulator/SimulatorReport.hpp>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/grid/utility/StopWatch.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>

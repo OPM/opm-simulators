@@ -36,7 +36,7 @@
 #include <opm/core/well_controls.h>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/wells/WellsManager.hpp>
-#include <opm/core/simulator/SimulatorReport.hpp>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>

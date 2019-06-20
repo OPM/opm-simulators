@@ -37,7 +37,7 @@
 #include <opm/simulators/flow/countGlobalCells.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
-#include <opm/core/simulator/SimulatorReport.hpp>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/common/ErrorMacros.hpp>

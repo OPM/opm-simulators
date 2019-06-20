@@ -38,7 +38,7 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellCollection.hpp>
-#include <opm/core/simulator/SimulatorReport.hpp>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>

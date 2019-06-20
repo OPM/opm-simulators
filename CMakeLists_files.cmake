@@ -26,7 +26,7 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/nncsorter.cpp
   opm/core/props/rock/RockFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
-  opm/core/simulator/SimulatorReport.cpp
+  opm/simulators/timestepping/SimulatorReport.cpp
   opm/core/wells/InjectionSpecification.cpp
   opm/core/wells/ProductionSpecification.cpp
   opm/core/wells/WellCollection.cpp
@@ -134,8 +134,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/core/props/rock/RockFromDeck.hpp
   opm/core/props/satfunc/RelpermDiagnostics.hpp
   opm/core/props/satfunc/RelpermDiagnostics_impl.hpp
-  opm/core/simulator/SimulatorReport.hpp
-  opm/core/simulator/WellState.hpp
+  opm/simulators/timestepping/SimulatorReport.hpp
+  opm/simulators/wells/WellState.hpp
   opm/core/well_controls.h
   opm/core/wells.h
   opm/core/wells/InjectionSpecification.hpp

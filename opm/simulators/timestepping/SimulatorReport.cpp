@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#include <opm/core/simulator/SimulatorReport.hpp>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 
 #include <iomanip>
 #include <ostream>
