@@ -43,7 +43,7 @@
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/RateConverter.hpp>
+#include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/MultisegmentWell.hpp>

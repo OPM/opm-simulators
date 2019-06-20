@@ -25,7 +25,6 @@
 list (APPEND MAIN_SOURCE_FILES
   ebos/nncsorter.cpp
   opm/autodiff/MPIUtilities.cpp
-  opm/autodiff/MissingFeatures.cpp
   opm/core/props/rock/RockFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/core/simulator/SimulatorReport.cpp
@@ -36,6 +35,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/wells/WellsManager.cpp
   opm/core/wells/well_controls.c
   opm/core/wells/wells.c
+  opm/simulators/flow/MissingFeatures.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
@@ -124,18 +124,17 @@ list (APPEND TEST_DATA_FILES
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilDetails.hpp
-  opm/autodiff/BlackoilModelEbos.hpp
-  opm/autodiff/BlackoilModelParametersEbos.hpp
+  opm/simulators/flow/BlackoilModelEbos.hpp
+  opm/simulators/flow/BlackoilModelParametersEbos.hpp
   opm/autodiff/createGlobalCellArray.hpp
-  opm/autodiff/FlowMainEbos.hpp
+  opm/simulators/flow/FlowMainEbos.hpp
   opm/autodiff/GridInit.hpp
   opm/autodiff/IterationReport.hpp
   opm/autodiff/MPIUtilities.hpp
-  opm/autodiff/NonlinearSolverEbos.hpp
-  opm/autodiff/RateConverter.hpp
+  opm/simulators/flow/NonlinearSolverEbos.hpp
   opm/autodiff/SimFIBODetails.hpp
-  opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp
-  opm/autodiff/MissingFeatures.hpp
+  opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp
+  opm/simulators/flow/MissingFeatures.hpp
   opm/core/props/BlackoilPhases.hpp
   opm/core/props/phaseUsageFromDeck.hpp
   opm/core/props/rock/RockFromDeck.hpp
@@ -194,6 +193,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/DeferredLogger.hpp
   opm/simulators/utils/gatherDeferredLogger.hpp
   opm/simulators/utils/moduleVersion.hpp
+  opm/simulators/wells/RateConverter.hpp
   opm/simulators/wells/WellConnectionAuxiliaryModule.hpp
   opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp
   opm/simulators/wells/VFPProperties.hpp

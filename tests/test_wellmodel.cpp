@@ -41,8 +41,8 @@
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/grid/GridHelpers.hpp>
-#include <opm/autodiff/FlowMainEbos.hpp>
-#include <opm/autodiff/BlackoilModelEbos.hpp>
+#include <opm/simulators/flow/FlowMainEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelEbos.hpp>
 #include <opm/autodiff/createGlobalCellArray.hpp>
 #include <opm/autodiff/GridInit.hpp>
 

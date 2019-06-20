@@ -38,11 +38,11 @@
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 
+#include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/BlackoilModelParametersEbos.hpp>
-#include <opm/autodiff/RateConverter.hpp>
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>

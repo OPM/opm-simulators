@@ -25,13 +25,12 @@
 
 #include <sys/utsname.h>
 
+#include <opm/simulators/flow/BlackoilModelEbos.hpp>
+#include <opm/simulators/flow/MissingFeatures.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/utils/ParallelFileMerger.hpp>
-
-#include <opm/autodiff/BlackoilModelEbos.hpp>
-#include <opm/autodiff/MissingFeatures.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
-#include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 
