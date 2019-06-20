@@ -24,7 +24,6 @@
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
   ebos/nncsorter.cpp
-  opm/autodiff/MPIUtilities.cpp
   opm/core/props/rock/RockFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/core/simulator/SimulatorReport.cpp
@@ -123,16 +122,11 @@ list (APPEND TEST_DATA_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
-  opm/autodiff/BlackoilDetails.hpp
+  opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/BlackoilModelEbos.hpp
   opm/simulators/flow/BlackoilModelParametersEbos.hpp
-  opm/autodiff/createGlobalCellArray.hpp
   opm/simulators/flow/FlowMainEbos.hpp
-  opm/autodiff/GridInit.hpp
-  opm/autodiff/IterationReport.hpp
-  opm/autodiff/MPIUtilities.hpp
   opm/simulators/flow/NonlinearSolverEbos.hpp
-  opm/autodiff/SimFIBODetails.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp
   opm/simulators/flow/MissingFeatures.hpp
   opm/core/props/BlackoilPhases.hpp
@@ -194,6 +188,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/gatherDeferredLogger.hpp
   opm/simulators/utils/moduleVersion.hpp
   opm/simulators/wells/RateConverter.hpp
+  opm/simulators/wells/SimFIBODetails.hpp
   opm/simulators/wells/WellConnectionAuxiliaryModule.hpp
   opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp
   opm/simulators/wells/VFPProperties.hpp

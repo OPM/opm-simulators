@@ -21,6 +21,7 @@
 */
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/SimFIBODetails.hpp>
 
 namespace Opm {
     template<typename TypeTag>
