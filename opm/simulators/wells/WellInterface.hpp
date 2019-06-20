@@ -320,6 +320,21 @@ namespace Opm
         // well bore diameter
         std::vector<double> bore_diameters_;
 
+        /*
+         *  completions_ contains the mapping from completion id to connection indices
+         *  {
+         *      2 : [ConnectionIndex, ConnectioniIndex],
+         *      1 : [ConnectionIndex, ConnectionIndex, ConnectoniIndex],
+         *      5 : [ConnectionIndex],
+         *      7 : [ConnectionIndex]
+         *      ...
+         *   }
+         *   The integer ID's correspond to the COMPLETION id given by the COMPLUMP keyword.
+         *   When there is no COMPLUMP keyword used, a default completion number will be assigned
+         *   based on the order of the declaration of the connections
+         */
+        std::map<int, std::vector<int>> completions_;
+
         const PhaseUsage* phase_usage_;
 
         bool getAllowCrossFlow() const;
@@ -416,6 +431,8 @@ namespace Opm
                                        Opm::DeferredLogger& deferred_logger);
 
         void scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger);
+
+        void initCompletions();
 
         // count the number of times an output log message is created in the productivity
         // index calculations

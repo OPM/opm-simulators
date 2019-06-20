@@ -100,6 +100,9 @@ namespace Opm
                       saturation_table_number_.begin() );
         }
 
+        // initialization of the completions mapping
+        initCompletions();
+
         well_efficiency_factor_ = 1.0;
 
         connectionRates_.resize(number_of_perforations_);
@@ -132,6 +135,28 @@ namespace Opm
         phase_usage_ = phase_usage_arg;
         gravity_ = gravity_arg;
     }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    initCompletions()
+    {
+        assert(completions_.empty() );
+
+        const WellConnections& connections = well_ecl_.getConnections();
+        const int num_conns = connections.size();
+
+        assert(num_conns == number_of_perforations_);
+
+        for (int c = 0; c < num_conns; c++) {
+            completions_[connections[c].complnum()].push_back(c);
+        }
+    }
+
 
 
 
