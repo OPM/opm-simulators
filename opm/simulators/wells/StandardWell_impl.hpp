@@ -2881,7 +2881,7 @@ namespace Opm
                         WellState& well_state, WellTestState& welltest_state,
                         Opm::DeferredLogger& deferred_logger)
     {
-        deferred_logger.debug(" well " + name() + " is being tested for physical limits");
+        deferred_logger.info(" well " + name() + " is being tested for physical limits");
 
         // some most difficult things are the explicit quantities, since there is no information
         // in the WellState to do a decent initialization
