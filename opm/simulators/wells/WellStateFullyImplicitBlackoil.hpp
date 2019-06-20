@@ -23,7 +23,7 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
-#include <opm/core/simulator/WellState.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>

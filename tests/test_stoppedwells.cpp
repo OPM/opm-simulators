@@ -28,7 +28,7 @@
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
-#include <opm/core/simulator/WellState.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 #include <opm/grid/GridManager.hpp>
 
 

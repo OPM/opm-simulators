@@ -26,25 +26,9 @@
 
 <h3>Solvers and simulators</h3>
 
-The opm-simulators module contains a diverse set of simulator programs.
-Notable simulator programs include
-- examples/flow.cpp, a fully implicit black-oil simulator.
-- examples/flow_polymer.cpp, a version of Flow that supports polymer EOR simulation
-- examples/flow_solvent.cpp, a version of Flow that supports solvent EOR simulation
-- examples/sim_2p_incomp_ad.cpp, a sequential incompressible 2-phase simulator.
-
-<h3>Automatic differentiation</h3>
-
-This library implements automatic differentiation for vector data with
-multiple blocks of sparse jacobians. This is contained in the class
-Opm::AutoDiffBlock. Also available is Opm::AutoDiff, a much simpler
-single-value single-derivative AD class.
-
-There are also some helper classes and functions that are intended to
-aid in the development of solvers and simulators with AD, these
-include Opm::HelperOps, Opm::UpwindSelector, Opm::subset,
-Opm::superset, Opm::Selector, Opm::collapseJacs, Opm::vertcat,
-Opm::Span and Opm::sign.
+The opm-simulators module is the home for the Flow reservoir
+simulator, the Ebos experimental simulator and library functionality
+on which they both depend.
 
 */
 

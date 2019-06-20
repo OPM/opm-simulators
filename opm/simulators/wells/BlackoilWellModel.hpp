@@ -38,17 +38,16 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellCollection.hpp>
-#include <opm/core/simulator/SimulatorReport.hpp>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
-#include <opm/autodiff/BlackoilDetails.hpp>
+#include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/RateConverter.hpp>
+#include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/MultisegmentWell.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
-#include <opm/autodiff/SimFIBODetails.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmatrix.hh>

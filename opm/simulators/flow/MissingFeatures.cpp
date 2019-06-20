@@ -16,6 +16,9 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#include <opm/simulators/flow/MissingFeatures.hpp>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
@@ -25,8 +28,6 @@
 #include <opm/parser/eclipse/Parser/ParserKeywords/C.hpp>
 #include <opm/parser/eclipse/Parser/ParserKeywords/E.hpp>
 #include <opm/parser/eclipse/Parser/ParserKeywords/P.hpp>
-
-#include <opm/autodiff/MissingFeatures.hpp>
 
 #include <unordered_set>
 #include <string>

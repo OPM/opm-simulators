@@ -24,11 +24,10 @@
 #include <opm/simulators/linalg/MatrixBlock.hpp>
 #include <opm/simulators/linalg/BlackoilAmg.hpp>
 #include <opm/simulators/linalg/CPRPreconditioner.hpp>
-#include <opm/autodiff/MPIUtilities.hpp>
 #include <opm/simulators/linalg/ParallelRestrictedAdditiveSchwarz.hpp>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
-#include <opm/autodiff/BlackoilDetails.hpp>
+#include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/common/utility/platform_dependent/disable_warnings.h>

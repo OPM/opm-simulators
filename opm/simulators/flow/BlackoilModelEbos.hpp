@@ -29,15 +29,15 @@
 
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 
-#include <opm/autodiff/NonlinearSolverEbos.hpp>
-#include <opm/autodiff/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
-#include <opm/autodiff/BlackoilDetails.hpp>
+#include <opm/simulators/flow/countGlobalCells.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
-#include <opm/core/simulator/SimulatorReport.hpp>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -64,7 +64,6 @@
 #include <limits>
 #include <vector>
 #include <algorithm>
-//#include <fstream>
 
 
 BEGIN_PROPERTIES

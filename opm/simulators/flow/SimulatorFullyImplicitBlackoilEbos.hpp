@@ -22,9 +22,9 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 
-#include <opm/autodiff/NonlinearSolverEbos.hpp>
-#include <opm/autodiff/BlackoilModelEbos.hpp>
-#include <opm/autodiff/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>

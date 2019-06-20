@@ -20,6 +20,10 @@
 #ifndef OPM_MISSINGFEATURES_HEADER_INCLUDED
 #define OPM_MISSINGFEATURES_HEADER_INCLUDED
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+
+#include <string>
+#include <map>
 
 namespace Opm {
 
