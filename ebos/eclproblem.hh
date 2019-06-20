@@ -3072,10 +3072,6 @@ private:
         // first thing in the morning, limit the time step size to the maximum size
         dtNext = std::min(dtNext, maxTimeStepSize_);
 
-        // use at least slightly more than half of the maximum time step size by default
-        if (dtNext < maxTimeStepSize_ && maxTimeStepSize_ < dtNext*2)
-            dtNext = 1.01 * maxTimeStepSize_/2.0;
-
         Scalar remainingEpisodeTime =
             simulator.episodeStartTime() + simulator.episodeLength()
             - (simulator.startTime() + simulator.time());
@@ -3088,16 +3084,18 @@ private:
             // necessary, but it should not hurt and is more fool-proof
             dtNext = std::min(maxTimeStepSize_, remainingEpisodeTime/2.0);
 
-        // if a well event occured, respect the limit for the maximum time step after
-        // that, too
-        int reportStepIdx = std::max(episodeIdx, 0);
-        bool wellEventOccured =
-            events.hasEvent(Opm::ScheduleEvents::NEW_WELL, reportStepIdx)
-            || events.hasEvent(Opm::ScheduleEvents::PRODUCTION_UPDATE, reportStepIdx)
-            || events.hasEvent(Opm::ScheduleEvents::INJECTION_UPDATE, reportStepIdx)
-            || events.hasEvent(Opm::ScheduleEvents::WELL_STATUS_CHANGE, reportStepIdx);
-        if (episodeIdx >= 0 && wellEventOccured && maxTimeStepAfterWellEvent_ > 0)
-            dtNext = std::min(dtNext, maxTimeStepAfterWellEvent_);
+        if (simulator.episodeStarts()) {
+            // if a well event occured, respect the limit for the maximum time step after
+            // that, too
+            int reportStepIdx = std::max(episodeIdx, 0);
+            bool wellEventOccured =
+                    events.hasEvent(Opm::ScheduleEvents::NEW_WELL, reportStepIdx)
+                    || events.hasEvent(Opm::ScheduleEvents::PRODUCTION_UPDATE, reportStepIdx)
+                    || events.hasEvent(Opm::ScheduleEvents::INJECTION_UPDATE, reportStepIdx)
+                    || events.hasEvent(Opm::ScheduleEvents::WELL_STATUS_CHANGE, reportStepIdx);
+            if (episodeIdx >= 0 && wellEventOccured && maxTimeStepAfterWellEvent_ > 0)
+                dtNext = std::min(dtNext, maxTimeStepAfterWellEvent_);
+        }
 
         return dtNext;
     }
