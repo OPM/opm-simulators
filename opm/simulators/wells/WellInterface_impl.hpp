@@ -950,7 +950,7 @@ namespace Opm
                         const double simulation_time, const int report_step,
                         const WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger)
     {
-        deferred_logger.debug(" well " + name() + " is being tested for economic limits");
+        deferred_logger.info(" well " + name() + " is being tested for economic limits");
 
         WellState well_state_copy = well_state;
 
