@@ -2173,7 +2173,10 @@ namespace Opm
             const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                 const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-                const EvalWell rvmax = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvt_region_index, temperature, seg_pressure);
+                EvalWell rvmax = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvt_region_index, temperature, seg_pressure);
+                if (rvmax < 0.0) { // negative rvmax can happen if the seg_pressure is outside the range of the table
+                    rvmax = 0.0;
+                }
                 if (mix_s[oilCompIdx] > 0.0) {
                     if (mix_s[gasCompIdx] > 0.0) {
                         rv = mix_s[oilCompIdx] / mix_s[gasCompIdx];
@@ -2201,7 +2204,10 @@ namespace Opm
             const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                const EvalWell rsmax = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvt_region_index, temperature, seg_pressure);
+                EvalWell rsmax = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvt_region_index, temperature, seg_pressure);
+                if (rsmax < 0.0) { // negative rsmax can happen if the seg_pressure is outside the range of the table
+                    rsmax = 0.0;
+                }
                 if (mix_s[gasCompIdx] > 0.0) {
                     if (mix_s[oilCompIdx] > 0.0) {
                         rs = mix_s[gasCompIdx] / mix_s[oilCompIdx];
