@@ -140,9 +140,9 @@ endif()
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 
 # Set absolute tolerance to be used passed to the macros in the following tests
-set(abs_tol 2e-2)
-set(rel_tol 1e-5)
-set(coarse_rel_tol 1e-2)
+set(abs_tol 2e-6)
+set(rel_tol 1e-9)
+set(coarse_rel_tol 1e-6)
 
 add_test_compareECLFiles(CASENAME spe1
                          FILENAME SPE1CASE2
@@ -301,8 +301,8 @@ add_test_compareECLFiles(CASENAME nnc
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
 # Cruder tolerances for the restarted tests
-set(abs_tol_restart 2e-1)
-set(rel_tol_restart 4e-5)
+set(abs_tol_restart 2e-5)
+set(rel_tol_restart 4e-9)
 add_test_compare_restarted_simulation(CASENAME spe1
                                       FILENAME SPE1CASE2_ACTNUM
                                       SIMULATOR flow
@@ -348,9 +348,9 @@ if(MPI_FOUND)
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-regressionTest.sh "")
 
   # Different tolerances for these tests
-  set(abs_tol_parallel 0.02)
-  set(rel_tol_parallel 1e-5)
-  set(coarse_rel_tol_parallel 1e-2)
+  set(abs_tol_parallel 0.000002)
+  set(rel_tol_parallel 1e-9)
+  set(coarse_rel_tol_parallel 1e-6)
 
   add_test_compare_parallel_simulation(CASENAME spe1
                                        FILENAME SPE1CASE2
