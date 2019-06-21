@@ -606,10 +606,8 @@ namespace Opm
 
                     // change temperature for injecting fluids
                     if (well_type_ == INJECTOR && cq_s[activeCompIdx] > 0.0){
-                        auto injectorType = this->well_ecl_.injectorType();
-
                         // only handles single phase injection now
-                        assert(injectorType != WellInjector::MULTI);
+                        assert(this->well_ecl_.injectorType() != WellInjector::MULTI);
                         fs.setTemperature(this->well_ecl_.temperature());
                         typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
                         typename FluidSystem::template ParameterCache<FsScalar> paramCache;
@@ -2005,7 +2003,6 @@ namespace Opm
             }
 
             const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-            const std::string& compName = FluidSystem::componentName(canonicalCompIdx);
             const int compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
 
             if (std::isnan(well_flux_residual[compIdx])) {

@@ -60,7 +60,6 @@ public:
           cartesianToCompressed[ *cell ] = cell - begin;
         }
 
-        int last_time_step = schedule.getTimeMap().size() - 1;
         const auto& schedule_wells = schedule.getWells2atEnd();
         wells_.reserve(schedule_wells.size());
 

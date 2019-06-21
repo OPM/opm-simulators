@@ -294,9 +294,8 @@ public:
         }
 
         if (collectToIORank_.isParallel()) {
-            unsigned long buffer_size = buffer.size();
-
 #ifdef HAVE_MPI
+            unsigned long buffer_size = buffer.size();
             MPI_Bcast(&buffer_size, 1, MPI_UNSIGNED_LONG, collectToIORank_.ioRank, MPI_COMM_WORLD);
             if (!collectToIORank_.isIORank())
                 buffer.resize( buffer_size );
