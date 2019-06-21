@@ -1,6 +1,3 @@
-# -*- mode: cmake; tab-width: 2; indent-tabs-mode: t; truncate-lines: t; compile-command: "cmake -Wdev" -*-
-# vim: set filetype=cmake autoindent tabstop=2 shiftwidth=2 noexpandtab softtabstop=2 nowrap:
-
 ###########################################################################
 #                                                                         #
 # Note: The bulk of the build system is located in the cmake/ directory.  #
@@ -80,9 +77,9 @@ include ("${project}-prereqs")
 include (CMakeLists_files.cmake)
 
 macro (config_hook)
-	opm_need_version_of ("dune-common")
-	opm_need_version_of ("dune-istl")
-	opm_need_version_of ("ewoms")
+  opm_need_version_of ("dune-common")
+  opm_need_version_of ("dune-istl")
+  opm_need_version_of ("ewoms")
 endmacro (config_hook)
 
 macro (prereqs_hook)
@@ -182,20 +179,23 @@ if (NOT BUILD_EBOS)
 else()
   set(EBOS_DEFAULT_ENABLE_IF "TRUE")
 endif()
-  
+
 # the research oriented general-purpose ECL simulator ("ebos" == &ecl
 # &black-&oil &simulator)
 get_target_property(ecl_INCLUDE_DIRS ecl INTERFACE_INCLUDE_DIRECTORIES)
-include_directories("${ecl_INCLUDE_DIRS}")
 
-add_library(ebos_libblackoil STATIC EXCLUDE_FROM_ALL ebos/ebos_blackoil.cc)
+foreach(OBJ blackoil solvent polymer gasoil oilwater thermal)
+  add_library(ebos_lib${OBJ} OBJECT EXCLUDE_FROM_ALL ebos/ebos_${OBJ}.cc)
+  target_include_directories(ebos_lib${OBJ} PRIVATE ${ecl_INCLUDE_DIRS})
+endforeach()
+
 opm_add_test(ebos
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${EBOS_DEFAULT_ENABLE_IF}
   ALWAYS_ENABLE
-  EXE_NAME "ebos"
-  LIBRARIES "ebos_libblackoil" "opmsimulators"
-  SOURCES "ebos/ebos_main.cc")
+  EXE_NAME ebos
+  LIBRARIES opmsimulators
+  SOURCES ebos/ebos_main.cc $<TARGET_OBJECTS:ebos_libblackoil>)
 
 if (BUILD_EBOS)
   install(TARGETS ebos DESTINATION bin)
@@ -208,52 +208,27 @@ else()
   set(EBOS_EXTENSIONS_DEFAULT_ENABLE_IF "TRUE")
 endif()
 
-add_library(ebos_libsolvent STATIC EXCLUDE_FROM_ALL ebos/ebos_solvent.cc)
-opm_add_test(ebos_solvent
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
-  SOURCES "ebos/ebos_solvent_main.cc"
-  EXE_NAME "ebos_solvent"
-  LIBRARIES "ebos_libsolvent" "opmsimulators")
-
-add_library(ebos_libpolymer STATIC EXCLUDE_FROM_ALL ebos/ebos_polymer.cc)
-opm_add_test(ebos_polymer
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
-  SOURCES "ebos/ebos_polymer_main.cc"
-  EXE_NAME "ebos_polymer"
-  LIBRARIES "ebos_libpolymer" "opmsimulators")
-
-add_library(ebos_libgasoil STATIC EXCLUDE_FROM_ALL ebos/ebos_gasoil.cc)
-opm_add_test(ebos_gasoil
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
-  SOURCES "ebos/ebos_gasoil_main.cc"
-  EXE_NAME "ebos_gasoil"
-  LIBRARIES "ebos_libgasoil" "opmsimulators")
-
-add_library(ebos_liboilwater STATIC EXCLUDE_FROM_ALL ebos/ebos_oilwater.cc)
-opm_add_test(ebos_oilwater
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
-  SOURCES ebos/ebos_oilwater_main.cc
-  EXE_NAME ebos_oilwater
-  LIBRARIES "ebos_liboilwater" "opmsimulators")
-
-add_library(ebos_libthermal STATIC EXCLUDE_FROM_ALL ebos/ebos_thermal.cc)
-opm_add_test(ebos_thermal
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
-  SOURCES "ebos/ebos_thermal_main.cc"
-  EXE_NAME "ebos_thermal"
-  LIBRARIES "ebos_libthermal" "opmsimulators")
+foreach(OBJ solvent polymer gasoil oilwater thermal)
+  opm_add_test(ebos_${OBJ}
+    ONLY_COMPILE
+    DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
+    SOURCES ebos/ebos_${OBJ}_main.cc $<TARGET_OBJECTS:ebos_lib${OBJ}>
+    EXE_NAME ebos_${OBJ}
+    LIBRARIES opmsimulators)
+endforeach()
 
 opm_add_test(mebos
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
-  SOURCES "ebos/mebos_main.cc"
-  EXE_NAME "mebos"
-  LIBRARIES "ebos_libblackoil" "ebos_libpolymer" "ebos_libsolvent" "ebos_libthermal" "ebos_liboilwater" "ebos_libgasoil" "opmsimulators")
+  SOURCES ebos/mebos_main.cc
+          $<TARGET_OBJECTS:ebos_libblackoil>
+          $<TARGET_OBJECTS:ebos_libsolvent>
+          $<TARGET_OBJECTS:ebos_libpolymer>
+          $<TARGET_OBJECTS:ebos_libthermal>
+          $<TARGET_OBJECTS:ebos_liboilwater>
+          $<TARGET_OBJECTS:ebos_libgasoil>
+  EXE_NAME mebos
+  LIBRARIES opmsimulators)
 
 if (NOT BUILD_EBOS_DEBUG_EXTENSIONS)
   set(EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF "FALSE")
@@ -266,29 +241,20 @@ opm_add_test(ebos_altidx
   DEFAULT_ENABLE_IF ${EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF}
   SOURCES ebos/ebos_altidx.cc
   EXE_NAME ebos_altidx
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators")
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators)
 
 opm_add_test(ebos_plain
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF}
   SOURCES ebos/ebos_plain.cc
   EXE_NAME ebos_plain
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators")
-
-opm_add_bash_completion(ebos_solvent)
-opm_add_bash_completion(ebos_polymer)
-opm_add_bash_completion(ebos_gasoil)
-opm_add_bash_completion(ebos_oilwater)
-opm_add_bash_completion(ebos_thermal)
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators)
 
 if (BUILD_EBOS_EXTENSIONS)
-  install(TARGETS ebos_solvent DESTINATION bin)
-  install(TARGETS ebos_polymer DESTINATION bin)
-  install(TARGETS ebos_gasoil DESTINATION bin)
-  install(TARGETS ebos_oilwater DESTINATION bin)
-  install(TARGETS ebos_thermal DESTINATION bin)
-  install(TARGETS mebos DESTINATION bin)
+  foreach(TGT ebos_solvent ebos_polymer ebos_gasoil ebos_oilwater ebos_thermal mebos)
+    install(TARGETS ${TGT} DESTINATION bin)
+    opm_add_bash_completion(${TGT})
+  endforeach()
 endif()
-
