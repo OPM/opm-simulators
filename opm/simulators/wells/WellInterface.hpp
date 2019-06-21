@@ -323,13 +323,13 @@ namespace Opm
         /*
          *  completions_ contains the mapping from completion id to connection indices
          *  {
-         *      2 : [ConnectionIndex, ConnectioniIndex],
-         *      1 : [ConnectionIndex, ConnectionIndex, ConnectoniIndex],
+         *      2 : [ConnectionIndex, ConnectionIndex],
+         *      1 : [ConnectionIndex, ConnectionIndex, ConnectionIndex],
          *      5 : [ConnectionIndex],
          *      7 : [ConnectionIndex]
          *      ...
          *   }
-         *   The integer ID's correspond to the COMPLETION id given by the COMPLUMP keyword.
+         *   The integer IDs correspond to the COMPLETION id given by the COMPLUMP keyword.
          *   When there is no COMPLUMP keyword used, a default completion number will be assigned
          *   based on the order of the declaration of the connections
          */
@@ -392,9 +392,15 @@ namespace Opm
                                              const WellState& well_state,
                                              Opm::DeferredLogger& deferred_logger) const;
 
-        bool checkMaxRatioLimitWell(const std::vector<double>& well_rates,
+        bool checkMaxRatioLimitWell(const WellState& well_state,
                                     const double max_ratio_limit,
                                     double (*ratioFunc)(const std::vector<double>&, const PhaseUsage&) ) const;
+
+        void checkMaxRatioLimitCompletions(const WellState& well_state,
+                                           const double max_ratio_limit,
+                                           double (*ratioFunc)(const std::vector<double>&, const PhaseUsage&),
+                                           int& worst_offending_completion,
+                                           double& violation_extent) const;
 
         double scalingFactor(const int comp_idx) const;
 
