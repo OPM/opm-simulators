@@ -392,6 +392,10 @@ namespace Opm
                                              const WellState& well_state,
                                              Opm::DeferredLogger& deferred_logger) const;
 
+        bool checkMaxRatioLimitWell(const std::vector<double>& well_rates,
+                                    const double max_ratio_limit,
+                                    double (*ratioFunc)(const std::vector<double>&, const PhaseUsage&) ) const;
+
         double scalingFactor(const int comp_idx) const;
 
         // whether a well is specified with a non-zero and valid VFP table number

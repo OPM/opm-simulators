@@ -612,7 +612,11 @@ namespace Opm
         assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
         assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
 
-        auto waterCut = [](const double oil_rate, const double water_rate) {
+        auto waterCut = [](const std::vector<double>& rates,
+                           const PhaseUsage& pu) {
+
+            const double oil_rate = rates[pu.phase_pos[Oil]];
+            const double water_rate = rates[pu.phase_pos[Water]];
 
             // both rate should be in the same direction
             assert(oil_rate * water_rate >= 0.);
@@ -626,16 +630,16 @@ namespace Opm
         };
 
         const int np = number_of_phases_;
-        const Opm::PhaseUsage& pu = phaseUsage();
 
-        const double oil_rate = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Oil ] ];
-        const double water_rate = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Water ] ];
-        const double water_cut = waterCut(oil_rate, water_rate);
+        std::vector<double> well_rates(np, 0.0);
 
+        for (int p = 0; p < np; ++p) {
+            well_rates[p] = well_state.wellRates()[index_of_well_ * np + p];
+        }
         const double max_water_cut_limit = econ_production_limits.maxWaterCut();
         assert(max_water_cut_limit != 0.);
 
-        const bool water_cut_limit_violated = (water_cut > max_water_cut_limit);
+        const bool water_cut_limit_violated = checkMaxRatioLimitWell(well_rates, max_water_cut_limit, waterCut);
 
         int worst_offending_completion = INVALIDCOMPLETION;
         double violation_extent = -1.0;
@@ -647,21 +651,19 @@ namespace Opm
             // look for the worst_offending_completion
             for (const auto& completion : completions_) {
 
-                double oil_completion_rate = 0.;
-                double water_completion_rate = 0.;
+                std::vector<double> completion_rates(np, 0.0);
 
                 const std::vector<int>& conns = completion.second;
                 for(const int c : conns) {
                     const int index_con = c + first_perf_;
 
-                    const double oil_connection_rate = well_state.perfPhaseRates()[index_con * np + pu.phase_pos[ Oil ] ];
-                    oil_completion_rate += oil_connection_rate;
-
-                    const double water_connection_rate = well_state.perfPhaseRates()[index_con * np + pu.phase_pos[ Water ] ];
-                    water_completion_rate += water_connection_rate;
+                    for (int p = 0; p < np; ++p) {
+                        const double connection_rate = well_state.perfPhaseRates()[index_con * np + p];
+                        completion_rates[p] += connection_rate;
+                    }
                 }
 
-                const double water_cut_completion = waterCut(oil_completion_rate, water_completion_rate);
+                const double water_cut_completion = waterCut(completion_rates, phaseUsage());
 
                 if (water_cut_completion > max_water_cut_completion) {
                     worst_offending_completion = completion.first;
@@ -732,6 +734,21 @@ namespace Opm
         }
 
         return std::make_tuple(any_limit_violated, worst_offending_completion, violation_extent);
+    }
+
+
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    checkMaxRatioLimitWell(const std::vector<double>& well_rates,
+                           const double max_ratio_limit,
+                           double (*ratioFunc)(const std::vector<double>&, const PhaseUsage&)) const
+    {
+        const double well_ratio = ratioFunc(well_rates, phaseUsage());
+
+        return (well_ratio > max_ratio_limit);
     }
 
 
