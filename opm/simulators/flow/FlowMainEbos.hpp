@@ -234,6 +234,20 @@ namespace Opm
 #endif
                 if ( unknownKeyWords )
                 {
+                    if ( output_cout_ )
+                    {
+                        std::string msg = "Aborting simulation due unknown "
+                            "parameters. Please query \"flow --help\" for "
+                            "supported command line parameters.";
+                        if (OpmLog::hasBackend("STREAMLOG"))
+                        {
+                            OpmLog::error(msg);
+                        }
+                        else {
+                              std::cerr << msg << std::endl;
+                        }
+                    }
+
 #if HAVE_MPI
                     MPI_Finalize();
 #endif
