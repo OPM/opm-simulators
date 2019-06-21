@@ -17,6 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
+
 #define BOOST_TEST_MODULE NNCSortTest
 #include <boost/test/unit_test.hpp>
 #include <ebos/nncsorter.hpp>
