@@ -158,7 +158,6 @@ NEW_PROP_TAG(EclEnableAquifers);
 // time stepping parameters
 NEW_PROP_TAG(EclMaxTimeStepSizeAfterWellEvent);
 NEW_PROP_TAG(EclRestartShrinkFactor);
-NEW_PROP_TAG(EclMaxFails);
 NEW_PROP_TAG(EclEnableTuning);
 
 // Set the problem property
@@ -366,7 +365,6 @@ SET_BOOL_PROP(EclBaseProblem, EnableExperiments, false);
 // set defaults for the time stepping parameters
 SET_SCALAR_PROP(EclBaseProblem, EclMaxTimeStepSizeAfterWellEvent, 3600*24*365.25);
 SET_SCALAR_PROP(EclBaseProblem, EclRestartShrinkFactor, 3);
-SET_INT_PROP(EclBaseProblem, EclMaxFails, 10);
 SET_BOOL_PROP(EclBaseProblem, EclEnableTuning, false);
 
 END_PROPERTIES
@@ -488,8 +486,6 @@ public:
                              "Maximum time step size after an well event");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclRestartShrinkFactor,
                              "Factor by which the time step is reduced after convergence failure");
-        EWOMS_REGISTER_PARAM(TypeTag, int, EclMaxFails,
-                             "Maximum consecutive convergence failures before termination");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableTuning,
                              "Honor some aspects of the TUNING keyword from the ECL deck.");
     }
@@ -621,7 +617,7 @@ public:
         maxTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxTimeStepSize);
         maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent);
         restartShrinkFactor_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclRestartShrinkFactor);
-        maxFails_ = EWOMS_GET_PARAM(TypeTag, int, EclMaxFails);
+        maxFails_ = EWOMS_GET_PARAM(TypeTag, unsigned, MaxTimeStepDivisions);
     }
 
     /*!
@@ -1721,43 +1717,17 @@ public:
     }
 
     /*!
-     * \brief Called by Ewoms::Simulator in order to do a time integration on the model.
+     * \brief Returns the minimum allowable size of a time step.
      */
-    void timeIntegration()
-    {
-        Simulator& simulator = this->simulator();
-        // if the time step size of the simulator is smaller than
-        // the specified minimum size and we're not going to finish
-        // the simulation or an episode, try with the minimum size.
-        if (simulator.timeStepSize() < minTimeStepSize_ &&
-            !simulator.episodeWillBeOver() &&
-            !simulator.willBeFinished())
-        {
-            simulator.setTimeStepSize(minTimeStepSize_);
-        }
+    Scalar minTimeStepSize() const
+    { return minTimeStepSize_; }
 
-        for (unsigned i = 0; i < maxFails_; ++i) {
-            bool converged = this->model().update();
-            if (converged)
-                return;
-
-            Scalar dt = simulator.timeStepSize();
-            Scalar nextDt = dt / restartShrinkFactor_;
-            if (nextDt < minTimeStepSize_)
-                break; // give up: we can't make the time step smaller anymore!
-            simulator.setTimeStepSize(nextDt);
-
-            // update failed
-            if (this->gridView().comm().rank() == 0)
-                std::cout << "Newton solver did not converge with "
-                          << "dt=" << dt << " seconds. Retrying with time step of "
-                          << nextDt << " seconds\n" << std::flush;
-        }
-
-        throw std::runtime_error("Newton solver didn't converge after "
-                                 +std::to_string(maxFails_)+" time-step divisions. dt="
-                                 +std::to_string(double(simulator.timeStepSize())));
-    }
+    /*!
+     * \brief Returns the maximum number of subsequent failures for the time integration
+     *        before giving up.
+     */
+    unsigned maxTimeIntegrationFailures() const
+    { return maxFails_; }
 
     /*!
      * \brief Calculate the porosity multiplier due to water induced rock compaction.
