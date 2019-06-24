@@ -150,11 +150,13 @@ namespace Opm
         const WellConnections& connections = well_ecl_.getConnections();
         const int num_conns = connections.size();
 
-        assert(num_conns == number_of_perforations_);
-
-        for (int c = 0; c < num_conns; c++) {
-            completions_[connections[c].complnum()].push_back(c);
+        int num_active_connections = 0;
+        for (int c = 0; c < num_conns; ++c) {
+            if (connections[c].state() == WellCompletion::OPEN) {
+                completions_[connections[c].complnum()].push_back(num_active_connections++);
+            }
         }
+        assert(num_active_connections == number_of_perforations_);
     }
 
 
