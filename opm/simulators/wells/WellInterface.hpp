@@ -331,7 +331,9 @@ namespace Opm
          *   }
          *   The integer IDs correspond to the COMPLETION id given by the COMPLUMP keyword.
          *   When there is no COMPLUMP keyword used, a default completion number will be assigned
-         *   based on the order of the declaration of the connections
+         *   based on the order of the declaration of the connections.
+         *   Since the connections not OPEN is not included in the Wells, so they will not be considered
+         *   in this mapping relation.
          */
         std::map<int, std::vector<int>> completions_;
 
