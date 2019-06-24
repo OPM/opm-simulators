@@ -320,6 +320,21 @@ namespace Opm
         // well bore diameter
         std::vector<double> bore_diameters_;
 
+        /*
+         *  completions_ contains the mapping from completion id to connection indices
+         *  {
+         *      2 : [ConnectionIndex, ConnectionIndex],
+         *      1 : [ConnectionIndex, ConnectionIndex, ConnectionIndex],
+         *      5 : [ConnectionIndex],
+         *      7 : [ConnectionIndex]
+         *      ...
+         *   }
+         *   The integer IDs correspond to the COMPLETION id given by the COMPLUMP keyword.
+         *   When there is no COMPLUMP keyword used, a default completion number will be assigned
+         *   based on the order of the declaration of the connections
+         */
+        std::map<int, std::vector<int>> completions_;
+
         const PhaseUsage* phase_usage_;
 
         bool getAllowCrossFlow() const;
@@ -377,6 +392,18 @@ namespace Opm
                                              const WellState& well_state,
                                              Opm::DeferredLogger& deferred_logger) const;
 
+        template <typename RatioFunc>
+        bool checkMaxRatioLimitWell(const WellState& well_state,
+                                    const double max_ratio_limit,
+                                    const RatioFunc& ratioFunc) const;
+
+        template <typename RatioFunc>
+        void checkMaxRatioLimitCompletions(const WellState& well_state,
+                                           const double max_ratio_limit,
+                                           const RatioFunc& ratioFunc,
+                                           int& worst_offending_completion,
+                                           double& violation_extent) const;
+
         double scalingFactor(const int comp_idx) const;
 
         // whether a well is specified with a non-zero and valid VFP table number
@@ -416,6 +443,8 @@ namespace Opm
                                        Opm::DeferredLogger& deferred_logger);
 
         void scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger);
+
+        void initCompletions();
 
         // count the number of times an output log message is created in the productivity
         // index calculations
