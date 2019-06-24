@@ -392,13 +392,15 @@ namespace Opm
                                              const WellState& well_state,
                                              Opm::DeferredLogger& deferred_logger) const;
 
+        template <typename RatioFunc>
         bool checkMaxRatioLimitWell(const WellState& well_state,
                                     const double max_ratio_limit,
-                                    double (*ratioFunc)(const std::vector<double>&, const PhaseUsage&) ) const;
+                                    const RatioFunc& ratioFunc) const;
 
+        template <typename RatioFunc>
         void checkMaxRatioLimitCompletions(const WellState& well_state,
                                            const double max_ratio_limit,
-                                           double (*ratioFunc)(const std::vector<double>&, const PhaseUsage&),
+                                           const RatioFunc& ratioFunc,
                                            int& worst_offending_completion,
                                            double& violation_extent) const;
 

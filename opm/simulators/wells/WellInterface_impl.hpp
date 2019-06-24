@@ -706,11 +706,12 @@ namespace Opm
 
 
     template<typename TypeTag>
+    template<typename RatioFunc>
     bool
     WellInterface<TypeTag>::
     checkMaxRatioLimitWell(const WellState& well_state,
                            const double max_ratio_limit,
-                           double (*ratioFunc)(const std::vector<double>&, const PhaseUsage&)) const
+                           const RatioFunc& ratioFunc) const
     {
         const int np = number_of_phases_;
 
@@ -729,11 +730,12 @@ namespace Opm
 
 
     template<typename TypeTag>
+    template<typename RatioFunc>
     void
     WellInterface<TypeTag>::
     checkMaxRatioLimitCompletions(const WellState& well_state,
                                   const double max_ratio_limit,
-                                  double (*ratioFunc)(const std::vector<double>&, const PhaseUsage&),
+                                  const RatioFunc& ratioFunc,
                                   int& worst_offending_completion,
                                   double& violation_extent) const
     {
