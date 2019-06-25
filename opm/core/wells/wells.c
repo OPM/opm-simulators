@@ -565,9 +565,8 @@ wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose)
         return false;
     }
     
-    bool are_equal = true;
-    are_equal = (W1->number_of_wells == W2->number_of_wells);
-    are_equal = are_equal && (W1->number_of_phases == W2->number_of_phases);
+    bool are_equal = (W1->number_of_wells == W2->number_of_wells) &&
+                     (W1->number_of_phases == W2->number_of_phases);
     if (!are_equal) {
         return are_equal;
     }
