@@ -236,7 +236,7 @@ namespace Opm
                 {
                     if ( output_cout_ )
                     {
-                        std::string msg = "Aborting simulation due unknown "
+                        std::string msg = "Aborting simulation due to unknown "
                             "parameters. Please query \"flow --help\" for "
                             "supported command line parameters.";
                         if (OpmLog::hasBackend("STREAMLOG"))
@@ -244,14 +244,14 @@ namespace Opm
                             OpmLog::error(msg);
                         }
                         else {
-                              std::cerr << msg << std::endl;
+                            std::cerr << msg << std::endl;
                         }
                     }
 
 #if HAVE_MPI
                     MPI_Finalize();
 #endif
-                    exit(EXIT_FAILURE);
+                    return EXIT_FAILURE;
                 }
                 runDiagnostics();
                 createSimulator();
