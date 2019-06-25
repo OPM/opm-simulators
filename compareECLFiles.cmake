@@ -290,6 +290,76 @@ add_test_compareECLFiles(CASENAME faults_model_1
                          REL_TOL ${rel_tol}
                          DIR model1)
 
+add_test_compareECLFiles(CASENAME base_model2
+                         FILENAME 0_BASE_MODEL2
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME multregt_model2
+                         FILENAME 1_MULTREGT_MODEL2
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME multxyz_model2
+			  FILENAME 2_MULTXYZ_MODEL2
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol}
+			  DIR model2)
+
+add_test_compareECLFiles(CASENAME multflt_model2
+			  FILENAME 3_MULTFLT_MODEL2
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol}
+			  DIR model2)
+
+add_test_compareECLFiles(CASENAME multpvv_model2
+			  FILENAME 4_MINPVV_MODEL2
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol}
+			  DIR model2)
+
+add_test_compareECLFiles(CASENAME swatinit_model2
+			  FILENAME 5_SWATINIT_MODEL2
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol}
+			  DIR model2)
+
+add_test_compareECLFiles(CASENAME endscale_model2
+			  FILENAME 6_ENDSCALE_MODEL2
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol}
+			  DIR model2)
+
+add_test_compareECLFiles(CASENAME hysteresis_model2
+			  FILENAME 7_HYSTERESIS_MODEL2
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol}
+			  DIR model2)
+
+add_test_compareECLFiles(CASENAME multiply_tranxyz_model2
+			  FILENAME 8_MULTIPLY_TRANXYZ_MODEL2
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol}
+			  DIR model2)
+
+add_test_compareECLFiles(CASENAME editnnc_model2
+			  FILENAME 9_EDITNNC_MODEL2
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol}
+			  DIR model2)
+
 add_test_compareECLFiles(CASENAME nnc
                          FILENAME NNC_AND_EDITNNC
                          SIMULATOR flow
