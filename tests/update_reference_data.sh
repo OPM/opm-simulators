@@ -17,11 +17,14 @@ copyToReferenceDir () {
   DIFF=1
   for filetype in $FILETYPES
   do
-    diff -q "$WORKSPACE/$SRC_DIR$STEM.$filetype" "$DST_DIR/$STEM.$filetype"
-    if test $? -ne 0
+    if [ -f $WORKSPACE/$SRC_DIR$STEM.$filetype ] || [ -f $DST_DIR/$STEM.$filetype ]
     then
-      cp "$WORKSPACE/$SRC_DIR$STEM.$filetype" $DST_DIR
-      DIFF=0
+      diff -q "$WORKSPACE/$SRC_DIR$STEM.$filetype" "$DST_DIR/$STEM.$filetype"
+      if test $? -ne 0
+      then
+        cp "$WORKSPACE/$SRC_DIR$STEM.$filetype" $DST_DIR
+        DIFF=0
+      fi
     fi
   done
 
