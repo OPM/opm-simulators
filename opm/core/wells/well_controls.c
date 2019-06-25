@@ -167,7 +167,6 @@ static int
 well_controls_reserve(int nctrl, struct WellControls *ctrl)
 /* ---------------------------------------------------------------------- */
 {
-    int   c, p, ok;
     void *type, *target, *alq, *vfp, *distr;
 
     type   = realloc(ctrl->type  , nctrl * 1                      * sizeof *ctrl->type  );
@@ -176,7 +175,7 @@ well_controls_reserve(int nctrl, struct WellControls *ctrl)
     vfp    = realloc(ctrl->vfp   , nctrl * 1                      * sizeof *ctrl->vfp   );
     distr  = realloc(ctrl->distr , nctrl * ctrl->number_of_phases * sizeof *ctrl->distr );
 
-    ok = 0;
+    int ok = 0;
     if (type   != NULL) { ctrl->type   = type  ; ok++; }
     if (target != NULL) { ctrl->target = target; ok++; }
     if (alq    != NULL) { ctrl->alq    = alq;    ok++; }
@@ -184,12 +183,12 @@ well_controls_reserve(int nctrl, struct WellControls *ctrl)
     if (distr  != NULL) { ctrl->distr  = distr ; ok++; }
 
     if (ok == 5) {
-        for (c = ctrl->cpty; c < nctrl; c++) {
+        for (int c = ctrl->cpty; c < nctrl; c++) {
             ctrl->type  [c] =  BHP;
             ctrl->target[c] = -1.0;
         }
 
-        for (p = ctrl->cpty * ctrl->number_of_phases; p < nctrl * ctrl->number_of_phases; ++p) {
+        for (int p = ctrl->cpty * ctrl->number_of_phases; p < nctrl * ctrl->number_of_phases; ++p) {
             ctrl->distr[ p ] = 0.0;
         }
 
@@ -205,34 +204,27 @@ struct WellControls *
 well_controls_clone(const struct WellControls *ctrl)
 /* ---------------------------------------------------------------------- */
 {
-    int                   ok, i, n;
-    double                target;
-    double                alq;
-    int                   vfp;
-    const double         *distr;
-    struct WellControls  *new;
-    enum WellControlType  type;
-
-    new = well_controls_create();
+    struct WellControls* new = well_controls_create();
 
     if (new != NULL) {
         /* Assign appropriate number of phases */
         well_controls_assert_number_of_phases(new, ctrl->number_of_phases);
 
-        n  = well_controls_get_num(ctrl);
-        ok = well_controls_reserve(n, new);
+        int n  = well_controls_get_num(ctrl);
+        int ok = well_controls_reserve(n, new);
 
         if (! ok) {
             well_controls_destroy(new);
             new = NULL;
         }
         else {
+            int i;
             for (i = 0; ok && (i < n); i++) {
-                type   = well_controls_iget_type  (ctrl, i);
-                distr  = well_controls_iget_distr (ctrl, i);
-                target = well_controls_iget_target(ctrl, i);
-                alq    = well_controls_iget_alq   (ctrl, i);
-                vfp    = well_controls_iget_vfp   (ctrl, i);
+                enum WellControlType type = well_controls_iget_type  (ctrl, i);
+                const double* distr = well_controls_iget_distr (ctrl, i);
+                double target = well_controls_iget_target(ctrl, i);
+                double alq = well_controls_iget_alq   (ctrl, i);
+                int vfp = well_controls_iget_vfp   (ctrl, i);
 
                 ok = well_controls_add_new(type, target, alq, vfp, distr, new);
             }

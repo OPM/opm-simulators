@@ -262,10 +262,7 @@ struct Wells *
 create_wells(int nphases, int nwells, int nperf)
 /* ---------------------------------------------------------------------- */
 {
-    int           ok;
-    struct Wells *W;
-
-    W = malloc(1 * sizeof *W);
+    struct Wells* W = malloc(1 * sizeof *W);
 
     if (W != NULL) {
         W->number_of_wells = 0;
@@ -286,7 +283,7 @@ create_wells(int nphases, int nwells, int nperf)
 
         W->data            = create_well_mgmt();
 
-        ok = (W->well_connpos != NULL) && (W->data != NULL);
+        int ok = (W->well_connpos != NULL) && (W->data != NULL);
         if (ok) {
             W->well_connpos[0] = 0;
 
@@ -310,18 +307,14 @@ void
 destroy_wells(struct Wells *W)
 /* ---------------------------------------------------------------------- */
 {
-    int w;
-
-    struct WellMgmt *m;
-
     if (W != NULL) {
-        m = W->data;
+        struct WellMgmt* m = W->data;
 
-        for (w = 0; w < m->well_cpty; w++) {
+        for (int w = 0; w < m->well_cpty; w++) {
             well_controls_destroy(W->ctrls[w]);
         }
 
-        for (w = 0; w < m->well_cpty; w++) {
+        for (int w = 0; w < m->well_cpty; w++) {
             free(W->name[w]);
         }
 
@@ -374,39 +367,34 @@ add_well(enum WellType  type     ,
          struct Wells  *W        )
 /* ---------------------------------------------------------------------- */
 {
-    int ok, nw, np, nperf_tot, off;
-    int nwalloc, nperfalloc;
-
-    struct WellMgmt *m;
-
     assert (W != NULL);
 
-    nw        = W->number_of_wells;
-    nperf_tot = W->well_connpos[nw];
+    int nw        = W->number_of_wells;
+    int nperf_tot = W->well_connpos[nw];
 
-    m = W->data;
+    struct WellMgmt* m = W->data;
 
-    ok = (nw < m->well_cpty) && (nperf_tot + nperf <= m->perf_cpty);
+    int ok = (nw < m->well_cpty) && (nperf_tot + nperf <= m->perf_cpty);
 
     if (! ok) {
-        nwalloc    = alloc_size(nw       , 1    , m->well_cpty);
-        nperfalloc = alloc_size(nperf_tot, nperf, m->perf_cpty);
+        int nwalloc    = alloc_size(nw       , 1    , m->well_cpty);
+        int nperfalloc = alloc_size(nperf_tot, nperf, m->perf_cpty);
 
         ok = wells_reserve(nwalloc, nperfalloc, W);
     }
 
-    off = W->well_connpos[nw];
+    int off = W->well_connpos[nw];
 
     if (ok && (nperf > 0)) {
         assert (cells != NULL);
+        if (cells != NULL && W->well_cells != NULL)
+          memcpy(W->well_cells + off,
+                 cells, nperf * sizeof *W->well_cells);
 
-        memcpy(W->well_cells + off,
-               cells, nperf * sizeof *W->well_cells);
-
-        if (WI != NULL) {
+        if (W->WI != NULL && WI != NULL) {
             memcpy(W->WI + off, WI, nperf * sizeof *W->WI);
         }
-        if (sat_table_id != NULL) {
+        if (W->sat_table_id != NULL && sat_table_id != NULL) {
             memcpy(W->sat_table_id + off, sat_table_id, nperf * sizeof *W->sat_table_id);
         }
     }
@@ -422,7 +410,7 @@ add_well(enum WellType  type     ,
             W->name [nw] = dup_string(name);
         }
 
-        np = W->number_of_phases;
+        int np = W->number_of_phases;
         if (comp_frac != NULL) {
             memcpy(W->comp_frac + np*nw, comp_frac, np * sizeof *W->comp_frac);
         }
@@ -493,10 +481,6 @@ struct Wells *
 clone_wells(const struct Wells *W)
 /* ---------------------------------------------------------------------- */
 {
-    int                  np, nperf, ok, pos, w;
-    const int           *cells, *sat_table_id;
-    const double        *WI, *comp_frac;
-
     struct WellControls *ctrl;
     struct Wells        *newWells;
 
@@ -504,21 +488,21 @@ clone_wells(const struct Wells *W)
         newWells = NULL;
     }
     else {
-        np  = W->number_of_phases;
+        int np  = W->number_of_phases;
         newWells = create_wells(W->number_of_phases, W->number_of_wells,
                                 W->well_connpos[ W->number_of_wells ]);
 
         if (newWells != NULL) {
-            pos = W->well_connpos[ 0 ];
-            ok  = 1;
+            int pos = W->well_connpos[ 0 ];
+            int ok  = 1;
 
-            for (w = 0; ok && (w < W->number_of_wells); w++) {
-                nperf = W->well_connpos[w + 1] - pos;
-                cells = W->well_cells + pos;
+            for (int w = 0; ok && (w < W->number_of_wells); w++) {
+                int nperf = W->well_connpos[w + 1] - pos;
+                const int* cells = W->well_cells + pos;
 
-                WI        = W->WI        != NULL ? W->WI        + pos  : NULL;
-                sat_table_id = W->sat_table_id != NULL ? W->sat_table_id + pos : NULL;
-                comp_frac = W->comp_frac != NULL ? W->comp_frac + w*np : NULL;
+                const double* WI = W->WI != NULL ? W->WI + pos  : NULL;
+                const int* sat_table_id = W->sat_table_id != NULL ? W->sat_table_id + pos : NULL;
+                const double* comp_frac = W->comp_frac != NULL ? W->comp_frac + w*np : NULL;
 
                 ok = add_well(W->type[ w ], W->depth_ref[ w ], nperf,
                               comp_frac, cells, WI, sat_table_id, W->name[ w ], W->allow_cf[ w ],  newWells);
