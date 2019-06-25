@@ -169,22 +169,17 @@ namespace Opm {
     forceShutWellByNameIfPredictionMode(const std::string& wellname,
                                         const double simulation_time)
     {
-        Opm::DeferredLogger local_deferredLogger;
         // Only add the well to the closed list on the
         // process that owns it.
         int well_was_shut = 0;
         for (const auto& well : well_container_) {
             if (well->name() == wellname) {
-                if (well->underPredictionMode(local_deferredLogger)) {
+                if (well->underPredictionMode() {
                     wellTestState_.closeWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
                     well_was_shut = 1;
                 }
                 break;
             }
-        }
-        Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
-        if (terminal_output_) {
-            global_deferredLogger.logMessages();
         }
 
         // Communicate across processes if a well was shut.
@@ -263,8 +258,8 @@ namespace Opm {
         well_state_.init(wells(), cellPressures, schedule(), wells_ecl_, timeStepIdx, &previous_well_state_, phase_usage_);
 
         // handling MS well related
-        if (param_.use_multisegment_well_&& anyMSWellOpenLocal(wells(), timeStepIdx)) { // if we use MultisegmentWell model
-            well_state_.initWellStateMSWell(wells(), wells_ecl_, timeStepIdx, phase_usage_, &previous_well_state_);
+        if (param_.use_multisegment_well_&& anyMSWellOpenLocal(wells())) { // if we use MultisegmentWell model
+            well_state_.initWellStateMSWell(wells(), wells_ecl_, phase_usage_, &previous_well_state_);
         }
 
         // update the previous well state. This is used to restart failed steps.
@@ -276,7 +271,7 @@ namespace Opm {
 
         int exception_thrown = 0;
         try {
-            computeRESV(timeStepIdx, local_deferredLogger);
+            computeRESV(local_deferredLogger);
         } catch (const std::exception& e){
             exception_thrown = 1;
         }
@@ -502,9 +497,9 @@ namespace Opm {
         if (nw > 0) {
             const auto phaseUsage = phaseUsageFromDeck(eclState());
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
-            const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal(wells, report_step));
-            well_state_.resize(wells, wells_ecl_, schedule(), handle_ms_well, report_step, numCells, phaseUsage); // Resize for restart step
-            wellsToState(restartValues.wells, phaseUsage, handle_ms_well, report_step, well_state_);
+            const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal(wells));
+            well_state_.resize(wells, wells_ecl_, schedule(), handle_ms_well, numCells, phaseUsage); // Resize for restart step
+            wellsToState(restartValues.wells, phaseUsage, handle_ms_well, well_state_);
             previous_well_state_ = well_state_;
         }
         initial_step_ = false;
@@ -1645,7 +1640,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    computeRESV(const std::size_t step, Opm::DeferredLogger& deferred_logger)
+    computeRESV(Opm::DeferredLogger& deferred_logger)
     {
 
         const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells());
@@ -1731,8 +1726,7 @@ namespace Opm {
     wellsToState( const data::Wells& wells,
                   const PhaseUsage& phases,
                   const bool handle_ms_well,
-                  const int report_step,
-                  WellStateFullyImplicitBlackoil& state ) const
+                  WellStateFullyImplicitBlackoil& state) const
     {
 
         using rt = data::Rates::opt;
@@ -1825,7 +1819,7 @@ namespace Opm {
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
-    anyMSWellOpenLocal(const Wells* wells, const int report_step) const
+    anyMSWellOpenLocal(const Wells* wells) const
     {
         bool any_ms_well_open = false;
 

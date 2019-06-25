@@ -297,14 +297,13 @@ namespace Opm
 
 
         void resize(const Wells* wells, const std::vector<Well2>& wells_ecl, const Schedule& schedule,
-                    const bool handle_ms_well, const int report_step, const size_t numCells,
-                    const PhaseUsage& pu)
+                    const bool handle_ms_well, const size_t numCells, const PhaseUsage& pu)
         {
             const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
             init(wells, tmp, schedule, wells_ecl, 0, nullptr, pu);
 
             if (handle_ms_well) {
-                initWellStateMSWell(wells, wells_ecl, report_step, pu, nullptr);
+                initWellStateMSWell(wells, wells_ecl, pu, nullptr);
             }
         }
 
@@ -609,7 +608,7 @@ namespace Opm
 
         /// init the MS well related.
         void initWellStateMSWell(const Wells* wells, const std::vector<Well2>& wells_ecl,
-                                 const int time_step, const PhaseUsage& pu, const WellStateFullyImplicitBlackoil* prev_well_state)
+                                 const PhaseUsage& pu, const WellStateFullyImplicitBlackoil* prev_well_state)
         {
             // still using the order in wells
             const int nw = wells->number_of_wells;

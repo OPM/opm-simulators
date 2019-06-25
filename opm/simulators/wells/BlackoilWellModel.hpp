@@ -389,7 +389,7 @@ namespace Opm {
 
             void prepareGroupControl(Opm::DeferredLogger& deferred_logger);
 
-            void computeRESV(const std::size_t step, Opm::DeferredLogger& deferred_logger);
+            void computeRESV(Opm::DeferredLogger& deferred_logger);
 
             void extractLegacyCellPvtRegionIndex_();
 
@@ -414,11 +414,10 @@ namespace Opm {
             void wellsToState( const data::Wells& wells,
                                const PhaseUsage& phases,
                                const bool handle_ms_well,
-                               const int report_step,
                                WellStateFullyImplicitBlackoil& state ) const;
 
             // whether there exists any multisegment well open on this process
-            bool anyMSWellOpenLocal(const Wells* wells, const int report_step) const;
+            bool anyMSWellOpenLocal(const Wells* wells) const;
 
             const Well2& getWellEcl(const std::string& well_name) const;
         };

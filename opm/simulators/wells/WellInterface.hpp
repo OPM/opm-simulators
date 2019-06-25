@@ -253,7 +253,7 @@ namespace Opm
         bool wellHasTHPConstraints() const;
 
         /// Returns true if the well is currently in prediction mode (i.e. not history mode).
-        bool underPredictionMode(Opm::DeferredLogger& deferred_logger) const;
+        bool underPredictionMode() const;
 
         // update perforation water throughput based on solved water rate
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const = 0;
@@ -416,8 +416,8 @@ namespace Opm
         OperabilityStatus operability_status_;
 
         void wellTestingEconomic(const Simulator& simulator, const std::vector<double>& B_avg,
-                                 const double simulation_time, const int report_step,
-                                 const WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger);
+                                 const double simulation_time, const WellState& well_state,
+                                 WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger);
 
         virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
                                  const double simulation_time, const int report_step,

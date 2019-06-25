@@ -1393,7 +1393,7 @@ namespace Opm
             return;
         }
 
-        if (!this->underPredictionMode(deferred_logger) ) {
+        if (!this->underPredictionMode() ) {
             return;
         }
 
@@ -2016,7 +2016,7 @@ namespace Opm
 
         checkConvergenceControlEq(report, deferred_logger);
 
-        checkConvergenceExtraEqs(res, report, deferred_logger);
+        checkConvergenceExtraEqs(res, report);
 
         return report;
     }
@@ -3148,8 +3148,7 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     checkConvergenceExtraEqs(const std::vector<double>& res,
-                             ConvergenceReport& report,
-                             DeferredLogger& deferred_logger) const
+                             ConvergenceReport& report) const
     {
         // if different types of extra equations are involved, this function needs to be refactored further
 
