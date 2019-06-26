@@ -485,8 +485,7 @@ namespace Opm
 
         // checking convergence of extra equations, if there are any
         void checkConvergenceExtraEqs(const std::vector<double>& res,
-                                      ConvergenceReport& report,
-                                      DeferredLogger& deferred_logger) const;
+                                      ConvergenceReport& report) const;
 
         // updating the connectionRates_ related polymer molecular weight
         void updateConnectionRatePolyMW(const EvalWell& cq_s_poly,

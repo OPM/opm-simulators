@@ -335,7 +335,6 @@ protected:
             }
             else
             {
-                const WellModel& wellModel = simulator_.problem().wellModel();
                 typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false > Operator;
                 Operator opA(*matrix_, *matrix_, wellModel);
                 solve( opA, x, *rhs_ );

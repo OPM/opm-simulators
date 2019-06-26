@@ -543,7 +543,6 @@ namespace Opm
     /// \param[in] the phase usage
     std::shared_ptr<WellsGroupInterface> createWellWellsGroup(const Well2& well,
                                                               const SummaryState& summaryState,
-                                                              size_t timeStep,
                                                               const PhaseUsage& phase_usage );
 
     /// Creates the WellsGroupInterface for the given Group

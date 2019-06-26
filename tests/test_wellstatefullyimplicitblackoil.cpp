@@ -79,7 +79,7 @@ namespace {
 
         state.initWellStateMSWell(wmgr.c_wells(),
                                   setup.sched.getWells2(timeStep),
-                                  timeStep, setup.pu, nullptr);
+                                  setup.pu, nullptr);
 
         return state;
     }

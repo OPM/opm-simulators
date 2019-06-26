@@ -226,16 +226,16 @@ void WellsManager::createWellsFromSpecs(const std::vector<Well2>& wells, size_t 
     destroy_wells( w );
 
     // Add wells.
-    for (int w = 0; w < num_wells; ++w) {
-        const int           w_num_perf = wellperf_data[w].size();
+    for (int iw = 0; iw < num_wells; ++iw) {
+        const int           w_num_perf = wellperf_data[iw].size();
         std::vector<int>    perf_cells  (w_num_perf);
         std::vector<double> perf_prodind(w_num_perf);
         std::vector<int> perf_satnumid(w_num_perf);
 
         for (int perf = 0; perf < w_num_perf; ++perf) {
-            perf_cells  [perf] = wellperf_data[w][perf].cell;
-            perf_prodind[perf] = wellperf_data[w][perf].well_index;
-            perf_satnumid[perf] = wellperf_data[w][perf].satnumid;
+            perf_cells  [perf] = wellperf_data[iw][perf].cell;
+            perf_prodind[perf] = wellperf_data[iw][perf].well_index;
+            perf_satnumid[perf] = wellperf_data[iw][perf].satnumid;
         }
 
         const double* comp_frac = NULL;
@@ -243,21 +243,21 @@ void WellsManager::createWellsFromSpecs(const std::vector<Well2>& wells, size_t 
         // We initialize all wells with a null component fraction,
         // and must (for injection wells) overwrite it later.
         const int ok =
-            add_well(well_data[w].type,
-                     well_data[w].reference_bhp_depth,
+            add_well(well_data[iw].type,
+                     well_data[iw].reference_bhp_depth,
                      w_num_perf,
                      comp_frac,
                      perf_cells.data(),
                      perf_prodind.data(),
                      perf_satnumid.data(),
-                     well_names[w].c_str(),
-                     well_data[w].allowCrossFlow,
+                     well_names[iw].c_str(),
+                     well_data[iw].allowCrossFlow,
                      w_);
 
         if (!ok) {
             OPM_THROW(std::runtime_error,
                       "Failed adding well "
-                      << well_names[w]
+                      << well_names[iw]
                       << " to Wells data structure.");
         }
     }
@@ -368,7 +368,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
                          pu, cartesian_to_compressed, interleavedPerm.data(), ntg,
                          wells_on_proc, deactivated_wells);
 
-    setupWellControls(wells, summaryState, timeStep, well_names, pu, wells_on_proc);
+    setupWellControls(wells, summaryState, well_names, pu, wells_on_proc);
 
     {
         const auto& fieldGroup = schedule.getGroup( "FIELD" );
@@ -401,7 +401,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
 
     if (well_collection_.groupControlActive()) {
         // here does not consider the well potentials related guide rate setting
-        setupGuideRates(wells, timeStep, well_data, well_names_to_index);
+        setupGuideRates(wells, well_data, well_names_to_index);
     }
 
     // Debug output.

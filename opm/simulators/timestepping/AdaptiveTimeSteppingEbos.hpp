@@ -520,8 +520,8 @@ namespace Opm {
                 failing_wells.insert(wf.wellName());
             }
             if (sr_size >= num_steps) {
-                for (int step = 1; step < num_steps; ++step) {
-                    const auto& srep = sr[sr_size - 1 - step];
+                for (int s = 1; s < num_steps; ++s) {
+                    const auto& srep = sr[sr_size - 1 - s];
                     // Report must be from same report step and substep, otherwise we have
                     // not chopped/retried enough times on this step.
                     if (srep.report_step != rep_step || srep.current_step != sub_step) {

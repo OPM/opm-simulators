@@ -659,7 +659,6 @@ public:
         if (enableTuning_) {
             // if support for the TUNING keyword is enabled, we get the initial time
             // steping parameters from it instead of from command line parameters
-            const auto& schedule = simulator.vanguard().schedule();
             const auto& tuning = schedule.getTuning();
             initialTimeStepSize_ = tuning.getTSINIT(0);
             maxTimeStepAfterWellEvent_ = tuning.getTMAXWC(0);
@@ -745,7 +744,7 @@ public:
     void deserialize(Restarter& res)
     {
         // reload the current episode/report step from the deck
-        beginEpisode(/*isOnRestart=*/true);
+        beginEpisode();
 
         // deserialize the wells
         wellModel_.deserialize(res);
@@ -773,7 +772,7 @@ public:
     /*!
      * \brief Called by the simulator before an episode begins.
      */
-    void beginEpisode(bool isOnRestart = false)
+    void beginEpisode()
     {
         // Proceed to the next report step
         auto& simulator = this->simulator();
@@ -1514,7 +1513,7 @@ public:
 
         // convert the source term from the total mass rate of the
         // cell to the one per unit of volume as used by the model.
-        unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        const unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
             rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
 
@@ -1528,7 +1527,6 @@ public:
         // if requested, compensate systematic mass loss for cells which were "well
         // behaved" in the last time step
         if (enableDriftCompensation_) {
-            unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
             const auto& intQuants = context.intensiveQuantities(spaceIdx, timeIdx);
             const auto& simulator = this->simulator();
             const auto& model = this->model();
@@ -2651,10 +2649,10 @@ private:
             //////
             // set temperature
             //////
-            Scalar temperature = tempiData[cartesianDofIdx];
-            if (!std::isfinite(temperature) || temperature <= 0)
-                temperature = FluidSystem::surfaceTemperature;
-            dofFluidState.setTemperature(temperature);
+            Scalar temperatureLoc = tempiData[cartesianDofIdx];
+            if (!std::isfinite(temperatureLoc) || temperatureLoc <= 0)
+                temperatureLoc = FluidSystem::surfaceTemperature;
+            dofFluidState.setTemperature(temperatureLoc);
 
             //////
             // set saturations

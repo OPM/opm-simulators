@@ -528,11 +528,11 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x,
                                           WellState& well_state,
-                                          Opm::DeferredLogger& deferred_logger) const
+                                          Opm::DeferredLogger& /* deferred_logger*/) const
     {
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);
-        updateWellState(xw, well_state, deferred_logger);
+        updateWellState(xw, well_state);
     }
 
 
@@ -712,13 +712,13 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger)
+    solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& /* deferred_logger */)
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
-        updateWellState(dx_well, well_state, deferred_logger);
+        updateWellState(dx_well, well_state);
     }
 
 
@@ -803,7 +803,6 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
                     WellState& well_state,
-                    Opm::DeferredLogger& deferred_logger,
                     const double relaxation_factor) const
     {
         const double dFLimit = param_.dwell_fraction_max_;
@@ -1686,9 +1685,9 @@ namespace Opm
 
         // handling the velocity head of intlet segments
         for (const int inlet : segment_inlets_[seg]) {
-            const EvalWell density = segment_densities_[inlet];
-            const EvalWell mass_rate = segment_mass_rates_[inlet];
-            const EvalWell inlet_velocity_head = mswellhelpers::velocityHead(area, mass_rate, density);
+            const EvalWell inlet_density = segment_densities_[inlet];
+            const EvalWell inlet_mass_rate = segment_mass_rates_[inlet];
+            const EvalWell inlet_velocity_head = mswellhelpers::velocityHead(area, inlet_mass_rate, inlet_density);
             resWell_[seg][SPres] += inlet_velocity_head.value();
             for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
                 duneD_[seg][inlet][SPres][pv_idx] += inlet_velocity_head.derivative(pv_idx + numEq);
@@ -1927,7 +1926,7 @@ namespace Opm
                 deferred_logger.debug(sstr.str());
             }
 
-            updateWellState(dx_well, well_state, deferred_logger, relaxation_factor);
+            updateWellState(dx_well, well_state, relaxation_factor);
 
             // TODO: should we do something more if a switching of control happens
             this->updateWellControl(ebosSimulator, well_state, deferred_logger);

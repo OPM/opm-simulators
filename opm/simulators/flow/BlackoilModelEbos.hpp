@@ -437,8 +437,8 @@ namespace Opm {
                 resultDenom += pressureNew*pressureNew;
 
                 for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
-                    Scalar tmp = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
-                    resultDelta += tmp*tmp;
+                    const Scalar tmpSat = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
+                    resultDelta += tmpSat * tmpSat;
                     resultDenom += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
                 }
             }
@@ -882,9 +882,9 @@ namespace Opm {
         const BlackoilWellModel<TypeTag>&
         wellModel() const { return well_model_; }
 
-        void beginReportStep(bool isRestart)
+        void beginReportStep()
         {
-            ebosSimulator_.problem().beginEpisode(isRestart);
+            ebosSimulator_.problem().beginEpisode();
         }
 
         void endReportStep()

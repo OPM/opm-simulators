@@ -67,24 +67,24 @@ BOOST_AUTO_TEST_CASE(deferredlogger)
 
     std::ostringstream log_stream;
     initLogger(log_stream);
-    auto deferredlogger = Opm::DeferredLogger();
-    deferredlogger.info("info 1");
-    deferredlogger.warning("warning 1");
-    deferredlogger.error("error 1");
-    deferredlogger.error("error 2");
-    deferredlogger.problem("problem 1");
-    deferredlogger.bug("bug 1");
-    deferredlogger.debug("debug 1");
-    deferredlogger.note("note 1");
-    deferredlogger.note("tagme", "note 2");
-    deferredlogger.note("tagme", "note 3");
-    deferredlogger.note("tagme", "note 3");
-    deferredlogger.note("tagme", "note 3");
-    deferredlogger.note("tagme", "note 3");
-    deferredlogger.note("tagme", "note 3");
-    deferredlogger.note("tagme", "note 3");
+    auto deferred_logger = Opm::DeferredLogger();
+    deferred_logger.info("info 1");
+    deferred_logger.warning("warning 1");
+    deferred_logger.error("error 1");
+    deferred_logger.error("error 2");
+    deferred_logger.problem("problem 1");
+    deferred_logger.bug("bug 1");
+    deferred_logger.debug("debug 1");
+    deferred_logger.note("note 1");
+    deferred_logger.note("tagme", "note 2");
+    deferred_logger.note("tagme", "note 3");
+    deferred_logger.note("tagme", "note 3");
+    deferred_logger.note("tagme", "note 3");
+    deferred_logger.note("tagme", "note 3");
+    deferred_logger.note("tagme", "note 3");
+    deferred_logger.note("tagme", "note 3");
 
-    deferredlogger.logMessages();
+    deferred_logger.logMessages();
 
     auto counter = OpmLog::getBackend<CounterLog>("COUNTER");
     BOOST_CHECK_EQUAL( 1 , counter->numMessages(Log::MessageType::Warning) );

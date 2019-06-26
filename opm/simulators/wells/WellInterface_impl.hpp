@@ -543,7 +543,7 @@ namespace Opm
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
-    underPredictionMode(Opm::DeferredLogger& deferred_logger) const
+    underPredictionMode() const
     {
         return well_ecl_.predictionMode();
     }
@@ -799,7 +799,7 @@ namespace Opm
 
         // Based on current understanding, only under prediction mode, we need to shut well due to various
         // reasons or limits. With more knowlage or testing cases later, this might need to be corrected.
-        if (!underPredictionMode(deferred_logger) ) {
+        if (!underPredictionMode() ) {
             return;
         }
 
@@ -997,7 +997,7 @@ namespace Opm
         }
 
         if (testing_reason == WellTestConfig::Reason::ECONOMIC) {
-            wellTestingEconomic(simulator, B_avg, simulation_time, report_step,
+            wellTestingEconomic(simulator, B_avg, simulation_time,
                                 well_state, well_test_state, deferred_logger);
         }
     }
@@ -1010,8 +1010,8 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     wellTestingEconomic(const Simulator& simulator, const std::vector<double>& B_avg,
-                        const double simulation_time, const int report_step,
-                        const WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger)
+                        const double simulation_time, const WellState& well_state,
+                        WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger)
     {
         deferred_logger.info(" well " + name() + " is being tested for economic limits");
 

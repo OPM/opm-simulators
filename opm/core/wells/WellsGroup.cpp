@@ -1588,7 +1588,7 @@ namespace Opm
       'CMODE_UNDEFINED' - we do not carry that over the specification
       objects here.
      */
-    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(const Well2& well, const SummaryState& summaryState, size_t timeStep, const PhaseUsage& phase_usage )
+    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(const Well2& well, const SummaryState& summaryState, const PhaseUsage& phase_usage )
     {
         InjectionSpecification injection_specification;
         ProductionSpecification production_specification;

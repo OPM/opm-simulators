@@ -204,10 +204,6 @@ public:
             wellModel_().initFromRestartFile(*restartValues);
         }
 
-        // beginReportStep(...) wants to know when we are at the
-        // beginning of a restart
-        bool firstRestartStep = isRestart();
-
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -252,9 +248,7 @@ public:
             ebosSimulator_.startNextEpisode(ebosSimulator_.startTime() + schedule().getTimeMap().getTimePassedUntil(timer.currentStepNum()),
                                             timer.currentStepLength());
             ebosSimulator_.setEpisodeIndex(timer.currentStepNum());
-            solver->model().beginReportStep(firstRestartStep);
-            firstRestartStep = false;
-
+            solver->model().beginReportStep();
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge
