@@ -429,10 +429,15 @@ namespace Opm
         if (production_violated) {
             switch (prodSpec().procedure_) {
             case ProductionSpecification::WELL:
-                getWorstOffending(well_reservoirrates_phase,
-                                  well_surfacerates_phase,
-                                  production_mode_violated).first->shutWell();
-                return false;
+              {
+                  const auto& offender = getWorstOffending(well_reservoirrates_phase,
+                                                           well_surfacerates_phase,
+                                                           production_mode_violated);
+                  if (offender.first)
+                      offender.first->shutWell();
+
+                  return false;
+              }
             case ProductionSpecification::RATE:
                 applyProdGroupControl(production_mode_violated,
                                       getTarget(production_mode_violated),
