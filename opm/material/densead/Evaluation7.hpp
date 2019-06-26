@@ -180,7 +180,7 @@ public:
     }
 
     template <class RhsValueType>
-    static Evaluation createVariable(const Evaluation& x, const RhsValueType& value, int varPos)
+    static Evaluation createVariable(const Evaluation& x OPM_UNUSED, const RhsValueType& value, int varPos)
     {
         // copy function value and set all derivatives to 0, except for the variable
         // which is represented by the value (which is set to 1.0)
