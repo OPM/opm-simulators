@@ -412,7 +412,9 @@ well_controls_equal(const struct WellControls *ctrls1, const struct WellControls
 
     if (!ctrls1 || !ctrls2) {
         if (verbose)
-            printf("ctrls1 %p or cntrls2 %p is NULL\n", ctrls2, ctrls2);
+            printf("ctrls1 %p or cntrls2 %p is NULL\n",
+                   (void*) ctrls1, (void*) ctrls2);
+
         return false;
     }
 
