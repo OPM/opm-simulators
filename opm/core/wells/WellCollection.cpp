@@ -80,7 +80,7 @@ namespace Opm
             OPM_THROW(std::runtime_error, "Trying to add well " << wellChild.name() << " Step: " << boost::lexical_cast<std::string>(timeStep) << " to group named " << wellChild.groupName() << ", but this group does not exist in the WellCollection.");
         }
 
-        std::shared_ptr<WellsGroupInterface> child = createWellWellsGroup(wellChild, summaryState, timeStep, phaseUsage);
+        std::shared_ptr<WellsGroupInterface> child = createWellWellsGroup(wellChild, summaryState, phaseUsage);
 
         WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
         if (!parent_as_group) {

@@ -294,7 +294,6 @@ namespace Opm
 
     void WellsManager::setupWellControls(const std::vector<Well2>& wells,
                                          const SummaryState& summaryState,
-                                         size_t timeStep,
                                          std::vector<std::string>& well_names,
                                          const PhaseUsage& phaseUsage,
                                          const std::vector<int>& wells_on_proc) {
@@ -599,7 +598,7 @@ namespace Opm
     }
 
     // only handle the guide rates from the keyword WGRUPCON
-    void WellsManager::setupGuideRates(const std::vector<Well2>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index)
+    void WellsManager::setupGuideRates(const std::vector<Well2>& wells, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index)
     {
         for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
             const auto& well = *wellIter;

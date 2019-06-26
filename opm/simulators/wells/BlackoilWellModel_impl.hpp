@@ -174,7 +174,7 @@ namespace Opm {
         int well_was_shut = 0;
         for (const auto& well : well_container_) {
             if (well->name() == wellname) {
-                if (well->underPredictionMode() {
+                if (well->underPredictionMode()) {
                     wellTestState_.closeWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
                     well_was_shut = 1;
                 }
