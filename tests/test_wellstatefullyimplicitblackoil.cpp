@@ -86,7 +86,6 @@ namespace {
 
 
     void setSegPress(const std::vector<Opm::Well2>& wells,
-                     const std::size_t                    tstep,
                      Opm::WellStateFullyImplicitBlackoil& wstate)
     {
         const auto nWell = wells.size();
@@ -119,7 +118,6 @@ namespace {
 
 
   void setSegRates(const std::vector<Opm::Well2>& wells,
-                     const std::size_t                    tstep,
                      const Opm::PhaseUsage&               pu,
                      Opm::WellStateFullyImplicitBlackoil& wstate)
     {
@@ -203,7 +201,7 @@ BOOST_AUTO_TEST_CASE(Pressure)
     const auto& wells = setup.sched.getWells2(tstep);
     const auto prod01_first = wells[0].name() == "PROD01";
 
-    setSegPress(wells, tstep, wstate);
+    setSegPress(wells, wstate);
 
     const auto rpt = wstate.report(setup.pu, setup.grid.c_grid()->global_cell);
 
@@ -249,7 +247,7 @@ BOOST_AUTO_TEST_CASE(Rates)
 
     const auto& pu = setup.pu;
 
-    setSegRates(wells, tstep, pu, wstate);
+    setSegRates(wells, pu, wstate);
 
     const auto rpt = wstate.report(pu, setup.grid.c_grid()->global_cell);
 
