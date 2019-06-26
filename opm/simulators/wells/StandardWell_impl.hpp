@@ -2920,7 +2920,7 @@ namespace Opm
         }
 
         if (this->isOperable() ) {
-            welltest_state.openWell(name() );
+            welltest_state.openWell(name(), WellTestConfig::PHYSICAL );
             const std::string msg = " well " + name() + " is re-opened through well testing for physical reason";
             deferred_logger.info(msg);
             well_state = well_state_copy;

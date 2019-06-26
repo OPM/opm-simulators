@@ -826,7 +826,7 @@ namespace Opm
                                 Opm::DeferredLogger& deferred_logger) const
     {
         if (!isOperable()) {
-            well_test_state.addClosedWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
+            well_test_state.closeWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
             if (write_message_to_opmlog) {
                 // TODO: considering auto shut in?
                 const std::string msg = "well " + name()
@@ -886,7 +886,7 @@ namespace Opm
                 deferred_logger.warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
             }
 
-            well_test_state.addClosedWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+            well_test_state.closeWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
             if (write_message_to_opmlog) {
                 if (well_ecl_.getAutomaticShutIn()) {
                     const std::string msg = std::string("well ") + name() + std::string(" will be shut due to rate economic limit");
@@ -938,7 +938,7 @@ namespace Opm
                     }
 
                     if (allCompletionsClosed) {
-                        well_test_state.addClosedWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+                        well_test_state.closeWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
                         if (write_message_to_opmlog) {
                             if (well_ecl_.getAutomaticShutIn()) {
                                 const std::string msg = name() + std::string(" will be shut due to last completion closed");
@@ -953,10 +953,10 @@ namespace Opm
                 }
                 case WellEcon::WELL:
                 {
-                well_test_state.addClosedWell(name(), WellTestConfig::Reason::ECONOMIC, 0);
+                well_test_state.closeWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
                 if (write_message_to_opmlog) {
                     if (well_ecl_.getAutomaticShutIn()) {
-                        // tell the controll that the well is closed
+                        // tell the control that the well is closed
                         const std::string msg = name() + std::string(" will be shut due to ratio economic limit");
                         deferred_logger.info(msg);
                     } else {
@@ -1044,9 +1044,9 @@ namespace Opm
         }
 
         // update wellTestState if the well test succeeds
-        if (!welltest_state_temp.hasWell(name(), WellTestConfig::Reason::ECONOMIC)) {
-            welltest_state.openWell(name());
-            const std::string msg = std::string("well ") + name() + std::string(" is re-opened");
+        if (!welltest_state_temp.hasWellClosed(name(), WellTestConfig::Reason::ECONOMIC)) {
+            welltest_state.openWell(name(), WellTestConfig::Reason::ECONOMIC);
+            const std::string msg = std::string("well ") + name() + std::string(" is re-opened through ECONOMIC testing");
             deferred_logger.info(msg);
 
             // also reopen completions

@@ -176,7 +176,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             if (well->name() == wellname) {
                 if (well->underPredictionMode(local_deferredLogger)) {
-                    wellTestState_.addClosedWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+                    wellTestState_.closeWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
                     well_was_shut = 1;
                 }
                 break;
@@ -549,7 +549,7 @@ namespace Opm {
 
                 if (allow_closing_opening_wells) {
                     // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
-                    if ( wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL ) ) {
+                    if ( wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::PHYSICAL ) ) {
                         // TODO: more checking here, to make sure this standard more specific and complete
                         // maybe there is some WCON keywords will not open the well
                         if (well_state_.effectiveEventsOccurred(w)) {
@@ -560,7 +560,7 @@ namespace Opm {
                                 // even if it was new or received new targets this report step.
                                 well_state_.setEffectiveEventsOccurred(w, false);
                             } else {
-                                wellTestState_.openWell(well_name);
+                                wellTestState_.openWell(well_name, WellTestConfig::Reason::PHYSICAL);
                             }
                         }
                     }
@@ -568,8 +568,8 @@ namespace Opm {
 
                     // TODO: should we do this for all kinds of closing reasons?
                     // something like wellTestState_.hasWell(well_name)?
-                    if ( wellTestState_.hasWell(well_name, WellTestConfig::Reason::ECONOMIC) ||
-                         wellTestState_.hasWell(well_name, WellTestConfig::Reason::PHYSICAL) ) {
+                    if ( wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::ECONOMIC) ||
+                         wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::PHYSICAL) ) {
                         if( well_ecl.getAutomaticShutIn() ) {
                             // shut wells are not added to the well container
                             // TODO: make a function from well_state side to handle the following
