@@ -206,7 +206,6 @@ EndTime=100
   
 InitialTimeStepSize=100   # first in-line comment
 
-UndefinedParam  =  "blubb"; second in-line comment
   # full line comment
 ; also a full line comment
 EOF
@@ -215,6 +214,9 @@ EOF
             exit 1
         elif $TEST_BINARY --parameter-file="foobar.ini" 2>&1 > /dev/null; then
             echo "$TEST_BINARY does not abort even though the specified parameter file does not exist"
+            exit 1
+        elif $TEST_BINARY --undefined-param="bla" 2>&1 > /dev/null; then
+            echo "$TEST_BINARY does not signal an error even though an undefined command line parameter was passed"
             exit 1
         elif $TEST_BINARY --foo 2>&1 > /dev/null; then
             echo "$TEST_BINARY accepts flag parameters besides --help"
