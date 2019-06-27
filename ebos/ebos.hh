@@ -99,6 +99,12 @@ SET_INT_PROP(EbosTypeTag, EclNewtonStrictIterations, 100);
 // relatively often)
 SET_INT_PROP(EbosTypeTag, NewtonMaxIterations, 8);
 
+// if openMP is available, set the default the number of threads per process for the main
+// simulation to 2 (instead of grabbing everything that is available).
+#if _OPENMP
+SET_INT_PROP(EbosTypeTag, ThreadsPerProcess, 2);
+#endif
+
 END_PROPERTIES
 
 namespace Ewoms {

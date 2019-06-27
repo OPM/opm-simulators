@@ -140,7 +140,6 @@ namespace Opm
 
             EWOMS_HIDE_PARAM(TypeTag, EclMaxTimeStepSizeAfterWellEvent);
             EWOMS_HIDE_PARAM(TypeTag, EclRestartShrinkFactor);
-            EWOMS_HIDE_PARAM(TypeTag, EclMaxFails);
             EWOMS_HIDE_PARAM(TypeTag, EclEnableTuning);
 
             // flow also does not use the eWoms Newton method
