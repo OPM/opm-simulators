@@ -163,7 +163,7 @@ namespace Opm
             EWOMS_END_PARAM_REGISTRATION(TypeTag);
 
             // read in the command line parameters
-            int status = Ewoms::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), false, true, true);
+            int status = Ewoms::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/true);
             if (status == 0) {
                 // deal with --print-properties and --print-parameters
 
