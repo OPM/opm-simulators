@@ -105,6 +105,10 @@ SET_INT_PROP(EbosTypeTag, NewtonMaxIterations, 8);
 SET_INT_PROP(EbosTypeTag, ThreadsPerProcess, 2);
 #endif
 
+// By default, ebos accepts the result of the time integration unconditionally if the
+// smallest time step size is reached.
+SET_BOOL_PROP(EbosTypeTag, ContinueOnConvergenceError, true);
+
 END_PROPERTIES
 
 namespace Ewoms {
