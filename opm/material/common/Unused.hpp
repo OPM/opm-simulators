@@ -40,4 +40,10 @@
 #define OPM_OPTIM_UNUSED
 #endif
 
+#ifdef HAVE_MPI
+#define OPM_UNUSED_NOMPI
+#else
+#define OPM_UNUSED_NOMPI OPM_UNUSED
+#endif
+
 #endif
