@@ -130,7 +130,7 @@ public:
   WellModelMatrixAdapter (const M& A,
                           const M& A_for_precond,
                           const WellModel& wellMod,
-                          const boost::any& parallelInformation = boost::any() )
+                          const boost::any& parallelInformation OPM_UNUSED_NOMPI = boost::any() )
       : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_()
   {
 #if HAVE_MPI
@@ -577,7 +577,10 @@ protected:
         /// \param[inout] x  solution to be computed x
         /// \param[in] b   right hand side b
         template <class Operator, class Comm >
-        void solve(Operator& opA, Vector& x, Vector& b, Comm& comm) const
+        void solve(Operator& opA OPM_UNUSED_NOMPI,
+                   Vector& x OPM_UNUSED_NOMPI,
+                   Vector& b OPM_UNUSED_NOMPI,
+                   Comm& comm OPM_UNUSED_NOMPI) const
         {
             Dune::InverseOperatorResult result;
             // Parallel version is deactivated until we figure out how to do it properly.
