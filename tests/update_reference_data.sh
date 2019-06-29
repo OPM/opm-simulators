@@ -64,6 +64,7 @@ tests[multiply_tranxyz_model2]="flow model2 8_MULTIPLY_TRANXYZ_MODEL2 multiply_t
 tests[editnnc_model2]="flow model2 9_EDITNNC_MODEL2 editnnc_model2"
 tests[polymer_injectivity]="flow polymer_injectivity 2D_POLYMER_INJECTIVITY"
 tests[nnc]="flow editnnc NNC_AND_EDITNNC nnc"
+tests[udq]="flow udq_actionx UDQ_WCONPROD"
 
 changed_tests=""
 for test_name in ${!tests[*]}
