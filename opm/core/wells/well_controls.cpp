@@ -142,7 +142,7 @@ well_controls_create(void)
 {
     struct WellControls *ctrl;
 
-    ctrl = malloc(1 * sizeof *ctrl);
+    ctrl = static_cast<WellControls*>(malloc(1 * sizeof *ctrl));
 
     if (ctrl != NULL) {
         /* Initialise empty control set; the well is created open. */
@@ -176,11 +176,11 @@ well_controls_reserve(int nctrl, struct WellControls *ctrl)
     distr  = realloc(ctrl->distr , nctrl * ctrl->number_of_phases * sizeof *ctrl->distr );
 
     int ok = 0;
-    if (type   != NULL) { ctrl->type   = type  ; ok++; }
-    if (target != NULL) { ctrl->target = target; ok++; }
-    if (alq    != NULL) { ctrl->alq    = alq;    ok++; }
-    if (vfp    != NULL) { ctrl->vfp    = vfp;    ok++; }
-    if (distr  != NULL) { ctrl->distr  = distr ; ok++; }
+    if (type   != NULL) { ctrl->type   = static_cast<WellControlType*>(type)  ; ok++; }
+    if (target != NULL) { ctrl->target = static_cast<double*>(target); ok++; }
+    if (alq    != NULL) { ctrl->alq    = static_cast<double*>(alq   ); ok++; }
+    if (vfp    != NULL) { ctrl->vfp    = static_cast<int*>(vfp);       ok++; }
+    if (distr  != NULL) { ctrl->distr  = static_cast<double*>(distr) ; ok++; }
 
     if (ok == 5) {
         for (int c = ctrl->cpty; c < nctrl; c++) {
@@ -204,18 +204,18 @@ struct WellControls *
 well_controls_clone(const struct WellControls *ctrl)
 /* ---------------------------------------------------------------------- */
 {
-    struct WellControls* new = well_controls_create();
+    struct WellControls* new_ctrls = well_controls_create();
 
-    if (new != NULL) {
+    if (new_ctrls != NULL) {
         /* Assign appropriate number of phases */
-        well_controls_assert_number_of_phases(new, ctrl->number_of_phases);
+        well_controls_assert_number_of_phases(new_ctrls, ctrl->number_of_phases);
 
         int n  = well_controls_get_num(ctrl);
-        int ok = well_controls_reserve(n, new);
+        int ok = well_controls_reserve(n, new_ctrls);
 
         if (! ok) {
-            well_controls_destroy(new);
-            new = NULL;
+            well_controls_destroy(new_ctrls);
+            new_ctrls= NULL;
         }
         else {
             int i;
@@ -226,32 +226,32 @@ well_controls_clone(const struct WellControls *ctrl)
                 double alq = well_controls_iget_alq   (ctrl, i);
                 int vfp = well_controls_iget_vfp   (ctrl, i);
 
-                ok = well_controls_add_new(type, target, alq, vfp, distr, new);
+                ok = well_controls_add_new(type, target, alq, vfp, distr, new_ctrls);
             }
 
             if (i < n) {
                 assert (!ok);
-                well_controls_destroy(new);
+                well_controls_destroy(new_ctrls);
 
-                new = NULL;
+                new_ctrls = NULL;
             }
             else {
                 i = well_controls_get_current(ctrl);
-                well_controls_set_current(new, i);
+                well_controls_set_current(new_ctrls, i);
 
                 if (well_controls_well_is_open(ctrl)) {
-                    well_controls_open_well(new);
+                    well_controls_open_well(new_ctrls);
                 }
                 else {
-                    well_controls_stop_well(new);
+                    well_controls_stop_well(new_ctrls);
                 }
             }
         }
     }
 
-    assert (well_controls_equal(ctrl, new, true));
+    assert (well_controls_equal(ctrl, new_ctrls, true));
 
-    return new;
+    return new_ctrls;
 }
 
 
