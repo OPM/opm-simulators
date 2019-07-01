@@ -46,6 +46,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
+#include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -207,6 +208,8 @@ int main(int argc, char** argv)
             eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
             schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
             summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
+
+            Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
 
             if (errorGuard) {
                 errorGuard.dump();
