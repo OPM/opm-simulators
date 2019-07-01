@@ -1017,10 +1017,11 @@ namespace Opm
 
         WellState well_state_copy = well_state;
 
+        updateWellStateWithTarget(simulator, well_state_copy, deferred_logger);
+        calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         updatePrimaryVariables(well_state_copy, deferred_logger);
         initPrimaryVariablesEvaluation();
 
-        // create a well
         WellTestState welltest_state_temp;
 
         bool testWell = true;
