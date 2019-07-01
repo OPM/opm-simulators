@@ -32,8 +32,12 @@ copyToReferenceDir () {
 }
 
 declare -A tests
-# binary dirname casename [testname]
-# you only have to specify testname if it differs from dirname
+# The tests are listed in a dictionary mapping name of the test to the commands used to
+# run the test:
+#
+# tests[name in log message]="binary dirname casename [testname]"
+#
+# The fourth argument testname is optional and only required if it differs from the test name.
 tests[spe1]="flow spe1 SPE1CASE1"
 tests[spe12]="flow spe1 SPE1CASE2"
 tests[spe12p]="flow spe1 SPE1CASE2_2P spe1_2p"
