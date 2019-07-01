@@ -42,6 +42,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <stdexcept>
+
 /**
  * Controls for a single well.
  * Each control specifies a well rate or bottom-hole pressure. Only
@@ -295,6 +297,8 @@ well_controls_iget_type(const struct WellControls * ctrl, int control_index) {
 
 enum WellControlType 
 well_controls_get_current_type(const struct WellControls * ctrl) {
+    if (ctrl->current < 0)
+        throw std::logic_error("Tried to use invalid current control < 0");
     return well_controls_iget_type( ctrl , ctrl->current);
 }
 
@@ -312,6 +316,8 @@ well_controls_iget_target(const struct WellControls * ctrl, int control_index) {
 
 double
 well_controls_get_current_target(const struct WellControls * ctrl) {
+    if (ctrl->current < 0)
+        throw std::logic_error("Tried to use invalid current control < 0");
     return ctrl->target[ctrl->current];
 }
 
