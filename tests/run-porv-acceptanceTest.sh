@@ -23,6 +23,11 @@ cd ${RESULT_PATH}
 ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-dry-run=true --output-dir=${RESULT_PATH}
 cd ..
 
+if ! test -d ${INPUT_DATA_PATH}/opm-porevolume-reference/${EXE_NAME}/
+then
+  echo "Reference data does not exists"
+  exit 1
+fi
 
 ecode=0
 ${COMPARE_ECL_COMMAND} -t INIT -k PORV ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-porevolume-reference/${EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}
