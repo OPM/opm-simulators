@@ -353,6 +353,30 @@ namespace Opm
     template<typename TypeTag>
     double
     WellInterface<TypeTag>::
+    wfoam() const
+    {
+        if (!has_foam) {
+            return 0.0;
+        }
+
+        auto injectorType = well_ecl_.injectorType();
+
+        if (injectorType == WellInjector::GAS) {
+            WellFoamProperties fprop = well_ecl_.getFoamProperties();
+            return fprop.m_foamConcentration;
+        } else {
+            // Not a gas injection well => no foam.
+            return 0.0;
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::
     mostStrictBhpFromBhpLimits(Opm::DeferredLogger& deferred_logger) const
     {
         double bhp;

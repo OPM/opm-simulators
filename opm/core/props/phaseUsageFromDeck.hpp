@@ -119,6 +119,15 @@ namespace Opm
         else
             pu.phase_pos[BlackoilPhases::PolymerMW] = -1;
 
+        // Add foam info
+        pu.has_foam = phases.active(Phase::FOAM);
+        if (pu.has_foam) {
+            pu.phase_pos[BlackoilPhases::Foam] = numActivePhases;
+            ++ numActivePhases;
+        }
+        else
+            pu.phase_pos[BlackoilPhases::Foam] = -1;
+
         return pu;
     }
 

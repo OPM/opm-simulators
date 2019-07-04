@@ -28,6 +28,10 @@
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
+#include <ewoms/models/blackoil/blackoilpolymermodules.hh>
+#include <ewoms/models/blackoil/blackoilsolventmodules.hh>
+#include <ewoms/models/blackoil/blackoilfoammodules.hh>
+
 #include <opm/material/densead/DynamicEvaluation.hpp>
 
 #include <dune/common/dynvector.hh>
@@ -53,8 +57,6 @@ namespace Opm
         using typename Base::MaterialLaw;
         using typename Base::ModelParameters;
         using typename Base::Indices;
-        using typename Base::PolymerModule;
-        using typename Base::FoamModule;
         using typename Base::RateConverterType;
 
         using Base::numEq;
@@ -63,6 +65,9 @@ namespace Opm
         using Base::has_polymer;
         using Base::has_foam;
         using Base::has_energy;
+
+        using PolymerModule =  Ewoms::BlackOilPolymerModule<TypeTag>;
+        using FoamModule = Ewoms::BlackOilFoamModule<TypeTag>;
 
         // polymer concentration and temperature are already known by the well, so
         // polymer and energy conservation do not need to be considered explicitly
@@ -129,6 +134,7 @@ namespace Opm
 
         using Base::contiSolventEqIdx;
         using Base::contiPolymerEqIdx;
+        using Base::contiFoamEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
         StandardWell(const Well2& well, const int time_step, const Wells* wells,
@@ -202,6 +208,7 @@ namespace Opm
         using Base::ebosCompIdxToFlowCompIdx;
         using Base::wsolvent;
         using Base::wpolymer;
+        using Base::wfoam;
         using Base::wellHasTHPConstraints;
         using Base::mostStrictBhpFromBhpLimits;
         using Base::scalingFactor;
