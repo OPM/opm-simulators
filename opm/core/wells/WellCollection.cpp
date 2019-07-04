@@ -21,7 +21,7 @@
 #include <opm/core/wells/WellCollection.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 
 #include <boost/lexical_cast.hpp>

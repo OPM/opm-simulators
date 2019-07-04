@@ -26,7 +26,7 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 
 #include <string>
 #include <memory>

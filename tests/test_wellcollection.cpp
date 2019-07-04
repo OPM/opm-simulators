@@ -29,8 +29,8 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/GroupTree.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GroupTree.hpp>
 
 using namespace Opm;
 
