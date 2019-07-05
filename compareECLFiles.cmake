@@ -374,6 +374,13 @@ add_test_compareECLFiles(CASENAME nnc
                          REL_TOL ${rel_tol}
                          DIR editnnc)
 
+add_test_compareECLFiles(CASENAME spe1_foam
+                         FILENAME SPE1FOAM
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe1_foam)
+
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
