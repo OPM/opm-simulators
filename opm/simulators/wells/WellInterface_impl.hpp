@@ -651,6 +651,57 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
+    checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
+                     const WellState& well_state,
+                     RatioLimitCheckReport& report) const
+    {
+
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+
+        // function to calculate gor based on rates
+        auto gor = [](const std::vector<double>& rates,
+                      const PhaseUsage& pu) {
+
+            const double oil_rate = rates[pu.phase_pos[Oil]];
+            const double gas_rate = rates[pu.phase_pos[Gas]];
+
+            // both rate should be in the same direction
+            assert(oil_rate * gas_rate >= 0.);
+
+            double gas_oil_ratio = 0.;
+
+            if (oil_rate != 0.) {
+                gas_oil_ratio = gas_rate / oil_rate;
+            } else {
+                if (gas_rate != 0.) {
+                    gas_oil_ratio = 1.e100; // big value to mark it as violated
+                } else {
+                    gas_oil_ratio = 0.0;
+                }
+            }
+
+            return gas_oil_ratio;
+        };
+
+        const double max_gor_limit = econ_production_limits.maxGasOilRatio();
+        assert(max_gor_limit > 0.);
+
+        const bool gor_limit_violated = checkMaxRatioLimitWell(well_state, max_gor_limit, gor);
+
+        if (gor_limit_violated) {
+            report.ratio_limit_violated = true;
+            checkMaxRatioLimitCompletions(well_state, max_gor_limit, gor, report);
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
     checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                          const WellState& well_state,
                          RatioLimitCheckReport& report,
@@ -669,7 +720,7 @@ namespace Opm
         }
 
         if (econ_production_limits.onMaxGasOilRatio()) {
-            deferred_logger.warning("NOT_SUPPORTING_MAX_GOR", "the support for max Gas-Oil ratio is not implemented yet!");
+            checkMaxGORLimit(econ_production_limits, well_state, report);
         }
 
         if (econ_production_limits.onMaxWaterGasRatio()) {

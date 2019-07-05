@@ -385,10 +385,15 @@ namespace Opm
                               const WellState& well_state,
                               RatioLimitCheckReport& report) const;
 
+        void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
+                              const WellState& well_state,
+                              RatioLimitCheckReport& report) const;
+
         void checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                                   const WellState& well_state,
                                   RatioLimitCheckReport& report,
                                   Opm::DeferredLogger& deferred_logger) const;
+
 
         template <typename RatioFunc>
         bool checkMaxRatioLimitWell(const WellState& well_state,
