@@ -379,20 +379,16 @@ namespace Opm
 
         double mostStrictBhpFromBhpLimits(Opm::DeferredLogger& deferred_logger) const;
 
-        // a tuple type for ratio limit check.
-        // first value indicates whether ratio limit is violated, when the ratio limit is not violated, the following two
-        // values should not be used.
-        // second value indicates the index of the worst-offending completion.
-        // the last value indicates the extent of the violation for the worst-offending completion, which is defined by
-        // the ratio of the actual value to the value of the violated limit.
-        using RatioCheckTuple = std::tuple<bool, int, double>;
+        struct RatioLimitCheckReport;
 
-        RatioCheckTuple checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                                              const WellState& well_state) const;
+        void checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
+                              const WellState& well_state,
+                              RatioLimitCheckReport& report) const;
 
-        RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                                             const WellState& well_state,
-                                             Opm::DeferredLogger& deferred_logger) const;
+        void checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
+                                  const WellState& well_state,
+                                  RatioLimitCheckReport& report,
+                                  Opm::DeferredLogger& deferred_logger) const;
 
         template <typename RatioFunc>
         bool checkMaxRatioLimitWell(const WellState& well_state,
@@ -403,8 +399,7 @@ namespace Opm
         void checkMaxRatioLimitCompletions(const WellState& well_state,
                                            const double max_ratio_limit,
                                            const RatioFunc& ratioFunc,
-                                           int& worst_offending_completion,
-                                           double& violation_extent) const;
+                                           RatioLimitCheckReport& report) const;
 
         double scalingFactor(const int comp_idx) const;
 
@@ -499,6 +494,17 @@ namespace Opm
         bool obey_bhp_limit_with_thp_limit = true;
 
     };
+
+
+    template<typename TypeTag>
+    struct
+    WellInterface<TypeTag>::
+    RatioLimitCheckReport{
+        bool ratio_limit_violated = false;
+        int worst_offending_completion = INVALIDCOMPLETION;
+        double violation_extent = 0.0;
+    };
+
     const std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
 
 }
