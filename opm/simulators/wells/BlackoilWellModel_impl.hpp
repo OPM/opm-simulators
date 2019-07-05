@@ -359,7 +359,7 @@ namespace Opm {
             std::vector< Scalar > B_avg(numComponents(), Scalar() );
             computeAverageFormationFactor(B_avg);
 
-            const auto& wellsForTesting = wellTestState_.updateWell(wtest_config, simulationTime);
+            const auto& wellsForTesting = wellTestState_.updateWells(wtest_config, wells_ecl_, simulationTime);
             for (const auto& testWell : wellsForTesting) {
                 const std::string& well_name = testWell.first;
 
@@ -544,7 +544,7 @@ namespace Opm {
 
                 if (allow_closing_opening_wells) {
                     // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
-                    if ( wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::PHYSICAL ) ) {
+                    if ( wellTestState_.hasWellClosed(well_name)) {
                         // TODO: more checking here, to make sure this standard more specific and complete
                         // maybe there is some WCON keywords will not open the well
                         if (well_state_.effectiveEventsOccurred(w)) {
@@ -555,7 +555,7 @@ namespace Opm {
                                 // even if it was new or received new targets this report step.
                                 well_state_.setEffectiveEventsOccurred(w, false);
                             } else {
-                                wellTestState_.openWell(well_name, WellTestConfig::Reason::PHYSICAL);
+                                wellTestState_.openWell(well_name);
                             }
                         }
                     }
