@@ -405,12 +405,12 @@ protected:
                 const MILU_VARIANT ilu_milu  = parameters_.ilu_milu_;
                 if (  parameters_.use_cpr_ )
                 {
-                    using Matrix         = typename MatrixOperator::matrix_type;
+                    using MatrixType     = typename MatrixOperator::matrix_type;
                     using CouplingMetric = Opm::Amg::Element<pressureEqnIndex, pressureVarIndex>;
-                    using CritBase       = Dune::Amg::SymmetricCriterion<Matrix, CouplingMetric>;
+                    using CritBase       = Dune::Amg::SymmetricCriterion<MatrixType, CouplingMetric>;
                     using Criterion      = Dune::Amg::CoarsenCriterion<CritBase>;
                     using AMG = typename ISTLUtility
-                        ::BlackoilAmgSelector< Matrix, Vector, Vector,POrComm, Criterion, pressureEqnIndex, pressureVarIndex >::AMG;
+                        ::BlackoilAmgSelector< MatrixType, Vector, Vector,POrComm, Criterion, pressureEqnIndex, pressureVarIndex >::AMG;
 
                     std::unique_ptr< AMG > amg;
                     // Construct preconditioner.
@@ -650,8 +650,7 @@ protected:
         void makeOverlapRowsInvalid(Matrix& ebosJacIgnoreOverlap) const
         {
             //value to set on diagonal
-            typedef Dune::FieldMatrix<Scalar, numEq, numEq >        MatrixBlockType;
-            MatrixBlockType diag_block(0.0);
+            Dune::FieldMatrix<Scalar, numEq, numEq> diag_block(0.0);
             for (int eq = 0; eq < numEq; ++eq)
                 diag_block[eq][eq] = 1.0e100;
 

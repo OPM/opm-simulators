@@ -179,8 +179,8 @@ namespace Opm
                     opASerial_.reset(new OperatorSerial(*(this->matrix_), *(this->matrix_), wellModel));
                 }
 
-                using POrComm = Dune::Amg::SequentialInformation;
-                POrComm parallelInformation_arg;
+                using POrCommType = Dune::Amg::SequentialInformation;
+                POrCommType parallelInformation_arg;
                 typedef  OperatorSerial LinearOperator;
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
@@ -189,7 +189,7 @@ namespace Opm
                 sp_ = std::move(sp);
 #else
                 constexpr int  category = Dune::SolverCategory::sequential;
-                typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
+                typedef Dune::ScalarProductChooser<Vector, POrCommType, category> ScalarProductChooser;
                 typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
                 SPPointer sp(ScalarProductChooser::construct(parallelInformation_arg));
                 sp_ = std::move(sp);
