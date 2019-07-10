@@ -236,34 +236,6 @@ namespace Opm {
             bool forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
 
         protected:
-
-            void extractLegacyPressure_(std::vector<double>& cellPressure) const
-            {
-                size_t nc = number_of_cells_;
-                std::vector<double> cellPressures(nc, 0.0);
-                ElementContext elemCtx(ebosSimulator_);
-                const auto& gridView = ebosSimulator_.vanguard().gridView();
-                const auto& elemEndIt = gridView.template end</*codim=*/0>();
-                for (auto elemIt = gridView.template begin</*codim=*/0>();
-                     elemIt != elemEndIt;
-                     ++elemIt)
-                {
-                    const auto& elem = *elemIt;
-                    if (elem.partitionType() != Dune::InteriorEntity) {
-                        continue;
-                    }
-                    elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-                    const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                    const auto& fs = intQuants.fluidState();
-
-                    const double p = fs.pressure(FluidSystem::oilPhaseIdx).value();
-                    cellPressures[cellIdx] = p;
-                }
-            }
-
             Simulator& ebosSimulator_;
             std::unique_ptr<WellsManager> wells_manager_;
             std::vector< Well2 > wells_ecl_;

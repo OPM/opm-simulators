@@ -560,10 +560,10 @@ private:
 
     template <class Intersection>
     void computeFaceProperties(const Intersection& intersection,
-                               const int insideElemIdx,
-                               const int insideFaceIdx,
-                               const int outsideElemIdx,
-                               const int outsideFaceIdx,
+                               const int insideElemIdx OPM_UNUSED,
+                               const int insideFaceIdx OPM_UNUSED,
+                               const int outsideElemIdx OPM_UNUSED,
+                               const int outsideFaceIdx OPM_UNUSED,
                                DimVector& faceCenterInside,
                                DimVector& faceCenterOutside,
                                DimVector& faceAreaNormal,
