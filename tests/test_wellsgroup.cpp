@@ -33,7 +33,7 @@
 #include <opm/core/wells/WellsGroup.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GroupTree.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -97,22 +97,26 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
 
     for( const auto& grp_name : sched.groupNames() ) {
         if( !nodes.exists( grp_name ) ) continue;
-        const auto& group = sched.getGroup(grp_name);
+        const auto& group = sched.getGroup2(grp_name, 2);
 
         std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, 2, pu);
         BOOST_CHECK_EQUAL(group.name(), wellsGroup->name());
-        if (group.isInjectionGroup(2)) {
-            BOOST_CHECK_EQUAL(group.getSurfaceMaxRate(2), wellsGroup->injSpec().surface_flow_max_rate_);
-            BOOST_CHECK_EQUAL(group.getReservoirMaxRate(2), wellsGroup->injSpec().reservoir_flow_max_rate_);
-            BOOST_CHECK_EQUAL(group.getTargetReinjectFraction(2), wellsGroup->injSpec().reinjection_fraction_target_);
-            BOOST_CHECK_EQUAL(group.getTargetVoidReplacementFraction(2), wellsGroup->injSpec().voidage_replacment_fraction_);
+        if (group.isInjectionGroup()) {
+            const auto& injection = group.injectionProperties();
+
+            BOOST_CHECK_EQUAL(injection.surface_max_rate, wellsGroup->injSpec().surface_flow_max_rate_);
+            BOOST_CHECK_EQUAL(injection.resv_max_rate, wellsGroup->injSpec().reservoir_flow_max_rate_);
+            BOOST_CHECK_EQUAL(injection.target_reinj_fraction, wellsGroup->injSpec().reinjection_fraction_target_);
+            BOOST_CHECK_EQUAL(injection.target_void_fraction, wellsGroup->injSpec().voidage_replacment_fraction_);
         }
-        if (group.isProductionGroup(2)) {
-            BOOST_CHECK_EQUAL(group.getReservoirVolumeTargetRate(2), wellsGroup->prodSpec().reservoir_flow_max_rate_);
-            BOOST_CHECK_EQUAL(group.getGasTargetRate(2), wellsGroup->prodSpec().gas_max_rate_);
-            BOOST_CHECK_EQUAL(group.getOilTargetRate(2), wellsGroup->prodSpec().oil_max_rate_);
-            BOOST_CHECK_EQUAL(group.getWaterTargetRate(2), wellsGroup->prodSpec().water_max_rate_);
-            BOOST_CHECK_EQUAL(group.getLiquidTargetRate(2), wellsGroup->prodSpec().liquid_max_rate_);
+
+        if (group.isProductionGroup()) {
+            const auto& production = group.productionProperties();
+            BOOST_CHECK_EQUAL(production.resv_target, wellsGroup->prodSpec().reservoir_flow_max_rate_);
+            BOOST_CHECK_EQUAL(production.gas_target, wellsGroup->prodSpec().gas_max_rate_);
+            BOOST_CHECK_EQUAL(production.oil_target, wellsGroup->prodSpec().oil_max_rate_);
+            BOOST_CHECK_EQUAL(production.water_target, wellsGroup->prodSpec().water_max_rate_);
+            BOOST_CHECK_EQUAL(production.liquid_target, wellsGroup->prodSpec().liquid_max_rate_);
         }
     }
 }
@@ -133,12 +137,12 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     const auto& nodes = sched.getGroupTree(2);
     for( const auto& grp_name : sched.groupNames() ) {
         if( !nodes.exists( grp_name ) ) continue;
-        const auto& group = sched.getGroup(grp_name);
+        const auto& group = sched.getGroup2(grp_name, 2);
 
         std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, 2, pu);
         BOOST_CHECK_EQUAL(group.name(), wellsGroup->name());
-        BOOST_CHECK_EQUAL(group.getGroupEfficiencyFactor(2), wellsGroup->efficiencyFactor());
-        BOOST_CHECK_EQUAL(group.getGroupEfficiencyFactor(2), wellsGroup->efficiencyFactor());
+        BOOST_CHECK_EQUAL(group.getGroupEfficiencyFactor(), wellsGroup->efficiencyFactor());
+        BOOST_CHECK_EQUAL(group.getGroupEfficiencyFactor(), wellsGroup->efficiencyFactor());
 
     }
 }

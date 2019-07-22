@@ -29,7 +29,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GroupTree.hpp>
 
 using namespace Opm;
@@ -50,11 +50,11 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     WellCollection collection;
 
     // Add groups to WellCollection
-    const auto& fieldGroup =  sched.getGroup("FIELD");
+    const auto& fieldGroup =  sched.getGroup2("FIELD", 2);
     collection.addField(fieldGroup, 2, pu);
 
-    collection.addGroup( sched.getGroup( "G1" ), fieldGroup.name(), 2, pu);
-    collection.addGroup( sched.getGroup( "G2" ), fieldGroup.name(), 2, pu);
+    collection.addGroup( sched.getGroup2( "G1", 2 ), fieldGroup.name(), 2, pu);
+    collection.addGroup( sched.getGroup2( "G2", 2 ), fieldGroup.name(), 2, pu);
 
     BOOST_CHECK_EQUAL("FIELD", collection.findNode("FIELD")->name());
     BOOST_CHECK_EQUAL("FIELD", collection.findNode("G1")->getParent()->name());
@@ -89,10 +89,10 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     size_t timestep = 2;
     WellCollection collection;
     // Add groups to WellCollection
-    const auto& fieldGroup =  sched.getGroup("FIELD");
+    const auto& fieldGroup =  sched.getGroup2("FIELD", timestep);
     collection.addField(fieldGroup, timestep, pu);
-    collection.addGroup( sched.getGroup( "G1" ), fieldGroup.name(), timestep, pu);
-    collection.addGroup( sched.getGroup( "G2" ), fieldGroup.name(), timestep, pu);
+    collection.addGroup( sched.getGroup2( "G1", timestep ), fieldGroup.name(), timestep, pu);
+    collection.addGroup( sched.getGroup2( "G2", timestep ), fieldGroup.name(), timestep, pu);
 
     BOOST_CHECK_EQUAL(1.0, collection.findNode("FIELD")->efficiencyFactor());
     BOOST_CHECK_EQUAL(1.0, collection.findNode("G1")->getParent()->efficiencyFactor());

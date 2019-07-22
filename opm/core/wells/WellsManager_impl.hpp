@@ -371,7 +371,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
     setupWellControls(wells, summaryState, well_names, pu, wells_on_proc);
 
     {
-        const auto& fieldGroup = schedule.getGroup( "FIELD" );
+        const auto& fieldGroup = schedule.getGroup2( "FIELD", timeStep);
         well_collection_.addField(fieldGroup, timeStep, pu);
 
         const auto& grouptree = schedule.getGroupTree( timeStep );
@@ -384,7 +384,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
             group_stack.insert( group_stack.end(), children.begin(), children.end() );
 
             for( const auto& child : children ) {
-                well_collection_.addGroup( schedule.getGroup( child ), parent, timeStep, pu );
+                well_collection_.addGroup( schedule.getGroup2( child, timeStep ), parent, timeStep, pu );
             }
 
         } while( !group_stack.empty() );

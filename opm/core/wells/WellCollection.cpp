@@ -21,7 +21,7 @@
 #include <opm/core/wells/WellCollection.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 
 #include <boost/lexical_cast.hpp>
@@ -30,7 +30,7 @@
 
 namespace Opm
 {
-    void WellCollection::addField(const Group& fieldGroup, size_t timeStep, const PhaseUsage& phaseUsage) {
+    void WellCollection::addField(const Group2& fieldGroup, size_t timeStep, const PhaseUsage& phaseUsage) {
         WellsGroupInterface* fieldNode = findNode(fieldGroup.name());
         if (fieldNode) {
             OPM_THROW(std::runtime_error, "Trying to add FIELD node, but this already exists. Can only have one FIELD node.");
@@ -39,7 +39,7 @@ namespace Opm
         roots_.push_back(createGroupWellsGroup(fieldGroup, timeStep, phaseUsage));
     }
 
-    void WellCollection::addGroup(const Group& groupChild, std::string parent_name,
+    void WellCollection::addGroup(const Group2& groupChild, std::string parent_name,
                                   size_t timeStep, const PhaseUsage& phaseUsage) {
         WellsGroupInterface* parent = findNode(parent_name);
         if (!parent) {
@@ -51,7 +51,7 @@ namespace Opm
 
         }
 
-        if (groupChild.isProductionGroup(timeStep) || groupChild.isInjectionGroup(timeStep)) {
+        if (groupChild.isProductionGroup() || groupChild.isInjectionGroup()) {
             group_control_active_ = true;
         }
 
