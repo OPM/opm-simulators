@@ -75,12 +75,14 @@ NEW_PROP_TAG(EclStrictParsing);
 NEW_PROP_TAG(EclOutputInterval);
 NEW_PROP_TAG(IgnoreKeywords);
 NEW_PROP_TAG(EnableExperiments);
+NEW_PROP_TAG(EdgeWeightsMethod);
 
 SET_STRING_PROP(EclBaseVanguard, IgnoreKeywords, "");
 SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
 SET_INT_PROP(EclBaseVanguard, EclOutputInterval, -1); // use the deck-provided value
 SET_BOOL_PROP(EclBaseVanguard, EnableOpmRstFile, false);
 SET_BOOL_PROP(EclBaseVanguard, EclStrictParsing, false);
+SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
 
 END_PROPERTIES
 
@@ -124,6 +126,8 @@ public:
                              "List of Eclipse keywords which should be ignored. As a ':' separated string.");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclStrictParsing,
                              "Use strict mode for parsing - all errors are collected before the applicaton exists.");
+        EWOMS_REGISTER_PARAM(TypeTag, int, EdgeWeightsMethod,
+                             "Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
     }
 
     /*!
@@ -255,6 +259,7 @@ public:
 #endif
 
         std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
+        edgeWeightsMethod_   = Dune::EdgeWeightMethod(EWOMS_GET_PARAM(TypeTag, int, EdgeWeightsMethod));
 
         if (fileName == "")
             throw std::runtime_error("No input deck file has been specified as a command line argument,"
@@ -443,6 +448,12 @@ public:
 
     const Opm::SummaryState& summaryState() const
     { return summaryState_; }
+
+    /*!
+     * \brief Parameter deciding the edge-weight strategy of the load balancer.
+     */
+    Dune::EdgeWeightMethod edgeWeightsMethod() const
+    { return edgeWeightsMethod_; }
     /*!
      * \brief Returns the name of the case.
      *
@@ -589,6 +600,7 @@ private:
 
     Opm::SummaryState summaryState_;
 
+    Dune::EdgeWeightMethod edgeWeightsMethod_;
 };
 
 template <class TypeTag>

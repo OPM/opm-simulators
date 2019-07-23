@@ -157,6 +157,8 @@ public:
             globalTrans_ = new EclTransmissibility<TypeTag>(*this);
             globalTrans_->update();
 
+            Dune::EdgeWeightMethod edgeWeightsMethod = this->edgeWeightsMethod();
+
             // convert to transmissibility for faces
             // TODO: grid_->numFaces() is not generic. use grid_->size(1) instead? (might
             // not work)
@@ -192,7 +194,7 @@ public:
             //distribute the grid and switch to the distributed view.
             {
                 const auto wells = this->schedule().getWells2atEnd();
-                defunctWellNames_ = std::get<1>(grid_->loadBalance(&wells, faceTrans.data()));
+                defunctWellNames_ = std::get<1>(grid_->loadBalance(edgeWeightsMethod, &wells, faceTrans.data()));
             }
             grid_->switchToDistributedView();
 
