@@ -12,7 +12,7 @@ function dotest {
 pushd .
 cd deps/opm-tests
 
-EXE=flow_legacy
+EXE=flow
 
 # Run the SPE1/3/9 cases
 cd spe1
