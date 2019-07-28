@@ -115,7 +115,6 @@ namespace MissingFeatures {
             "EQUALREG",
             "EXCEL",
             "EXTRAPMS",
-            "FILLEPS",
             "FLUXTYPE",
             "FULLIMP",
             "GCONSALE",
