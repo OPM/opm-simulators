@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(findInterpData)
 
     BOOST_CHECK_EQUAL(eval2.ind_[0], 0);
     BOOST_CHECK_EQUAL(eval2.ind_[1], 1);
-    BOOST_CHECK_EQUAL(eval2.factor_, -0.5);
+    BOOST_CHECK_EQUAL(eval2.factor_, -0.25);
 
     BOOST_CHECK_EQUAL(eval3.ind_[0], 4);
     BOOST_CHECK_EQUAL(eval3.ind_[1], 5);
