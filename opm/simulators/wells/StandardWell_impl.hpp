@@ -2430,23 +2430,30 @@ namespace Opm
                           std::vector<double>& well_potentials,
                           Opm::DeferredLogger& deferred_logger) // const
     {
-        updatePrimaryVariables(well_state, deferred_logger);
-        computeWellConnectionPressures(ebosSimulator, well_state);
+
+        // creating a copy of the well itself, to avoid messing up the explicit informations
+        // during this copy, the only information not copied properly is the well controls
+        StandardWell<TypeTag> well(*this);
+
+        well.well_controls_ = this->createWellControlsWithBHPAndTHP(deferred_logger);
+
+        well.updatePrimaryVariables(well_state, deferred_logger);
+        well.computeWellConnectionPressures(ebosSimulator, well_state);
 
         // initialize the primary variables in Evaluation, which is used in computePerfRate for computeWellPotentials
         // TODO: for computeWellPotentials, no derivative is required actually
-        initPrimaryVariablesEvaluation();
+        well.initPrimaryVariablesEvaluation();
 
         const int np = number_of_phases_;
         well_potentials.resize(np, 0.0);
 
         // get the bhp value based on the bhp constraints
-        const double bhp = mostStrictBhpFromBhpLimits(deferred_logger);
+        const double bhp = well.mostStrictBhpFromBhpLimits(deferred_logger);
 
         // does the well have a THP related constraint?
-        if ( !wellHasTHPConstraints() ) {
+        if ( !well.wellHasTHPConstraints() ) {
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
-            computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
+            well.computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
         } else {
             // the well has a THP related constraint
             // checking whether a well is newly added, it only happens at the beginning of the report step
@@ -2458,7 +2465,7 @@ namespace Opm
                 }
             } else {
                 // We need to generate a reasonable rates to start the iteration process
-                computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
+                well.computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
                 for (double& value : well_potentials) {
                     // make the value a little safer in case the BHP limits are default ones
                     // TODO: a better way should be a better rescaling based on the investigation of the VFP table.
@@ -2467,8 +2474,12 @@ namespace Opm
                 }
             }
 
-            well_potentials = computeWellPotentialWithTHP(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
+            well_potentials = well.computeWellPotentialWithTHP(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
         }
+
+
+        // destroy the newly created WellControls
+        well_controls_destroy(well.well_controls_);
     }
 
 

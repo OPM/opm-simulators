@@ -1068,13 +1068,7 @@ namespace Opm {
         const int np = numPhases();
         well_potentials.resize(nw * np, 0.0);
 
-
-        const int reportStepIdx = ebosSimulator_.episodeIndex();
-        const double invalid_alq = -1e100;
-        const double invalid_vfp = -2147483647;
         auto well_state_copy = well_state_;
-        const Wells* local_wells = clone_wells(wells());
-        std::vector<WellInterfacePtr> well_container_copy = createWellContainer(reportStepIdx, local_wells, /*allow_closing_opening_wells=*/ false, deferred_logger);
 
         // average B factors are required for the convergence checking of well equations
         // Note: this must be done on all processes, even those with
@@ -1087,51 +1081,7 @@ namespace Opm {
         const bool write_restart_file = ebosSimulator_.vanguard().eclState().getRestartConfig().getWriteRestartFile(reportStepIdx);
         int exception_thrown = 0;
         try {
-            for (const auto& well : well_container_copy) {
-                // Only compute the well potential when asked for
-                well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
-
-                WellControls* wc = well->wellControls();
-                well_controls_clear(wc);
-                well_controls_assert_number_of_phases( wc , np);
-                if (well->wellType() == INJECTOR) {
-                    const auto controls = well->wellEcl()->injectionControls(summaryState);
-
-                    if (controls.hasControl(WellInjector::THP)) {
-                        const double thp_limit  = controls.thp_limit;
-                        const int    vfp_number = controls.vfp_table_number;
-                        well_controls_add_new(THP, thp_limit, invalid_alq, vfp_number, NULL, wc);
-                    }
-
-                    // we always have a bhp limit
-                    const double bhp_limit = controls.bhp_limit;
-                    well_controls_add_new(BHP, bhp_limit, invalid_alq, invalid_vfp, NULL, wc);
-                } else {
-                    const auto controls = well->wellEcl()->productionControls(summaryState);
-                    if (controls.hasControl(WellProducer::THP)) {
-                        const double thp_limit  = controls.thp_limit;
-                        const double alq_value  = controls.alq_value;
-                        const int    vfp_number = controls.vfp_table_number;
-                        well_controls_add_new(THP, thp_limit, alq_value, vfp_number, NULL, wc);
-                    }
-
-                    // we always have a bhp limit
-                    const double bhp_limit = controls.bhp_limit;
-                    well_controls_add_new(BHP, bhp_limit, invalid_alq, invalid_vfp, NULL, wc);
-
-                    well->setVFPProperties(vfp_properties_.get());
-
-                }
-
-                if (has_polymer_)
-                {
-                    const Grid& grid = ebosSimulator_.vanguard().grid();
-                    if (PolymerModule::hasPlyshlog() || GET_PROP_VALUE(TypeTag, EnablePolymerMW) ) {
-                        well->computeRepRadiusPerfLength(grid, cartesian_to_compressed_, deferred_logger);
-                    }
-                }
-
-
+            for (const auto& well : well_container_) {
 
                 const bool needed_for_summary = ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
                                                   summaryConfig.hasSummaryKey( "WOPI:" + well->name()) ||
