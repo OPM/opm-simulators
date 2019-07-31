@@ -1556,7 +1556,7 @@ namespace Opm
         }
     } // anonymous namespace
 
-    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group2& group, size_t timeStep, const PhaseUsage& phase_usage )
+    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group2& group, const PhaseUsage& phase_usage )
     {
         InjectionSpecification injection_specification;
         ProductionSpecification production_specification;

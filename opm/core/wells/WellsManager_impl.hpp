@@ -372,19 +372,15 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
 
     {
         const auto& fieldGroup = schedule.getGroup2( "FIELD", timeStep);
-        well_collection_.addField(fieldGroup, timeStep, pu);
-
-        const auto& grouptree = schedule.getGroupTree( timeStep );
+        well_collection_.addField(fieldGroup, pu);
         std::vector< std::string > group_stack = { "FIELD" };
 
         do {
-            auto parent = group_stack.back();
+            const auto& parent = schedule.getGroup2(group_stack.back(), timeStep);
             group_stack.pop_back();
-            const auto& children = grouptree.children( parent );
-            group_stack.insert( group_stack.end(), children.begin(), children.end() );
-
-            for( const auto& child : children ) {
-                well_collection_.addGroup( schedule.getGroup2( child, timeStep ), parent, timeStep, pu );
+            for (const auto& child: parent.groups()) {
+                group_stack.push_back(child);
+                well_collection_.addGroup( schedule.getGroup2( child, timeStep ), parent.name(), pu );
             }
 
         } while( !group_stack.empty() );
@@ -393,7 +389,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
     for (size_t i = 0; i < wells_on_proc.size(); ++i) {
         // wells_on_proc is a vector of flag to indicate whether a well is on the process
         if (wells_on_proc[i]) {
-            well_collection_.addWell(wells[i], summaryState, timeStep, pu);
+            well_collection_.addWell(wells[i], summaryState, pu);
         }
     }
 

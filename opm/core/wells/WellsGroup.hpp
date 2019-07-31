@@ -549,7 +549,7 @@ namespace Opm
     /// \param[in] group the Group to construct object for
     /// \param[in] timeStep the time step in question
     /// \param[in] the phase usage
-    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group2& group, size_t timeStep,
+    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group2& group,
                                                                const PhaseUsage& phase_usage );
 }
 

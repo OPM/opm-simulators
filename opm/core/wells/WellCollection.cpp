@@ -30,17 +30,17 @@
 
 namespace Opm
 {
-    void WellCollection::addField(const Group2& fieldGroup, size_t timeStep, const PhaseUsage& phaseUsage) {
+    void WellCollection::addField(const Group2& fieldGroup, const PhaseUsage& phaseUsage) {
         WellsGroupInterface* fieldNode = findNode(fieldGroup.name());
         if (fieldNode) {
             OPM_THROW(std::runtime_error, "Trying to add FIELD node, but this already exists. Can only have one FIELD node.");
         }
 
-        roots_.push_back(createGroupWellsGroup(fieldGroup, timeStep, phaseUsage));
+        roots_.push_back(createGroupWellsGroup(fieldGroup, phaseUsage));
     }
 
     void WellCollection::addGroup(const Group2& groupChild, std::string parent_name,
-                                  size_t timeStep, const PhaseUsage& phaseUsage) {
+                                  const PhaseUsage& phaseUsage) {
         WellsGroupInterface* parent = findNode(parent_name);
         if (!parent) {
             OPM_THROW(std::runtime_error, "Trying to add child group to group named " << parent_name << ", but this does not exist in the WellCollection.");
@@ -55,7 +55,7 @@ namespace Opm
             group_control_active_ = true;
         }
 
-        std::shared_ptr<WellsGroupInterface> child = createGroupWellsGroup(groupChild, timeStep, phaseUsage);
+        std::shared_ptr<WellsGroupInterface> child = createGroupWellsGroup(groupChild, phaseUsage);
 
         if (child->injSpec().control_mode_ == InjectionSpecification::VREP) {
             having_vrep_groups_ = true;
@@ -69,7 +69,7 @@ namespace Opm
         child->setParent(parent);
     }
 
-    void WellCollection::addWell(const Well2& wellChild, const SummaryState& summaryState, size_t timeStep, const PhaseUsage& phaseUsage) {
+    void WellCollection::addWell(const Well2& wellChild, const SummaryState& summaryState, const PhaseUsage& phaseUsage) {
         if (wellChild.getStatus() == WellCommon::SHUT) {
             //SHUT wells are not added to the well collection
             return;
@@ -77,7 +77,7 @@ namespace Opm
 
         WellsGroupInterface* parent = findNode(wellChild.groupName());
         if (!parent) {
-            OPM_THROW(std::runtime_error, "Trying to add well " << wellChild.name() << " Step: " << boost::lexical_cast<std::string>(timeStep) << " to group named " << wellChild.groupName() << ", but this group does not exist in the WellCollection.");
+            OPM_THROW(std::runtime_error, "Trying to add well " << wellChild.name() << " to group named " << wellChild.groupName() << ", but this group does not exist in the WellCollection.");
         }
 
         std::shared_ptr<WellsGroupInterface> child = createWellWellsGroup(wellChild, summaryState, phaseUsage);
