@@ -701,7 +701,7 @@ private:
     void extractPermeability_()
     {
         const auto& props = vanguard_.eclState().get3DProperties();
-
+        const auto& deck = vanguard_.deck();
         unsigned numElem = vanguard_.gridView().size(/*codim=*/0);
         permeability_.resize(numElem);
 
@@ -709,6 +709,32 @@ private:
         // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
         // simulation grid might remove a few elements. (e.g. because it is distributed
         // over several processes.)
+
+        if (deck.hasKeyword("PERMFUN")) {
+            const std::vector<double>& poro = props.getDoubleGridProperty("PORO").getData();
+            const auto& permfun = deck.getKeyword("PERMFUN");
+            std::vector<double> permx(poro.size());
+            /*
+
+              PERMX = MIN_PERM + poro^POWER
+
+            */
+            const double min_perm = permfun.getRecord(0).getItem("MIN_PERM").getSIDouble(0);
+            const double power = permfun.getRecord(0).getItem("POWER").getSIDouble(0);
+
+            for (std::size_t index = 0; index < poro.size(); index++) {
+                permx[index] = min_perm + std::pow(poro[index], power);
+            }
+
+            for (size_t dofIdx = 0; dofIdx < numElem; ++ dofIdx) {
+                unsigned cartesianElemIdx = vanguard_.cartesianIndex(dofIdx);
+                permeability_[dofIdx] = 0.0;
+                permeability_[dofIdx][0][0] = permx[cartesianElemIdx];
+                permeability_[dofIdx][1][1] = permx[cartesianElemIdx];
+                permeability_[dofIdx][2][2] = permx[cartesianElemIdx];
+            }
+        }
+        else
         if (props.hasDeckDoubleGridProperty("PERMX")) {
             const std::vector<double>& permxData =
                 props.getDoubleGridProperty("PERMX").getData();
