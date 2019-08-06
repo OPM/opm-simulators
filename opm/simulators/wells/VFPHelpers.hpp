@@ -199,14 +199,18 @@ struct InterpData {
 
 /**
  * Helper function to find indices etc. for linear interpolation and extrapolation
- *  @param value Value to find in values
+ *  @param value_in Value to find in values
  *  @param values Sorted list of values to search for value in.
  *  @return Data required to find the interpolated value
  */
-inline InterpData findInterpData(const double& value, const std::vector<double>& values) {
+inline InterpData findInterpData(const double& value_in, const std::vector<double>& values) {
     InterpData retval;
 
     const int nvalues = values.size();
+
+    // chopping the value to be zero, which means we do not
+    // extrapolate the table towards nagative ranges
+    const double value = value_in < 0.? 0. : value_in;
 
     //If we only have one value in our vector, return that
     if (values.size() == 1) {
