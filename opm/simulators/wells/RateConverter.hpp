@@ -437,7 +437,7 @@ namespace Opm {
                 // and set all attributes to zero
                 const auto& grid = simulator.vanguard().grid();
                 const unsigned numCells = grid.size(/*codim=*/0);
-                std::vector<int> cell2region(numCells, -1);
+                std::vector<RegionId> cell2region(numCells, -1);
                 for (const auto& reg : rmap_.activeRegions()) {
                     for (const auto& cell : rmap_.cells(reg)) {
                         cell2region[cell] = reg;
@@ -449,6 +449,17 @@ namespace Opm {
                     ra.rv = 0.0;
                     ra.pv = 0.0;
 
+                }
+
+                // quantities for pore volume average
+                std::unordered_map<RegionId, Attributes> atrributes_pv;
+
+                // quantities for hydrocarbon volume average
+                std::unordered_map<RegionId, Attributes> atrributes_hpv;
+
+                for (const auto& reg : rmap_.activeRegions()) {
+                    attributes_pv.insert({reg, Attributes()});
+                    attributes_hpv.insert({reg, Attributes()});
                 }
 
                 ElementContext elemCtx( simulator );
@@ -482,44 +493,63 @@ namespace Opm {
                         hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
                     }
 
-                    int reg = cell2region[cellIdx];
+                    const auto& reg = cell2region[cellIdx];
                     assert(reg >= 0);
-                    auto& ra = attr_.attributes(reg);
-                    auto& p  = ra.pressure;
-                    auto& T  = ra.temperature;
-                    auto& rs  = ra.rs;
-                    auto& rv  = ra.rv;
-                    auto& pv  = ra.pv;
 
                     // sum p, rs, rv, and T.
-                    double hydrocarbonPV = pv_cell*hydrocarbon;
-                    if (hydrocarbonPV > 0) {
-                        pv += hydrocarbonPV;
-                        p += fs.pressure(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
-                        rs += fs.Rs().value()*hydrocarbonPV;
-                        rv += fs.Rv().value()*hydrocarbonPV;
-                        T += fs.temperature(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
+                    const double hydrocarbonPV = pv_cell*hydrocarbon;
+                    if (hydrocarbonPV > 0.) {
+                        auto& attr = attributes_hpv[reg];
+                        attr.pv += hydrocarbonPV;
+                        attr.p += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
+                        attr.rs += fs.Rs().value() * hydrocarbonPV;
+                        attr.rv += fs.Rv().value() * hydrocarbonPV;
+                        attr.T += fs.temperature(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
+                    }
+
+                    if (pv_cell > 0.) {
+                        auto& attr = attributes_pv[reg];
+                        attr.pv += pv_cell;
+                        attr.p += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
+                        attr.rs += fs.Rs().value() * pv_cell;
+                        attr.rv += fs.Rv().value() * pv_cell;
+                        attr.T += fs.temperature(FluidSystem::oilPhaseIdx).value() * pv_cell;
                     }
                 }
 
                 for (const auto& reg : rmap_.activeRegions()) {
                       auto& ra = attr_.attributes(reg);
-                      auto& p  = ra.pressure;
-                      auto& T  = ra.temperature;
-                      auto& rs  = ra.rs;
-                      auto& rv  = ra.rv;
-                      auto& pv  = ra.pv;
-                      // communicate sums
-                      p = comm.sum(p);
-                      T = comm.sum(T);
-                      rs = comm.sum(rs);
-                      rv = comm.sum(rv);
-                      pv = comm.sum(pv);
-                      // compute average
-                      p /= pv;
-                      T /= pv;
-                      rs /= pv;
-                      rv /= pv;
+
+                      const double hpv_sum = comm.sum(attributes_hpv[reg].pv);
+                      // TODO: should we have some epsilon here instead of zero?
+                      if (hpv_sum > 0.) {
+                          const auto& attri_hpv = attributes_hpv[reg];
+                          const double p_hpv_sum = comm.sum(attri_hpv.p);
+                          const double T_hpv_sum = comm.sum(attri_hpv.T);
+                          const double rs_hpv_sum = comm.sum(attri_hpv.rs);
+                          const double rv_hpv_sum = comm.sum(attri_hpv.rv);
+
+                          ra.pressure = p_hpv_sum / hpv_sum;
+                          ra.temperature = T_hpv_sum / hpv_sum;
+                          ra.rs = rs_hpv_sum / hpv_sum;
+                          ra.rv = rv_hpv_sum / hpv_sum;
+                          ra.pv = hpv_sum;
+                      } else {
+                          // using the pore volume to do the averaging
+                          const auto& attri_pv = attributes_pv[reg];
+                          const double pv_sum = comm.sum(attri_pv.pv);
+                          assert(pv_sum > 0.);
+                          const double p_pv_sum = comm.sum(attri_pv.p);
+                          const double T_pv_sum = comm.sum(attri_pv.T);
+                          const double rs_pv_sum = comm.sum(attri_pv.rs);
+                          const double rv_pv_sum = comm.sum(attri_pv.rv);
+
+                          ra.pressure = p_pv_sum / pv_sum;
+                          ra.temperature = T_pv_sum / pv_sum;
+                          ra.rs = rs_pv_sum / pv_sum;
+                          ra.rv = rv_pv_sum / pv_sum;
+                          ra.pv = pv_sum;
+                      }
                 }
             }
 
