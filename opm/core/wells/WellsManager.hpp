@@ -26,7 +26,6 @@
 
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/wells/WellsGroup.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GroupTree.hpp>
 
 #include <opm/grid/utility/CompressedPropertyAccess.hpp>
 

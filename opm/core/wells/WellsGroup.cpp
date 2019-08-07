@@ -1556,30 +1556,32 @@ namespace Opm
         }
     } // anonymous namespace
 
-    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group& group, size_t timeStep, const PhaseUsage& phase_usage )
+    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group2& group, const PhaseUsage& phase_usage )
     {
         InjectionSpecification injection_specification;
         ProductionSpecification production_specification;
-        if (group.isInjectionGroup(timeStep)) {
-            injection_specification.injector_type_ = toInjectorType(group.getInjectionPhase(timeStep));
-            injection_specification.control_mode_ = toInjectionControlMode(GroupInjection::ControlEnum2String(group.getInjectionControlMode(timeStep)));
-            injection_specification.surface_flow_max_rate_ = group.getSurfaceMaxRate(timeStep);
-            injection_specification.reservoir_flow_max_rate_ = group.getReservoirMaxRate(timeStep);
-            injection_specification.reinjection_fraction_target_ = group.getTargetReinjectFraction(timeStep);
-            injection_specification.voidage_replacment_fraction_ = group.getTargetVoidReplacementFraction(timeStep);
+        if (group.isInjectionGroup()) {
+            const auto& injection = group.injectionProperties();
+            injection_specification.injector_type_ = toInjectorType(injection.phase);
+            injection_specification.control_mode_ = toInjectionControlMode(GroupInjection::ControlEnum2String(injection.cmode));
+            injection_specification.surface_flow_max_rate_ = injection.surface_max_rate;
+            injection_specification.reservoir_flow_max_rate_ = injection.resv_max_rate;
+            injection_specification.reinjection_fraction_target_ = injection.target_reinj_fraction;
+            injection_specification.voidage_replacment_fraction_ = injection.target_void_fraction;
         }
 
-        if (group.isProductionGroup(timeStep)) {
-            production_specification.oil_max_rate_ = group.getOilTargetRate(timeStep);
-            production_specification.control_mode_ = toProductionControlMode(GroupProduction::ControlEnum2String(group.getProductionControlMode(timeStep)));
-            production_specification.water_max_rate_ = group.getWaterTargetRate(timeStep);
-            production_specification.gas_max_rate_ = group.getGasTargetRate(timeStep);
-            production_specification.liquid_max_rate_ = group.getLiquidTargetRate(timeStep);
-            production_specification.procedure_ = toProductionProcedure(GroupProductionExceedLimit::ActionEnum2String(group.getProductionExceedLimitAction(timeStep)));
-            production_specification.reservoir_flow_max_rate_ = group.getReservoirVolumeTargetRate(timeStep);
+        if (group.isProductionGroup()) {
+            const auto& production = group.productionProperties();
+            production_specification.oil_max_rate_ = production.oil_target;
+            production_specification.control_mode_ = toProductionControlMode(GroupProduction::ControlEnum2String(production.cmode));
+            production_specification.water_max_rate_ = production.water_target;
+            production_specification.gas_max_rate_ = production.gas_target;
+            production_specification.liquid_max_rate_ = production.liquid_target;
+            production_specification.procedure_ = toProductionProcedure(GroupProductionExceedLimit::ActionEnum2String(production.exceed_action));
+            production_specification.reservoir_flow_max_rate_ = production.resv_target;
         }
 
-        const double efficiency_factor = group.getGroupEfficiencyFactor(timeStep);
+        const double efficiency_factor = group.getGroupEfficiencyFactor();
 
         std::shared_ptr<WellsGroupInterface> wells_group(new WellsGroup(group.name(), efficiency_factor, production_specification, injection_specification, phase_usage));
         return wells_group;
