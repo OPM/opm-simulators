@@ -372,7 +372,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
 
     {
         const auto& fieldGroup = schedule.getGroup2( "FIELD", timeStep);
-        well_collection_.addField(fieldGroup, pu);
+        well_collection_.addField(fieldGroup, summaryState, pu);
         std::vector< std::string > group_stack = { "FIELD" };
 
         do {
@@ -380,7 +380,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
             group_stack.pop_back();
             for (const auto& child: parent.groups()) {
                 group_stack.push_back(child);
-                well_collection_.addGroup( schedule.getGroup2( child, timeStep ), parent.name(), pu );
+                well_collection_.addGroup( schedule.getGroup2( child, timeStep ), parent.name(), summaryState, pu );
             }
 
         } while( !group_stack.empty() );

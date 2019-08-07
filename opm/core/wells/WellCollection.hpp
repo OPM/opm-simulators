@@ -36,12 +36,12 @@ namespace Opm
     {
     public:
 
-        void addField(const Group2& fieldGroup, const PhaseUsage& phaseUsage);
+        void addField(const Group2& fieldGroup, const SummaryState& summaryState, const PhaseUsage& phaseUsage);
 
         void addWell(const Well2& wellChild, const SummaryState& summaryState, const PhaseUsage& phaseUsage);
 
         void addGroup(const Group2& groupChild, std::string parent_name,
-                      const PhaseUsage& phaseUsage);
+                      const SummaryState& summaryState, const PhaseUsage& phaseUsage);
 
         /// Adds the child to the collection
         /// and appends it to parent's children.

@@ -89,14 +89,15 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
+    SummaryState summaryState;
 
     for( const auto& grp_name : sched.groupNames() ) {
         const auto& group = sched.getGroup2(grp_name, 2);
 
-        std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, pu);
+        std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, summaryState, pu);
         BOOST_CHECK_EQUAL(group.name(), wellsGroup->name());
         if (group.isInjectionGroup()) {
-            const auto& injection = group.injectionProperties();
+            const auto& injection = group.injectionControls(summaryState);
 
             BOOST_CHECK_EQUAL(injection.surface_max_rate, wellsGroup->injSpec().surface_flow_max_rate_);
             BOOST_CHECK_EQUAL(injection.resv_max_rate, wellsGroup->injSpec().reservoir_flow_max_rate_);
@@ -105,7 +106,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
         }
 
         if (group.isProductionGroup()) {
-            const auto& production = group.productionProperties();
+            const auto& production = group.productionControls(summaryState);
             BOOST_CHECK_EQUAL(production.resv_target, wellsGroup->prodSpec().reservoir_flow_max_rate_);
             BOOST_CHECK_EQUAL(production.gas_target, wellsGroup->prodSpec().gas_max_rate_);
             BOOST_CHECK_EQUAL(production.oil_target, wellsGroup->prodSpec().oil_max_rate_);
@@ -126,12 +127,12 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
-
+    SummaryState summaryState;
 
     for( const auto& grp_name : sched.groupNames() ) {
         const auto& group = sched.getGroup2(grp_name, 2);
 
-        std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, pu);
+        std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, summaryState, pu);
         BOOST_CHECK_EQUAL(group.name(), wellsGroup->name());
         BOOST_CHECK_EQUAL(group.getGroupEfficiencyFactor(), wellsGroup->efficiencyFactor());
         BOOST_CHECK_EQUAL(group.getGroupEfficiencyFactor(), wellsGroup->efficiencyFactor());

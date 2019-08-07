@@ -1556,12 +1556,12 @@ namespace Opm
         }
     } // anonymous namespace
 
-    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group2& group, const PhaseUsage& phase_usage )
+    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group2& group, const SummaryState& st, const PhaseUsage& phase_usage )
     {
         InjectionSpecification injection_specification;
         ProductionSpecification production_specification;
         if (group.isInjectionGroup()) {
-            const auto& injection = group.injectionProperties();
+            const auto& injection = group.injectionControls(st);
             injection_specification.injector_type_ = toInjectorType(injection.phase);
             injection_specification.control_mode_ = toInjectionControlMode(GroupInjection::ControlEnum2String(injection.cmode));
             injection_specification.surface_flow_max_rate_ = injection.surface_max_rate;
@@ -1571,7 +1571,7 @@ namespace Opm
         }
 
         if (group.isProductionGroup()) {
-            const auto& production = group.productionProperties();
+            const auto& production = group.productionControls(st);
             production_specification.oil_max_rate_ = production.oil_target;
             production_specification.control_mode_ = toProductionControlMode(GroupProduction::ControlEnum2String(production.cmode));
             production_specification.water_max_rate_ = production.water_target;
