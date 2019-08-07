@@ -395,8 +395,17 @@ public:
             }
 
             if (oilPressure_.size() > 0) {
-                oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
-                Opm::Valgrind::CheckDefined(oilPressure_[globalDofIdx]);
+                if(FluidSystem::phaseIsActive(oilPhaseIdx)){
+                    oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
+                }else{
+                    // put pressure in oil pressure for output
+                    if(FluidSystem::phaseIsActive(waterPhaseIdx)){
+                        oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(waterPhaseIdx));
+                    }else{
+                        oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(gasPhaseIdx));
+                    }
+                }
+                Opm::Valgrind::CheckDefined(oilPressure_[globalDofIdx]);   
             }
 
             if (enableEnergy) {

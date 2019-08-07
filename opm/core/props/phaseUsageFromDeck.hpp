@@ -54,14 +54,9 @@ namespace Opm
             }
         }
 
-        // Only 2 or 3 phase systems handled.
-        if (pu.num_phases < 2 || pu.num_phases > 3) {
-            OPM_THROW(std::runtime_error, "Cannot handle cases with " << pu.num_phases << " phases.");
-        }
-
         // We need oil systems, since we do not support the keywords needed for
         // water-gas systems.
-        if (!pu.phase_used[BlackoilPhases::Liquid]) {
+        if (!pu.phase_used[BlackoilPhases::Liquid] && !(pu.num_phases==1)) {
             OPM_THROW(std::runtime_error, "Cannot handle cases with no OIL, i.e. water-gas systems.");
         }
 

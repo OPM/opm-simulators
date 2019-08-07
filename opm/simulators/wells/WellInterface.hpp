@@ -102,6 +102,7 @@ namespace Opm
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
         static const bool has_energy = GET_PROP_VALUE(TypeTag, EnableEnergy);
+        static const bool has_temperature = GET_PROP_VALUE(TypeTag, EnableTemperature);
         // flag for polymer molecular weight related
         static const bool has_polymermw = GET_PROP_VALUE(TypeTag, EnablePolymerMW);
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
@@ -112,7 +113,13 @@ namespace Opm
         // For the conversion between the surface volume rate and resrevoir voidage rate
         using RateConverterType = RateConverter::
         SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
-
+        static const bool compositionSwitchEnabled = Indices::gasEnabled;
+        using FluidState = Opm::BlackOilFluidState<Eval,
+						   FluidSystem,
+						   has_temperature,
+						   has_energy,
+						   compositionSwitchEnabled,
+						   Indices::numPhases >;
         /// Constructor
         WellInterface(const Well2& well, const int time_step, const Wells* wells,
                       const ModelParameters& param,
