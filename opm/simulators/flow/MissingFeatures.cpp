@@ -422,7 +422,6 @@ namespace MissingFeatures {
             "NOWARN",
             "NSTACK",
             "NUMRES",
-            "NUPCOL",
             "OLDTRAN",
             "OPERATER",
             "OPTIONS",

@@ -195,6 +195,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/VFPHelpers.hpp
   opm/simulators/wells/VFPInjProperties.hpp
   opm/simulators/wells/VFPProdProperties.hpp
+  opm/simulators/wells/WellGroupHelpers.hpp
   opm/simulators/wells/WellHelpers.hpp
   opm/simulators/wells/WellInterface.hpp
   opm/simulators/wells/WellInterface_impl.hpp

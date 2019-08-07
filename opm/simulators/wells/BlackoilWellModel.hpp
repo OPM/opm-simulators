@@ -47,6 +47,7 @@
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/MultisegmentWell.hpp>
+#include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -203,11 +204,6 @@ namespace Opm {
             // Check if well equations is converged.
             ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg) const;
 
-            // return all the wells.
-            const WellCollection& wellCollection() const;
-            // return non const reference to all the wells.
-            WellCollection& wellCollection();
-
             // return the internal well state, ignore the passed one.
             // Used by the legacy code to make it compatible with the legacy well models.
             const WellState& wellState(const WellState& well_state OPM_UNUSED) const;
@@ -306,9 +302,7 @@ namespace Opm {
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
-            void updateWellControls(Opm::DeferredLogger& deferred_logger);
-
-            void updateGroupControls(Opm::DeferredLogger& deferred_logger);
+            void updateWellControls(Opm::DeferredLogger& deferred_logger, const bool checkGroupControl);
 
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(Opm::DeferredLogger& deferred_logger);
@@ -320,17 +314,12 @@ namespace Opm {
 
             void computeAverageFormationFactor(std::vector<Scalar>& B_avg) const;
 
-            void applyVREPGroupControl();
-
-            void computeWellVoidageRates(std::vector<double>& well_voidage_rates,
-                                         std::vector<double>& voidage_conversion_coeffs) const;
-
             // Calculating well potentials for each well
-            void computeWellPotentials(std::vector<double>& well_potentials, Opm::DeferredLogger& deferred_logger);
+            void computeWellPotentials(std::vector<double>& well_potentials, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
 
             const std::vector<double>& wellPerfEfficiencyFactors() const;
 
-            void calculateEfficiencyFactors();
+            void calculateEfficiencyFactors(const int reportStepIdx);
 
             // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
             // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
@@ -350,17 +339,11 @@ namespace Opm {
 
             int numPhases() const;
 
-            void resetWellControlFromState() const;
-
             void assembleWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger);
 
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(Opm::DeferredLogger& deferred_logger);
-
-            void prepareGroupControl(Opm::DeferredLogger& deferred_logger);
-
-            void computeRESV(Opm::DeferredLogger& deferred_logger);
 
             void extractLegacyCellPvtRegionIndex_();
 
@@ -391,6 +374,13 @@ namespace Opm {
             bool anyMSWellOpenLocal(const Wells* wells) const;
 
             const Well2& getWellEcl(const std::string& well_name) const;
+
+            void checkGroupConstraints(const Group2& group, Opm::DeferredLogger& deferred_logger);
+
+            void actionOnBrokenConstraints(const Group2& group, const Group2::ExceedAction& exceed_action, const Group2::ProductionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
+
+            void actionOnBrokenConstraints(const Group2& group, const Group2::InjectionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
+
         };
 
 

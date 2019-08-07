@@ -163,7 +163,8 @@ namespace Opm
                                                Opm::DeferredLogger& deferred_logger) const override;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg,
+        virtual ConvergenceReport getWellConvergence(const WellState& well_state,
+                                                     const std::vector<double>& B_avg,
                                                      Opm::DeferredLogger& deferred_logger) const override;
 
         /// Ax = Ax - C D^-1 B x
@@ -210,10 +211,9 @@ namespace Opm
         using Base::wsolvent;
         using Base::wpolymer;
         using Base::wfoam;
-        using Base::wellHasTHPConstraints;
-        using Base::mostStrictBhpFromBhpLimits;
         using Base::scalingFactor;
         using Base::scaleProductivityIndex;
+        using Base::mostStrictBhpFromBhpLimits;
 
         // protected member variables from the Base class
         using Base::current_step_;
@@ -232,7 +232,6 @@ namespace Opm
         using Base::comp_frac_;
         using Base::well_index_;
         using Base::index_of_well_;
-        using Base::well_controls_;
         using Base::well_type_;
         using Base::num_components_;
         using Base::connectionRates_;
@@ -240,6 +239,8 @@ namespace Opm
         using Base::perf_rep_radius_;
         using Base::perf_length_;
         using Base::bore_diameters_;
+
+        using Base::wellIsStopped_;
 
         // total number of the well equations and primary variables
         // there might be extra equations be used, numWellEq will be updated during the initialization
@@ -364,7 +365,8 @@ namespace Opm
                                                         Opm::DeferredLogger& deferred_logger);
 
         template <class ValueType>
-        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const int control_index, Opm::DeferredLogger& deferred_logger) const;
+        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const Well2& well, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger) const;
+
 
         double calculateThpFromBhp(const std::vector<double>& rates, const double bhp, Opm::DeferredLogger& deferred_logger) const;
 
@@ -390,7 +392,11 @@ namespace Opm
 
         void updateThp(WellState& well_state, Opm::DeferredLogger& deferred_logger) const;
 
-        void assembleControlEq(Opm::DeferredLogger& deferred_logger);
+        void assembleControlEq(const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger);
+
+        void assembleGroupProductionControl(const Group2& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
+        void assembleGroupInjectionControl(const Group2& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState,  const Well2::InjectorType& injectorType, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
+
 
         // handle the non reasonable fractions due to numerical overshoot
         void processFractions() const;
@@ -444,7 +450,7 @@ namespace Opm
         // calculate the BHP from THP target based on IPR
         // TODO: we need to check the operablility here first, if not operable, then maybe there is
         // no point to do this
-        double calculateBHPWithTHPTargetIPR(Opm::DeferredLogger& deferred_logger) const;
+        double calculateBHPWithTHPTargetIPR(const Well2& well, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger) const;
 
         // relaxation factor considering only one fraction value
         static double relaxationFactorFraction(const double old_value,
@@ -493,7 +499,8 @@ namespace Opm
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
 
         // checking the convergence of the well control equations
-        void checkConvergenceControlEq(ConvergenceReport& report,
+        void checkConvergenceControlEq(const WellState& well_state,
+                                       ConvergenceReport& report,
                                        DeferredLogger& deferred_logger) const;
 
         // checking convergence of extra equations, if there are any
@@ -506,6 +513,7 @@ namespace Opm
                                         const WellState& well_state,
                                         const int perf,
                                         DeferredLogger& deferred_logger);
+
 
     };
 
