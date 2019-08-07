@@ -38,6 +38,7 @@
 #include <map>
 #include <algorithm>
 #include <array>
+#include <iostream>
 
 namespace Opm
 {
@@ -157,11 +158,12 @@ namespace Opm
                 }
             }
 
-            current_controls_.resize(nw);
-            // The controls set in the Wells (specified in the DECK) are treated as default initial value
-            for (int w = 0; w < nw; ++w) {
-                current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
-            }
+            current_injection_controls_.resize(nw);
+            current_production_controls_.resize(nw);
+            current_injection_group_controls_.clear();
+            current_production_group_controls_.clear();
+
+
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
             productivity_index_.resize(nw * np, 0.0);
@@ -186,12 +188,16 @@ namespace Opm
                         // thp
                         thp()[ newIndex ] = prevState->thp()[ oldIndex ];
 
-                        // if there is no effective control event happens to the well, we use the current_controls_ from prevState
+                         // Currently this is taken care of by updateWellStateFromTarge. Maybe we should just remove the initialization and just use updateWellStateFromTarget
+                         //if (effective_events_occurred_[w]) {
+                         //   continue;
+                         //}
+
+                        // if there is no effective control event happens to the well, we use the current_injection/production_controls_ from prevState
                         // otherwise, we use the control specified in the deck
                         if (!effective_events_occurred_[w]) {
-                            current_controls_[ newIndex ] = prevState->currentControls()[ oldIndex ];
-                            // also change the one in the WellControls
-                            well_controls_set_current(wells->ctrls[w], current_controls_[ newIndex ]);
+                            current_injection_controls_[ newIndex ] = prevState->currentInjectionControls()[ oldIndex ];
+                            current_production_controls_[ newIndex ] = prevState->currentProductionControls()[ oldIndex ];
                         }
 
                         // wellrates
@@ -307,196 +313,44 @@ namespace Opm
             }
         }
 
-        /// Allocate and initialize if wells is non-null.  Also tries
-        /// to give useful initial values to the bhp(), wellRates()
-        /// and perfPhaseRates() fields, depending on controls.
-        ///
-        /// this method is only for flow_legacy!
-        template <class PrevWellState>
-        void initLegacy(const Wells* wells, const std::vector<double>& cellPressures , const PrevWellState& prevState, const PhaseUsage& pu)
-        {
-            // call init on base class
-            BaseType :: init(wells, cellPressures);
-
-            // if there are no well, do nothing in init
-            if (wells == 0) {
-                return;
-            }
-
-            const int nw = wells->number_of_wells;
-
-            if( nw == 0 ) return ;
-
-            // Initialize perfphaserates_, which must be done here.
-            const int np = wells->number_of_phases;
-            const int nperf = wells->well_connpos[nw];
-
-            well_reservoir_rates_.resize(nw * np, 0.0);
-            well_dissolved_gas_rates_.resize(nw, 0.0);
-            well_vaporized_oil_rates_.resize(nw, 0.0);
-
-            productivity_index_.resize(nw * np, 0.0);
-            well_potentials_.resize(nw*np, 0.0);
-
-            // Ensure that we start out with zero rates by default.
-            perfphaserates_.clear();
-            perfphaserates_.resize(nperf * np, 0.0);
-            for (int w = 0; w < nw; ++w) {
-                assert((wells->type[w] == INJECTOR) || (wells->type[w] == PRODUCER));
-                const WellControls* ctrl = wells->ctrls[w];
-
-                if (well_controls_well_is_stopped(ctrl)) {
-                    // Shut well: perfphaserates_ are all zero.
-                } else {
-                    const int num_perf_this_well = wells->well_connpos[w + 1] - wells->well_connpos[w];
-                    // Open well: Initialize perfphaserates_ to well
-                    // rates divided by the number of perforations.
-                    for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
-                        for (int p = 0; p < np; ++p) {
-                            perfphaserates_[np*perf + p] = wellRates()[np*w + p] / double(num_perf_this_well);
-                        }
-                        perfPress()[perf] = cellPressures[wells->well_cells[perf]];
-                    }
-                }
-            }
-
-            // Initialize current_controls_.
-            // The controls set in the Wells object are treated as defaults,
-            // and also used for initial values.
-            current_controls_.resize(nw);
-            for (int w = 0; w < nw; ++w) {
-                current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
-            }
-
-            perfRateSolvent_.clear();
-            perfRateSolvent_.resize(nperf, 0.0);
-
-            // intialize wells that have been there before
-            // order may change so the mapping is based on the well name
-            if( ! prevState.wellMap().empty() )
-            {
-                typedef typename WellMapType :: const_iterator const_iterator;
-                const_iterator end = prevState.wellMap().end();
-                for (int w = 0; w < nw; ++w) {
-                    std::string name( wells->name[ w ] );
-                    const_iterator it = prevState.wellMap().find( name );
-                    if( it != end )
-                    {
-                        const int oldIndex = (*it).second[ 0 ];
-                        const int newIndex = w;
-
-                        // bhp
-                        bhp()[ newIndex ] = prevState.bhp()[ oldIndex ];
-
-                        // thp
-                        thp()[ newIndex ] = prevState.thp()[ oldIndex ];
-
-                        // wellrates
-                        for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )
-                        {
-                            wellRates()[ idx ] = prevState.wellRates()[ oldidx ];
-                        }
-
-                        // perfPhaseRates
-                        const int oldPerf_idx_beg = (*it).second[ 1 ];
-                        const int num_perf_old_well = (*it).second[ 2 ];
-                        const int num_perf_this_well = wells->well_connpos[newIndex + 1] - wells->well_connpos[newIndex];
-                        // copy perforation rates when the number of perforations is equal,
-                        // otherwise initialize perfphaserates to well rates divided by the number of perforations.
-                        if( num_perf_old_well == num_perf_this_well )
-                        {
-                            int old_perf_phase_idx = oldPerf_idx_beg *np;
-                            for (int perf_phase_idx = wells->well_connpos[ newIndex ]*np;
-                                 perf_phase_idx < wells->well_connpos[ newIndex + 1]*np; ++perf_phase_idx, ++old_perf_phase_idx )
-                            {
-                                perfPhaseRates()[ perf_phase_idx ] = prevState.perfPhaseRates()[ old_perf_phase_idx ];
-                            }
-                        } else {
-                            for (int perf = wells->well_connpos[newIndex]; perf < wells->well_connpos[newIndex + 1]; ++perf) {
-                                for (int p = 0; p < np; ++p) {
-                                    perfPhaseRates()[np*perf + p] = wellRates()[np*newIndex + p] / double(num_perf_this_well);
-                                }
-                            }
-                        }
-                        // perfPressures
-                        if( num_perf_old_well == num_perf_this_well )
-                        {
-                            int oldPerf_idx = oldPerf_idx_beg;
-                            for (int perf = wells->well_connpos[ newIndex ];
-                                 perf < wells->well_connpos[ newIndex + 1]; ++perf, ++oldPerf_idx )
-                            {
-                                perfPress()[ perf ] = prevState.perfPress()[ oldPerf_idx ];
-                            }
-                        }
-                        // perfSolventRates
-                        if (pu.has_solvent) {
-                            if( num_perf_old_well == num_perf_this_well )
-                            {
-                                int oldPerf_idx = oldPerf_idx_beg;
-                                for (int perf = wells->well_connpos[ newIndex ];
-                                     perf < wells->well_connpos[ newIndex + 1]; ++perf, ++oldPerf_idx )
-                                {
-                                    perfRateSolvent()[ perf ] = prevState.perfRateSolvent()[ oldPerf_idx ];
-                                }
-                            }
-                        }
-                    }
-
-
-                    // If in the new step, there is no THP related target/limit anymore, its thp value should be
-                    // set to zero.
-                    const WellControls* ctrl = wells->ctrls[w];
-                    const int nwc = well_controls_get_num(ctrl);
-                    int ctrl_index = 0;
-                    for (; ctrl_index < nwc; ++ctrl_index) {
-                        if (well_controls_iget_type(ctrl, ctrl_index) == THP) {
-                            break;
-                        }
-                    }
-                    // not finding any thp related control/limits
-                    if (ctrl_index == nwc) {
-                        thp()[w] = 0.;
-                    }
-                }
-            }
-
-            {
-                // we need to create a trival segment related values to avoid there will be some
-                // multi-segment wells added later.
-                nseg_ = nw;
-                top_segment_index_.resize(nw);
-                seg_number_.resize(nw);
-                for (int w = 0; w < nw; ++w) {
-                    top_segment_index_[w] = w;
-                    seg_number_[w] = 1; // Top segment is segment #1
-                }
-                segpress_ = bhp();
-                segrates_ = wellRates();
-            }
-        }
-
-        // this method is only for flow_legacy!
-        template <class State, class PrevWellState>
-        void initLegacy(const Wells* wells, const State& state, const PrevWellState& prevState, const PhaseUsage& pu)
-        {
-            initLegacy(wells, state.pressure(), prevState, pu);
-        }
-
-        // this method is only for flow_legacy!
-        template <class State>
-        void resizeLegacy(const Wells* wells, const State& state, const PhaseUsage& pu)
-        {
-            const WellStateFullyImplicitBlackoil dummy_state{}; // Init with an empty previous state only resizes
-            initLegacy(wells, state, dummy_state, pu) ;
-        }
-
         /// One rate per phase and well connection.
         std::vector<double>& perfPhaseRates() { return perfphaserates_; }
         const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
 
-        /// One current control per well.
-        std::vector<int>& currentControls() { return current_controls_; }
-        const std::vector<int>& currentControls() const { return current_controls_; }
+        /// One current control per injecting well.
+        std::vector<Opm::Well2::InjectorCMode>& currentInjectionControls() { return current_injection_controls_; }
+        const std::vector<Opm::Well2::InjectorCMode>& currentInjectionControls() const { return current_injection_controls_; }
+
+
+        /// One current control per producing well.
+        std::vector<Well2::ProducerCMode>& currentProductionControls() { return current_production_controls_; }
+        const std::vector<Well2::ProducerCMode>& currentProductionControls() const { return current_production_controls_; }
+
+        /// One current control per group.
+        void setCurrentProductionGroupControl(const std::string& groupName, const Group2::ProductionCMode& groupControl ) {
+            current_production_group_controls_[groupName] = groupControl;
+        }
+        const Group2::ProductionCMode& currentProductionGroupControl(const std::string& groupName) const {
+            auto it = current_production_group_controls_.find(groupName);
+
+            if (it == current_production_group_controls_.end())
+                OPM_THROW(std::logic_error, "Could not find any well control for " << groupName);
+
+            return it->second;
+        }
+
+        /// One current control per group.
+        void setCurrentInjectionGroupControl(const std::string& groupName, const Group2::InjectionCMode& groupControl ) {
+            current_injection_group_controls_[groupName] = groupControl;
+        }
+        const Group2::InjectionCMode& currentInjectionGroupControl(const std::string& groupName) const {
+            auto it = current_injection_group_controls_.find(groupName);
+
+            if (it == current_injection_group_controls_.end())
+                OPM_THROW(std::logic_error, "Could not find any well control for " << groupName);
+
+            return it->second;
+        }
 
         data::Wells report(const PhaseUsage &pu, const int* globalCellIdxMap) const override
         {
@@ -538,8 +392,8 @@ namespace Opm
             for( const auto& wt : this->wellMap() ) {
                 const auto w = wt.second[ 0 ];
                 auto& well = res.at( wt.first );
-                well.control = this->currentControls()[ w ];
-
+                well.injectionControl = static_cast<int>(this->currentInjectionControls()[ w ]);
+                well.productionControl = static_cast<int>(this->currentProductionControls()[ w ]);
                 const int well_rate_index = w * pu.num_phases;
 
                 if ( pu.phase_used[Water] ) {
@@ -835,6 +689,11 @@ namespace Opm
             return well_reservoir_rates_;
         }
 
+        const std::vector<double>& wellReservoirRates() const
+        {
+            return well_reservoir_rates_;
+        }
+
         std::vector<double>& wellDissolvedGasRates()
         {
             return well_dissolved_gas_rates_;
@@ -919,7 +778,12 @@ namespace Opm
 
     private:
         std::vector<double> perfphaserates_;
-        std::vector<int> current_controls_;
+        std::vector<Opm::Well2::InjectorCMode> current_injection_controls_;
+        std::vector<Well2::ProducerCMode> current_production_controls_;
+        std::map<std::string, Group2::ProductionCMode> current_production_group_controls_;
+        std::map<std::string, Group2::InjectionCMode> current_injection_group_controls_;
+
+
         std::vector<double> perfRateSolvent_;
 
         // it is the throughput of water flow through the perforations

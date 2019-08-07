@@ -206,16 +206,6 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
         BOOST_CHECK(well->wellType() == PRODUCER);
         BOOST_CHECK(well->numEq == 3);
         BOOST_CHECK(well->numStaticWellEq== 4);
-        const auto& wc = well->wellControls();
-        const int ctrl_num = well_controls_get_num(wc);
-        BOOST_CHECK(ctrl_num > 0);
-        const auto& control = well_controls_get_current(wc);
-        BOOST_CHECK(control >= 0);
-        // GAS RATE CONTROL
-        const auto& distr = well_controls_iget_distr(wc, control);
-        BOOST_CHECK(distr[0] == 0.);
-        BOOST_CHECK(distr[1] == 0.);
-        BOOST_CHECK(distr[2] == 1.);
     }
 
     // second well, it is the injection well from the deck
@@ -224,16 +214,6 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
         BOOST_CHECK_EQUAL(well->name(), "INJE1");
         BOOST_CHECK(well->wellType() == INJECTOR);
         BOOST_CHECK(well->numEq == 3);
-        BOOST_CHECK(well->numStaticWellEq== 4);
-        const auto& wc = well->wellControls();
-        const int ctrl_num = well_controls_get_num(wc);
-        BOOST_CHECK(ctrl_num > 0);
-        const auto& control = well_controls_get_current(wc);
-        BOOST_CHECK(control >= 0);
-        // WATER RATE CONTROL
-        const auto& distr = well_controls_iget_distr(wc, control);
-        BOOST_CHECK(distr[0] == 1.);
-        BOOST_CHECK(distr[1] == 0.);
-        BOOST_CHECK(distr[2] == 0.);
+        BOOST_CHECK(well->numStaticWellEq== 4);      
     }
 }

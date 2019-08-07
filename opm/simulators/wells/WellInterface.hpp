@@ -2,6 +2,7 @@
   Copyright 2017 SINTEF Digital, Mathematics and Cybernetics.
   Copyright 2017 Statoil ASA.
   Copyright 2017 IRIS
+  Copyright 2019 Norce
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -39,6 +40,7 @@
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
+#include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
@@ -142,7 +144,7 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const = 0;
 
-        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger) const = 0;
+        virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger) const = 0;
 
         virtual void solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger) = 0;
 
@@ -226,7 +228,7 @@ namespace Opm
 
         void closeCompletions(WellTestState& wellTestState);
 
-        const Well2* wellEcl() const;
+        const Well2& wellEcl() const;
 
         // TODO: theoretically, it should be a const function
         // Simulator is not const is because that assembleWellEq is non-const Simulator
@@ -244,13 +246,24 @@ namespace Opm
         bool isOperable() const;
 
         /// Returns true if the well has one or more THP limits/constraints.
-        bool wellHasTHPConstraints() const;
+        bool wellHasTHPConstraints(const SummaryState& summaryState) const;
 
         /// Returns true if the well is currently in prediction mode (i.e. not history mode).
         bool underPredictionMode() const;
 
         // update perforation water throughput based on solved water rate
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const = 0;
+
+        void stopWell() {
+            wellIsStopped_ = true;
+        }
+        void openWell() {
+            wellIsStopped_ = false;
+        }
+
+        bool wellIsStopped() {
+            return wellIsStopped_;
+        }
 
     protected:
 
@@ -277,9 +290,6 @@ namespace Opm
         // component fractions for each well
         // typically, it should apply to injection wells
         std::vector<double> comp_frac_;
-
-        // controls for this well
-        struct WellControls* well_controls_;
 
         // number of the perforations for this well
         int number_of_perforations_;
@@ -350,6 +360,8 @@ namespace Opm
 
         std::vector<RateVector> connectionRates_;
 
+        bool wellIsStopped_;
+
         const PhaseUsage& phaseUsage() const;
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
@@ -366,14 +378,14 @@ namespace Opm
                                  const WellState& well_state,
                                  Opm::DeferredLogger& deferred_logger) const;
 
-        double getTHPConstraint(Opm::DeferredLogger& deferred_logger) const;
+        double getTHPConstraint(const SummaryState& summaryState) const;
 
         int getControlIndex(const WellControlType& type) const;
 
         // Component fractions for each phase for the well
         const std::vector<double>& compFrac() const;
 
-        double mostStrictBhpFromBhpLimits(Opm::DeferredLogger& deferred_logger) const;
+        double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
 
         struct RatioLimitCheckReport;
 
@@ -431,9 +443,9 @@ namespace Opm
                                          WellTestState& well_test_state,
                                          Opm::DeferredLogger& deferred_logger) const;
 
-        void  solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state,
-                                  const std::vector<double>& B_avg,
-                                  Opm::DeferredLogger& deferred_logger);
+        void solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state,
+                                 const std::vector<double>& B_avg,
+                                 Opm::DeferredLogger& deferred_logger);
 
         bool solveWellEqUntilConverged(const Simulator& ebosSimulator,
                                        const std::vector<double>& B_avg,
@@ -444,14 +456,14 @@ namespace Opm
 
         void initCompletions();
 
-        WellControls* createWellControlsWithBHPAndTHP(DeferredLogger& deferred_logger) const;
-
         // count the number of times an output log message is created in the productivity
         // index calculations
         int well_productivity_index_logger_counter_;
 
+        bool checkConstraints(WellState& well_state, const SummaryState& summaryState);
 
     };
+
 
 
 

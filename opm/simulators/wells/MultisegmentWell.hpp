@@ -124,7 +124,7 @@ namespace Opm
                                                Opm::DeferredLogger& deferred_logger) const override;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger) const override;
+        virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger) const override;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const override;
@@ -188,7 +188,6 @@ namespace Opm
         using Base::saturation_table_number_;
         using Base::well_efficiency_factor_;
         using Base::gravity_;
-        using Base::well_controls_;
         using Base::perf_depth_;
         using Base::num_components_;
         using Base::connectionRates_;
@@ -200,6 +199,8 @@ namespace Opm
         using Base::ebosCompIdxToFlowCompIdx;
         using Base::getAllowCrossFlow;
         using Base::scalingFactor;
+        using Base::wellIsStopped_;
+
 
         // TODO: trying to use the information from the Well opm-parser as much
         // as possible, it will possibly be re-implemented later for efficiency reason.
@@ -325,7 +326,7 @@ namespace Opm
 
         EvalWell getSegmentRate(const int seg, const int comp_idx) const;
 
-        EvalWell getSegmentRateUpwinding(const int seg, const int comp_idx) const;
+        EvalWell getSegmentRateUpwinding(const int seg, const size_t comp_idx) const;
 
         EvalWell getSegmentGTotal(const int seg) const;
 
@@ -340,7 +341,10 @@ namespace Opm
                                               std::vector<double>& well_flux,
                                               Opm::DeferredLogger& deferred_logger);
 
-        void assembleControlEq(Opm::DeferredLogger& deferred_logger) const;
+        void assembleControlEq(const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger);
+        void assembleGroupProductionControl(const Group2& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
+        void assembleGroupInjectionControl(const Group2& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState,  const Well2::InjectorType& injectorType, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
+
 
         void assemblePressureEq(const int seg) const;
 
@@ -392,12 +396,14 @@ namespace Opm
         void detectOscillations(const std::vector<double>& measure_history,
                                 const int it, bool& oscillate, bool& stagnate) const;
 
-        double getResidualMeasureValue(const std::vector<double>& residuals,
+        double getResidualMeasureValue(const WellState& well_state,
+                                       const std::vector<double>& residuals,
                                        DeferredLogger& deferred_logger) const;
 
-        double getControlTolerance(DeferredLogger& deferred_logger) const;
+        double getControlTolerance(const WellState& well_state, DeferredLogger& deferred_logger) const;
 
-        void checkConvergenceControlEq(ConvergenceReport& report,
+        void checkConvergenceControlEq(const WellState& well_state,
+                                       ConvergenceReport& report,
                                        DeferredLogger& deferred_logger) const;
 
         void updateUpwindingSegments();

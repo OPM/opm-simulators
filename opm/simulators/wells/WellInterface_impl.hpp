@@ -73,8 +73,6 @@ namespace Opm
                       wells->comp_frac + index_begin + number_of_phases_, comp_frac_.begin() );
         }
 
-        well_controls_ = wells->ctrls[index_well];
-
         ref_depth_ = wells->depth_ref[index_well];
 
         // perforations related
@@ -108,6 +106,12 @@ namespace Opm
         connectionRates_.resize(number_of_perforations_);
 
         well_productivity_index_logger_counter_ = 0;
+
+        wellIsStopped_ = false;
+        if (well.getStatus() == Well2::Status::STOP) {
+            wellIsStopped_ = true;
+        }
+
 
     }
 
@@ -200,14 +204,6 @@ namespace Opm
 
 
     template<typename TypeTag>
-    WellControls*
-    WellInterface<TypeTag>::
-    wellControls() const
-    {
-        return well_controls_;
-    }
-
-    template<typename TypeTag>
     int
     WellInterface<TypeTag>::
     indexOfWell() const
@@ -242,11 +238,11 @@ namespace Opm
 
 
     template<typename TypeTag>
-    const Well2*
+    const Well2&
     WellInterface<TypeTag>::
     wellEcl() const
     {
-      return std::addressof(well_ecl_);
+      return well_ecl_;
     }
 
 
@@ -372,102 +368,64 @@ namespace Opm
 
 
 
-
-
-    template<typename TypeTag>
-    double
-    WellInterface<TypeTag>::
-    mostStrictBhpFromBhpLimits(Opm::DeferredLogger& deferred_logger) const
-    {
-        double bhp;
-
-        // initial bhp value, making the value not usable
-        switch( well_type_ ) {
-        case INJECTOR:
-            bhp = std::numeric_limits<double>::max();
-            break;
-        case PRODUCER:
-            bhp = -std::numeric_limits<double>::max();
-            break;
-        default:
-            OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name(), deferred_logger);
-        }
-
-        // The number of the well controls/constraints
-        const int nwc = well_controls_get_num(well_controls_);
-
-        for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
-            // finding a BHP constraint
-            if (well_controls_iget_type(well_controls_, ctrl_index) == BHP) {
-                // get the bhp constraint value, it should always be postive assummingly
-                const double bhp_target = well_controls_iget_target(well_controls_, ctrl_index);
-
-                switch(well_type_) {
-                case INJECTOR: // using the lower bhp contraint from Injectors
-                    if (bhp_target < bhp) {
-                        bhp = bhp_target;
-                    }
-                    break;
-                case PRODUCER:
-                    if (bhp_target > bhp) {
-                        bhp = bhp_target;
-                    }
-                    break;
-                default:
-                    OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name(), deferred_logger);
-                } // end of switch
-            }
-        }
-
-        return bhp;
-    }
-
-
-
-
-
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
-    wellHasTHPConstraints() const
+    wellHasTHPConstraints(const SummaryState& summaryState) const
     {
-        return getControlIndex(THP) >= 0;
+        if (well_ecl_.isInjector()) {
+            const auto controls = well_ecl_.injectionControls(summaryState);
+            if (controls.hasControl(Well2::InjectorCMode::THP))
+                return true;
+        }
+
+        if (well_ecl_.isProducer( )) {
+            const auto controls = well_ecl_.productionControls(summaryState);
+            if (controls.hasControl(Well2::ProducerCMode::THP))
+                return true;
+        }
+
+        return false;
+
     }
-
-
-
 
     template<typename TypeTag>
     double
     WellInterface<TypeTag>::
-    getTHPConstraint(Opm::DeferredLogger& deferred_logger) const
+    mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const
     {
-        const int thp_control_index = getControlIndex(THP);
-
-        if (thp_control_index < 0) {
-            OPM_DEFLOG_THROW(std::runtime_error, " there is no THP constraint/limit for well " << name()
-                                          << ", while we are requesting it ", deferred_logger);
+        if (well_ecl_.isInjector()) {
+            const auto& controls = well_ecl_.injectionControls(summaryState);
+            return controls.bhp_limit;
         }
 
-        return well_controls_iget_target(well_controls_, thp_control_index);
+        if (well_ecl_.isProducer( )) {
+            const auto& controls = well_ecl_.productionControls(summaryState);
+            return controls.bhp_limit;
+        }
+
+        return 0.0;
     }
-
-
-
 
     template<typename TypeTag>
-    int
+    double
     WellInterface<TypeTag>::
-    getControlIndex(const WellControlType& type) const
+    getTHPConstraint(const SummaryState& summaryState) const
     {
-        const int nwc = well_controls_get_num(well_controls_);
-        for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
-            if (well_controls_iget_type(well_controls_, ctrl_index) == type) {
-                return ctrl_index;
-            }
+        if (well_ecl_.isInjector()) {
+            const auto& controls = well_ecl_.injectionControls(summaryState);
+            return controls.thp_limit;
         }
-        return -1;
+
+        if (well_ecl_.isProducer( )) {
+            const auto& controls = well_ecl_.productionControls(summaryState);
+            return controls.thp_limit;
+        }
+
+        return 0.0;
+
     }
+
 
 
 
@@ -480,81 +438,36 @@ namespace Opm
                       WellState& well_state,
                       Opm::DeferredLogger& deferred_logger) /* const */
     {
+
+        const auto& summaryState = ebos_simulator.vanguard().summaryState();
+        const auto& well = well_ecl_;
+        std::string from;
+        if (well.isInjector()) {
+            from = Well2::InjectorCMode2String(well_state.currentInjectionControls()[index_of_well_]);
+        } else {
+            from = Well2::ProducerCMode2String(well_state.currentProductionControls()[index_of_well_]);
+        }
+
+        bool changed = checkConstraints(well_state, summaryState);
+
         auto cc = Dune::MPIHelper::getCollectiveCommunication();
-        const int np = number_of_phases_;
-        const int w = index_of_well_;
-
-        const int old_control_index = well_state.currentControls()[w];
-
-        // Find, for each well, if any constraints are broken. If so,
-        // switch control to first broken constraint.
-        WellControls* wc = well_controls_;
-
-        // Loop over all controls except the current one, and also
-        // skip any RESERVOIR_RATE controls, since we cannot
-        // handle those.
-        const int nwc = well_controls_get_num(wc);
-        // the current control index
-        int current = well_state.currentControls()[w];
-        int ctrl_index = 0;
-        for (; ctrl_index < nwc; ++ctrl_index) {
-            if (ctrl_index == current) {
-                // This is the currently used control, so it is
-                // used as an equation. So this is not used as an
-                // inequality constraint, and therefore skipped.
-                continue;
-            }
-            if (wellhelpers::constraintBroken(
-                    well_state.bhp(), well_state.thp(), well_state.wellRates(),
-                    w, np, well_type_, wc, ctrl_index)) {
-
-                // if the well can not work under THP / BHP control, we should not switch to THP / BHP control
-                const bool cannot_switch_to_bhp = well_controls_iget_type(wc, ctrl_index) == BHP && !operability_status_.isOperableUnderBHPLimit();
-                const bool cannot_switch_to_thp = well_controls_iget_type(wc, ctrl_index) == THP && !operability_status_.isOperableUnderTHPLimit();
-                const bool cannot_switch = cannot_switch_to_bhp || cannot_switch_to_thp;
-                if ( !cannot_switch ) {
-
-                    // ctrl_index will be the index of the broken constraint after the loop.
-                    break;
-                } else {
-                    // before we figure out to handle it, we give some debug information here
-                    if ( well_controls_iget_type(wc, ctrl_index) == BHP && !operability_status_.isOperableUnderBHPLimit() ) {
-                        deferred_logger.debug("well " + name() + " breaks the BHP limit, while it is not operable under BHP limit");
-                    }
-
-                    if ( well_controls_iget_type(wc, ctrl_index) == THP && !operability_status_.isOperableUnderTHPLimit() ) {
-                        deferred_logger.debug("well " + name() + " breaks the THP limit, while it is not operable under THP limit");
-                    }
-                }
-            }
-        }
-
-        if (ctrl_index != nwc) {
-            // Constraint number ctrl_index was broken, switch to it.
-            well_state.currentControls()[w] = ctrl_index;
-            current = well_state.currentControls()[w];
-            well_controls_set_current( wc, current);
-        }
-
-        // the new well control indices after all the related updates,
-        const int updated_control_index = well_state.currentControls()[w];
 
         // checking whether control changed
-        if (updated_control_index != old_control_index) {
-
-            auto from = well_controls_iget_type(wc, old_control_index);
-            auto to  = well_controls_iget_type(wc, updated_control_index);
+        if (changed) {
+            std::string to;
+            if (well.isInjector()) {
+                to = Well2::InjectorCMode2String(well_state.currentInjectionControls()[index_of_well_]);
+            } else {
+                to = Well2::ProducerCMode2String(well_state.currentProductionControls()[index_of_well_]);
+            }
             std::ostringstream ss;
             ss << "    Switching control mode for well " << name()
-               << " from " << modestring[from]
-               << " to " <<  modestring[to];
+               << " from " << from
+               << " to " <<  to;
             if (cc.size() > 1) {
                ss << " on rank " << cc.rank();
             }
             deferred_logger.info(ss.str());
-        }
-
-        if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
             updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
         }
@@ -886,7 +799,7 @@ namespace Opm
                                 WellTestState& well_test_state,
                                 Opm::DeferredLogger& deferred_logger) const
     {
-        if (!isOperable()) {
+        if (!isOperable() && !wellIsStopped_) {
             well_test_state.closeWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
             if (write_message_to_opmlog) {
                 // TODO: considering auto shut in?
@@ -911,6 +824,9 @@ namespace Opm
                                 WellTestState& well_test_state,
                                 Opm::DeferredLogger& deferred_logger) const
     {
+        if (wellIsStopped_)
+            return;
+
         const WellEconProductionLimits& econ_production_limits = well_ecl_.getEconLimits();
 
         // if no limit is effective here, then continue to the next well
@@ -1005,7 +921,7 @@ namespace Opm
                         if (write_message_to_opmlog) {
                             if (well_ecl_.getAutomaticShutIn()) {
                                 const std::string msg = name() + std::string(" will be shut due to last completion closed");
-                            	deferred_logger.info(msg);
+                                deferred_logger.info(msg);
                             } else {
                                 const std::string msg = name() + std::string(" will be stopped due to last completion closed");
                                 deferred_logger.info(msg);
@@ -1204,19 +1120,6 @@ namespace Opm
     double
     WellInterface<TypeTag>::scalingFactor(const int phaseIdx) const
     {
-        const WellControls* wc = well_controls_;
-
-        if (well_controls_get_current(wc) != -1 && well_controls_get_current_type(wc) == RESERVOIR_RATE) {
-            if (has_solvent && phaseIdx == contiSolventEqIdx ) {
-                typedef Opm::BlackOilSolventModule<TypeTag> SolventModule;
-                double coeff = 0;
-                rateConverter_.template calcCoeffSolvent<SolventModule>(0, pvtRegionIdx_, coeff);
-                return coeff;
-            }
-            // TODO: use the rateConverter here as well.
-            const double* distr = well_controls_get_current_distr(wc);
-            return distr[phaseIdx];
-        }
         const auto& pu = phaseUsage();
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
             return 1.0;
@@ -1292,7 +1195,7 @@ namespace Opm
         do {
             assembleWellEq(ebosSimulator, B_avg, dt, well_state, deferred_logger);
 
-            auto report = getWellConvergence(B_avg, deferred_logger);
+            auto report = getWellConvergence(well_state, B_avg, deferred_logger);
 
             converged = report.converged();
             if (converged) {
@@ -1302,7 +1205,8 @@ namespace Opm
             ++it;
             solveEqAndUpdateWellState(well_state, deferred_logger);
 
-            updateWellControl(ebosSimulator, well_state, deferred_logger);
+            // We don't allow for switching well controls while computing well potentials and testing wells
+            // updateWellControl(ebosSimulator, well_state, deferred_logger);
             initPrimaryVariablesEvaluation();
         } while (it < max_iter);
 
@@ -1441,35 +1345,197 @@ namespace Opm
         return operability_status_.isOperable();
     }
 
-
-
-
-
-
     template<typename TypeTag>
-    WellControls*
+    bool
     WellInterface<TypeTag>::
-    createWellControlsWithBHPAndTHP(DeferredLogger& deferred_logger) const
-    {
-        WellControls* wc = well_controls_create();
-        well_controls_assert_number_of_phases(wc, number_of_phases_);
+    checkConstraints(WellState& well_state, const SummaryState& summaryState) {
 
-        // a well always has a bhp limit
-        const double invalid_alq = -1e100;
-        const double invalid_vfp = -2147483647;
-        const double bhp_limit = this->mostStrictBhpFromBhpLimits(deferred_logger);
-        well_controls_add_new(BHP, bhp_limit, invalid_alq, invalid_vfp, NULL, wc);
+        const auto& well = well_ecl_;
+        const PhaseUsage& pu = phaseUsage();
+        const int well_index = index_of_well_;
+        const auto wellrate_index = well_index * pu.num_phases;
+        bool changed = false;
 
-        if (this->wellHasTHPConstraints()) {
-            // it might be better to do it through EclipseState?
-            const double thp_limit = this->getTHPConstraint(deferred_logger);
-            const double thp_control_index = this->getControlIndex(THP);
-            const  int vfp_number = well_controls_iget_vfp(well_controls_, thp_control_index);
-            const double alq = well_controls_iget_alq(well_controls_, thp_control_index);
-            well_controls_add_new(THP, thp_limit, alq, vfp_number, NULL, wc);
+//        // Stopped wells can not change control
+//        if (currentControl == "STOP")
+//            return newControl;
+
+        if (well.isInjector()) {
+            const auto controls = well.injectionControls(summaryState);
+            Opm::Well2::InjectorCMode& currentControl = well_state.currentInjectionControls()[well_index];
+            if (controls.hasControl(Well2::InjectorCMode::RATE) && currentControl != Well2::InjectorCMode::RATE)
+            {
+                Well2::InjectorType injectorType = controls.injector_type;
+                double current_rate = 0.0;
+
+                switch (injectorType) {
+                case Well2::InjectorType::WATER:
+                {
+                    current_rate = well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
+                    break;
+                }
+                case Well2::InjectorType::OIL:
+                {
+                    current_rate = well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ];
+                    break;
+                }
+                case Well2::InjectorType::GAS:
+                {
+                    current_rate = well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ];
+                    break;
+                }
+                default:
+                    throw("Expected WATER, OIL or GAS as type for injectors " + well.name());
+                }
+
+                if (controls.surface_rate < current_rate) {
+                    currentControl = Well2::InjectorCMode::RATE;
+                    changed = true;
+                }
+
+            }
+
+            if (controls.hasControl(Well2::InjectorCMode::RESV) && currentControl != Well2::InjectorCMode::RESV)
+            {
+                double current_rate = 0.0;
+                if( pu.phase_used[BlackoilPhases::Aqua] )
+                    current_rate += well_state.wellReservoirRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
+
+                if( pu.phase_used[BlackoilPhases::Liquid] )
+                    current_rate += well_state.wellReservoirRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ];
+
+                if( pu.phase_used[BlackoilPhases::Vapour] )
+                    current_rate += well_state.wellReservoirRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ];
+
+                if (controls.reservoir_rate < current_rate) {
+                    currentControl = Well2::InjectorCMode::RESV;
+                    changed = true;
+                }
+            }
+
+            if (controls.hasControl(Well2::InjectorCMode::BHP) && currentControl != Well2::InjectorCMode::BHP)
+            {
+                const auto& bhp = controls.bhp_limit;
+                double current_bhp = well_state.bhp()[well_index];
+                if (bhp < current_bhp) {
+                    currentControl = Well2::InjectorCMode::BHP;
+                    changed = true;
+                }
+            }
+
+            if (controls.hasControl(Well2::InjectorCMode::THP) && currentControl != Well2::InjectorCMode::THP)
+            {
+                const auto& thp = controls.thp_limit;
+                double current_thp = well_state.thp()[well_index];
+                if (thp < current_thp) {
+                    currentControl = Well2::InjectorCMode::THP;
+                    changed = true;
+                }
+            }
         }
 
-        return wc;
+        if (well.isProducer( )) {
+            const auto controls = well.productionControls(summaryState);
+            Well2::ProducerCMode& currentControl = well_state.currentProductionControls()[well_index];
+
+            if (controls.hasControl(Well2::ProducerCMode::ORAT) && currentControl != Well2::ProducerCMode::ORAT) {
+                double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ];
+                if (controls.oil_rate < current_rate  ) {
+                    currentControl = Well2::ProducerCMode::ORAT;
+                    changed = true;
+                }
+            }
+
+            if (controls.hasControl(Well2::ProducerCMode::WRAT) && currentControl != Well2::ProducerCMode::WRAT ) {
+                double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
+                if (controls.water_rate < current_rate  ) {
+                    currentControl = Well2::ProducerCMode::WRAT;
+                    changed = true;
+                }
+            }
+
+            if (controls.hasControl(Well2::ProducerCMode::GRAT) && currentControl != Well2::ProducerCMode::GRAT ) {
+                double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ];
+                if (controls.gas_rate < current_rate  ) {
+                    currentControl = Well2::ProducerCMode::GRAT;
+                    changed = true;
+                }
+            }
+
+            if (controls.hasControl(Well2::ProducerCMode::LRAT) && currentControl != Well2::ProducerCMode::LRAT) {
+                double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ];
+                current_rate -= well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
+                if (controls.liquid_rate < current_rate  ) {
+                    currentControl = Well2::ProducerCMode::LRAT;
+                    changed = true;
+                }
+            }
+
+            if (controls.hasControl(Well2::ProducerCMode::RESV) && currentControl != Well2::ProducerCMode::RESV ) {
+                double current_rate = 0.0;
+                if( pu.phase_used[BlackoilPhases::Aqua] )
+                    current_rate -= well_state.wellReservoirRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
+
+                if( pu.phase_used[BlackoilPhases::Liquid] )
+                    current_rate -= well_state.wellReservoirRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ];
+
+                if( pu.phase_used[BlackoilPhases::Vapour] )
+                    current_rate -= well_state.wellReservoirRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ];
+
+                if (controls.prediction_mode && controls.resv_rate > current_rate) {
+                    currentControl = Well2::ProducerCMode::RESV;
+                    changed = true;
+                }
+
+                if (!controls.prediction_mode) {
+                    const int fipreg = 0; // not considering the region for now
+                    const int np = number_of_phases_;
+
+                    std::vector<double> surface_rates(np, 0.0);
+                    if( pu.phase_used[BlackoilPhases::Aqua] )
+                        surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = controls.water_rate;
+                    if( pu.phase_used[BlackoilPhases::Liquid] )
+                        surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = controls.oil_rate;
+                    if( pu.phase_used[BlackoilPhases::Vapour] )
+                        surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = controls.gas_rate;
+
+                    std::vector<double> voidage_rates(np, 0.0);
+                    rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegionIdx_, surface_rates, voidage_rates);
+
+                    double resv_rate = 0.0;
+                    for (int p = 0; p < np; ++p) {
+                        resv_rate += voidage_rates[p];
+                    }
+
+                    if (resv_rate < current_rate) {
+                        currentControl = Well2::ProducerCMode::RESV;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (controls.hasControl(Well2::ProducerCMode::BHP) && currentControl != Well2::ProducerCMode::BHP )
+            {
+                const double bhp = controls.bhp_limit;
+                double current_bhp = well_state.bhp()[well_index];
+                if (bhp > current_bhp) {
+                    currentControl = Well2::ProducerCMode::BHP;
+                    changed = true;
+                }
+            }
+
+            if (controls.hasControl(Well2::ProducerCMode::THP) && currentControl != Well2::ProducerCMode::THP)
+            {
+                const auto& thp = controls.thp_limit;
+                double current_thp =  well_state.thp()[well_index];
+                if (thp > current_thp) {
+                    currentControl = Well2::ProducerCMode::THP;
+                    changed = true;
+                }
+            }
+        }
+
+        return changed;
     }
 
 
