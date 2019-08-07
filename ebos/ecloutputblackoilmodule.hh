@@ -1146,7 +1146,7 @@ public:
 
     Scalar getSolventSaturation(unsigned elemIdx) const
     {
-        if (sSol_.size() > 0)
+        if (sSol_.size() > elemIdx)
             return sSol_[elemIdx];
 
         return 0;
@@ -1154,7 +1154,7 @@ public:
 
     Scalar getPolymerConcentration(unsigned elemIdx) const
     {
-        if (cPolymer_.size() > 0)
+        if (cPolymer_.size() > elemIdx)
             return cPolymer_[elemIdx];
 
         return 0;
@@ -1162,7 +1162,7 @@ public:
 
     Scalar getFoamConcentration(unsigned elemIdx) const
     {
-        if (cFoam_.size() > 0)
+        if (cFoam_.size() > elemIdx)
             return cFoam_[elemIdx];
 
         return 0;
