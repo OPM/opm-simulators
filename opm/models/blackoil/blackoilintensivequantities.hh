@@ -129,7 +129,7 @@ public:
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
         if (waterEnabled){
-            if(priVars.primaryVarsMeaning() == PrimaryVariables::px){
+            if(priVars.primaryVarsMeaning() == PrimaryVariables::OnePhase_p){
                 Sw = 1.0;
             }else{
                 Sw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
@@ -140,7 +140,7 @@ public:
         {
             if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
                 // -> threephase case
-                assert( not(priVars.primaryVarsMeaning() == PrimaryVariables::px) );
+                assert( not(priVars.primaryVarsMeaning() == PrimaryVariables::OnePhase_p) );
                 Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
             } else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
                 // -> gas-water case
@@ -284,7 +284,7 @@ public:
                 fluidState_.setRs(0.0);
             }
         } else {
-            assert(priVars.primaryVarsMeaning() == PrimaryVariables::px);
+            assert(priVars.primaryVarsMeaning() == PrimaryVariables::OnePhase_p);
         }
 
         typename FluidSystem::template ParameterCache<Evaluation> paramCache;

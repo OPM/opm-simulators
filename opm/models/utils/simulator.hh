@@ -125,7 +125,7 @@ public:
         time_ = 0.0;
         endTime_ = EWOMS_GET_PARAM(TypeTag, Scalar, EndTime);
         timeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
-        assert(timeStepSize_>0);
+        assert(timeStepSize_ > 0);
         const std::string& predetTimeStepFile =
             EWOMS_GET_PARAM(TypeTag, std::string, PredeterminedTimeStepsFile);
         if (!predetTimeStepFile.empty()) {
