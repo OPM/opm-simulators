@@ -71,7 +71,7 @@ public:
         , comm_(nullptr)
         , weights_(Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
               linearoperator.getmat(), prm.get<int>("pressure_var_index"), transpose))
-        , levelTransferPolicy_(*comm_, weights_, prm.get<int>("pressure_var_index"))
+        , levelTransferPolicy_(dummy_comm_, weights_, prm.get<int>("pressure_var_index"))
         , coarseSolverPolicy_(prm.get_child("coarsesolver"))
         , twolevel_method_(linearoperator,
                            finesmoother_,
@@ -182,6 +182,7 @@ private:
     CoarseSolverPolicy coarseSolverPolicy_;
     TwoLevelMethod twolevel_method_;
     boost::property_tree::ptree prm_;
+    Communication dummy_comm_;
 };
 
 } // namespace Dune
