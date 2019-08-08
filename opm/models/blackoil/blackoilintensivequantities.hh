@@ -128,10 +128,10 @@ public:
 
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
-        if (waterEnabled){
-            if(priVars.primaryVarsMeaning() == PrimaryVariables::OnePhase_p){
+        if (waterEnabled) {
+            if (priVars.primaryVarsMeaning() == PrimaryVariables::OnePhase_p) {
                 Sw = 1.0;
-            }else{
+            } else {
                 Sw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
             }
         }
@@ -140,7 +140,7 @@ public:
         {
             if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
                 // -> threephase case
-                assert( not(priVars.primaryVarsMeaning() == PrimaryVariables::OnePhase_p) );
+                assert( priVars.primaryVarsMeaning() != PrimaryVariables::OnePhase_p );
                 Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
             } else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
                 // -> gas-water case
@@ -206,11 +206,10 @@ public:
         // update the Saturation functions for the blackoil solvent module.
         asImp_().solventPostSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
 
-        Evaluation SoMax=0;
-        if(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
-            SoMax =
-                Opm::max(fluidState_.saturation(oilPhaseIdx),
-                         elemCtx.problem().maxOilSaturation(globalSpaceIdx));
+        Evaluation SoMax = 0.0;
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            SoMax = Opm::max(fluidState_.saturation(oilPhaseIdx),
+                             elemCtx.problem().maxOilSaturation(globalSpaceIdx));
         }
 
         // take the meaning of the switiching primary variable into account for the gas
@@ -268,7 +267,7 @@ public:
         else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
             const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
             fluidState_.setRv(Rv);
-            
+
             if (FluidSystem::enableDissolvedGas()) {
                 // the oil phase is not present, but we need to compute its "composition" for
                 // the gravity correction anyway
@@ -278,7 +277,7 @@ public:
                                                             oilPhaseIdx,
                                                             pvtRegionIdx,
                                                             SoMax);
-                
+
                 fluidState_.setRs(Opm::min(RsMax, RsSat));
             } else {
                 fluidState_.setRs(0.0);
@@ -349,11 +348,11 @@ public:
         if (rockCompressibility > 0.0) {
             Scalar rockRefPressure = problem.rockReferencePressure(elemCtx, dofIdx, timeIdx);
             Evaluation x;
-            if(FluidSystem::phaseIsActive(oilPhaseIdx)){
+            if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
                 x = rockCompressibility*(fluidState_.pressure(oilPhaseIdx) - rockRefPressure);
-            }else if( FluidSystem::phaseIsActive(waterPhaseIdx) ){
+            } else if (FluidSystem::phaseIsActive(waterPhaseIdx)){
                 x = rockCompressibility*(fluidState_.pressure(waterPhaseIdx) - rockRefPressure);
-            }else{
+            } else {
                 x = rockCompressibility*(fluidState_.pressure(gasPhaseIdx) - rockRefPressure);
             }
             porosity_ *= 1.0 + x + 0.5*x*x;

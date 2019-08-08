@@ -265,13 +265,14 @@ public:
         EnergyModule::assignPrimaryVars(*this, fluidState);
 
         // determine the meaning of the primary variables
-        if ( FluidSystem::numActivePhases() == 1 ){
+        if (FluidSystem::numActivePhases() == 1) {
             primaryVarsMeaning_ = OnePhase_p;
-        }else if ((gasPresent && oilPresent) || (onlyWater && FluidSystem::phaseIsActive(oilPhaseIdx)) ){
+        }
+        else if ((gasPresent && oilPresent) || (onlyWater && FluidSystem::phaseIsActive(oilPhaseIdx))) {
             // gas and oil: both hydrocarbon phases are in equilibrium (i.e., saturated
             // with the "protagonist" component of the other phase.)
             primaryVarsMeaning_ = Sw_po_Sg;
-        } 
+        }
         else if (oilPresent) {
             // only oil: if dissolved gas is enabled, we need to consider the oil phase
             // composition, if it is disabled, the gas component must stick to its phase
@@ -292,10 +293,10 @@ public:
 
         // assign the actual primary variables
         if (primaryVarsMeaning() == OnePhase_p) {
-            if (waterEnabled){
+            if (waterEnabled) {
                 (*this)[waterSaturationIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
                 (*this)[pressureSwitchIdx] = FsToolbox::value(fluidState.pressure(waterPhaseIdx));
-            }else{
+            } else {
                 throw std::logic_error("Only pure ware is presently allowed");
             }
             
