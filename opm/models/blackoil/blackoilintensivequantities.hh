@@ -138,11 +138,11 @@ public:
         Evaluation Sg = 0.0;
         if (compositionSwitchEnabled)
         {
-            if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg)
+            if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
                 // -> threephase case
-                assert( not(priVars.primaryVarsMeaning() == PrimaryVariables::px) )
+                assert( not(priVars.primaryVarsMeaning() == PrimaryVariables::px) );
                 Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-            else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
+            } else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
                 // -> gas-water case
                 Sg = 1.0 - Sw;
 
