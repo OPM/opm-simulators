@@ -663,20 +663,20 @@ public:
             minTimeStepSize_ = tuning.getTSMINZ(0);
         }
 
+        initFluidSystem_();
+
         // deal with DRSDT
         unsigned ntpvt = eclState.runspec().tabdims().getNumPVTTables();
         size_t numDof = this->model().numGridDof();
-        if(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             maxDRs_.resize(ntpvt, 1e30);
             dRsDtOnlyFreeGas_.resize(ntpvt, false);
-       
             lastRs_.resize(numDof, 0.0);
             maxDRv_.resize(ntpvt, 1e30);
             lastRv_.resize(numDof, 0.0);
             maxOilSaturation_.resize(numDof, 0.0);
         }
 
-        initFluidSystem_();
         updateElementDepths_();
         readRockParameters_();
         readMaterialParameters_();

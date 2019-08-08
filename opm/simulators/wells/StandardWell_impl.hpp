@@ -1093,17 +1093,14 @@ namespace Opm
     updateWellStateFromPrimaryVariables(WellState& well_state, Opm::DeferredLogger& deferred_logger) const
     {
         const PhaseUsage& pu = phaseUsage();
-        //assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
-        int oil_pos;// = pu.phase_pos[Oil];
 
         std::vector<double> F(number_of_phases_, 0.0);
-	if ( FluidSystem::numActivePhases() ==1 ) {
-	    F[0] =1;
-	}else{	    
-	    if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
-		oil_pos = pu.phase_pos[Oil];
-		F[oil_pos] = 1.0;
-	    }
+	if (FluidSystem::numActivePhases() == 1) {
+	    F[0] = 1.0;
+	} else {
+	    assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
+            const int oil_pos = pu.phase_pos[Oil];
+            F[oil_pos] = 1.0;
 
 	    if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
 		const int water_pos = pu.phase_pos[Water];
