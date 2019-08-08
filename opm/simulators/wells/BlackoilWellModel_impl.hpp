@@ -1587,7 +1587,7 @@ namespace Opm {
     int
     BlackoilWellModel<TypeTag>::numComponents() const
     {
-        if (numPhases() < 3) {
+        if (numWells() > 0 && numPhases() < 3) {
             return numPhases();
         }
         int numComp = FluidSystem::numComponents;
