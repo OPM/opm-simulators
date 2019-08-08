@@ -127,9 +127,8 @@ struct BlackOilOnePhaseIndices
         return 0;
     }
 
-    //! Index of the continuity equation of the first phase
+    //! Index of the continuity equation of the first (and only) phase
     static const int conti0EqIdx = PVOffset + 0;
-    // one continuity equation follows
 
     //! Index of the continuity equation for the first solvent component
     static const int contiSolventEqIdx =
