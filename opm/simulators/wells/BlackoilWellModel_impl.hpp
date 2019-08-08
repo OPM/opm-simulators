@@ -253,13 +253,13 @@ namespace Opm {
             const auto& fs = intQuants.fluidState();
 	    // copy of get perfpressure in Standard well
 	    // exept for value
-	    double perf_pressure=0.0;
-	    if(Indices::oilEnabled){  
+	    double perf_pressure = 0.0;
+	    if (Indices::oilEnabled) {
 		perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
-	    }else{
-		if(Indices::waterEnabled){
+	    } else {
+		if (Indices::waterEnabled) {
 		    perf_pressure = fs.pressure(FluidSystem::waterPhaseIdx).value();
-		}else{
+		} else {
 		    perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
 		}
 	    }

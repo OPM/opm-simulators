@@ -128,7 +128,7 @@ namespace Opm
     {
         // shift errors
         for( int i=0; i<2; ++i ) {
-	    errors_[ i ] = errors_[i+1];
+            errors_[ i ] = errors_[i+1];
         }
 
         // store new error

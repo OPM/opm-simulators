@@ -493,7 +493,7 @@ namespace Opm {
 
                     // sum p, rs, rv, and T.
                     double hydrocarbonPV = pv_cell*hydrocarbon;
-		    if(hydrocarbonPV>0){
+		    if (hydrocarbonPV > 0) {
 			pv += hydrocarbonPV;
 			p += fs.pressure(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
 			rs += fs.Rs().value()*hydrocarbonPV;
