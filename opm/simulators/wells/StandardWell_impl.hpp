@@ -237,8 +237,8 @@ namespace Opm
     StandardWell<TypeTag>::
     wellVolumeFraction(const unsigned compIdx) const
     {
-	if (FluidSystem::numActivePhases()==1){
-	    return 1;
+	if (FluidSystem::numActivePhases() == 1) {
+	    return EvalWell(numWellEq_ + numEq, 1.0);
 	}
       
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
@@ -695,9 +695,9 @@ namespace Opm
             // TODO: following the development in MSW, we need to convert the volume of the wellbore to be surface volume
             // since all the rates are under surface condition
 	   
-	    EvalWell resWell_loc = 0;
-	    if(FluidSystem::numActivePhases()>1){
-		assert(dt>0);
+	    EvalWell resWell_loc(numWellEq_ + numEq, 0.0);
+	    if (FluidSystem::numActivePhases() > 1) {
+		assert(dt > 0);
 		resWell_loc += (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
 	    }
             resWell_loc -= getQs(componentIdx) * well_efficiency_factor_;
