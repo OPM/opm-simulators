@@ -47,9 +47,6 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
-#include <ewoms/models/blackoil/blackoilpolymermodules.hh>
-#include <ewoms/models/blackoil/blackoilsolventmodules.hh>
-
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
 #include<dune/istl/matrixmatrix.hh>
@@ -97,19 +94,19 @@ namespace Opm
         typedef Dune::BlockVector<VectorBlockType> BVector;
         typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
-        typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
-
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
         static const bool has_energy = GET_PROP_VALUE(TypeTag, EnableEnergy);
         // flag for polymer molecular weight related
         static const bool has_polymermw = GET_PROP_VALUE(TypeTag, EnablePolymerMW);
+        static const bool has_foam = GET_PROP_VALUE(TypeTag, EnableFoam);
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
         // index for the polymer molecular weight continuity equation
         static const int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;
+        static const int contiFoamEqIdx = Indices::contiFoamEqIdx;
 
-        // For the conversion between the surface volume rate and resrevoir voidage rate
+        // For the conversion between the surface volume rate and reservoir voidage rate
         using RateConverterType = RateConverter::
         SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
 
@@ -365,6 +362,8 @@ namespace Opm
         double wsolvent() const;
 
         double wpolymer() const;
+
+        double wfoam() const;
 
         bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                                  const WellState& well_state,

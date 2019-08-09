@@ -46,6 +46,7 @@ public:
     typedef Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
                                            GET_PROP_VALUE(TypeTag, EnablePolymer),
                                            GET_PROP_VALUE(TypeTag, EnableEnergy),
+                                           GET_PROP_VALUE(TypeTag, EnableFoam),
                                            /*PVOffset=*/0,
                                            /*disabledCompIdx=*/FluidSystem::waterCompIdx> type;
 };

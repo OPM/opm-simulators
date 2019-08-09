@@ -25,6 +25,7 @@
 #include <flow/flow_ebos_oilwater.hpp>
 #include <flow/flow_ebos_solvent.hpp>
 #include <flow/flow_ebos_polymer.hpp>
+#include <flow/flow_ebos_foam.hpp>
 #include <flow/flow_ebos_energy.hpp>
 #include <flow/flow_ebos_oilwater_polymer.hpp>
 #include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
@@ -271,6 +272,11 @@ int main(int argc, char** argv)
                 return Opm::flowEbosPolymerMain(argc, argv);
             }
         }
+        // Foam case
+        else if ( phases.active( Opm::Phase::FOAM ) ) {
+            Opm::flowEbosFoamSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
+            return Opm::flowEbosFoamMain(argc, argv);
+        }
         // Solvent case
         else if ( phases.active( Opm::Phase::SOLVENT ) ) {
             Opm::flowEbosSolventSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
@@ -289,7 +295,7 @@ int main(int argc, char** argv)
         else
         {
             if (outputCout)
-                std::cerr << "No suitable configuration found, valid are Twophase, polymer, solvent, energy, or blackoil" << std::endl;
+                std::cerr << "No suitable configuration found, valid are Twophase, polymer, foam, solvent, energy, blackoil." << std::endl;
             return EXIT_FAILURE;
         }
     }

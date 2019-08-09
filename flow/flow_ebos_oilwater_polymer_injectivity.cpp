@@ -55,6 +55,7 @@ public:
     typedef Ewoms::BlackOilTwoPhaseIndices<0,
                                            2,
                                            0,
+                                           GET_PROP_VALUE(TypeTag, EnableFoam),
                                            /*PVOffset=*/0,
                                            /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
 };

@@ -16,14 +16,9 @@
 */
 #include "config.h"
 
-// Define making clear that the simulator supports AMG
-#define FLOW_SUPPORT_AMG 1
-
-#include <flow/flow_ebos_gasoil.hpp>
+#include <flow/flow_ebos_foam.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
-#include <ewoms/models/blackoil/blackoiltwophaseindices.hh>
-
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
@@ -36,32 +31,14 @@
 
 namespace Ewoms {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowGasOilProblem, INHERITS_FROM(EclFlowProblem));
-
-//! The indices required by the model
-SET_PROP(EclFlowGasOilProblem, Indices)
-{
-private:
-    // it is unfortunately not possible to simply use 'TypeTag' here because this leads
-    // to cyclic definitions of some properties. if this happens the compiler error
-    // messages unfortunately are *really* confusing and not really helpful.
-    typedef TTAG(EclFlowProblem) BaseTypeTag;
-    typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
-
-public:
-    typedef Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
-                                           GET_PROP_VALUE(TypeTag, EnablePolymer),
-                                           GET_PROP_VALUE(TypeTag, EnableEnergy),
-                                           GET_PROP_VALUE(TypeTag, EnableFoam),
-                                           /*PVOffset=*/0,
-                                           /*disabledCompIdx=*/FluidSystem::waterCompIdx> type;
-};
+NEW_TYPE_TAG(EclFlowFoamProblem, INHERITS_FROM(EclFlowProblem));
+SET_BOOL_PROP(EclFlowFoamProblem, EnableFoam, true);
 }}
 
 namespace Opm {
-void flowEbosGasOilSetDeck(double setupTime, Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosFoamSetDeck(double setupTime, Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
-    typedef TTAG(EclFlowGasOilProblem) TypeTag;
+    typedef TTAG(EclFlowFoamProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalSetupTime(setupTime);
@@ -73,19 +50,20 @@ void flowEbosGasOilSetDeck(double setupTime, Deck &deck, EclipseState& eclState,
 
 
 // ----------------- Main program -----------------
-int flowEbosGasOilMain(int argc, char** argv)
+int flowEbosFoamMain(int argc, char** argv)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     Opm::resetLocale();
 
+    // initialize MPI, finalize is done automatically on exit
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argc, argv);
 #else
-    Dune::MPIHelper::instance(argc, argv);
+    Dune::MPIHelper::instance(argc, argv).rank();
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowGasOilProblem)> mainfunc;
+    Opm::FlowMainEbos<TTAG(EclFlowFoamProblem)> mainfunc;
     return mainfunc.execute(argc, argv);
 }
 

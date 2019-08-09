@@ -643,6 +643,18 @@ namespace Opm
                 }
             }
 
+            if (has_foam) {
+                // TODO: the application of well efficiency factor has not been tested with an example yet
+                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                EvalWell cq_s_foam = cq_s[gasCompIdx] * well_efficiency_factor_;
+                if (well_type_ == INJECTOR) {
+                    cq_s_foam *= wfoam();
+                } else {
+                    cq_s_foam *= extendEval(intQuants.foamConcentration());
+                }
+                connectionRates_[perf][contiFoamEqIdx] = Base::restrictEval(cq_s_foam);
+            }
+
             // Store the perforation pressure for later usage.
             well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[index_of_well_] + perf_pressure_diffs_[perf];
 
@@ -1973,8 +1985,8 @@ namespace Opm
                        Opm::DeferredLogger& deferred_logger) const
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
-        // For the polymer case and the energy case, there is one more mass balance equations of reservoir than wells
-        assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy);
+        // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells
+        assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy || has_foam);
 
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;
