@@ -185,9 +185,11 @@ endif()
 # &black-&oil &simulator)
 get_target_property(ecl_INCLUDE_DIRS ecl INTERFACE_INCLUDE_DIRECTORIES)
 
-foreach(OBJ blackoil solvent polymer gasoil oilwater thermal)
+set(MEBOS_TARGETS "")
+foreach(OBJ blackoil solvent polymer foam gasoil oilwater thermal)
   add_library(ebos_lib${OBJ} OBJECT EXCLUDE_FROM_ALL ebos/ebos_${OBJ}.cc)
   target_include_directories(ebos_lib${OBJ} PRIVATE ${ecl_INCLUDE_DIRS})
+  list(APPEND MEBOS_TARGETS $<TARGET_OBJECTS:ebos_lib${OBJ}>)
 endforeach()
 
 opm_add_test(ebos
@@ -209,7 +211,7 @@ else()
   set(EBOS_EXTENSIONS_DEFAULT_ENABLE_IF "TRUE")
 endif()
 
-foreach(OBJ solvent polymer gasoil oilwater thermal)
+foreach(OBJ solvent polymer foam gasoil oilwater thermal)
   opm_add_test(ebos_${OBJ}
     ONLY_COMPILE
     DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
@@ -222,12 +224,7 @@ opm_add_test(mebos
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
   SOURCES ebos/mebos_main.cc
-          $<TARGET_OBJECTS:ebos_libblackoil>
-          $<TARGET_OBJECTS:ebos_libsolvent>
-          $<TARGET_OBJECTS:ebos_libpolymer>
-          $<TARGET_OBJECTS:ebos_libthermal>
-          $<TARGET_OBJECTS:ebos_liboilwater>
-          $<TARGET_OBJECTS:ebos_libgasoil>
+          ${MEBOS_TARGETS}
   EXE_NAME mebos
   LIBRARIES opmsimulators)
 
@@ -254,7 +251,7 @@ opm_add_test(ebos_plain
   LIBRARIES opmsimulators)
 
 if (BUILD_EBOS_EXTENSIONS)
-  foreach(TGT ebos_solvent ebos_polymer ebos_gasoil ebos_oilwater ebos_thermal mebos)
+  foreach(TGT ebos_solvent ebos_polymer ebos_foam ebos_gasoil ebos_oilwater ebos_thermal mebos)
     install(TARGETS ${TGT} DESTINATION bin)
     opm_add_bash_completion(${TGT})
   endforeach()
