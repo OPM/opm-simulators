@@ -50,10 +50,10 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
 
     // Add groups to WellCollection
     const auto& fieldGroup =  sched.getGroup2("FIELD", 2);
-    collection.addField(fieldGroup, pu);
+    collection.addField(fieldGroup, summaryState, pu);
 
-    collection.addGroup( sched.getGroup2( "G1", 2 ), fieldGroup.name(), pu);
-    collection.addGroup( sched.getGroup2( "G2", 2 ), fieldGroup.name(), pu);
+    collection.addGroup( sched.getGroup2( "G1", 2 ), fieldGroup.name(), summaryState, pu);
+    collection.addGroup( sched.getGroup2( "G2", 2 ), fieldGroup.name(), summaryState, pu);
 
     BOOST_CHECK_EQUAL("FIELD", collection.findNode("FIELD")->name());
     BOOST_CHECK_EQUAL("FIELD", collection.findNode("G1")->getParent()->name());
@@ -89,9 +89,9 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     WellCollection collection;
     // Add groups to WellCollection
     const auto& fieldGroup =  sched.getGroup2("FIELD", timestep);
-    collection.addField(fieldGroup, pu);
-    collection.addGroup( sched.getGroup2( "G1", timestep ), fieldGroup.name(), pu);
-    collection.addGroup( sched.getGroup2( "G2", timestep ), fieldGroup.name(), pu);
+    collection.addField( fieldGroup, summaryState, pu);
+    collection.addGroup( sched.getGroup2( "G1", timestep ), fieldGroup.name(), summaryState, pu);
+    collection.addGroup( sched.getGroup2( "G2", timestep ), fieldGroup.name(), summaryState, pu);
 
     BOOST_CHECK_EQUAL(1.0, collection.findNode("FIELD")->efficiencyFactor());
     BOOST_CHECK_EQUAL(1.0, collection.findNode("G1")->getParent()->efficiencyFactor());

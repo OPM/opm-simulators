@@ -30,17 +30,17 @@
 
 namespace Opm
 {
-    void WellCollection::addField(const Group2& fieldGroup, const PhaseUsage& phaseUsage) {
+    void WellCollection::addField(const Group2& fieldGroup, const SummaryState& summaryState, const PhaseUsage& phaseUsage) {
         WellsGroupInterface* fieldNode = findNode(fieldGroup.name());
         if (fieldNode) {
             OPM_THROW(std::runtime_error, "Trying to add FIELD node, but this already exists. Can only have one FIELD node.");
         }
 
-        roots_.push_back(createGroupWellsGroup(fieldGroup, phaseUsage));
+        roots_.push_back(createGroupWellsGroup(fieldGroup, summaryState, phaseUsage));
     }
 
     void WellCollection::addGroup(const Group2& groupChild, std::string parent_name,
-                                  const PhaseUsage& phaseUsage) {
+                                  const SummaryState& summaryState, const PhaseUsage& phaseUsage) {
         WellsGroupInterface* parent = findNode(parent_name);
         if (!parent) {
             OPM_THROW(std::runtime_error, "Trying to add child group to group named " << parent_name << ", but this does not exist in the WellCollection.");
@@ -55,8 +55,7 @@ namespace Opm
             group_control_active_ = true;
         }
 
-        std::shared_ptr<WellsGroupInterface> child = createGroupWellsGroup(groupChild, phaseUsage);
-
+        std::shared_ptr<WellsGroupInterface> child = createGroupWellsGroup(groupChild, summaryState, phaseUsage);
         if (child->injSpec().control_mode_ == InjectionSpecification::VREP) {
             having_vrep_groups_ = true;
         }
