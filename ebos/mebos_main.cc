@@ -38,6 +38,7 @@
 #include "ebos_thermal.hh"
 #include "ebos_solvent.hh"
 #include "ebos_polymer.hh"
+#include "ebos_foam.hh"
 
 #include <ewoms/common/propertysystem.hh>
 
@@ -84,6 +85,7 @@ int main(int argc, char **argv)
     bool oilActive = deck->hasKeyword("OIL");
     bool solventActive = deck->hasKeyword("SOLVENT");
     bool polymerActive = deck->hasKeyword("POLYMER");
+    bool foamActive = deck->hasKeyword("FOAM");
     bool thermalActive = deck->hasKeyword("THERMAL") || deck->hasKeyword("TEMP");
 
     std::stringstream notSupportedErrorStream;
@@ -93,6 +95,7 @@ int main(int argc, char **argv)
                             << "   oil: " << oilActive << "\n"
                             << "   solvent: " << solventActive << "\n"
                             << "   polymer: " << polymerActive << "\n"
+                            << "   foam: " << foamActive << "\n"
                             << "   thermal/temperature: " << thermalActive << "\n";
 
     int numBlackOilPhases = (waterActive?1:0) + (gasActive?1:0) + (oilActive?1:0);
@@ -119,6 +122,13 @@ int main(int argc, char **argv)
         if (polymerActive) {
             notSupportedErrorStream << "\n"
                                     << "combining twophase and polymer is not supported by the multiplexed simulator\n";
+            std::cerr << notSupportedErrorStream.str() << std::endl;
+            std::abort();
+        }
+
+        if (foamActive) {
+            notSupportedErrorStream << "\n"
+                                    << "combining twophase and foam is not supported by the multiplexed simulator\n";
             std::cerr << notSupportedErrorStream.str() << std::endl;
             std::abort();
         }
@@ -156,10 +166,48 @@ int main(int argc, char **argv)
             std::abort();
         }
     }
+    else if (foamActive) {
+        if (solventActive) {
+            notSupportedErrorStream << "\n"
+                                    << "combining foam and solvent is not supported by the multiplexed simulator\n";
+            std::cerr << notSupportedErrorStream.str() << std::endl;
+            std::abort();
+        }
+
+        if (polymerActive) {
+            notSupportedErrorStream << "\n"
+                                    << "combining foam and polymer is not supported by the multiplexed simulator\n";
+            std::cerr << notSupportedErrorStream.str() << std::endl;
+            std::abort();
+        }
+
+        if (thermalActive) {
+            notSupportedErrorStream << "\n"
+                                    << "combining foam and and energy conservation is not supported by the multiplexed simulator\n";
+            std::cerr << notSupportedErrorStream.str() << std::endl;
+            std::abort();
+        }
+
+        // run ebos_foam
+        if (myRank == 0)
+            std::cout << "Using foam mode" << std::endl;
+        Ewoms::ebosFoamSetDeck(deck.get(),
+                               parseContext.get(),
+                               errorGuard.get(),
+                               externalSetupTimer.elapsed());
+        return Ewoms::ebosFoamMain(argc, argv);
+    }
     else if (polymerActive) {
         if (solventActive) {
             notSupportedErrorStream << "\n"
                                     << "combining polymer and solvent is not supported by the multiplexed simulator\n";
+            std::cerr << notSupportedErrorStream.str() << std::endl;
+            std::abort();
+        }
+
+        if (foamActive) {
+            notSupportedErrorStream << "\n"
+                                    << "combining polymer and foam is not supported by the multiplexed simulator\n";
             std::cerr << notSupportedErrorStream.str() << std::endl;
             std::abort();
         }
@@ -183,14 +231,21 @@ int main(int argc, char **argv)
     else if (solventActive) {
         if (polymerActive) {
             notSupportedErrorStream << "\n"
-                                    << "combining polymer and solvent is not supported\n";
+                                    << "combining solvent and polymer is not supported\n";
+            std::cerr << notSupportedErrorStream.str() << std::endl;
+            std::abort();
+        }
+
+        if (foamActive) {
+            notSupportedErrorStream << "\n"
+                                    << "combining solvent and foam is not supported\n";
             std::cerr << notSupportedErrorStream.str() << std::endl;
             std::abort();
         }
 
         if (thermalActive) {
             notSupportedErrorStream << "\n"
-                                    << "combining polymer and and energy conservation is not supported\n";
+                                    << "combining solvent and and energy conservation is not supported\n";
             std::cerr << notSupportedErrorStream.str() << std::endl;
             std::abort();
         }
@@ -215,6 +270,13 @@ int main(int argc, char **argv)
         if (polymerActive) {
             notSupportedErrorStream << "\n"
                                     << "combining thermal and polymer is not supported by the multiplexed simulator\n";
+            std::cerr << notSupportedErrorStream.str() << std::endl;
+            std::abort();
+        }
+
+        if (foamActive) {
+            notSupportedErrorStream << "\n"
+                                    << "combining thermal and foam is not supported by the multiplexed simulator\n";
             std::cerr << notSupportedErrorStream.str() << std::endl;
             std::abort();
         }
