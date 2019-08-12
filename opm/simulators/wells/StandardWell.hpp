@@ -344,21 +344,19 @@ namespace Opm
                              Opm::DeferredLogger& deferred_logger) const;
 
         void computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                                             const double& bhp,
-                                             std::vector<double>& well_flux,
-                                             Opm::DeferredLogger& deferred_logger) const;
+                                     const double& bhp,
+                                     std::vector<double>& well_flux,
+                                     Opm::DeferredLogger& deferred_logger) const;
 
-        void computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
-                                              const std::vector<Scalar>& B_avg,
-                                              const double& bhp,
-                                              std::vector<double>& well_flux,
-                                              Opm::DeferredLogger& deferred_logger);
+        void computeWellPotentialsWithBHPLimit(const Simulator& ebosSimulator,
+                                               const std::vector<Scalar>& B_avg,
+                                               std::vector<double>& well_flux,
+                                               Opm::DeferredLogger& deferred_logger);
 
-        std::vector<double> computeWellPotentialWithTHP(const Simulator& ebosSimulator,
-                                                        const std::vector<Scalar>& B_avg,
-                                                        const double initial_bhp, // bhp from BHP constraints
-                                                        const std::vector<double>& initial_potential,
-                                                        Opm::DeferredLogger& deferred_logger);
+        std::vector<double> computeWellPotentialsWithTHP(const Simulator& ebosSimulator,
+                                                         const std::vector<Scalar>& B_avg,
+                                                         const std::vector<double>& initial_potential,
+                                                         Opm::DeferredLogger& deferred_logger);
 
         template <class ValueType>
         ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const int control_index, Opm::DeferredLogger& deferred_logger) const;

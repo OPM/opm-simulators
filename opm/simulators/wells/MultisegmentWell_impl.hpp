@@ -552,7 +552,7 @@ namespace Opm
         // during this copy, the only information not copied properly is the well controls
         MultisegmentWell<TypeTag> well(*this);
 
-        well.well_controls_ = this->createWellControlsWithBHPAndTHP(deferred_logger);
+        well.well_controls_ = this->createWellControlsWithBHPAndTHPLimits(deferred_logger);
 
         const int np = number_of_phases_;
         well_potentials.resize(np, 0.0);
@@ -563,14 +563,9 @@ namespace Opm
         // TODO: for computeWellPotentials, no derivative is required actually
         well.initPrimaryVariablesEvaluation();
 
-        // get the bhp value based on the bhp constraints
-        const double bhp = well.mostStrictBhpFromBhpLimits(deferred_logger);
-
         // does the well have a THP related constraint?
         if ( !well.wellHasTHPConstraints() ) {
-            assert(std::abs(bhp) != std::numeric_limits<double>::max());
-
-            well.computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
+            well.computeWellPotentialsWithBHPLimit(ebosSimulator, B_avg, well_potentials, deferred_logger);
         } else {
 
             const std::string msg = std::string("Well potential calculation is not supported for thp controlled multisegment wells \n")
@@ -589,29 +584,25 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
-                                     const std::vector<Scalar>& B_avg,
-                                     const double& bhp,
-                                     std::vector<double>& well_flux,
-                                     Opm::DeferredLogger& deferred_logger)
+    computeWellPotentialsWithBHPLimit(const Simulator& ebosSimulator,
+                                      const std::vector<Scalar>& B_avg,
+                                      std::vector<double>& well_flux,
+                                      Opm::DeferredLogger& deferred_logger)
     {
+        WellControls* const original_well_controls = well_controls_;
 
-        WellControls* wc = well_controls_;
-        const int bhp_index = Base::getControlIndex(BHP);
-        const double orig_bhp = well_controls_iget_target(wc, bhp_index);
-        const auto orig_current = well_controls_get_current(wc);
-
-        well_controls_iset_target(wc, bhp_index, bhp);
-        well_controls_set_current(wc, bhp_index);
+        well_controls_ = this->createWellControlsWithBHPLimit(deferred_logger);
+        well_controls_set_current(well_controls_, 0); // only one avaible control
 
         // store a copy of the well state, we don't want to update the real well state
-        WellState copy = ebosSimulator.problem().wellModel().wellState();
+        WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
+        well_state_copy.currentControls()[index_of_well_] = 0;
 
         initPrimaryVariablesEvaluation();
 
         const double dt = ebosSimulator.timeStepSize();
         // iterate to get a solution that satisfies the bhp potential.
-        iterateWellEquations(ebosSimulator, B_avg, dt, copy, deferred_logger);
+        iterateWellEquations(ebosSimulator, B_avg, dt, well_state_copy, deferred_logger);
 
         // compute the potential and store in the flux vector.
         const int np = number_of_phases_;
@@ -621,10 +612,9 @@ namespace Opm
             well_flux[ebosCompIdxToFlowCompIdx(compIdx)] += rate.value();
         }
 
-        // reset bhp limit
-        well_controls_iset_target(wc, bhp_index, orig_bhp);
-        well_controls_set_current(wc, orig_current);
-
+        // recovering the well controls here
+        well_controls_destroy(well_controls_);
+        well_controls_ = original_well_controls;
     }
 
 

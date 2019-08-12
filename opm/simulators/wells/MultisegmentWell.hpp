@@ -334,11 +334,10 @@ namespace Opm
                          const int perf,
                          std::vector<EvalWell>& mob) const;
 
-        void computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
-                                              const std::vector<Scalar>& B_avg,
-                                              const double& bhp,
-                                              std::vector<double>& well_flux,
-                                              Opm::DeferredLogger& deferred_logger);
+        void computeWellPotentialsWithBHPLimit(const Simulator& ebosSimulator,
+                                               const std::vector<Scalar>& B_avg,
+                                               std::vector<double>& well_flux,
+                                               Opm::DeferredLogger& deferred_logger);
 
         void assembleControlEq(Opm::DeferredLogger& deferred_logger) const;
 
