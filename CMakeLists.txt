@@ -258,3 +258,10 @@ if (BUILD_EBOS_EXTENSIONS)
     opm_add_bash_completion(${TGT})
   endforeach()
 endif()
+
+# For python bindings
+if (OPM_ENABLE_PYTHON)
+  set_target_properties(opmsimulators PROPERTIES POSITION_INDEPENDENT_CODE ON)
+#  set_target_properties(flow PROPERTIES ENABLE_EXPORTS ON)
+  add_subdirectory(python)
+endif()
