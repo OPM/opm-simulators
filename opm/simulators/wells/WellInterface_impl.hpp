@@ -1207,7 +1207,7 @@ namespace Opm
         const WellControls* wc = well_controls_;
         const double* distr = well_controls_get_current_distr(wc);
 
-        if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
+        if (well_controls_get_current(wc) != -1 && well_controls_get_current_type(wc) == RESERVOIR_RATE) {
             if (has_solvent && phaseIdx == contiSolventEqIdx ) {
                 typedef Ewoms::BlackOilSolventModule<TypeTag> SolventModule;
                 double coeff = 0;

@@ -109,6 +109,19 @@ namespace Opm
                             const int first_cell = wells->well_cells[wells->well_connpos[w]];
                             bhp_[w] = cellPressures[first_cell];
                         }
+                    } else if (well_controls_get_current(ctrl) == -1) {
+                        // Well under group control.
+                        // 1. Rates: assign zero well rates.
+                        for (int p = 0; p < np; ++p) {
+                            wellrates_[np*w + p] = 0.0;
+                        }
+                        // 2. Bhp: initialize bhp to be a
+                        //    little above or below (depending on if
+                        //    the well is an injector or producer)
+                        //    pressure in first perforation cell.
+                        const int first_cell = wells->well_cells[wells->well_connpos[w]];
+                        const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
+                        bhp_[w] = safety_factor*cellPressures[first_cell];
                     } else {
                         // Open well:
                         // 1. Rates: initialize well rates to match controls
