@@ -2506,11 +2506,8 @@ namespace Opm
             }
         }
 
-
-        const WellControls* wc = well_controls_;
-        const auto pu = phaseUsage();
-
-        if(std::abs(total_well_rate) > 0.) {
+        if (std::abs(total_well_rate) > 0.) {
+            const auto pu = phaseUsage();
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / total_well_rate;
             }
