@@ -356,6 +356,8 @@ well_controls_iget_distr(const struct WellControls * ctrl, int control_index) {
 
 const double *
 well_controls_get_current_distr(const struct WellControls * ctrl) {
+    if (ctrl->current < 0)
+        throw std::logic_error("Tried to use invalid current control < 0");
     return well_controls_iget_distr( ctrl , ctrl->current );
 }
 
