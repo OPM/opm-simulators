@@ -19,6 +19,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellInjectionProperties.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 namespace Opm
@@ -2519,9 +2520,10 @@ namespace Opm
             }
         } else { // total_well_rate == 0
             if (well_type_ == INJECTOR) {
+                auto phase = well_ecl_.getInjectionProperties().injectorType;
                 // only single phase injection handled
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    if (well_ecl_.getPreferredPhase() == Phase::WATER) {
+                    if (phase == WellInjector::TypeEnum::WATER) {
                         primary_variables_[WFrac] = 1.0;
                     } else {
                         primary_variables_[WFrac] = 0.0;
@@ -2529,7 +2531,7 @@ namespace Opm
                 }
 
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    if (well_ecl_.getPreferredPhase() == Phase::GAS) {
+                    if (phase == WellInjector::TypeEnum::GAS) {
                         primary_variables_[GFrac] = 1.0 - wsolvent();
                         if (has_solvent) {
                             primary_variables_[SFrac] = wsolvent();
