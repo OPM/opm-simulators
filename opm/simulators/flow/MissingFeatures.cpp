@@ -114,7 +114,7 @@ namespace MissingFeatures {
             "BPIDIMS",
             "BRANPROP",
             "BRINE",
-            "BTOBALFA"
+            "BTOBALFA",
             "BTOBALFV",
             "CARFIN",
             "COMPDATL",
