@@ -19,6 +19,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellInjectionProperties.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 namespace Opm
@@ -2506,12 +2507,8 @@ namespace Opm
             }
         }
 
-
-        const WellControls* wc = well_controls_;
-        const double* distr = well_controls_get_current_distr(wc);
-        const auto pu = phaseUsage();
-
-        if(std::abs(total_well_rate) > 0.) {
+        if (std::abs(total_well_rate) > 0.) {
+            const auto pu = phaseUsage();
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / total_well_rate;
             }
@@ -2523,9 +2520,10 @@ namespace Opm
             }
         } else { // total_well_rate == 0
             if (well_type_ == INJECTOR) {
+                auto phase = well_ecl_.getInjectionProperties().injectorType;
                 // only single phase injection handled
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    if (distr[Water] > 0.0) {
+                    if (phase == WellInjector::TypeEnum::WATER) {
                         primary_variables_[WFrac] = 1.0;
                     } else {
                         primary_variables_[WFrac] = 0.0;
@@ -2533,7 +2531,7 @@ namespace Opm
                 }
 
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    if (distr[pu.phase_pos[Gas]] > 0.0) {
+                    if (phase == WellInjector::TypeEnum::GAS) {
                         primary_variables_[GFrac] = 1.0 - wsolvent();
                         if (has_solvent) {
                             primary_variables_[SFrac] = wsolvent();

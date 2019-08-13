@@ -32,7 +32,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/wells/WellCollection.cpp
   opm/core/wells/WellsGroup.cpp
   opm/core/wells/WellsManager.cpp
-  opm/core/wells/well_controls.c
+  opm/core/wells/well_controls.cpp
   opm/core/wells/wells.c
   opm/simulators/flow/MissingFeatures.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
