@@ -2508,7 +2508,6 @@ namespace Opm
 
 
         const WellControls* wc = well_controls_;
-        const double* distr = well_controls_get_current_distr(wc);
         const auto pu = phaseUsage();
 
         if(std::abs(total_well_rate) > 0.) {
@@ -2525,7 +2524,7 @@ namespace Opm
             if (well_type_ == INJECTOR) {
                 // only single phase injection handled
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    if (distr[Water] > 0.0) {
+                    if (well_ecl_.getPreferredPhase() == Phase::WATER) {
                         primary_variables_[WFrac] = 1.0;
                     } else {
                         primary_variables_[WFrac] = 0.0;
@@ -2533,7 +2532,7 @@ namespace Opm
                 }
 
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    if (distr[pu.phase_pos[Gas]] > 0.0) {
+                    if (well_ecl_.getPreferredPhase() == Phase::GAS) {
                         primary_variables_[GFrac] = 1.0 - wsolvent();
                         if (has_solvent) {
                             primary_variables_[SFrac] = wsolvent();

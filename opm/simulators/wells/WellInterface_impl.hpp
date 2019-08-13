@@ -1205,7 +1205,6 @@ namespace Opm
     WellInterface<TypeTag>::scalingFactor(const int phaseIdx) const
     {
         const WellControls* wc = well_controls_;
-        const double* distr = well_controls_get_current_distr(wc);
 
         if (well_controls_get_current(wc) != -1 && well_controls_get_current_type(wc) == RESERVOIR_RATE) {
             if (has_solvent && phaseIdx == contiSolventEqIdx ) {
@@ -1215,6 +1214,7 @@ namespace Opm
                 return coeff;
             }
             // TODO: use the rateConverter here as well.
+            const double* distr = well_controls_get_current_distr(wc);
             return distr[phaseIdx];
         }
         const auto& pu = phaseUsage();
