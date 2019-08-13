@@ -29,8 +29,15 @@ copyToReferenceDir () {
 }
 
 declare -A tests
-# binary dirname casename [testname]
-# you only have to specify testname if it differs from dirname
+# The tests are listed in a dictionary mapping name of the test to the commands
+# used to run the test:
+#
+#    tests[testname]="binary dirname casename [cmake_testname]"
+#
+# By default the testname and dirname should be the same, but if you have
+# several test datasets in the same directory this will lead to non unique test
+# names in the cmake setup; to avoid that you can supply an alternative testname
+# to be used by cmake as an optional fourth argument.
 tests[spe1]="flow spe1 SPE1CASE1"
 tests[spe12]="flow spe1 SPE1CASE2"
 tests[spe12p]="flow spe1 SPE1CASE2_2P spe1_2p"
@@ -64,7 +71,7 @@ tests[multiply_tranxyz_model2]="flow model2 8_MULTIPLY_TRANXYZ_MODEL2 multiply_t
 tests[editnnc_model2]="flow model2 9_EDITNNC_MODEL2 editnnc_model2"
 tests[polymer_injectivity]="flow polymer_injectivity 2D_POLYMER_INJECTIVITY"
 tests[nnc]="flow editnnc NNC_AND_EDITNNC nnc"
-tests[udq]="flow udq_actionx UDQ_WCONPROD"
+tests[udq]="flow udq_actionx UDQ_WCONPROD udq_wconprod"
 tests[spe1_foam]="flow spe1_foam SPE1FOAM"
 
 changed_tests=""
