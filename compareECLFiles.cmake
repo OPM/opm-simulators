@@ -99,6 +99,8 @@ function(add_test_compare_parallel_simulation)
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_ECL_COMMAND}
                TEST_ARGS ${TEST_ARGS})
+  set_tests_properties(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}
+                       PROPERTIES RUN_SERIAL 1)
 endfunction()
 
 
@@ -130,6 +132,8 @@ function(add_test_compare_parallel_restarted_simulation)
                            ${OPM_PACK_COMMAND}
                            1
                TEST_ARGS ${TEST_ARGS})
+  set_tests_properties(compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}
+                       PROPERTIES RUN_SERIAL 1)
 endfunction()
 
 if(NOT TARGET test-suite)
