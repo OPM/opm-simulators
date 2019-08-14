@@ -221,8 +221,16 @@ namespace MissingFeatures {
             "TRACERS",
             "VAPPARS",
             "VISCREF",
+            "WAGHYSTR",
+            "WAITBAL",
+            "WALKALIN",
+            "WALQCALC",
+            "WAPI",
             "WARN",
             "WATVISCT",
+            "WBHGLR",
+            "WBOREVOL",
+            "WCALCVAL",
             "WELPI",
             "WELSPECL",
             "WGASPROD",
@@ -233,7 +241,10 @@ namespace MissingFeatures {
             "WPITAB",
             "WTEMP",
             "WTRACER",
-            "ZIPPY2" };
+            "ZIPPY2",
+            "ZIPP2OFF"};
+
+
         std::multimap<std::string, PartiallySupported<std::string> > string_options;
         std::multimap<std::string, PartiallySupported<int> > int_options;
         addSupported<ParserKeywords::COMPORD, ParserKeywords::COMPORD::ORDER_TYPE, std::string>(string_options , "INPUT");
