@@ -1287,7 +1287,7 @@ namespace Opm
     {
         const int max_iter = param_.max_welleq_iter_;
         int it = 0;
-        const double dt = 1.0; //not used for the well tests
+        const double dt = 1.0e6; //not used for the well tests
         bool converged;
         // WellState well_state0 = well_state;
         do {

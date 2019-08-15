@@ -1173,7 +1173,7 @@ namespace Opm {
     {
 
         // TODO: we should make rateConverter_ has a bool function to see whether the state is defined
-        // here, for testing purpose, we always defineState 
+        // here, for testing purpose, we always defineState
 //        if ( wellCollection().havingVREPGroups() ) {
             rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 //         }
@@ -1185,8 +1185,6 @@ namespace Opm {
         // with the wellControls from the deck when we create well_state at the beginning of the report step
         resetWellControlFromState();
 
-        // process group control related
-        prepareGroupControl(deferred_logger);
 
 
         int exception_thrown = 0;
@@ -1194,6 +1192,10 @@ namespace Opm {
             for (const auto& well : well_container_) {
                 well->checkWellOperability(ebosSimulator_, well_state_, B_avg, deferred_logger);
             }
+
+            // process group control related
+            prepareGroupControl(deferred_logger);
+
             // since the controls are all updated, we should update well_state accordingly
             for (const auto& well : well_container_) {
                 const int w = well->indexOfWell();

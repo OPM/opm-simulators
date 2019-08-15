@@ -64,8 +64,16 @@ double VFPProdProperties::thp(int table_id,
     double wfr = detail::getWFR(aqua, liquid, vapour, table->getWFRType());
     double gfr = detail::getGFR(aqua, liquid, vapour, table->getGFRType());
 
+    std::cout << " flo " << flo << " wfr " << wfr << " gfr " << gfr << " alq " << alq << std::endl;
+
     const std::vector<double> thp_array = table->getTHPAxis();
     int nthp = thp_array.size();
+
+    std::cout <<  " thp " << std::endl;
+    for (const auto value : thp_array ) {
+        std::cout << value / 1.e5 << " ";
+    }
+    std::cout << std::endl;
 
     /**
      * Find the function bhp_array(thp) by creating a 1D view of the data
@@ -83,7 +91,15 @@ double VFPProdProperties::thp(int table_id,
         bhp_array[i] = detail::interpolate(data, flo_i, thp_i, wfr_i, gfr_i, alq_i).value;
     }
 
+    std::cout << " bhp " << std::endl;
+    for (const auto value : bhp_array) {
+        std::cout << value / 1.e5 << " ";
+    }
+    std::cout << std::endl;
+
     double retval = detail::findTHP(bhp_array, thp_array, bhp_arg);
+
+    std::cout << " calculated thp " << retval << std::endl;
     return retval;
 }
 

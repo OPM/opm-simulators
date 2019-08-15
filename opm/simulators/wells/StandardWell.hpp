@@ -403,6 +403,14 @@ namespace Opm
                                         const std::vector<double>& B_avg,
                                         Opm::DeferredLogger& deferred_logger) const;
 
+        // \Note, the bhp_limit is not necessarily to be there, while it makes the function can be
+        // a little more versatile for now.
+        // We will determine whether to keep this argument later.
+        std::vector<double> solveForRatesUnderBHP(const Simulator& ebos_simulator,
+                                                  const std::vector<double>& B_avg,
+                                                  const double bhp_limit,
+                                                  Opm::DeferredLogger& deferred_logger) const;
+
         // check whether the well is operable under the current reservoir condition
         // mostly related to BHP limit and THP limit
         virtual void updateWellOperability(const Simulator& ebos_simulator,
