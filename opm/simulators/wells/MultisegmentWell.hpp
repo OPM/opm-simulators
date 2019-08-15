@@ -152,6 +152,8 @@ namespace Opm
                                                  const WellState& well_state,
                                                  Opm::DeferredLogger& deferred_logger) override; // should be const?
 
+        virtual void  addWellContributions(Mat& mat) const override;
+
         /// number of segments for this well
         /// int number_of_segments_;
         int numberOfSegments() const;
