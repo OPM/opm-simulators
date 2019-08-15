@@ -875,6 +875,18 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    addWellContributions(Mat& /* mat */) const
+    {
+        OPM_THROW(std::runtime_error, "addWellContributions is not supported by multisegment well yet");
+    }
+
+
+
+
+
     template <typename TypeTag>
     const WellSegments&
     MultisegmentWell<TypeTag>::

@@ -208,8 +208,7 @@ namespace Opm
         void calculateReservoirRates(WellState& well_state) const;
 
         // Add well contributions to matrix
-        virtual void addWellContributions(Mat&) const
-        {}
+        virtual void addWellContributions(Mat&) const = 0;
 
         void addCellRates(RateVector& rates, int cellIdx) const;
 
