@@ -163,6 +163,14 @@ opm_add_test(flow_blackoil_dunecpr
   DEPENDS "opmsimulators"
   LIBRARIES "opmsimulators")
 
+opm_add_test(flow_blackoil_dunecpr_noflex
+  ONLY_COMPILE
+  DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
+  SOURCES flow/flow_blackoil_dunecpr_noflex.cpp
+  EXE_NAME flow_blackoil_dunecpr_noflex
+  CONDITION NOT MPI_FOUND
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
 
 
 if (BUILD_FLOW)

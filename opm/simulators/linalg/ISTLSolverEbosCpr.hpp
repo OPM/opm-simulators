@@ -24,7 +24,7 @@
 #include <opm/simulators/linalg/BlackoilAmgCpr.hpp>
 #include <utility>
 #include <memory>
-
+#include "WriteSystemMatrixHelper.hpp"
 namespace Opm
 {
 //=====================================================================
@@ -296,6 +296,15 @@ namespace Opm
             if (this->parameters_.scale_linear_system_) {
                 this->scaleSolution(x);
             }
+	    if(this->parameters_.linear_solver_verbosity_ > 10){
+		if(this->iterations() > (this->parameters_.linear_solver_verbosity_ - 10)){
+		    Opm::Helper::writeSystem(this->simulator_,
+					     *this->matrix_,
+					     *this->rhs_);
+		}
+	    }
+	    
+	    
 	    return this->converged_;
         }
 
