@@ -20,7 +20,7 @@
 #define OPM_WRITESYSTEMMATRIXHELPER_HEADER_INCLUDED
 //#include <dune/istl/matrixmarket.hh>
 //#include <ewoms/linear/matrixblock.hh>
-#include <ewoms/linear/matrixmarket_ewoms.hh>
+#include "matrixmarket_ewoms.hh"
 namespace Opm{
     namespace Helper {
 	template<class SimulatorType,
