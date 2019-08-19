@@ -38,6 +38,10 @@
 #include <opm/simulators/flow/MissingFeatures.hpp>
 #include <opm/material/common/ResetLocale.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/EclipsePRTLog.hpp>
+#include <opm/common/OpmLog/LogUtil.hpp>
+
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
@@ -111,6 +115,104 @@ namespace detail
     }
 
 }
+
+
+
+
+
+// Setup the OpmLog backends
+void setupLogging(int mpi_rank_, const std::string& deck_filename, const std::string& cmdline_output_dir, const std::string& cmdline_output, bool output_cout_, const std::string& stdout_log_id) {
+    // create logFile
+    using boost::filesystem::path;
+    path fpath(deck_filename);
+    std::string baseName;
+    std::ostringstream debugFileStream;
+    std::ostringstream logFileStream;
+
+    // Strip extension "." or ".DATA"
+    std::string extension = boost::to_upper_copy(fpath.extension().string());
+    if (extension == ".DATA" || extension == ".") {
+        baseName = boost::to_upper_copy(fpath.stem().string());
+    } else {
+        baseName = boost::to_upper_copy(fpath.filename().string());
+    }
+
+    std::string output_dir = cmdline_output_dir;
+    if (output_dir.empty()) {
+        output_dir = absolute(path(baseName).parent_path()).string();
+    }
+
+    logFileStream << output_dir << "/" << baseName;
+    debugFileStream << output_dir << "/" << baseName;
+
+    if (mpi_rank_ != 0) {
+        // Added rank to log file for non-zero ranks.
+        // This prevents message loss.
+        debugFileStream << "." << mpi_rank_;
+        // If the following file appears then there is a bug.
+        logFileStream << "." << mpi_rank_;
+    }
+    logFileStream << ".PRT";
+    debugFileStream << ".DBG";
+
+    FileOutputMode output_;
+    {
+        static std::map<std::string, FileOutputMode> stringToOutputMode =
+            { {"none", OUTPUT_NONE },
+              {"false", OUTPUT_LOG_ONLY },
+              {"log", OUTPUT_LOG_ONLY },
+              {"all" , OUTPUT_ALL },
+              {"true" , OUTPUT_ALL }};
+        auto outputModeIt = stringToOutputMode.find(cmdline_output);
+        if (outputModeIt != stringToOutputMode.end()) {
+            output_ = outputModeIt->second;
+        }
+        else {
+            output_ = OUTPUT_ALL;
+            std::cerr << "Value " << cmdline_output <<
+                " is not a recognized output mode. Using \"all\" instead."
+                      << std::endl;
+        }
+    }
+
+    if (output_ > OUTPUT_NONE) {
+        std::shared_ptr<Opm::EclipsePRTLog> prtLog = std::make_shared<Opm::EclipsePRTLog>(logFileStream.str(), Opm::Log::NoDebugMessageTypes, false, output_cout_);
+        Opm::OpmLog::addBackend("ECLIPSEPRTLOG", prtLog);
+        prtLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>());
+        prtLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(false));
+    }
+
+    if (output_ >= OUTPUT_LOG_ONLY) {
+        std::string debugFile = debugFileStream.str();
+        std::shared_ptr<Opm::StreamLog> debugLog = std::make_shared<Opm::EclipsePRTLog>(debugFileStream.str(), Opm::Log::DefaultMessageTypes, false, output_cout_);
+        Opm::OpmLog::addBackend("DEBUGLOG", debugLog);
+    }
+
+    std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
+    Opm::OpmLog::addBackend(stdout_log_id, streamLog);
+    streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(true));
+}
+
+
+
+void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string& stdout_log_id) {
+    std::shared_ptr<Opm::StreamLog> stream_log = Opm::OpmLog::getBackend<Opm::StreamLog>(stdout_log_id);
+
+    const std::map<int64_t, int> limits = {{Opm::Log::MessageType::Note,
+                                            msgLimits.getCommentPrintLimit(0)},
+                                           {Opm::Log::MessageType::Info,
+                                            msgLimits.getMessagePrintLimit(0)},
+                                           {Opm::Log::MessageType::Warning,
+                                            msgLimits.getWarningPrintLimit(0)},
+                                           {Opm::Log::MessageType::Error,
+                                            msgLimits.getErrorPrintLimit(0)},
+                                           {Opm::Log::MessageType::Problem,
+                                            msgLimits.getProblemPrintLimit(0)},
+                                           {Opm::Log::MessageType::Bug,
+                                            msgLimits.getBugPrintLimit(0)}};
+    stream_log->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10, limits));
+}
+
 
 // ----------------- Main program -----------------
 int main(int argc, char** argv)
@@ -190,6 +292,11 @@ int main(int argc, char** argv)
             Opm::Parser parser;
             Opm::ParseContext parseContext;
             Opm::ErrorGuard errorGuard;
+            setupLogging(mpiRank,
+                         deckFilename,
+                         EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir),
+                         EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
+                         outputCout, "STDOUT_LOGGER");
 
             if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
                 parseContext.update( Opm::InputError::DELAYED_EXIT1);
@@ -202,13 +309,13 @@ int main(int argc, char** argv)
 
             deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
             Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
-
             if ( outputCout )
                 Opm::checkDeck(*deck, parser, parseContext, errorGuard);
 
             eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
             schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
             summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
+            setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
 
