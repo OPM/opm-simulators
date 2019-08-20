@@ -100,38 +100,59 @@ namespace detail
     }
 }
 
-class FlowSimulator
+class BlackOilSimulator
 {
 public:
-    FlowSimulator()
+    BlackOilSimulator()
     {
-        _argc = 2;
-        _argv = new char*[2];
-        _argv[0] = new char[200];
+        argc_ = 2;
+        argv_ = new char*[2];
+        argv_[0] = new char[200];
         char argv0[] = "flow";
-        std::strcpy(_argv[0], argv0);
-        _argv[1] = new char[200];
+        std::strcpy(argv_[0], argv0);
+        argv_[1] = new char[200];
     }
 
-    ~FlowSimulator() 
+    ~BlackOilSimulator() 
     {
-        delete[] _argv[0];
-        delete[] _argv[1];
-        delete[] _argv;
+        delete[] argv_[0];
+        delete[] argv_[1];
+        delete[] argv_;
     }
 
-    void setDeckFilenameTo( char* deckFilename )
+    void setDeckFilename( char* deckFilename )
     {
-        std::strcpy(_argv[1], deckFilename);
-        // argv1 = deckFilename;
-        std::printf("Deck filename set to '%s'\n", _argv[1]);
+        std::strcpy(argv_[1], deckFilename);
+    }
+
+    void setDeck( const Opm::Deck& deck )
+    {
+        deck_ = std::make_shared< Opm::Deck >(deck);
+        // deck_ = std::shared_ptr< Opm::Deck >( const_cast< Opm::Deck* > (&deck), [](Opm::Deck*){} );
+    }
+
+    void setEclipseState( const Opm::EclipseState& eclipseState )
+    {
+        eclipseState_ = std::make_shared< Opm::EclipseState >(eclipseState);
+        // eclipseState_ = std::shared_ptr< Opm::EclipseState >( const_cast< Opm::EclipseState* > (&eclipseState), [](Opm::EclipseState*){} );
+    }
+
+    void setSchedule( const Opm::Schedule& schedule )
+    {
+        schedule_ = std::make_shared< Opm::Schedule >(schedule);
+        // schedule_ = std::shared_ptr< Opm::Schedule >( const_cast< Opm::Schedule* > (&schedule), [](Opm::Schedule*){} );
+    }
+
+    void setSummaryConfig( const Opm::SummaryConfig& summaryConfig )
+    {
+        summaryConfig_ = std::make_shared< Opm::SummaryConfig >(summaryConfig);
+        // summaryConfig_ = std::shared_ptr< Opm::SummaryConfig >( const_cast< Opm::SummaryConfig* > (&summaryConfig), [](Opm::SummaryConfig*){} );
     }
 
     int run()
     {
-        // Setup argc and argv variables
-        int argc = _argc;
-        char** argv = _argv;
+        int argc = argc_;
+        char **argv = argv_;
 
         Dune::Timer externalSetupTimer;
         externalSetupTimer.start();
@@ -176,166 +197,59 @@ public:
         if (mpiRank == 0)
             outputCout = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
 
-        std::string deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
-        typedef typename GET_PROP_TYPE(PreTypeTag, Vanguard) PreVanguard;
-        try {
-            deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
-        }
-        catch (const std::exception& e) {
-            if ( mpiRank == 0 )
-                std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
-#if HAVE_MPI
-            MPI_Finalize();
-#endif
-            return 1;
-        }
+//         std::string deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
+//         typedef typename GET_PROP_TYPE(PreTypeTag, Vanguard) PreVanguard;
+//         try {
+//             deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
+//         }
+//         catch (const std::exception& e) {
+//             if ( mpiRank == 0 )
+//                 std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
+// #if HAVE_MPI
+//             MPI_Finalize();
+// #endif
+//             return 1;
+//         }
 
         if (outputCout) {
             Opm::FlowMainEbos<PreTypeTag>::printBanner();
         }
 
-        // Create Deck and EclipseState.
-        try {
-            if (outputCout) {
-                std::cout << "Reading deck file '" << deckFilename << "'\n";
-                std::cout.flush();
-            }
-            std::shared_ptr<Opm::Deck> deck;
-            std::shared_ptr<Opm::EclipseState> eclipseState;
-            std::shared_ptr<Opm::Schedule> schedule;
-            std::shared_ptr<Opm::SummaryConfig> summaryConfig;
-            {
-                Opm::Parser parser;
-                Opm::ParseContext parseContext;
-                Opm::ErrorGuard errorGuard;
+        const auto& phases = Opm::Runspec(*deck_).phases();
 
-                if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
-                    parseContext.update( Opm::InputError::DELAYED_EXIT1);
-                else {
-                    parseContext.update(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
-                    parseContext.update(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
-                    parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
-                    parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
-                }
-
-                deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
-                Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
-
-                if ( outputCout )
-                    Opm::checkDeck(*deck, parser, parseContext, errorGuard);
-
-                eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
-                schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
-                summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
-
-                Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
-
-                if (errorGuard) {
-                    errorGuard.dump();
-                    errorGuard.clear();
-
-                    throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
-                }
-            }
-            const auto& phases = Opm::Runspec(*deck).phases();
-
-            std::cout << "\nDeck has been created!\n";
-
-            // run the actual simulator
-            //
-            // TODO: make sure that no illegal combinations like thermal and twophase are
-            //       requested.
-
-            // Twophase cases
-            if( phases.size() == 2 ) {
-                // oil-gas
-                if (phases.active( Opm::Phase::GAS ))
-                {
-                    Opm::flowEbosGasOilSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-                    return Opm::flowEbosGasOilMain(argc, argv);
-                }
-                // oil-water
-                else if ( phases.active( Opm::Phase::WATER ) )
-                {
-                    Opm::flowEbosOilWaterSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-                    return Opm::flowEbosOilWaterMain(argc, argv);
-                }
-                else {
-                    if (outputCout)
-                        std::cerr << "No suitable configuration found, valid are Twophase (oilwater and oilgas), polymer, solvent, or blackoil" << std::endl;
-                    return EXIT_FAILURE;
-                }
-            }
-            // Polymer case
-            else if ( phases.active( Opm::Phase::POLYMER ) ) {
-
-                if ( !phases.active( Opm::Phase::WATER) ) {
-                    if (outputCout)
-                        std::cerr << "No valid configuration is found for polymer simulation, valid options include "
-                                << "oilwater + polymer and blackoil + polymer" << std::endl;
-                    return EXIT_FAILURE;
-                }
-
-                // Need to track the polymer molecular weight
-                // for the injectivity study
-                if ( phases.active( Opm::Phase::POLYMW ) ) {
-                    // only oil water two phase for now
-                    assert( phases.size() == 4);
-                    return Opm::flowEbosOilWaterPolymerInjectivityMain(argc, argv);
-                }
-
-                if ( phases.size() == 3 ) { // oil water polymer case
-                    Opm::flowEbosOilWaterPolymerSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-                    return Opm::flowEbosOilWaterPolymerMain(argc, argv);
-                } else {
-                    Opm::flowEbosPolymerSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-                    return Opm::flowEbosPolymerMain(argc, argv);
-                }
-            }
-            // Solvent case
-            else if ( phases.active( Opm::Phase::SOLVENT ) ) {
-                Opm::flowEbosSolventSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-                return Opm::flowEbosSolventMain(argc, argv);
-            }
-            // Energy case
-            else if (eclipseState->getSimulationConfig().isThermal()) {
-                Opm::flowEbosEnergySetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-                return Opm::flowEbosEnergyMain(argc, argv);
-            }
-            // Blackoil case
-            else if( phases.size() == 3 ) {
-                Opm::flowEbosBlackoilSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-                return Opm::flowEbosBlackoilMain(argc, argv);
-            }
-            else
-            {
-                if (outputCout)
-                    std::cerr << "No suitable configuration found, valid are Twophase, polymer, solvent, energy, or blackoil" << std::endl;
-                return EXIT_FAILURE;
-            }
+        // Blackoil case
+        if( phases.size() == 3 ) {
+            Opm::flowEbosBlackoilSetDeck(externalSetupTimer.elapsed(), *deck_, *eclipseState_, *schedule_, *summaryConfig_);
+            return Opm::flowEbosBlackoilMain(argc, argv);
         }
-        catch (const std::invalid_argument& e)
+        else
         {
-            if (outputCout) {
-                std::cerr << "Failed to create valid EclipseState object." << std::endl;
-                std::cerr << "Exception caught: " << e.what() << std::endl;
-            }
+            if (outputCout)
+                std::cerr << "Only blackoil configuration is supported!" << std::endl;
             return EXIT_FAILURE;
         }
-
+        
         return EXIT_SUCCESS;
     }
 
 private:
-    std::string _deckFilename;
-    int _argc;
-    char** _argv;
+    int argc_;
+    char **argv_;
+
+    std::shared_ptr<Opm::Deck>          deck_;
+    std::shared_ptr<Opm::EclipseState>  eclipseState_;
+    std::shared_ptr<Opm::Schedule>      schedule_;
+    std::shared_ptr<Opm::SummaryConfig> summaryConfig_;
 };
 
 PYBIND11_MODULE(simulators, m)
 {
-    py::class_<FlowSimulator>(m, "FlowSimulator")
+    py::class_<BlackOilSimulator>(m, "BlackOilSimulator")
         .def(py::init<>())
-        .def("setDeckFilenameTo", &FlowSimulator::setDeckFilenameTo)
-        .def("run", &FlowSimulator::run);
+        .def("run", &BlackOilSimulator::run)
+        .def("setDeck", &BlackOilSimulator::setDeck)
+        .def("setDeckFilename", &BlackOilSimulator::setDeckFilename)
+        .def("setEclipseState", &BlackOilSimulator::setEclipseState)
+        .def("setSchedule", &BlackOilSimulator::setSchedule)
+        .def("setSummaryConfig", &BlackOilSimulator::setSummaryConfig);
 }
