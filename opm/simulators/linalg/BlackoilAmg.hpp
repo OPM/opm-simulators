@@ -35,6 +35,7 @@
 #include <dune/istl/scalarproducts.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include "matrixmarket_ewoms.hh"
 namespace Dune
 {
 namespace Amg
@@ -553,6 +554,13 @@ public:
     CoarseLevelSolver* createCoarseLevelSolver(LTP& transferPolicy)
     {
         coarseOperator_=transferPolicy.getCoarseLevelOperator();
+	if( param_->cpr_solver_verbose_ >10 ){
+	    std::string filename = "course_matrix_istl_blackoil.txt";
+	    std::ofstream filem(filename);
+	    //const auto& matrix = *transferPolicy.getCoarseMatrix();
+	    const auto& matrix = coarseOperator_->getmat(); 
+	    Dune::writeMatrixMarket(matrix, filem);
+	}
         const LevelTransferPolicy& transfer =
             reinterpret_cast<const LevelTransferPolicy&>(transferPolicy);
         AMGInverseOperator* inv = new AMGInverseOperator(param_,

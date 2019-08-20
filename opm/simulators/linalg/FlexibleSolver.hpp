@@ -130,6 +130,14 @@ private:
                                                               tol, // desired residual reduction factor
                                                               maxiter, // maximum number of iterations
                                                               verbosity));
+	} else if (solver_type == "cg") {
+            linsolver_.reset(new Dune::CGSolver<VectorType>(*linearoperator_,
+							    *scalarproduct_,
+							    *preconditioner_,
+							    tol, // desired residual reduction factor
+							    maxiter, // maximum number of iterations
+							    verbosity));    
+	    
         } else if (solver_type == "gmres") {
             int restart = prm.get<int>("restart");
             linsolver_.reset(new Dune::RestartedGMResSolver<VectorType>(*linearoperator_,

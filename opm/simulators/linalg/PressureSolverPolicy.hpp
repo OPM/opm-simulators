@@ -113,6 +113,16 @@ namespace Amg
             auto& tp = dynamic_cast<LevelTransferPolicy&>(transferPolicy); // TODO: make this unnecessary.
             PressureInverseOperator* inv
                 = new PressureInverseOperator(*coarseOperator_, prm_, tp.getCoarseLevelCommunication());
+	    if (prm_.get<int>("verbosity") > 10) {         
+		std::string filename = "course_matrix_istl_pressure_flex.txt";
+		std::ofstream filem(filename);
+		if (!filem) {
+		    throw std::runtime_error("Could not write matrix");
+		}
+		//const auto& matrix = *levelTransferPolicy_.getCoarseMatrix();
+		const auto& matrix = coarseOperator_->getmat(); 
+		Dune::writeMatrixMarket(matrix, filem);
+	    }
             return inv;
         }
 
