@@ -128,7 +128,6 @@ namespace MissingFeatures {
             "COLLAPSE",
             "COLUMNS",
             "CBMOPTS",
-            "COMPDAT",
             "COMPDATL",
             "COMPIMB",
             "COMPFLSH",
