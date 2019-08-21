@@ -181,7 +181,7 @@ public:
             }
             rhs_ = b;
         } else {
-            solver_->preconditioner().update(prm_);
+            solver_->preconditioner().update(prm_.get_child("preconditioner"));
             rhs_ = b;
         }
     }
