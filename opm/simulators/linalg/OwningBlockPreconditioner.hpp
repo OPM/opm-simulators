@@ -63,9 +63,9 @@ public:
     }
 
     // The update() function does nothing for a wrapped preconditioner.
-    virtual void update(const boost::property_tree::ptree& p) override
+    virtual void update(const X& w,const boost::property_tree::ptree& pt) override
     {
-        orig_precond_.update(p);
+        orig_precond_.update(w, pt);
     }
 
 private:

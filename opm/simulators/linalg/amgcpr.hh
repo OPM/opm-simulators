@@ -239,7 +239,7 @@ namespace Dune
       /**
        * @brief Update the coarse solver and the hierarchies.
        */
-      virtual void update(const boost::property_tree::ptree& prm);
+      virtual void update(const X& w, const boost::property_tree::ptree& prm);
 
       virtual void update();
       /**
@@ -470,7 +470,7 @@ namespace Dune
     }
 
     template<class M, class X, class S, class PI, class A>
-    void AMGCPR<M,X,S,PI,A>::update(const boost::property_tree::ptree& /* prm */)
+    void AMGCPR<M,X,S,PI,A>::update(const X& /*w*/, const boost::property_tree::ptree& /*prm*/)
     {
       update();
     }
