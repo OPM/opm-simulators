@@ -142,30 +142,32 @@ public:
             assert(recreate_solver == false);
             // Never recreate solver.
         }
+	VectorType weights;
         if( prm_.get<std::string>("preconditioner.type") == "cpr" ||
 	    prm_.get<std::string>("preconditioner.type") == "cprt"
 	    )
-	{
+	{	    
 	    bool transpose = false;
 	    if(prm_.get<std::string>("preconditioner.type") == "cprt"){
 		transpose = true;
 	    }
-
-	    
 	    if(prm_.get<std::string>("preconditioner.weight_type") == "quasiimpes") {
-		VectorType weights = Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
-		    mat.istlMatrix(),
-		    prm_.get<int>("preconditioner.pressure_var_index"), transpose);
-		prm_.put("preconditioner.weights",weights);
-	    
+		if( not( recreate_solver || !solver_) ){
+		    // weighs will be created as default in the solver
+		    weights = Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
+			mat.istlMatrix(),
+			prm_.get<int>("preconditioner.pressure_var_index"), transpose);
+		}
 	    }else if(prm_.get<std::string>("preconditioner.weight_type") == "trueimpes"  ){
-		VectorType weights =
+		weights = 
 		    this->getTrueImpesWeights(b, prm_.get<int>("preconditioner.pressure_var_index"));
-	    prm_.put("preconditioner.weights",weights);
+		if( recreate_solver || !solver_){
+		    // need weights for the constructor
+		    prm_.put("preconditioner.weights",weights);
+		}
 	    }else{
 		throw std::runtime_error("no such weights implemented for cpr");
-	    }
-	
+	    }	
 	}else{
 	    
 	}
@@ -181,7 +183,7 @@ public:
             }
             rhs_ = b;
         } else {
-            solver_->preconditioner().update(prm_.get_child("preconditioner"));
+            solver_->preconditioner().update(weights, prm_.get_child("preconditioner"));
             rhs_ = b;
         }
     }

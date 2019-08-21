@@ -84,7 +84,13 @@ public:
         : linear_operator_(linearoperator)
         , finesmoother_(PrecFactory::create(linearoperator, prm.get_child("finesmoother")))
         , comm_(nullptr)
-        , weights_(prm.get<VectorType>("weights"))
+        , weights_(
+	    (prm.get<std::string>("weight_type") != "quasiimpes") ?
+	    prm.get<VectorType>("weights") :
+	    Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(linearoperator.getmat(),
+								   prm.get<int>("pressure_var_index"),
+								   transpose)
+	    )
         , levelTransferPolicy_(dummy_comm_, weights_, prm.get<int>("pressure_var_index"))
         , coarseSolverPolicy_(prm.get_child("coarsesolver"))
         , twolevel_method_(linearoperator,
@@ -108,7 +114,13 @@ public:
         : linear_operator_(linearoperator)
         , finesmoother_(PrecFactory::create(linearoperator, prm.get_child("finesmoother"), comm))
         , comm_(&comm)
-        , weights_(prm.get<VectorType>("weights"))
+        , weights_(
+	    (prm.get<std::string>("weight_type") != "quasiimpes") ?
+	    prm.get<VectorType>("weights") :
+	    Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(linearoperator.getmat(),
+								   prm.get<int>("pressure_var_index"),
+								   transpose)
+	    )
         , levelTransferPolicy_(*comm_, weights_, prm.get<int>("pressure_var_index"))
         , coarseSolverPolicy_(prm.get_child("coarsesolver"))
         , twolevel_method_(linearoperator,
@@ -145,11 +157,16 @@ public:
         twolevel_method_.post(x);
     }
 
-    virtual void update(const boost::property_tree::ptree& prm) override
+    virtual void update(const VectorType& weights, const boost::property_tree::ptree& /*prm*/) override
     {
-        //Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
-        //    linear_operator_.getmat(), prm_.get<int>("pressure_var_index"), transpose, weights_);
-	weights_ = prm.get<VectorType>("weights");
+	
+	// if(prm.get<std::string>("weight_type") == "quasiimpes"){
+	//     Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
+	// 	linear_operator_.getmat(), prm_.get<int>("pressure_var_index"), transpose, weights_);
+	//     weights_ = prm.get<VectorType>("weights");
+	// }else{
+	    weights_ = weights;
+	    //}
         updateImpl(comm_);
     }
 
