@@ -1442,4 +1442,35 @@ namespace Opm
     }
 
 
+
+
+
+
+    template<typename TypeTag>
+    WellControls*
+    WellInterface<TypeTag>::
+    createWellControlsWithBHPAndTHP(DeferredLogger& deferred_logger) const
+    {
+        WellControls* wc = well_controls_create();
+        well_controls_assert_number_of_phases(wc, number_of_phases_);
+
+        // a well always has a bhp limit
+        const double invalid_alq = -1e100;
+        const double invalid_vfp = -2147483647;
+        const double bhp_limit = this->mostStrictBhpFromBhpLimits(deferred_logger);
+        well_controls_add_new(BHP, bhp_limit, invalid_alq, invalid_vfp, NULL, wc);
+
+        if (this->wellHasTHPConstraints()) {
+            // it might be better to do it through EclipseState?
+            const double thp_limit = this->getTHPConstraint(deferred_logger);
+            const double thp_control_index = this->getControlIndex(THP);
+            const  int vfp_number = well_controls_iget_vfp(well_controls_, thp_control_index);
+            const double alq = well_controls_iget_alq(well_controls_, thp_control_index);
+            well_controls_add_new(THP, thp_limit, alq, vfp_number, NULL, wc);
+        }
+
+        return wc;
+    }
+
+
 }

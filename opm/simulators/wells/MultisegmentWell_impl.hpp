@@ -548,23 +548,29 @@ namespace Opm
                           std::vector<double>& well_potentials,
                           Opm::DeferredLogger& deferred_logger)
     {
+        // creating a copy of the well itself, to avoid messing up the explicit informations
+        // during this copy, the only information not copied properly is the well controls
+        MultisegmentWell<TypeTag> well(*this);
+
+        well.well_controls_ = this->createWellControlsWithBHPAndTHP(deferred_logger);
+
         const int np = number_of_phases_;
         well_potentials.resize(np, 0.0);
 
-        updatePrimaryVariables(well_state, deferred_logger);
+        well.updatePrimaryVariables(well_state, deferred_logger);
 
         // initialize the primary variables in Evaluation, which is used in computePerfRate for computeWellPotentials
         // TODO: for computeWellPotentials, no derivative is required actually
-        initPrimaryVariablesEvaluation();
+        well.initPrimaryVariablesEvaluation();
 
         // get the bhp value based on the bhp constraints
-        const double bhp = Base::mostStrictBhpFromBhpLimits(deferred_logger);
+        const double bhp = well.mostStrictBhpFromBhpLimits(deferred_logger);
 
         // does the well have a THP related constraint?
-        if ( !Base::wellHasTHPConstraints() ) {
+        if ( !well.wellHasTHPConstraints() ) {
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
 
-            computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
+            well.computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
         } else {
 
             const std::string msg = std::string("Well potential calculation is not supported for thp controlled multisegment wells \n")
@@ -573,9 +579,10 @@ namespace Opm
                     + "you will have to change the " + name() + " well to a standard well \n";
 
             deferred_logger.warning("WELL_POTENTIAL_FOR_THP_NOT_IMPLEMENTED_FOR_MULTISEG_WELLS", msg);
-            return;
         }
 
+        // destroy the newly created WellControls
+        well_controls_destroy(well.well_controls_);
     }
 
 

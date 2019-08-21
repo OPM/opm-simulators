@@ -304,7 +304,7 @@ namespace Opm {
             wellTesting(reportStepIdx, simulationTime, local_deferredLogger);
 
             // create the well container
-            well_container_ = createWellContainer(reportStepIdx, wells(), /*allow_closing_opening_wells=*/true, local_deferredLogger);
+            well_container_ = createWellContainer(reportStepIdx, local_deferredLogger);
 
             // do the initialization for all the wells
             // TODO: to see whether we can postpone of the intialization of the well containers to
@@ -512,7 +512,7 @@ namespace Opm {
     template<typename TypeTag>
     std::vector<typename BlackoilWellModel<TypeTag>::WellInterfacePtr >
     BlackoilWellModel<TypeTag>::
-    createWellContainer(const int time_step, const Wells* wells, const bool allow_closing_opening_wells, Opm::DeferredLogger& deferred_logger)
+    createWellContainer(const int time_step, Opm::DeferredLogger& deferred_logger)
     {
         std::vector<WellInterfacePtr> well_container;
 
@@ -524,7 +524,7 @@ namespace Opm {
             // With the following way, it will have the same order with wells struct
             // Hopefully, it can generate the same residual history with master branch
             for (int w = 0; w < nw; ++w) {
-                const std::string well_name = std::string(wells->name[w]);
+                const std::string well_name = std::string(wells()->name[w]);
 
                 // finding the location of the well in wells_ecl
                 const int nw_wells_ecl = wells_ecl_.size();
@@ -542,56 +542,54 @@ namespace Opm {
 
                 const Well2& well_ecl = wells_ecl_[index_well];
 
-                if (allow_closing_opening_wells) {
-                    // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
-                    if ( wellTestState_.hasWellClosed(well_name)) {
-                        // TODO: more checking here, to make sure this standard more specific and complete
-                        // maybe there is some WCON keywords will not open the well
-                        if (well_state_.effectiveEventsOccurred(w)) {
-                            if (wellTestState_.lastTestTime(well_name) == ebosSimulator_.time()) {
-                                // The well was shut this timestep, we are most likely retrying
-                                // a timestep without the well in question, after it caused
-                                // repeated timestep cuts. It should therefore not be opened,
-                                // even if it was new or received new targets this report step.
-                                well_state_.setEffectiveEventsOccurred(w, false);
-                            } else {
-                                wellTestState_.openWell(well_name);
-                            }
-                        }
-                    }
-
-
-                    // TODO: should we do this for all kinds of closing reasons?
-                    // something like wellTestState_.hasWell(well_name)?
-                    if ( wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::ECONOMIC) ||
-                         wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::PHYSICAL) ) {
-                        if( well_ecl.getAutomaticShutIn() ) {
-                            // shut wells are not added to the well container
-                            // TODO: make a function from well_state side to handle the following
-                            well_state_.thp()[w] = 0.;
-                            well_state_.bhp()[w] = 0.;
-                            const int np = numPhases();
-                            for (int p = 0; p < np; ++p) {
-                                well_state_.wellRates()[np * w + p] = 0.;
-                            }
-                            continue;
+                // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
+                if ( wellTestState_.hasWellClosed(well_name)) {
+                    // TODO: more checking here, to make sure this standard more specific and complete
+                    // maybe there is some WCON keywords will not open the well
+                    if (well_state_.effectiveEventsOccurred(w)) {
+                        if (wellTestState_.lastTestTime(well_name) == ebosSimulator_.time()) {
+                            // The well was shut this timestep, we are most likely retrying
+                            // a timestep without the well in question, after it caused
+                            // repeated timestep cuts. It should therefore not be opened,
+                            // even if it was new or received new targets this report step.
+                            well_state_.setEffectiveEventsOccurred(w, false);
                         } else {
-                            // close wells are added to the container but marked as closed
-                            struct WellControls* well_controls = wells->ctrls[w];
-                            well_controls_stop_well(well_controls);
+                            wellTestState_.openWell(well_name);
                         }
                     }
                 }
 
+
+                // TODO: should we do this for all kinds of closing reasons?
+                // something like wellTestState_.hasWell(well_name)?
+                if ( wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::ECONOMIC) ||
+                    wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::PHYSICAL) ) {
+                    if( well_ecl.getAutomaticShutIn() ) {
+                        // shut wells are not added to the well container
+                        // TODO: make a function from well_state side to handle the following
+                        well_state_.thp()[w] = 0.;
+                        well_state_.bhp()[w] = 0.;
+                        const int np = numPhases();
+                        for (int p = 0; p < np; ++p) {
+                            well_state_.wellRates()[np * w + p] = 0.;
+                        }
+                        continue;
+                    } else {
+                        // close wells are added to the container but marked as closed
+                        struct WellControls* well_controls = wells()->ctrls[w];
+                        well_controls_stop_well(well_controls);
+                    }
+                }
+
                 // Use the pvtRegionIdx from the top cell
-                const int well_cell_top = wells->well_cells[wells->well_connpos[w]];
+                const int well_cell_top = wells()->well_cells[wells()->well_connpos[w]];
                 const int pvtreg = pvt_region_idx_[well_cell_top];
 
                 if ( !well_ecl.isMultiSegment() || !param_.use_multisegment_well_) {
-                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells,
+                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
                                                 param_, *rateConverter_, pvtreg, numComponents() ) );
                 } else {
-                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells,
+                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(),
                                                 param_, *rateConverter_, pvtreg, numComponents() ) );
                 }
             }
@@ -1068,13 +1066,7 @@ namespace Opm {
         const int np = numPhases();
         well_potentials.resize(nw * np, 0.0);
 
-
-        const int reportStepIdx = ebosSimulator_.episodeIndex();
-        const double invalid_alq = -1e100;
-        const double invalid_vfp = -2147483647;
         auto well_state_copy = well_state_;
-        const Wells* local_wells = clone_wells(wells());
-        std::vector<WellInterfacePtr> well_container_copy = createWellContainer(reportStepIdx, local_wells, /*allow_closing_opening_wells=*/ false, deferred_logger);
 
         // average B factors are required for the convergence checking of well equations
         // Note: this must be done on all processes, even those with
@@ -1082,56 +1074,12 @@ namespace Opm {
         std::vector< Scalar > B_avg(numComponents(), Scalar() );
         computeAverageFormationFactor(B_avg);
 
+        const int reportStepIdx = ebosSimulator_.episodeIndex();
         const Opm::SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
-        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         const bool write_restart_file = ebosSimulator_.vanguard().eclState().getRestartConfig().getWriteRestartFile(reportStepIdx);
         int exception_thrown = 0;
         try {
-            for (const auto& well : well_container_copy) {
-                // Only compute the well potential when asked for
-                well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
-
-                WellControls* wc = well->wellControls();
-                well_controls_clear(wc);
-                well_controls_assert_number_of_phases( wc , np);
-                if (well->wellType() == INJECTOR) {
-                    const auto controls = well->wellEcl()->injectionControls(summaryState);
-
-                    if (controls.hasControl(WellInjector::THP)) {
-                        const double thp_limit  = controls.thp_limit;
-                        const int    vfp_number = controls.vfp_table_number;
-                        well_controls_add_new(THP, thp_limit, invalid_alq, vfp_number, NULL, wc);
-                    }
-
-                    // we always have a bhp limit
-                    const double bhp_limit = controls.bhp_limit;
-                    well_controls_add_new(BHP, bhp_limit, invalid_alq, invalid_vfp, NULL, wc);
-                } else {
-                    const auto controls = well->wellEcl()->productionControls(summaryState);
-                    if (controls.hasControl(WellProducer::THP)) {
-                        const double thp_limit  = controls.thp_limit;
-                        const double alq_value  = controls.alq_value;
-                        const int    vfp_number = controls.vfp_table_number;
-                        well_controls_add_new(THP, thp_limit, alq_value, vfp_number, NULL, wc);
-                    }
-
-                    // we always have a bhp limit
-                    const double bhp_limit = controls.bhp_limit;
-                    well_controls_add_new(BHP, bhp_limit, invalid_alq, invalid_vfp, NULL, wc);
-
-                    well->setVFPProperties(vfp_properties_.get());
-
-                }
-
-                if (has_polymer_)
-                {
-                    const Grid& grid = ebosSimulator_.vanguard().grid();
-                    if (PolymerModule::hasPlyshlog() || GET_PROP_VALUE(TypeTag, EnablePolymerMW) ) {
-                        well->computeRepRadiusPerfLength(grid, cartesian_to_compressed_, deferred_logger);
-                    }
-                }
-
-
+            for (const auto& well : well_container_) {
 
                 const bool needed_for_summary = ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
                                                   summaryConfig.hasSummaryKey( "WOPI:" + well->name()) ||

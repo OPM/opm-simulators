@@ -446,6 +446,8 @@ namespace Opm
 
         void initCompletions();
 
+        WellControls* createWellControlsWithBHPAndTHP(DeferredLogger& deferred_logger) const;
+
         // count the number of times an output log message is created in the productivity
         // index calculations
         int well_productivity_index_logger_counter_;
