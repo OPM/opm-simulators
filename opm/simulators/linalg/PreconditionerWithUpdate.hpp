@@ -22,7 +22,7 @@
 
 #include <dune/istl/preconditioner.hh>
 #include <memory>
-
+#include <boost/property_tree/ptree.hpp>
 namespace Dune
 {
 
@@ -31,7 +31,7 @@ template <class X, class Y>
 class PreconditionerWithUpdate : public Preconditioner<X, Y>
 {
 public:
-    virtual void update() = 0;
+    virtual void update(const boost::property_tree::ptree& pt) = 0;
 };
 
 template <class OriginalPreconditioner>
@@ -69,7 +69,7 @@ public:
     }
 
     // The update() function does nothing for a wrapped preconditioner.
-    virtual void update() override
+    virtual void update(const boost::property_tree::ptree& /* pt */) override
     {
     }
 

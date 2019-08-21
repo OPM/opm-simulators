@@ -65,6 +65,19 @@ class ISTLSolverEbosFlexible
 #endif
     using SolverType = Dune::FlexibleSolver<MatrixType, VectorType>;
 
+    // for quasiImpesWeights
+    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
+    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    //typedef typename GET_PROP_TYPE(TypeTag, EclWellModel) WellModel;
+    //typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
+    typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
+    typedef typename Vector::block_type BlockVector;
+    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+    typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+    typedef typename GridView::template Codim<0>::Entity Element;
+    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+
 
 public:
     static void registerParameters()
@@ -135,6 +148,30 @@ public:
             assert(recreate_solver == false);
             // Never recreate solver.
         }
+        if( prm_.get<std::string>("preconditioner.type") == "cpr" ||
+            prm_.get<std::string>("preconditioner.type") == "cprt"
+            )
+        {
+            bool transpose = false;
+            if(prm_.get<std::string>("preconditioner.type") == "cprt"){
+                transpose = true;
+            }
+
+
+            if(prm_.get<std::string>("preconditioner.weight_type") == "quasiimpes") {
+                VectorType weights = Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
+                    mat.istlMatrix(),
+                    prm_.get<int>("preconditioner.pressure_var_index"), transpose);
+                prm_.put("preconditioner.weights",weights);
+
+            }else if(prm_.get<std::string>("preconditioner.weight_type") == "trueimpes"  ){
+                VectorType weights =
+                    this->getTrueImpesWeights(b, prm_.get<int>("preconditioner.pressure_var_index"));
+            prm_.put("preconditioner.weights",weights);
+            }else{
+                throw std::runtime_error("no such weights implemented for cpr");
+            }
+        }
 
         if (recreate_solver || !solver_) {
             if (isParallel()) {
@@ -146,7 +183,7 @@ public:
             }
             rhs_ = b;
         } else {
-            solver_->preconditioner().update();
+            solver_->preconditioner().update(prm_);
             rhs_ = b;
         }
     }
@@ -202,6 +239,47 @@ protected:
             //diagonal block set to diag(1.0).
             matrix[lcell][lcell] = diag_block;
         }
+    }
+
+    VectorType getTrueImpesWeights(const VectorType& b,const int pressureVarIndex)
+    {
+        VectorType weights(b.size());
+        BlockVector rhs(0.0);
+        rhs[pressureVarIndex] = 1.0;
+        int index = 0;
+        ElementContext elemCtx(simulator_);
+        const auto& vanguard = simulator_.vanguard();
+        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            const int numEq = MatrixType::block_type::rows;
+            Dune::FieldVector<Evaluation, numEq> storage;
+            unsigned threadId = ThreadManager::threadId();
+            simulator_.model().localLinearizer(threadId).localResidual().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
+            Scalar extrusionFactor = elemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
+            Scalar scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
+            Scalar storage_scale = scvVolume / elemCtx.simulator().timeStepSize();
+            MatrixBlockType block;
+            double pressure_scale = 50e5;
+            for (int ii = 0; ii < numEq; ++ii) {
+                for (int jj = 0; jj < numEq; ++jj) {
+                    block[ii][jj] = storage[ii].derivative(jj)/storage_scale;
+                    if (jj == pressureVarIndex) {
+                        block[ii][jj] *= pressure_scale;
+                    }
+                }
+            }
+            BlockVector bweights;
+            MatrixBlockType block_transpose = Opm::transposeDenseMatrix(block);
+            block_transpose.solve(bweights, rhs);
+            bweights /= 1000.0; // given normal densities this scales weights to about 1.
+            weights[index] = bweights;
+            ++index;
+        }
+        return weights;
     }
 
 

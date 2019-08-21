@@ -53,6 +53,21 @@ namespace Dune
 template <class MatrixTypeT, class VectorTypeT>
 class FlexibleSolver;
 
+template <typename T, typename A, int i>
+std::ostream& operator<<(std::ostream& out,
+                         const BlockVector< FieldVector< T, i >, A >&  vector)
+{
+   Dune::writeMatrixMarket(vector, out);
+   return out;
+}
+
+    template <typename T, typename A, int i>
+    std::istream& operator>>(std::istream& input,
+                             BlockVector< FieldVector< T, i >, A >&  vector)
+{
+   Dune::readMatrixMarket(vector, input);
+   return input;
+}
 
 /// A version of the two-level preconditioner that is:
 /// - Self-contained, because it owns its policy components.
@@ -73,8 +88,7 @@ public:
         : linear_operator_(linearoperator)
         , finesmoother_(PrecFactory::create(linearoperator, prm.get_child("finesmoother")))
         , comm_(nullptr)
-        , weights_(Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
-              linearoperator.getmat(), prm.get<int>("pressure_var_index"), transpose))
+        , weights_(prm.get<VectorType>("weights"))
         , levelTransferPolicy_(dummy_comm_, weights_, prm.get<int>("pressure_var_index"))
         , coarseSolverPolicy_(prm.get_child("coarsesolver"))
         , twolevel_method_(linearoperator,
@@ -98,8 +112,7 @@ public:
         : linear_operator_(linearoperator)
         , finesmoother_(PrecFactory::create(linearoperator, prm.get_child("finesmoother"), comm))
         , comm_(&comm)
-        , weights_(Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
-              linearoperator.getmat(), prm.get<int>("pressure_var_index"), transpose))
+        , weights_(prm.get<VectorType>("weights"))
         , levelTransferPolicy_(*comm_, weights_, prm.get<int>("pressure_var_index"))
         , coarseSolverPolicy_(prm.get_child("coarsesolver"))
         , twolevel_method_(linearoperator,
@@ -110,6 +123,8 @@ public:
                            transpose ? 0 : 1)
         , prm_(prm)
     {
+        //Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
+        //      linearoperator.getmat(), prm.get<int>("pressure_var_index"), transpose))
         if (prm.get<int>("verbosity") > 10) {
             std::ofstream outfile(prm.get<std::string>("weights_filename"));
             if (!outfile) {
@@ -134,10 +149,11 @@ public:
         twolevel_method_.post(x);
     }
 
-    virtual void update() override
+    virtual void update(const boost::property_tree::ptree& prm) override
     {
-        Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
-            linear_operator_.getmat(), prm_.get<int>("pressure_var_index"), transpose, weights_);
+        //Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
+        //    linear_operator_.getmat(), prm_.get<int>("pressure_var_index"), transpose, weights_);
+        weights_ = prm.get<VectorType>("weights");
         updateImpl(comm_);
     }
 
