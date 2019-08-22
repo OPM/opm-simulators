@@ -100,6 +100,11 @@ public:
             comm_.reset(new Communication(parinfo->communicator()));
         }
 #endif
+	if(prm_.get<int>("verbosity")> 10){
+	    std::ofstream file("options_flexiblesolver_aftersetup.json");
+	    namespace pt = boost::property_tree;
+	    pt::write_json(file,prm_);
+	}
     }
 
     void eraseMatrix()
@@ -152,6 +157,9 @@ public:
 		transpose = true;
 	    }
 	    if(prm_.get<std::string>("preconditioner.weight_type") == "quasiimpes") {
+		if(prm_.get<int>("verbosity") > 10){
+		    std::cout << "Using quasiimpes" << std::endl;
+		}
 		if( not( recreate_solver || !solver_) ){
 		    // weighs will be created as default in the solver
 		    weights = Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
@@ -159,6 +167,9 @@ public:
 			prm_.get<int>("preconditioner.pressure_var_index"), transpose);
 		}
 	    }else if(prm_.get<std::string>("preconditioner.weight_type") == "trueimpes"  ){
+		if(prm_.get<int>("verbosity") > 10){
+		    std::cout << "Using trueimpes" << std::endl;
+		}
 		weights = 
 		    this->getTrueImpesWeights(b, prm_.get<int>("preconditioner.pressure_var_index"));
 		if( recreate_solver || !solver_){

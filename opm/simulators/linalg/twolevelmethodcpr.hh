@@ -14,10 +14,8 @@
 #include<dune/istl/paamg/amg.hh>
 #include<dune/istl/paamg/galerkin.hh>
 #include<dune/istl/solver.hh>
-
 #include<dune/common/unused.hh>
 #include<dune/common/version.hh>
-
 /**
  * @addtogroup ISTL_PAAMG
  * @{
