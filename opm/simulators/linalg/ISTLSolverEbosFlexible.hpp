@@ -25,6 +25,8 @@
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
+#include <boost/property_tree/json_parser.hpp>
+
 #include <memory>
 #include <utility>
 
@@ -226,6 +228,7 @@ public:
     }
 
 protected:
+
     /// Zero out off-diagonal blocks on rows corresponding to overlap cells
     /// Diagonal blocks on ovelap rows are set to diag(1.0).
     void makeOverlapRowsInvalid(MatrixType& matrix) const
@@ -288,7 +291,6 @@ protected:
         }
         return weights;
     }
-
 
     const Simulator& simulator_;
 
