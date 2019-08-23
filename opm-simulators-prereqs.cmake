@@ -39,7 +39,7 @@ set (opm-simulators_DEPS
   "opm-common REQUIRED"
   "opm-material REQUIRED"
   "opm-grid REQUIRED"
-  "ewoms REQUIRED"
+  "opm-models REQUIRED"
   )
 
 find_package_deps(opm-simulators)
