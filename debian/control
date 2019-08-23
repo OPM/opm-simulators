@@ -10,7 +10,7 @@ Build-Depends: build-essential, debhelper (>= 9), libboost-filesystem-dev,
                libopm-material-dev,
                libboost-iostreams-dev, libopm-common-dev,
                libopm-grid-dev, libdune-grid-dev,
-               libtrilinos-zoltan-dev, libopenmpi-dev, mpi-default-bin, libewoms-dev
+               libtrilinos-zoltan-dev, libopenmpi-dev, mpi-default-bin, libopm-models-dev
 Standards-Version: 3.9.2
 Section: libs
 Homepage: http://opm-project.org

@@ -79,7 +79,7 @@ include (CMakeLists_files.cmake)
 macro (config_hook)
   opm_need_version_of ("dune-common")
   opm_need_version_of ("dune-istl")
-  opm_need_version_of ("ewoms")
+  opm_need_version_of ("opm-models")
 endmacro (config_hook)
 
 macro (prereqs_hook)
