@@ -266,6 +266,12 @@ namespace MissingFeatures {
             "WDRILPRI",
             "WDRILRES",
             "WECONINJ",
+            "WECONT",
+            "WELCNTL",
+            "WELDEBUG",
+            "WELDRAW",
+            "WELEVNT",
+            "WELOPENL"
             "WELPI",
             "WELSPECL",
             "WGASPROD",
