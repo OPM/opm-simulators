@@ -22,7 +22,7 @@
 
 namespace Opm {
   // void flowEbosOilWaterPolymerInjectivitySetDeck(Deck& deck, EclipseState& eclState);
-  int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv);
+int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv, bool outputCout, bool outputFiles);
 }
 
 #endif // FLOW_EBOS_OILWATER_POLYMER_INJECTIVITY_HPP

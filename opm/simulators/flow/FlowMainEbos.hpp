@@ -66,15 +66,6 @@ SET_INT_PROP(EclFlowProblem, OutputInterval, 1);
 
 END_PROPERTIES
 
-enum FileOutputMode {
-     //! \brief No output to files.
-     OUTPUT_NONE = 0,
-     //! \brief Output only to log files, no eclipse output.
-     OUTPUT_LOG_ONLY = 1,
-     //! \brief Output to all files.
-     OUTPUT_ALL = 3
-};
-
 namespace Opm
 {
     // The FlowMain class is the ebos based black-oil simulator.
@@ -207,7 +198,7 @@ namespace Opm
         /// This is the main function of Flow.  It runs a complete simulation with the
         /// given grid and simulator classes, based on the user-specified command-line
         /// input.
-        int execute(int argc, char** argv)
+        int execute(int argc, char** argv, bool output_cout, bool output_to_files)
         {
             try {
                 // deal with some administrative boilerplate
@@ -217,8 +208,8 @@ namespace Opm
                     return status;
 
                 setupParallelism();
-                setupEbosSimulator();
-                int unknownKeyWords = printPRTHeader();
+                setupEbosSimulator(output_cout);
+                int unknownKeyWords = printPRTHeader(output_cout);
 #if HAVE_MPI
                 int globalUnknownKeyWords;
                 MPI_Allreduce(&unknownKeyWords,  &globalUnknownKeyWords, 1, MPI_INT,  MPI_SUM, MPI_COMM_WORLD);
@@ -226,7 +217,7 @@ namespace Opm
 #endif
                 if ( unknownKeyWords )
                 {
-                    if ( output_cout_ )
+                    if ( output_cout )
                     {
                         std::string msg = "Aborting simulation due to unknown "
                             "parameters. Please query \"flow --help\" for "
@@ -245,14 +236,14 @@ namespace Opm
 #endif
                     return EXIT_FAILURE;
                 }
-                runDiagnostics();
+                runDiagnostics(output_cout);
                 createSimulator();
 
                 // do the actual work
-                runSimulator();
+                runSimulator(output_cout);
 
                 // clean up
-                mergeParallelLogFiles();
+                mergeParallelLogFiles(output_to_files);
 
                 return EXIT_SUCCESS;
             }
@@ -260,7 +251,7 @@ namespace Opm
                 std::ostringstream message;
                 message  << "Program threw an exception: " << e.what();
 
-                if (output_cout_) {
+                if (output_cout) {
                     // in some cases exceptions are thrown before the logging system is set
                     // up.
                     if (OpmLog::hasBackend("STREAMLOG")) {
@@ -302,9 +293,9 @@ namespace Opm
 
         // Print an ASCII-art header to the PRT and DEBUG files.
         // \return Whether unkown keywords were seen during parsing.
-        bool printPRTHeader()
+        bool printPRTHeader(bool output_cout)
         {
-          if (output_cout_) {
+          if (output_cout) {
               const std::string version = moduleVersion();
               const double megabyte = 1024 * 1024;
               unsigned num_cpu = std::thread::hardware_concurrency();
@@ -353,12 +344,12 @@ namespace Opm
               }
         }
 
-        void mergeParallelLogFiles()
+        void mergeParallelLogFiles(bool output_to_files)
         {
             // force closing of all log files.
             OpmLog::removeAllBackends();
 
-            if (mpi_rank_ != 0 || mpi_size_ < 2 || !output_to_files_) {
+            if (mpi_rank_ != 0 || mpi_size_ < 2 || !output_to_files) {
                 return;
             }
 
@@ -383,14 +374,14 @@ namespace Opm
                                                      EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning)));
         }
 
-        void setupEbosSimulator()
+        void setupEbosSimulator(bool output_cout)
         {
             ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
             ebosSimulator_->executionTimer().start();
             ebosSimulator_->model().applyInitialSolution();
 
             try {
-                if (output_cout_) {
+                if (output_cout) {
                     MissingFeatures::checkKeywords(deck());
                 }
 
@@ -439,9 +430,9 @@ namespace Opm
         // Run diagnostics.
         // Writes to:
         //   OpmLog singleton.
-        void runDiagnostics()
+        void runDiagnostics(bool output_cout)
         {
-            if (!output_cout_) {
+            if (!output_cout) {
                 return;
             }
 
@@ -451,7 +442,7 @@ namespace Opm
         }
 
         // Run the simulator.
-        void runSimulator()
+        void runSimulator(bool output_cout)
         {
             const auto& schedule = this->schedule();
             const auto& timeMap = schedule.getTimeMap();
@@ -462,7 +453,7 @@ namespace Opm
             const auto& initConfig = eclState().getInitConfig();
             simtimer.init(timeMap, (size_t)initConfig.getRestartStep());
 
-            if (output_cout_) {
+            if (output_cout) {
                 std::ostringstream oss;
 
                 // This allows a user to catch typos and misunderstandings in the
@@ -475,7 +466,7 @@ namespace Opm
             }
 
             if (!ioConfig.initOnly()) {
-                if (output_cout_) {
+                if (output_cout) {
                     std::string msg;
                     msg = "\n\n================ Starting main simulation loop ===============\n";
                     OpmLog::info(msg);
@@ -484,7 +475,7 @@ namespace Opm
                 SimulatorReport successReport = simulator_->run(simtimer);
                 SimulatorReport failureReport = simulator_->failureReport();
 
-                if (output_cout_) {
+                if (output_cout) {
                     std::ostringstream ss;
                     ss << "\n\n================    End of simulation     ===============\n\n";
                     successReport.reportFullyImplicit(ss, &failureReport);
@@ -492,7 +483,7 @@ namespace Opm
                 }
 
             } else {
-                if (output_cout_) {
+                if (output_cout) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }
 
@@ -524,9 +515,6 @@ namespace Opm
         std::unique_ptr<EbosSimulator> ebosSimulator_;
         int  mpi_rank_ = 0;
         int  mpi_size_ = 1;
-        bool output_cout_ = false;
-        //FileOutputMode output_ = OUTPUT_ALL;
-        bool output_to_files_ = false;
         boost::any parallel_information_;
         std::unique_ptr<Simulator> simulator_;
     };

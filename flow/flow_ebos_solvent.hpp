@@ -25,7 +25,7 @@
 
 namespace Opm {
 void flowEbosSolventSetDeck(double setupTime, Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
-int flowEbosSolventMain(int argc, char** argv);
+int flowEbosSolventMain(int argc, char** argv, bool outoutCout, bool outputFiles);
 }
 
 #endif // FLOW_EBOS_SOLVENT_HPP
