@@ -69,7 +69,7 @@ namespace Opm
     }
 
     void WellCollection::addWell(const Well2& wellChild, const SummaryState& summaryState, const PhaseUsage& phaseUsage) {
-        if (wellChild.getStatus() == WellCommon::SHUT) {
+        if (wellChild.getStatus() == Well2::Status::SHUT) {
             //SHUT wells are not added to the well collection
             return;
         }

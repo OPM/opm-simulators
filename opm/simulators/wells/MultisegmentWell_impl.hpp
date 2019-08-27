@@ -72,7 +72,7 @@ namespace Opm
         perf_depth_.resize(number_of_perforations_, 0.);
         for (size_t perf = 0; perf < completion_set.size(); ++perf) {
             const Connection& connection = completion_set.get(perf);
-            if (connection.state() == WellCompletion::OPEN) {
+            if (connection.state() == Connection::State::OPEN) {
                 const int segment_index = segmentNumberToIndex(connection.segment());
                 segment_perforations_[segment_index].push_back(i_perf_wells);
                 perf_depth_[i_perf_wells] = connection.depth();
@@ -931,7 +931,7 @@ namespace Opm
 
 
     template <typename TypeTag>
-    WellSegment::CompPressureDropEnum
+    WellSegments::CompPressureDrop
     MultisegmentWell<TypeTag>::
     compPressureDrop() const
     {
@@ -943,7 +943,7 @@ namespace Opm
 
 
     template <typename TypeTag>
-    WellSegment::MultiPhaseModelEnum
+    WellSegments::MultiPhaseModel
     MultisegmentWell<TypeTag>::
     multiphaseModel() const
     {
@@ -1869,7 +1869,7 @@ namespace Opm
     frictionalPressureLossConsidered() const
     {
         // HF- and HFA needs to consider frictional pressure loss
-        return (segmentSet().compPressureDrop() != WellSegment::H__);
+        return (segmentSet().compPressureDrop() != WellSegments::CompPressureDrop::H__);
     }
 
 
@@ -1881,7 +1881,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     accelerationalPressureLossConsidered() const
     {
-        return (segmentSet().compPressureDrop() == WellSegment::HFA);
+        return (segmentSet().compPressureDrop() == WellSegments::CompPressureDrop::HFA);
     }
 
 

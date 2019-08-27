@@ -1686,7 +1686,7 @@ public:
         const auto& simulator = this->simulator();
         int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
         const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
-        return (oilVaporizationControl.getType() == Opm::OilVaporizationEnum::VAPPARS);
+        return (oilVaporizationControl.getType() == Opm::OilVaporizationProperties::OilVaporization::VAPPARS);
     }
 
     bool nonTrivialBoundaryConditions() const

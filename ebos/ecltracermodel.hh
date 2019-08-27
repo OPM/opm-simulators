@@ -485,14 +485,14 @@ protected:
         const auto& wells = simulator_.vanguard().schedule().getWells2(episodeIdx);
         for (const auto& well : wells) {
 
-            if (well.getStatus() == Opm::WellCommon::SHUT)
+            if (well.getStatus() == Opm::Well2::Status::SHUT)
                 continue;
 
             const double wtracer = well.getTracerProperties().getConcentration(tracerNames_[tracerIdx]);
             std::array<int, 3> cartesianCoordinate;
             for (auto& connection : well.getConnections()) {
 
-                if (connection.state() == Opm::WellCompletion::SHUT)
+                if (connection.state() == Opm::Connection::State::SHUT)
                     continue;
 
                 cartesianCoordinate[0] = connection.getI();
