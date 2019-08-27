@@ -50,7 +50,7 @@ void flowEbosSolventSetDeck(double setupTime, Deck &deck, EclipseState& eclState
 
 
 // ----------------- Main program -----------------
-int flowEbosSolventMain(int argc, char** argv)
+int flowEbosSolventMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -64,7 +64,7 @@ int flowEbosSolventMain(int argc, char** argv)
 #endif
 
     Opm::FlowMainEbos<TTAG(EclFlowSolventProblem)> mainfunc;
-    return mainfunc.execute(argc, argv);
+    return mainfunc.execute(argc, argv, outputCout, outputFiles);
 }
 
 }

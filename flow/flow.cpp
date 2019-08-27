@@ -38,6 +38,10 @@
 #include <opm/simulators/flow/MissingFeatures.hpp>
 #include <opm/material/common/ResetLocale.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/EclipsePRTLog.hpp>
+#include <opm/common/OpmLog/LogUtil.hpp>
+
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
@@ -112,6 +116,115 @@ namespace detail
 
 }
 
+enum class FileOutputMode {
+    //! \brief No output to files.
+    OUTPUT_NONE = 0,
+    //! \brief Output only to log files, no eclipse output.
+    OUTPUT_LOG_ONLY = 1,
+    //! \brief Output to all files.
+    OUTPUT_ALL = 3
+};
+
+
+
+
+
+// Setup the OpmLog backends
+FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, const std::string& cmdline_output_dir, const std::string& cmdline_output, bool output_cout_, const std::string& stdout_log_id) {
+    // create logFile
+    using boost::filesystem::path;
+    path fpath(deck_filename);
+    std::string baseName;
+    std::ostringstream debugFileStream;
+    std::ostringstream logFileStream;
+
+    // Strip extension "." or ".DATA"
+    std::string extension = boost::to_upper_copy(fpath.extension().string());
+    if (extension == ".DATA" || extension == ".") {
+        baseName = boost::to_upper_copy(fpath.stem().string());
+    } else {
+        baseName = boost::to_upper_copy(fpath.filename().string());
+    }
+
+    std::string output_dir = cmdline_output_dir;
+    if (output_dir.empty()) {
+        output_dir = absolute(path(baseName).parent_path()).string();
+    }
+
+    logFileStream << output_dir << "/" << baseName;
+    debugFileStream << output_dir << "/" << baseName;
+
+    if (mpi_rank_ != 0) {
+        // Added rank to log file for non-zero ranks.
+        // This prevents message loss.
+        debugFileStream << "." << mpi_rank_;
+        // If the following file appears then there is a bug.
+        logFileStream << "." << mpi_rank_;
+    }
+    logFileStream << ".PRT";
+    debugFileStream << ".DBG";
+
+    FileOutputMode output;
+    {
+        static std::map<std::string, FileOutputMode> stringToOutputMode =
+            { {"none", FileOutputMode::OUTPUT_NONE },
+              {"false", FileOutputMode::OUTPUT_LOG_ONLY },
+              {"log", FileOutputMode::OUTPUT_LOG_ONLY },
+              {"all" , FileOutputMode::OUTPUT_ALL },
+              {"true" , FileOutputMode::OUTPUT_ALL }};
+        auto outputModeIt = stringToOutputMode.find(cmdline_output);
+        if (outputModeIt != stringToOutputMode.end()) {
+            output = outputModeIt->second;
+        }
+        else {
+            output = FileOutputMode::OUTPUT_ALL;
+            std::cerr << "Value " << cmdline_output <<
+                " is not a recognized output mode. Using \"all\" instead."
+                      << std::endl;
+        }
+    }
+
+    if (output > FileOutputMode::OUTPUT_NONE) {
+        std::shared_ptr<Opm::EclipsePRTLog> prtLog = std::make_shared<Opm::EclipsePRTLog>(logFileStream.str(), Opm::Log::NoDebugMessageTypes, false, output_cout_);
+        Opm::OpmLog::addBackend("ECLIPSEPRTLOG", prtLog);
+        prtLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>());
+        prtLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(false));
+    }
+
+    if (output >= FileOutputMode::OUTPUT_LOG_ONLY) {
+        std::string debugFile = debugFileStream.str();
+        std::shared_ptr<Opm::StreamLog> debugLog = std::make_shared<Opm::EclipsePRTLog>(debugFileStream.str(), Opm::Log::DefaultMessageTypes, false, output_cout_);
+        Opm::OpmLog::addBackend("DEBUGLOG", debugLog);
+    }
+
+    std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
+    Opm::OpmLog::addBackend(stdout_log_id, streamLog);
+    streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(true));
+
+    return output;
+}
+
+
+
+void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string& stdout_log_id) {
+    std::shared_ptr<Opm::StreamLog> stream_log = Opm::OpmLog::getBackend<Opm::StreamLog>(stdout_log_id);
+
+    const std::map<int64_t, int> limits = {{Opm::Log::MessageType::Note,
+                                            msgLimits.getCommentPrintLimit(0)},
+                                           {Opm::Log::MessageType::Info,
+                                            msgLimits.getMessagePrintLimit(0)},
+                                           {Opm::Log::MessageType::Warning,
+                                            msgLimits.getWarningPrintLimit(0)},
+                                           {Opm::Log::MessageType::Error,
+                                            msgLimits.getErrorPrintLimit(0)},
+                                           {Opm::Log::MessageType::Problem,
+                                            msgLimits.getProblemPrintLimit(0)},
+                                           {Opm::Log::MessageType::Bug,
+                                            msgLimits.getBugPrintLimit(0)}};
+    stream_log->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10, limits));
+}
+
+
 // ----------------- Main program -----------------
 int main(int argc, char** argv)
 {
@@ -146,7 +259,6 @@ int main(int argc, char** argv)
     typedef GET_PROP_TYPE(PreTypeTag, Problem) PreProblem;
 
     PreProblem::setBriefDescription("Flow, an advanced reservoir simulator for ECL-decks provided by the Open Porous Media project.");
-
     int status = Opm::FlowMainEbos<PreTypeTag>::setupParameters_(argc, argv);
     if (status != 0)
         // if setupParameters_ returns a value smaller than 0, there was no error, but
@@ -154,6 +266,7 @@ int main(int argc, char** argv)
         // --print-properties parameters.
         return (status >= 0)?status:0;
 
+    FileOutputMode outputMode = FileOutputMode::OUTPUT_NONE;
     bool outputCout = false;
     if (mpiRank == 0)
         outputCout = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
@@ -190,6 +303,11 @@ int main(int argc, char** argv)
             Opm::Parser parser;
             Opm::ParseContext parseContext;
             Opm::ErrorGuard errorGuard;
+            outputMode = setupLogging(mpiRank,
+                                      deckFilename,
+                                      EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir),
+                                      EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
+                                      outputCout, "STDOUT_LOGGER");
 
             if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
                 parseContext.update( Opm::InputError::DELAYED_EXIT1);
@@ -202,13 +320,13 @@ int main(int argc, char** argv)
 
             deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
             Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
-
             if ( outputCout )
                 Opm::checkDeck(*deck, parser, parseContext, errorGuard);
 
             eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
             schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
             summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
+            setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
 
@@ -220,7 +338,7 @@ int main(int argc, char** argv)
             }
         }
         const auto& phases = Opm::Runspec(*deck).phases();
-
+        bool outputFiles = (outputMode != FileOutputMode::OUTPUT_NONE);
         // run the actual simulator
         //
         // TODO: make sure that no illegal combinations like thermal and twophase are
@@ -232,13 +350,13 @@ int main(int argc, char** argv)
             if (phases.active( Opm::Phase::GAS ))
             {
                 Opm::flowEbosGasOilSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-                return Opm::flowEbosGasOilMain(argc, argv);
+                return Opm::flowEbosGasOilMain(argc, argv, outputCout, outputFiles);
             }
             // oil-water
             else if ( phases.active( Opm::Phase::WATER ) )
             {
                 Opm::flowEbosOilWaterSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-                return Opm::flowEbosOilWaterMain(argc, argv);
+                return Opm::flowEbosOilWaterMain(argc, argv, outputCout, outputFiles);
             }
             else {
                 if (outputCout)
@@ -261,36 +379,36 @@ int main(int argc, char** argv)
             if ( phases.active( Opm::Phase::POLYMW ) ) {
                 // only oil water two phase for now
                 assert( phases.size() == 4);
-                return Opm::flowEbosOilWaterPolymerInjectivityMain(argc, argv);
+                return Opm::flowEbosOilWaterPolymerInjectivityMain(argc, argv, outputCout, outputFiles);
             }
 
             if ( phases.size() == 3 ) { // oil water polymer case
                 Opm::flowEbosOilWaterPolymerSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-                return Opm::flowEbosOilWaterPolymerMain(argc, argv);
+                return Opm::flowEbosOilWaterPolymerMain(argc, argv, outputCout, outputFiles);
             } else {
                 Opm::flowEbosPolymerSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-                return Opm::flowEbosPolymerMain(argc, argv);
+                return Opm::flowEbosPolymerMain(argc, argv, outputCout, outputFiles);
             }
         }
         // Foam case
         else if ( phases.active( Opm::Phase::FOAM ) ) {
             Opm::flowEbosFoamSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-            return Opm::flowEbosFoamMain(argc, argv);
+            return Opm::flowEbosFoamMain(argc, argv, outputCout, outputFiles);
         }
         // Solvent case
         else if ( phases.active( Opm::Phase::SOLVENT ) ) {
             Opm::flowEbosSolventSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-            return Opm::flowEbosSolventMain(argc, argv);
+            return Opm::flowEbosSolventMain(argc, argv, outputCout, outputFiles);
         }
         // Energy case
         else if (eclipseState->getSimulationConfig().isThermal()) {
             Opm::flowEbosEnergySetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-            return Opm::flowEbosEnergyMain(argc, argv);
+            return Opm::flowEbosEnergyMain(argc, argv, outputCout, outputFiles);
         }
         // Blackoil case
         else if( phases.size() == 3 ) {
             Opm::flowEbosBlackoilSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-            return Opm::flowEbosBlackoilMain(argc, argv);
+            return Opm::flowEbosBlackoilMain(argc, argv, outputCout, outputFiles);
         }
         else
         {

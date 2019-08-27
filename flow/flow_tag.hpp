@@ -69,7 +69,7 @@ namespace Opm {
   
 // ----------------- Main program -----------------
   template <class TypeTag>
-  int flowEbosMain(int argc, char** argv)
+  int flowEbosMain(int argc, char** argv, bool outputCout, bool outputFiles)
   {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -81,7 +81,7 @@ namespace Opm {
     Dune::MPIHelper::instance(argc, argv);
 #endif
     Opm::FlowMainEbos<TypeTag> mainfunc;
-    return mainfunc.execute(argc, argv);
+    return mainfunc.execute(argc, argv, outputCout, outputFiles);
   }
 
 }
@@ -123,7 +123,7 @@ namespace detail
 
 // ----------------- Main program -----------------
 template<class TypeTag>
-int mainFlow(int argc, char** argv)
+int mainFlow(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // MPI setup.
 #if HAVE_DUNE_FEM
@@ -160,7 +160,6 @@ int mainFlow(int argc, char** argv)
         // --print-properties parameters.
         return (status >= 0)?status:0;
 
-    bool outputCout = false;
     if (mpiRank == 0)
         outputCout = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
 
@@ -198,7 +197,7 @@ int mainFlow(int argc, char** argv)
 
       std::shared_ptr<Opm::EclipseState> eclipseState = std::make_shared< Opm::EclipseState > ( *deck, parseContext, errorGuard );
       Opm::flowEbosSetDeck<TypeTag>(*deck, *eclipseState);
-      return Opm::flowEbosMain<TypeTag>(argc, argv);
+      return Opm::flowEbosMain<TypeTag>(argc, argv, outputCout, outputFiles);
     }
   catch (const std::invalid_argument& e)
     {

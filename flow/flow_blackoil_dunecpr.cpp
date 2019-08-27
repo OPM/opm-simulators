@@ -99,5 +99,7 @@ namespace Ewoms {
 int main(int argc, char** argv)
 {
   typedef TTAG(EclFlowProblemSimple) TypeTag;
-  return mainFlow<TypeTag>(argc, argv);
+  bool outputCout = true;
+  bool outputFiles = true;
+  return mainFlow<TypeTag>(argc, argv, outputCout, outputFiles);
 }

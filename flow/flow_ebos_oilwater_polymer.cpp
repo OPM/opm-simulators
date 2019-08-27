@@ -73,7 +73,7 @@ void flowEbosOilWaterPolymerSetDeck(double setupTime, Deck& deck, EclipseState& 
 }
 
 // ----------------- Main program -----------------
-int flowEbosOilWaterPolymerMain(int argc, char** argv)
+int flowEbosOilWaterPolymerMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -86,7 +86,7 @@ int flowEbosOilWaterPolymerMain(int argc, char** argv)
 #endif
 
     Opm::FlowMainEbos<TTAG(EclFlowOilWaterPolymerProblem)> mainfunc;
-    return mainfunc.execute(argc, argv);
+    return mainfunc.execute(argc, argv, outputCout, outputFiles);
 }
 
 }
