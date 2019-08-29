@@ -87,6 +87,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionContext.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RockwnodTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/OverburdTable.hpp>
@@ -966,10 +967,13 @@ public:
     void endEpisode()
     {
         auto& simulator = this->simulator();
-        const auto& schedule = simulator.vanguard().schedule();
+        auto& schedule = simulator.vanguard().schedule();
         const auto& timeMap = schedule.getTimeMap();
 
         int episodeIdx = simulator.episodeIndex();
+        this->applyActions(episodeIdx + 1,
+                           schedule,
+                           simulator.vanguard().summaryState());
 
         // check if we're finished ...
         if (episodeIdx + 1 >= static_cast<int>(timeMap.numTimesteps())) {
@@ -1012,6 +1016,31 @@ public:
         if (enableEclOutput_)
             eclWriter_->writeOutput(isSubStep);
     }
+
+
+    void applyActions(int reportStep,
+                      Opm::Schedule& schedule,
+                      const Opm::SummaryState& summaryState) {
+        const auto& actions = schedule.actions();
+        if (actions.empty())
+            return;
+
+        Opm::Action::Context context( summaryState );
+
+        auto simTime = schedule.simTime(reportStep);
+        for (const auto& action : actions.pending(simTime)) {
+            auto actionResult = action->eval(simTime, context);
+            if (actionResult) {
+                std::string msg = "The action: " + action->name() + " evaluated to true at report step: " + std::to_string(reportStep);
+                Opm::OpmLog::info(msg);
+                schedule.applyAction(reportStep, *action, actionResult);
+            } else {
+                std::string msg = "The action: " + action->name() + " evaluated to false sat report step: " + std::to_string(reportStep);
+                Opm::OpmLog::info(msg);
+            }
+        }
+    }
+
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
