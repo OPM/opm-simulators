@@ -1021,7 +1021,7 @@ public:
     void applyActions(int reportStep,
                       Opm::Schedule& schedule,
                       const Opm::SummaryState& summaryState) {
-        const auto& actions = schedule.actions();
+        const auto& actions = schedule.actions(reportStep);
         if (actions.empty())
             return;
 
