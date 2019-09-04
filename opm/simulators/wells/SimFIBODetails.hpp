@@ -24,7 +24,10 @@
 #include <utility>
 #include <algorithm>
 #include <locale>
+
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
+
 #include <opm/core/well_controls.h>
 
 namespace Opm
@@ -85,7 +88,7 @@ namespace Opm
 
         inline void
         historyRates(const PhaseUsage&               pu,
-                     const ProductionControls& p,
+                     const Well2::ProductionControls& p,
                      std::vector<double>&            rates)
         {
             assert (! p.prediction_mode);

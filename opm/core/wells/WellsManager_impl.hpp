@@ -34,7 +34,7 @@ namespace WellsManagerDetail
         Mode mode(const std::string& control);
 
 
-        Mode mode(Opm::WellProducer::ControlModeEnum controlMode);
+        Mode mode(Opm::Well2::ProducerCMode controlMode);
     } // namespace ProductionControl
 
 
@@ -50,7 +50,7 @@ namespace WellsManagerDetail
     */
         Mode mode(const std::string& control);
 
-        Mode mode(Opm::WellInjector::ControlModeEnum controlMode);
+        Mode mode(Opm::Well2::InjectorCMode controlMode);
 
     } // namespace InjectionControl
 
@@ -136,7 +136,7 @@ void WellsManager::createWellsFromSpecs(const std::vector<Well2>& wells, size_t 
     for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
         const auto& well = (*wellIter);
 
-        if (well.getStatus() == WellCommon::SHUT) {
+        if (well.getStatus() == Well2::Status::SHUT) {
             continue;
         }
 
@@ -149,7 +149,7 @@ void WellsManager::createWellsFromSpecs(const std::vector<Well2>& wells, size_t 
             // shut completions and open ones stored in this process will have 1 others 0.
 
             for(const auto& completion : well.getConnections()) {
-                if (completion.state() == WellCompletion::OPEN) {
+                if (completion.state() == Connection::State::OPEN) {
                     const int i = completion.getI();
                     const int j = completion.getJ();
                     const int k = completion.getK();
@@ -172,8 +172,8 @@ void WellsManager::createWellsFromSpecs(const std::vector<Well2>& wells, size_t 
                         wellperf_data[active_well_index].push_back(pd);
                     }
                 } else {
-                    if (completion.state() != WellCompletion::SHUT) {
-                        OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion.state() ) << " not handled");
+                    if (completion.state() != Connection::State::SHUT) {
+                        OPM_THROW(std::runtime_error, "Completion state: " << Connection::State2String( completion.state() ) << " not handled");
                     }
                 }
             }

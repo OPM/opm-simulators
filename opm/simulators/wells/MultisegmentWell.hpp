@@ -164,9 +164,9 @@ namespace Opm
         int number_segments_;
 
         // components of the pressure drop to be included
-        WellSegment::CompPressureDropEnum compPressureDrop() const;
+        WellSegments::CompPressureDrop compPressureDrop() const;
         // multi-phase flow model
-        WellSegment::MultiPhaseModelEnum multiphaseModel() const;
+        WellSegments::MultiPhaseModel multiphaseModel() const;
 
         // get the WellSegments from the well_ecl_
         const WellSegments& segmentSet() const;

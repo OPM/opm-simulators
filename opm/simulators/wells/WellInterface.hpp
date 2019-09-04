@@ -29,8 +29,6 @@
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
-
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>

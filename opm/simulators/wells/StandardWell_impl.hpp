@@ -608,7 +608,7 @@ namespace Opm
                     // change temperature for injecting fluids
                     if (well_type_ == INJECTOR && cq_s[activeCompIdx] > 0.0){
                         // only handles single phase injection now
-                        assert(this->well_ecl_.injectorType() != WellInjector::MULTI);
+                        assert(this->well_ecl_.injectorType() != Well2::InjectorType::MULTI);
                         fs.setTemperature(this->well_ecl_.temperature());
                         typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
                         typename FluidSystem::template ParameterCache<FsScalar> paramCache;
@@ -2534,7 +2534,7 @@ namespace Opm
                 auto phase = well_ecl_.getInjectionProperties().injectorType;
                 // only single phase injection handled
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    if (phase == WellInjector::TypeEnum::WATER) {
+                    if (phase == Well2::InjectorType::WATER) {
                         primary_variables_[WFrac] = 1.0;
                     } else {
                         primary_variables_[WFrac] = 0.0;
@@ -2542,7 +2542,7 @@ namespace Opm
                 }
 
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    if (phase == WellInjector::TypeEnum::GAS) {
+                    if (phase == Well2::InjectorType::GAS) {
                         primary_variables_[GFrac] = 1.0 - wsolvent();
                         if (has_solvent) {
                             primary_variables_[SFrac] = wsolvent();
