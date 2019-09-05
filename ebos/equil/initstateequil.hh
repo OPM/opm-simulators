@@ -67,7 +67,7 @@ NEW_PROP_TAG(FluidSystem);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /**
  * Types and routines that collectively implement a basic

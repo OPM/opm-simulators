@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::EclWriter
+ * \copydoc Opm::EclWriter
  */
 #ifndef EWOMS_ECL_WRITER_HH
 #define EWOMS_ECL_WRITER_HH
@@ -66,7 +66,7 @@ NEW_PROP_TAG(EclOutputDoublePrecision);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 template <class TypeTag>
 class EclWriter;
@@ -711,6 +711,6 @@ private:
 
 
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

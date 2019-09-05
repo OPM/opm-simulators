@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::EclProblem
+ * \copydoc Opm::EclProblem
  */
 #ifndef EWOMS_ECL_PROBLEM_HH
 #define EWOMS_ECL_PROBLEM_HH
@@ -109,7 +109,7 @@
 #include <string>
 #include <algorithm>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class EclProblem;
 }
@@ -162,7 +162,7 @@ NEW_PROP_TAG(EclRestartShrinkFactor);
 NEW_PROP_TAG(EclEnableTuning);
 
 // Set the problem property
-SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
+SET_TYPE_PROP(EclBaseProblem, Problem, Opm::EclProblem<TypeTag>);
 
 // Select the element centered finite volume method as spatial discretization
 SET_TAG_PROP(EclBaseProblem, SpatialDiscretizationSplice, EcfvDiscretization);
@@ -223,14 +223,14 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
 public:
-    typedef Ewoms::EcfvStencil<Scalar,
-                               GridView,
-                               /*needIntegrationPos=*/false,
-                               /*needNormal=*/false> type;
+    typedef Opm::EcfvStencil<Scalar,
+                             GridView,
+                             /*needIntegrationPos=*/false,
+                             /*needNormal=*/false> type;
 };
 
 // by default use the dummy aquifer "model"
-SET_TYPE_PROP(EclBaseProblem, EclAquiferModel, Ewoms::EclBaseAquiferModel<TypeTag>);
+SET_TYPE_PROP(EclBaseProblem, EclAquiferModel, Opm::EclBaseAquiferModel<TypeTag>);
 
 // use the built-in proof of concept well model by default
 SET_TYPE_PROP(EclBaseProblem, EclWellModel, EclWellManager<TypeTag>);
@@ -323,14 +323,14 @@ SET_BOOL_PROP(EclBaseProblem, EnableIntensiveQuantityCache, true);
 SET_BOOL_PROP(EclBaseProblem, EnableStorageCache, true);
 
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
-SET_TYPE_PROP(EclBaseProblem, FluxModule, Ewoms::EclTransFluxModule<TypeTag>);
+SET_TYPE_PROP(EclBaseProblem, FluxModule, Opm::EclTransFluxModule<TypeTag>);
 
 // Use the dummy gradient calculator in order not to do unnecessary work.
-SET_TYPE_PROP(EclBaseProblem, GradientCalculator, Ewoms::EclDummyGradientCalculator<TypeTag>);
+SET_TYPE_PROP(EclBaseProblem, GradientCalculator, Opm::EclDummyGradientCalculator<TypeTag>);
 
 // Use a custom Newton-Raphson method class for ebos in order to attain more
 // sophisticated update and error computation mechanisms
-SET_TYPE_PROP(EclBaseProblem, NewtonMethod, Ewoms::EclNewtonMethod<TypeTag>);
+SET_TYPE_PROP(EclBaseProblem, NewtonMethod, Opm::EclNewtonMethod<TypeTag>);
 
 // The frequency of writing restart (*.ers) files. This is the number of time steps
 // between writing restart files
@@ -371,7 +371,7 @@ SET_BOOL_PROP(EclBaseProblem, EclEnableTuning, false);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -2437,7 +2437,7 @@ private:
         const auto& simulator = this->simulator();
 
         // initial condition corresponds to hydrostatic conditions.
-        typedef Ewoms::EclEquilInitializer<TypeTag> EquilInitializer;
+        typedef Opm::EclEquilInitializer<TypeTag> EquilInitializer;
         EquilInitializer equilInitializer(simulator, *materialLawManager_);
 
         size_t numElems = this->model().numGridDof();
@@ -3184,6 +3184,6 @@ private:
 template <class TypeTag>
 std::string EclProblem<TypeTag>::briefDescription_;
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

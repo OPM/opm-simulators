@@ -38,12 +38,12 @@ SET_BOOL_PROP(EbosPolymerTypeTag, EnablePolymer, true);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 void ebosPolymerSetDeck(Opm::Deck* deck,
-                         Opm::ParseContext* parseContext,
-                         Opm::ErrorGuard* errorGuard,
-                         double externalSetupTime)
+                        Opm::ParseContext* parseContext,
+                        Opm::ErrorGuard* errorGuard,
+                        double externalSetupTime)
 {
     typedef TTAG(EbosPolymerTypeTag) ProblemTypeTag;
     typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
@@ -57,7 +57,7 @@ void ebosPolymerSetDeck(Opm::Deck* deck,
 int ebosPolymerMain(int argc, char **argv)
 {
     typedef TTAG(EbosPolymerTypeTag) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv);
 }
 
 }

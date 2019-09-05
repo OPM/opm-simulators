@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::EclNewtonMethod
+ * \copydoc Opm::EclNewtonMethod
  */
 #ifndef EWOMS_ECL_NEWTON_METHOD_HH
 #define EWOMS_ECL_NEWTON_METHOD_HH
@@ -43,7 +43,7 @@ NEW_PROP_TAG(EclNewtonRelaxedTolerance);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \brief A newton solver which is ebos specific.
@@ -238,6 +238,6 @@ private:
 
     int numStrictIterations_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

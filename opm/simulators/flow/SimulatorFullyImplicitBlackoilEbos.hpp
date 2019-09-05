@@ -65,7 +65,7 @@ public:
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
     typedef AdaptiveTimeSteppingEbos<TypeTag> TimeStepper;
-    typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
+    typedef Opm::BlackOilPolymerModule<TypeTag> PolymerModule;
 
     typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilModelEbos<TypeTag> Model;

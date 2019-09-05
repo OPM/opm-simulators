@@ -1208,7 +1208,7 @@ namespace Opm
 
         if (well_controls_get_current(wc) != -1 && well_controls_get_current_type(wc) == RESERVOIR_RATE) {
             if (has_solvent && phaseIdx == contiSolventEqIdx ) {
-                typedef Ewoms::BlackOilSolventModule<TypeTag> SolventModule;
+                typedef Opm::BlackOilSolventModule<TypeTag> SolventModule;
                 double coeff = 0;
                 rateConverter_.template calcCoeffSolvent<SolventModule>(0, pvtRegionIdx_, coeff);
                 return coeff;

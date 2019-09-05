@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::EclOutputBlackOilModule
+ * \copydoc Opm::EclOutputBlackOilModule
  */
 #ifndef EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
@@ -57,7 +57,7 @@ SET_BOOL_PROP(EclOutputBlackOil, ForceDisableFluidInPlaceOutput, false);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 // forward declaration
 template <class TypeTag>
@@ -149,7 +149,7 @@ public:
      */
     void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const bool substep, const bool log)
     {
-        if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
+        if (!std::is_same<Discretization, Opm::EcfvDiscretization<TypeTag> >::value)
             return;
 
         // Summary output is for all steps
@@ -376,7 +376,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
+        if (!std::is_same<Discretization, Opm::EcfvDiscretization<TypeTag> >::value)
             return;
 
         const auto& problem = elemCtx.simulator().problem();
@@ -787,7 +787,7 @@ public:
      */
     void assignToSolution(Opm::data::Solution& sol)
     {
-        if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag>>::value)
+        if (!std::is_same<Discretization, Opm::EcfvDiscretization<TypeTag>>::value)
             return;
 
         if (oilPressure_.size() > 0) {
@@ -1508,6 +1508,6 @@ private:
     std::map<size_t, Scalar> gasConnectionSaturations_;
     std::vector<ScalarBuffer> tracerConcentrations_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

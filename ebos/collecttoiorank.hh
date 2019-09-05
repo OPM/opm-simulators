@@ -41,7 +41,7 @@
 
 #include <stdexcept>
 
-namespace Ewoms {
+namespace Opm {
 
 template <class Vanguard>
 class CollectDataToIORank
@@ -588,6 +588,6 @@ protected:
     Opm::data::Wells globalWellData_;
 };
 
-} // end namespace Ewoms
+} // end namespace Opm
 
 #endif

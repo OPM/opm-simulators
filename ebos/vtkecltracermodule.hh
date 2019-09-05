@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::VtkEclTracerModule
+ * \copydoc Opm::VtkEclTracerModule
  */
 #ifndef EWOMS_VTK_ECL_TRACER_MODULE_HH
 #define EWOMS_VTK_ECL_TRACER_MODULE_HH
@@ -54,7 +54,7 @@ NEW_PROP_TAG(VtkWriteEclTracerConcentration);
 SET_BOOL_PROP(VtkEclTracer, VtkWriteEclTracerConcentration, false);
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
     /*!
  * \ingroup Vtk
  *
@@ -74,7 +74,7 @@ namespace Ewoms {
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
         static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
-        typedef Ewoms::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+        typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
 
         typedef typename ParentType::ScalarBuffer ScalarBuffer;
@@ -165,6 +165,6 @@ namespace Ewoms {
 
         std::vector<ScalarBuffer> eclTracerConcentration_;
     };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

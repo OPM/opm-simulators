@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::EclTransmissibility
+ * \copydoc Opm::EclTransmissibility
  */
 #ifndef EWOMS_ECL_TRANSMISSIBILITY_HH
 #define EWOMS_ECL_TRANSMISSIBILITY_HH
@@ -65,7 +65,7 @@ NEW_PROP_TAG(EnableEnergy);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -910,6 +910,6 @@ private:
                             std::unordered_map<std::uint64_t, Scalar> > thermalHalfTrans_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

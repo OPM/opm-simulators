@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::EclCpGridVanguard
+ * \copydoc Opm::EclCpGridVanguard
  */
 #ifndef EWOMS_ECL_CP_GRID_VANGUARD_HH
 #define EWOMS_ECL_CP_GRID_VANGUARD_HH
@@ -38,7 +38,7 @@
 
 #include <dune/common/version.hh>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class EclCpGridVanguard;
 }
@@ -48,13 +48,13 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclCpGridVanguard, INHERITS_FROM(EclBaseVanguard));
 
 // declare the properties
-SET_TYPE_PROP(EclCpGridVanguard, Vanguard, Ewoms::EclCpGridVanguard<TypeTag>);
+SET_TYPE_PROP(EclCpGridVanguard, Vanguard, Opm::EclCpGridVanguard<TypeTag>);
 SET_TYPE_PROP(EclCpGridVanguard, Grid, Dune::CpGrid);
 SET_TYPE_PROP(EclCpGridVanguard, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -289,6 +289,6 @@ protected:
     std::unordered_set<std::string> defunctWellNames_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

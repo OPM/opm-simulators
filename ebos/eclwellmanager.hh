@@ -23,7 +23,7 @@
 /**
  * \file
  *
- * \copydoc Ewoms::EclWellManager
+ * \copydoc Opm::EclWellManager
  */
 #ifndef EWOMS_ECL_WELL_MANAGER_HH
 #define EWOMS_ECL_WELL_MANAGER_HH
@@ -57,7 +57,7 @@ NEW_PROP_TAG(Grid);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -85,7 +85,7 @@ class EclWellManager
 
     typedef typename GridView::template Codim<0>::Entity Element;
 
-    typedef Ewoms::EclPeacemanWell<TypeTag> Well;
+    typedef Opm::EclPeacemanWell<TypeTag> Well;
 
     typedef std::map<int, std::pair<const Opm::Connection*, std::shared_ptr<Well> > > WellConnectionsMap;
 
@@ -806,6 +806,6 @@ protected:
     std::map<std::string, std::array<Scalar, numPhases> > wellTotalInjectedVolume_;
     std::map<std::string, std::array<Scalar, numPhases> > wellTotalProducedVolume_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::EclThresholdPressure
+ * \copydoc Opm::EclThresholdPressure
  */
 #ifndef EWOMS_ECL_THRESHOLD_PRESSURE_HH
 #define EWOMS_ECL_THRESHOLD_PRESSURE_HH
@@ -60,7 +60,7 @@ NEW_PROP_TAG(EnableExperiments);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -399,6 +399,6 @@ private:
     bool enableThresholdPressure_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

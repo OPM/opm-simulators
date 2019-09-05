@@ -99,7 +99,7 @@ namespace Opm
             Simulator::registerParameters();
 
             // register the parameters inherited from ebos
-            Ewoms::registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
+            Opm::registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
 
             // hide the parameters unused by flow. TODO: this is a pain to maintain
             EWOMS_HIDE_PARAM(TypeTag, EnableGravity);
@@ -148,7 +148,7 @@ namespace Opm
             EWOMS_END_PARAM_REGISTRATION(TypeTag);
 
             // read in the command line parameters
-            int status = Ewoms::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/true);
+            int status = Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/true);
             if (status == 0) {
                 // deal with --print-properties and --print-parameters
 
@@ -161,13 +161,13 @@ namespace Opm
                 if (EWOMS_GET_PARAM(TypeTag, int, PrintProperties) == 1) {
                     doExit = true;
                     if (mpiRank == 0)
-                        Ewoms::Properties::printValues<TypeTag>();
+                        Opm::Properties::printValues<TypeTag>();
                 }
 
                 if (EWOMS_GET_PARAM(TypeTag, int, PrintParameters) == 1) {
                     doExit = true;
                     if (mpiRank == 0)
-                        Ewoms::Parameters::printValues<TypeTag>();
+                        Opm::Parameters::printValues<TypeTag>();
                 }
 
                 if (doExit)
@@ -329,14 +329,14 @@ namespace Opm
               ss << "Simulation started on " << tmstr << " hrs\n";
 
               ss << "Parameters used by Flow:\n";
-              Ewoms::Parameters::printValues<TypeTag>(ss);
+              Opm::Parameters::printValues<TypeTag>(ss);
 
               OpmLog::note(ss.str());
           }
 
               if ( mpi_rank_ == 0 )
               {
-                  return Ewoms::Parameters::printUnused<TypeTag>(std::cerr);
+                  return Opm::Parameters::printUnused<TypeTag>(std::cerr);
               }
               else
               {
@@ -458,7 +458,7 @@ namespace Opm
 
                 // This allows a user to catch typos and misunderstandings in the
                 // use of simulator parameters.
-                if (Ewoms::Parameters::printUnused<TypeTag>(oss)) {
+                if (Opm::Parameters::printUnused<TypeTag>(oss)) {
                     std::cout << "-----------------   Unrecognized parameters:   -----------------\n";
                     std::cout << oss.str();
                     std::cout << "----------------------------------------------------------------" << std::endl;

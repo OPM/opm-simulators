@@ -23,7 +23,7 @@
 /**
  * \file
  *
- * \copydoc Ewoms::EclEquilInitializer
+ * \copydoc Opm::EclEquilInitializer
  */
 #ifndef EWOMS_ECL_EQUIL_INITIALIZER_HH
 #define EWOMS_ECL_EQUIL_INITIALIZER_HH
@@ -50,7 +50,7 @@ NEW_PROP_TAG(EnableEnergy);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -182,6 +182,6 @@ protected:
 
     std::vector<ScalarFluidState> initialFluidStates_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

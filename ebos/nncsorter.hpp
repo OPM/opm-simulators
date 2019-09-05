@@ -29,7 +29,7 @@
 
 #include <vector>
 
-namespace Ewoms
+namespace Opm
 {
 /// \brief Scale NNC data wit informtion form EDITNNC and sort it.
 /// \param nncData The NNC data as provided by the deck.

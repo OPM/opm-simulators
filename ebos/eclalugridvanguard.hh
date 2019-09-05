@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::EclAluGridVanguard
+ * \copydoc Opm::EclAluGridVanguard
  */
 #ifndef EWOMS_ECL_ALU_GRID_VANGUARD_HH
 #define EWOMS_ECL_ALU_GRID_VANGUARD_HH
@@ -34,24 +34,24 @@
 #include <dune/alugrid/common/fromtogridfactory.hh>
 #include <opm/grid/CpGrid.hpp>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class EclAluGridVanguard;
 
-} // namespace Ewoms
+} // namespace Opm
 
 BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(EclAluGridVanguard, INHERITS_FROM(EclBaseVanguard));
 
 // declare the properties
-SET_TYPE_PROP(EclAluGridVanguard, Vanguard, Ewoms::EclAluGridVanguard<TypeTag>);
+SET_TYPE_PROP(EclAluGridVanguard, Vanguard, Opm::EclAluGridVanguard<TypeTag>);
 SET_TYPE_PROP(EclAluGridVanguard, Grid,  Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>);
 SET_TYPE_PROP(EclAluGridVanguard, EquilGrid, Dune::CpGrid);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -75,7 +75,7 @@ public:
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
 private:
-    typedef Ewoms::AluCartesianIndexMapper<Grid> CartesianIndexMapper;
+    typedef Opm::AluCartesianIndexMapper<Grid> CartesianIndexMapper;
     typedef Dune::CartesianIndexMapper<EquilGrid> EquilCartesianIndexMapper;
 
     static const int dimension = Grid::dimension;
@@ -215,6 +215,6 @@ protected:
     EquilCartesianIndexMapper* equilCartesianIndexMapper_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

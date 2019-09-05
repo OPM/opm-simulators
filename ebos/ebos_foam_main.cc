@@ -33,5 +33,5 @@
 
 int main(int argc, char** argv)
 {
-    return Ewoms::ebosFoamMain(argc, argv);
+    return Opm::ebosFoamMain(argc, argv);
 }
