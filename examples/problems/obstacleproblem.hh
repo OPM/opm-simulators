@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::ObstacleProblem
+ * \copydoc Opm::ObstacleProblem
  */
 #ifndef EWOMS_OBSTACLE_PROBLEM_HH
 #define EWOMS_OBSTACLE_PROBLEM_HH
@@ -52,7 +52,7 @@
 #include <string>
 #include <iostream>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class ObstacleProblem;
 }
@@ -65,7 +65,7 @@ NEW_TYPE_TAG(ObstacleBaseProblem);
 SET_TYPE_PROP(ObstacleBaseProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the problem property
-SET_TYPE_PROP(ObstacleBaseProblem, Problem, Ewoms::ObstacleProblem<TypeTag>);
+SET_TYPE_PROP(ObstacleBaseProblem, Problem, Opm::ObstacleProblem<TypeTag>);
 
 // Set fluid configuration
 SET_TYPE_PROP(ObstacleBaseProblem, FluidSystem,
@@ -119,7 +119,7 @@ SET_STRING_PROP(ObstacleBaseProblem, GridFile, "./data/obstacle_24x16.dgf");
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 /*!
  * \ingroup TestProblems
  *
@@ -569,6 +569,6 @@ private:
     Scalar temperature_;
     Scalar eps_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

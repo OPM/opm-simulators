@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::OutflowProblem
+ * \copydoc Opm::OutflowProblem
  */
 #ifndef EWOMS_OUTFLOW_PROBLEM_HH
 #define EWOMS_OUTFLOW_PROBLEM_HH
@@ -40,7 +40,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class OutflowProblem;
 }
@@ -53,7 +53,7 @@ NEW_TYPE_TAG(OutflowBaseProblem);
 SET_TYPE_PROP(OutflowBaseProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the problem property
-SET_TYPE_PROP(OutflowBaseProblem, Problem, Ewoms::OutflowProblem<TypeTag>);
+SET_TYPE_PROP(OutflowBaseProblem, Problem, Opm::OutflowProblem<TypeTag>);
 
 // Set fluid system
 SET_PROP(OutflowBaseProblem, FluidSystem)
@@ -83,7 +83,7 @@ SET_STRING_PROP(OutflowBaseProblem, GridFile, "./data/outflow.dgf");
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 /*!
  * \ingroup TestProblems
  *
@@ -369,6 +369,6 @@ private:
     Scalar porosity_;
     Scalar tortuosity_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

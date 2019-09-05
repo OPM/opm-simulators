@@ -35,9 +35,9 @@
 
 std::mutex outputMutex;
 
-Ewoms::TaskletRunner *runner;
+Opm::TaskletRunner *runner;
 
-class SleepTasklet : public Ewoms::TaskletInterface
+class SleepTasklet : public Opm::TaskletInterface
 {
 public:
     SleepTasklet(int mseconds)
@@ -77,7 +77,7 @@ int SleepTasklet::numInstantiated_ = 0;
 int main()
 {
     int numWorkers = 2;
-    runner = new Ewoms::TaskletRunner(numWorkers);
+    runner = new Opm::TaskletRunner(numWorkers);
 
     // the master thread is not a worker thread
     assert(runner->workerThreadIndex() < 0);

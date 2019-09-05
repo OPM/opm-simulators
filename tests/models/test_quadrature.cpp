@@ -51,7 +51,7 @@
 
 const unsigned dim = 3;
 typedef double Scalar;
-typedef Ewoms::QuadrialteralQuadratureGeometry<Scalar, dim> QuadratureGeom;
+typedef Opm::QuadrialteralQuadratureGeometry<Scalar, dim> QuadratureGeom;
 typedef QuadratureGeom::LocalPosition LocalPosition;
 typedef QuadratureGeom::GlobalPosition GlobalPosition;
 
@@ -121,7 +121,7 @@ void writeTetrahedronSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
 
     GridFactory2 gf2;
     const auto &gridView = grid.leafView();
-    typedef Ewoms::VcfvStencil<Scalar, GridView> Stencil;
+    typedef Opm::VcfvStencil<Scalar, GridView> Stencil;
     typedef typename Stencil :: Mapper Mapper;
 
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
@@ -206,7 +206,7 @@ void writeCubeSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
     typedef Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming> Grid2;
     typedef typename Grid2::LeafGridView GridView2;
     typedef Dune::GridFactory<Grid2> GridFactory2;
-    typedef Ewoms::VcfvStencil<Scalar, GridView> Stencil;
+    typedef Opm::VcfvStencil<Scalar, GridView> Stencil;
 
     GridFactory2 gf2;
     const auto &gridView = grid.leafView();
@@ -312,7 +312,7 @@ void testQuadrature()
     const auto eEndIt = gridView.end<0>();
     Scalar result = 0;
     // instanciate a stencil
-    typedef Ewoms::VcfvStencil<Scalar, GridView> Stencil;
+    typedef Opm::VcfvStencil<Scalar, GridView> Stencil;
     typedef typename Stencil :: Mapper Mapper;
 
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)

@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::Co2InjectionProblem
+ * \copydoc Opm::Co2InjectionProblem
  */
 #ifndef EWOMS_CO2_INJECTION_PROBLEM_HH
 #define EWOMS_CO2_INJECTION_PROBLEM_HH
@@ -57,7 +57,7 @@
 #include <iostream>
 #include <string>
 
-namespace Ewoms {
+namespace Opm {
 //! \cond SKIP_THIS
 template <class TypeTag>
 class Co2InjectionProblem;
@@ -89,14 +89,14 @@ SET_TYPE_PROP(Co2InjectionBaseProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the problem property
 SET_TYPE_PROP(Co2InjectionBaseProblem, Problem,
-              Ewoms::Co2InjectionProblem<TypeTag>);
+              Opm::Co2InjectionProblem<TypeTag>);
 
 // Set fluid configuration
 SET_PROP(Co2InjectionBaseProblem, FluidSystem)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef Ewoms::Co2Injection::CO2Tables CO2Tables;
+    typedef Opm::Co2Injection::CO2Tables CO2Tables;
 
 public:
     typedef Opm::BrineCO2FluidSystem<Scalar, CO2Tables> type;
@@ -173,7 +173,7 @@ SET_STRING_PROP(Co2InjectionBaseProblem, GridFile, "data/co2injection.dgf");
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 /*!
  * \ingroup TestProblems
  *
@@ -649,6 +649,6 @@ private:
     Scalar pressureLow_, pressureHigh_;
     Scalar temperatureLow_, temperatureHigh_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

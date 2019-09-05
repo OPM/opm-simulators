@@ -54,5 +54,5 @@ END_PROPERTIES
 int main(int argc, char **argv)
 {
     typedef TTAG(ReservoirNcpVcfvProblem) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv);
 }
