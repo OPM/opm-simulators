@@ -395,7 +395,7 @@ void test_RegMapping()
         }
     }
 
-    Ewoms::RegionMapping<> eqlmap(eqlnum);
+    Opm::RegionMapping<> eqlmap(eqlnum);
 
     PPress ppress(2, PVal(simulator->vanguard().grid().size(0), 0));
     for (const auto& r : eqlmap.activeRegions()) {
