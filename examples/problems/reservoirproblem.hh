@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::ReservoirProblem
+ * \copydoc Opm::ReservoirProblem
  */
 #ifndef EWOMS_RESERVOIR_PROBLEM_HH
 #define EWOMS_RESERVOIR_PROBLEM_HH
@@ -50,11 +50,11 @@
 #include <vector>
 #include <string>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class ReservoirProblem;
 
-} // namespace Ewoms
+} // namespace Opm
 
 BEGIN_PROPERTIES
 
@@ -72,7 +72,7 @@ NEW_PROP_TAG(WellWidth);
 SET_TYPE_PROP(ReservoirBaseProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the problem property
-SET_TYPE_PROP(ReservoirBaseProblem, Problem, Ewoms::ReservoirProblem<TypeTag>);
+SET_TYPE_PROP(ReservoirBaseProblem, Problem, Opm::ReservoirProblem<TypeTag>);
 
 // Set the material Law
 SET_PROP(ReservoirBaseProblem, MaterialLaw)
@@ -141,7 +141,7 @@ SET_SCALAR_PROP(ReservoirBaseProblem, NewtonTolerance, 1e-6);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup TestProblems
@@ -746,6 +746,6 @@ private:
     Scalar maxDepth_;
     Scalar wellWidth_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

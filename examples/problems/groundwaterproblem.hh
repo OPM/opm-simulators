@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::GroundWaterProblem
+ * \copydoc Opm::GroundWaterProblem
  */
 #ifndef EWOMS_GROUND_WATER_PROBLEM_HH
 #define EWOMS_GROUND_WATER_PROBLEM_HH
@@ -46,7 +46,7 @@
 #include <sstream>
 #include <string>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class GroundWaterProblem;
 }
@@ -78,7 +78,7 @@ SET_TYPE_PROP(GroundWaterBaseProblem, Grid, Dune::YaspGrid<2>);
 // SET_TYPE_PROP(GroundWaterBaseProblem, Grid, Dune::SGrid<2, 2>);
 
 SET_TYPE_PROP(GroundWaterBaseProblem, Problem,
-              Ewoms::GroundWaterProblem<TypeTag>);
+              Opm::GroundWaterProblem<TypeTag>);
 
 SET_SCALAR_PROP(GroundWaterBaseProblem, LensLowerLeftX, 0.25);
 SET_SCALAR_PROP(GroundWaterBaseProblem, LensLowerLeftY, 0.25);
@@ -105,11 +105,11 @@ SET_STRING_PROP(GroundWaterBaseProblem, GridFile, "./data/groundwater_2d.dgf");
 // ILU-0) from dune-istl
 SET_TAG_PROP(GroundWaterBaseProblem, LinearSolverSplice, ParallelIstlLinearSolver);
 SET_TYPE_PROP(GroundWaterBaseProblem, LinearSolverWrapper,
-              Ewoms::Linear::SolverWrapperConjugatedGradients<TypeTag>);
+              Opm::Linear::SolverWrapperConjugatedGradients<TypeTag>);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 /*!
  * \ingroup TestProblems
  *
@@ -392,6 +392,6 @@ private:
 
     Scalar eps_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

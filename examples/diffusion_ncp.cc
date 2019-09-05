@@ -40,5 +40,5 @@ END_PROPERTIES
 int main(int argc, char **argv)
 {
     typedef TTAG(DiffusionProblem) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv);
 }

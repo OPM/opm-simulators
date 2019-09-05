@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::Tutorial1Problem
+ * \copydoc Opm::Tutorial1Problem
  */
 #ifndef EWOMS_TUTORIAL1_PROBLEM_HH /*@\label{tutorial1:guardian1}@*/
 #define EWOMS_TUTORIAL1_PROBLEM_HH /*@\label{tutorial1:guardian2}@*/
@@ -51,7 +51,7 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
 
-namespace Ewoms {
+namespace Opm {
 // forward declaration of the problem class
 template <class TypeTag>
 class Tutorial1Problem;
@@ -68,11 +68,11 @@ SET_TAG_PROP(Tutorial1Problem, SpatialDiscretizationSplice,
 
 // Set the "Problem" property
 SET_TYPE_PROP(Tutorial1Problem, Problem,
-              Ewoms::Tutorial1Problem<TypeTag>); /*@\label{tutorial1:set-problem}@*/
+              Opm::Tutorial1Problem<TypeTag>); /*@\label{tutorial1:set-problem}@*/
 
 // Set grid and the grid manager to be used
 SET_TYPE_PROP(Tutorial1Problem, Grid, Dune::YaspGrid</*dim=*/2>); /*@\label{tutorial1:set-grid}@*/
-SET_TYPE_PROP(Tutorial1Problem, Vanguard, Ewoms::CubeGridVanguard<TypeTag>); /*@\label{tutorial1:set-grid-manager}@*/
+SET_TYPE_PROP(Tutorial1Problem, Vanguard, Opm::CubeGridVanguard<TypeTag>); /*@\label{tutorial1:set-grid-manager}@*/
 
 // Set the wetting phase /*@\label{tutorial1:2p-system-start}@*/
 SET_TYPE_PROP(Tutorial1Problem,
@@ -129,7 +129,7 @@ SET_INT_PROP(Tutorial1Problem, CellsZ, 1); /*@\label{tutorial1:default-params-en
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 //! Tutorial problem using the "immiscible" model.
 template <class TypeTag>
 class Tutorial1Problem
@@ -309,7 +309,7 @@ private:
     // small epsilon value
     Scalar eps_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif
 

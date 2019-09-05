@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::CuvetteProblem
+ * \copydoc Opm::CuvetteProblem
  */
 #ifndef EWOMS_CUVETTE_PROBLEM_HH
 #define EWOMS_CUVETTE_PROBLEM_HH
@@ -51,7 +51,7 @@
 
 #include <string>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class CuvetteProblem;
 }
@@ -66,7 +66,7 @@ NEW_TYPE_TAG(CuvetteBaseProblem);
 SET_TYPE_PROP(CuvetteBaseProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the problem property
-SET_TYPE_PROP(CuvetteBaseProblem, Problem, Ewoms::CuvetteProblem<TypeTag>);
+SET_TYPE_PROP(CuvetteBaseProblem, Problem, Opm::CuvetteProblem<TypeTag>);
 
 // Set the fluid system
 SET_TYPE_PROP(
@@ -123,7 +123,7 @@ SET_STRING_PROP(CuvetteBaseProblem, GridFile, "./data/cuvette_11x4.dgf");
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 /*!
  * \ingroup TestProblems
  *
@@ -632,6 +632,6 @@ private:
 
     const Scalar eps_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

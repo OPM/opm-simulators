@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::PowerInjectionProblem
+ * \copydoc Opm::PowerInjectionProblem
  */
 #ifndef EWOMS_POWER_INJECTION_PROBLEM_HH
 #define EWOMS_POWER_INJECTION_PROBLEM_HH
@@ -52,7 +52,7 @@
 #include <type_traits>
 #include <iostream>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class PowerInjectionProblem;
 }
@@ -66,11 +66,11 @@ SET_TYPE_PROP(PowerInjectionBaseProblem, Grid, Dune::YaspGrid</*dim=*/1>);
 
 // set the Vanguard property
 SET_TYPE_PROP(PowerInjectionBaseProblem, Vanguard,
-              Ewoms::CubeGridVanguard<TypeTag>);
+              Opm::CubeGridVanguard<TypeTag>);
 
 // Set the problem property
 SET_TYPE_PROP(PowerInjectionBaseProblem, Problem,
-              Ewoms::PowerInjectionProblem<TypeTag>);
+              Opm::PowerInjectionProblem<TypeTag>);
 
 // Set the wetting phase
 SET_PROP(PowerInjectionBaseProblem, WettingPhase)
@@ -138,7 +138,7 @@ SET_SCALAR_PROP(PowerInjectionBaseProblem, InitialTimeStepSize, 1e-3);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 /*!
  * \ingroup TestProblems
  * \brief 1D Problem with very fast injection of gas on the left.
@@ -236,7 +236,7 @@ public:
         std::ostringstream oss;
         oss << "powerinjection_";
         if (std::is_same<typename GET_PROP_TYPE(TypeTag, FluxModule),
-                         Ewoms::DarcyFluxModule<TypeTag> >::value)
+                         Opm::DarcyFluxModule<TypeTag> >::value)
             oss << "darcy";
         else
             oss << "forchheimer";
@@ -429,6 +429,6 @@ private:
     Scalar eps_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::DiffusionProblem
+ * \copydoc Opm::DiffusionProblem
  */
 #ifndef EWOMS_POWER_INJECTION_PROBLEM_HH
 #define EWOMS_POWER_INJECTION_PROBLEM_HH
@@ -47,7 +47,7 @@
 #include <sstream>
 #include <string>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class DiffusionProblem;
 }
@@ -60,10 +60,10 @@ NEW_TYPE_TAG(DiffusionBaseProblem);
 SET_TYPE_PROP(DiffusionBaseProblem, Grid, Dune::YaspGrid</*dim=*/1>);
 
 // set the Vanguard property
-SET_TYPE_PROP(DiffusionBaseProblem, Vanguard, Ewoms::CubeGridVanguard<TypeTag>);
+SET_TYPE_PROP(DiffusionBaseProblem, Vanguard, Opm::CubeGridVanguard<TypeTag>);
 
 // Set the problem property
-SET_TYPE_PROP(DiffusionBaseProblem, Problem, Ewoms::DiffusionProblem<TypeTag>);
+SET_TYPE_PROP(DiffusionBaseProblem, Problem, Opm::DiffusionProblem<TypeTag>);
 
 // Set the fluid system
 SET_PROP(DiffusionBaseProblem, FluidSystem)
@@ -117,7 +117,7 @@ SET_SCALAR_PROP(DiffusionBaseProblem, InitialTimeStepSize, 1000);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 /*!
  * \ingroup TestProblems
  * \brief 1D problem which is driven by molecular diffusion.
@@ -369,6 +369,6 @@ private:
     Scalar temperature_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif
