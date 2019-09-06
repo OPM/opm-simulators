@@ -286,7 +286,13 @@ namespace MissingFeatures {
             "WELEVNT",
             "WELOPENL"
             "WELPI",
+            "WELPRI",
+            "WELSOMIN",
             "WELSPECL",
+            "WFRICSEG",
+            "WFRICSGL",
+            "WFRICTN",
+            "WFRICTNL",
             "WGASPROD",
             "WINJMULT",
             "WLIMTOL",
