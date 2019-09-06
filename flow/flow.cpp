@@ -53,6 +53,8 @@
 
 #include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
 
+#include <boost/filesystem.hpp>
+
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
 #else
@@ -127,10 +129,26 @@ enum class FileOutputMode {
 
 
 
+void ensureOutputDirExists(const std::string& cmdline_output_dir)
+{
+    if (!boost::filesystem::is_directory(cmdline_output_dir)) {
+        try {
+            boost::filesystem::create_directories(cmdline_output_dir);
+        }
+        catch (...) {
+            throw std::runtime_error("Creation of output directory '" + cmdline_output_dir + "' failed\n");
+        }
+    }
+}
 
 
 // Setup the OpmLog backends
 FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, const std::string& cmdline_output_dir, const std::string& cmdline_output, bool output_cout_, const std::string& stdout_log_id) {
+
+    if (!cmdline_output_dir.empty()) {
+        ensureOutputDirExists(cmdline_output_dir);
+    }
+
     // create logFile
     using boost::filesystem::path;
     path fpath(deck_filename);
