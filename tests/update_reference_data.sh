@@ -17,6 +17,12 @@ copyToReferenceDir () {
   DIFF=1
   for filetype in $FILETYPES
   do
+    # Don't flag as changed if both reference and result dir lack a file type
+    # In particular to handle the optional RFT's
+    if [ ! -f $WORKSPACE/$SRC_DIR$STEM.$filetype ] && [ ! -f $DST_DIR/$STEM.$filetype ]
+    then
+      continue
+    fi
     diff -q "$WORKSPACE/$SRC_DIR$STEM.$filetype" "$DST_DIR/$STEM.$filetype"
     if test $? -ne 0
     then
