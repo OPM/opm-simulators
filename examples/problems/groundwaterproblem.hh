@@ -29,7 +29,7 @@
 #define EWOMS_GROUND_WATER_PROBLEM_HH
 
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
-#include <ewoms/linear/parallelistlbackend.hh>
+#include <opm/simulators/linalg/parallelistlbackend.hh>
 
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
