@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::WaterAirProblem
+ * \copydoc Opm::WaterAirProblem
  */
 #ifndef EWOMS_WATER_AIR_PROBLEM_HH
 #define EWOMS_WATER_AIR_PROBLEM_HH
@@ -53,7 +53,7 @@
 #include <sstream>
 #include <string>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class WaterAirProblem;
 }
@@ -66,7 +66,7 @@ NEW_TYPE_TAG(WaterAirBaseProblem);
 SET_TYPE_PROP(WaterAirBaseProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the problem property
-SET_TYPE_PROP(WaterAirBaseProblem, Problem, Ewoms::WaterAirProblem<TypeTag>);
+SET_TYPE_PROP(WaterAirBaseProblem, Problem, Opm::WaterAirProblem<TypeTag>);
 
 // Set the material Law
 SET_PROP(WaterAirBaseProblem, MaterialLaw)
@@ -130,19 +130,19 @@ SET_STRING_PROP(WaterAirBaseProblem, GridFile, "./data/waterair.dgf");
 // Use the restarted GMRES linear solver with the ILU-2 preconditioner from dune-istl
 SET_TAG_PROP(WaterAirBaseProblem, LinearSolverSplice, ParallelIstlLinearSolver);
 SET_TYPE_PROP(WaterAirBaseProblem, LinearSolverWrapper,
-              Ewoms::Linear::SolverWrapperRestartedGMRes<TypeTag>);
+              Opm::Linear::SolverWrapperRestartedGMRes<TypeTag>);
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
 SET_TYPE_PROP(WaterAirBaseProblem, PreconditionerWrapper,
-              Ewoms::Linear::PreconditionerWrapperILU<TypeTag>);
+              Opm::Linear::PreconditionerWrapperILU<TypeTag>);
 #else
 SET_TYPE_PROP(WaterAirBaseProblem, PreconditionerWrapper,
-              Ewoms::Linear::PreconditionerWrapperILUn<TypeTag>);
+              Opm::Linear::PreconditionerWrapperILUn<TypeTag>);
 #endif
 SET_INT_PROP(WaterAirBaseProblem, PreconditionerOrder, 2);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 /*!
  * \ingroup TestProblems
  * \brief Non-isothermal gas injection problem where a air
@@ -589,6 +589,6 @@ private:
     Scalar maxDepth_;
     Scalar eps_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

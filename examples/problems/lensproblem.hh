@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::LensProblem
+ * \copydoc Opm::LensProblem
  */
 #ifndef EWOMS_LENS_PROBLEM_HH
 #define EWOMS_LENS_PROBLEM_HH
@@ -51,7 +51,7 @@
 #include <string>
 #include <iostream>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class LensProblem;
 }
@@ -69,7 +69,7 @@ NEW_PROP_TAG(LensUpperRightY);
 NEW_PROP_TAG(LensUpperRightZ);
 
 // Set the problem property
-SET_TYPE_PROP(LensBaseProblem, Problem, Ewoms::LensProblem<TypeTag>);
+SET_TYPE_PROP(LensBaseProblem, Problem, Opm::LensProblem<TypeTag>);
 
 // Use Dune-grid's YaspGrid
 SET_TYPE_PROP(LensBaseProblem, Grid, Dune::YaspGrid<2>);
@@ -158,7 +158,7 @@ SET_BOOL_PROP(LensBaseProblem, EnableIntensiveQuantityCache, true);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup TestProblems
@@ -326,7 +326,7 @@ public:
 
         std::string disc = "vertex centered finite volume";
         typedef typename GET_PROP_TYPE(TypeTag, Discretization) D;
-        bool useEcfv = std::is_same<D, Ewoms::EcfvDiscretization<TypeTag>>::value;
+        bool useEcfv = std::is_same<D, Opm::EcfvDiscretization<TypeTag>>::value;
         if (useEcfv)
             disc = "element centered finite volume";
 
@@ -625,6 +625,6 @@ private:
     Scalar eps_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

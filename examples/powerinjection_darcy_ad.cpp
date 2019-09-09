@@ -37,7 +37,7 @@ NEW_TYPE_TAG(PowerInjectionDarcyAdProblem,
              INHERITS_FROM(ImmiscibleTwoPhaseModel,
                            PowerInjectionBaseProblem));
 
-SET_TYPE_PROP(PowerInjectionDarcyAdProblem, FluxModule, Ewoms::DarcyFluxModule<TypeTag>);
+SET_TYPE_PROP(PowerInjectionDarcyAdProblem, FluxModule, Opm::DarcyFluxModule<TypeTag>);
 SET_TAG_PROP(PowerInjectionDarcyAdProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 
 END_PROPERTIES
@@ -45,5 +45,5 @@ END_PROPERTIES
 int main(int argc, char **argv)
 {
     typedef TTAG(PowerInjectionDarcyAdProblem) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv);
 }

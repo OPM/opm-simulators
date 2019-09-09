@@ -37,7 +37,7 @@ NEW_TYPE_TAG(PowerInjectionForchheimerFdProblem,
              INHERITS_FROM(ImmiscibleTwoPhaseModel,
                            PowerInjectionBaseProblem));
 
-SET_TYPE_PROP(PowerInjectionForchheimerFdProblem, FluxModule, Ewoms::ForchheimerFluxModule<TypeTag>);
+SET_TYPE_PROP(PowerInjectionForchheimerFdProblem, FluxModule, Opm::ForchheimerFluxModule<TypeTag>);
 SET_TAG_PROP(PowerInjectionForchheimerFdProblem, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
 
 END_PROPERTIES
@@ -45,5 +45,5 @@ END_PROPERTIES
 int main(int argc, char **argv)
 {
     typedef TTAG(PowerInjectionForchheimerFdProblem) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv);
 }

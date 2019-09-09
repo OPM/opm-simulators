@@ -23,14 +23,14 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::Co2InjectionFlash
+ * \copydoc Opm::Co2InjectionFlash
  */
 #ifndef EWOMS_CO2_INJECTION_FLASH_HH
 #define EWOMS_CO2_INJECTION_FLASH_HH
 
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 
-namespace Ewoms {
+namespace Opm {
 /*!
  * \brief Flash solver used by the CO2 injection problem.
  *
@@ -61,6 +61,6 @@ public:
     }
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif // EWOMS_CO2_INJECTION_FLASH_HH

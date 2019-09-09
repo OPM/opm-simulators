@@ -48,8 +48,8 @@ SET_TAG_PROP(Co2InjectionFlashNiEcfvProblem, LocalLinearizerSplice, AutoDiffLoca
 // use the CO2 injection problem adapted flash solver
 SET_TYPE_PROP(
     Co2InjectionFlashNiEcfvProblem, FlashSolver,
-    Ewoms::Co2InjectionFlash<typename GET_PROP_TYPE(TypeTag, Scalar),
-                             typename GET_PROP_TYPE(TypeTag, FluidSystem)>);
+    Opm::Co2InjectionFlash<typename GET_PROP_TYPE(TypeTag, Scalar),
+                           typename GET_PROP_TYPE(TypeTag, FluidSystem)>);
 
 // the flash model has serious problems with the numerical
 // precision. if quadruple precision math is available, we use it,
@@ -69,5 +69,5 @@ END_PROPERTIES
 int main(int argc, char **argv)
 {
     typedef TTAG(Co2InjectionFlashNiEcfvProblem) EcfvProblemTypeTag;
-    return Ewoms::start<EcfvProblemTypeTag>(argc, argv);
+    return Opm::start<EcfvProblemTypeTag>(argc, argv);
 }

@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::FractureProblem
+ * \copydoc Opm::FractureProblem
  */
 #ifndef EWOMS_FRACTURE_PROBLEM_HH
 #define EWOMS_FRACTURE_PROBLEM_HH
@@ -60,7 +60,7 @@
 #include <sstream>
 #include <string>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class FractureProblem;
 }
@@ -76,10 +76,10 @@ SET_TYPE_PROP(
     Dune::ALUGrid</*dim=*/2, /*dimWorld=*/2, Dune::simplex, Dune::nonconforming>);
 
 // Set the Vanguard property
-SET_TYPE_PROP(FractureProblem, Vanguard, Ewoms::DgfVanguard<TypeTag>);
+SET_TYPE_PROP(FractureProblem, Vanguard, Opm::DgfVanguard<TypeTag>);
 
 // Set the problem property
-SET_TYPE_PROP(FractureProblem, Problem, Ewoms::FractureProblem<TypeTag>);
+SET_TYPE_PROP(FractureProblem, Problem, Opm::FractureProblem<TypeTag>);
 
 // Set the wetting phase
 SET_PROP(FractureProblem, WettingPhase)
@@ -160,7 +160,7 @@ SET_SCALAR_PROP(FractureProblem, InitialTimeStepSize, 100);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 /*!
  * \ingroup TestProblems
  *
@@ -220,7 +220,7 @@ class FractureProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     };
     typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, FaceLayout> FaceMapper;
 
-    typedef Ewoms::FractureMapper<TypeTag> FractureMapper;
+    typedef Opm::FractureMapper<TypeTag> FractureMapper;
 
 public:
     /*!
@@ -648,6 +648,6 @@ private:
     Scalar temperature_;
     Scalar eps_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif // EWOMS_FRACTURE_PROBLEM_HH

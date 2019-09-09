@@ -44,5 +44,5 @@ int mainCU1(int argc, char **argv);
 int mainCU1(int argc, char **argv)
 {
     typedef TTAG(LensProblemEcfvAd) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv);
 }
