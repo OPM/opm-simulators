@@ -185,7 +185,7 @@ int main()
     std::cout << "---------------------------------------\n";
 
     std::cout << "---- All properties for Sedan ---\n";
-    Ewoms::Properties::printValues<TTAG(Sedan)>();
+    Opm::Properties::printValues<TTAG(Sedan)>();
 
     std::cout << "---- Message for (HummerH1, CanonCaliber) ---\n"
               << PROP_DIAGNOSTIC(TTAG(HummerH1), CanonCaliber);

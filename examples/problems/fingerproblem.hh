@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::FingerProblem
+ * \copydoc Opm::FingerProblem
  */
 #ifndef EWOMS_FINGER_PROBLEM_HH
 #define EWOMS_FINGER_PROBLEM_HH
@@ -56,11 +56,11 @@
 #include <vector>
 #include <string>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class FingerProblem;
 
-} // namespace Ewoms
+} // namespace Opm
 
 BEGIN_PROPERTIES
 
@@ -80,7 +80,7 @@ SET_TYPE_PROP(FingerBaseProblem,
 NEW_PROP_TAG(InitialWaterSaturation);
 
 // Set the problem property
-SET_TYPE_PROP(FingerBaseProblem, Problem, Ewoms::FingerProblem<TypeTag>);
+SET_TYPE_PROP(FingerBaseProblem, Problem, Opm::FingerProblem<TypeTag>);
 
 // Set the wetting phase
 SET_PROP(FingerBaseProblem, WettingPhase)
@@ -147,7 +147,7 @@ SET_SCALAR_PROP(FingerBaseProblem, InitialTimeStepSize, 10);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup TestProblems
@@ -550,6 +550,6 @@ private:
     Scalar eps_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

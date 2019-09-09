@@ -45,8 +45,8 @@ SET_BOOL_PROP(Co2InjectionFlashNiVcfvProblem, EnableEnergy, true);
 // use the CO2 injection problem adapted flash solver
 SET_TYPE_PROP(
     Co2InjectionFlashNiVcfvProblem, FlashSolver,
-    Ewoms::Co2InjectionFlash<typename GET_PROP_TYPE(TypeTag, Scalar),
-                             typename GET_PROP_TYPE(TypeTag, FluidSystem)>);
+    Opm::Co2InjectionFlash<typename GET_PROP_TYPE(TypeTag, Scalar),
+                           typename GET_PROP_TYPE(TypeTag, FluidSystem)>);
 
 // the flash model has serious problems with the numerical
 // precision. if quadruple precision math is available, we use it,
@@ -66,5 +66,5 @@ END_PROPERTIES
 int main(int argc, char **argv)
 {
     typedef TTAG(Co2InjectionFlashNiVcfvProblem) VcfvProblemTypeTag;
-    return Ewoms::start<VcfvProblemTypeTag>(argc, argv);
+    return Opm::start<VcfvProblemTypeTag>(argc, argv);
 }

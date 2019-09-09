@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::RichardsLensProblem
+ * \copydoc Opm::RichardsLensProblem
  */
 #ifndef EWOMS_RICHARDS_LENS_PROBLEM_HH
 #define EWOMS_RICHARDS_LENS_PROBLEM_HH
@@ -45,11 +45,11 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class RichardsLensProblem;
 
-} // namespace Ewoms
+} // namespace Opm
 
 BEGIN_PROPERTIES
 
@@ -59,7 +59,7 @@ NEW_TYPE_TAG(RichardsLensProblem, INHERITS_FROM(Richards));
 SET_TYPE_PROP(RichardsLensProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the physical problem to be solved
-SET_TYPE_PROP(RichardsLensProblem, Problem, Ewoms::RichardsLensProblem<TypeTag>);
+SET_TYPE_PROP(RichardsLensProblem, Problem, Opm::RichardsLensProblem<TypeTag>);
 
 // Set the wetting phase
 SET_PROP(RichardsLensProblem, WettingFluid)
@@ -120,7 +120,7 @@ SET_STRING_PROP(RichardsLensProblem, GridFile, "./data/richardslens_24x16.dgf");
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup TestProblems
@@ -481,6 +481,6 @@ private:
     Scalar eps_;
     Scalar pnRef_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

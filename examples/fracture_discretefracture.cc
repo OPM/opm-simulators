@@ -33,5 +33,5 @@
 int main(int argc, char **argv)
 {
     typedef TTAG(FractureProblem) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv);
 }

@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::InfiltrationProblem
+ * \copydoc Opm::InfiltrationProblem
  */
 #ifndef EWOMS_INFILTRATION_PROBLEM_HH
 #define EWOMS_INFILTRATION_PROBLEM_HH
@@ -47,7 +47,7 @@
 #include <sstream>
 #include <string>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class InfiltrationProblem;
 }
@@ -61,7 +61,7 @@ SET_TYPE_PROP(InfiltrationBaseProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the problem property
 SET_TYPE_PROP(InfiltrationBaseProblem, Problem,
-              Ewoms::InfiltrationProblem<TypeTag>);
+              Opm::InfiltrationProblem<TypeTag>);
 
 // Set the fluid system
 SET_TYPE_PROP(
@@ -106,7 +106,7 @@ SET_STRING_PROP(InfiltrationBaseProblem, GridFile,
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 /*!
  * \ingroup TestProblems
  * \brief Isothermal NAPL infiltration problem where LNAPL
@@ -469,6 +469,6 @@ private:
     Scalar temperature_;
     Scalar eps_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif
