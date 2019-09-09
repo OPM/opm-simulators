@@ -19,7 +19,7 @@
 #ifndef OPM_AMG_HEADER_INCLUDED
 #define OPM_AMG_HEADER_INCLUDED
 
-#include <ewoms/linear/matrixblock.hh>
+#include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/CPRPreconditioner.hpp>
