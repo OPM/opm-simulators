@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::EclBaseVanguard
+ * \copydoc Opm::EclBaseVanguard
  */
 #ifndef EWOMS_ECL_BASE_VANGUARD_HH
 #define EWOMS_ECL_BASE_VANGUARD_HH
@@ -55,7 +55,7 @@
 #include <unordered_set>
 #include <array>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class EclBaseVanguard;
 }
@@ -86,7 +86,7 @@ SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -624,6 +624,6 @@ Opm::Schedule* EclBaseVanguard<TypeTag>::externalEclSchedule_ = nullptr;
 template <class TypeTag>
 Opm::SummaryConfig* EclBaseVanguard<TypeTag>::externalEclSummaryConfig_ = nullptr;
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

@@ -97,7 +97,7 @@ initSimulator(const char *filename)
         filenameArg.c_str()
     };
 
-    Ewoms::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/false);
+    Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/false);
 
     return std::unique_ptr<Simulator>(new Simulator);
 }
@@ -118,11 +118,11 @@ void test_summary()
 
     auto simulator = initSimulator<TypeTag>(filename.data());
     typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
-    typedef Ewoms::CollectDataToIORank< Vanguard > CollectDataToIORankType;
+    typedef Opm::CollectDataToIORank< Vanguard > CollectDataToIORankType;
     CollectDataToIORankType collectToIORank(simulator->vanguard());
-    Ewoms::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, collectToIORank);
+    Opm::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, collectToIORank);
 
-    typedef Ewoms::EclWriter<TypeTag> EclWriterType;
+    typedef Opm::EclWriter<TypeTag> EclWriterType;
     // create the actual ECL writer
     std::unique_ptr<EclWriterType> eclWriter = std::unique_ptr<EclWriterType>(new EclWriterType(*simulator));
 
@@ -253,7 +253,7 @@ int main(int argc, char** argv)
 #endif
 
     typedef TTAG(TestEclOutputTypeTag) TypeTag;
-    Ewoms::registerAllParameters_<TypeTag>();
+    Opm::registerAllParameters_<TypeTag>();
     test_summary();
     test_readWriteWells();
 

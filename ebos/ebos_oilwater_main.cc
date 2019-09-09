@@ -33,5 +33,5 @@
 
 int main(int argc, char** argv)
 {
-    return Ewoms::ebosOilWaterMain(argc, argv);
+    return Opm::ebosOilWaterMain(argc, argv);
 }

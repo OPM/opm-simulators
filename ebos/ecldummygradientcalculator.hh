@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::EclDummyGradientCalculator
+ * \copydoc Opm::EclDummyGradientCalculator
  */
 #ifndef EWOMS_ECL_DUMMY_GRADIENT_CALCULATOR_HH
 #define EWOMS_ECL_DUMMY_GRADIENT_CALCULATOR_HH
@@ -34,7 +34,7 @@
 
 #include <dune/common/fvector.hh>
 
-namespace Ewoms {
+namespace Opm {
 /*!
  * \ingroup EclBlackOilSimulator
  *
@@ -99,6 +99,6 @@ public:
         throw std::logic_error("Generic boundary gradients are not supported by the ECL black-oil simulator");
     }
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

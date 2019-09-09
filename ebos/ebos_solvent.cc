@@ -38,12 +38,12 @@ SET_BOOL_PROP(EbosSolventTypeTag, EnableSolvent, true);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 void ebosSolventSetDeck(Opm::Deck* deck,
-                         Opm::ParseContext* parseContext,
-                         Opm::ErrorGuard* errorGuard,
-                         double externalSetupTime)
+                        Opm::ParseContext* parseContext,
+                        Opm::ErrorGuard* errorGuard,
+                        double externalSetupTime)
 {
     typedef TTAG(EbosSolventTypeTag) ProblemTypeTag;
     typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
@@ -57,7 +57,7 @@ void ebosSolventSetDeck(Opm::Deck* deck,
 int ebosSolventMain(int argc, char **argv)
 {
     typedef TTAG(EbosSolventTypeTag) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv);
 }
 
 }

@@ -47,7 +47,7 @@ NEW_PROP_TAG(MaterialLaw);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 template <class TypeTag>
 class EclTransIntensiveQuantities;
@@ -500,6 +500,6 @@ private:
     unsigned short dnIdx_[numPhases];
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

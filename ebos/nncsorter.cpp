@@ -28,7 +28,7 @@
 #include <sstream>
 #include <algorithm>
 #include <iostream>
-namespace Ewoms
+namespace Opm
 {
 std::vector<Opm::NNCdata> sortNncAndApplyEditnnc(const std::vector<Opm::NNCdata>& nncDataIn, std::vector<Opm::NNCdata> editnncData,
                                                  bool log )
@@ -92,4 +92,4 @@ std::vector<Opm::NNCdata> sortNncAndApplyEditnnc(const std::vector<Opm::NNCdata>
     }
     return nncData;
 }
-} // end namespace Ewoms
+} // end namespace Opm

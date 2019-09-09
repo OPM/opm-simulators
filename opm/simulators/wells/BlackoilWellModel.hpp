@@ -66,7 +66,7 @@ namespace Opm {
 
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
-        class BlackoilWellModel : public Ewoms::BaseAuxiliaryModule<TypeTag>
+        class BlackoilWellModel : public Opm::BaseAuxiliaryModule<TypeTag>
         {
         public:
             // ---------      Types      ---------
@@ -83,7 +83,7 @@ namespace Opm {
             typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector)      GlobalEqVector;
             typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
 
-            typedef typename Ewoms::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
+            typedef typename Opm::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
             static const int numEq = Indices::numEq;
             static const int solventSaturationIdx = Indices::solventSaturationIdx;
@@ -102,7 +102,7 @@ namespace Opm {
 #endif
             typedef typename SparseMatrixAdapter::IstlMatrix Mat;
 
-            typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
+            typedef Opm::BlackOilPolymerModule<TypeTag> PolymerModule;
 
             // For the conversion between the surface volume rate and resrevoir voidage rate
             using RateConverterType = RateConverter::

@@ -32,11 +32,11 @@
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 
-namespace Ewoms {
+namespace Opm {
 void ebosPolymerSetDeck(Opm::Deck* deck,
-                         Opm::ParseContext* parseContext,
-                         Opm::ErrorGuard* errorGuard,
-                         double externalSetupTime);
+                        Opm::ParseContext* parseContext,
+                        Opm::ErrorGuard* errorGuard,
+                        double externalSetupTime);
 
 int ebosPolymerMain(int argc, char** argv);
 }

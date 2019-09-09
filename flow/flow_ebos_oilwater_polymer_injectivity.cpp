@@ -34,7 +34,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(EclFlowOilWaterPolymerInjectivityProblem, INHERITS_FROM(EclFlowProblem));
 SET_BOOL_PROP(EclFlowOilWaterPolymerInjectivityProblem, EnablePolymer, true);
@@ -52,12 +52,12 @@ private:
     typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
 
 public:
-    typedef Ewoms::BlackOilTwoPhaseIndices<0,
-                                           2,
-                                           0,
-                                           GET_PROP_VALUE(TypeTag, EnableFoam),
-                                           /*PVOffset=*/0,
-                                           /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
+    typedef Opm::BlackOilTwoPhaseIndices<0,
+                                         2,
+                                         0,
+                                         GET_PROP_VALUE(TypeTag, EnableFoam),
+                                         /*PVOffset=*/0,
+                                         /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
 };
 }}
 

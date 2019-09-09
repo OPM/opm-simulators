@@ -66,8 +66,8 @@ namespace Opm
         using Base::has_foam;
         using Base::has_energy;
 
-        using PolymerModule =  Ewoms::BlackOilPolymerModule<TypeTag>;
-        using FoamModule = Ewoms::BlackOilFoamModule<TypeTag>;
+        using PolymerModule =  Opm::BlackOilPolymerModule<TypeTag>;
+        using FoamModule = Opm::BlackOilFoamModule<TypeTag>;
 
         // polymer concentration and temperature are already known by the well, so
         // polymer and energy conservation do not need to be considered explicitly

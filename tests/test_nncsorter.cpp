@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(Test1) {
     std::vector<Opm::NNCdata> nncDataOut2 =
         { { 1, 2, 0.5 }, { 1, 2, 0.3 }, { 3, 4, 0.4 }, { 8, 9, 10.0 } };
 
-    auto nncDataProcessed = Ewoms::sortNncAndApplyEditnnc(nncDataIn, editnncData);
+    auto nncDataProcessed = Opm::sortNncAndApplyEditnnc(nncDataIn, editnncData);
     BOOST_CHECK(nncDataProcessed.size() == nncDataOut1.size());
     auto expectedNnc1 = nncDataOut1.begin();
     auto expectedNnc2 = nncDataOut2.begin();

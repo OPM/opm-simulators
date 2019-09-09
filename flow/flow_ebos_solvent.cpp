@@ -29,7 +29,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(EclFlowSolventProblem, INHERITS_FROM(EclFlowProblem));
 SET_BOOL_PROP(EclFlowSolventProblem, EnableSolvent, true);

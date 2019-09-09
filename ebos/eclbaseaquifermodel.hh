@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::EclBaseAquiferModel
+ * \copydoc Opm::EclBaseAquiferModel
  */
 #ifndef EWOMS_ECL_BASE_AQUIFER_MODEL_HH
 #define EWOMS_ECL_BASE_AQUIFER_MODEL_HH
@@ -36,7 +36,7 @@ NEW_PROP_TAG(RateVector);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBaseAquiferModel
@@ -137,6 +137,6 @@ protected:
     Simulator& simulator_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

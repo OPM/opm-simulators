@@ -23,14 +23,14 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::TracerVdTable
+ * \copydoc Opm::TracerVdTable
  */
 #ifndef EWOMS_TRACER_VD_TABLE_HH
 #define EWOMS_TRACER_VD_TABLE_HH
 
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \brief A class that contains tracer concentration vs depth table

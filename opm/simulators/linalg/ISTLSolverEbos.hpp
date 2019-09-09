@@ -63,10 +63,10 @@ SET_PROP(FlowIstlSolver, SparseMatrixAdapter)
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
-    typedef Ewoms::MatrixBlock<Scalar, numEq, numEq> Block;
+    typedef Opm::MatrixBlock<Scalar, numEq, numEq> Block;
 
 public:
-    typedef typename Ewoms::Linear::IstlSparseMatrixAdapter<Block> type;
+    typedef typename Opm::Linear::IstlSparseMatrixAdapter<Block> type;
 };
 
 END_PROPERTIES

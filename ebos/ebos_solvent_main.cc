@@ -33,5 +33,5 @@
 
 int main(int argc, char** argv)
 {
-    return Ewoms::ebosSolventMain(argc, argv);
+    return Opm::ebosSolventMain(argc, argv);
 }
