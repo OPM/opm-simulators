@@ -29,7 +29,7 @@
 #define EWOMS_WATER_AIR_PROBLEM_HH
 
 #include <ewoms/models/pvs/pvsproperties.hh>
-#include <ewoms/linear/parallelistlbackend.hh>
+#include <opm/simulators/linalg/parallelistlbackend.hh>
 
 #include <opm/material/fluidsystems/H2OAirFluidSystem.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
