@@ -20,7 +20,7 @@
 #define OPM_AMGCPR_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
-#include <ewoms/linear/matrixblock.hh>
+#include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/CPRPreconditioner.hpp>
