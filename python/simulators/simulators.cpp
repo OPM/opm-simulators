@@ -1,42 +1,23 @@
-// ========================================================================
-// Basically all the header files from flow.cpp
 #include "config.h"
 
 #include <flow/flow_ebos_blackoil.hpp>
-#include <flow/flow_ebos_gasoil.hpp>
-#include <flow/flow_ebos_oilwater.hpp>
-#include <flow/flow_ebos_solvent.hpp>
-#include <flow/flow_ebos_polymer.hpp>
-#include <flow/flow_ebos_energy.hpp>
-#include <flow/flow_ebos_oilwater_polymer.hpp>
-#include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
 
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
-#include <opm/simulators/flow/MissingFeatures.hpp>
 #include <opm/material/common/ResetLocale.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-
-#include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
 #else
 #include <dune/common/parallel/mpihelper.hh>
 #endif
-
-// ========================================================================
 
 #include <pybind11/pybind11.h>
 #include <string>
@@ -120,33 +101,24 @@ public:
         delete[] argv_;
     }
 
-    void setDeckFilename( char* deckFilename )
-    {
-        std::strcpy(argv_[1], deckFilename);
-    }
-
     void setDeck( const Opm::Deck& deck )
     {
         deck_ = std::make_shared< Opm::Deck >(deck);
-        // deck_ = std::shared_ptr< Opm::Deck >( const_cast< Opm::Deck* > (&deck), [](Opm::Deck*){} );
     }
 
     void setEclipseState( const Opm::EclipseState& eclipseState )
     {
         eclipseState_ = std::make_shared< Opm::EclipseState >(eclipseState);
-        // eclipseState_ = std::shared_ptr< Opm::EclipseState >( const_cast< Opm::EclipseState* > (&eclipseState), [](Opm::EclipseState*){} );
     }
 
     void setSchedule( const Opm::Schedule& schedule )
     {
         schedule_ = std::make_shared< Opm::Schedule >(schedule);
-        // schedule_ = std::shared_ptr< Opm::Schedule >( const_cast< Opm::Schedule* > (&schedule), [](Opm::Schedule*){} );
     }
 
     void setSummaryConfig( const Opm::SummaryConfig& summaryConfig )
     {
         summaryConfig_ = std::make_shared< Opm::SummaryConfig >(summaryConfig);
-        // summaryConfig_ = std::shared_ptr< Opm::SummaryConfig >( const_cast< Opm::SummaryConfig* > (&summaryConfig), [](Opm::SummaryConfig*){} );
     }
 
     int run()
@@ -197,20 +169,6 @@ public:
         if (mpiRank == 0)
             outputCout = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
 
-//         std::string deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
-//         typedef typename GET_PROP_TYPE(PreTypeTag, Vanguard) PreVanguard;
-//         try {
-//             deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
-//         }
-//         catch (const std::exception& e) {
-//             if ( mpiRank == 0 )
-//                 std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
-// #if HAVE_MPI
-//             MPI_Finalize();
-// #endif
-//             return 1;
-//         }
-
         if (outputCout) {
             Opm::FlowMainEbos<PreTypeTag>::printBanner();
         }
@@ -248,7 +206,6 @@ PYBIND11_MODULE(simulators, m)
         .def(py::init<>())
         .def("run", &BlackOilSimulator::run)
         .def("setDeck", &BlackOilSimulator::setDeck)
-        .def("setDeckFilename", &BlackOilSimulator::setDeckFilename)
         .def("setEclipseState", &BlackOilSimulator::setEclipseState)
         .def("setSchedule", &BlackOilSimulator::setSchedule)
         .def("setSummaryConfig", &BlackOilSimulator::setSummaryConfig);

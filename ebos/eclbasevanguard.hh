@@ -256,33 +256,37 @@ public:
 
         std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
 
-        if (fileName == "")
-            throw std::runtime_error("No input deck file has been specified as a command line argument,"
-                                     " or via '--ecl-deck-file-name=CASE.DATA'");
+        // Skip processing of filename if external deck already exists.
+        if (!externalDeck_)
+        {
+            if (fileName == "")
+                throw std::runtime_error("No input deck file has been specified as a command line argument,"
+                                        " or via '--ecl-deck-file-name=CASE.DATA'");
 
-        fileName = canonicalDeckPath(fileName).string();
+            fileName = canonicalDeckPath(fileName).string();
 
-        // compute the base name of the input file name
-        const char directorySeparator = '/';
-        long int i;
-        for (i = fileName.size(); i >= 0; -- i)
-            if (fileName[i] == directorySeparator)
-                break;
-        std::string baseName = fileName.substr(i + 1, fileName.size());
+            // compute the base name of the input file name
+            const char directorySeparator = '/';
+            long int i;
+            for (i = fileName.size(); i >= 0; -- i)
+                if (fileName[i] == directorySeparator)
+                    break;
+            std::string baseName = fileName.substr(i + 1, fileName.size());
 
-        // remove the extension from the input file
-        for (i = baseName.size(); i >= 0; -- i)
-            if (baseName[i] == '.')
-                break;
-        std::string rawCaseName;
-        if (i < 0)
-            rawCaseName = baseName;
-        else
-            rawCaseName = baseName.substr(0, i);
+            // remove the extension from the input file
+            for (i = baseName.size(); i >= 0; -- i)
+                if (baseName[i] == '.')
+                    break;
+            std::string rawCaseName;
+            if (i < 0)
+                rawCaseName = baseName;
+            else
+                rawCaseName = baseName.substr(0, i);
 
-        // transform the result to ALL_UPPERCASE
-        caseName_ = rawCaseName;
-        std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
+            // transform the result to ALL_UPPERCASE
+            caseName_ = rawCaseName;
+            std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
+        }
 
         // create the parser objects for the deck or use their externally specified
         // versions (if desired)
@@ -313,7 +317,6 @@ public:
         }
         else {
             assert(externalDeck_);
-
             deck_ = externalDeck_;
         }
 
