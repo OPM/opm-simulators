@@ -30,7 +30,7 @@
 #define EWOMS_LENS_IMMISCIBLE_ECFV_AD_HH
 
 #include <ewoms/models/immiscible/immisciblemodel.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/lensproblem.hh"
 
 BEGIN_PROPERTIES

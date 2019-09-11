@@ -29,7 +29,7 @@
 #ifndef EWOMS_QUANTITY_CALLBACKS_HH
 #define EWOMS_QUANTITY_CALLBACKS_HH
 
-#include <ewoms/disc/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
