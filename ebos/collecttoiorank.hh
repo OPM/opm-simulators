@@ -189,33 +189,34 @@ public:
         {
             std::set<int> send, recv;
             typedef typename Vanguard::EquilGrid::LeafGridView EquilGridView;
-            const EquilGridView equilGridView = vanguard.equilGrid().leafGridView();
-
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
-            typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView> EquilElementMapper;
-            EquilElementMapper equilElemMapper(equilGridView, Dune::mcmgElementLayout());
-#else
-            typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView, Dune::MCMGElementLayout> EquilElementMapper;
-            EquilElementMapper equilElemMapper(equilGridView);
-#endif
-
             // We need a mapping from local to global grid, here we
             // use equilGrid which represents a view on the global grid
-            const size_t globalSize = vanguard.equilGrid().leafGridView().size(0);
             // reserve memory
+            auto logSize = vanguard.grid().logicalCartesianSize();
+            const size_t globalSize = logSize[0]*logSize[1]*logSize[2];
             globalCartesianIndex_.resize(globalSize, -1);
-
-            // loop over all elements (global grid) and store Cartesian index
-            auto elemIt = vanguard.equilGrid().leafGridView().template begin<0>();
-            const auto& elemEndIt = vanguard.equilGrid().leafGridView().template end<0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                int elemIdx = equilElemMapper.index(*elemIt);
-                int cartElemIdx = vanguard.equilCartesianIndexMapper().cartesianIndex(elemIdx);
-                globalCartesianIndex_[elemIdx] = cartElemIdx;
-            }
 
             // the I/O rank receives from all other ranks
             if (isIORank()) {
+                const EquilGridView equilGridView = vanguard.equilGrid().leafGridView();
+
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
+                typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView> EquilElementMapper;
+                EquilElementMapper equilElemMapper(equilGridView, Dune::mcmgElementLayout());
+#else
+                typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView, Dune::MCMGElementLayout> EquilElementMapper;
+                EquilElementMapper equilElemMapper(equilGridView);
+#endif
+
+                // loop over all elements (global grid) and store Cartesian index
+                auto elemIt = vanguard.equilGrid().leafGridView().template begin<0>();
+                const auto& elemEndIt = vanguard.equilGrid().leafGridView().template end<0>();
+                for (; elemIt != elemEndIt; ++elemIt) {
+                    int elemIdx = equilElemMapper.index(*elemIt);
+                    int cartElemIdx = vanguard.equilCartesianIndexMapper().cartesianIndex(elemIdx);
+                    globalCartesianIndex_[elemIdx] = cartElemIdx;
+                }
+
                 for (int i = 0; i < comm.size(); ++i) {
                     if (i != ioRank)
                         recv.insert(i);
