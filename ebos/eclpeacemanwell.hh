@@ -29,7 +29,7 @@
 #define EWOMS_ECL_PEACEMAN_WELL_HH
 
 #include <ewoms/models/blackoil/blackoilproperties.hh>
-#include <ewoms/disc/common/baseauxiliarymodule.hh>
+#include <opm/models/discretization/common/baseauxiliarymodule.hh>
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/alignedallocator.hh>
 

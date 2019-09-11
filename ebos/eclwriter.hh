@@ -32,7 +32,7 @@
 #include "ecloutputblackoilmodule.hh"
 
 #include <ewoms/models/blackoil/blackoilmodel.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include <ewoms/io/baseoutputwriter.hh>
 #include <ewoms/parallel/tasklets.hh>
 
