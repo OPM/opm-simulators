@@ -31,7 +31,7 @@
 #ifndef EWOMS_ECL_FLUX_MODULE_HH
 #define EWOMS_ECL_FLUX_MODULE_HH
 
-#include <ewoms/disc/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/utils/signum.hh>
 

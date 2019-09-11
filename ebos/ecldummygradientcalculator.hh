@@ -28,7 +28,7 @@
 #ifndef EWOMS_ECL_DUMMY_GRADIENT_CALCULATOR_HH
 #define EWOMS_ECL_DUMMY_GRADIENT_CALCULATOR_HH
 
-#include <ewoms/disc/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/material/common/Exceptions.hpp>
 
