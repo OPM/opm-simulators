@@ -29,7 +29,7 @@
 
 #include <ewoms/common/start.hh>
 #include <ewoms/models/immiscible/immisciblemodel.hh>
-#include <ewoms/disc/vcfv/vcfvdiscretization.hh>
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include "problems/fingerproblem.hh"
 
 BEGIN_PROPERTIES

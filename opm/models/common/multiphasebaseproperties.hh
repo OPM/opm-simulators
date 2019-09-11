@@ -30,7 +30,7 @@
 #ifndef EWOMS_MULTI_PHASE_BASE_PROPERTIES_HH
 #define EWOMS_MULTI_PHASE_BASE_PROPERTIES_HH
 
-#include <ewoms/disc/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <ewoms/io/vtkmultiphasemodule.hh>
 #include <ewoms/io/vtktemperaturemodule.hh>
 

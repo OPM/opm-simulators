@@ -30,8 +30,8 @@
 
 #include "multiphasebaseproperties.hh"
 
-#include <ewoms/disc/common/fvbaseproblem.hh>
-#include <ewoms/disc/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproblem.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/common/Means.hpp>

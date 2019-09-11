@@ -30,7 +30,7 @@
 
 #include <opm/models/utils/start.hh>
 #include <ewoms/models/ncp/ncpmodel.hh>
-#include <ewoms/disc/vcfv/vcfvdiscretization.hh>
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
 BEGIN_PROPERTIES

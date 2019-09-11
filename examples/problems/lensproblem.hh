@@ -30,8 +30,8 @@
 
 #include <ewoms/io/structuredgridvanguard.hh>
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
-#include <ewoms/disc/common/fvbaseadlocallinearizer.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
+#include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>

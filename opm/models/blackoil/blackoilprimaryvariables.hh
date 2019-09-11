@@ -34,7 +34,7 @@
 #include "blackoilenergymodules.hh"
 #include "blackoilfoammodules.hh"
 
-#include <ewoms/disc/common/fvbaseprimaryvariables.hh>
+#include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 
 #include <dune/common/fvector.hh>
 

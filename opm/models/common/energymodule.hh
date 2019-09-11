@@ -29,7 +29,7 @@
 #ifndef EWOMS_ENERGY_MODULE_HH
 #define EWOMS_ENERGY_MODULE_HH
 
-#include <ewoms/disc/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 
 #include <opm/material/common/Valgrind.hpp>

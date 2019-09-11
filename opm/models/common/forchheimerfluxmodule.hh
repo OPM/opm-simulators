@@ -32,7 +32,7 @@
 
 #include "darcyfluxmodule.hh"
 
-#include <ewoms/disc/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Unused.hpp>

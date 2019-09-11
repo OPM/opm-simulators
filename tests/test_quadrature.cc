@@ -39,7 +39,7 @@
 #include <dune/common/version.hh>
 #include <dune/geometry/quadraturerules.hh>
 
-#include <ewoms/disc/vcfv/vcfvstencil.hh>
+#include <opm/models/discretization/vcfv/vcfvstencil.hh>
 
 #include <opm/material/common/Unused.hpp>
 

@@ -28,7 +28,7 @@
 #include "config.h"
 
 #include <opm/models/utils/start.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 
 #include "problems/richardslensproblem.hh"
 
