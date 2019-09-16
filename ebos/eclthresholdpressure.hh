@@ -28,7 +28,7 @@
 #ifndef EWOMS_ECL_THRESHOLD_PRESSURE_HH
 #define EWOMS_ECL_THRESHOLD_PRESSURE_HH
 
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>

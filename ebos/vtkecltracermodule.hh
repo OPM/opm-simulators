@@ -31,8 +31,8 @@
 #include <ewoms/io/vtkmultiwriter.hh>
 #include <ewoms/io/baseoutputmodule.hh>
 
-#include <ewoms/common/propertysystem.hh>
-#include <ewoms/common/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
 #include <ewoms/models/blackoil/blackoilproperties.hh>
 
 

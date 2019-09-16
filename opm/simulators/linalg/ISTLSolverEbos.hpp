@@ -33,8 +33,8 @@
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 
-#include <ewoms/common/parametersystem.hh>
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <dune/istl/scalarproducts.hh>
 #include <dune/istl/operators.hh>

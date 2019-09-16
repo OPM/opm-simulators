@@ -40,7 +40,7 @@
 #include "ebos_polymer.hh"
 #include "ebos_foam.hh"
 
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/timer.hh>

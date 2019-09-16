@@ -30,8 +30,8 @@
 
 #include <ewoms/models/blackoil/blackoilproperties.hh>
 #include <ewoms/disc/common/baseauxiliarymodule.hh>
-#include <ewoms/common/propertysystem.hh>
-#include <ewoms/common/alignedallocator.hh>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/alignedallocator.hh>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/densead/Evaluation.hpp>

@@ -33,7 +33,7 @@
 
 #include <ewoms/disc/common/fvbaseproperties.hh>
 #include <ewoms/models/blackoil/blackoilproperties.hh>
-#include <ewoms/common/signum.hh>
+#include <opm/models/utils/signum.hh>
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Exceptions.hpp>
