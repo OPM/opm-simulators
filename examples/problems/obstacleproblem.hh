@@ -28,7 +28,7 @@
 #ifndef EWOMS_OBSTACLE_PROBLEM_HH
 #define EWOMS_OBSTACLE_PROBLEM_HH
 
-#include <ewoms/models/ncp/ncpproperties.hh>
+#include <opm/models/ncp/ncpproperties.hh>
 
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>

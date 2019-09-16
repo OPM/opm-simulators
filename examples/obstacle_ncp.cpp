@@ -28,7 +28,7 @@
 #include "config.h"
 
 #include <opm/models/utils/start.hh>
-#include <ewoms/models/ncp/ncpmodel.hh>
+#include <opm/models/ncp/ncpmodel.hh>
 
 #include "problems/obstacleproblem.hh"
 
