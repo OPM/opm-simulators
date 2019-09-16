@@ -28,8 +28,8 @@
 #define EWOMS_VTK_ECL_TRACER_MODULE_HH
 
 
-#include <ewoms/io/vtkmultiwriter.hh>
-#include <ewoms/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
+#include <opm/models/io/baseoutputmodule.hh>
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>

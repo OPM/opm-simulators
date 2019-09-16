@@ -33,7 +33,7 @@
 
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
-#include <ewoms/io/baseoutputwriter.hh>
+#include <opm/models/io/baseoutputwriter.hh>
 #include <opm/models/parallel/tasklets.hh>
 
 #include <ebos/nncsorter.hpp>

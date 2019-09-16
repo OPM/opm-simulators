@@ -27,7 +27,7 @@
 #ifndef EWOMS_ECL_BASE_VANGUARD_HH
 #define EWOMS_ECL_BASE_VANGUARD_HH
 
-#include <ewoms/io/basevanguard.hh>
+#include <opm/models/io/basevanguard.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 
