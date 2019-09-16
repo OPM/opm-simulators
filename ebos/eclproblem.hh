@@ -65,7 +65,7 @@
 #include "vtkecltracermodule.hh"
 
 #include <ewoms/common/pffgridvector.hh>
-#include <ewoms/models/blackoil/blackoilmodel.hh>
+#include <opm/models/blackoil/blackoilmodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>

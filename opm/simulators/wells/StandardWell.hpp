@@ -28,9 +28,9 @@
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
-#include <ewoms/models/blackoil/blackoilpolymermodules.hh>
-#include <ewoms/models/blackoil/blackoilsolventmodules.hh>
-#include <ewoms/models/blackoil/blackoilfoammodules.hh>
+#include <opm/models/blackoil/blackoilpolymermodules.hh>
+#include <opm/models/blackoil/blackoilsolventmodules.hh>
+#include <opm/models/blackoil/blackoilfoammodules.hh>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
 

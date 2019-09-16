@@ -32,7 +32,7 @@
 #define EWOMS_ECL_FLUX_MODULE_HH
 
 #include <ewoms/disc/common/fvbaseproperties.hh>
-#include <ewoms/models/blackoil/blackoilproperties.hh>
+#include <opm/models/blackoil/blackoilproperties.hh>
 #include <ewoms/common/signum.hh>
 
 #include <opm/material/common/Valgrind.hpp>
