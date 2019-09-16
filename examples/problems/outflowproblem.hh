@@ -27,7 +27,7 @@
 #ifndef EWOMS_OUTFLOW_PROBLEM_HH
 #define EWOMS_OUTFLOW_PROBLEM_HH
 
-#include <ewoms/models/pvs/pvsproperties.hh>
+#include <opm/models/pvs/pvsproperties.hh>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/H2ON2LiquidPhaseFluidSystem.hpp>

@@ -28,7 +28,7 @@
 #include "config.h"
 
 #include <opm/models/utils/start.hh>
-#include <ewoms/models/pvs/pvsmodel.hh>
+#include <opm/models/pvs/pvsmodel.hh>
 #include "problems/outflowproblem.hh"
 
 BEGIN_PROPERTIES

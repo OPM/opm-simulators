@@ -28,7 +28,7 @@
 #ifndef EWOMS_WATER_AIR_PROBLEM_HH
 #define EWOMS_WATER_AIR_PROBLEM_HH
 
-#include <ewoms/models/pvs/pvsproperties.hh>
+#include <opm/models/pvs/pvsproperties.hh>
 #include <opm/simulators/linalg/parallelistlbackend.hh>
 
 #include <opm/material/fluidsystems/H2OAirFluidSystem.hpp>
