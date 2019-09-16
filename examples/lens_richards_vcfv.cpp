@@ -27,7 +27,7 @@
  */
 #include "config.h"
 
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 #include <ewoms/disc/vcfv/vcfvdiscretization.hh>
 
 #include "problems/richardslensproblem.hh"

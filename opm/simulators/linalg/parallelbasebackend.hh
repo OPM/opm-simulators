@@ -36,9 +36,9 @@
 #include <opm/simulators/linalg/parallelbasebackend.hh>
 #include <opm/simulators/linalg/istlpreconditionerwrappers.hh>
 
-#include <ewoms/common/genericguard.hh>
-#include <ewoms/common/propertysystem.hh>
-#include <ewoms/common/parametersystem.hh>
+#include <opm/models/utils/genericguard.hh>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
 
 #include <dune/grid/io/file/vtk/vtkwriter.hh>

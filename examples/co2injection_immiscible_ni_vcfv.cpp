@@ -28,7 +28,7 @@
  */
 #include "config.h"
 
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include <ewoms/disc/vcfv/vcfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"

@@ -23,30 +23,36 @@
 /*!
  * \file
  *
- * \brief Test for the reservoir problem using the black-oil model, the ECFV discretization
- *        and automatic differentiation.
+ * \copydoc Opm::TimerGuard
  */
-#include "config.h"
+#ifndef EWOMS_TIMER_GUARD_HH
+#define EWOMS_TIMER_GUARD_HH
 
-#include <opm/models/utils/start.hh>
-#include <ewoms/models/blackoil/blackoilmodel.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
-#include "problems/reservoirproblem.hh"
+#include "timer.hh"
 
-BEGIN_PROPERTIES
-
-NEW_TYPE_TAG(ReservoirBlackOilEcfvProblem, INHERITS_FROM(BlackOilModel, ReservoirBaseProblem));
-
-// Select the element centered finite volume method as spatial discretization
-SET_TAG_PROP(ReservoirBlackOilEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
-
-// Use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(ReservoirBlackOilEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
-
-END_PROPERTIES
-
-int main(int argc, char **argv)
+namespace Opm {
+/*!
+ * \ingroup Common
+ *
+ * \brief A simple class which makes sure that a timer gets stopped if an exception is
+ *        thrown.
+ */
+class TimerGuard
 {
-    typedef TTAG(ReservoirBlackOilEcfvProblem) ProblemTypeTag;
-    return Opm::start<ProblemTypeTag>(argc, argv);
-}
+public:
+    TimerGuard(Timer& timer)
+        : timer_(timer)
+    { }
+
+    ~TimerGuard()
+    {
+        timer_.stop();
+    }
+
+private:
+    Timer& timer_;
+};
+
+} // namespace Opm
+
+#endif

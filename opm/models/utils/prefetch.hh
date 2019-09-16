@@ -22,31 +22,33 @@
 */
 /*!
  * \file
- *
- * \brief Test for the reservoir problem using the black-oil model, the ECFV discretization
- *        and automatic differentiation.
+ * \copydoc prefetch
  */
-#include "config.h"
+#ifndef EWOMS_PREFETCH_HH
+#define EWOMS_PREFETCH_HH
 
-#include <opm/models/utils/start.hh>
-#include <ewoms/models/blackoil/blackoilmodel.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
-#include "problems/reservoirproblem.hh"
-
-BEGIN_PROPERTIES
-
-NEW_TYPE_TAG(ReservoirBlackOilEcfvProblem, INHERITS_FROM(BlackOilModel, ReservoirBaseProblem));
-
-// Select the element centered finite volume method as spatial discretization
-SET_TAG_PROP(ReservoirBlackOilEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
-
-// Use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(ReservoirBlackOilEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
-
-END_PROPERTIES
-
-int main(int argc, char **argv)
+namespace Opm {
+/*!
+ * \brief Template function which emits prefetch instructions for a range of memory
+ *
+ * This function does not change the semantics of the code, but used correctly it will
+ * improve performace because the number of cache misses will be reduced.
+ */
+template <int temporalLocality = 3, int writeOnly = 0, class T = void>
+void prefetch(const T& val, unsigned n = 1)
 {
-    typedef TTAG(ReservoirBlackOilEcfvProblem) ProblemTypeTag;
-    return Opm::start<ProblemTypeTag>(argc, argv);
+#if __clang__ || __GNUC__
+    // this value is architecture specific, but a cache line size of 64 bytes seems to be
+    // used by all contemporary architectures.
+    static const int cacheLineSize = 64;
+
+    const char *beginPtr = reinterpret_cast<const char*>(&val);
+    const char *endPtr = reinterpret_cast<const char*>(&val + n);
+    for (; beginPtr < endPtr; beginPtr += cacheLineSize)
+        __builtin_prefetch(beginPtr, writeOnly, temporalLocality);
+#endif
 }
+
+} // namespace Opm
+
+#endif

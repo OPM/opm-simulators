@@ -22,31 +22,24 @@
 */
 /*!
  * \file
- *
- * \brief Test for the reservoir problem using the black-oil model, the ECFV discretization
- *        and automatic differentiation.
+ * \copydoc sgn()
  */
-#include "config.h"
+#ifndef EWOMS_SIGNUM_HH
+#define EWOMS_SIGNUM_HH
 
-#include <opm/models/utils/start.hh>
-#include <ewoms/models/blackoil/blackoilmodel.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
-#include "problems/reservoirproblem.hh"
+namespace Opm {
+/*!
+ * \brief Template function which returns the sign of a floating point value
+ *
+ * This is a type safe and fast implementation of a sign() function for arbitrary
+ * floating point values. It a slightly modified variant of
+ *
+ * https://stackoverflow.com/questions/1903954/is-there-a-standard-sign-function-signum-sgn-in-c-c
+ */
+template <class Scalar>
+int signum(Scalar val)
+{ return (0 < val) - (val < 0); }
 
-BEGIN_PROPERTIES
+} // namespace Opm
 
-NEW_TYPE_TAG(ReservoirBlackOilEcfvProblem, INHERITS_FROM(BlackOilModel, ReservoirBaseProblem));
-
-// Select the element centered finite volume method as spatial discretization
-SET_TAG_PROP(ReservoirBlackOilEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
-
-// Use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(ReservoirBlackOilEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
-
-END_PROPERTIES
-
-int main(int argc, char **argv)
-{
-    typedef TTAG(ReservoirBlackOilEcfvProblem) ProblemTypeTag;
-    return Opm::start<ProblemTypeTag>(argc, argv);
-}
+#endif
