@@ -36,7 +36,7 @@
 
 //#include <opm/material/fluidsystems/BlackOilFluidSystemSimple.hpp>
 //#include <opm/material/fluidsystems/BlackOilFluidSystemSimple.hpp> 
-#include <ewoms/models/blackoil/blackoilintensivequantities.hh>
+#include <opm/models/blackoil/blackoilintensivequantities.hh>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 //#include <opm/material/fluidstates/BlackOilFluidStateSimple.hpp>
 
