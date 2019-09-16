@@ -29,7 +29,7 @@
 #define EWOMS_BLACK_OIL_ENERGY_MODULE_HH
 
 #include "blackoilproperties.hh"
-#include <ewoms/io/vtkblackoilenergymodule.hh>
+#include <opm/models/io/vtkblackoilenergymodule.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 
 #include <opm/material/common/Tabulated1DFunction.hpp>

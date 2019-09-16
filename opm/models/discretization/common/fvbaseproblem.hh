@@ -30,8 +30,8 @@
 
 #include "fvbaseproperties.hh"
 
-#include <ewoms/io/vtkmultiwriter.hh>
-#include <ewoms/io/restart.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
+#include <opm/models/io/restart.hh>
 #include <opm/models/discretization/common/restrictprolong.hh>
 
 #include <opm/material/common/Unused.hpp>

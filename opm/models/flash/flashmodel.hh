@@ -41,9 +41,9 @@
 
 #include <opm/models/common/multiphasebasemodel.hh>
 #include <opm/models/common/energymodule.hh>
-#include <ewoms/io/vtkcompositionmodule.hh>
-#include <ewoms/io/vtkenergymodule.hh>
-#include <ewoms/io/vtkdiffusionmodule.hh>
+#include <opm/models/io/vtkcompositionmodule.hh>
+#include <opm/models/io/vtkenergymodule.hh>
+#include <opm/models/io/vtkdiffusionmodule.hh>
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/constraintsolvers/NcpFlash.hpp>

@@ -30,7 +30,7 @@
 
 #include "vcfvproperties.hh"
 
-#include <ewoms/io/baseoutputwriter.hh>
+#include <opm/models/io/baseoutputwriter.hh>
 
 #include <string>
 #include <vector>

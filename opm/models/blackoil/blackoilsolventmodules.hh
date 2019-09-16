@@ -29,7 +29,7 @@
 #define EWOMS_BLACK_OIL_SOLVENT_MODULE_HH
 
 #include "blackoilproperties.hh"
-#include <ewoms/io/vtkblackoilsolventmodule.hh>
+#include <opm/models/io/vtkblackoilsolventmodule.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>

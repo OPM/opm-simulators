@@ -30,7 +30,7 @@
 
 #include <ewoms/models/ncp/ncpproperties.hh>
 
-#include <ewoms/io/cubegridvanguard.hh>
+#include <opm/models/io/cubegridvanguard.hh>
 
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>

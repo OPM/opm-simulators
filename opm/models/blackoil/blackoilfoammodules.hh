@@ -29,7 +29,7 @@
 #define EWOMS_BLACK_OIL_FOAM_MODULE_HH
 
 #include "blackoilproperties.hh"
-//#include <ewoms/io/vtkblackoilfoammodule.hh>
+//#include <opm/models/io/vtkblackoilfoammodule.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
