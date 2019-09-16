@@ -27,7 +27,7 @@
  */
 #include "config.h"
 
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include "problems/fingerproblem.hh"

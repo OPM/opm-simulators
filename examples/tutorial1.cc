@@ -27,7 +27,7 @@
  *        immisciblility.
  */
 #include "config.h"              /*@\label{tutorial1:include-begin}@*/
-#include <ewoms/common/start.hh> /*@\label{tutorial1:include-end}@*/
+#include <opm/models/utils/start.hh> /*@\label{tutorial1:include-end}@*/
 #include "tutorial1problem.hh" /*@\label{tutorial1:include-problem-header}@*/
 
 int main(int argc, char **argv)

@@ -29,7 +29,7 @@
 #include "config.h"
 
 #include <opm/material/common/quad.hpp>
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 #include <ewoms/models/flash/flashmodel.hh>
 #include <ewoms/disc/vcfv/vcfvdiscretization.hh>
 #include "problems/co2injectionflash.hh"

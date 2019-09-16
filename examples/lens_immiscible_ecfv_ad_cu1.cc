@@ -36,7 +36,7 @@
 
 #include "lens_immiscible_ecfv_ad.hh"
 
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 
 // fake forward declaration to prevent esoteric compiler warning
 int mainCU1(int argc, char **argv);

@@ -30,7 +30,7 @@
 #if HAVE_SUPERLU
 
 #include <ewoms/linear/istlsparsematrixbackend.hh>
-#include <ewoms/common/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hh>
 
 #include <opm/material/common/Unused.hpp>
 
