@@ -22,23 +22,38 @@
 */
 /*!
  * \file
+ * \ingroup FlashModel
  *
- * \brief Test for the Forchheimer velocity model
+ * \brief Declares the properties required by the compositional
+ *        multi-phase model based on flash calculations.
  */
-#include "config.h"
+#ifndef EWOMS_FLASH_PROPERTIES_HH
+#define EWOMS_FLASH_PROPERTIES_HH
 
-#include <opm/models/utils/start.hh>
-#include <opm/models/flash/flashmodel.hh>
-#include "problems/diffusionproblem.hh"
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <ewoms/io/vtkcompositionmodule.hh>
+#include <ewoms/io/vtkenergymodule.hh>
+#include <ewoms/io/vtkdiffusionmodule.hh>
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(DiffusionProblem, INHERITS_FROM(FlashModel, DiffusionBaseProblem));
+//! Provides the thermodynamic relations
+NEW_PROP_TAG(FluidSystem);
+//! The type of the flash constraint solver
+NEW_PROP_TAG(FlashSolver);
+//! The maximum accepted error of the flash solver
+NEW_PROP_TAG(FlashTolerance);
+
+//! The thermal conduction law which ought to be used
+NEW_PROP_TAG(ThermalConductionLaw);
+//! The parameters of the thermal conduction law
+NEW_PROP_TAG(ThermalConductionLawParams);
+
+//! Specifies whether energy should be considered as a conservation quantity or not
+NEW_PROP_TAG(EnableEnergy);
+//! Enable diffusive fluxes?
+NEW_PROP_TAG(EnableDiffusion);
 
 END_PROPERTIES
 
-int main(int argc, char **argv)
-{
-    typedef TTAG(DiffusionProblem) ProblemTypeTag;
-    return Opm::start<ProblemTypeTag>(argc, argv);
-}
+#endif
