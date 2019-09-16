@@ -29,7 +29,7 @@
 #include "config.h"
 
 #include <opm/models/utils/start.hh>
-#include <ewoms/models/blackoil/blackoilmodel.hh>
+#include <opm/models/blackoil/blackoilmodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include "problems/reservoirproblem.hh"
 
