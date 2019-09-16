@@ -33,7 +33,7 @@
 #endif
 
 #include <opm/models/utils/start.hh>
-#include <ewoms/models/flash/flashmodel.hh>
+#include <opm/models/flash/flashmodel.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include "problems/co2injectionflash.hh"
 #include "problems/co2injectionproblem.hh"
