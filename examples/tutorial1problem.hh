@@ -29,7 +29,7 @@
 #define EWOMS_TUTORIAL1_PROBLEM_HH /*@\label{tutorial1:guardian2}@*/
 
 // The numerical model
-#include <ewoms/models/immiscible/immisciblemodel.hh>
+#include <opm/models/immiscible/immisciblemodel.hh>
 
 // The spatial discretization (VCFV == Vertex-Centered Finite Volumes)
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>  /*@\label{tutorial1:include-discretization}@*/

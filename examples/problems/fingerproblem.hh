@@ -41,7 +41,7 @@
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Air.hpp>
 
-#include <ewoms/models/immiscible/immiscibleproperties.hh>
+#include <opm/models/immiscible/immiscibleproperties.hh>
 #include <opm/models/discretization/common/restrictprolong.hh>
 
 #if HAVE_DUNE_ALUGRID

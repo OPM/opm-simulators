@@ -22,30 +22,37 @@
 */
 /*!
  * \file
+ * \ingroup ImmiscibleModel
  *
- * \brief Two-phase test for the immiscible model which uses the element-centered finite
- *        volume discretization in conjunction with automatic differentiation
+ * \brief Defines the properties required for the immiscible
+ *        multi-phase model.
  */
-#ifndef EWOMS_LENS_IMMISCIBLE_ECFV_AD_HH
-#define EWOMS_LENS_IMMISCIBLE_ECFV_AD_HH
+#ifndef EWOMS_IMMISCIBLE_PROPERTIES_HH
+#define EWOMS_IMMISCIBLE_PROPERTIES_HH
 
-#include <opm/models/immiscible/immisciblemodel.hh>
-#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
-#include "problems/lensproblem.hh"
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <ewoms/io/vtkenergymodule.hh>
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(LensProblemEcfvAd, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
+//!The fluid systems including the information about the phases
+NEW_PROP_TAG(FluidSystem);
+//! Specify whether energy should be considered as a conservation quantity or not
+NEW_PROP_TAG(EnableEnergy);
 
-// use the element centered finite volume spatial discretization
-SET_TAG_PROP(LensProblemEcfvAd, SpatialDiscretizationSplice, EcfvDiscretization);
+// these properties only make sense for the ImmiscibleTwoPhase type tag
 
-// use automatic differentiation for this simulator
-SET_TAG_PROP(LensProblemEcfvAd, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+//! The wetting phase for two-phase models
+NEW_PROP_TAG(WettingPhase);
+//! The non-wetting phase for two-phase models
+NEW_PROP_TAG(NonwettingPhase);
 
-// this problem works fine if the linear solver uses single precision scalars
-SET_TYPE_PROP(LensProblemEcfvAd, LinearSolverScalar, float);
+// these properties only make sense for the ImmiscibleSinglePhase type tag
+
+//! The fluid used by the model
+NEW_PROP_TAG(Fluid);
+
 
 END_PROPERTIES
 
-#endif // EWOMS_LENS_IMMISCIBLE_ECFV_AD_HH
+#endif

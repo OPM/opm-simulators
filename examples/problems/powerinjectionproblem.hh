@@ -28,7 +28,7 @@
 #ifndef EWOMS_POWER_INJECTION_PROBLEM_HH
 #define EWOMS_POWER_INJECTION_PROBLEM_HH
 
-#include <ewoms/models/immiscible/immisciblemodel.hh>
+#include <opm/models/immiscible/immisciblemodel.hh>
 #include <ewoms/io/cubegridvanguard.hh>
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
