@@ -29,7 +29,7 @@
 #include "config.h"
 
 #include <opm/models/utils/start.hh>
-#include <ewoms/models/ncp/ncpmodel.hh>
+#include <opm/models/ncp/ncpmodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 

@@ -28,7 +28,7 @@
 #ifndef EWOMS_POWER_INJECTION_PROBLEM_HH
 #define EWOMS_POWER_INJECTION_PROBLEM_HH
 
-#include <ewoms/models/ncp/ncpproperties.hh>
+#include <opm/models/ncp/ncpproperties.hh>
 
 #include <opm/models/io/cubegridvanguard.hh>
 

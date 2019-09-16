@@ -22,27 +22,38 @@
 */
 /*!
  * \file
+ * \ingroup NcpModel
  *
- * \brief Test for the isothermal VCVF discretization based on non-linear
- *        complementarity problems.
+ * \brief Declares the properties required for the NCP compositional
+ *        multi-phase model.
  */
-#include "config.h"
+#ifndef EWOMS_NCP_PROPERTIES_HH
+#define EWOMS_NCP_PROPERTIES_HH
 
-#include <opm/models/utils/start.hh>
-#include <opm/models/ncp/ncpmodel.hh>
-#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
-
-#include "problems/co2injectionproblem.hh"
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/io/vtkcompositionmodule.hh>
+#include <opm/models/io/vtkenergymodule.hh>
+#include <opm/models/io/vtkdiffusionmodule.hh>
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(Co2InjectionNcpVcfvProblem, INHERITS_FROM(NcpModel, Co2InjectionBaseProblem));
-SET_TAG_PROP(Co2InjectionNcpVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
+//! Enable the energy equation?
+NEW_PROP_TAG(EnableEnergy);
+
+//! Enable diffusive fluxes?
+NEW_PROP_TAG(EnableDiffusion);
+
+//! The unmodified weight for the pressure primary variable
+NEW_PROP_TAG(NcpPressureBaseWeight);
+//! The weight for the saturation primary variables
+NEW_PROP_TAG(NcpSaturationsBaseWeight);
+//! The unmodified weight for the fugacity primary variables
+NEW_PROP_TAG(NcpFugacitiesBaseWeight);
+
+//! The themodynamic constraint solver which calculates the
+//! composition of any phase given all component fugacities.
+NEW_PROP_TAG(NcpCompositionFromFugacitiesSolver);
 
 END_PROPERTIES
 
-int main(int argc, char **argv)
-{
-    typedef TTAG(Co2InjectionNcpVcfvProblem) VcfvProblemTypeTag;
-    return Opm::start<VcfvProblemTypeTag>(argc, argv);
-}
+#endif
