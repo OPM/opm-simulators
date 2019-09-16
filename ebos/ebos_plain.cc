@@ -29,7 +29,7 @@
 
 #include "eclproblem.hh"
 
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 
 BEGIN_PROPERTIES
 

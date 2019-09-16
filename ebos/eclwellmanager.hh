@@ -42,7 +42,7 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/material/common/Exceptions.hpp>
 
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 #include <opm/models/parallel/threadedentityiterator.hh>
 
 #include <dune/grid/common/gridenums.hh>

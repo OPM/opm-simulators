@@ -20,8 +20,8 @@
 #ifndef OPM_BLACKOILMODELPARAMETERS_EBOS_HEADER_INCLUDED
 #define OPM_BLACKOILMODELPARAMETERS_EBOS_HEADER_INCLUDED
 
-#include <ewoms/common/propertysystem.hh>
-#include <ewoms/common/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
 
 #include <string>
 

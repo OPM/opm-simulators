@@ -28,8 +28,8 @@
 #define EWOMS_ECL_BASE_VANGUARD_HH
 
 #include <ewoms/io/basevanguard.hh>
-#include <ewoms/common/propertysystem.hh>
-#include <ewoms/common/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>

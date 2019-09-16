@@ -44,7 +44,7 @@
 #include <opm/simulators/flow/BlackoilModelEbos.hpp>
 
 #include <ebos/eclproblem.hh>
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>

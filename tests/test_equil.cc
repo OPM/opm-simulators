@@ -24,7 +24,7 @@
 
 #include <ebos/equil/equilibrationhelpers.hh>
 #include <ebos/eclproblem.hh>
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/grid/GridManager.hpp>

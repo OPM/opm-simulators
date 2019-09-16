@@ -29,7 +29,7 @@
 #define EWOMS_ECL_NEWTON_METHOD_HH
 
 #include <opm/models/blackoil/blackoilnewtonmethod.hh>
-#include <ewoms/common/signum.hh>
+#include <opm/models/utils/signum.hh>
 
 #include <opm/material/common/Unused.hpp>
 

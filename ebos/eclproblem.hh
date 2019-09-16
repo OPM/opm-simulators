@@ -64,7 +64,7 @@
 #include "ecltracermodel.hh"
 #include "vtkecltracermodule.hh"
 
-#include <ewoms/common/pffgridvector.hh>
+#include <opm/models/utils/pffgridvector.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 

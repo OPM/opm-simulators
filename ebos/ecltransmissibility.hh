@@ -30,7 +30,7 @@
 
 #include <ebos/nncsorter.hpp>
 
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperties.hpp>
