@@ -28,7 +28,7 @@
 #ifndef EWOMS_FINGER_PROBLEM_HH
 #define EWOMS_FINGER_PROBLEM_HH
 
-#include <ewoms/io/structuredgridvanguard.hh>
+#include <opm/models/io/structuredgridvanguard.hh>
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>

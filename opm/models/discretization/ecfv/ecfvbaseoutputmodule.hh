@@ -30,7 +30,7 @@
 
 #include "ecfvproperties.hh"
 
-#include <ewoms/io/vtkmultiwriter.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
 
 namespace Opm {
 /*!

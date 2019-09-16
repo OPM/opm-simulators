@@ -35,7 +35,7 @@
 #include "fvbasefdlocallinearizer.hh"
 
 #include <opm/models/utils/basicproperties.hh>
-#include <ewoms/io/vtkprimaryvarsmodule.hh>
+#include <opm/models/io/vtkprimaryvarsmodule.hh>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 BEGIN_PROPERTIES

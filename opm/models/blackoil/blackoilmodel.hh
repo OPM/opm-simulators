@@ -47,8 +47,8 @@
 #include "blackoildarcyfluxmodule.hh"
 
 #include <opm/models/common/multiphasebasemodel.hh>
-#include <ewoms/io/vtkcompositionmodule.hh>
-#include <ewoms/io/vtkblackoilmodule.hh>
+#include <opm/models/io/vtkcompositionmodule.hh>
+#include <opm/models/io/vtkblackoilmodule.hh>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/common/Unused.hpp>

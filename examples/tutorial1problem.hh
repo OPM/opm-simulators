@@ -45,7 +45,7 @@
 
 // For the DUNE grid
 #include <dune/grid/yaspgrid.hh> /*@\label{tutorial1:include-grid-manager}@*/
-#include <ewoms/io/cubegridvanguard.hh> /*@\label{tutorial1:include-grid-manager}@*/
+#include <opm/models/io/cubegridvanguard.hh> /*@\label{tutorial1:include-grid-manager}@*/
 
 // For Dune::FieldMatrix
 #include <dune/common/fmatrix.hh>
