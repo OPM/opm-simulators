@@ -30,7 +30,7 @@
 #include <opm/simulators/linalg/domesticoverlapfrombcrsmatrix.hh>
 #include <opm/simulators/linalg/globalindices.hh>
 #include <opm/simulators/linalg/blacklist.hh>
-#include <ewoms/parallel/mpibuffer.hh>
+#include <opm/models/parallel/mpibuffer.hh>
 
 #include <opm/material/common/Valgrind.hpp>
 

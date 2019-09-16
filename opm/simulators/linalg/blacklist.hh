@@ -30,7 +30,7 @@
 #include "overlaptypes.hh"
 
 #if HAVE_MPI
-#include <ewoms/parallel/mpibuffer.hh>
+#include <opm/models/parallel/mpibuffer.hh>
 
 #include <dune/grid/common/datahandleif.hh>
 #include <dune/grid/common/gridenums.hh>
