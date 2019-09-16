@@ -28,7 +28,7 @@
 #ifndef EWOMS_CO2_INJECTION_PROBLEM_HH
 #define EWOMS_CO2_INJECTION_PROBLEM_HH
 
-#include <ewoms/models/immiscible/immisciblemodel.hh>
+#include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/simulators/linalg/parallelamgbackend.hh>
 
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>

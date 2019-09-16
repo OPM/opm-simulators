@@ -29,7 +29,7 @@
 #include "config.h"
 
 #include <opm/models/utils/start.hh>
-#include <ewoms/models/immiscible/immisciblemodel.hh>
+#include <opm/models/immiscible/immisciblemodel.hh>
 #include "problems/lensproblem.hh"
 
 BEGIN_PROPERTIES
