@@ -64,8 +64,13 @@ public:
         : overlap_(overlap), comm_( Dune::MPIHelper::getCollectiveCommunication() )
     {}
 
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
+    field_type dot(const OverlappingBlockVector& x,
+                   const OverlappingBlockVector& y) const override
+#else
     field_type dot(const OverlappingBlockVector& x,
                    const OverlappingBlockVector& y) override
+#endif
     {
         field_type sum = 0;
         size_t numLocal = overlap_.numLocal();
@@ -78,7 +83,11 @@ public:
         return comm_.sum( sum );
     }
 
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
+    real_type norm(const OverlappingBlockVector& x) const override
+#else
     real_type norm(const OverlappingBlockVector& x) override
+#endif
     { return std::sqrt(dot(x, x)); }
 
 private:
