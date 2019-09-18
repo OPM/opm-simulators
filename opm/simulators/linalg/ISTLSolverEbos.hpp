@@ -551,7 +551,6 @@ protected:
 #if HAVE_MPI
             if (parallelInformation_.type() == typeid(ParallelISTLInformation))
             {
-                typedef Dune::OwnerOverlapCopyCommunication<int,int> Comm;
                 const ParallelISTLInformation& info =
                     boost::any_cast<const ParallelISTLInformation&>( parallelInformation_);
                 Comm istlComm(info.communicator());
