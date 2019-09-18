@@ -241,8 +241,8 @@ public:
     /*!
      * \brief Register all foam specific VTK and ECL output modules.
      */
-    static void registerOutputModules(Model& model,
-                                      Simulator& simulator)
+    static void registerOutputModules(Model& model OPM_UNUSED,
+                                      Simulator& simulator OPM_UNUSED)
     {
         if (!enableFoam)
             // foam have been disabled at compile time
@@ -286,7 +286,7 @@ public:
 
     }
 
-    static std::string eqName(unsigned eqIdx)
+    static std::string eqName(unsigned eqIdx OPM_OPTIM_UNUSED)
     {
         assert(eqApplies(eqIdx));
 
