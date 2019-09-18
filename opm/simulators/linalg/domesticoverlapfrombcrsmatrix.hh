@@ -31,7 +31,7 @@
 #include "blacklist.hh"
 #include "globalindices.hh"
 
-#include <ewoms/parallel/mpibuffer.hh>
+#include <opm/models/parallel/mpibuffer.hh>
 
 #include <algorithm>
 #include <limits>

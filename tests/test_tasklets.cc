@@ -28,7 +28,7 @@
  */
 #include "config.h"
 
-#include <ewoms/parallel/tasklets.hh>
+#include <opm/models/parallel/tasklets.hh>
 
 #include <chrono>
 #include <iostream>

@@ -29,7 +29,7 @@
 
 #include "overlaptypes.hh"
 
-#include <ewoms/parallel/mpibuffer.hh>
+#include <opm/models/parallel/mpibuffer.hh>
 #include <opm/material/common/Valgrind.hpp>
 
 #include <dune/istl/bvector.hh>
