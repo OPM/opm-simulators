@@ -259,7 +259,7 @@ M setupAnisotropic2d(int N, Dune::ParallelIndexSet<G,L,s>& indices, const Dune::
 //BOOST_AUTO_TEST_CASE(runBlackoilAmgLaplace)
 void runBlackoilAmgLaplace()
 {
-    const int BS=2, N=100;
+    constexpr int BS=2, N=100;
     typedef Dune::FieldMatrix<double,BS,BS> MatrixBlock;
     typedef Dune::BCRSMatrix<MatrixBlock> BCRSMat;
     typedef Dune::FieldVector<double,BS> VectorBlock;
