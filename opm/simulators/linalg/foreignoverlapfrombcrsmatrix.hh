@@ -30,7 +30,7 @@
 #include "overlaptypes.hh"
 #include "blacklist.hh"
 
-#include <ewoms/parallel/mpibuffer.hh>
+#include <opm/models/parallel/mpibuffer.hh>
 
 #include <opm/material/common/Unused.hpp>
 
