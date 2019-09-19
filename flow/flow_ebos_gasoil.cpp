@@ -22,7 +22,7 @@
 #include <flow/flow_ebos_gasoil.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
-#include <ewoms/models/blackoil/blackoiltwophaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>

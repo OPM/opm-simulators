@@ -30,7 +30,7 @@
 
 #include "eclpeacemanwell.hh"
 
-#include <ewoms/disc/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -42,7 +42,7 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/material/common/Exceptions.hpp>
 
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 #include <opm/models/parallel/threadedentityiterator.hh>
 
 #include <dune/grid/common/gridenums.hh>

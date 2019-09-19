@@ -25,7 +25,7 @@
 #define OPM_BLACKOILMODELEBOS_HEADER_INCLUDED
 
 #include <ebos/eclproblem.hh>
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 

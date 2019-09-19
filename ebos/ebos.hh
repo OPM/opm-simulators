@@ -34,7 +34,7 @@
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 
 namespace Opm {
 template <class TypeTag>
