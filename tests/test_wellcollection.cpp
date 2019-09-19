@@ -16,6 +16,7 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <chrono>
 
 #include <config.h>
 
@@ -44,7 +45,7 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Runspec runspec(deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
-    SummaryState summaryState;
+    SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
 
     WellCollection collection;
 
@@ -83,7 +84,7 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Runspec runspec(deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
-    SummaryState summaryState;
+    Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
 
     size_t timestep = 2;
     WellCollection collection;
