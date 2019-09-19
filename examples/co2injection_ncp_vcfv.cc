@@ -28,9 +28,9 @@
  */
 #include "config.h"
 
-#include <ewoms/common/start.hh>
-#include <ewoms/models/ncp/ncpmodel.hh>
-#include <ewoms/disc/vcfv/vcfvdiscretization.hh>
+#include <opm/models/utils/start.hh>
+#include <opm/models/ncp/ncpmodel.hh>
+#include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 
 #include "problems/co2injectionproblem.hh"
 

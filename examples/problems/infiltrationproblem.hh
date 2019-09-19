@@ -27,7 +27,7 @@
 #ifndef EWOMS_INFILTRATION_PROBLEM_HH
 #define EWOMS_INFILTRATION_PROBLEM_HH
 
-#include <ewoms/models/pvs/pvsproperties.hh>
+#include <opm/models/pvs/pvsproperties.hh>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/H2OAirMesityleneFluidSystem.hpp>

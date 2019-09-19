@@ -28,9 +28,9 @@
  */
 #include "config.h"
 
-#include <ewoms/common/start.hh>
-#include <ewoms/models/blackoil/blackoilmodel.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
+#include <opm/models/utils/start.hh>
+#include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/reservoirproblem.hh"
 
 BEGIN_PROPERTIES

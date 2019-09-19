@@ -43,8 +43,8 @@
 #ifndef EWOMS_ISTL_SOLVER_WRAPPERS_HH
 #define EWOMS_ISTL_SOLVER_WRAPPERS_HH
 
-#include <ewoms/common/propertysystem.hh>
-#include <ewoms/common/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
 
 #include <dune/istl/solvers.hh>
 

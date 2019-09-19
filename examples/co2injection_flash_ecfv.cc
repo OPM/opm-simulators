@@ -32,9 +32,9 @@
 #include <opm/material/common/quad.hpp>
 #endif
 
-#include <ewoms/common/start.hh>
-#include <ewoms/models/flash/flashmodel.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
+#include <opm/models/utils/start.hh>
+#include <opm/models/flash/flashmodel.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/co2injectionflash.hh"
 #include "problems/co2injectionproblem.hh"
 

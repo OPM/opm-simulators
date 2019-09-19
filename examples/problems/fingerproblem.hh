@@ -28,7 +28,7 @@
 #ifndef EWOMS_FINGER_PROBLEM_HH
 #define EWOMS_FINGER_PROBLEM_HH
 
-#include <ewoms/io/structuredgridvanguard.hh>
+#include <opm/models/io/structuredgridvanguard.hh>
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
@@ -41,8 +41,8 @@
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Air.hpp>
 
-#include <ewoms/models/immiscible/immiscibleproperties.hh>
-#include <ewoms/disc/common/restrictprolong.hh>
+#include <opm/models/immiscible/immiscibleproperties.hh>
+#include <opm/models/discretization/common/restrictprolong.hh>
 
 #if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>

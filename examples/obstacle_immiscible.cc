@@ -28,8 +28,8 @@
  */
 #include "config.h"
 
-#include <ewoms/common/start.hh>
-#include <ewoms/models/immiscible/immisciblemodel.hh>
+#include <opm/models/utils/start.hh>
+#include <opm/models/immiscible/immisciblemodel.hh>
 #include "problems/obstacleproblem.hh"
 
 BEGIN_PROPERTIES
