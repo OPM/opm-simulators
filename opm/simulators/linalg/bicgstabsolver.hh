@@ -31,8 +31,8 @@
 #include "residreductioncriterion.hh"
 #include "linearsolverreport.hh"
 
-#include <ewoms/common/timer.hh>
-#include <ewoms/common/timerguard.hh>
+#include <opm/models/utils/timer.hh>
+#include <opm/models/utils/timerguard.hh>
 
 #include <opm/material/common/Exceptions.hpp>
 

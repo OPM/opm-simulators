@@ -31,7 +31,7 @@
  */
 #include "config.h"
 
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <iostream>
 

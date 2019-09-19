@@ -28,7 +28,7 @@
 #ifndef EWOMS_RICHARDS_LENS_PROBLEM_HH
 #define EWOMS_RICHARDS_LENS_PROBLEM_HH
 
-#include <ewoms/models/richards/richardsmodel.hh>
+#include <opm/models/richards/richardsmodel.hh>
 
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/fluidsystems/LiquidPhase.hpp>

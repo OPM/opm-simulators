@@ -38,7 +38,7 @@
 #endif
 
 #include <ewoms/models/discretefracture/discretefracturemodel.hh>
-#include <ewoms/io/dgfvanguard.hh>
+#include <opm/models/io/dgfvanguard.hh>
 
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>

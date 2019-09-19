@@ -30,7 +30,7 @@
 
 #include "lens_immiscible_ecfv_ad.hh"
 
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 
 int main(int argc, char **argv)
 {

@@ -28,9 +28,9 @@
 #ifndef EWOMS_POWER_INJECTION_PROBLEM_HH
 #define EWOMS_POWER_INJECTION_PROBLEM_HH
 
-#include <ewoms/models/ncp/ncpproperties.hh>
+#include <opm/models/ncp/ncpproperties.hh>
 
-#include <ewoms/io/cubegridvanguard.hh>
+#include <opm/models/io/cubegridvanguard.hh>
 
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>

@@ -31,8 +31,8 @@
 #include <omp.h>
 #endif
 
-#include <ewoms/common/parametersystem.hh>
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <opm/material/common/Exceptions.hpp>
 

@@ -28,7 +28,7 @@
 #ifndef EWOMS_RESERVOIR_PROBLEM_HH
 #define EWOMS_RESERVOIR_PROBLEM_HH
 
-#include <ewoms/models/blackoil/blackoilproperties.hh>
+#include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
