@@ -53,6 +53,7 @@
 #include <list>
 #include <utility>
 #include <string>
+#include <chrono>
 
 #ifdef HAVE_MPI
 #include <mpi.h>
@@ -426,7 +427,7 @@ public:
               cumulatives will be counted doubly, we therefor use a temporary
               SummaryState instance in this call to loadRestart().
             */
-            Opm::SummaryState summaryState;
+            Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(simulator_.vanguard().schedule().getStartTime()));
             auto restartValues = eclIO_->loadRestart(summaryState, solutionKeys, extraKeys);
 
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
