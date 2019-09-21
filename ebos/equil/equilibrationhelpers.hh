@@ -34,8 +34,6 @@
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 
-// due to a bug in Equil.hpp, cstddef must be included before Equil.hpp
-#include <cstddef>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 
 #include <memory>
