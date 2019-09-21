@@ -30,6 +30,9 @@
 #include <opm/grid/GridManager.hpp>
 
 #include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/json/JsonObject.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -157,61 +160,46 @@ static void initDefaultFluidSystem()
     FluidSystem::initEnd();
 }
 
+
+
+/*
+  This function is quite contrived. The function builds up a DeckRecord
+  containing one EquilRecord, but the record is manually assembled from SI
+  quantity values. To achieve this we assemble custom parser with a
+  dimensionless EQUIL keyword and then parse a string with the values we want.
+
+  Runner up in the obfuscated opm code competition ....
+*/
+
+
 static Opm::EquilRecord mkEquilRecord( double datd, double datp,
                                        double zwoc, double pcow_woc,
                                        double zgoc, double pcgo_goc )
 {
     using namespace Opm;
+    Parser parser(false);
+    std::string equil_no_dim = R"(
+{"name" : "EQUIL" , "sections" : ["SOLUTION"], "size" : 1,
+ "items" :
+ [{"name" : "DATUM_DEPTH"       , "value_type" : "DOUBLE" , "default" : 0.0 , "dimension" : "Length"},
+  {"name" : "DATUM_PRESSURE"    , "value_type" : "DOUBLE" , "dimension" : "Pressure"} ,
+  {"name" : "OWC"               , "value_type" : "DOUBLE" , "default" : 0.0 , "dimension" : "Length"},
+  {"name" : "PC_OWC"            , "value_type" : "DOUBLE" , "default" : 0.0 , "dimension" : "Pressure"} ,
+  {"name" : "GOC"               , "value_type" : "DOUBLE" , "default" : 0.0 , "dimension" : "Length"} ,
+  {"name" : "PC_GOC"            , "value_type" : "DOUBLE" , "default" : 0.0 , "dimension" : "Pressure"} ,
+  {"name" : "BLACK_OIL_INIT"    , "value_type" : "INT" , "default" : 0} ,
+  {"name" : "BLACK_OIL_INIT_WG" , "value_type" : "INT" , "default" : 0} ,
+  {"name" : "OIP_INIT"          , "value_type" : "INT" , "default" : -5}]}
+)";
+    parser.addParserKeyword(Json::JsonObject(equil_no_dim));
 
-    DeckItem dd( "datdep", double() );
-    dd.push_back( datd  );
-    Opm::Dimension dd_dim( "dddim", 1 );
-    dd.push_backDimension( dd_dim, dd_dim );
+    std::stringstream deck_ss;
+    deck_ss << "EQUIL" << std::endl;
+    deck_ss << "   " << datd << " " << datp << " " << zwoc << " " << pcow_woc << " " << zgoc << " " << pcgo_goc << " 0 0 0 /" << std::endl;
 
-    DeckItem dp( "datps", double() );
-    dp.push_back( datp );
-    Opm::Dimension dp_dim( "dpdim", 1 );
-    dp.push_backDimension( dp_dim, dp_dim );
-
-    DeckItem zw( "zwoc", double() );
-    zw.push_back( zwoc );
-    Opm::Dimension zw_dim( "zwdim", 1 );
-    zw.push_backDimension( zw_dim, zw_dim );
-
-    DeckItem pcow( "pcow", double() );
-    pcow.push_back( pcow_woc );
-    Opm::Dimension pcow_dim( "pcowdim", 1 );
-    pcow.push_backDimension( pcow_dim, pcow_dim );
-
-    DeckItem zg( "zgoc", double() );
-    zg.push_back( zgoc );
-    Opm::Dimension zg_dim( "zgdim", 1 );
-    zg.push_backDimension( zg_dim, zg_dim );
-
-    DeckItem pcgo( "pcgo", double() );
-    pcgo.push_back( pcgo_goc );
-    Opm::Dimension pcgo_dim( "pcgodim", 1 );
-    pcgo.push_backDimension( pcgo_dim, pcgo_dim );
-
-    DeckItem i1( "i1", int() );
-    DeckItem i2( "i2", int() );
-    DeckItem i3( "i3", int() );
-    i1.push_back( 0 );
-    i2.push_back( 0 );
-    i3.push_back( 0 );
-
-    DeckRecord rec;
-    rec.addItem( std::move( dd ) );
-    rec.addItem( std::move( dp ) );
-    rec.addItem( std::move( zw ) );
-    rec.addItem( std::move( pcow ) );
-    rec.addItem( std::move( zg ) );
-    rec.addItem( std::move( pcgo ) );
-    rec.addItem( std::move( i1 ) );
-    rec.addItem( std::move( i2 ) );
-    rec.addItem( std::move( i3 ) );
-
-    return EquilRecord( rec );
+    auto deck = parser.parseString(deck_ss.str());
+    auto equil = Equil( deck.getKeyword("EQUIL") );
+    return equil.getRecord(0);
 }
 
 void test_PhasePressure();
