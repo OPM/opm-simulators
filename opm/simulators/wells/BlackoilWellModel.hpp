@@ -384,6 +384,14 @@ namespace Opm {
 
             void actionOnBrokenConstraints(const Group2& group, const Group2::InjectionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
 
+            WellInterfacePtr getWell(const std::string& well_name) const;
+
+            void updateWsolvent(const Group2& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState);
+
+            void setWsolvent(const Group2& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
+
+
+
         };
 
 

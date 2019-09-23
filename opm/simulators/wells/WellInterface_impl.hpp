@@ -112,7 +112,14 @@ namespace Opm
             wellIsStopped_ = true;
         }
 
+        wsolvent_ = 0.0;
 
+        if (has_solvent && well.isInjector()) {
+            auto injectorType = well_ecl_.injectorType();
+            if (injectorType == Well2::InjectorType::GAS) {
+                wsolvent_ = well_ecl_.getSolventFraction();
+            }
+        }
     }
 
     template<typename TypeTag>
@@ -308,18 +315,17 @@ namespace Opm
     WellInterface<TypeTag>::
     wsolvent() const
     {
-        if (!has_solvent) {
-            return 0.0;
-        }
+        return wsolvent_;
+    }
 
-        auto injectorType = well_ecl_.injectorType();
-        if (injectorType == Well2::InjectorType::GAS) {
-            double solvent_fraction = well_ecl_.getSolventFraction();
-            return solvent_fraction;
-        } else {
-            // Not a gas injection well => no solvent.
-            return 0.0;
-        }
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    setWsolvent(const double wsolvent)
+    {
+       wsolvent_ = wsolvent;
     }
 
 
