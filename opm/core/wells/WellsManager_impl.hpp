@@ -347,7 +347,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
     {
         std::vector<int> gc = compressedToCartesian(number_of_cells, global_cell);
         for (int cell = 0; cell < number_of_cells; ++cell) {
-            dz[cell] = eclGrid.getCellThicknes(gc[cell]);
+            dz[cell] = eclGrid.getCellThickness(gc[cell]);
         }
     }
 
