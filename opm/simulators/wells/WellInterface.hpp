@@ -274,6 +274,9 @@ namespace Opm
             return wellIsStopped_;
         }
 
+        void setWsolvent(const double wsolvent);
+
+
     protected:
 
         // to indicate a invalid completion
@@ -372,6 +375,8 @@ namespace Opm
         std::vector<RateVector> connectionRates_;
 
         bool wellIsStopped_;
+
+        double wsolvent_;
 
         const PhaseUsage& phaseUsage() const;
 
@@ -472,6 +477,8 @@ namespace Opm
         int well_productivity_index_logger_counter_;
 
         bool checkConstraints(WellState& well_state, const SummaryState& summaryState);
+
+
 
     };
 

@@ -1028,7 +1028,7 @@ namespace Opm
             productionRate += wellGroupHelpers::sumWellRates(group, schedule, well_state, current_step_, phasePos, /*isInjector*/false);
             productionRate /= efficiencyFactor;
             double target = std::max(0.0, (groupcontrols.target_reinj_fraction*productionRate - groupTargetReduction));
-            control_eq = getWQTotal() - fraction * target;
+            control_eq = getWQTotal() - fraction * target;            
             break;
         }
         case Group2::InjectionCMode::VREP:

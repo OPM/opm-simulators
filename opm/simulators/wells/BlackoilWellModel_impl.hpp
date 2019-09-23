@@ -407,6 +407,9 @@ namespace Opm {
         }
         const Group2& fieldGroup = schedule().getGroup2("FIELD", reportStepIdx);
         wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, guideRate_.get(), well_state_);
+
+        // compute wsolvent fraction for REIN wells
+        updateWsolvent(fieldGroup, schedule(), reportStepIdx,  well_state_);
     }
 
 
@@ -476,10 +479,10 @@ namespace Opm {
         // update the rate converter with current averages pressures etc in
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
-        const int reportStepIdx = ebosSimulator_.episodeIndex();
         // calculate the well potentials
         try {
             std::vector<double> well_potentials;
+            const int reportStepIdx = ebosSimulator_.episodeIndex();
             computeWellPotentials(well_potentials, reportStepIdx, local_deferredLogger);
         } catch ( std::runtime_error& e ) {
             const std::string msg = "A zero well potential is returned for output purposes. ";
@@ -491,8 +494,6 @@ namespace Opm {
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
-
-
 
     }
 
@@ -1580,6 +1581,26 @@ namespace Opm {
 
         return *well_ecl;
     }
+
+
+    template<typename TypeTag>
+    typename BlackoilWellModel<TypeTag>::WellInterfacePtr
+    BlackoilWellModel<TypeTag>::
+    getWell(const std::string& well_name) const
+    {
+        // finding the iterator of the well in wells_ecl
+        auto well = std::find_if(well_container_.begin(),
+                                     well_container_.end(),
+                                     [&well_name](const WellInterfacePtr& elem)->bool {
+                                         return elem->name() == well_name;
+                                     });
+
+        assert(well != well_container_.end());
+
+        return *well;
+    }
+
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -1821,6 +1842,51 @@ namespace Opm {
         deferred_logger.info(ss.str());
         well_state.setCurrentInjectionGroupControl(group.name(), newControl);
         wellGroupHelpers::setGroupControl(group, schedule(), reportStepIdx, /*isInjector*/true, well_state);
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updateWsolvent(const Group2& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState) {
+        for (const std::string& groupName : group.groups()) {
+            const Group2& groupTmp = schedule.getGroup2(groupName, reportStepIdx);
+            updateWsolvent(groupTmp, schedule, reportStepIdx, wellState);
+        }
+
+        if (group.isProductionGroup())
+            return;
+
+        const Group2::InjectionCMode& currentGroupControl = wellState.currentInjectionGroupControl(group.name());
+        if( currentGroupControl == Group2::InjectionCMode::REIN ) {
+            int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
+            double gasProductionRate = wellGroupHelpers::sumWellRates(group, schedule, wellState, reportStepIdx, gasPos, /*isInjector*/false);
+            double solventProductionRate = wellGroupHelpers::sumSolventRates(group, schedule, wellState, reportStepIdx, /*isInjector*/false);
+
+            double wsolvent = 0.0;
+            if (std::abs(gasProductionRate) > 1e-6)
+                wsolvent = solventProductionRate / gasProductionRate;
+
+            setWsolvent(group, schedule, reportStepIdx, wsolvent);
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    setWsolvent(const Group2& group, const Schedule& schedule, const int reportStepIdx, double wsolvent) {
+        for (const std::string& groupName : group.groups()) {
+            const Group2& groupTmp = schedule.getGroup2(groupName, reportStepIdx);
+            setWsolvent(groupTmp, schedule, reportStepIdx, wsolvent);
+        }
+
+        for (const std::string& wellName : group.wells()) {
+            const auto& wellTmp = schedule.getWell2(wellName, reportStepIdx);
+            if (wellTmp.getStatus() == Well2::Status::SHUT)
+                continue;
+
+            auto well = getWell(wellName);
+            well->setWsolvent(wsolvent);
+        }
     }
 
 
