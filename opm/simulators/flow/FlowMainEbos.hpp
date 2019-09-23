@@ -150,14 +150,45 @@ namespace Opm
             // read in the command line parameters
             int status = Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/true);
             if (status == 0) {
-                // deal with --print-properties and --print-parameters
-
-                bool doExit = false;
 
                 int mpiRank = 0;
 #if HAVE_MPI
                 MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
 #endif
+
+                // deal with unknown parameters.
+
+                int unknownKeyWords = 0;
+                if (mpiRank == 0) {
+                    unknownKeyWords = Opm::Parameters::printUnused<TypeTag>(std::cerr);
+                }
+#if HAVE_MPI
+                int globalUnknownKeyWords;
+                MPI_Allreduce(&unknownKeyWords,  &globalUnknownKeyWords, 1, MPI_INT,  MPI_SUM, MPI_COMM_WORLD);
+                unknownKeyWords = globalUnknownKeyWords;
+#endif
+                if ( unknownKeyWords )
+                {
+                    if ( mpiRank == 0 )
+                    {
+                        std::string msg = "Aborting simulation due to unknown "
+                            "parameters. Please query \"flow --help\" for "
+                            "supported command line parameters.";
+                        if (OpmLog::hasBackend("STREAMLOG"))
+                        {
+                            OpmLog::error(msg);
+                        }
+                        else {
+                            std::cerr << msg << std::endl;
+                        }
+                    }
+                    return EXIT_FAILURE;
+                }
+
+                // deal with --print-properties and --print-parameters and unknown parameters.
+
+                bool doExit = false;
+
                 if (EWOMS_GET_PARAM(TypeTag, int, PrintProperties) == 1) {
                     doExit = true;
                     if (mpiRank == 0)
@@ -209,33 +240,7 @@ namespace Opm
 
                 setupParallelism();
                 setupEbosSimulator(output_cout);
-                int unknownKeyWords = printPRTHeader(output_cout);
-#if HAVE_MPI
-                int globalUnknownKeyWords;
-                MPI_Allreduce(&unknownKeyWords,  &globalUnknownKeyWords, 1, MPI_INT,  MPI_SUM, MPI_COMM_WORLD);
-                unknownKeyWords = globalUnknownKeyWords;
-#endif
-                if ( unknownKeyWords )
-                {
-                    if ( output_cout )
-                    {
-                        std::string msg = "Aborting simulation due to unknown "
-                            "parameters. Please query \"flow --help\" for "
-                            "supported command line parameters.";
-                        if (OpmLog::hasBackend("STREAMLOG"))
-                        {
-                            OpmLog::error(msg);
-                        }
-                        else {
-                            std::cerr << msg << std::endl;
-                        }
-                    }
-
-#if HAVE_MPI
-                    MPI_Finalize();
-#endif
-                    return EXIT_FAILURE;
-                }
+                printPRTHeader(output_cout);
                 runDiagnostics(output_cout);
                 createSimulator();
 
@@ -290,10 +295,9 @@ namespace Opm
             ThreadManager::init();
         }
 
-
         // Print an ASCII-art header to the PRT and DEBUG files.
         // \return Whether unkown keywords were seen during parsing.
-        bool printPRTHeader(bool output_cout)
+        void printPRTHeader(bool output_cout)
         {
           if (output_cout) {
               const std::string version = moduleVersion();
@@ -333,15 +337,6 @@ namespace Opm
 
               OpmLog::note(ss.str());
           }
-
-              if ( mpi_rank_ == 0 )
-              {
-                  return Opm::Parameters::printUnused<TypeTag>(std::cerr);
-              }
-              else
-              {
-                  return false;
-              }
         }
 
         void mergeParallelLogFiles(bool output_to_files)

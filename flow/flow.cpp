@@ -278,11 +278,15 @@ int main(int argc, char** argv)
 
     PreProblem::setBriefDescription("Flow, an advanced reservoir simulator for ECL-decks provided by the Open Porous Media project.");
     int status = Opm::FlowMainEbos<PreTypeTag>::setupParameters_(argc, argv);
-    if (status != 0)
+    if (status != 0) {
         // if setupParameters_ returns a value smaller than 0, there was no error, but
         // the program should abort. This is the case e.g. for the --help and the
         // --print-properties parameters.
+#if HAVE_MPI
+        MPI_Finalize();
+#endif
         return (status >= 0)?status:0;
+    }
 
     FileOutputMode outputMode = FileOutputMode::OUTPUT_NONE;
     bool outputCout = false;
