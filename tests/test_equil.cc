@@ -161,57 +161,7 @@ static Opm::EquilRecord mkEquilRecord( double datd, double datp,
                                        double zwoc, double pcow_woc,
                                        double zgoc, double pcgo_goc )
 {
-    using namespace Opm;
-
-    DeckItem dd( "datdep", double() );
-    dd.push_back( datd  );
-    Opm::Dimension dd_dim( "dddim", 1 );
-    dd.push_backDimension( dd_dim, dd_dim );
-
-    DeckItem dp( "datps", double() );
-    dp.push_back( datp );
-    Opm::Dimension dp_dim( "dpdim", 1 );
-    dp.push_backDimension( dp_dim, dp_dim );
-
-    DeckItem zw( "zwoc", double() );
-    zw.push_back( zwoc );
-    Opm::Dimension zw_dim( "zwdim", 1 );
-    zw.push_backDimension( zw_dim, zw_dim );
-
-    DeckItem pcow( "pcow", double() );
-    pcow.push_back( pcow_woc );
-    Opm::Dimension pcow_dim( "pcowdim", 1 );
-    pcow.push_backDimension( pcow_dim, pcow_dim );
-
-    DeckItem zg( "zgoc", double() );
-    zg.push_back( zgoc );
-    Opm::Dimension zg_dim( "zgdim", 1 );
-    zg.push_backDimension( zg_dim, zg_dim );
-
-    DeckItem pcgo( "pcgo", double() );
-    pcgo.push_back( pcgo_goc );
-    Opm::Dimension pcgo_dim( "pcgodim", 1 );
-    pcgo.push_backDimension( pcgo_dim, pcgo_dim );
-
-    DeckItem i1( "i1", int() );
-    DeckItem i2( "i2", int() );
-    DeckItem i3( "i3", int() );
-    i1.push_back( 0 );
-    i2.push_back( 0 );
-    i3.push_back( 0 );
-
-    DeckRecord rec;
-    rec.addItem( std::move( dd ) );
-    rec.addItem( std::move( dp ) );
-    rec.addItem( std::move( zw ) );
-    rec.addItem( std::move( pcow ) );
-    rec.addItem( std::move( zg ) );
-    rec.addItem( std::move( pcgo ) );
-    rec.addItem( std::move( i1 ) );
-    rec.addItem( std::move( i2 ) );
-    rec.addItem( std::move( i3 ) );
-
-    return EquilRecord( rec );
+    return Opm::EquilRecord( datd, datp, zwoc, pcow_woc, zgoc, pcgo_goc, true, true, 0);
 }
 
 void test_PhasePressure();
