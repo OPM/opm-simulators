@@ -337,7 +337,8 @@ SET_TYPE_PROP(EclBaseProblem, NewtonMethod, Opm::EclNewtonMethod<TypeTag>);
 SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
 
 // Drift compensation is an experimental feature, i.e., systematic errors in the
-// conservation quantities are only compensated for if experimental mode is enabled.
+// conservation quantities are only compensated for
+// as default if experimental mode is enabled.
 SET_BOOL_PROP(EclBaseProblem,
               EclEnableDriftCompensation,
               GET_PROP_VALUE(TypeTag, EnableExperiments));
@@ -480,9 +481,8 @@ public:
                              "The frequencies of which time steps are serialized to disk");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTracerModel,
                              "Transport tracers found in the deck.");
-        if (enableExperiments)
-            EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableDriftCompensation,
-                                 "Enable partial compensation of systematic mass losses via the source term of the next time step");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableDriftCompensation,
+                             "Enable partial compensation of systematic mass losses via the source term of the next time step");
         if (enableExperiments)
             EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableAquifers,
                                  "Enable analytic and numeric aquifer models");
@@ -604,10 +604,7 @@ public:
         // create the ECL writer
         eclWriter_.reset(new EclWriterType(simulator));
 
-        if (enableExperiments)
-            enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
-        else
-            enableDriftCompensation_ = false;
+        enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
 
         enableEclOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
 
