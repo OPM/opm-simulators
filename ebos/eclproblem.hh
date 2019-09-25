@@ -2492,12 +2492,14 @@ private:
             eclWriter_->eclOutputModule().initHysteresisParams(simulator, elemIdx);
             eclWriter_->eclOutputModule().assignToFluidState(elemFluidState, elemIdx);
 
-            processRestartSaturations_(elemFluidState);
+            if (enableSolvent)
+                 solventSaturation_[elemIdx] = eclWriter_->eclOutputModule().getSolventSaturation(elemIdx);
+
+            processRestartSaturations_(elemFluidState, solventSaturation_[elemIdx]);
 
             lastRs_[elemIdx] = elemFluidState.Rs();
             lastRv_[elemIdx] = elemFluidState.Rv();
-            if (enableSolvent)
-                 solventSaturation_[elemIdx] = eclWriter_->eclOutputModule().getSolventSaturation(elemIdx);
+
             if (enablePolymer)
                  polymerConcentration_[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
             // if we need to restart for polymer molecular weight simulation, we need to add related here
@@ -2548,7 +2550,7 @@ private:
         eclWriter_->endRestart();
     }
 
-    void processRestartSaturations_(InitialFluidState& elemFluidState)
+    void processRestartSaturations_(InitialFluidState& elemFluidState, Scalar& solventSaturation)
     {
         // each phase needs to be above certain value to be claimed to be existing
         // this is used to recover some RESTART running with the defaulted single-precision format
@@ -2561,6 +2563,13 @@ private:
 
                 sumSaturation += elemFluidState.saturation(phaseIdx);
             }
+
+        }
+        if (enableSolvent) {
+            if (solventSaturation < smallSaturationTolerance)
+                solventSaturation = 0.0;
+
+           sumSaturation += solventSaturation;
         }
 
         assert(sumSaturation > 0.0);
@@ -2570,6 +2579,9 @@ private:
                 const Scalar saturation = elemFluidState.saturation(phaseIdx) / sumSaturation;
                 elemFluidState.setSaturation(phaseIdx, saturation);
             }
+        }
+        if (enableSolvent) {
+            solventSaturation = solventSaturation / sumSaturation;
         }
     }
 
