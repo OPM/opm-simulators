@@ -27,8 +27,6 @@
 #ifndef EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
-#include "eclwriter.hh"
-
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/utils/propertysystem.hh>
