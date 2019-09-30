@@ -222,8 +222,9 @@ void test_readWriteWells()
     w1.rates = r1;
     w1.bhp = 1.23;
     w1.temperature = 3.45;
-    w1.injectionControl = 1;
-    w1.productionControl = 1;
+    w1.control = 1;
+    //w1.injectionControl = 1;
+    //w1.productionControl = 1;
 
 
     /*
@@ -236,8 +237,9 @@ void test_readWriteWells()
     w2.rates = r2;
     w2.bhp = 2.34;
     w2.temperature = 4.56;
-    w1.injectionControl = 2;
-    w1.productionControl = 2;
+    w2.control = 1;
+    //w1.injectionControl = 2;
+    //w1.productionControl = 2;
     w2.connections.push_back( { 188, rc3, 36.22, 19.28, 0.0, 0.0, 0.0, 0.0 } );
 
     Opm::data::Wells wellRates;

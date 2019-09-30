@@ -574,8 +574,8 @@ namespace Opm {
 
         // for ecl compatible restart the current controls are not written
         const auto& ioCfg = eclState().getIOConfig();
-        const auto ecl_compatible_rst = ioCfg.getEclCompatibleRST();
-        if (ecl_compatible_rst) {
+        const auto ecl_compatible_rst = ioCfg.getEclCompatibleRST();        
+        if (true || ecl_compatible_rst) { // always set the control from the schedule
             for (int w = 0; w <nw; ++w) {
                 const int nw_wells_ecl = wells_ecl_.size();
                 int index_well_ecl = 0;
@@ -1472,8 +1472,8 @@ namespace Opm {
             state.bhp()[ well_index ] = well.bhp;
             state.temperature()[ well_index ] = well.temperature;
 
-            state.currentInjectionControls()[ well_index ] = static_cast<Opm::Well2::InjectorCMode>(well.injectionControl);
-            state.currentProductionControls()[ well_index ] = static_cast<Well2::ProducerCMode>(well.productionControl);
+            //state.currentInjectionControls()[ well_index ] = static_cast<Opm::Well2::InjectorCMode>(well.injectionControl);
+            //state.currentProductionControls()[ well_index ] = static_cast<Well2::ProducerCMode>(well.productionControl);
 
             const auto wellrate_index = well_index * np;
             for( size_t i = 0; i < phs.size(); ++i ) {
@@ -1481,33 +1481,31 @@ namespace Opm {
                 state.wellRates()[ wellrate_index + i ] = well.rates.get( phs[ i ] );
             }
 
-#warning get out of memory issue on restart where the number of wells doesnt match. Not related to this PR
-//            const auto perforation_pressure = []( const data::Connection& comp ) {
-//                return comp.pressure;
-//            };
+            const auto perforation_pressure = []( const data::Connection& comp ) {
+                return comp.pressure;
+            };
 
-//            const auto perforation_reservoir_rate = []( const data::Connection& comp ) {
-//                return comp.reservoir_rate;
-//            };
+            const auto perforation_reservoir_rate = []( const data::Connection& comp ) {
+                return comp.reservoir_rate;
+            };
+            std::transform( well.connections.begin(),
+                            well.connections.end(),
+                            state.perfPress().begin() + wm.second[ 1 ],
+                    perforation_pressure );
 
-//            std::transform( well.connections.begin(),
-//                            well.connections.end(),
-//                            state.perfPress().begin() + wm.second[ 1 ],
-//                    perforation_pressure );
+            std::transform( well.connections.begin(),
+                            well.connections.end(),
+                            state.perfRates().begin() + wm.second[ 1 ],
+                    perforation_reservoir_rate );
 
-//            std::transform( well.connections.begin(),
-//                            well.connections.end(),
-//                            state.perfRates().begin() + wm.second[ 1 ],
-//                    perforation_reservoir_rate );
-
-//            int local_comp_index = 0;
-//            for (const data::Connection& comp : well.connections) {
-//                const int global_comp_index = wm.second[1] + local_comp_index;
-//                for (int phase_index = 0; phase_index < np; ++phase_index) {
-//                    state.perfPhaseRates()[global_comp_index*np + phase_index] = comp.rates.get(phs[phase_index]);
-//                }
-//                ++local_comp_index;
-//            }
+            int local_comp_index = 0;
+            for (const data::Connection& comp : well.connections) {
+                const int global_comp_index = wm.second[1] + local_comp_index;
+                for (int phase_index = 0; phase_index < np; ++phase_index) {
+                    state.perfPhaseRates()[global_comp_index*np + phase_index] = comp.rates.get(phs[phase_index]);
+                }
+                ++local_comp_index;
+            }
 
             if (handle_ms_well && !well.segments.empty()) {
                 // we need the well_ecl_ information
