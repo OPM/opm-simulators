@@ -19,6 +19,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/common/utility/numeric/RootFinders.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellInjectionProperties.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
@@ -1777,12 +1778,28 @@ namespace Opm
             case Well2::ProducerCMode::THP:
             {
                 std::vector<double> rates(3, 0.0);
-                for (int p = 0; p<np; ++p) {
-                    rates[p] = -well_state.wellRates()[well_index*np + p];
+                auto eq = [this, &ebos_simulator, &rates, &deferred_logger, &well, &summaryState](const double bhp) {
+                    computeWellRatesWithBhp(ebos_simulator, bhp, rates, deferred_logger);
+                    const double bhp_calculated = calculateBhpFromThp(rates, well, summaryState, deferred_logger);
+                    return bhp_calculated - bhp;
+                };
+
+                try {
+                    int iteration = 0;
+                    const double solved_bhp = RegulaFalsi<>::solve(eq,
+                                                                   controls.bhp_limit,
+                                                                   400e5,
+                                                                   100,
+                                                                   1000.0,
+                                                                   iteration);
+                    well_state.bhp()[well_index] = solved_bhp;
                 }
-                double bhp = calculateBhpFromThp(rates, well, summaryState, deferred_logger);
-                well_state.bhp()[well_index] = bhp;
+                catch (...) {
+                    deferred_logger.warning("FAILURE_GETTING_CONVERGED_BHP",
+                                            "Failed to find BHP when switching to THP control for well " + name());
+                }
                 break;
+
             }
             case Well2::ProducerCMode::GRUP:
             {
@@ -2818,6 +2835,30 @@ namespace Opm
         const auto& well = Base::wellEcl();
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
 
+
+        std::vector<double> rates(3, 0.0);
+        auto eq = [this, &ebosSimulator, &rates, &deferred_logger, &well, &summaryState](const double bhp) {
+            computeWellRatesWithBhp(ebosSimulator, bhp, rates, deferred_logger);
+            const double bhp_calculated = calculateBhpFromThp(rates, well, summaryState, deferred_logger);
+            return bhp_calculated - bhp;
+        };
+
+        try {
+            const double solved_bhp = RegulaFalsi<>::solve(eq,
+                                                           initial_bhp,
+                                                           400e5,
+                                                           max_iteration,
+                                                           bhp_tolerance,
+                                                           iteration);
+            computeWellRatesWithBhp(ebosSimulator, solved_bhp, potentials, deferred_logger);
+        }
+        catch (...) {
+            deferred_logger.warning("FAILURE_GETTING_CONVERGED_POTENTIAL",
+                    "Failed in getting converged for the potential calculation for well " + name());
+        }
+
+        /*
+
         while ( !converged && iteration < max_iteration ) {
             // for each iteration, we calculate the bhp based on the rates/potentials with thp constraints
             // with considering the bhp value from the bhp limits. At the beginning of each iteration,
@@ -2873,7 +2914,7 @@ namespace Opm
                 for (int p = 0; p < np; ++p) {
                     // TODO: improve the interpolation, will it always be valid with the way below?
                     // TODO: finding better paramters, better iteration strategy for better convergence rate.
-                    const double potential_update_damping_factor = 0.001;
+                    const double potential_update_damping_factor = 0.9;
                     potentials[p] = potential_update_damping_factor * potentials[p] + (1.0 - potential_update_damping_factor) * old_potentials[p];
                     old_potentials[p] = potentials[p];
                 }
@@ -2890,6 +2931,7 @@ namespace Opm
                     "Failed in getting converged for the potential calculation for well " + name());
         }
 
+        */
         return potentials;
     }
 
