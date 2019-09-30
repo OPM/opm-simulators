@@ -27,8 +27,6 @@
 #ifndef EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
-#include "eclwriter.hh"
-
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/utils/propertysystem.hh>
@@ -123,9 +121,9 @@ public:
 
         // Initialize block output
         for (const auto& node: summaryConfig) {
-            if (node.type() == ECL_SMSPEC_BLOCK_VAR) {
-                if (collectToIORank.isGlobalIdxOnThisRank(node.num() - 1)) {
-                    std::pair<std::string, int> key = std::make_pair(node.keyword(), node.num());
+            if (node.category() == SummaryNode::Category::Block) {
+                if (collectToIORank.isGlobalIdxOnThisRank(node.number() - 1)) {
+                    std::pair<std::string, int> key = std::make_pair(node.keyword(), node.number());
                     blockData_[key] = 0.0;
                 }
             }
