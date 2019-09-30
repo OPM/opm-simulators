@@ -392,8 +392,8 @@ namespace Opm
             for( const auto& wt : this->wellMap() ) {
                 const auto w = wt.second[ 0 ];
                 auto& well = res.at( wt.first );
-                well.injectionControl = static_cast<int>(this->currentInjectionControls()[ w ]);
-                well.productionControl = static_cast<int>(this->currentProductionControls()[ w ]);
+                //well.injectionControl = static_cast<int>(this->currentInjectionControls()[ w ]);
+                //well.productionControl = static_cast<int>(this->currentProductionControls()[ w ]);
                 const int well_rate_index = w * pu.num_phases;
 
                 if ( pu.phase_used[Water] ) {
