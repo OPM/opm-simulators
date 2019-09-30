@@ -215,6 +215,10 @@ namespace Opm {
 
             groupTotalGuideRate += guideRate->get(wellName, wellTarget);
         }
+
+        if (groupTotalGuideRate == 0.0)
+            return 0.0;
+
         double wellGuideRate = guideRate->get(well.name(), wellTarget);
         return wellGuideRate / groupTotalGuideRate;
     }
@@ -231,6 +235,9 @@ namespace Opm {
                 groupTotalGuideRate += guideRate->get(groupName, groupTarget);
             }
         }
+        if (groupTotalGuideRate == 0.0)
+            return 0.0;
+
         double groupGuideRate = guideRate->get(group.name(), groupTarget);
         return groupGuideRate / groupTotalGuideRate;
     }
