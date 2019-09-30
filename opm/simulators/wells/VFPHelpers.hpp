@@ -258,6 +258,10 @@ inline InterpData findInterpData(const double& value_in, const std::vector<doubl
         }
     }
 
+    if (retval.factor_ > 3.0) {
+        retval.factor_ = 3.0;
+    }
+
     return retval;
 }
 
