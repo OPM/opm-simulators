@@ -1365,7 +1365,7 @@ namespace Opm
         const PhaseUsage& pu = phaseUsage();
         const int well_index = index_of_well_;
         const auto wellrate_index = well_index * pu.num_phases;
-        bool changed = false;
+        // bool changed = false;
 
 //        // Stopped wells can not change control
 //        if (currentControl == "STOP")
@@ -1401,7 +1401,7 @@ namespace Opm
 
                 if (controls.surface_rate < current_rate) {
                     currentControl = Well2::InjectorCMode::RATE;
-                    changed = true;
+                    return true;
                 }
 
             }
@@ -1420,7 +1420,7 @@ namespace Opm
 
                 if (controls.reservoir_rate < current_rate) {
                     currentControl = Well2::InjectorCMode::RESV;
-                    changed = true;
+                    return true;
                 }
             }
 
@@ -1430,7 +1430,7 @@ namespace Opm
                 double current_bhp = well_state.bhp()[well_index];
                 if (bhp < current_bhp) {
                     currentControl = Well2::InjectorCMode::BHP;
-                    changed = true;
+                    return true;
                 }
             }
 
@@ -1440,7 +1440,7 @@ namespace Opm
                 double current_thp = well_state.thp()[well_index];
                 if (thp < current_thp) {
                     currentControl = Well2::InjectorCMode::THP;
-                    changed = true;
+                    return true;
                 }
             }
         }
@@ -1453,7 +1453,7 @@ namespace Opm
                 double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ];
                 if (controls.oil_rate < current_rate  ) {
                     currentControl = Well2::ProducerCMode::ORAT;
-                    changed = true;
+                    return true;
                 }
             }
 
@@ -1461,7 +1461,7 @@ namespace Opm
                 double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
                 if (controls.water_rate < current_rate  ) {
                     currentControl = Well2::ProducerCMode::WRAT;
-                    changed = true;
+                    return true;
                 }
             }
 
@@ -1469,7 +1469,7 @@ namespace Opm
                 double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ];
                 if (controls.gas_rate < current_rate  ) {
                     currentControl = Well2::ProducerCMode::GRAT;
-                    changed = true;
+                    return true;
                 }
             }
 
@@ -1478,7 +1478,7 @@ namespace Opm
                 current_rate -= well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
                 if (controls.liquid_rate < current_rate  ) {
                     currentControl = Well2::ProducerCMode::LRAT;
-                    changed = true;
+                    return true;
                 }
             }
 
@@ -1495,7 +1495,7 @@ namespace Opm
 
                 if (controls.prediction_mode && controls.resv_rate > current_rate) {
                     currentControl = Well2::ProducerCMode::RESV;
-                    changed = true;
+                    return true;
                 }
 
                 if (!controls.prediction_mode) {
@@ -1520,7 +1520,7 @@ namespace Opm
 
                     if (resv_rate < current_rate) {
                         currentControl = Well2::ProducerCMode::RESV;
-                        changed = true;
+                        return true;
                     }
                 }
             }
@@ -1531,7 +1531,7 @@ namespace Opm
                 double current_bhp = well_state.bhp()[well_index];
                 if (bhp > current_bhp) {
                     currentControl = Well2::ProducerCMode::BHP;
-                    changed = true;
+                    return true;
                 }
             }
 
@@ -1541,12 +1541,12 @@ namespace Opm
                 double current_thp =  well_state.thp()[well_index];
                 if (thp > current_thp) {
                     currentControl = Well2::ProducerCMode::THP;
-                    changed = true;
+                    return true;
                 }
             }
         }
 
-        return changed;
+        return false;
     }
 
 
