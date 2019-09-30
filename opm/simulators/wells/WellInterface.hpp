@@ -30,6 +30,7 @@
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
@@ -142,6 +143,8 @@ namespace Opm
         WellControls* wellControls() const;
 
         void setVFPProperties(const VFPProperties<VFPInjProperties,VFPProdProperties>* vfp_properties_arg);
+
+        void setGuideRate(const GuideRate* guide_rate_arg);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
@@ -352,6 +355,8 @@ namespace Opm
         bool getAllowCrossFlow() const;
 
         const VFPProperties<VFPInjProperties,VFPProdProperties>* vfp_properties_;
+
+        const GuideRate* guide_rate_;
 
         double gravity_;
 

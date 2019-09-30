@@ -35,6 +35,7 @@
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellCollection.hpp>
@@ -272,6 +273,7 @@ namespace Opm {
             SimulatorReport last_report_;
 
             WellTestState wellTestState_;
+            std::unique_ptr<GuideRate> guideRate_;
 
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_;

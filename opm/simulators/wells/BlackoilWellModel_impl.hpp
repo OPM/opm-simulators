@@ -34,6 +34,9 @@ namespace Opm {
         terminal_output_ = false;
         if (ebosSimulator.gridView().comm().rank() == 0)
             terminal_output_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
+
+        // Create the guide rate container.
+        guideRate_.reset(new GuideRate (ebosSimulator_.vanguard().schedule()));
     }
 
     template<typename TypeTag>
@@ -377,12 +380,33 @@ namespace Opm {
 
         for (auto& well : well_container_) {
             well->setVFPProperties(vfp_properties_.get());
+            well->setGuideRate(guideRate_.get());
         }
 
         // Close completions due to economical reasons
         for (auto& well : well_container_) {
             well->closeCompletions(wellTestState_);
         }
+
+        // calculate the well potentials
+        try {
+            std::vector<double> well_potentials;
+            computeWellPotentials(well_potentials, reportStepIdx, local_deferredLogger);
+        } catch ( std::runtime_error& e ) {
+            const std::string msg = "A zero well potential is returned for output purposes. ";
+            local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
+        }
+
+        //compute well guideRates
+        const int np = numPhases();
+        for (const auto& well : well_container_) {
+            const double& oilpot = well_state_.wellPotentials()[well->indexOfWell() * np + phase_usage_.phase_pos[BlackoilPhases::Liquid]];
+            const double& gaspot = well_state_.wellPotentials()[well->indexOfWell() * np + phase_usage_.phase_pos[BlackoilPhases::Vapour]];
+            const double& waterpot = well_state_.wellPotentials()[well->indexOfWell() * np + phase_usage_.phase_pos[BlackoilPhases::Aqua]];
+            guideRate_->compute(well->name(), reportStepIdx, simulationTime, oilpot, gaspot, waterpot);
+        }
+        const Group2& fieldGroup = schedule().getGroup2("FIELD", reportStepIdx);
+        wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, guideRate_.get(), well_state_);
     }
 
 
@@ -412,6 +436,7 @@ namespace Opm {
                 wellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup2(wellEcl.groupName(), timeStepIdx), schedule(), timeStepIdx, well_efficiency_factor);
                 well->setWellEfficiencyFactor(well_efficiency_factor);
                 well->setVFPProperties(vfp_properties_.get());
+                well->setGuideRate(guideRate_.get());
 
                 const WellTestConfig::Reason testing_reason = testWell.second;
 
@@ -451,10 +476,10 @@ namespace Opm {
         // update the rate converter with current averages pressures etc in
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
+        const int reportStepIdx = ebosSimulator_.episodeIndex();
         // calculate the well potentials
         try {
             std::vector<double> well_potentials;
-            const int reportStepIdx = ebosSimulator_.episodeIndex();
             computeWellPotentials(well_potentials, reportStepIdx, local_deferredLogger);
         } catch ( std::runtime_error& e ) {
             const std::string msg = "A zero well potential is returned for output purposes. ";
@@ -466,6 +491,8 @@ namespace Opm {
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
+
+
 
     }
 
