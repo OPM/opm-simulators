@@ -176,8 +176,13 @@ namespace Opm
         vfp_properties_ = vfp_properties_arg;
     }
 
-
-
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    setGuideRate(const GuideRate* guide_rate_arg)
+    {
+        guide_rate_ = guide_rate_arg;
+    }
 
 
     template<typename TypeTag>
