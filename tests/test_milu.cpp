@@ -23,7 +23,7 @@ void test_milu0(M& A)
     diagonal.reset(new std::vector<typename M::block_type>());
 
     Opm::detail::milu0_decomposition(ILU, diagonal.get());
-#ifdef DEBUG
+#ifdef DEBUGBUILD
     if ( A.N() < 11)
     {
         Dune::printmatrix(std::cout, ILU, "ILU", "row");
@@ -72,7 +72,7 @@ void test_milu0(M& A)
     for ( std::size_t i = 0, end = A.N(); i < end; ++i)
     {
         auto point_difference = diff[i].two_norm();
-#ifdef DEBUG
+#ifdef DEBUGBUILD
         std::cout<<"index "<<i<<" size "<<diff.size()<<" difference"<<point_difference<<std::endl;
 #endif
         BOOST_CHECK(point_difference < 1e-12);
@@ -86,7 +86,7 @@ void test_milu0(M& A)
 
     for ( std::size_t i = 0, end = A.N(); i < end; ++i)
     {
-#ifdef DEBUG
+#ifdef DEBUGBUILD
         auto point_difference = diff[i].two_norm();
         std::cout<<"index "<<i<<" size "<<diff.size()<<" point_difference "<<point_difference<<std::endl;
 #endif
@@ -169,7 +169,7 @@ void test()
     Dune::BCRSMatrix<Dune::FieldMatrix<double, bsize, bsize> > A;
     setupLaplacian(A, N);
     test_milu0(A);
-#ifdef DEBUG
+#ifdef DEBUGBUILD
     std::cout<< "Tested block size "<< bsize<<std::endl;
 #endif
 }
