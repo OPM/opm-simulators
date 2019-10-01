@@ -83,8 +83,11 @@ private:
 
 public:
     EclCpGridVanguard(Simulator& simulator)
-        : EclBaseVanguard<TypeTag>(simulator)
+        : EclBaseVanguard<TypeTag>(simulator), mpiRank()
     {
+#if HAVE_MPI
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+#endif
         this->callImplementationInit();
     }
 
@@ -111,11 +114,7 @@ public:
      */
     const EquilGrid& equilGrid() const
     {
-#if HAVE_MPI
-        int mpiRank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
         assert(mpiRank == 0);
-#endif
         return *equilGrid_;
     }
 
@@ -140,9 +139,7 @@ public:
     void loadBalance()
     {
 #if HAVE_MPI
-        int mpiRank = 0;
         int mpiSize = 1;
-        MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
         MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
 
         if (mpiSize > 1) {
@@ -229,12 +226,8 @@ public:
      */
     const CartesianIndexMapper& equilCartesianIndexMapper() const
     {
-#if HAVE_MPI
-        int mpiRank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
         assert(mpiRank == 0);
         assert(equilCartesianIndexMapper_);
-#endif
         return *equilCartesianIndexMapper_;
     }
 
@@ -272,7 +265,7 @@ protected:
         // the initial condition is calculated.
         // After loadbalance grid_ will contain a global and distribute view.
         // equilGrid_being a shallow copy only the global view.
-        if (grid_->size(0))
+        if (mpiRank == 0)
         {
             equilGrid_.reset(new Dune::CpGrid(*grid_));
             equilCartesianIndexMapper_.reset(new CartesianIndexMapper(*equilGrid_));
@@ -296,6 +289,7 @@ protected:
 
     std::unique_ptr<EclTransmissibility<TypeTag> > globalTrans_;
     std::unordered_set<std::string> defunctWellNames_;
+    int mpiRank;
 };
 
 } // namespace Opm
