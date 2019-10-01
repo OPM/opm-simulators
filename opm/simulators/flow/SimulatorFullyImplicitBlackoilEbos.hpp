@@ -134,18 +134,6 @@ public:
 
         ebosSimulator_.setEpisodeIndex(-1);
 
-        // handle restarts
-        std::unique_ptr<RestartValue> restartValues;
-        if (isRestart()) {
-            Opm::SummaryState& summaryState = ebosSimulator_.vanguard().summaryState();
-            std::vector<RestartKey> extraKeys = {
-                {"OPMEXTRA" , Opm::UnitSystem::measure::identity, false}
-            };
-
-            std::vector<RestartKey> solutionKeys = {};
-            restartValues.reset(new RestartValue(ebosSimulator_.problem().eclIO().loadRestart(summaryState, solutionKeys, extraKeys)));
-        }
-
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solverTimer;
         Opm::time::StopWatch totalTimer;
@@ -164,45 +152,15 @@ public:
                 adaptiveTimeStepping.reset(new TimeStepper(terminalOutput_));
             }
 
-            double suggestedStepSize = -1.0;
             if (isRestart()) {
-                // This is a restart, determine the time step size from the restart data
-                if (restartValues->hasExtra("OPMEXTRA")) {
-                    std::vector<double> opmextra = restartValues->getExtra("OPMEXTRA");
-                    assert(opmextra.size() == 1);
-                    suggestedStepSize = opmextra[0];
-                }
-                else {
-                    OpmLog::warning("Restart data is missing OPMEXTRA field, restart run may deviate from original run.");
-                    suggestedStepSize = -1.0;
-                }
-
-                if (suggestedStepSize > 0.0) {
-                    adaptiveTimeStepping->setSuggestedNextStep(suggestedStepSize);
-                }
+                // For restarts the ebosSimulator may have gotten some information
+                // about the next timestep size from the OPMEXTRA field
+                adaptiveTimeStepping->setSuggestedNextStep(ebosSimulator_.timeStepSize());
             }
         }
 
         SimulatorReport report;
         SimulatorReport stepReport;
-
-        if (isRestart()) {
-            // Set the start time of the simulation
-            const auto& schedule = ebosSimulator_.vanguard().schedule();
-            const auto& eclState = ebosSimulator_.vanguard().eclState();
-            const auto& timeMap = schedule.getTimeMap();
-            const auto& initconfig = eclState.getInitConfig();
-            int episodeIdx = initconfig.getRestartStep() - 1;
-
-            ebosSimulator_.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
-            ebosSimulator_.setTime(timeMap.getTimePassedUntil(episodeIdx));
-
-            ebosSimulator_.startNextEpisode(ebosSimulator_.startTime() + ebosSimulator_.time(),
-                                            timeMap.getTimeStepLength(episodeIdx));
-            ebosSimulator_.setEpisodeIndex(episodeIdx);
-            wellModel_().beginEpisode();
-            wellModel_().initFromRestartFile(*restartValues);
-        }
 
         // Main simulation loop.
         while (!timer.done()) {

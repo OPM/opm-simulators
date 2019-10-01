@@ -418,16 +418,7 @@ public:
         eclOutputModule_.allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false);
 
         {
-            /*
-              When running a restarted simulation the restart file is loaded
-              twice, first here as part of the state initialization and then
-              subsequently in the Simulator::run() method. The global
-              SummaryState instance is accumulates total variables like FOPT, if
-              the same instance is used twice when loading the restart file, the
-              cumulatives will be counted doubly, we therefor use a temporary
-              SummaryState instance in this call to loadRestart().
-            */
-            Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(simulator_.vanguard().schedule().getStartTime()));
+            Opm::SummaryState& summaryState = simulator_.vanguard().summaryState();
             auto restartValues = eclIO_->loadRestart(summaryState, solutionKeys, extraKeys);
 
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
@@ -442,6 +433,9 @@ public:
                 thpres.setFromRestart(thpresValues);
             }
             restartTimeStepSize_ = restartValues.getExtra("OPMEXTRA")[0];
+
+            // initialize the well model from restart values
+            simulator_.problem().wellModel().initFromRestartFile(restartValues);
         }
     }
 

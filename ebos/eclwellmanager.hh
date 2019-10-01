@@ -39,6 +39,8 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/output/eclipse/RestartValue.hpp>
+
 #include <opm/output/data/Wells.hpp>
 #include <opm/material/common/Exceptions.hpp>
 
@@ -612,6 +614,11 @@ public:
                                Opm::ScheduleEvents::WELL_STATUS_CHANGE,
                                reportStepIdx);
     }
+
+    void initFromRestartFile(const RestartValue& restartValues OPM_UNUSED){
+        // not implemented
+    }
+
 
 protected:
     bool wellTopologyChanged_(const Opm::EclipseState& eclState OPM_UNUSED,
