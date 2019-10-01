@@ -70,6 +70,7 @@ class EclCpGridVanguard : public EclBaseVanguard<TypeTag>
     typedef EclBaseVanguard<TypeTag> ParentType;
 
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
 
 public:
@@ -81,10 +82,11 @@ private:
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
 
 public:
-    /*!
-     * \brief Inherit the constructors from the base class.
-     */
-    using EclBaseVanguard<TypeTag>::EclBaseVanguard;
+    EclCpGridVanguard(Simulator& simulator)
+        : EclBaseVanguard<TypeTag>(simulator)
+    {
+        this->callImplementationInit();
+    }
 
     ~EclCpGridVanguard()
     {
