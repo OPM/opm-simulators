@@ -1039,6 +1039,17 @@ public:
             so -= sol.data("SGAS")[globalDofIndex];
         }
 
+        if (sSol_.size() > 0) {
+            // keep the SSOL option for backward compatibility
+            // should be removed after 10.2018 release
+            if (sol.has("SSOL"))
+                sSol_[elemIdx] = sol.data("SSOL")[globalDofIndex];
+            else if (sol.has("SSOLVENT"))
+                sSol_[elemIdx] = sol.data("SSOLVENT")[globalDofIndex];
+
+            so -= sSol_[elemIdx];
+        }
+
         assert(saturation_[oilPhaseIdx].size() > 0);
         saturation_[oilPhaseIdx][elemIdx] = so;
 
@@ -1050,14 +1061,6 @@ public:
             rs_[elemIdx] = sol.data("RS")[globalDofIndex];
         if (rv_.size() > 0 && sol.has("RV"))
             rv_[elemIdx] = sol.data("RV")[globalDofIndex];
-        if (sSol_.size() > 0) {
-            // keep the SSOL option for backward compatibility
-            // should be removed after 10.2018 release
-            if (sol.has("SSOL"))
-                sSol_[elemIdx] = sol.data("SSOL")[globalDofIndex];
-            else if (sol.has("SSOLVENT"))
-                sSol_[elemIdx] = sol.data("SSOLVENT")[globalDofIndex];
-        }
         if (cPolymer_.size() > 0 && sol.has("POLYMER"))
             cPolymer_[elemIdx] = sol.data("POLYMER")[globalDofIndex];
         if (cFoam_.size() > 0 && sol.has("FOAM"))
