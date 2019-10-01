@@ -178,12 +178,14 @@ public:
         , collectToIORank_(simulator_.vanguard())
         , eclOutputModule_(simulator, collectToIORank_)
     {
-        globalGrid_ = simulator_.vanguard().grid();
-        globalGrid_.switchToGlobalView();
-        eclIO_.reset(new Opm::EclipseIO(simulator_.vanguard().eclState(),
-                                        Opm::UgGridHelpers::createEclipseGrid(globalGrid_, simulator_.vanguard().eclState().getInputGrid()),
-                                        simulator_.vanguard().schedule(),
-                                        simulator_.vanguard().summaryConfig()));
+        if (collectToIORank_.isIORank()) {
+            globalGrid_ = simulator_.vanguard().grid();
+            globalGrid_.switchToGlobalView();
+            eclIO_.reset(new Opm::EclipseIO(simulator_.vanguard().eclState(),
+                                            Opm::UgGridHelpers::createEclipseGrid(globalGrid_, simulator_.vanguard().eclState().getInputGrid()),
+                                            simulator_.vanguard().schedule(),
+                                            simulator_.vanguard().summaryConfig()));
+        }
 
         // create output thread if enabled and rank is I/O rank
         // async output is enabled by default if pthread are enabled
@@ -198,7 +200,10 @@ public:
     { }
 
     const Opm::EclipseIO& eclIO() const
-    { return *eclIO_; }
+    {
+        assert(eclIO_);
+        return *eclIO_;
+    }
 
     void writeInit()
     {
@@ -239,7 +244,6 @@ public:
         if (reportStepNum == 0)
             return;
 
-        const auto& summary = eclIO_->summary();
         Scalar curTime = simulator_.time() + simulator_.timeStepSize();
         Scalar totalCpuTime =
             simulator_.executionTimer().realTimeElapsed() +
@@ -272,6 +276,7 @@ public:
 
         std::vector<char> buffer;
         if (collectToIORank_.isIORank()) {
+            const auto& summary = eclIO_->summary();
             const auto& eclState = simulator_.vanguard().eclState();
 
             // Add TCPU
