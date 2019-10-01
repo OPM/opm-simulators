@@ -163,8 +163,15 @@ public:
             // transmissibilities are relatively expensive to compute, we only do it if
             // more than a single process is involved in the simulation.
             cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
-            globalTrans_ = new EclTransmissibility<TypeTag>(*this);
-            globalTrans_->update();
+            if (grid_->size(0))
+            {
+                globalTrans_ = new EclTransmissibility<TypeTag>(*this);
+                globalTrans_->update();
+            }
+            else
+            {
+                globalTrans_ = nullptr;
+            }
 
             Dune::EdgeWeightMethod edgeWeightsMethod = this->edgeWeightsMethod();
 
@@ -253,7 +260,10 @@ public:
     { return defunctWellNames_; }
 
     const EclTransmissibility<TypeTag>& globalTransmissibility() const
-    { return *globalTrans_; }
+    {
+        assert( globalTrans_ != nullptr );
+        return *globalTrans_;
+    }
 
     void releaseGlobalTransmissibility()
     {
