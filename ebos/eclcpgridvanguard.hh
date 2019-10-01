@@ -88,15 +88,6 @@ public:
         this->callImplementationInit();
     }
 
-    ~EclCpGridVanguard()
-    {
-        delete cartesianIndexMapper_;
-        delete equilCartesianIndexMapper_;
-        delete grid_;
-        delete equilGrid_;
-        delete globalTrans_;
-    }
-
     /*!
      * \brief Return a reference to the simulation grid.
      */
@@ -137,11 +128,8 @@ public:
      */
     void releaseEquilGrid()
     {
-        delete equilGrid_;
-        equilGrid_ = 0;
-
-        delete equilCartesianIndexMapper_;
-        equilCartesianIndexMapper_ = 0;
+        equilGrid_.reset();
+        equilCartesianIndexMapper_.reset();
     }
 
     /*!
@@ -162,15 +150,11 @@ public:
             // its edge weights. since this is (kind of) a layering violation and
             // transmissibilities are relatively expensive to compute, we only do it if
             // more than a single process is involved in the simulation.
-            cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
+            cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
             if (grid_->size(0))
             {
-                globalTrans_ = new EclTransmissibility<TypeTag>(*this);
+                globalTrans_.reset(new EclTransmissibility<TypeTag>(*this));
                 globalTrans_->update();
-            }
-            else
-            {
-                globalTrans_ = nullptr;
             }
 
             Dune::EdgeWeightMethod edgeWeightsMethod = this->edgeWeightsMethod();
@@ -214,12 +198,11 @@ public:
             }
             grid_->switchToDistributedView();
 
-            delete cartesianIndexMapper_;
-            cartesianIndexMapper_ = nullptr;
+            cartesianIndexMapper_.reset();
         }
 #endif
 
-        cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
+        cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
 
         this->updateGridView_();
     }
@@ -231,8 +214,7 @@ public:
      */
     void releaseGlobalTransmissibilities()
     {
-        delete globalTrans_;
-        globalTrans_ = nullptr;
+        globalTrans_.reset();
     }
 
     /*!
@@ -267,8 +249,7 @@ public:
 
     void releaseGlobalTransmissibility()
     {
-        delete globalTrans_;
-        globalTrans_ = nullptr;
+        globalTrans_.reset();
     }
 
 protected:
@@ -277,7 +258,7 @@ protected:
         const auto& gridProps = this->eclState().get3DProperties();
         const std::vector<double>& porv = gridProps.getDoubleGridProperty("PORV").getData();
 
-        grid_ = new Dune::CpGrid();
+        grid_.reset(new Dune::CpGrid());
         grid_->processEclipseFormat(this->eclState().getInputGrid(),
                                     /*isPeriodic=*/false,
                                     /*flipNormals=*/false,
@@ -293,16 +274,9 @@ protected:
         // equilGrid_being a shallow copy only the global view.
         if (grid_->size(0))
         {
-            equilGrid_ = new Dune::CpGrid(*grid_);
-            equilCartesianIndexMapper_ = new CartesianIndexMapper(*equilGrid_);
+            equilGrid_.reset(new Dune::CpGrid(*grid_));
+            equilCartesianIndexMapper_.reset(new CartesianIndexMapper(*equilGrid_));
         }
-        else
-        {
-            equilGrid_ = nullptr;
-            equilCartesianIndexMapper_ = nullptr;
-        }
-
-        globalTrans_ = nullptr;
     }
 
     // removing some connection located in inactive grid cells
@@ -315,12 +289,12 @@ protected:
         }
     }
 
-    Grid* grid_;
-    EquilGrid* equilGrid_;
-    CartesianIndexMapper* cartesianIndexMapper_;
-    CartesianIndexMapper* equilCartesianIndexMapper_;
+    std::unique_ptr<Grid> grid_;
+    std::unique_ptr<EquilGrid> equilGrid_;
+    std::unique_ptr<CartesianIndexMapper> cartesianIndexMapper_;
+    std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
 
-    EclTransmissibility<TypeTag>* globalTrans_;
+    std::unique_ptr<EclTransmissibility<TypeTag> > globalTrans_;
     std::unordered_set<std::string> defunctWellNames_;
 };
 
