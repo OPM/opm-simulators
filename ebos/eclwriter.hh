@@ -489,9 +489,10 @@ private:
 #endif
 
         const auto& cartesianCellIdx = globalGrid_.globalCell();
-        const auto* globalTrans = &(simulator_.vanguard().globalTransmissibility());
+        const EclTransmissibility<TypeTag>* globalTrans;
 
         if (!collectToIORank_.isParallel())
+        {
             // in the sequential case we must use the transmissibilites defined by
             // the problem. (because in the sequential case, the grid manager does
             // not compute "global" transmissibilities for performance reasons. in
@@ -499,6 +500,11 @@ private:
             // because this object refers to the distributed grid and we need the
             // sequential version here.)
             globalTrans = &simulator_.problem().eclTransmissibilities();
+        }
+        else
+        {
+            globalTrans = &(simulator_.vanguard().globalTransmissibility());
+        }
 
         auto elemIt = globalGridView.template begin</*codim=*/0>();
         const auto& elemEndIt = globalGridView.template end</*codim=*/0>();
@@ -588,7 +594,7 @@ private:
         ElementMapper globalElemMapper(globalGridView);
 #endif
 
-        const auto* globalTrans = &(simulator_.vanguard().globalTransmissibility());
+        const EclTransmissibility<TypeTag>* globalTrans;
         if (!collectToIORank_.isParallel()) {
             // in the sequential case we must use the transmissibilites defined by
             // the problem. (because in the sequential case, the grid manager does
@@ -597,6 +603,10 @@ private:
             // because this object refers to the distributed grid and we need the
             // sequential version here.)
             globalTrans = &simulator_.problem().eclTransmissibilities();
+        }
+        else
+        {
+            globalTrans = &(simulator_.vanguard().globalTransmissibility());
         }
 
         auto cartDims = simulator_.vanguard().cartesianIndexMapper().cartesianDimensions();
