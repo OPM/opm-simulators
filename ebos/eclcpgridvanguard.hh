@@ -244,6 +244,7 @@ public:
         int mpiRank;
         MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
         assert(mpiRank == 0);
+        assert(equilCartesianIndexMapper_);
 #endif
         return *equilCartesianIndexMapper_;
     }
@@ -280,8 +281,16 @@ protected:
         // the initial condition is calculated.
         // After loadbalance grid_ will contain a global and distribute view.
         // equilGrid_being a shallow copy only the global view.
-        equilGrid_ = new Dune::CpGrid(*grid_);
-        equilCartesianIndexMapper_ = new CartesianIndexMapper(*equilGrid_);
+        if (grid_->size(0))
+        {
+            equilGrid_ = new Dune::CpGrid(*grid_);
+            equilCartesianIndexMapper_ = new CartesianIndexMapper(*equilGrid_);
+        }
+        else
+        {
+            equilGrid_ = nullptr;
+            equilCartesianIndexMapper_ = nullptr;
+        }
 
         globalTrans_ = nullptr;
     }
@@ -289,11 +298,11 @@ protected:
     // removing some connection located in inactive grid cells
     void filterConnections_()
     {
-        assert(grid_);
-        Grid grid = *grid_;
-        grid.switchToGlobalView();
-        const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(grid, this->eclState().getInputGrid());
-        this->schedule().filterConnections(eclipseGrid);
+        if (equilGrid_)
+        {
+            const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(equilGrid(), this->eclState().getInputGrid());
+            this->schedule().filterConnections(eclipseGrid);
+        }
     }
 
     Grid* grid_;
