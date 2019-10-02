@@ -77,10 +77,11 @@ private:
     typedef CartesianIndexMapper* CartesianIndexMapperPointer;
 
 public:
-    /*!
-     * \brief Inherit the constructors from the base class.
-     */
-    using EclBaseVanguard<TypeTag>::EclBaseVanguard;
+    EclPolyhedralGridVanguard(Simulator& simulator)
+        : EclBaseVanguard<TypeTag>(simulator)
+    {
+        this->callImplementationInit();
+    }
 
     ~EclPolyhedralGridVanguard()
     {

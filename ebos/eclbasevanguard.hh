@@ -373,16 +373,6 @@ public:
         int outputInterval = EWOMS_GET_PARAM(TypeTag, int, EclOutputInterval);
         if (outputInterval >= 0)
             eclState_->getRestartConfig().overrideRestartWriteInterval(outputInterval);
-
-        asImp_().createGrids_();
-        asImp_().filterConnections_();
-        asImp_().updateOutputDir_();
-        asImp_().finalizeInit_();
-
-        if (enableExperiments) {
-            Opm::RelpermDiagnostics relpermDiagnostics;
-            relpermDiagnostics.diagnosis(*eclState_, *deck_, asImp_().grid());
-        }
     }
 
     /*!
@@ -538,6 +528,19 @@ public:
     std::unordered_set<std::string> defunctWellNames() const
     { return std::unordered_set<std::string>(); }
 
+protected:
+    void callImplementationInit()
+    {
+        asImp_().createGrids_();
+        asImp_().filterConnections_();
+        asImp_().updateOutputDir_();
+        asImp_().finalizeInit_();
+
+        if (enableExperiments) {
+            Opm::RelpermDiagnostics relpermDiagnostics;
+            relpermDiagnostics.diagnosis(*eclState_, *deck_, asImp_().grid());
+        }
+    }
 private:
     void updateOutputDir_()
     {

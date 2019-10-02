@@ -81,10 +81,11 @@ private:
     static const int dimension = Grid::dimension;
 
 public:
-    /*!
-     * \brief Inherit the constructors from the base class.
-     */
-    using EclBaseVanguard<TypeTag>::EclBaseVanguard;
+    EclAluGridVanguard(Simulator& simulator)
+        : EclBaseVanguard<TypeTag>(simulator)
+    {
+        this->callImplementationInit();
+    }
 
     ~EclAluGridVanguard()
     {
