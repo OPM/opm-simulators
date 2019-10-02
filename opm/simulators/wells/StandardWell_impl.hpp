@@ -3827,4 +3827,216 @@ namespace Opm
         }
         connectionRates_[perf][this->contiPolymerMWEqIdx] = Base::restrictEval(cq_s_polymw);
     }
-}
+
+
+
+
+
+
+    template<typename TypeTag>
+    boost::optional<double>
+    StandardWell<TypeTag>::
+    robustSolveBhpAtThpLimitProd(const Simulator& ebos_simulator,
+                                 const SummaryState& summary_state,
+                                 DeferredLogger& deferred_logger) const
+    {
+        // Given a VFP function returning bhp as a function of phase
+        // rates and thp:
+        //     fbhp(rates, thp),
+        // a function extracting the particular flow rate used for VFP
+        // lookups:
+        //     flo(rates)
+        // and the inflow function (assuming the reservoir is fixed):
+        //     frates(bhp)
+        // we want to solve the equation:
+        //     fbhp(frates(bhp, thplimit)) - bhp = 0
+        // for bhp.
+        //
+        // This may result in 0, 1 or 2 solutions. If two solutions,
+        // the one corresponding to the lowest bhp (and therefore
+        // highest rate) is returned.
+        //
+        // In order to detect these situations, we will find piecewise
+        // linear approximations both to the inverse of the frates
+        // function and to the fbhp function.
+        //
+        // We first take the FLO sample points of the VFP curve, and
+        // find the corresponding bhp values by solving the equation:
+        //     flo(frates(bhp)) - flo_sample = 0
+        // for bhp, for each flo_sample. The resulting (flo_sample,
+        // bhp_sample) values give a piecewise linear approximation to
+        // the true inverse inflow function, at the same flo values as
+        // the VFP data. We also keep the computed frates(bhp_sample)
+        // values, for use in the next step.
+        //
+        // Then we extract a piecewise linear approximation from the
+        // multilinear fbhp() by evaluating it at the flo_sample
+        // points, with fractions given by the frates(bhp_sample)
+        // values.
+        //
+        // When we have both piecewise linear curves defined on the
+        // same flo_sample points, it is easy to distinguish between
+        // the 0, 1 or 2 solution cases, and obtain the right interval
+        // in which to solve for the solution we want (with highest
+        // flow in case of 2 solutions.
+
+        // Make the fbhp() function.
+        const auto& controls = well_ecl_.productionControls(summary_state);
+        const auto& table = *(vfp_properties_->getProd()->getTable(controls.vfp_table_number));
+        const double vfp_ref_depth = table.getDatumDepth();
+        const double rho = perf_densities_[0]; // Use the density at the top perforation.
+        const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
+        auto fbhp = [this, &controls, dp](const std::vector<double>& rates) {
+            assert(rates.size() == 3);
+            return this->vfp_properties_->getProd()
+            ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], controls.thp_limit, controls.alq_value) - dp;
+        };
+
+        // Make the flo() function.
+        auto flo_type = table.getFloType();
+        auto flo = [flo_type](const std::vector<double>& rates) {
+            return detail::getFlo(rates[Water], rates[Oil], rates[Gas], flo_type);
+        };
+
+        // Make the frates() function.
+        auto frates = [this, &ebos_simulator, &deferred_logger](const double bhp) {
+            // Not solving the well equations here, which means we are
+            // calculating at the current Fg/Fw values of the
+            // well. This does not matter unless the well is
+            // crossflowing, and then it is likely still a good
+            // approximation.
+            std::vector<double> rates(3);
+            computeWellRatesWithBhp(ebos_simulator, bhp, rates, deferred_logger);
+            return rates;
+        };
+
+        // Get the flo samples, add extra samples at low rates and bhp
+        // limit point if necessary. Then the sign must be flipped
+        // since the VFP code expects that production flo values are
+        // negative.
+        std::vector<double> flo_samples = table.getFloAxis();
+        if (flo_samples[0] > 0.0) {
+            const double f0 = flo_samples[0];
+            flo_samples.insert(flo_samples.begin(), { 0.0, f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
+        }
+        const double flo_bhp_limit = -flo(frates(controls.bhp_limit));
+        if (flo_samples.back() < flo_bhp_limit) {
+            flo_samples.push_back(flo_bhp_limit);
+        }
+        for (double& x : flo_samples) {
+            x = -x;
+        }
+
+        // Find bhp values for inflow relation corresponding to flo samples.
+        std::vector<double> bhp_samples;
+        for (double flo_sample : flo_samples) {
+            if (flo_sample < -flo_bhp_limit) {
+                // We would have to go under the bhp limit to obtain a
+                // flow of this magnitude. We associate all such flows
+                // with simply the bhp limit. The first one
+                // encountered is considered valid, the rest not. They
+                // are therefore skipped.
+                bhp_samples.push_back(controls.bhp_limit);
+                break;
+            }
+            auto eq = [&flo, &frates, flo_sample](double bhp) {
+                return flo(frates(bhp)) - flo_sample;
+            };
+            // TODO: replace hardcoded low/high limits.
+            const double low = 10.0 * unit::barsa;
+            const double high = 400.0 * unit::barsa;
+            const int max_iteration = 50;
+            const double flo_tolerance = 1e-6 * std::fabs(flo_samples.back());
+            int iteration = 0;
+            try {
+                const double solved_bhp = RegulaFalsi<>::
+                    solve(eq, low, high, max_iteration, flo_tolerance, iteration);
+                bhp_samples.push_back(solved_bhp);
+            }
+            catch (...) {
+                // Use previous value (or max value if at start) if we failed.
+                bhp_samples.push_back(bhp_samples.empty() ? high : bhp_samples.back());
+                deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_EXTRACT_SAMPLES",
+                                        "Robust bhp(thp) solve failed extracting bhp values at flo samples for well " + name());
+            }
+        }
+
+        // Find bhp values for VFP relation corresponding to flo samples.
+        const int num_samples = bhp_samples.size(); // Note that this can be smaller than flo_samples.size()
+        std::vector<double> fbhp_samples(num_samples);
+        for (int ii = 0; ii < num_samples; ++ii) {
+            fbhp_samples[ii] = fbhp(frates(bhp_samples[ii]));
+        }
+// #define EXTRA_THP_DEBUGGING
+#ifdef EXTRA_THP_DEBUGGING
+        std::string dbgmsg;
+        dbgmsg += "flo: ";
+        for (int ii = 0; ii < num_samples; ++ii) {
+            dbgmsg += "  " + std::to_string(flo_samples[ii]);
+        }
+        dbgmsg += "\nbhp: ";
+        for (int ii = 0; ii < num_samples; ++ii) {
+            dbgmsg += "  " + std::to_string(bhp_samples[ii]);
+        }
+        dbgmsg += "\nfbhp: ";
+        for (int ii = 0; ii < num_samples; ++ii) {
+            dbgmsg += "  " + std::to_string(fbhp_samples[ii]);
+        }
+        OpmLog::debug(dbgmsg);
+#endif // EXTRA_THP_DEBUGGING
+
+        // Look for sign changes for the (fbhp_samples - bhp_samples) piecewise linear curve.
+        // We only look at the valid
+        int sign_change_index = -1;
+        for (int ii = 0; ii < num_samples - 1; ++ii) {
+            const double curr = fbhp_samples[ii] - bhp_samples[ii];
+            const double next = fbhp_samples[ii + 1] - bhp_samples[ii + 1];
+            if (curr * next < 0.0) {
+                // Sign change in the [ii, ii + 1] interval.
+                sign_change_index = ii; // May overwrite, thereby choosing the highest-flo solution.
+            }
+        }
+
+        // Handle the no solution case.
+        if (sign_change_index == -1) {
+            return boost::optional<double>();
+        }
+
+        // Solve for the proper solution in the given interval.
+        auto eq = [&fbhp, &frates](double bhp) {
+            return fbhp(frates(bhp)) - bhp;
+        };
+        // TODO: replace hardcoded low/high limits.
+        const double low = bhp_samples[sign_change_index + 1];
+        const double high = bhp_samples[sign_change_index];
+        const int max_iteration = 50;
+        const double bhp_tolerance = 0.01 * unit::barsa;
+        int iteration = 0;
+        if (low == high) {
+            // We are in the high flow regime where the bhp_samples
+            // are all equal to the bhp_limit.
+            assert(low == controls.bhp_limit);
+            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
+                                    "Robust bhp(thp) solve failed for well " + name());
+            return boost::optional<double>();
+        }
+        try {
+            const double solved_bhp = RegulaFalsi<>::
+                solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
+#ifdef EXTRA_THP_DEBUGGING
+            OpmLog::debug("*****    " + name() + "    solved_bhp = " + std::to_string(solved_bhp)
+                          + "    flo_bhp_limit = " + std::to_string(flo_bhp_limit));
+#endif // EXTRA_THP_DEBUGGING
+            return solved_bhp;
+        }
+        catch (...) {
+            // Use previous value (or max value if at start) if we failed.
+            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
+                                    "Robust bhp(thp) solve failed for well " + name());
+            return boost::optional<double>();
+        }
+
+    }
+
+
+} // namespace Opm
