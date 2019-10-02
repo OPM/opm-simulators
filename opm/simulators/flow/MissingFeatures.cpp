@@ -467,6 +467,14 @@ namespace MissingFeatures {
             "WSEGTABL",
             "WTEMP",
             "WTRACER",
+            "WSURFACT",
+            "WTAD",
+            "WTEMPQ",
+            "WTHPMAX",
+            "WTMULT",
+            "WVFPDP",
+            "WVFPEXP",
+            "WWPAVE",
             "ZIPPY2",
             "ZIPP2OFF"};
 
