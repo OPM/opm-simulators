@@ -478,12 +478,13 @@ private:
             tranz.data[0] = 0.0;
         }
 
-        const auto& globalGridView = globalGrid_.leafGridView();
+        typedef typename Grid :: LeafGridView  GlobalGridView;
+        const GlobalGridView& globalGridView = globalGrid_.leafGridView();
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
-        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
+        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView> ElementMapper;
         ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
 #else
-        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
+        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView, Dune::MCMGElementLayout> ElementMapper;
         ElementMapper globalElemMapper(globalGridView);
 #endif
 
@@ -576,13 +577,14 @@ private:
         // Checked when writing NNC transmissibilities from the simulation.
         std::sort(nncData.begin(), nncData.end(), nncCompare);
 
-        const auto& globalGridView = globalGrid_.leafGridView();
+        typedef typename Grid :: LeafGridView  GlobalGridView;
+        const GlobalGridView& globalGridView = globalGrid_.leafGridView();
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
-        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
+        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView> ElementMapper;
         ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
 
 #else
-        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
+        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView, Dune::MCMGElementLayout> ElementMapper;
         ElementMapper globalElemMapper(globalGridView);
 #endif
 
