@@ -885,7 +885,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    addWellContributions(Mat& /* mat */) const
+    addWellContributions(SparseMatrixAdapter& /* jacobian */) const
     {
         OPM_THROW(std::runtime_error, "addWellContributions is not supported by multisegment well yet");
     }

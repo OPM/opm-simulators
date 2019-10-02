@@ -58,6 +58,7 @@ namespace Opm
         using typename Base::ModelParameters;
         using typename Base::Indices;
         using typename Base::RateConverterType;
+        using typename Base::SparseMatrixAdapter;
 
         using Base::numEq;
 
@@ -110,7 +111,6 @@ namespace Opm
         using Base::Oil;
         using Base::Gas;
 
-        using typename Base::Mat;
         using typename Base::BVector;
         using typename Base::Eval;
 
@@ -191,7 +191,7 @@ namespace Opm
                                                  const WellState& well_state,
                                                  Opm::DeferredLogger& deferred_logger) override; // should be const?
 
-        virtual void  addWellContributions(Mat& mat) const override;
+        virtual void  addWellContributions(SparseMatrixAdapter& mat) const override;
 
         /// \brief Wether the Jacobian will also have well contributions in it.
         virtual bool jacobianContainsWellContributions() const override
