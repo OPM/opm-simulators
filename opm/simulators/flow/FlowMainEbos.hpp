@@ -295,15 +295,15 @@ namespace Opm
               ss << " #         #######    ######       #   #    \n\n";
               ss << "Flow is a simulator for fully implicit three-phase black-oil flow,";
               ss << " and is part of OPM.\nFor more information visit: https://opm-project.org \n\n";
-              ss << "Flow Version  =  " + version + "\n";
+              ss << "Flow Version     =  " + version + "\n";
               if (uname(&arch) == 0) {
-                 ss << "System        =  " << arch.nodename << " (Number of logical cores: " << num_cpu;
-                 ss << ", RAM: " << std::fixed << std::setprecision (2) << mem_size << " MB) \n";
-                 ss << "Architecture  =  " << arch.sysname << " " << arch.machine << " (Release: " << arch.release;
-                 ss << ", Version: " << arch.version << " )\n";
+                 ss << "Machine name     =  " << arch.nodename << " (Number of logical cores: " << num_cpu;
+                 ss << ", Memory size: " << std::fixed << std::setprecision (2) << mem_size << " MB) \n";
+                 ss << "Operating system =  " << arch.sysname << " " << arch.machine << " (Kernel: " << arch.release;
+                 ss << ", " << arch.version << " )\n";
                  }
               if (user) {
-                 ss << "User          =  " << user << std::endl;
+                 ss << "User             =  " << user << std::endl;
                  }
               ss << "Simulation started on " << tmstr << " hrs\n";
 
