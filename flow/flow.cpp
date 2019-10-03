@@ -340,6 +340,8 @@ int main(int argc, char** argv)
                 parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
             }
 
+            Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout);
+
             deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
             Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
             if ( outputCout )

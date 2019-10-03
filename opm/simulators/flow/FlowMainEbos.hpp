@@ -240,7 +240,6 @@ namespace Opm
 
                 setupParallelism();
                 setupEbosSimulator(output_cout);
-                printPRTHeader(output_cout);
                 runDiagnostics(output_cout);
                 createSimulator();
 
@@ -271,33 +270,9 @@ namespace Opm
             }
         }
 
-    protected:
-        void setupParallelism()
-        {
-            // determine the rank of the current process and the number of processes
-            // involved in the simulation. MPI must have already been initialized
-            // here. (yes, the name of this method is misleading.)
-#if HAVE_MPI
-            MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
-            MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
-#else
-            mpi_rank_ = 0;
-            mpi_size_ = 1;
-#endif
-
-#if _OPENMP
-            // if openMP is available, default to 2 threads per process.
-            if (!getenv("OMP_NUM_THREADS"))
-                omp_set_num_threads(std::min(2, omp_get_num_procs()));
-#endif
-
-            typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
-            ThreadManager::init();
-        }
-
         // Print an ASCII-art header to the PRT and DEBUG files.
         // \return Whether unkown keywords were seen during parsing.
-        void printPRTHeader(bool output_cout)
+        static void printPRTHeader(bool output_cout)
         {
           if (output_cout) {
               const std::string version = moduleVersion();
@@ -338,6 +313,32 @@ namespace Opm
               OpmLog::note(ss.str());
           }
         }
+
+    protected:
+        void setupParallelism()
+        {
+            // determine the rank of the current process and the number of processes
+            // involved in the simulation. MPI must have already been initialized
+            // here. (yes, the name of this method is misleading.)
+#if HAVE_MPI
+            MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
+            MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
+#else
+            mpi_rank_ = 0;
+            mpi_size_ = 1;
+#endif
+
+#if _OPENMP
+            // if openMP is available, default to 2 threads per process.
+            if (!getenv("OMP_NUM_THREADS"))
+                omp_set_num_threads(std::min(2, omp_get_num_procs()));
+#endif
+
+            typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+            ThreadManager::init();
+        }
+
+
 
         void mergeParallelLogFiles(bool output_to_files)
         {
@@ -495,7 +496,7 @@ namespace Opm
             simulator_.reset(new Simulator(*ebosSimulator_));
         }
 
-        unsigned long long getTotalSystemMemory()
+        static unsigned long long getTotalSystemMemory()
         {
             long pages = sysconf(_SC_PHYS_PAGES);
             long page_size = sysconf(_SC_PAGE_SIZE);
