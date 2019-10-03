@@ -1740,29 +1740,13 @@ namespace Opm
             }
             case Well2::ProducerCMode::THP:
             {
-                std::vector<double> rates(3, 0.0);
-                auto eq = [this, &ebos_simulator, &rates, &deferred_logger, &well, &summaryState](const double bhp) {
-                    computeWellRatesWithBhp(ebos_simulator, bhp, rates, deferred_logger);
-                    const double bhp_calculated = calculateBhpFromThp(rates, well, summaryState, deferred_logger);
-                    return bhp_calculated - bhp;
-                };
-
-                try {
-                    int iteration = 0;
-                    const double solved_bhp = RegulaFalsi<>::solve(eq,
-                                                                   controls.bhp_limit,
-                                                                   400e5,
-                                                                   100,
-                                                                   1000.0,
-                                                                   iteration);
-                    well_state.bhp()[well_index] = solved_bhp;
-                }
-                catch (...) {
+                auto bhp = robustSolveBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
+                if (bhp) {
+                    well_state.bhp()[well_index] = *bhp;
+                } else {
                     deferred_logger.warning("FAILURE_GETTING_CONVERGED_BHP",
                                             "Failed to find BHP when switching to THP control for well " + name());
                 }
-                break;
-
             }
             case Well2::ProducerCMode::GRUP:
             {
@@ -2763,128 +2747,22 @@ namespace Opm
     template<typename TypeTag>
     std::vector<double>
     StandardWell<TypeTag>::
-    computeWellPotentialWithTHP(const Simulator& ebosSimulator,
-                                const std::vector<Scalar>& B_avg,
-                                const double initial_bhp, // bhp from BHP constraints
-                                const std::vector<double>& initial_potential,
-                                Opm::DeferredLogger& deferred_logger)
+    computeWellPotentialWithTHP(const Simulator& ebos_simulator,
+                                Opm::DeferredLogger& deferred_logger) const
     {
-        // TODO: pay attention to the situation that finally the potential is calculated based on the bhp control
-        // TODO: should we consider the bhp constraints during the iterative process?
-        const int np = number_of_phases_;
+        std::vector<double> potentials(number_of_phases_, 0.0);
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
 
-        assert( np == int(initial_potential.size()) );
-
-        std::vector<double> potentials = initial_potential;
-        std::vector<double> old_potentials = potentials; // keeping track of the old potentials
-
-        double bhp = initial_bhp;
-        double old_bhp = bhp;
-
-        bool converged = false;
-        const int max_iteration = 1000;
-        const double bhp_tolerance = 1000.; // 1000 pascal
-
-        int iteration = 0;
-
-        const auto& well = Base::wellEcl();
-        const auto& summaryState = ebosSimulator.vanguard().summaryState();
-
-
-        std::vector<double> rates(3, 0.0);
-        auto eq = [this, &ebosSimulator, &rates, &deferred_logger, &well, &summaryState](const double bhp) {
-            computeWellRatesWithBhp(ebosSimulator, bhp, rates, deferred_logger);
-            const double bhp_calculated = calculateBhpFromThp(rates, well, summaryState, deferred_logger);
-            return bhp_calculated - bhp;
-        };
-
-        try {
-            const double solved_bhp = RegulaFalsi<>::solve(eq,
-                                                           initial_bhp,
-                                                           400e5,
-                                                           max_iteration,
-                                                           bhp_tolerance,
-                                                           iteration);
-            computeWellRatesWithBhp(ebosSimulator, solved_bhp, potentials, deferred_logger);
-        }
-        catch (...) {
+        auto bhp_at_thp_limit = robustSolveBhpAtThpLimitProd(ebos_simulator, summary_state, deferred_logger);
+        if (bhp_at_thp_limit) {
+            const auto& controls = well_ecl_.productionControls(summary_state);
+            const double bhp = std::max(*bhp_at_thp_limit, controls.bhp_limit);
+            computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
+        } else {
             deferred_logger.warning("FAILURE_GETTING_CONVERGED_POTENTIAL",
-                    "Failed in getting converged for the potential calculation for well " + name());
+                                    "Failed in getting converged for the potential calculation for well " + name());
         }
 
-        /*
-
-        while ( !converged && iteration < max_iteration ) {
-            // for each iteration, we calculate the bhp based on the rates/potentials with thp constraints
-            // with considering the bhp value from the bhp limits. At the beginning of each iteration,
-            // we initialize the bhp to be the bhp value from the bhp limits. Then based on the bhp values calculated
-            // from the thp constraints, we decide the effective bhp value for well potential calculation.
-            bhp = initial_bhp;
-
-
-            const Opm::PhaseUsage& pu = phaseUsage();
-
-            std::vector<double> rates(3, 0.0);
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                rates[ Water ] = potentials[pu.phase_pos[ Water ] ];
-            }
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                rates[ Oil ] = potentials[pu.phase_pos[ Oil ] ];
-            }
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                rates[ Gas ] = potentials[pu.phase_pos[ Gas ] ];
-            }
-
-            const double bhp_calculated = calculateBhpFromThp(rates, well, summaryState, deferred_logger);
-
-            if (well_type_ == INJECTOR && bhp_calculated < bhp ) {
-                bhp = bhp_calculated;
-            }
-
-            if (well_type_ == PRODUCER && bhp_calculated > bhp) {
-                bhp = bhp_calculated;
-            }
-
-
-            // there should be always some available bhp/thp constraints there
-            if (std::isinf(bhp) || std::isnan(bhp)) {
-                OPM_DEFLOG_THROW(std::runtime_error, "Unvalid bhp value obtained during the potential calculation for well " << name(), deferred_logger);
-            }
-
-            converged = std::abs(old_bhp - bhp) < bhp_tolerance;
-
-            computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, potentials, deferred_logger);
-
-            // checking whether the potentials have valid values
-            for (const double value : potentials) {
-                if (std::isinf(value) || std::isnan(value)) {
-                    OPM_DEFLOG_THROW(std::runtime_error, "Unvalid potential value obtained during the potential calculation for well " << name(), deferred_logger);
-                }
-            }
-
-            if (!converged) {
-                old_bhp = bhp;
-                for (int p = 0; p < np; ++p) {
-                    // TODO: improve the interpolation, will it always be valid with the way below?
-                    // TODO: finding better paramters, better iteration strategy for better convergence rate.
-                    const double potential_update_damping_factor = 0.9;
-                    potentials[p] = potential_update_damping_factor * potentials[p] + (1.0 - potential_update_damping_factor) * old_potentials[p];
-                    old_potentials[p] = potentials[p];
-                }
-            }
-
-            ++iteration;
-        }
-
-        if (!converged) {
-            // TODO: temporary approach to recover the running of prediction case
-            // more sophisicated treatment should be developed to handle the situation in a general way
-            // OPM_DEFLOG_THROW(std::runtime_error, "Failed in getting converged for the potential calculation for well " << name(), deferred_logger);
-            deferred_logger.warning("FAILURE_GETTING_CONVERGED_POTENTIAL",
-                    "Failed in getting converged for the potential calculation for well " + name());
-        }
-
-        */
         return potentials;
     }
 
@@ -2916,35 +2794,16 @@ namespace Opm
         const int np = number_of_phases_;
         well_potentials.resize(np, 0.0);
 
-        // get the bhp value based on the bhp constraints
-        const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        const double bhp = well.mostStrictBhpFromBhpLimits(summaryState);
-
         // does the well have a THP related constraint?
+        const auto& summaryState = ebosSimulator.vanguard().summaryState();
         if ( !well.Base::wellHasTHPConstraints(summaryState) ) {
+            // get the bhp value based on the bhp constraints
+            const double bhp = well.mostStrictBhpFromBhpLimits(summaryState);
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
             well.computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
         } else {
             // the well has a THP related constraint
-            // checking whether a well is newly added, it only happens at the beginning of the report step
-            if ( !well_state.effectiveEventsOccurred(index_of_well_) ) {
-                for (int p = 0; p < np; ++p) {
-                    // This is dangerous for new added well
-                    // since we are not handling the initialization correctly for now
-                    well_potentials[p] = well_state.wellRates()[index_of_well_ * np + p];
-                }
-            } else {
-                // We need to generate a reasonable rates to start the iteration process
-                well.computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
-                for (double& value : well_potentials) {
-                    // make the value a little safer in case the BHP limits are default ones
-                    // TODO: a better way should be a better rescaling based on the investigation of the VFP table.
-                    const double rate_safety_scaling_factor = 0.00001;
-                    value *= rate_safety_scaling_factor;
-                }
-            }
-
-            well_potentials = well.computeWellPotentialWithTHP(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
+            well_potentials = well.computeWellPotentialWithTHP(ebosSimulator, deferred_logger);
         }
     }
 
