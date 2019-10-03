@@ -810,13 +810,18 @@ namespace Opm
                                 WellTestState& well_test_state,
                                 Opm::DeferredLogger& deferred_logger) const
     {
-        if (!isOperable() && !wellIsStopped_) {
-            well_test_state.closeWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
-            if (write_message_to_opmlog) {
-                // TODO: considering auto shut in?
-                const std::string msg = "well " + name()
-                             + std::string(" will be shut as it can not operate under current reservoir condition");
-                deferred_logger.info(msg);
+        if (!isOperable() || wellIsStopped_) {
+            if (well_test_state.hasWellClosed(name(), WellTestConfig::Reason::ECONOMIC) ||
+                well_test_state.hasWellClosed(name(), WellTestConfig::Reason::PHYSICAL) ) {
+                // Already closed, do nothing.
+            } else {
+                well_test_state.closeWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
+                if (write_message_to_opmlog) {
+                    const std::string action = well_ecl_.getAutomaticShutIn() ? "shut" : "stopped";
+                    const std::string msg = "Well " + name()
+                        + " will be " + action + " as it can not operate under current reservoir conditions.";
+                    deferred_logger.info(msg);
+                }
             }
         }
 
