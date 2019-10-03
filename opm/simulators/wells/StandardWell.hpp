@@ -361,10 +361,7 @@ namespace Opm
                                               Opm::DeferredLogger& deferred_logger);
 
         std::vector<double> computeWellPotentialWithTHP(const Simulator& ebosSimulator,
-                                                        const std::vector<Scalar>& B_avg,
-                                                        const double initial_bhp, // bhp from BHP constraints
-                                                        const std::vector<double>& initial_potential,
-                                                        Opm::DeferredLogger& deferred_logger);
+                                                        Opm::DeferredLogger& deferred_logger) const;
 
         template <class ValueType>
         ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const Well2& well, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger) const;
