@@ -681,6 +681,7 @@ namespace Opm {
                         continue;
                     } else {
                         // stopped wells are added to the container but marked as stopped
+                        well_state_.thp()[w] = 0.;
                         wellIsStopped = true;
                     }
                 }

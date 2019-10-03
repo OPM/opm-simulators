@@ -270,7 +270,7 @@ namespace Opm
             wellIsStopped_ = false;
         }
 
-        bool wellIsStopped() {
+        bool wellIsStopped() const {
             return wellIsStopped_;
         }
 

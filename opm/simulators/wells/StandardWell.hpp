@@ -283,6 +283,8 @@ namespace Opm
         mutable std::vector<double> ipr_a_;
         mutable std::vector<double> ipr_b_;
 
+        bool changed_to_stopped_this_step_ = false;
+
         const EvalWell& getBhp() const;
 
         EvalWell getQs(const int comp_idx) const;

@@ -509,7 +509,7 @@ namespace Opm
 
         checkWellOperability(ebosSimulator, well_state, deferred_logger);
 
-        if (!this->isOperable()) return;
+        if (!this->isOperable() && !this->wellIsStopped()) return;
 
         // clear all entries
         duneB_ = 0.0;
@@ -1272,7 +1272,7 @@ namespace Opm
                     WellState& well_state,
                     Opm::DeferredLogger& deferred_logger) const
     {
-        if (!this->isOperable()) return;
+        if (!this->isOperable() && !this->wellIsStopped()) return;
 
         updatePrimaryVariablesNewton(dwells, well_state);
 
@@ -1544,7 +1544,7 @@ namespace Opm
     updateThp(WellState& well_state, Opm::DeferredLogger& deferred_logger) const
     {
         // When there is no vaild VFP table provided, we set the thp to be zero.
-        if (!this->isVFPActive(deferred_logger)) {
+        if (!this->isVFPActive(deferred_logger) || this->wellIsStopped()) {
             well_state.thp()[index_of_well_] = 0.;
             return;
         }
@@ -1592,6 +1592,7 @@ namespace Opm
             for (int p = 0; p<np; ++p) {
                 well_state.wellRates()[well_index*np + p] = 0.0;
             }
+            well_state.thp()[well_index] = 0.0;
             return;
         }
 
@@ -1923,6 +1924,10 @@ namespace Opm
             return;
         }
 
+        if (this->wellIsStopped() && !changed_to_stopped_this_step_) {
+            return;
+        }
+
         const bool old_well_operable = this->operability_status_.isOperable();
 
         updateWellOperability(ebos_simulator, well_state, deferred_logger);
@@ -1930,9 +1935,18 @@ namespace Opm
         const bool well_operable = this->operability_status_.isOperable();
 
         if (!well_operable && old_well_operable) {
-            deferred_logger.info(" well " + name() + " gets SHUT during iteration ");
+            if (well_ecl_.getAutomaticShutIn()) {
+                deferred_logger.info(" well " + name() + " gets SHUT during iteration ");
+            } else {
+                if (!this->wellIsStopped()) {
+                    deferred_logger.info(" well " + name() + " gets STOPPED during iteration ");
+                    this->stopWell();
+                    changed_to_stopped_this_step_ = true;
+                }
+            }
         } else if (well_operable && !old_well_operable) {
             deferred_logger.info(" well " + name() + " gets REVIVED during iteration ");
+            changed_to_stopped_this_step_ = false;
         }
     }
 
@@ -2045,11 +2059,13 @@ namespace Opm
             }
         } else {
             this->operability_status_.can_obtain_bhp_with_thp_limit = false;
-            const double thp_limit = this->getTHPConstraint(summaryState);
-            deferred_logger.debug(" COULD NOT find bhp value under thp_limit "
-                          + std::to_string(unit::convert::to(thp_limit, unit::barsa))
-                          + " bars for well " + name() + ", the well might need to be closed ");
             this->operability_status_.obey_bhp_limit_with_thp_limit = false;
+            if (!this->wellIsStopped()) {
+                const double thp_limit = this->getTHPConstraint(summaryState);
+                deferred_logger.debug(" could not find bhp value at thp limit "
+                                      + std::to_string(unit::convert::to(thp_limit, unit::barsa))
+                                      + " bar for well " + name() + ", the well might need to be closed ");
+            }
         }
     }
 
@@ -2582,7 +2598,7 @@ namespace Opm
     StandardWell<TypeTag>::
     solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger)
     {
-        if (!this->isOperable()) return;
+        if (!this->isOperable() && !this->wellIsStopped()) return;
 
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
@@ -2633,7 +2649,7 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
-        if (!this->isOperable()) return;
+        if (!this->isOperable() && !this->wellIsStopped()) return;
 
         if ( param_.matrix_add_well_contributions_ )
         {
@@ -2663,7 +2679,7 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(BVector& r) const
     {
-        if (!this->isOperable()) return;
+        if (!this->isOperable() && !this->wellIsStopped()) return;
 
         assert( invDrw_.size() == invDuneD_.N() );
 
@@ -2682,7 +2698,7 @@ namespace Opm
     StandardWell<TypeTag>::
     recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     {
-        if (!this->isOperable()) return;
+        if (!this->isOperable() && !this->wellIsStopped()) return;
 
         BVectorWell resWell = resWell_;
         // resWell = resWell - B * x
@@ -2702,7 +2718,7 @@ namespace Opm
                                           WellState& well_state,
                                           Opm::DeferredLogger& deferred_logger) const
     {
-        if (!this->isOperable()) return;
+        if (!this->isOperable() && !this->wellIsStopped()) return;
 
         BVectorWell xw(1);
         xw[0].resize(numWellEq_);
@@ -2820,6 +2836,12 @@ namespace Opm
                           std::vector<double>& well_potentials,
                           Opm::DeferredLogger& deferred_logger) // const
     {
+        const int np = number_of_phases_;
+        well_potentials.resize(np, 0.0);
+
+        if (this->wellIsStopped()) {
+            return;
+        }
 
         // creating a copy of the well itself, to avoid messing up the explicit informations
         // during this copy, the only information not copied properly is the well controls
@@ -2831,9 +2853,6 @@ namespace Opm
         // initialize the primary variables in Evaluation, which is used in computePerfRate for computeWellPotentials
         // TODO: for computeWellPotentials, no derivative is required actually
         well.initPrimaryVariablesEvaluation();
-
-        const int np = number_of_phases_;
-        well_potentials.resize(np, 0.0);
 
         // does the well have a THP related constraint?
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
@@ -2858,7 +2877,7 @@ namespace Opm
     StandardWell<TypeTag>::
     updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& deferred_logger) const
     {
-        if (!this->isOperable()) return;
+        if (!this->isOperable() && !this->wellIsStopped()) return;
 
         const int well_index = index_of_well_;
         const int np = number_of_phases_;
@@ -3724,8 +3743,7 @@ namespace Opm
         // for bhp, for each flo_sample. The resulting (flo_sample,
         // bhp_sample) values give a piecewise linear approximation to
         // the true inverse inflow function, at the same flo values as
-        // the VFP data. We also keep the computed frates(bhp_sample)
-        // values, for use in the next step.
+        // the VFP data.
         //
         // Then we extract a piecewise linear approximation from the
         // multilinear fbhp() by evaluating it at the flo_sample
@@ -3736,7 +3754,7 @@ namespace Opm
         // same flo_sample points, it is easy to distinguish between
         // the 0, 1 or 2 solution cases, and obtain the right interval
         // in which to solve for the solution we want (with highest
-        // flow in case of 2 solutions.
+        // flow in case of 2 solutions).
 
         // Make the fbhp() function.
         const auto& controls = well_ecl_.productionControls(summary_state);
