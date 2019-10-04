@@ -136,7 +136,7 @@ namespace Opm {
 
       // Get all the carter tracy aquifer properties data and put it in aquifers vector
       const AquiferCT aquiferct = AquiferCT(eclState,deck);
-      const Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
+      const Aquancon aquifer_connect = Aquancon(eclState, deck);
 
       std::vector<AquiferCT::AQUCT_data> aquifersData = aquiferct.getAquifers();
       std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
@@ -163,7 +163,7 @@ namespace Opm {
 
       // Get all the carter tracy aquifer properties data and put it in aquifers vector
       const Aquifetp aquifetp = Aquifetp(deck);
-      const Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
+      const Aquancon aquifer_connect = Aquancon(eclState, deck);
 
       std::vector<Aquifetp::AQUFETP_data> aquifersData = aquifetp.getAquifers();
       std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
