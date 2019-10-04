@@ -2039,19 +2039,18 @@ namespace Opm
     StandardWell<TypeTag>::
     checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger)
     {
-        const Well2& well = Base::wellEcl();
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
-        const double obtain_bhp =  calculateBHPWithTHPTargetIPR(well, summaryState, deferred_logger);
+        const auto obtain_bhp = robustSolveBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
 
-        if (obtain_bhp > 0.) {
+        if (obtain_bhp) {
             this->operability_status_.can_obtain_bhp_with_thp_limit = true;
 
             const double  bhp_limit = mostStrictBhpFromBhpLimits(summaryState);
-            this->operability_status_.obey_bhp_limit_with_thp_limit = (obtain_bhp >= bhp_limit);
+            this->operability_status_.obey_bhp_limit_with_thp_limit = (*obtain_bhp >= bhp_limit);
 
             const double thp_limit = this->getTHPConstraint(summaryState);
-            if (obtain_bhp < thp_limit) {
-                const std::string msg = " obtained bhp " + std::to_string(unit::convert::to(obtain_bhp, unit::barsa))
+            if (*obtain_bhp < thp_limit) {
+                const std::string msg = " obtained bhp " + std::to_string(unit::convert::to(*obtain_bhp, unit::barsa))
                                         + " bars is SMALLER than thp limit "
                                         + std::to_string(unit::convert::to(thp_limit, unit::barsa))
                                         + " bars as a producer for well " + name();
@@ -2150,70 +2149,6 @@ namespace Opm
     openCrossFlowAvoidSingularity(const Simulator& ebos_simulator) const
     {
         return !getAllowCrossFlow() && allDrawDownWrongDirection(ebos_simulator);
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    updateWellStateWithTHPTargetIPR(const Simulator& ebos_simulator,
-                                    WellState& well_state,
-                                    Opm::DeferredLogger& deferred_logger) const
-    {
-        if (well_type_ == PRODUCER) {
-            updateWellStateWithTHPTargetIPRProducer(ebos_simulator,
-                                                    well_state,
-                                                    deferred_logger);
-        }
-
-        if (well_type_ == INJECTOR) {
-            const auto& summaryState = ebos_simulator.vanguard().summaryState();
-            well_state.thp()[index_of_well_] = this->getTHPConstraint(summaryState);
-            // TODO: more work needs to be done for the injectors here, while injectors
-            // have been okay with the current strategy relying on well control equation directly.
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    updateWellStateWithTHPTargetIPRProducer(const Simulator& ebos_simulator,
-                                            WellState& well_state,
-                                            Opm::DeferredLogger& deferred_logger) const
-    {
-        const auto& summaryState = ebos_simulator.vanguard().summaryState();
-        well_state.thp()[index_of_well_] = this->getTHPConstraint(summaryState);
-
-        const Well2& well = Base::wellEcl();
-        const double bhp = calculateBHPWithTHPTargetIPR(well, summaryState, deferred_logger);
-
-        assert(bhp > 0.0);
-
-        well_state.bhp()[index_of_well_] = bhp;
-
-        // TODO: explicit quantities are always tricky for this type of situation
-        updatePrimaryVariables(well_state, deferred_logger);
-        initPrimaryVariablesEvaluation();
-
-        std::vector<double> rates;
-        computeWellRatesWithBhp(ebos_simulator, bhp, rates, deferred_logger);
-
-        // TODO: double checke the obtained rates
-        // this is another places we might obtain negative rates
-
-        for (int p = 0; p < number_of_phases_; ++p) {
-            well_state.wellRates()[number_of_phases_ * index_of_well_ + p] = rates[p];
-        }
-
-        // TODO: there will be something need to be done for the cases not the defaulted 3 phases,
-        // like 2 phases or solvent, polymer, etc. But we are not addressing them with THP control yet.
     }
 
 
@@ -3019,35 +2954,6 @@ namespace Opm
     }
 
 
-
-    template<typename TypeTag>
-    double
-    StandardWell<TypeTag>::
-    calculateBHPWithTHPTargetIPR(const Well2& well,
-                        const SummaryState& summaryState,
-                        Opm::DeferredLogger& deferred_logger) const
-    {
-        // TODO: when well is under THP control, the BHP is dependent on the rates,
-        // the well rates is also dependent on the BHP, so it might need to do some iteration.
-        // However, when group control is involved, change of the rates might impacts other wells
-        // so iterations on a higher level will be required. Some investigation might be needed when
-        // we face problems under THP control.
-
-        //assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
-
-        // pick the density in the top layer
-        // TODO: it is possible it should be a Evaluation
-        const double rho = perf_densities_[0];
-
-        assert(well.isProducer());
-
-        const auto& controls = well.productionControls(summaryState);
-        const double vfp_ref_depth = vfp_properties_->getProd()->getTable(controls.vfp_table_number)->getDatumDepth();
-        const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-
-        return vfp_properties_->getProd()->calculateBhpWithTHPTarget(ipr_a_, ipr_b_,
-                                                                     controls.bhp_limit, controls.vfp_table_number, controls.thp_limit, controls.alq_value, dp);
-    }
 
     template<typename TypeTag>
     double

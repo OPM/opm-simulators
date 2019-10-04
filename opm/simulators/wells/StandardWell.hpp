@@ -423,15 +423,6 @@ namespace Opm
         // check whether the well is operable under THP limit with current reservoir condition
         void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger);
 
-        // update WellState based on IPR and associated VFP table
-        void updateWellStateWithTHPTargetIPR(const Simulator& ebos_simulator,
-                                             WellState& well_state,
-                                             Opm::DeferredLogger& deferred_logger) const;
-
-        void updateWellStateWithTHPTargetIPRProducer(const Simulator& ebos_simulator,
-                                                     WellState& well_state,
-                                                     Opm::DeferredLogger& deferred_logger) const;
-
         // for a well, when all drawdown are in the wrong direction, then this well will not
         // be able to produce/inject .
         bool allDrawDownWrongDirection(const Simulator& ebos_simulator) const;
@@ -447,11 +438,6 @@ namespace Opm
         // well rates, it can cause problem for THP calculation
         // TODO: looking for better alternative to avoid wrong-signed well rates
         bool openCrossFlowAvoidSingularity(const Simulator& ebos_simulator) const;
-
-        // calculate the BHP from THP target based on IPR
-        // TODO: we need to check the operablility here first, if not operable, then maybe there is
-        // no point to do this
-        double calculateBHPWithTHPTargetIPR(const Well2& well, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger) const;
 
         // relaxation factor considering only one fraction value
         static double relaxationFactorFraction(const double old_value,
