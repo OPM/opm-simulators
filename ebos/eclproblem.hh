@@ -606,7 +606,7 @@ public:
         if (enableExperiments)
             enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
         else
-            enableDriftCompensation_ = false;
+            enableDriftCompensation_ = true;
 
         enableEclOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
 
