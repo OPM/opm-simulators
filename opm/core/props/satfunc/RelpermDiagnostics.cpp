@@ -32,21 +32,21 @@ namespace Opm{
         bool hasGas     = phases.active( Phase::GAS );
         bool hasOil     = phases.active( Phase::OIL );
         bool hasSolvent = phases.active( Phase::SOLVENT );
-            
+
         if (hasWater && hasGas && !hasOil && !hasSolvent) {
             const std::string msg = "System:  Water-Gas system.";
             OpmLog::info(msg);
             fluidSystem_ = FluidSystem::WaterGas;
         }
-        if (hasWater && hasOil && !hasGas && !hasSolvent) { 
+        if (hasWater && hasOil && !hasGas && !hasSolvent) {
             const std::string msg = "System:  Oil-Water system.";
             OpmLog::info(msg);
-            fluidSystem_ = FluidSystem::OilWater; 
+            fluidSystem_ = FluidSystem::OilWater;
         }
-        if (hasOil && hasGas && !hasWater && !hasSolvent) { 
+        if (hasOil && hasGas && !hasWater && !hasSolvent) {
             const std::string msg = "System:  Oil-Gas system.";
             OpmLog::info(msg);
-            fluidSystem_ = FluidSystem::OilGas; 
+            fluidSystem_ = FluidSystem::OilGas;
         }
         if (hasOil && hasWater && hasGas && !hasSolvent) {
             const std::string msg = "System:  Black-oil system.";
@@ -115,7 +115,7 @@ namespace Opm{
             satFamily_ = SaturationFunctionFamily::FamilyI;
             const std::string msg = "Relative permeability input format: Saturation Family I.";
             OpmLog::info(msg);
-        } 
+        }
         if (!family1 && family2) {
             satFamily_ = SaturationFunctionFamily::FamilyII;
             const std::string msg = "Relative permeability input format: Saturation Family II.";
@@ -124,7 +124,7 @@ namespace Opm{
     }
 
 
- 
+
 
     void RelpermDiagnostics::tableCheck_(const EclipseState& eclState)
     {
@@ -147,7 +147,7 @@ namespace Opm{
         const TableContainer& ssfnTables    = tableManager.getSsfnTables();
         const TableContainer& miscTables    = tableManager.getMiscTables();
         const TableContainer& msfnTables    = tableManager.getMsfnTables();
-        
+
         for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
             if (tableManager.hasTables("SWOF")) {
                 swofTableCheck_(swofTables.getTable<SwofTable>(satnumIdx), satnumIdx+1);
@@ -203,7 +203,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::swofTableCheck_(const Opm::SwofTable& swofTables, 
+    void RelpermDiagnostics::swofTableCheck_(const Opm::SwofTable& swofTables,
                                              const int satnumIdx)
     {
         const auto& sw = swofTables.getSwColumn();
@@ -274,7 +274,7 @@ namespace Opm{
     }
 
     void RelpermDiagnostics::slgofTableCheck_(const Opm::SlgofTable& slgofTables,
-                                              const int satnumIdx) 
+                                              const int satnumIdx)
     {
         const auto& sl = slgofTables.getSlColumn();
         const auto& krg = slgofTables.getKrgColumn();
@@ -321,7 +321,7 @@ namespace Opm{
             const std::string msg = "In SWFN table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
             OpmLog::error(msg);
         }
-        
+
         //Check krw column.
         if (krw.front() < 0.0 || krw.back() > 1.0) {
             const std::string msg = "In SWFN table SATNUM = " + regionIdx + ", krw should be in range [0,1].";
@@ -334,7 +334,7 @@ namespace Opm{
         }
     }
 
-    
+
 
 
 
@@ -349,7 +349,7 @@ namespace Opm{
             const std::string msg = "In SGFN table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
             OpmLog::error(msg);
         }
-        
+
         //Check krg column.
         if (krg.front() < 0.0 || krg.back() > 1.0) {
             const std::string msg = "In SGFN table SATNUM = " + regionIdx + ", krg should be in range [0,1].";
@@ -399,7 +399,7 @@ namespace Opm{
             const std::string msg = "In SOF3 table SATNUM = " + regionIdx + ", first value of krog should be 0.";
             OpmLog::error(msg);
         }
-    
+
         if (krog.back() != krow.back()) {
             const std::string msg = "In SOF3 table SATNUM = " + regionIdx + ", max value of krog and krow should be the same.";
             OpmLog::error(msg);
