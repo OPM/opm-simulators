@@ -25,6 +25,7 @@
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 #include <opm/grid/utility/compressedToCartesian.hpp>
+#include <opm/grid/GridHelpers.hpp>
 
 namespace Opm {
 
