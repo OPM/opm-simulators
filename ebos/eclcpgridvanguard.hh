@@ -272,16 +272,6 @@ protected:
         globalTrans_ = nullptr;
     }
 
-    // removing some connection located in inactive grid cells
-    void filterConnections_()
-    {
-        assert(grid_);
-        Grid grid = *grid_;
-        grid.switchToGlobalView();
-        const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(grid, this->eclState().getInputGrid());
-        this->schedule().filterConnections(eclipseGrid);
-    }
-
     Grid* grid_;
     EquilGrid* equilGrid_;
     CartesianIndexMapper* cartesianIndexMapper_;

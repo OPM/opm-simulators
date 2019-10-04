@@ -532,7 +532,6 @@ protected:
     void callImplementationInit()
     {
         asImp_().createGrids_();
-        asImp_().filterConnections_();
         asImp_().updateOutputDir_();
         asImp_().finalizeInit_();
 
