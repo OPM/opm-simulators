@@ -31,11 +31,15 @@
 
 #include <opm/parser/eclipse/Units/Units.hpp>
 
-
 #include <opm/output/eclipse/Summary.hpp>
 #include <ebos/collecttoiorank.hh>
 #include <ebos/ecloutputblackoilmodule.hh>
 #include <ebos/eclwriter.hh>
+
+#include <ert/ecl/ecl_sum.h>
+#include <ert/ecl/smspec_node.h>
+#include <ert/util/ert_unique_ptr.hpp>
+#include <ert/util/util.h>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
