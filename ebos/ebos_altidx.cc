@@ -32,6 +32,7 @@
 #include "config.h"
 
 #include "ebos.hh"
+#include "startEbos.hh"
 
 namespace Opm {
 class EclAlternativeBlackOilIndexTraits
@@ -67,5 +68,5 @@ END_PROPERTIES
 int main(int argc, char **argv)
 {
     typedef TTAG(EbosAltIdxTypeTag) ProblemTypeTag;
-    return Opm::start<ProblemTypeTag>(argc, argv);
+    return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
