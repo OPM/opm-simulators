@@ -50,13 +50,10 @@
 
 BEGIN_PROPERTIES
 
-NEW_PROP_TAG(OutputMode);
 NEW_PROP_TAG(EnableDryRun);
 NEW_PROP_TAG(OutputInterval);
 NEW_PROP_TAG(UseAmg);
 NEW_PROP_TAG(EnableLoggingFalloutWarning);
-
-SET_STRING_PROP(EclFlowProblem, OutputMode, "all");
 
 // TODO: enumeration parameters. we use strings for now.
 SET_STRING_PROP(EclFlowProblem, EnableDryRun, "auto");
@@ -87,8 +84,6 @@ namespace Opm
         static int setupParameters_(int argc, char** argv)
         {
             // register the flow specific parameters
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
-                                 "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, EnableDryRun,
                                  "Specify if the simulation ought to be actually run, or just pretended to be");
             EWOMS_REGISTER_PARAM(TypeTag, int, OutputInterval,
@@ -472,7 +467,6 @@ namespace Opm
 
                 SimulatorReport successReport = simulator_->run(simtimer);
                 SimulatorReport failureReport = simulator_->failureReport();
-
                 if (output_cout) {
                     std::ostringstream ss;
                     ss << "\n\n================    End of simulation     ===============\n\n";

@@ -160,6 +160,7 @@ NEW_PROP_TAG(EclEnableAquifers);
 NEW_PROP_TAG(EclMaxTimeStepSizeAfterWellEvent);
 NEW_PROP_TAG(EclRestartShrinkFactor);
 NEW_PROP_TAG(EclEnableTuning);
+NEW_PROP_TAG(OutputMode);
 
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Opm::EclProblem<TypeTag>);
@@ -370,6 +371,10 @@ SET_SCALAR_PROP(EclBaseProblem, EclMaxTimeStepSizeAfterWellEvent, 3600*24*365.25
 SET_SCALAR_PROP(EclBaseProblem, EclRestartShrinkFactor, 3);
 SET_BOOL_PROP(EclBaseProblem, EclEnableTuning, false);
 
+SET_STRING_PROP(EclBaseProblem, OutputMode, "all");
+
+
+
 END_PROPERTIES
 
 namespace Opm {
@@ -492,6 +497,9 @@ public:
                              "Factor by which the time step is reduced after convergence failure");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableTuning,
                              "Honor some aspects of the TUNING keyword from the ECL deck.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
+                             "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
+
     }
 
     /*!
@@ -636,6 +644,7 @@ public:
 
         // Set the start time of the simulation
         simulator.setStartTime(timeMap.getStartTime(/*reportStepIdx=*/0));
+        simulator.setEndTime(timeMap.getTotalTime());
 
         // We want the episode index to be the same as the report step index to make
         // things simpler, so we have to set the episode index to -1 because it is
@@ -777,11 +786,11 @@ public:
     {
         // Proceed to the next report step
         auto& simulator = this->simulator();
+        int episodeIdx = simulator.episodeIndex();
         auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
         const auto& events = schedule.getEvents();
         const auto& timeMap = schedule.getTimeMap();
-        int episodeIdx = simulator.episodeIndex();
 
         if (episodeIdx >= 0 && events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER, episodeIdx)) {
             // bring the contents of the keywords to the current state of the SCHEDULE
@@ -803,14 +812,18 @@ public:
         if (enableExperiments && this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
             // print some useful information in experimental mode. (the production
             // simulator does this externally.)
+            std::ostringstream ss;
+            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
             boost::posix_time::ptime curDateTime =
                 boost::posix_time::from_time_t(timeMap.getStartTime(episodeIdx));
-            std::cout << "Report step " << episodeIdx + 1
+            ss.imbue(std::locale(std::locale::classic(), facet));
+            ss << "Report step " << episodeIdx + 1
                       << "/" << timeMap.numTimesteps()
                       << " at day " << timeMap.getTimePassedUntil(episodeIdx)/(24*3600)
                       << "/" << timeMap.getTotalTime()/(24*3600)
                       << ", date = " << curDateTime.date()
                       << "\n ";
+            OpmLog::info(ss.str());
         }
 
         // react to TUNING changes
@@ -859,9 +872,23 @@ public:
     void beginTimeStep()
     {
         const auto& simulator = this->simulator();
-        int epsiodeIdx = simulator.episodeIndex();
+        int episodeIdx = simulator.episodeIndex();
+
+        if (enableExperiments && this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
+            std::ostringstream ss;
+            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+            boost::posix_time::ptime date = boost::posix_time::from_time_t((this->simulator().startTime())) + boost::posix_time::milliseconds(static_cast<long long>(this->simulator().time() / Opm::prefix::milli));
+            ss.imbue(std::locale(std::locale::classic(), facet));
+            ss <<"\nTime step " << this->simulator().timeStepIndex() << ", stepsize "
+               << unit::convert::to(this->simulator().timeStepSize(), unit::day) << " days,"
+               << " at day " << (double)unit::convert::to(this->simulator().time(), unit::day)
+               << "/" << (double)unit::convert::to(this->simulator().endTime(), unit::day)
+               << ", date = " << date;
+            OpmLog::info(ss.str());
+        }
+
         bool invalidateIntensiveQuantities = false;
-        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(episodeIdx);
         if (drsdtActive_())
             // DRSDT is enabled
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
