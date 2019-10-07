@@ -449,6 +449,9 @@ namespace Opm
                       WellState& well_state,
                       Opm::DeferredLogger& deferred_logger) /* const */
     {
+        if (this->wellIsStopped()) {
+            return;
+        }
 
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const auto& well = well_ecl_;

@@ -1773,6 +1773,7 @@ namespace Opm
             }
             case Well2::ProducerCMode::THP:
             {
+                well_state.thp()[well_index] = controls.thp_limit;
                 auto bhp = robustSolveBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
                 if (bhp) {
                     well_state.bhp()[well_index] = *bhp;
@@ -1946,6 +1947,7 @@ namespace Opm
             }
         } else if (well_operable && !old_well_operable) {
             deferred_logger.info(" well " + name() + " gets REVIVED during iteration ");
+            this->openWell();
             changed_to_stopped_this_step_ = false;
         }
     }
@@ -2791,8 +2793,8 @@ namespace Opm
 
         // does the well have a THP related constraint?
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        // does the well have a THP related constraint?
-        if ( !well.Base::wellHasTHPConstraints(summaryState) ) {
+        const Well2::ProducerCMode& current_control = well_state.currentProductionControls()[this->index_of_well_];
+        if ( !well.Base::wellHasTHPConstraints(summaryState) || current_control == Well2::ProducerCMode::BHP ) {
             // get the bhp value based on the bhp constraints
             const double bhp = well.mostStrictBhpFromBhpLimits(summaryState);
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
