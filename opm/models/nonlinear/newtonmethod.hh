@@ -614,6 +614,8 @@ protected:
      */
     void beginIteration_()
     {
+        // start with a clean message stream
+        endIterMsgStream_.str("");
         const auto& comm = simulator_.gridView().comm();
         bool succeeded = true;
         try {
@@ -891,8 +893,6 @@ protected:
                       << " error: " << error_
                       << endIterMsg().str() << "\n" << std::flush;
         }
-
-        endIterMsgStream_.str("");
     }
 
     /*!
