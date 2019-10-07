@@ -79,6 +79,21 @@ auto getRv_(typename std::enable_if<HasMember_Rv<FluidState>::value, const Fluid
     -> decltype(Opm::decay<LhsEval>(fluidState.Rv()))
 { return Opm::decay<LhsEval>(fluidState.Rv()); }
 
+template <class FluidSystem, class FluidState, class LhsEval>
+LhsEval getSaltconcentration_(typename std::enable_if<!HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,
+               unsigned regionIdx)
+{
+    //const auto& XoG =
+    //    Opm::decay<LhsEval>(fluidState.massFraction(FluidSystem::oilPhaseIdx, FluidSystem::gasCompIdx));
+    //return FluidSystem::convertXoGToRs(XoG, regionIdx);
+}
+
+template <class FluidSystem, class FluidState, class LhsEval>
+auto getSaltconcentration_(typename std::enable_if<HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,
+            unsigned regionIdx OPM_UNUSED)
+    -> decltype(Opm::decay<LhsEval>(fluidState.saltconcentration()))
+{ return Opm::decay<LhsEval>(fluidState.saltconcentration()); }
+
 }
 
 /*!

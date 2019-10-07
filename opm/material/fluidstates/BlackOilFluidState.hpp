@@ -88,6 +88,7 @@ template <class ScalarT,
           bool enableTemperature = false,
           bool enableEnergy = false,
           bool enableDissolution = true,
+          bool enableSaltWater = false,
           unsigned numStoragePhases = FluidSystem::numPhases>
 class BlackOilFluidState
 {
@@ -132,6 +133,10 @@ public:
             Opm::Valgrind::CheckDefined(*Rv_);
         }
 
+        if (enableSaltWater) {
+            Opm::Valgrind::CheckDefined(*saltconcentration_);
+        }
+
         if (enableTemperature || enableEnergy)
             Opm::Valgrind::CheckDefined(*temperature_);
 #endif // NDEBUG
@@ -155,6 +160,9 @@ public:
             setRv(Opm::BlackOil::getRv_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
         }
 
+        if (enableSaltWater){
+            setSaltconcentration(Opm::BlackOil::getSaltconcentration_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
+        }
         for (unsigned storagePhaseIdx = 0; storagePhaseIdx < numStoragePhases; ++storagePhaseIdx) {
             unsigned phaseIdx = storageToCanonicalPhaseIndex_(storagePhaseIdx);
             setSaturation(phaseIdx, fs.saturation(phaseIdx));
@@ -244,6 +252,12 @@ public:
     { *Rv_ = newRv; }
 
     /*!
+     * \brief Set the salt concentration.
+     */
+    void setSaltconcentration(const Scalar& newSaltconcentration)
+    { *saltconcentration_ = newSaltconcentration; }
+
+    /*!
      * \brief Return the pressure of a fluid phase [Pa]
      */
     const Scalar& pressure(unsigned phaseIdx) const
@@ -309,6 +323,19 @@ public:
         }
 
         return *Rv_;
+    }
+
+    /*!
+     * \brief Return the concentration of salt in water
+     */
+    const Scalar& saltconcentration() const
+    {
+        if (!enableSaltWater) {
+            static Scalar null = 0.0;
+            return null;
+        }
+
+        return *saltconcentration_;
     }
 
     /*!
@@ -517,6 +544,7 @@ private:
     std::array<Scalar, numStoragePhases> density_;
     Opm::ConditionalStorage<enableDissolution,Scalar> Rs_;
     Opm::ConditionalStorage<enableDissolution, Scalar> Rv_;
+    Opm::ConditionalStorage<enableSaltWater, Scalar> saltconcentration_;
     unsigned short pvtRegionIdx_;
 };
 
