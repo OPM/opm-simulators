@@ -393,7 +393,6 @@ namespace MissingFeatures {
             "RADFIN4",
             "RHO",
             "RKTRMDIR",
-            "ROCKCOMP",
             "ROCKOPTS",
             "ROCKTAB",
             "RPTGRID",

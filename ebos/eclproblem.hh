@@ -872,13 +872,11 @@ public:
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
                 maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
 
-        if (enableExperiments) {
-            // update maximum water saturation and minimum pressure
-            // used when ROCKCOMP is activated
-            const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
-            const bool invalidateFromMinPressure = updateMinPressure_();
-            invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure;
-        }
+        // update maximum water saturation and minimum pressure
+        // used when ROCKCOMP is activated
+        const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
+        const bool invalidateFromMinPressure = updateMinPressure_();
+        invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure;
 
         if (invalidateIntensiveQuantities)
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
@@ -1768,7 +1766,7 @@ public:
     template <class LhsEval>
     LhsEval rockCompPoroMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        if (!enableExperiments || rockCompPoroMult_.size() == 0)
+        if (rockCompPoroMult_.empty())
             return 1.0;
 
         unsigned tableIdx = 0;
@@ -1800,7 +1798,7 @@ public:
     template <class LhsEval>
     LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        if (!enableExperiments || rockCompTransMult_.size() == 0)
+        if (rockCompTransMult_.empty())
             return 1.0;
 
         unsigned tableIdx = 0;
@@ -1831,7 +1829,7 @@ public:
      */
     Scalar overburdenPressure(unsigned elementIdx) const
     {
-        if (!enableExperiments || overburdenPressure_.size() == 0)
+        if (overburdenPressure_.empty())
             return 0.0;
 
         return overburdenPressure_[elementIdx];
@@ -2074,7 +2072,7 @@ private:
     bool updateMinPressure_()
     {
         // IRREVERS option is used in ROCKCOMP
-        if (minOilPressure_.size() == 0)
+        if (minOilPressure_.empty())
             return false;
 
         ElementContext elemCtx(this->simulator());
@@ -2120,8 +2118,7 @@ private:
         }
 
         // read the parameters for water-induced rock compaction
-        if (enableExperiments)
-            readRockCompactionParameters_();
+        readRockCompactionParameters_();
 
         // check the kind of region which is supposed to be used by checking the ROCKOPTS
         // keyword. note that for some funny reason, the ROCK keyword uses PVTNUM by
