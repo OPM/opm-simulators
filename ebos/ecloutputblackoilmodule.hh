@@ -2,20 +2,16 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   This file is part of the Open Porous Media project (OPM).
-
   OPM is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 2 of the License, or
   (at your option) any later version.
-
   OPM is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
-
   Consult the COPYING file in the top-level source directory of this
   module for the precise wording of the license and the list of
   copyright holders.
@@ -27,12 +23,10 @@
 #ifndef EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
-#include "eclwriter.hh"
+#include <opm/models/blackoil/blackoilproperties.hh>
 
-#include <ewoms/models/blackoil/blackoilproperties.hh>
-
-#include <ewoms/common/propertysystem.hh>
-#include <ewoms/common/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
 
 #include <opm/material/common/Valgrind.hpp>
 
@@ -123,9 +117,9 @@ public:
 
         // Initialize block output
         for (const auto& node: summaryConfig) {
-            if (node.type() == ECL_SMSPEC_BLOCK_VAR) {
-                if (collectToIORank.isGlobalIdxOnThisRank(node.num() - 1)) {
-                    std::pair<std::string, int> key = std::make_pair(node.keyword(), node.num());
+            if (node.category() == SummaryNode::Category::Block) {
+                if (collectToIORank.isGlobalIdxOnThisRank(node.number() - 1)) {
+                    std::pair<std::string, int> key = std::make_pair(node.keyword(), node.number());
                     blockData_[key] = 0.0;
                 }
             }
@@ -1041,6 +1035,17 @@ public:
             so -= sol.data("SGAS")[globalDofIndex];
         }
 
+        if (sSol_.size() > 0) {
+            // keep the SSOL option for backward compatibility
+            // should be removed after 10.2018 release
+            if (sol.has("SSOL"))
+                sSol_[elemIdx] = sol.data("SSOL")[globalDofIndex];
+            else if (sol.has("SSOLVENT"))
+                sSol_[elemIdx] = sol.data("SSOLVENT")[globalDofIndex];
+
+            so -= sSol_[elemIdx];
+        }
+
         assert(saturation_[oilPhaseIdx].size() > 0);
         saturation_[oilPhaseIdx][elemIdx] = so;
 
@@ -1052,14 +1057,6 @@ public:
             rs_[elemIdx] = sol.data("RS")[globalDofIndex];
         if (rv_.size() > 0 && sol.has("RV"))
             rv_[elemIdx] = sol.data("RV")[globalDofIndex];
-        if (sSol_.size() > 0) {
-            // keep the SSOL option for backward compatibility
-            // should be removed after 10.2018 release
-            if (sol.has("SSOL"))
-                sSol_[elemIdx] = sol.data("SSOL")[globalDofIndex];
-            else if (sol.has("SSOLVENT"))
-                sSol_[elemIdx] = sol.data("SSOLVENT")[globalDofIndex];
-        }
         if (cPolymer_.size() > 0 && sol.has("POLYMER"))
             cPolymer_[elemIdx] = sol.data("POLYMER")[globalDofIndex];
         if (cFoam_.size() > 0 && sol.has("FOAM"))
