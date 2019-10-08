@@ -271,7 +271,7 @@ public:
         eclOutputModule_.outputFipLog(miscSummaryData, regionData, isSubStep);
         
         eclOutputModule_.outputProdLog(reportStepNum, isSubStep);
-		    eclOutputModule_.outputInjLog(reportStepNum, isSubStep);
+        eclOutputModule_.outputInjLog(reportStepNum, isSubStep);
 
         std::vector<char> buffer;
         if (collectToIORank_.isIORank()) {
