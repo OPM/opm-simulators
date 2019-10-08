@@ -31,15 +31,16 @@
 #include "collecttoiorank.hh"
 #include "ecloutputblackoilmodule.hh"
 
-#include <ewoms/models/blackoil/blackoilmodel.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
-#include <ewoms/io/baseoutputwriter.hh>
-#include <ewoms/parallel/tasklets.hh>
+#include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+#include <opm/models/io/baseoutputwriter.hh>
+#include <opm/models/parallel/tasklets.hh>
 
 #include <ebos/nncsorter.hpp>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
+#include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/grid/GridHelpers.hpp>
@@ -53,6 +54,7 @@
 #include <list>
 #include <utility>
 #include <string>
+#include <chrono>
 
 #ifdef HAVE_MPI
 #include <mpi.h>
@@ -156,6 +158,8 @@ class EclWriter
     typedef std::vector<Scalar> ScalarBuffer;
 
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
+
 
 public:
     static void registerParameters()
@@ -265,6 +269,9 @@ public:
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
         eclOutputModule_.outputFipLog(miscSummaryData, regionData, isSubStep);
+        
+        eclOutputModule_.outputProdLog(reportStepNum, isSubStep);
+		    eclOutputModule_.outputInjLog(reportStepNum, isSubStep);
 
         std::vector<char> buffer;
         if (collectToIORank_.isIORank()) {
@@ -391,6 +398,7 @@ public:
             {"SWAT", Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
             {"SGAS", Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
             {"TEMP" , Opm::UnitSystem::measure::temperature, enableEnergy},
+            {"SSOLVENT" , Opm::UnitSystem::measure::identity, enableSolvent},
             {"RS", Opm::UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
             {"RV", Opm::UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
             {"SOMAX", Opm::UnitSystem::measure::identity, simulator_.problem().vapparsActive()},
@@ -426,7 +434,7 @@ public:
               cumulatives will be counted doubly, we therefor use a temporary
               SummaryState instance in this call to loadRestart().
             */
-            Opm::SummaryState summaryState;
+            Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(simulator_.vanguard().schedule().getStartTime()));
             auto restartValues = eclIO_->loadRestart(summaryState, solutionKeys, extraKeys);
 
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
