@@ -157,11 +157,11 @@ public:
             for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++ satRegionIdx) {
                 const auto& plyrockTable = plyrockTables.template getTable<Opm::PlyrockTable>(satRegionIdx);
                 setPlyrock(satRegionIdx,
-                           plyrockTable.getDeadPoreVolumeColumn()[satRegionIdx],
-                           plyrockTable.getResidualResistanceFactorColumn()[satRegionIdx],
-                           plyrockTable.getRockDensityFactorColumn()[satRegionIdx],
-                           static_cast<AdsorptionBehaviour>(plyrockTable.getAdsorbtionIndexColumn()[satRegionIdx]),
-                           plyrockTable.getMaxAdsorbtionColumn()[satRegionIdx]);
+                           plyrockTable.getDeadPoreVolumeColumn()[0],
+                           plyrockTable.getResidualResistanceFactorColumn()[0],
+                           plyrockTable.getRockDensityFactorColumn()[0],
+                           static_cast<AdsorptionBehaviour>(plyrockTable.getAdsorbtionIndexColumn()[0]),
+                           plyrockTable.getMaxAdsorbtionColumn()[0]);
             }
         }
         else {
