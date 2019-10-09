@@ -101,6 +101,7 @@ public:
         IndexMapType& localIndexMap_;
         IndexMapStorageType& indexMaps_;
         std::map<int, int> globalPosition_;
+        std::set<int>& recv_;
         std::vector<int>& ranks_;
 
     public:
@@ -108,21 +109,26 @@ public:
                                const std::vector<int>& distributedGlobalIndex,
                                IndexMapType& localIndexMap,
                                IndexMapStorageType& indexMaps,
-                               std::vector<int>& ranks)
+                               std::vector<int>& ranks,
+                               std::set<int>& recv,
+                               bool isIORank)
             : distributedGlobalIndex_(distributedGlobalIndex)
             , localIndexMap_(localIndexMap)
             , indexMaps_(indexMaps)
             , globalPosition_()
+            , recv_(recv)
             , ranks_(ranks)
         {
             size_t size = globalIndex.size();
             // create mapping globalIndex --> localIndex
-            for (size_t index = 0; index < size; ++index)
-                globalPosition_.insert(std::make_pair(globalIndex[index], index));
+            if ( isIORank ) // ioRank
+                for (size_t index = 0; index < size; ++index)
+                    globalPosition_.insert(std::make_pair(globalIndex[index], index));
 
             // we need to create a mapping from local to global
             if (!indexMaps_.empty()) {
-                ranks_.resize(size, -1);
+                if (isIORank)
+                    ranks_.resize(size, -1);
                 // for the ioRank create a localIndex to index in global state map
                 IndexMapType& indexMap = indexMaps_.back();
                 size_t localSize = localIndexMap_.size();
@@ -130,9 +136,41 @@ public:
                 for (size_t i=0; i<localSize; ++i)
                 {
                     int id = distributedGlobalIndex_[localIndexMap_[i]];
-                    indexMap[i] = globalPosition_[id];
-                    ranks_[indexMap[i]] = ioRank;
+                    indexMap[i] = id;
                 }
+            }
+        }
+
+        ~DistributeIndexMapping()
+        {
+            if (!indexMaps_.size())
+                return;
+
+            if ( ranks_.size() )
+            {
+                auto rankIt = recv_.begin();
+                // translate index maps from global cartesian to index
+                for (auto& indexMap: indexMaps_)
+                {
+                    int rank = 0;
+                    if (rankIt != recv_.end())
+                        rank = *rankIt;
+
+                    for (auto&& entry: indexMap)
+                    {
+                        auto candidate = globalPosition_.find(entry);
+                        assert(candidate != globalPosition_.end());
+                        entry = candidate->second;
+                        // Using max should be backwards compatible
+                        ranks_[entry] = std::max(ranks_[entry], rank);
+                    }
+                    if (rankIt != recv_.end())
+                        ++rankIt;
+                }
+#ifndef NDEBUG
+                for (const auto& rank: ranks_)
+                    assert(rank>=0);
+#endif
             }
         }
 
@@ -163,11 +201,7 @@ public:
             buffer.read(numCells);
             indexMap.resize(numCells);
             for (int index = 0; index < numCells; ++index) {
-                int globalId = -1;
-                buffer.read(globalId);
-                assert(globalPosition_.find(globalId) != globalPosition_.end());
-                indexMap[index] = globalPosition_[globalId];
-                ranks_[indexMap[index]] = link + 1;
+                buffer.read(indexMap[index]);
             }
         }
     };
@@ -270,7 +304,9 @@ public:
                                                     distributedCartesianIndex,
                                                     localIndexMap_,
                                                     indexMaps_,
-                                                    globalRanks_);
+                                                    globalRanks_,
+                                                    recv,
+                                                    isIORank());
             toIORankComm_.exchange(distIndexMapping);
         }
     }
