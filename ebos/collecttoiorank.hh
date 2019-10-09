@@ -223,15 +223,14 @@ public:
         {
             std::set<int> send, recv;
             typedef typename Vanguard::EquilGrid::LeafGridView EquilGridView;
-            // We need a mapping from local to global grid, here we
-            // use equilGrid which represents a view on the global grid
-            // reserve memory
-            auto logSize = vanguard.grid().logicalCartesianSize();
-            const size_t globalSize = logSize[0]*logSize[1]*logSize[2];
-            globalCartesianIndex_.resize(globalSize, -1);
 
             // the I/O rank receives from all other ranks
             if (isIORank()) {
+                // We need a mapping from local to global grid, here we
+                // use equilGrid which represents a view on the global grid
+                // reserve memory
+                const size_t globalSize = vanguard.equilGrid().leafGridView().size(0);
+                globalCartesianIndex_.resize(globalSize, -1);
                 const EquilGridView equilGridView = vanguard.equilGrid().leafGridView();
 
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
