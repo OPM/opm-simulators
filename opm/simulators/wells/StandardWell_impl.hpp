@@ -1742,13 +1742,14 @@ namespace Opm
             case Well2::ProducerCMode::THP:
             {
                 well_state.thp()[well_index] = controls.thp_limit;
-                auto bhp = robustSolveBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
+                auto bhp = computeBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
                 if (bhp) {
                     well_state.bhp()[well_index] = *bhp;
                 } else {
                     deferred_logger.warning("FAILURE_GETTING_CONVERGED_BHP",
                                             "Failed to find BHP when switching to THP control for well " + name());
                 }
+                break;
             }
             case Well2::ProducerCMode::GRUP:
             {
@@ -2001,7 +2002,7 @@ namespace Opm
     checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
-        const auto obtain_bhp = robustSolveBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
+        const auto obtain_bhp = computeBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
 
         if (obtain_bhp) {
             this->operability_status_.can_obtain_bhp_with_thp_limit = true;
@@ -2706,7 +2707,7 @@ namespace Opm
         std::vector<double> potentials(number_of_phases_, 0.0);
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
 
-        auto bhp_at_thp_limit = robustSolveBhpAtThpLimitProd(ebos_simulator, summary_state, deferred_logger);
+        auto bhp_at_thp_limit = computeBhpAtThpLimitProd(ebos_simulator, summary_state, deferred_logger);
         if (bhp_at_thp_limit) {
             const auto& controls = well_ecl_.productionControls(summary_state);
             const double bhp = std::max(*bhp_at_thp_limit, controls.bhp_limit);
@@ -3575,9 +3576,9 @@ namespace Opm
     template<typename TypeTag>
     boost::optional<double>
     StandardWell<TypeTag>::
-    robustSolveBhpAtThpLimitProd(const Simulator& ebos_simulator,
-                                 const SummaryState& summary_state,
-                                 DeferredLogger& deferred_logger) const
+    computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
+                             const SummaryState& summary_state,
+                             DeferredLogger& deferred_logger) const
     {
         // Given a VFP function returning bhp as a function of phase
         // rates and thp:
@@ -3768,7 +3769,6 @@ namespace Opm
             return solved_bhp;
         }
         catch (...) {
-            // Use previous value (or max value if at start) if we failed.
             deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                     "Robust bhp(thp) solve failed for well " + name());
             return boost::optional<double>();
