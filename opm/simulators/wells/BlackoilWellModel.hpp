@@ -100,7 +100,6 @@ namespace Opm {
 #else
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
 #endif
-            typedef typename SparseMatrixAdapter::IstlMatrix Mat;
 
             typedef Opm::BlackOilPolymerModule<TypeTag> PolymerModule;
 
@@ -124,7 +123,7 @@ namespace Opm {
             void applyInitial()
             {}
 
-            void linearize(SparseMatrixAdapter& mat , GlobalEqVector& res);
+            void linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res);
 
             void postSolve(GlobalEqVector& deltaX)
             {
@@ -218,10 +217,10 @@ namespace Opm {
 
             const SimulatorReport& lastReport() const;
 
-            void addWellContributions(Mat& mat) const
+            void addWellContributions(SparseMatrixAdapter& jacobian) const
             {
                 for ( const auto& well: well_container_ ) {
-                    well->addWellContributions(mat);
+                    well->addWellContributions(jacobian);
                 }
             }
 

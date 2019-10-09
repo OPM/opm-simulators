@@ -1,5 +1,6 @@
 /*
   Copyright 2016 IRIS AS
+  Copyright 2019 NORCE
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -457,23 +458,55 @@ namespace Opm
 {
 namespace Detail
 {
-    //! calculates ret = A^T * B
-    template< class K, int m, int n, int p >
-    static inline void multMatrixTransposed(const Dune::FieldMatrix< K, n, m >& A,
-                                            const Dune::FieldMatrix< K, n, p >& B,
-                                            Dune::FieldMatrix< K, m, p >& ret)
+    //! calculates ret = sign * (A^T * B)
+    //! TA, TB, and TC are not necessarily FieldMatrix, but those should
+    //! follow the Dune::DenseMatrix interface.
+    template< class TA, class TB, class TC, class PositiveSign >
+    static inline void multMatrixTransposedImpl ( const TA &A, // n x m
+                                                  const TB &B, // n x p
+                                                  TC &ret,     // m x p
+                                                  const PositiveSign )
     {
-        typedef typename Dune::FieldMatrix< K, m, p > :: size_type size_type;
+        typedef typename TA :: size_type size_type;
+        typedef typename TA :: field_type K;
+        assert( A.N() == B.N() );
+        assert( A.M() == ret.N() );
+        assert( B.M() == ret.M() );
 
+        const size_type n = A.N();
+        const size_type m = ret.N();
+        const size_type p = B.M();
         for( size_type i = 0; i < m; ++i )
         {
             for( size_type j = 0; j < p; ++j )
             {
-                ret[ i ][ j ] = K( 0 );
+                K sum = 0;
                 for( size_type k = 0; k < n; ++k )
-                    ret[ i ][ j ] += A[ k ][ i ] * B[ k ][ j ];
+                {
+                    sum += A[ k ][ i ] * B[ k ][ j ];
+                }
+                // set value depending on given sign
+                ret[ i ][ j ] = PositiveSign::value ? sum : -sum;
             }
         }
+    }
+
+    //! calculates ret = A^T * B
+    template <class DenseMatrixA, class DenseMatrixB, class DenseMatrixC>
+    static inline void multMatrixTransposed(const DenseMatrixA& A,
+                                            const DenseMatrixB& B,
+                                            DenseMatrixC& ret)
+    {
+        multMatrixTransposedImpl( A, B, ret, std::true_type() );
+    }
+
+    //! calculates ret = -A^T * B
+    template <class DenseMatrixA, class DenseMatrixB, class DenseMatrixC>
+    static inline void negativeMultMatrixTransposed(const DenseMatrixA& A,
+                                                    const DenseMatrixB& B,
+                                                    DenseMatrixC& ret)
+    {
+        multMatrixTransposedImpl( A, B, ret, std::false_type() );
     }
 
     //! calculates ret = A * B
@@ -504,32 +537,6 @@ namespace Detail
         }
     }
 
-
-    //! calculates ret = A^T * B
-    template< class K, int m, int p >
-    static inline void multMatrixTransposed(const Dune::DynamicMatrix<K>& A,
-                                            const Dune::DynamicMatrix<K>& B,
-                                            Dune::FieldMatrix< K, m, p>& ret )
-    {
-        typedef typename Dune::DynamicMatrix<K> :: size_type size_type;
-
-        // A is a tranpose matrix
-        const size_type n = A.rows();
-        assert(m == A.cols() );
-
-        assert(n == B.rows() );
-        assert(p == B.cols() );
-
-        for( size_type i = 0; i < m; ++i )
-        {
-            for( size_type j = 0; j < p; ++j )
-            {
-                ret[ i ][ j ] = K( 0 );
-                for( size_type k = 0; k < n; ++k )
-                    ret[ i ][ j ] += A[ k ][ i ] * B[ k ][ j ];
-            }
-        }
-    }
 } // namespace Detail
 } // namespace Opm
 

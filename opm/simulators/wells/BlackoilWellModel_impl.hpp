@@ -119,7 +119,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    linearize(SparseMatrixAdapter& mat , GlobalEqVector& res)
+    linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res)
     {
         if (!localWellsActive())
             return;
@@ -135,7 +135,7 @@ namespace Opm {
         }
 
         for (const auto& well: well_container_) {
-            well->addWellContributions(mat.istlMatrix());
+            well->addWellContributions(jacobian);
 
             // applying the well residual to reservoir residuals
             // r = r - duneC_^T * invDuneD_ * resWell_

@@ -2751,9 +2751,12 @@ namespace Opm
         }
     }
 
+
+
+
     template<typename TypeTag>
     void
-    StandardWell<TypeTag>::addWellContributions(Mat& mat) const
+    StandardWell<TypeTag>::addWellContributions(SparseMatrixAdapter& jacobian) const
     {
         // We need to change matrx A as follows
         // A -= C^T D^-1 B
@@ -2761,24 +2764,17 @@ namespace Opm
         // B and C have 1 row, nc colums and nonzero
         // at (0,j) only if this well has a perforation at cell j.
 
+        typename SparseMatrixAdapter::MatrixBlock tmpMat;
+        Dune::DynamicMatrix<Scalar> tmp;
         for ( auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC )
         {
             const auto row_index = colC.index();
-            auto& row = mat[row_index];
-            auto col = row.begin();
 
             for ( auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB )
             {
-                const auto col_index = colB.index();
-                // Move col to index col_index
-                while ( col != row.end() && col.index() < col_index ) ++col;
-                assert(col != row.end() && col.index() == col_index);
-
-                Dune::DynamicMatrix<Scalar> tmp;
                 Detail::multMatrix(invDuneD_[0][0],  (*colB), tmp);
-                typename Mat::block_type tmp1;
-                Detail::multMatrixTransposed((*colC), tmp, tmp1);
-                (*col) -= tmp1;
+                Detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
+                jacobian.addToBlock( row_index, colB.index(), tmpMat );
             }
         }
     }
