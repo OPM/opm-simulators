@@ -1299,30 +1299,28 @@ namespace Opm
         const double relaxation_factor_fractions = (well_type_ == PRODUCER) ?
                                          relaxationFactorFractionsProducer(old_primary_variables, dwells)
                                        : 1.0;
-        if (FluidSystem::numActivePhases() > 1) {
-            // update the second and third well variable (The flux fractions)
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
-                const double dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac] * relaxation_factor_fractions), dFLimit);
-                // primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
-                primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
-            }
 
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                const int sign3 = dwells[0][GFrac] > 0 ? 1: -1;
-                const double dx3_limited = sign3 * std::min(std::abs(dwells[0][GFrac] * relaxation_factor_fractions), dFLimit);
-                primary_variables_[GFrac] = old_primary_variables[GFrac] - dx3_limited;
-            }
-
-            if (has_solvent) {
-                const int sign4 = dwells[0][SFrac] > 0 ? 1: -1;
-                const double dx4_limited = sign4 * std::min(std::abs(dwells[0][SFrac]) * relaxation_factor_fractions, dFLimit);
-                primary_variables_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
-            }
-
-            processFractions();
+        // update the second and third well variable (The flux fractions)
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
+            const double dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac] * relaxation_factor_fractions), dFLimit);
+            // primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
+            primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
         }
 
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int sign3 = dwells[0][GFrac] > 0 ? 1: -1;
+            const double dx3_limited = sign3 * std::min(std::abs(dwells[0][GFrac] * relaxation_factor_fractions), dFLimit);
+            primary_variables_[GFrac] = old_primary_variables[GFrac] - dx3_limited;
+        }
+
+        if (has_solvent) {
+            const int sign4 = dwells[0][SFrac] > 0 ? 1: -1;
+            const double dx4_limited = sign4 * std::min(std::abs(dwells[0][SFrac]) * relaxation_factor_fractions, dFLimit);
+            primary_variables_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
+        }
+
+        processFractions();
 
         // updating the total rates Q_t
         const double relaxation_factor_rate = relaxationFactorRate(old_primary_variables, dwells);
@@ -1338,10 +1336,6 @@ namespace Opm
         }
 
         updateExtraPrimaryVariables(dwells);
-
-        for (double v : primary_variables_) {
-            assert(Opm::isfinite(v));
-        }
     }
 
 
@@ -1459,52 +1453,49 @@ namespace Opm
     updateWellStateFromPrimaryVariables(WellState& well_state, Opm::DeferredLogger& deferred_logger) const
     {
         const PhaseUsage& pu = phaseUsage();
+        assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
+        const int oil_pos = pu.phase_pos[Oil];
 
         std::vector<double> F(number_of_phases_, 0.0);
-        if (FluidSystem::numActivePhases() == 1) {
-            F[0] = 1.0;
-        } else {
-            assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
-            const int oil_pos = pu.phase_pos[Oil];
-            F[oil_pos] = 1.0;
+        F[oil_pos] = 1.0;
 
-            if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
-                const int water_pos = pu.phase_pos[Water];
-                F[water_pos] = primary_variables_[WFrac];
-                F[oil_pos] -= F[water_pos];
-            }
-
-            if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
-                const int gas_pos = pu.phase_pos[Gas];
-                F[gas_pos] = primary_variables_[GFrac];
-                F[oil_pos] -= F[gas_pos];
-            }
-
-            double F_solvent = 0.0;
-            if (has_solvent) {
-                F_solvent = primary_variables_[SFrac];
-                F[oil_pos] -= F_solvent;
-            }
-
-            // convert the fractions to be Q_p / G_total to calculate the phase rates
-            for (int p = 0; p < number_of_phases_; ++p) {
-                const double scal = scalingFactor(p);
-                // for injection wells, there should only one non-zero scaling factor
-                if (scal > 0) {
-                    F[p] /= scal ;
-                } else {
-                    // this should only happens to injection wells
-                    F[p] = 0.;
-                }
-            }
-            // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
-            // More testing is needed to make sure this is correct for well groups and THP.
-            if (has_solvent){
-                F_solvent /= scalingFactor(contiSolventEqIdx);
-                F[pu.phase_pos[Gas]] += F_solvent;
-            }
-
+        if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
+            const int water_pos = pu.phase_pos[Water];
+            F[water_pos] = primary_variables_[WFrac];
+            F[oil_pos] -= F[water_pos];
         }
+
+        if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
+            const int gas_pos = pu.phase_pos[Gas];
+            F[gas_pos] = primary_variables_[GFrac];
+            F[oil_pos] -= F[gas_pos];
+        }
+
+        double F_solvent = 0.0;
+        if (has_solvent) {
+            F_solvent = primary_variables_[SFrac];
+            F[oil_pos] -= F_solvent;
+        }
+
+        // convert the fractions to be Q_p / G_total to calculate the phase rates
+        for (int p = 0; p < number_of_phases_; ++p) {
+            const double scal = scalingFactor(p);
+            // for injection wells, there should only one non-zero scaling factor
+            if (scal > 0) {
+                F[p] /= scal ;
+            } else {
+                // this should only happens to injection wells
+                F[p] = 0.;
+            }
+        }
+
+        // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
+        // More testing is needed to make sure this is correct for well groups and THP.
+        if (has_solvent){
+            F_solvent /= scalingFactor(contiSolventEqIdx);
+            F[pu.phase_pos[Gas]] += F_solvent;
+        }
+
         well_state.bhp()[index_of_well_] = primary_variables_[Bhp];
 
         // calculate the phase rates based on the primary variables
@@ -1782,7 +1773,6 @@ namespace Opm
                                             "Failed to find BHP when switching to THP control for well " + name());
                 }
                 break;
-
             }
             case Well2::ProducerCMode::GRUP:
             {
@@ -2042,7 +2032,7 @@ namespace Opm
     checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
-        const auto obtain_bhp = robustSolveBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
+        const auto obtain_bhp = computeBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
 
         if (obtain_bhp) {
             this->operability_status_.can_obtain_bhp_with_thp_limit = true;
@@ -2747,7 +2737,7 @@ namespace Opm
         std::vector<double> potentials(number_of_phases_, 0.0);
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
 
-        auto bhp_at_thp_limit = robustSolveBhpAtThpLimitProd(ebos_simulator, summary_state, deferred_logger);
+        auto bhp_at_thp_limit = computeBhpAtThpLimitProd(ebos_simulator, summary_state, deferred_logger);
         if (bhp_at_thp_limit) {
             const auto& controls = well_ecl_.productionControls(summary_state);
             const double bhp = std::max(*bhp_at_thp_limit, controls.bhp_limit);
@@ -3621,9 +3611,9 @@ namespace Opm
     template<typename TypeTag>
     boost::optional<double>
     StandardWell<TypeTag>::
-    robustSolveBhpAtThpLimitProd(const Simulator& ebos_simulator,
-                                 const SummaryState& summary_state,
-                                 DeferredLogger& deferred_logger) const
+    computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
+                             const SummaryState& summary_state,
+                             DeferredLogger& deferred_logger) const
     {
         // Given a VFP function returning bhp as a function of phase
         // rates and thp:
@@ -3814,7 +3804,6 @@ namespace Opm
             return solved_bhp;
         }
         catch (...) {
-            // Use previous value (or max value if at start) if we failed.
             deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                     "Robust bhp(thp) solve failed for well " + name());
             return boost::optional<double>();

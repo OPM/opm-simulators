@@ -502,9 +502,9 @@ namespace Opm
                                         DeferredLogger& deferred_logger);
 
 
-        boost::optional<double> robustSolveBhpAtThpLimitProd(const Simulator& ebos_simulator,
-                                                             const SummaryState& summary_state,
-                                                             DeferredLogger& deferred_logger) const;
+        boost::optional<double> computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
+                                                         const SummaryState& summary_state,
+                                                         DeferredLogger& deferred_logger) const;
     };
 
 }
