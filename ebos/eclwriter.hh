@@ -43,6 +43,7 @@
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
+#include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
@@ -428,7 +429,8 @@ public:
 
         {
             Opm::SummaryState& summaryState = simulator_.vanguard().summaryState();
-            auto restartValues = eclIO_->loadRestart(summaryState, solutionKeys, extraKeys);
+            auto restartValues = loadParallelRestart(eclIO_.get(), summaryState, solutionKeys, extraKeys,
+                                                     gridView.grid().comm());
 
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
                 unsigned globalIdx = collectToIORank_.localIdxToGlobalIdx(elemIdx);
