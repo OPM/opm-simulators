@@ -297,7 +297,7 @@ public:
                 (*this)[waterSaturationIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
                 (*this)[pressureSwitchIdx] = FsToolbox::value(fluidState.pressure(waterPhaseIdx));
             } else {
-                throw std::logic_error("Only pure ware is presently allowed");
+                throw std::logic_error("For single-phase runs, only pure water is presently allowed.");
             }
             
         }
