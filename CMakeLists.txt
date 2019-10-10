@@ -163,6 +163,22 @@ opm_add_test(flow_blackoil_dunecpr
   DEPENDS "opmsimulators"
   LIBRARIES "opmsimulators")
 
+opm_add_test(flow_onephase
+  ONLY_COMPILE
+  DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
+  SOURCES flow/flow_onephase.cpp
+  EXE_NAME flow_onephase
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
+
+opm_add_test(flow_onephase_energy
+  ONLY_COMPILE
+  DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
+  SOURCES flow/flow_onephase_energy.cpp
+  EXE_NAME flow_onephase_energy
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
+
 
 
 if (BUILD_FLOW)
