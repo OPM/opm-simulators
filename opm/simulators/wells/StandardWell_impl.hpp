@@ -311,7 +311,7 @@ namespace Opm
 
     template<typename TypeTag>
     typename StandardWell<TypeTag>::Eval
-    StandardWell<TypeTag>::getPerfPressure(const typename StandardWell<TypeTag>::FluidState& fs) const
+    StandardWell<TypeTag>::getPerfCellPressure(const typename StandardWell<TypeTag>::FluidState& fs) const
     {
         Eval pressure;
         if (Indices::oilEnabled) {
@@ -343,7 +343,7 @@ namespace Opm
     {
 
         const auto& fs = intQuants.fluidState();
-        const EvalWell pressure = extendEval(getPerfPressure(fs));
+        const EvalWell pressure = extendEval(getPerfCellPressure(fs));
         const EvalWell rs = extendEval(fs.Rs());
         const EvalWell rv = extendEval(fs.Rv());
         std::vector<EvalWell> b_perfcells_dense(num_components_, EvalWell{numWellEq_ + numEq, 0.0});
@@ -692,7 +692,7 @@ namespace Opm
 
                     const unsigned int compIdx = flowPhaseToEbosCompIdx(p);
                     const auto& fs = intQuants.fluidState();
-                    Eval perf_pressure = getPerfPressure(fs);
+                    Eval perf_pressure = getPerfCellPressure(fs);
                     const double drawdown  = well_state.perfPress()[first_perf_ + perf] - perf_pressure.value();
                     const bool new_well = schedule.hasWellEvent(name(), ScheduleEvents::NEW_WELL, current_step_);
                     double productivity_index = cq_s[compIdx].value() / drawdown;
@@ -1364,7 +1364,7 @@ namespace Opm
             const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             const auto& fs = int_quantities.fluidState();
             // the pressure of the reservoir grid block the well connection is in
-            Eval perf_pressure = getPerfPressure(fs);
+            Eval perf_pressure = getPerfCellPressure(fs);
             double p_r = perf_pressure.value();
 
             // calculating the b for the connection
@@ -1591,7 +1591,7 @@ namespace Opm
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
-            Eval perf_pressure = getPerfPressure(fs);
+            Eval perf_pressure = getPerfCellPressure(fs);
             const double pressure = perf_pressure.value();
 
             const double bhp = getBhp().value();

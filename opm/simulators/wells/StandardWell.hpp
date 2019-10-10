@@ -294,7 +294,7 @@ namespace Opm
 
         EvalWell extendEval(const Eval& in) const;
 
-        Eval getPerfPressure(const FluidState& fs) const;
+        Eval getPerfCellPressure(const FluidState& fs) const;
 
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
