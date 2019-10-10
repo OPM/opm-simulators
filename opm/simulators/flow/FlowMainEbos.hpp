@@ -432,9 +432,11 @@ namespace Opm
                 return;
             }
 
-            // Run relperm diagnostics
-            RelpermDiagnostics diagnostic;
-            diagnostic.diagnosis(eclState(), deck(), this->grid());
+            // Run relperm diagnostics if we have more than one phase.
+            if (FluidSystem::numActivePhases() > 1) {
+                RelpermDiagnostics diagnostic;
+                diagnostic.diagnosis(eclState(), deck(), this->grid());
+            }
         }
 
         // Run the simulator.
