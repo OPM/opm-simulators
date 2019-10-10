@@ -99,7 +99,5 @@ namespace Opm {
 int main(int argc, char** argv)
 {
   typedef TTAG(EclFlowProblemSimple) TypeTag;
-  bool outputCout = true;
-  bool outputFiles = true;
-  return mainFlow<TypeTag>(argc, argv, outputCout, outputFiles);
+  return mainFlow<TypeTag>(argc, argv);
 }
