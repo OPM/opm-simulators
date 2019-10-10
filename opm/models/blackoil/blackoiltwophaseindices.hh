@@ -104,7 +104,7 @@ struct BlackOilTwoPhaseIndices
 
     //! Index of the primary variable for the foam
     static const int foamConcentrationIdx =
-        enableFoam ? polymerMoleWeightIdx + 1 : -1000;
+        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers : -1000;
 
     //! Index of the primary variable for temperature
     static const int temperatureIdx  =
@@ -167,9 +167,9 @@ struct BlackOilTwoPhaseIndices
     static const int contiPolymerMWEqIdx =
         numPolymers > 1 ? contiPolymerEqIdx + 1 : -1000;
 
-    //! Index of the continuity equation for the foam  component
+    //! Index of the continuity equation for the foam component
     static const int contiFoamEqIdx =
-        enableFoam ? contiPolymerMWEqIdx + 1 : -1000;
+        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers : -1000;
 
     //! Index of the continuity equation for energy
     static const int contiEnergyEqIdx =
