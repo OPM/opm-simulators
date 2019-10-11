@@ -2,16 +2,20 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   This file is part of the Open Porous Media project (OPM).
+
   OPM is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 2 of the License, or
   (at your option) any later version.
+
   OPM is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
+
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+
   Consult the COPYING file in the top-level source directory of this
   module for the precise wording of the license and the list of
   copyright holders.
@@ -46,12 +50,8 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclOutputBlackOil);
 
 NEW_PROP_TAG(ForceDisableFluidInPlaceOutput);
-NEW_PROP_TAG(ForceDisableProdRepOutput);
-NEW_PROP_TAG(ForceDisableInjRepOutput);
 
 SET_BOOL_PROP(EclOutputBlackOil, ForceDisableFluidInPlaceOutput, false);
-SET_BOOL_PROP(EclOutputBlackOil, ForceDisableProdRepOutput, false);
-SET_BOOL_PROP(EclOutputBlackOil, ForceDisableInjRepOutput, false);
 
 END_PROPERTIES
 
@@ -108,47 +108,6 @@ class EclOutputBlackOilModule
         };
         static const int numFipValues = PoreVolume + 1 ;
     };
-    
-    struct WellProdDataType
-    {
-        enum WPId
-        {
-            WellLocationi = 0, //WLi
-	    WellLocationj = 1, //WLj
-            CTRLMode = 2, //CTRL
-            OilRate = 3, //OR
-            WaterRate = 4, //WR
-            GasRate = 5, //GR
-            FluidResVol = 6, //FRV
-	    WaterCut = 7, //WC
-            GasOilRatio = 8, //GOR
-            WatGasRatio = 9, //WGR
-	    BHP = 10, //BHP
-	    THP = 11, //THP
-            SteadyStatePI = 12, //SteadyStatePI
-        };
-        static const int numWPValues = 13;
-    };
-	
-	struct WellInjDataType
-    {
-        enum WIId
-        {
-            WellLocationi = 0, //WLi
-		      	WellLocationj = 1, //WLj
-            CTRLModeOil = 2, //CTRL
-		      	CTRLModeWat = 3, //CTRL
-      			CTRLModeGas = 4, //CTRL
-            OilRate = 5, //OR
-            WaterRate = 6, //WR
-            GasRate = 7, //GR
-	      		FluidResVol = 8, //FRV
-      			BHP = 9, //BHP
-	      		THP = 10, //THP
-	      		SteadyStateII = 11, //SteadyStateII
-        };
-        static const int numWIValues = 12;
-    };
 
 public:
     template<class CollectDataToIORankType>
@@ -171,8 +130,6 @@ public:
         }
 
         forceDisableFipOutput_ = EWOMS_GET_PARAM(TypeTag, bool, ForceDisableFluidInPlaceOutput);
-        forceDisableProdOutput_ = EWOMS_GET_PARAM(TypeTag, bool, ForceDisableProdRepOutput);
-	forceDisableInjOutput_ = EWOMS_GET_PARAM(TypeTag, bool, ForceDisableInjRepOutput);
     }
 
     /*!
@@ -182,10 +139,6 @@ public:
     {
         EWOMS_REGISTER_PARAM(TypeTag, bool, ForceDisableFluidInPlaceOutput,
                              "Do not print fluid-in-place values after each report step even if requested by the deck.");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, ForceDisableProdRepOutput,
-                             "Do not print production values after each report step even if requested by the deck.");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, ForceDisableInjRepOutput,
-                             "Do not print injection values after each report step even if requested by the deck.");
     }
 
     /*!
@@ -1073,100 +1026,6 @@ public:
         }
 
     }
-    
-    // write production report to output log
-    void outputProdLog(size_t reportStepNum, const bool substep) 
-    {
-		  if (!substep) {
-			
-		        ScalarBuffer  tmp(WellProdDataType::numWPValues, 0.0);
-			outputProductionReport_(tmp, "");
-			
-		    	const auto& st = simulator_.vanguard().summaryState(); 
-		    	const auto& schedule = simulator_.vanguard().schedule();
-		    	for (const auto& well: schedule.getWells2(reportStepNum)) {
-				
-			  	// don't bother with wells not on this process 
-			  	const auto& defunctWellNames = simulator_.vanguard().defunctWellNames(); 
-			  	if (defunctWellNames.find(well.name()) != defunctWellNames.end()) {
-			  	  	continue;
-			  	}				
-					
-			  	// Ignore injector wells  
-			  	if (well.isInjector()){ 
-				    	continue;
-			  	}
-	
-			  	tmp[0] = well.getHeadI() + 1; //WellProdDataType::WellLocationi
-			  	tmp[1] = well.getHeadJ() + 1; //WellProdDataType::WellLocationi
-                                tmp[2] = 0; //WellProdDataType::CTRLMode
-			  	tmp[3] = 0; //WellProdDataType::OilRate 
-			  	tmp[4] = 0; //WellProdDataType::WaterRate
-			  	tmp[5] = 0; //WellProdDataType::GasRate
-			  	tmp[7] = tmp[4] / (tmp[4] + tmp[3]); //Compute Water Cut
-			  	tmp[8] = tmp[5] / tmp[3]; //Compute Gas-Oil ratio
-			  	tmp[9] = tmp[4] / tmp[5]; //Compute water-Gas ratio		
-			  	tmp[10] = 0; //WellProdDataType::BHP
-			  	tmp[11] = 0; //WellProdDataType::THP 
-                                tmp[12] = 0; //WellProdDataType::SteadyStatePI
-
-			  	const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
-			  	if (units.getType() != Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC){
-			    		ProdUnitConvert_(tmp);
-			  	}
-				
-			  	std::ostringstream wellName; 
-			  	wellName << well.name(); 	
-			  	outputProductionReport_(tmp, wellName.str()); 					
-			}
-	  	 }
-    }
-    
-    // write injection report to output log 
-    void outputInjLog(size_t reportStepNum, const bool substep)
-    {
-	  	if (!substep) {		
-		  	ScalarBuffer  tmp(WellInjDataType::numWIValues, 0.0);
-		  	outputInjectionReport_(tmp, "");
-			
-		  	const auto& st = simulator_.vanguard().summaryState();
-		  	const auto& schedule = simulator_.vanguard().schedule();
-		  	for (const auto& well: schedule.getWells2(reportStepNum)) {
-				
-			  	// don't bother with wells not on this process 
-			  	const auto& defunctWellNames = simulator_.vanguard().defunctWellNames(); 
-			  	if (defunctWellNames.find(well.name()) != defunctWellNames.end()) {
-				    	continue;
-			  	}				
-					
-			  	// Ignore Producer wells  
-			  	if (well.isProducer()){  
-			    		continue;
-			  	}			
-			 	
-			  	tmp[0] = well.getHeadI() + 1; //WellInjDataType::wellLocationi
-			  	tmp[1] = well.getHeadJ() + 1; //WellInjDataType::wellLocationj 
-			  	tmp[2] = 0;  //WellInjDataType::CTRLModeOil
-                                tmp[3] = 0;  //WellInjDataType::CTRLModeWat
-                                tmp[4] = 0;  //WellInjDataType::CTRLModeGas
-			  	tmp[5] = 0; //WellInjDataType::OilRate
-			  	tmp[6] = 0; //WellInjDataType::WaterRate
-			  	tmp[7] = 0; //WellInjDataType::GasRate				
-			  	tmp[9] = 0; //WellInjDataType::BHP
-			  	tmp[10] = 0; //WellInjDataType::THP
-                                tmp[11] = 0; //WellInjDataType::SteadyStateII 
-				
-		  		const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
-		  		if (units.getType() != Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC){
-			  		InjUnitConvert_(tmp);
-			  	}
-			
-			  	std::ostringstream wellName; 
-			  	wellName << well.name(); 	
-			  	outputInjectionReport_(tmp, wellName.str()); 					
-		  	}
-	  	}
-    }
 
     void setRestart(const Opm::data::Solution& sol, unsigned elemIdx, unsigned globalDofIndex)
     {
@@ -1579,129 +1438,6 @@ private:
            << ":========================:==========================================:================:==========================================:\n";
         Opm::OpmLog::note(ss.str());
     }
-    
-    void ProdUnitConvert_(ScalarBuffer& wellProd) 
-    {
-        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
-        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-	   Scalar stbpday = Opm::unit::stb/Opm::unit::day;// stb/day
-            wellProd[WellProdDataType::OilRate] = Opm::unit::convert::to(wellProd[WellProdDataType::OilRate], stbpday); //scm/s -> stb/day
-            wellProd[WellProdDataType::WaterRate] = Opm::unit::convert::to(wellProd[WellProdDataType::WaterRate], stbpday); //scm/s -> stb/day
-            wellProd[WellProdDataType::GasRate] = Opm::unit::convert::to(wellProd[WellProdDataType::GasRate], stbpday); //scm/s -> stb/day
-            wellProd[WellProdDataType::FluidResVol] = Opm::unit::convert::to(wellProd[WellProdDataType::FluidResVol], stbpday); //rcm/s -> rb/day
-	    wellProd[WellProdDataType::BHP] = Opm::unit::convert::to(wellProd[WellProdDataType::BHP], Opm::unit::psia); //barsa -> psia
-	    wellProd[WellProdDataType::THP] = Opm::unit::convert::to(wellProd[WellProdDataType::THP], Opm::unit::psia); //barsa -> psia
-        }
-        else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
-            Scalar sccphour = Opm::unit::cubic(Opm::prefix::centi * Opm::unit::meter)/Opm::unit::hour; //standard cubic cm.
-            wellProd[WellProdDataType::OilRate] = Opm::unit::convert::to(wellProd[WellProdDataType::OilRate], sccphour); //scm/s -> scc/h
-            wellProd[WellProdDataType::WaterRate] = Opm::unit::convert::to(wellProd[WellProdDataType::WaterRate], sccphour); //scm/s -> scc/h
-            wellProd[WellProdDataType::GasRate] = Opm::unit::convert::to(wellProd[WellProdDataType::GasRate], sccphour); //scm/s -> scc/h
-	    wellProd[WellProdDataType::FluidResVol] = Opm::unit::convert::to(wellProd[WellProdDataType::FluidResVol], sccphour); //rcm/s -> rcc/h
-	    wellProd[WellProdDataType::BHP] = Opm::unit::convert::to(wellProd[WellProdDataType::BHP], Opm::unit::atm); //barsa -> atm
-            wellProd[WellProdDataType::THP] = Opm::unit::convert::to(wellProd[WellProdDataType::THP], Opm::unit::atm); //barsa -> atm
-        }
-        else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            wellProd[WellProdDataType::OilRate] = Opm::unit::convert::to(wellProd[WellProdDataType::OilRate], 1/Opm::unit::day); //scm/s -> scm/day
-            wellProd[WellProdDataType::WaterRate] = Opm::unit::convert::to(wellProd[WellProdDataType::WaterRate], 1/Opm::unit::day); //scm/s -> scm/day
-            wellProd[WellProdDataType::GasRate] = Opm::unit::convert::to(wellProd[WellProdDataType::GasRate], 1/Opm::unit::day); //scm/s -> scm/day
-	    wellProd[WellProdDataType::FluidResVol] = Opm::unit::convert::to(wellProd[WellProdDataType::FluidResVol], 1/Opm::unit::day); //rcm/s -> rb/day
-        }
-        else {
-            throw std::runtime_error("Unsupported unit type for fluid in place output.");
-        }
-    }
-	
-   void outputProductionReport_(const ScalarBuffer& wellProd, const std::string wellName)
-    {
-	if(forceDisableProdOutput_)
-	    return;
-		
-        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
-        std::ostringstream ss;
-        if (wellName.empty()) {
-            ss << "=================================================== Production Report ========================================================================== \n"
-               << ":  WELL  :  LOCATION :CTRL:    OIL    :   WATER   :    GAS    :   FLUID   : Water : GAS/OIL  : WAT/GAS  : BHP OR : THP OR : STEADY-ST PI       :\n"
-               << ":  NAME  :  (I,J,K)  :MODE:    RATE   :   RATE    :    RATE   :  RES.VOL. :  Cut  :  RATIO   :  RATIO   : CON.PR.: BLK.PR.: OR POTN OF PREF. PH:\n";
-            if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-		ss << ":        :           :    :    (SCM/DAY)   :   (SCM/DAY)    :    (SCM/DAY)   :   (RCM/DAY) :  (SCM/SCM)     :   (SCM/SCM)   :  (SCM/SCM)    : (BARSA):  (BARSA)    :                    :\n";
-	    }
-            if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-		ss << ":        :           :    : (STB/DAY) : (STB/DAY) : (STB/DAY) : (RB/DAY)  :       :(STB/STB) :(STB/STB) : (PSIA) : (PSIA) :                    :\n"; 
-            }
-	    if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
-		ss << ":        :           :    : (SCC/HR) : (SCC/HR) : (SCC/HR) : (RCC)  :  (SCC/SCC)     :(SCC/SCC):(SCC/SCC): (ATMA) : (ATMA) :                    :\n"; 
-	    }
-	    ss << "================================================================================================================================================\n"; 
-        }
-	else {
-            ss << ":" << wellName << std::setw(10) << wellProd[WellProdDataType::WellLocationi] << "," << wellProd[WellProdDataType::WellLocationj] << std::setw(6) << wellProd[WellProdDataType::CTRLMode] << std::setw(10) << wellProd[WellProdDataType::OilRate] << std::setw(10) << wellProd[WellProdDataType::WaterRate] << std::setw(10)<< wellProd[WellProdDataType::GasRate] << std::setw(13) << wellProd[WellProdDataType::FluidResVol] << std::setw(10) << wellProd[WellProdDataType::WaterCut] << std::setw(10) << wellProd[WellProdDataType::GasOilRatio] << std::setw(13) << wellProd[WellProdDataType::WatGasRatio] << std::setw(10) << wellProd[WellProdDataType::BHP] << std::setw(10) << wellProd[WellProdDataType::THP] << std::setw(10) << wellProd[WellProdDataType::SteadyStatePI] << std::setw(10) << "\n"
-               << ":--------:-----------:----:------------:----------:-----------:-----------:-------:----------:----------:--------:--------:--------------------:\n";
-        }
-        Opm::OpmLog::note(ss.str());
-    }
-	
-  	void InjUnitConvert_(ScalarBuffer& wellInj)
-    {
-        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
-        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            Scalar stbpday = Opm::unit::stb/Opm::unit::day;// stb/day
-            wellInj[WellInjDataType::OilRate] = Opm::unit::convert::to(wellInj[WellInjDataType::OilRate], stbpday); //scm/s -> stb/day
-            wellInj[WellInjDataType::WaterRate] = Opm::unit::convert::to(wellInj[WellInjDataType::WaterRate], stbpday); //scm/s -> stb/day
-            wellInj[WellInjDataType::GasRate] = Opm::unit::convert::to(wellInj[WellInjDataType::GasRate], stbpday); //scm/s -> stb/day
-            wellInj[WellInjDataType::FluidResVol] = Opm::unit::convert::to(wellInj[WellInjDataType::FluidResVol], stbpday); //scm -> stb
-	    wellInj[WellInjDataType::BHP] = Opm::unit::convert::to(wellInj[WellInjDataType::BHP], Opm::unit::psia); //barsa -> psia
-	    wellInj[WellInjDataType::THP] = Opm::unit::convert::to(wellInj[WellInjDataType::THP], Opm::unit::psia); //barsa -> psia
-        }
-        else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
-            Scalar sccphour = Opm::unit::cubic(Opm::prefix::centi * Opm::unit::meter)/Opm::unit::hour; //standard cubic cm.
-            wellInj[WellInjDataType::OilRate] = Opm::unit::convert::to(wellInj[WellInjDataType::OilRate], sccphour); //scm/s -> scc/h
-            wellInj[WellInjDataType::WaterRate] = Opm::unit::convert::to(wellInj[WellInjDataType::WaterRate], sccphour); //scm/s -> scc/h
-            wellInj[WellInjDataType::GasRate] = Opm::unit::convert::to(wellInj[WellInjDataType::GasRate], sccphour); //scm/s -> scc/h
-	    wellInj[WellInjDataType::FluidResVol] = Opm::unit::convert::to(wellInj[WellInjDataType::FluidResVol], sccphour); //rcm/s -> rcc/h
-	    wellInj[WellInjDataType::BHP] = Opm::unit::convert::to(wellInj[WellInjDataType::BHP], Opm::unit::atm); //barsa -> atm
-	    wellInj[WellInjDataType::THP] = Opm::unit::convert::to(wellInj[WellInjDataType::THP], Opm::unit::atm); //barsa -> atm
-        }
-        else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            wellInj[WellInjDataType::OilRate] = Opm::unit::convert::to(wellInj[WellInjDataType::OilRate], 1/Opm::unit::day); //scm/s -> scm/day
-            wellInj[WellInjDataType::WaterRate] = Opm::unit::convert::to(wellInj[WellInjDataType::WaterRate], 1/Opm::unit::day); //scm/s -> scm/day
-            wellInj[WellInjDataType::GasRate] = Opm::unit::convert::to(wellInj[WellInjDataType::GasRate], 1/Opm::unit::day); //scm/s -> scm/day
-	    wellInj[WellInjDataType::FluidResVol] = Opm::unit::convert::to(wellInj[WellInjDataType::FluidResVol], 1/Opm::unit::day); //rcm/s -> rb/day
-        }
-        else {
-            throw std::runtime_error("Unsupported unit type for fluid in place output.");
-        }
-    }
-	
-
-    void outputInjectionReport_(const ScalarBuffer& wellInj, const std::string wellName)
-    {
-        if(forceDisableInjOutput_)
-            return;
-		
-        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
-        std::ostringstream ss;
-        if (wellName.empty()) {
-            ss << "=================================================== Injection Report ======================================================= \n"
-               << ":  WELL  :  LOCATION :CTRL:CTRL:CTRL:    OIL    :   WATER   :    GAS    :   FLUID   : BHP OR : THP OR : STEADY-ST II       :\n"
-               << ":  NAME  :  (I,J,K)  :MODE:MODE:MODE:    RATE   :   RATE    :    RATE   :  RES.VOL. : CON.PR.: BLK.PR.: OR POTENTIAL       :\n";
-            if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-	        ss << ":        :           :OIL :WAT :GAS :    (SCM/DAY)   :   (SCM/DAY)    :    (SCM/DAY)   :   (RCM/DAY) :  (BARSA)    :  (BARSA)    :                    :\n";
-	    }
-            if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-		ss << ":        :           :OIL :WAT :GAS : (STB/DAY) : (STB/DAY) : (STB/DAY) : (RB/DAY)  : (PSIA) : (PSIA) :                    :\n"; 
-	    }
-	    if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
-		ss << ":        :           :OIL :WAT :GAS : (SCC/HR) : (SCC/HR) : (SCC/HR) : (RCC/HR)  : (ATMA) : (ATMA) :                    :\n"; 
-	    }
-	     ss << "=============================================================================================================================\n"; 
-        }
-        else {
-             ss  << ":" << wellName << std::setw(11) << wellInj[WellInjDataType::WellLocationi] << "," << wellInj[WellInjDataType::WellLocationj] << std::setw(6) << wellInj[WellInjDataType::CTRLModeOil] << std::setw(6) << wellInj[WellInjDataType::CTRLModeWat] << std::setw(6) << wellInj[WellInjDataType::CTRLModeGas] << std::setw(8) << wellInj[WellInjDataType::OilRate] << std::setw(10) << wellInj[WellInjDataType::WaterRate] << std::setw(18)<< wellInj[WellInjDataType::GasRate] << std::setw(10) << wellInj[WellInjDataType::FluidResVol] << std::setw(8)<< wellInj[WellInjDataType::BHP] << std::setw(10)<< wellInj[WellInjDataType::THP] << std::setw(10)<< wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
-                 << ":--------:-----------:----:----:----:------------:----------:-----------:-----------:-------:---------:--------------------:\n";      
-        }
-	Opm::OpmLog::note(ss.str());
-    }
 
     std::string fipEnumToString_(int i)
     {
@@ -1719,49 +1455,6 @@ private:
         }
         return "ERROR";
     }
-    
-    std::string WPEnumToString_(int i)
-    {
-        typedef typename WellProdDataType::WPId WPId;
-        switch(static_cast<WPId>(i))
-        {
-        case WellProdDataType::WellLocationi: return "WLi";
-        case WellProdDataType::WellLocationj: return "WLj";
-        case WellProdDataType::CTRLMode: return "CTRL";
-        case WellProdDataType::OilRate: return "OR";
-        case WellProdDataType::WaterRate: return "WR";
-        case WellProdDataType::GasRate: return "GR";
-	case WellProdDataType::FluidResVol: return "FRV";
-	case WellProdDataType::WaterCut: return "WC";
-	case WellProdDataType::GasOilRatio: return "GOR";
-	case WellProdDataType::WatGasRatio: return "WGR";
-	case WellProdDataType::BHP: return "BHP";
-	case WellProdDataType::THP: return "THP";
-	case WellProdDataType::SteadyStatePI: return "SteadyStatePI";
-        }
-        return "ERROR";
-    }
-	
-		std::string WIEnumToString_(int i)
-    {
-        typedef typename WellInjDataType::WIId WIId;
-        switch(static_cast<WIId>(i))
-        {
-        case WellInjDataType::WellLocationi: return "WLi";
-	case WellInjDataType::WellLocationj: return "WLj";
-        case WellInjDataType::CTRLModeOil: return "CTRLo";
-    	case WellInjDataType::CTRLModeWat: return "CTRLw";
-	case WellInjDataType::CTRLModeGas: return "CTRLg";
-        case WellInjDataType::OilRate: return "OR";
-        case WellInjDataType::WaterRate: return "WR";
-        case WellInjDataType::GasRate: return "GR";
-        case WellInjDataType::FluidResVol: return "FRV";
-    	case WellInjDataType::BHP: return "BHP";
-    	case WellInjDataType::THP: return "THP";
-    	case WellInjDataType::SteadyStateII: return "SteadyStateII";
-        }
-        return "ERROR";
-    }
 
 
     const Simulator& simulator_;
@@ -1769,9 +1462,6 @@ private:
     bool outputFipRestart_;
     bool computeFip_;
     bool forceDisableFipOutput_;
-    
-    bool forceDisableProdOutput_;
-    bool forceDisableInjOutput_;
 
     ScalarBuffer saturation_[numPhases];
     ScalarBuffer oilPressure_;
