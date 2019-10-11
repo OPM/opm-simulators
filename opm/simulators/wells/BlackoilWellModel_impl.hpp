@@ -251,18 +251,18 @@ namespace Opm {
             const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
-	    // copy of get perfpressure in Standard well
-	    // exept for value
-	    double perf_pressure = 0.0;
-	    if (Indices::oilEnabled) {
-		perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
-	    } else {
-		if (Indices::waterEnabled) {
-		    perf_pressure = fs.pressure(FluidSystem::waterPhaseIdx).value();
-		} else {
-		    perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
-		}
-	    }
+            // copy of get perfpressure in Standard well
+            // exept for value
+            double perf_pressure = 0.0;
+            if (Indices::oilEnabled) {
+                perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
+            } else {
+                if (Indices::waterEnabled) {
+                    perf_pressure = fs.pressure(FluidSystem::waterPhaseIdx).value();
+                } else {
+                    perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
+                }
+            }
             cellPressures[cellIdx] = perf_pressure;
         }
         well_state_.init(wells(), cellPressures, schedule(), wells_ecl_, timeStepIdx, &previous_well_state_, phase_usage_);

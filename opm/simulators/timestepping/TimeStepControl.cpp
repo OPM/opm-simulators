@@ -134,11 +134,11 @@ namespace Opm
         // store new error
         const double error = relChange.relativeChange();
         errors_[ 2 ] = error;
-	for( int i=0; i<2; ++i ) {
-	    assert(std::isfinite(errors_[i]));
-	    assert(errors_[i]>0);
-	}
-	
+        for( int i=0; i<2; ++i ) {
+            assert(std::isfinite(errors_[i]));
+            assert(errors_[i]>0);
+        }
+
         if( error > tol_ )
         {
             // adjust dt by given tolerance

@@ -40,7 +40,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
 
 //#include <opm/material/fluidsystems/BlackOilFluidSystemSimple.hpp>
-//#include <opm/material/fluidsystems/BlackOilFluidSystemSimple.hpp> 
+//#include <opm/material/fluidsystems/BlackOilFluidSystemSimple.hpp>
 #include <opm/models/blackoil/blackoilintensivequantities.hh>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 //#include <opm/material/fluidstates/BlackOilFluidStateSimple.hpp>
@@ -71,7 +71,7 @@ namespace Opm {
     Vanguard::setExternalDeck(&deck);
     Vanguard::setExternalEclState(&eclState);
   }
-  
+
 // ----------------- Main program -----------------
   template <class TypeTag>
   int flowEbosMain(int argc, char** argv, bool outputCout, bool outputFiles)
@@ -79,7 +79,7 @@ namespace Opm {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     Opm::resetLocale();
-    
+
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argc, argv);
 #else
@@ -306,7 +306,7 @@ int mainFlow(int argc, char** argv)
     typedef GET_PROP_TYPE(PreTypeTag, Problem) PreProblem;
 
     PreProblem::setBriefDescription("Flow, an advanced reservoir simulator for ECL-decks provided by the Open Porous Media project.");
-    
+
     int status = Opm::FlowMainEbos<PreTypeTag>::setupParameters_(argc, argv);
     if (status != 0) {
         // if setupParameters_ returns a value smaller than 0, there was no error, but
@@ -391,12 +391,12 @@ int mainFlow(int argc, char** argv)
   catch (const std::invalid_argument& e)
     {
       if (outputCout) {
-	std::cerr << "Failed to create valid EclipseState object." << std::endl;
-	std::cerr << "Exception caught: " << e.what() << std::endl;
+        std::cerr << "Failed to create valid EclipseState object." << std::endl;
+        std::cerr << "Exception caught: " << e.what() << std::endl;
       }
       throw;
     }
-    
+
     return EXIT_SUCCESS;
 }
 #endif

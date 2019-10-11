@@ -238,10 +238,10 @@ namespace Opm
     StandardWell<TypeTag>::
     wellVolumeFraction(const unsigned compIdx) const
     {
-	if (FluidSystem::numActivePhases() == 1) {
-	    return EvalWell(numWellEq_ + numEq, 1.0);
-	}
-      
+        if (FluidSystem::numActivePhases() == 1) {
+            return EvalWell(numWellEq_ + numEq, 1.0);
+        }
+
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
             return primary_variables_evaluation_[WFrac];
         }

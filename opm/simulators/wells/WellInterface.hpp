@@ -109,11 +109,11 @@ namespace Opm
         SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
         static const bool compositionSwitchEnabled = Indices::gasEnabled;
         using FluidState = Opm::BlackOilFluidState<Eval,
-						   FluidSystem,
-						   has_temperature,
-						   has_energy,
-						   compositionSwitchEnabled,
-						   Indices::numPhases >;
+                                                   FluidSystem,
+                                                   has_temperature,
+                                                   has_energy,
+                                                   compositionSwitchEnabled,
+                                                   Indices::numPhases >;
         /// Constructor
         WellInterface(const Well2& well, const int time_step, const Wells* wells,
                       const ModelParameters& param,

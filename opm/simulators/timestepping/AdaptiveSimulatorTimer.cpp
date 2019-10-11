@@ -60,7 +60,7 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
     {
         ++current_step_;
         current_time_ += dt_;
-	assert(dt_ > 0);
+        assert(dt_ > 0);
         // store used time step sizes
         steps_.push_back( dt_ );
         return *this;
@@ -82,7 +82,7 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
                 if( dt_ > max_time_step_ ) {
                     dt_ = 0.5 * remaining;
                 }
-		assert(dt_ > 0);
+                assert(dt_ > 0);
                 return;
             }
 
@@ -91,7 +91,7 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
 
             if( 1.5 * dt_ > remaining ) {
                 dt_ = 0.5 * remaining;
-		assert(dt_ > 0);
+                assert(dt_ > 0);
                 return;
             }
         }
