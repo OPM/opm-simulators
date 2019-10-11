@@ -128,12 +128,16 @@ namespace Opm
     {
         // shift errors
         for( int i=0; i<2; ++i ) {
-          errors_[ i ] = errors_[i+1];
+            errors_[ i ] = errors_[i+1];
         }
 
         // store new error
         const double error = relChange.relativeChange();
         errors_[ 2 ] = error;
+        for( int i=0; i<2; ++i ) {
+            assert(std::isfinite(errors_[i]));
+            assert(errors_[i]>0);
+        }
 
         if( error > tol_ )
         {

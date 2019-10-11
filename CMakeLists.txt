@@ -19,6 +19,7 @@ cmake_minimum_required (VERSION 2.8)
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
+option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
 option(BUILD_EBOS "Build the research oriented ebos simulator?" ON)
 option(BUILD_EBOS_EXTENSIONS "Build the variants for various extensions of ebos by default?" OFF)
 option(BUILD_EBOS_DEBUG_EXTENSIONS "Build the ebos variants which are purely for debugging by default?" OFF)
@@ -155,15 +156,36 @@ opm_add_test(flow
   flow/flow_ebos_oilwater_polymer.cpp
   flow/flow_ebos_oilwater_polymer_injectivity.cpp)
 
+if (NOT BUILD_FLOW_VARIANTS)
+  set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "FALSE")
+else()
+  set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "TRUE")
+endif()
+
+# Variant versions of Flow.
 opm_add_test(flow_blackoil_dunecpr
   ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
+  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
   SOURCES flow/flow_blackoil_dunecpr.cpp
   EXE_NAME flow_blackoil_dunecpr
   DEPENDS "opmsimulators"
   LIBRARIES "opmsimulators")
 
+opm_add_test(flow_onephase
+  ONLY_COMPILE
+  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
+  SOURCES flow/flow_onephase.cpp
+  EXE_NAME flow_onephase
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
 
+opm_add_test(flow_onephase_energy
+  ONLY_COMPILE
+  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
+  SOURCES flow/flow_onephase_energy.cpp
+  EXE_NAME flow_onephase_energy
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
 
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)

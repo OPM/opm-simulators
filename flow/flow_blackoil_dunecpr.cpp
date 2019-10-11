@@ -43,7 +43,7 @@ SET_PROP(EclFlowProblemSimple, FluidState)
       typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
       typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
       static const bool compositionSwitchEnabled = Indices::gasEnabled;
- 
+
     public:
 //typedef Opm::BlackOilFluidSystemSimple<Scalar> type;
        typedef Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  Indices::numPhases > type;
@@ -89,7 +89,7 @@ namespace Opm {
 #endif
     SET_BOOL_PROP(EclFlowProblemSimple, EnableStorageCache, true);
     SET_BOOL_PROP(EclFlowProblemSimple, EnableIntensiveQuantityCache, true);
-    
+
     //SET_INT_PROP(EclFlowProblemSimple, NumWellAdjoint, 1);
     //SET_BOOL_PROP(EclFlowProblem, EnableStorageCache, true);
     //SET_BOOL_PROP(EclFlowProblem, EnableIntensiveQuantityCache, true);
@@ -98,8 +98,6 @@ namespace Opm {
 
 int main(int argc, char** argv)
 {
-  typedef TTAG(EclFlowProblemSimple) TypeTag;
-  bool outputCout = true;
-  bool outputFiles = true;
-  return mainFlow<TypeTag>(argc, argv, outputCout, outputFiles);
+    typedef TTAG(EclFlowProblemSimple) TypeTag;
+    return mainFlow<TypeTag>(argc, argv);
 }
