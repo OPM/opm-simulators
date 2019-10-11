@@ -35,7 +35,7 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
-#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/GridManager.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/wells.h>
