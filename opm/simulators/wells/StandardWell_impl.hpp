@@ -985,8 +985,8 @@ namespace Opm
 
         updateExtraPrimaryVariables(dwells);
 
-        for (int i = 0; i < primary_variables_.size(); ++i) {
-            assert(Opm::isfinite(primary_variables_[i]));
+        for (double v : primary_variables_) {
+            assert(Opm::isfinite(v));
         }
     }
 
@@ -1329,8 +1329,8 @@ namespace Opm
             break;
         } // end of switch
 
-        for (int i = 0; i < primary_variables_.size(); ++i) {
-            assert(Opm::isfinite(primary_variables_[i]));
+        for (double v : primary_variables_) {
+            assert(Opm::isfinite(v));
         }
     }
 
@@ -2623,8 +2623,8 @@ namespace Opm
             }
         }
 
-        for (int i = 0; i < primary_variables_.size(); ++i) {
-            assert(Opm::isfinite(primary_variables_[i]));
+        for (double v : primary_variables_) {
+            assert(Opm::isfinite(v));
         }
     }
 

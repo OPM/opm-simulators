@@ -445,8 +445,8 @@ namespace Opm {
                         saturationsOld[FluidSystem::oilPhaseIdx] = oilSaturationOld;
                     }
                     for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
-                        Scalar tmp = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
-                        resultDelta += tmp*tmp;
+                        Scalar tmpSat = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
+                        resultDelta += tmpSat*tmpSat;
                         resultDenom += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
                         assert(std::isfinite(resultDelta));
                         assert(std::isfinite(resultDenom));
