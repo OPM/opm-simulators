@@ -23,27 +23,27 @@
 /*!
  * \file
  *
- * \copydoc Opm::BlackOilTwoPhaseIndices
+ * \copydoc Ewoms::BlackOilTwoPhaseIndices
  */
-#ifndef EWOMS_BLACK_OIL_TWO_PHASE_INDICES_HH
-#define EWOMS_BLACK_OIL_TWO_PHASE_INDICES_HH
+#ifndef EWOMS_BLACK_OIL_ONE_PHASE_INDICES_HH
+#define EWOMS_BLACK_OIL_ONE_PHASE_INDICES_HH
 
 #include <cassert>
 
-namespace Opm {
+namespace Ewoms {
 
 /*!
  * \ingroup BlackOilModel
  *
  * \brief The primary variable and equation indices for the black-oil model.
  */
-template <unsigned numSolventsV, unsigned numPolymersV, unsigned numEnergyV, bool enableFoam, unsigned PVOffset, unsigned disabledCanonicalCompIdx>
-struct BlackOilTwoPhaseIndices
+template <unsigned numSolventsV, unsigned numPolymersV, unsigned numEnergyV, bool enableFoam, unsigned PVOffset, unsigned canonicalCompIdx>
+struct BlackOilOnePhaseIndices
 {
     //! Is phase enabled or not
-    static const bool oilEnabled = (disabledCanonicalCompIdx != 0);
-    static const bool waterEnabled = (disabledCanonicalCompIdx != 1);
-    static const bool gasEnabled = (disabledCanonicalCompIdx != 2);
+    static const bool oilEnabled = (canonicalCompIdx == 0);
+    static const bool waterEnabled = (canonicalCompIdx == 1);
+    static const bool gasEnabled = (canonicalCompIdx == 2);
 
     //! Are solvents involved?
     static const bool enableSolvent = numSolventsV > 0;
@@ -67,7 +67,7 @@ struct BlackOilTwoPhaseIndices
     static const int numFoam = enableFoam? 1 : 0;
 
     //! The number of fluid phases
-    static const int numPhases = 2;
+    static const int numPhases = 1;
 
     //! The number of equations
     static const int numEq = numPhases + numSolvents + numPolymers + numEnergy + numFoam;
@@ -77,10 +77,10 @@ struct BlackOilTwoPhaseIndices
     //////////////////////////////
 
     //! The index of the water saturation. For two-phase oil gas models this is disabled.
-    static const int waterSaturationIdx  = waterEnabled ? PVOffset + 0 : -10000;
+    static const int waterSaturationIdx  = -10000;
 
     //! Index of the oil pressure in a vector of primary variables
-    static const int pressureSwitchIdx  = waterEnabled ? PVOffset + 1 : PVOffset + 0;
+    static const int pressureSwitchIdx  = PVOffset + 0;
 
     /*!
      * \brief Index of the switching variable which determines the composition of the
@@ -88,7 +88,7 @@ struct BlackOilTwoPhaseIndices
      *
      * \note For two-phase water oil models this is disabled.
      */
-    static const int compositionSwitchIdx = gasEnabled ? PVOffset + 1 : -10000;
+    static const int compositionSwitchIdx = -10000;
 
     //! Index of the primary variable for the first solvent
     static const int solventSaturationIdx =
@@ -108,7 +108,7 @@ struct BlackOilTwoPhaseIndices
 
     //! Index of the primary variable for temperature
     static const int temperatureIdx  =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : - 1000;
+        enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam: - 1000;
 
     //////////////////////
     // Equation indices
@@ -117,43 +117,25 @@ struct BlackOilTwoPhaseIndices
     //! \brief returns the index of "active" component
     static unsigned canonicalToActiveComponentIndex(unsigned compIdx)
     {
-        // assumes canonical oil = 0, water = 1, gas = 2;
-        if(!gasEnabled) {
-            assert(compIdx != 2);
-            // oil = 0, water = 1
-            return compIdx;
-        } else if (!waterEnabled) {
-            assert(compIdx != 1);
-            // oil = 0, gas = 1
-            return compIdx / 2;
-        } else {
-            assert(!oilEnabled);
-            assert(compIdx != 0);
-        }
-        // water = 0, gas = 1;
-        return compIdx-1;
+        return 0;
     }
 
     static unsigned activeToCanonicalComponentIndex(unsigned compIdx)
     {
         // assumes canonical oil = 0, water = 1, gas = 2;
-        assert(compIdx < 2);
-        if(!gasEnabled) {
-            // oil = 0, water = 1
-            return compIdx;
-        } else if (!waterEnabled) {
-            // oil = 0, gas = 1
-            return compIdx * 2;
+        assert(compIdx == 0);
+        if(gasEnabled) {
+            return 2;
+        } else if (waterEnabled) {
+            return 1;
         } else {
-            assert(!oilEnabled);
+            assert(oilEnabled);
         }
-        // water = 0, gas = 1;
-        return compIdx+1;
+        return 0;
     }
 
-    //! Index of the continuity equation of the first phase
+    //! Index of the continuity equation of the first (and only) phase
     static const int conti0EqIdx = PVOffset + 0;
-    // one continuity equation follows
 
     //! Index of the continuity equation for the first solvent component
     static const int contiSolventEqIdx =
@@ -176,6 +158,6 @@ struct BlackOilTwoPhaseIndices
         enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
 };
 
-} // namespace Opm
+} // namespace Ewoms
 
 #endif

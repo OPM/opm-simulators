@@ -125,7 +125,7 @@ public:
         time_ = 0.0;
         endTime_ = EWOMS_GET_PARAM(TypeTag, Scalar, EndTime);
         timeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
-
+        assert(timeStepSize_ > 0);
         const std::string& predetTimeStepFile =
             EWOMS_GET_PARAM(TypeTag, std::string, PredeterminedTimeStepsFile);
         if (!predetTimeStepFile.empty()) {
@@ -400,7 +400,9 @@ public:
      * \param timeStepSize The new value for the time step size \f$\mathrm{[s]}\f$
      */
     void setTimeStepSize(Scalar value)
-    { timeStepSize_ = value; }
+    {
+         timeStepSize_ = value;
+    }
 
     /*!
      * \brief Set the current time step index to a given value.
@@ -760,7 +762,7 @@ public:
                 else
                     // ask the problem to provide the next time step size
                     dt = std::min(maxTimeStepSize(), problem_->nextTimeStepSize());
-
+                assert(dt > 0);
                 setTimeStepSize(dt);
             }
             prePostProcessTimer_.stop();

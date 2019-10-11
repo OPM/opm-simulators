@@ -376,7 +376,6 @@ public:
         // and the thermal condictivity coefficients
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                fs.setEnthalpy(phaseIdx, 0.0);
                 continue;
             }
 

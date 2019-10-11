@@ -579,8 +579,10 @@ protected:
 
             // Use the implicit Euler time discretization
             for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+                double dt = elemCtx.simulator().timeStepSize();
+                assert(dt > 0);
                 tmp[eqIdx] -= tmp2[eqIdx];
-                tmp[eqIdx] *= scvVolume / elemCtx.simulator().timeStepSize();
+                tmp[eqIdx] *= scvVolume / dt;
 
                 residual[dofIdx][eqIdx] += tmp[eqIdx];
             }
