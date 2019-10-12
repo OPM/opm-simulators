@@ -243,6 +243,84 @@ void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string&
 }
 
 
+
+void load_deck(std::shared_ptr<Opm::Deck>& deck, const Opm::Parser& parser, const std::string& deckFilename, bool outputCout, const Opm::ParseContext& parseContext, Opm::ErrorGuard errorGuard) {
+    if (outputCout)
+        std::cout << "Reading deck file '" << deckFilename << std::endl << std::endl;
+
+    try {
+        deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
+    } catch (const std::exception& exc) {
+        std::cerr << std::endl;
+        std::cerr << "An error occured while loading input from: " << deckFilename << std::endl << std::endl;
+        std::cerr << "Error message: " << exc.what() << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+
+    if (outputCout)
+        std::cout << std::endl << "Reading deck file '" << deckFilename << "' complete." << std::endl;
+
+    Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
+    if ( outputCout )
+        Opm::checkDeck(*deck, parser, parseContext, errorGuard);
+}
+
+
+
+void load_eclstate(std::shared_ptr<Opm::EclipseState>& eclipseState, const Opm::Deck& deck, bool outputCout, const Opm::ParseContext& parseContext, Opm::ErrorGuard& errorGuard) {
+    if (outputCout) {
+        std::cout << "Processing RUNSPEC, GRID, EDIT, PROPS, REGIONS and SOLUTION sections .... ";
+        std::cout.flush();
+    }
+    try {
+        eclipseState.reset( new Opm::EclipseState(deck, parseContext, errorGuard ));
+    } catch (const std::exception& exc) {
+        std::cerr << std::endl;
+        std::cerr << "An error occured while processing " << std::endl;
+        std::cerr << "Error message: " << exc.what() << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+    if (outputCout)
+        std::cout << std::endl;
+}
+
+
+void load_schedule(std::shared_ptr<Opm::Schedule>& schedule, const Opm::Deck& deck, const Opm::EclipseState& eclipseState, bool outputCout, const Opm::ParseContext& parseContext, Opm::ErrorGuard& errorGuard) {
+    if (outputCout) {
+        std::cout << "Processing SCHEDULE section .... ";
+        std::cout.flush();
+    }
+    try {
+        schedule.reset(new Opm::Schedule(deck, eclipseState, parseContext, errorGuard));
+    } catch (const std::exception& exc) {
+        std::cerr << std::endl;
+        std::cerr << "An error occured while processing SCHEDULE section " << std::endl;
+        std::cerr << "Error message: " << exc.what() << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+    if (outputCout)
+        std::cout << std::endl;
+}
+
+
+void load_summary(std::shared_ptr<Opm::SummaryConfig>& summaryConfig, const Opm::Deck& deck, const Opm::Schedule& schedule, const Opm::TableManager& tables,  bool outputCout, const Opm::ParseContext& parseContext, Opm::ErrorGuard& errorGuard) {
+    if (outputCout) {
+        std::cout << "Processing SUMMARY section .... ";
+        std::cout.flush();
+    }
+    try {
+        summaryConfig.reset( new Opm::SummaryConfig(deck, schedule, tables, parseContext, errorGuard));
+    } catch (const std::exception& exc) {
+        std::cerr << std::endl;
+        std::cerr << "An error occured while processing SUMMARY section " << std::endl;
+        std::cerr << "Error message: " << exc.what() << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+    if (outputCout)
+        std::cout << std::endl;
+}
+
+
 // ----------------- Main program -----------------
 int main(int argc, char** argv)
 {
@@ -311,87 +389,80 @@ int main(int argc, char** argv)
         Opm::FlowMainEbos<PreTypeTag>::printBanner();
     }
 
-    // Create Deck and EclipseState.
+    std::shared_ptr<Opm::Deck> deck;
+    std::shared_ptr<Opm::EclipseState> eclipseState;
+    std::shared_ptr<Opm::Schedule> schedule;
+    std::shared_ptr<Opm::SummaryConfig> summaryConfig;
+    {
+        Opm::Parser parser;
+        Opm::ParseContext parseContext;
+        Opm::ErrorGuard errorGuard;
+        outputMode = setupLogging(mpiRank,
+                                  deckFilename,
+                                  EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir),
+                                  EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
+                                  outputCout, "STDOUT_LOGGER");
+
+        if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
+            parseContext.update( Opm::InputError::DELAYED_EXIT1);
+        else {
+            parseContext.update(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
+            parseContext.update(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
+            parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
+            parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
+        }
+
+        Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout);
+
+        load_deck(deck, parser, deckFilename, outputCout, parseContext, errorGuard);
+        load_eclstate(eclipseState, *deck, outputCout, parseContext, errorGuard);
+        load_schedule(schedule, *deck, *eclipseState, outputCout, parseContext, errorGuard);
+        load_summary(summaryConfig, *deck, *schedule, eclipseState->getTableManager(), outputCout, parseContext, errorGuard);
+
+        setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
+
+        Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
+
+        if (errorGuard) {
+            errorGuard.dump();
+            errorGuard.clear();
+
+            throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
+        }
+    }
+    const auto& phases = Opm::Runspec(*deck).phases();
+    bool outputFiles = (outputMode != FileOutputMode::OUTPUT_NONE);
+    // run the actual simulator
+    //
+    // TODO: make sure that no illegal combinations like thermal and twophase are
+    //       requested.
+
     try {
-        if (outputCout) {
-            std::cout << "Reading deck file '" << deckFilename << "'\n";
-            std::cout.flush();
-        }
-        std::shared_ptr<Opm::Deck> deck;
-        std::shared_ptr<Opm::EclipseState> eclipseState;
-        std::shared_ptr<Opm::Schedule> schedule;
-        std::shared_ptr<Opm::SummaryConfig> summaryConfig;
-        {
-            Opm::Parser parser;
-            Opm::ParseContext parseContext;
-            Opm::ErrorGuard errorGuard;
-            outputMode = setupLogging(mpiRank,
-                                      deckFilename,
-                                      EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir),
-                                      EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
-                                      outputCout, "STDOUT_LOGGER");
-
-            if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
-                parseContext.update( Opm::InputError::DELAYED_EXIT1);
-            else {
-                parseContext.update(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
-                parseContext.update(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
-                parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
-                parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
-            }
-
-            Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout);
-
-            deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
-            Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
-            if ( outputCout )
-                Opm::checkDeck(*deck, parser, parseContext, errorGuard);
-
-            eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
-            schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
-            summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
-            setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
-
-            Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
-
-            if (errorGuard) {
-                errorGuard.dump();
-                errorGuard.clear();
-
-                throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
-            }
-        }
-        const auto& phases = Opm::Runspec(*deck).phases();
-        bool outputFiles = (outputMode != FileOutputMode::OUTPUT_NONE);
-        // run the actual simulator
-        //
-        // TODO: make sure that no illegal combinations like thermal and twophase are
-        //       requested.
-
         // Twophase cases
-        if( phases.size() == 2 ) {
+        if (phases.size() == 2) {
             // oil-gas
-            if (phases.active( Opm::Phase::GAS ))
-            {
-                Opm::flowEbosGasOilSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
+            if (phases.active(Opm::Phase::GAS)) {
+                Opm::flowEbosGasOilSetDeck(
+                    externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
                 return Opm::flowEbosGasOilMain(argc, argv, outputCout, outputFiles);
             }
             // oil-water
-            else if ( phases.active( Opm::Phase::WATER ) )
-            {
-                Opm::flowEbosOilWaterSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
+            else if (phases.active(Opm::Phase::WATER)) {
+                Opm::flowEbosOilWaterSetDeck(
+                    externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
                 return Opm::flowEbosOilWaterMain(argc, argv, outputCout, outputFiles);
-            }
-            else {
+            } else {
                 if (outputCout)
-                    std::cerr << "No suitable configuration found, valid are Twophase (oilwater and oilgas), polymer, solvent, or blackoil" << std::endl;
+                    std::cerr << "No suitable configuration found, valid are Twophase (oilwater and oilgas), polymer, "
+                                 "solvent, or blackoil"
+                              << std::endl;
                 return EXIT_FAILURE;
             }
         }
         // Polymer case
-        else if ( phases.active( Opm::Phase::POLYMER ) ) {
+        else if (phases.active(Opm::Phase::POLYMER)) {
 
-            if ( !phases.active( Opm::Phase::WATER) ) {
+            if (!phases.active(Opm::Phase::WATER)) {
                 if (outputCout)
                     std::cerr << "No valid configuration is found for polymer simulation, valid options include "
                               << "oilwater + polymer and blackoil + polymer" << std::endl;
@@ -400,27 +471,29 @@ int main(int argc, char** argv)
 
             // Need to track the polymer molecular weight
             // for the injectivity study
-            if ( phases.active( Opm::Phase::POLYMW ) ) {
+            if (phases.active(Opm::Phase::POLYMW)) {
                 // only oil water two phase for now
-                assert( phases.size() == 4);
+                assert(phases.size() == 4);
                 return Opm::flowEbosOilWaterPolymerInjectivityMain(argc, argv, outputCout, outputFiles);
             }
 
-            if ( phases.size() == 3 ) { // oil water polymer case
-                Opm::flowEbosOilWaterPolymerSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
+            if (phases.size() == 3) { // oil water polymer case
+                Opm::flowEbosOilWaterPolymerSetDeck(
+                    externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
                 return Opm::flowEbosOilWaterPolymerMain(argc, argv, outputCout, outputFiles);
             } else {
-                Opm::flowEbosPolymerSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
+                Opm::flowEbosPolymerSetDeck(
+                    externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
                 return Opm::flowEbosPolymerMain(argc, argv, outputCout, outputFiles);
             }
         }
         // Foam case
-        else if ( phases.active( Opm::Phase::FOAM ) ) {
+        else if (phases.active(Opm::Phase::FOAM)) {
             Opm::flowEbosFoamSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
             return Opm::flowEbosFoamMain(argc, argv, outputCout, outputFiles);
         }
         // Solvent case
-        else if ( phases.active( Opm::Phase::SOLVENT ) ) {
+        else if (phases.active(Opm::Phase::SOLVENT)) {
             Opm::flowEbosSolventSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
             return Opm::flowEbosSolventMain(argc, argv, outputCout, outputFiles);
         }
@@ -430,23 +503,22 @@ int main(int argc, char** argv)
             return Opm::flowEbosEnergyMain(argc, argv, outputCout, outputFiles);
         }
         // Blackoil case
-        else if( phases.size() == 3 ) {
+        else if (phases.size() == 3) {
             Opm::flowEbosBlackoilSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
             return Opm::flowEbosBlackoilMain(argc, argv, outputCout, outputFiles);
-        }
-        else
-        {
+        } else {
             if (outputCout)
-                std::cerr << "No suitable configuration found, valid are Twophase, polymer, foam, solvent, energy, blackoil." << std::endl;
+                std::cerr
+                    << "No suitable configuration found, valid are Twophase, polymer, foam, solvent, energy, blackoil."
+                    << std::endl;
             return EXIT_FAILURE;
         }
-    }
-    catch (const std::invalid_argument& e)
-    {
-        if (outputCout) {
-            std::cerr << "Failed to create valid EclipseState object." << std::endl;
-            std::cerr << "Exception caught: " << e.what() << std::endl;
-        }
+    } catch (const std::exception& exc) {
+        std::cerr << "Running the simulator failed." << std::endl;
+        std::cerr << "Error message: " << exc.what() << std::endl;
+        return EXIT_FAILURE;
+    } catch (...) {
+        std::cerr << "Running the simulator failed with unknown error condition." << std::endl;
         return EXIT_FAILURE;
     }
 
