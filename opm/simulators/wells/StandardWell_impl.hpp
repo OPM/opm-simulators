@@ -239,6 +239,10 @@ namespace Opm
     StandardWell<TypeTag>::
     wellVolumeFraction(const unsigned compIdx) const
     {
+        if (FluidSystem::numActivePhases() == 1) {
+            return EvalWell(numWellEq_ + numEq, 1.0);
+        }
+
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
             return primary_variables_evaluation_[WFrac];
         }
@@ -1336,6 +1340,11 @@ namespace Opm
         }
 
         updateExtraPrimaryVariables(dwells);
+
+        for (double v : primary_variables_) {
+            assert(Opm::isfinite(v));
+        }
+
     }
 
 
@@ -1765,7 +1774,7 @@ namespace Opm
             case Well2::ProducerCMode::THP:
             {
                 well_state.thp()[well_index] = controls.thp_limit;
-                auto bhp = robustSolveBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
+                auto bhp = computeBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
                 if (bhp) {
                     well_state.bhp()[well_index] = *bhp;
                 } else {
@@ -3064,32 +3073,24 @@ namespace Opm
 
     template<typename TypeTag>
     void
-    StandardWell<TypeTag>::addWellContributions(Mat& mat) const
+    StandardWell<TypeTag>::addWellContributions(SparseMatrixAdapter& jacobian) const
     {
         // We need to change matrx A as follows
         // A -= C^T D^-1 B
         // D is diagonal
         // B and C have 1 row, nc colums and nonzero
         // at (0,j) only if this well has a perforation at cell j.
-
+        typename SparseMatrixAdapter::MatrixBlock tmpMat;
+        Dune::DynamicMatrix<Scalar> tmp;
         for ( auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC )
         {
             const auto row_index = colC.index();
-            auto& row = mat[row_index];
-            auto col = row.begin();
 
             for ( auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB )
             {
-                const auto col_index = colB.index();
-                // Move col to index col_index
-                while ( col != row.end() && col.index() < col_index ) ++col;
-                assert(col != row.end() && col.index() == col_index);
-
-                Dune::DynamicMatrix<Scalar> tmp;
                 Detail::multMatrix(invDuneD_[0][0],  (*colB), tmp);
-                typename Mat::block_type tmp1;
-                Detail::multMatrixTransposed((*colC), tmp, tmp1);
-                (*col) -= tmp1;
+                Detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
+                jacobian.addToBlock( row_index, colB.index(), tmpMat );
             }
         }
     }
@@ -3168,6 +3169,7 @@ namespace Opm
         assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
 
         return relaxation_factor;
+    }
     }
 
 
