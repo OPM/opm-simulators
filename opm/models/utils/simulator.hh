@@ -762,7 +762,7 @@ public:
                 else
                     // ask the problem to provide the next time step size
                     dt = std::min(maxTimeStepSize(), problem_->nextTimeStepSize());
-                assert(dt > 0);
+                assert(finished() || dt > 0);
                 setTimeStepSize(dt);
             }
             prePostProcessTimer_.stop();
