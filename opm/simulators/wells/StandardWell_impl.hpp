@@ -985,9 +985,11 @@ namespace Opm
 
         updateExtraPrimaryVariables(dwells);
 
+#ifndef NDEBUG
         for (double v : primary_variables_) {
             assert(Opm::isfinite(v));
         }
+#endif
     }
 
 
@@ -1329,9 +1331,11 @@ namespace Opm
             break;
         } // end of switch
 
+#ifndef NDEBUG
         for (double v : primary_variables_) {
             assert(Opm::isfinite(v));
         }
+#endif
     }
 
 
@@ -2623,9 +2627,11 @@ namespace Opm
             }
         }
 
+#ifndef NDEBUG
         for (double v : primary_variables_) {
             assert(Opm::isfinite(v));
         }
+#endif
     }
 
 
