@@ -279,7 +279,7 @@ static inline void resetTerminal_(int signum)
  * \param argv The array of the command line arguments
  */
 template <class TypeTag>
-static inline int start(int argc, char **argv)
+static inline int start(int argc, char **argv,  bool registerParams=true)
 {
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
@@ -303,7 +303,7 @@ static inline int start(int argc, char **argv)
     int myRank = 0;
     try
     {
-        int paramStatus = setupParameters_<TypeTag>(argc, const_cast<const char**>(argv));
+        int paramStatus = setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), registerParams);
         if (paramStatus == 1)
             return 1;
         if (paramStatus == 2)
