@@ -28,6 +28,7 @@
 #include "config.h"
 
 #include "ebos.hh"
+#include "startEbos.hh"
 
 namespace Opm {
 
@@ -105,7 +106,7 @@ void ebosBlackOilSetDeck(Opm::Deck* deck,
 int ebosBlackOilMain(int argc, char **argv)
 {
     typedef TTAG(EbosTypeTag) ProblemTypeTag;
-    return Opm::start<ProblemTypeTag>(argc, argv);
+    return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 
 }

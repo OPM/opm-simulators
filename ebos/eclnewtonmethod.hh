@@ -30,6 +30,8 @@
 
 #include <opm/models/blackoil/blackoilnewtonmethod.hh>
 #include <opm/models/utils/signum.hh>
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 
 #include <opm/material/common/Unused.hpp>
 
@@ -225,6 +227,16 @@ public:
             throw Opm::NumericalIssue("Newton: Sum of the error "+std::to_string(double(errorSum_))
                                         +" is larger than maximum allowed error of "
                                         +std::to_string(double(newtonMaxError)));
+    }
+
+    void endIteration_(SolutionVector& nextSolution,
+                       const SolutionVector& currentSolution)
+    {
+        ParentType::endIteration_(nextSolution, currentSolution);
+        OpmLog::debug( "Newton iteration " + std::to_string(this->numIterations_) + ""
+                  + " error: " + std::to_string(double(this->error_))
+                  + this->endIterMsg().str());
+        this->endIterMsg().str("");
     }
 
 private:
