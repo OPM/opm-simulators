@@ -31,15 +31,12 @@
 
 #include <opm/parser/eclipse/Units/Units.hpp>
 
+#include <opm/io/eclipse/ESmry.hpp>
+
 #include <opm/output/eclipse/Summary.hpp>
 #include <ebos/collecttoiorank.hh>
 #include <ebos/ecloutputblackoilmodule.hh>
 #include <ebos/eclwriter.hh>
-
-#include <ert/ecl/ecl_sum.h>
-#include <ert/ecl/smspec_node.h>
-#include <ert/util/ert_unique_ptr.hpp>
-#include <ert/util/util.h>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -87,6 +84,26 @@ SET_BOOL_PROP(TestEclOutputTypeTag, EnableAsyncEclOutput, false);
 
 END_PROPERTIES
 
+namespace {
+std::unique_ptr<Opm::EclIO::ESmry> readsum(const std::string& base)
+{
+    return std::make_unique<Opm::EclIO::ESmry>(base);
+}
+
+double ecl_sum_get_field_var(const Opm::EclIO::ESmry* smry,
+                             const int                timeIdx,
+                             const std::string&       var)
+{
+    return smry->get(var)[timeIdx];
+}
+
+double ecl_sum_get_general_var(const Opm::EclIO::ESmry* smry,
+                               const int                timeIdx,
+                               const std::string&       var)
+{
+    return smry->get(var)[timeIdx];
+}
+
 template <class TypeTag>
 std::unique_ptr<typename GET_PROP_TYPE(TypeTag, Simulator)>
 initSimulator(const char *filename)
@@ -106,14 +123,6 @@ initSimulator(const char *filename)
     return std::unique_ptr<Simulator>(new Simulator);
 }
 
-ERT::ert_unique_ptr<ecl_sum_type, ecl_sum_free> readsum(const std::string& base);
-ERT::ert_unique_ptr<ecl_sum_type, ecl_sum_free> readsum(const std::string& base)
-{
-    return ERT::ert_unique_ptr<ecl_sum_type, ecl_sum_free>(
-            ecl_sum_fread_alloc_case(base.c_str(), ":"));
-}
-
-void test_summary();
 void test_summary()
 {
     typedef typename TTAG(TestEclOutputTypeTag) TypeTag;
@@ -184,7 +193,6 @@ void test_summary()
     CHECK_CLOSE(roip2, ecl_sum_get_general_var( resp, 1, "ROIP:2" ), 1e-3 );
 }
 
-void test_readWriteWells();
 void test_readWriteWells()
 {
     using opt = Opm::data::Rates::opt;
@@ -246,6 +254,7 @@ void test_readWriteWells()
     CHECK( wellRatesCopy.get( "OP_1" , opt::wat) , wellRates.get( "OP_1" , opt::wat));
     CHECK( wellRatesCopy.get( "OP_2" , 188 , opt::wat) , wellRates.get( "OP_2" , 188 , opt::wat));
 }
+} // Anonymous namespace
 
 
 int main(int argc, char** argv)
