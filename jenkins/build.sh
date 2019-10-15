@@ -4,14 +4,12 @@
 #set -x
 
 declare -a upstreams
-upstreams=(libecl
-           opm-common
+upstreams=(opm-common
            opm-material
            opm-grid
            opm-models)
 
 declare -A upstreamRev
-upstreamRev[libecl]=master
 upstreamRev[opm-common]=master
 upstreamRev[opm-material]=master
 upstreamRev[opm-grid]=master
