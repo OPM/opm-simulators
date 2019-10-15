@@ -28,6 +28,7 @@
 #include "config.h"
 
 #include "ebos.hh"
+#include "startEbos.hh"
 
 BEGIN_PROPERTIES
 
@@ -57,7 +58,7 @@ void ebosThermalSetDeck(Opm::Deck* deck,
 int ebosThermalMain(int argc, char **argv)
 {
     typedef TTAG(EbosThermalTypeTag) ProblemTypeTag;
-    return Opm::start<ProblemTypeTag>(argc, argv);
+    return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 
 }

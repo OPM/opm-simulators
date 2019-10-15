@@ -28,6 +28,7 @@
 #include "config.h"
 
 #include "ebos.hh"
+#include "startEbos.hh"
 
 BEGIN_PROPERTIES
 
@@ -57,7 +58,7 @@ void ebosSolventSetDeck(Opm::Deck* deck,
 int ebosSolventMain(int argc, char **argv)
 {
     typedef TTAG(EbosSolventTypeTag) ProblemTypeTag;
-    return Opm::start<ProblemTypeTag>(argc, argv);
+    return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 
 }
