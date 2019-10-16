@@ -1382,6 +1382,27 @@ namespace Opm
         if (well.isInjector()) {
             const auto controls = well.injectionControls(summaryState);
             Opm::Well2::InjectorCMode& currentControl = well_state.currentInjectionControls()[well_index];
+
+            if (controls.hasControl(Well2::InjectorCMode::BHP) && currentControl != Well2::InjectorCMode::BHP)
+            {
+                const auto& bhp = controls.bhp_limit;
+                double current_bhp = well_state.bhp()[well_index];
+                if (bhp < current_bhp) {
+                    currentControl = Well2::InjectorCMode::BHP;
+                    return true;
+                }
+            }
+
+            if (controls.hasControl(Well2::InjectorCMode::THP) && currentControl != Well2::InjectorCMode::THP)
+            {
+                const auto& thp = controls.thp_limit;
+                double current_thp = well_state.thp()[well_index];
+                if (thp < current_thp) {
+                    currentControl = Well2::InjectorCMode::THP;
+                    return true;
+                }
+            }
+
             if (controls.hasControl(Well2::InjectorCMode::RATE) && currentControl != Well2::InjectorCMode::RATE)
             {
                 Well2::InjectorType injectorType = controls.injector_type;
@@ -1432,30 +1453,31 @@ namespace Opm
                 }
             }
 
-            if (controls.hasControl(Well2::InjectorCMode::BHP) && currentControl != Well2::InjectorCMode::BHP)
-            {
-                const auto& bhp = controls.bhp_limit;
-                double current_bhp = well_state.bhp()[well_index];
-                if (bhp < current_bhp) {
-                    currentControl = Well2::InjectorCMode::BHP;
-                    return true;
-                }
-            }
-
-            if (controls.hasControl(Well2::InjectorCMode::THP) && currentControl != Well2::InjectorCMode::THP)
-            {
-                const auto& thp = controls.thp_limit;
-                double current_thp = well_state.thp()[well_index];
-                if (thp < current_thp) {
-                    currentControl = Well2::InjectorCMode::THP;
-                    return true;
-                }
-            }
         }
 
         if (well.isProducer( )) {
             const auto controls = well.productionControls(summaryState);
             Well2::ProducerCMode& currentControl = well_state.currentProductionControls()[well_index];
+
+            if (controls.hasControl(Well2::ProducerCMode::BHP) && currentControl != Well2::ProducerCMode::BHP )
+            {
+                const double bhp = controls.bhp_limit;
+                double current_bhp = well_state.bhp()[well_index];
+                if (bhp > current_bhp) {
+                    currentControl = Well2::ProducerCMode::BHP;
+                    return true;
+                }
+            }
+
+            if (controls.hasControl(Well2::ProducerCMode::THP) && currentControl != Well2::ProducerCMode::THP)
+            {
+                const auto& thp = controls.thp_limit;
+                double current_thp =  well_state.thp()[well_index];
+                if (thp > current_thp) {
+                    currentControl = Well2::ProducerCMode::THP;
+                    return true;
+                }
+            }
 
             if (controls.hasControl(Well2::ProducerCMode::ORAT) && currentControl != Well2::ProducerCMode::ORAT) {
                 double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ];
@@ -1533,25 +1555,6 @@ namespace Opm
                 }
             }
 
-            if (controls.hasControl(Well2::ProducerCMode::BHP) && currentControl != Well2::ProducerCMode::BHP )
-            {
-                const double bhp = controls.bhp_limit;
-                double current_bhp = well_state.bhp()[well_index];
-                if (bhp > current_bhp) {
-                    currentControl = Well2::ProducerCMode::BHP;
-                    return true;
-                }
-            }
-
-            if (controls.hasControl(Well2::ProducerCMode::THP) && currentControl != Well2::ProducerCMode::THP)
-            {
-                const auto& thp = controls.thp_limit;
-                double current_thp =  well_state.thp()[well_index];
-                if (thp > current_thp) {
-                    currentControl = Well2::ProducerCMode::THP;
-                    return true;
-                }
-            }
         }
 
         return false;
