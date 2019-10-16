@@ -1777,11 +1777,14 @@ namespace Opm {
 
         auto& well_state = well_state_;       
         const Group2::ProductionCMode& oldControl = well_state.currentProductionGroupControl(group.name());
-        const std::string from = Group2::ProductionCMode2String(oldControl);
 
         std::ostringstream ss;
-        ss << "Group " << group.name() << " exceeding "
-           << from << " limit  \n";
+
+        if (oldControl != newControl) {
+            const std::string from = Group2::ProductionCMode2String(oldControl);
+            ss << "Group " << group.name() << " exceeding "
+               << from << " limit \n";
+        }
         switch(exceed_action) {
         case Group2::ExceedAction::NONE: {
             OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit NONE not implemented", deferred_logger);
@@ -1804,10 +1807,11 @@ namespace Opm {
             break;
         }
         case Group2::ExceedAction::RATE: {
-            well_state.setCurrentProductionGroupControl(group.name(), newControl);
-            ss << "Switching control mode for group to " << Group2::ProductionCMode2String(newControl)
-               << " \n Wells in group " + group.name() + " switches to GRUP control limit";
-            wellGroupHelpers::setGroupControl(group, schedule(), reportStepIdx, false, well_state);
+            if (oldControl != newControl) {
+                well_state.setCurrentProductionGroupControl(group.name(), newControl);
+                ss << "Switching control mode for group to " << Group2::ProductionCMode2String(newControl);
+            }
+            wellGroupHelpers::setGroupControl(group, schedule(), reportStepIdx, false, well_state, ss);
             break;
         }
         default:
@@ -1818,7 +1822,8 @@ namespace Opm {
         if (cc.size() > 1) {
             ss << " on rank " << cc.rank();
         }
-        deferred_logger.info(ss.str());
+        if (!ss.str().empty())
+            deferred_logger.info(ss.str());
 
 
     }
@@ -1830,19 +1835,24 @@ namespace Opm {
     actionOnBrokenConstraints(const Group2& group, const Group2::InjectionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger) {
         auto& well_state = well_state_;
         const Group2::InjectionCMode& oldControl = well_state.currentInjectionGroupControl(group.name());
-        const std::string from = Group2::InjectionCMode2String(oldControl);
+
         std::ostringstream ss;
-        ss << "Group " << group.name() << " exceeding "
-           << from << " limit \n";
-        ss << "Switching control mode for group to " << Group2::InjectionCMode2String(newControl)
-           << " \n Wells in group " + group.name() + " switches to GRUP control limit";
-        auto cc = Dune::MPIHelper::getCollectiveCommunication();
-        if (cc.size() > 1) {
-            ss << " on rank " << cc.rank();
+        if (oldControl != newControl) {
+            const std::string from = Group2::InjectionCMode2String(oldControl);
+            ss << "Group " << group.name() << " exceeding "
+               << from << " limit \n";
+            ss << "Switching control mode for group to " << Group2::InjectionCMode2String(newControl);
+            auto cc = Dune::MPIHelper::getCollectiveCommunication();
+            if (cc.size() > 1) {
+                ss << " on rank " << cc.rank();
+            }
+            well_state.setCurrentInjectionGroupControl(group.name(), newControl);
         }
-        deferred_logger.info(ss.str());
-        well_state.setCurrentInjectionGroupControl(group.name(), newControl);
-        wellGroupHelpers::setGroupControl(group, schedule(), reportStepIdx, /*isInjector*/true, well_state);
+        wellGroupHelpers::setGroupControl(group, schedule(), reportStepIdx, /*isInjector*/true, well_state, ss);
+
+        if (!ss.str().empty())
+            deferred_logger.info(ss.str());
+
     }
 
     template<typename TypeTag>

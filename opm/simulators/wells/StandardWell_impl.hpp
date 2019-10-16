@@ -3146,30 +3146,29 @@ namespace Opm
                 relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
             }
 
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            const double relaxation_factor_g = relaxationFactorFraction(primary_variables[GFrac], dwells[0][GFrac]);
-            relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
-        }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            // We need to make sure the even with the relaxation_factor, the sum of F_w and F_g is below one, so there will
-            // not be negative oil fraction later
-            const double original_sum = primary_variables[WFrac] + primary_variables[GFrac];
-            const double relaxed_update = (dwells[0][WFrac] + dwells[0][GFrac]) * relaxation_factor;
-            const double possible_updated_sum = original_sum - relaxed_update;
-
-            if (possible_updated_sum > 1.0) {
-                assert(relaxed_update != 0.);
-
-                const double further_relaxation_factor = std::abs((1. - original_sum) / relaxed_update) * 0.95;
-                relaxation_factor *= further_relaxation_factor;
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const double relaxation_factor_g = relaxationFactorFraction(primary_variables[GFrac], dwells[0][GFrac]);
+                relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
             }
+
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                // We need to make sure the even with the relaxation_factor, the sum of F_w and F_g is below one, so there will
+                // not be negative oil fraction later
+                const double original_sum = primary_variables[WFrac] + primary_variables[GFrac];
+                const double relaxed_update = (dwells[0][WFrac] + dwells[0][GFrac]) * relaxation_factor;
+                const double possible_updated_sum = original_sum - relaxed_update;
+
+                if (possible_updated_sum > 1.0) {
+                    assert(relaxed_update != 0.);
+
+                    const double further_relaxation_factor = std::abs((1. - original_sum) / relaxed_update) * 0.95;
+                    relaxation_factor *= further_relaxation_factor;
+                }
+            }
+
+            assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
         }
-
-        assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
-
         return relaxation_factor;
-    }
     }
 
 

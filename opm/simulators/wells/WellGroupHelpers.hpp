@@ -56,11 +56,11 @@ namespace Opm {
             accumulateGroupEfficiencyFactor(schedule.getGroup2(group.parent(), reportStepIdx), schedule, reportStepIdx, factor);
     }
 
-    inline void setGroupControl(const Group2& group, const Schedule& schedule, const int reportStepIdx, const bool injector, WellStateFullyImplicitBlackoil& wellState) {
+    inline void setGroupControl(const Group2& group, const Schedule& schedule, const int reportStepIdx, const bool injector, WellStateFullyImplicitBlackoil& wellState, std::ostringstream& ss) {
 
         for (const std::string& groupName : group.groups()) {
             const Group2& groupTmp = schedule.getGroup2(groupName, reportStepIdx);
-            setGroupControl(groupTmp, schedule, reportStepIdx, injector, wellState);
+            setGroupControl(groupTmp, schedule, reportStepIdx, injector, wellState, ss);
             if (injector)
                 wellState.setCurrentInjectionGroupControl(groupName, Group2::InjectionCMode::FLD);
             else
@@ -82,11 +82,19 @@ namespace Opm {
             if (!wellEcl.isAvailableForGroupControl())
                 continue;
 
-            if (wellEcl.isProducer() && !injector)
-                wellState.currentProductionControls()[well_index] = Well2::ProducerCMode::GRUP;
+            if (wellEcl.isProducer() && !injector) {
+                if (wellState.currentProductionControls()[well_index] != Well2::ProducerCMode::GRUP) {
+                    wellState.currentProductionControls()[well_index] = Well2::ProducerCMode::GRUP;
+                    ss <<"\n Producer " << wellName << " switches to GRUP control limit";
+                }
+            }
 
-            if (wellEcl.isInjector() && injector)
-                wellState.currentInjectionControls()[well_index] = Well2::InjectorCMode::GRUP;
+            if (wellEcl.isInjector() && injector) {
+                if (wellState.currentInjectionControls()[well_index] != Well2::InjectorCMode::GRUP) {
+                    wellState.currentInjectionControls()[well_index] = Well2::InjectorCMode::GRUP;
+                    ss <<"\n Injector " << wellName << " switches to GRUP control limit";
+                }
+            }
         }
     }
 
