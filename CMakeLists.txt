@@ -205,12 +205,9 @@ endif()
 
 # the research oriented general-purpose ECL simulator ("ebos" == &ecl
 # &black-&oil &simulator)
-get_target_property(ecl_INCLUDE_DIRS ecl INTERFACE_INCLUDE_DIRECTORIES)
-
 set(MEBOS_TARGETS "")
 foreach(OBJ blackoil solvent polymer foam gasoil oilwater thermal)
   add_library(ebos_lib${OBJ} OBJECT EXCLUDE_FROM_ALL ebos/ebos_${OBJ}.cc)
-  target_include_directories(ebos_lib${OBJ} PRIVATE ${ecl_INCLUDE_DIRS})
   list(APPEND MEBOS_TARGETS $<TARGET_OBJECTS:ebos_lib${OBJ}>)
 endforeach()
 
