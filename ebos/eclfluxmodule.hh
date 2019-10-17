@@ -119,7 +119,6 @@ class EclTransExtensiveQuantities
     enum { numPhases = FluidSystem::numPhases };
     enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
@@ -437,10 +436,9 @@ protected:
             const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
 
             Evaluation transModified = trans;
-            if (enableExperiments) {
-                // deal with water induced rock compaction
-                transModified *= problem.template rockCompTransMultiplier<double>(up, stencil.globalSpaceIndex(upstreamIdx));
-            }
+
+            // deal with water induced rock compaction
+            transModified *= problem.template rockCompTransMultiplier<double>(up, stencil.globalSpaceIndex(upstreamIdx));
 
             if (upstreamIdx == interiorDofIdx_) {
                 volumeFlux_[phaseIdx] =
