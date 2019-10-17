@@ -115,7 +115,7 @@ struct BlackOilOnePhaseIndices
     //////////////////////
 
     //! \brief returns the index of "active" component
-    static unsigned canonicalToActiveComponentIndex(unsigned compIdx)
+    static unsigned canonicalToActiveComponentIndex(unsigned compIdx OPM_UNUSED)
     {
         return 0;
     }
