@@ -5,7 +5,7 @@ Build-Depends: build-essential, debhelper (>= 9), libboost-filesystem-dev,
                libboost-system-dev, libboost-date-time-dev, libboost-test-dev,
                gfortran, pkg-config, libopm-common-dev,
                libdune-common-dev, libdune-istl-dev, cmake, bc,
-               libecl-dev, git, zlib1g-dev, libtool, doxygen,
+               git, zlib1g-dev, libtool, doxygen,
                texlive-latex-extra, texlive-latex-recommended, ghostscript,
                libboost-iostreams-dev, mpi-default-dev,
                mpi-default-bin
