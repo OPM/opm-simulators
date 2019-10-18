@@ -3462,7 +3462,7 @@ namespace Opm
             case Well2::InjectorCMode::RATE:
             case Well2::InjectorCMode::RESV:
                 ctrltype = CR::WellFailure::Type::ControlRate;
-                control_tolerance = 1.e-6; //
+                control_tolerance = 1.e-4; //
                 break;
             case Well2::InjectorCMode::GRUP:
                 ctrltype = CR::WellFailure::Type::ControlRate;
@@ -3491,7 +3491,7 @@ namespace Opm
             case Well2::ProducerCMode::RESV:
             case Well2::ProducerCMode::CRAT:
                 ctrltype = CR::WellFailure::Type::ControlRate;
-                control_tolerance = 1.e-6; // smaller tolerance for rate control
+                control_tolerance = 1.e-4; // smaller tolerance for rate control
                 break;
             case Well2::ProducerCMode::GRUP:
                 ctrltype = CR::WellFailure::Type::ControlRate;
