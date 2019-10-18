@@ -42,7 +42,3 @@ set (opm-simulators_DEPS
   )
 
 find_package_deps(opm-simulators)
-
-if(NOT HAVE_ECL_INPUT OR NOT HAVE_ECL_OUTPUT)
-  message(FATAL_ERROR "Eclipse input/output support required in opm-common")
-endif()
