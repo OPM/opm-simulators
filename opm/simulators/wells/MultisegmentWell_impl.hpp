@@ -2950,6 +2950,7 @@ namespace Opm
             case Well2::ProducerCMode::GRUP:
                 ctrltype = CR::WellFailure::Type::ControlRate;
                 control_tolerance = param_.tolerance_wells_;
+                break;
             default:
                 OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
             }
