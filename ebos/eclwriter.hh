@@ -251,7 +251,7 @@ public:
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
-        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log);
+        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
         ElementIterator elemIt = gridView.template begin</*codim=*/0>();
@@ -326,7 +326,7 @@ public:
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
-        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log);
+        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
         ElementIterator elemIt = gridView.template begin</*codim=*/0>();
@@ -419,7 +419,7 @@ public:
 
         const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
-        eclOutputModule_.allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false);
+        eclOutputModule_.allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false, /*isRestart*/ true);
 
         {
             /*
