@@ -286,7 +286,7 @@ void pack(const char* str, std::vector<char>& buffer, int& position,
     std::size_t length = strlen(str)+1;
     MPI_Pack(&length, 1, Dune::MPITraits<std::size_t>::getType(), buffer.data(),
         buffer.size(), &position, comm);
-MPI_Pack(str, strlen(str)+1, MPI_CHAR, buffer.data(), buffer.size(),
+    MPI_Pack(str, strlen(str)+1, MPI_CHAR, buffer.data(), buffer.size(),
          &position, comm);
 #endif
 }
@@ -486,11 +486,10 @@ void unpack(std::string& str, std::vector<char>& buffer, int& position,
 {
     std::size_t length=0;
     unpack(length, buffer, position, comm);
-    char* cStr = new char[length];
-    unpack(cStr, length, buffer, position, comm);
+    std::vector<char> cStr(length, '\0');
+    unpack(cStr.data(), length, buffer, position, comm);
     assert(str.empty());
-    str.append(cStr);
-    delete[] cStr;
+    str.append(cStr.data());
 }
 
 template<class T1, class T2>
