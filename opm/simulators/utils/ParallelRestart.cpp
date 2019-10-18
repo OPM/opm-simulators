@@ -46,7 +46,8 @@ std::size_t packSize(const T*, std::size_t l, Dune::MPIHelper::MPICommunicator c
     MPI_Pack_size(l, Dune::MPITraits<T>::getType(), comm, &size);
     return totalSize + size;
 #else
-    return 0;
+    (void) comm;
+    return l-l;
 #endif
 }
 
@@ -72,6 +73,7 @@ std::size_t packSize(const T&, Dune::MPIHelper::MPICommunicator comm,
     MPI_Pack_size(1, Dune::MPITraits<T>::getType(), comm, &size);
     return size;
 #else
+    (void) comm;
     return 0;
 #endif
 }
@@ -112,6 +114,8 @@ std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm)
     MPI_Pack_size(strlen(str)+1, MPI_CHAR, comm, &size);
     return totalSize + size;
 #else
+    (void) str;
+    (void) comm;
     return 0;
 #endif
 }
@@ -220,6 +224,12 @@ void pack(const T* data, std::size_t l, std::vector<char>& buffer, int& position
              buffer.size(), &position, comm);
     MPI_Pack(data, l, Dune::MPITraits<T>::getType(), buffer.data(),
              buffer.size(), &position, comm);
+#else
+    (void) data;
+    (void) comm;
+    (void) l;
+    (void) buffer;
+    (void) position;
 #endif
 }
 
@@ -244,6 +254,11 @@ void pack(const T& data, std::vector<char>& buffer, int& position,
 #if HAVE_MPI
     MPI_Pack(&data, 1, Dune::MPITraits<T>::getType(), buffer.data(),
              buffer.size(), &position, comm);
+#else
+    (void) data;
+    (void) comm;
+    (void) buffer;
+    (void) position;
 #endif
 }
 
@@ -288,6 +303,11 @@ void pack(const char* str, std::vector<char>& buffer, int& position,
         buffer.size(), &position, comm);
     MPI_Pack(str, strlen(str)+1, MPI_CHAR, buffer.data(), buffer.size(),
          &position, comm);
+#else
+    (void) str;
+    (void) comm;
+    (void) buffer;
+    (void) position;
 #endif
 }
 
@@ -413,6 +433,12 @@ void unpack(T* data, const std::size_t& l, std::vector<char>& buffer, int& posit
 #if HAVE_MPI
     MPI_Unpack(buffer.data(), buffer.size(), &position, data, l,
                Dune::MPITraits<T>::getType(), comm);
+#else
+    (void) data;
+    (void) comm;
+    (void) l;
+    (void) buffer;
+    (void) position;
 #endif
 }
 
@@ -437,6 +463,11 @@ void unpack(T& data, std::vector<char>& buffer, int& position,
 #if HAVE_MPI
     MPI_Unpack(buffer.data(), buffer.size(), &position, &data, 1,
                Dune::MPITraits<T>::getType(), comm);
+#else
+    (void) data;
+    (void) comm;
+    (void) buffer;
+    (void) position;
 #endif
 }
 
@@ -478,6 +509,12 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
 {
 #if HAVE_MPI
     MPI_Unpack(buffer.data(), buffer.size(), &position, const_cast<char*>(str), length, MPI_CHAR, comm);
+#else
+    (void) str;
+    (void) comm;
+    (void) length;
+    (void) buffer;
+    (void) position;
 #endif
 }
 
@@ -630,6 +667,7 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summarySt
     }
     return restartValues;
 #else
+    (void) comm;
     return eclIO->loadRestart(summaryState, solutionKeys, extraKeys);
 #endif
 }
