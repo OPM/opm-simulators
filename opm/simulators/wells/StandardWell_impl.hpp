@@ -2895,10 +2895,11 @@ namespace Opm
                 primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = well_state.perfSkinPressure()[first_perf_ + perf];
             }
         }
-
+#ifndef NDEBUG
         for (double v : primary_variables_) {
             assert(Opm::isfinite(v));
         }
+#endif
     }
 
 
