@@ -1341,9 +1341,11 @@ namespace Opm
 
         updateExtraPrimaryVariables(dwells);
 
+#ifndef NDEBUG
         for (double v : primary_variables_) {
             assert(Opm::isfinite(v));
         }
+#endif
 
     }
 
@@ -1797,14 +1799,9 @@ namespace Opm
                 OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well "  + name() , deferred_logger);
             }
 
-            break;
-        } // end of switch
-
-#ifndef NDEBUG
-        for (double v : primary_variables_) {
-            assert(Opm::isfinite(v));
+                break;
+            } // end of switch
         }
-#endif
     }
 
 
