@@ -1648,7 +1648,6 @@ namespace Opm
                 for (int p = 0; p<np; ++p) {
                     rates[p] = well_state.wellRates()[well_index*np + p];
                 }
-                const auto& summaryState = ebos_simulator.vanguard().summaryState();
                 double bhp = calculateBhpFromThp(rates, well, summaryState, deferred_logger);
                 well_state.bhp()[well_index] = bhp;
                 break;
@@ -1748,7 +1747,6 @@ namespace Opm
                     }
                 } else {
                     std::vector<double> hrates(number_of_phases_,0.);
-                    const PhaseUsage& pu = phaseUsage();
                     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                         hrates[pu.phase_pos[Water]] = controls.water_rate;
                     }

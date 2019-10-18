@@ -427,7 +427,6 @@ namespace Opm
                     }
                 } else {
                     std::vector<double> hrates(number_of_phases_,0.);
-                    const PhaseUsage& pu = phaseUsage();
                     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                         hrates[pu.phase_pos[Water]] = controls.water_rate;
                     }
