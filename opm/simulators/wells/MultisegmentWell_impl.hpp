@@ -683,7 +683,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
                                      const std::vector<Scalar>& B_avg,
-                                     const double& bhp,
+                                     const double& bhp OPM_UNUSED,
                                      std::vector<double>& well_flux,
                                      Opm::DeferredLogger& deferred_logger)
     {
