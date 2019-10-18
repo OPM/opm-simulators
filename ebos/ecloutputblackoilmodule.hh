@@ -145,7 +145,7 @@ public:
      * \brief Allocate memory for the scalar fields we would like to
      *        write to ECL output files
      */
-    void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const bool substep, const bool log)
+    void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const bool substep, const bool log, const bool isRestart)
     {
         if (!std::is_same<Discretization, Opm::EcfvDiscretization<TypeTag> >::value)
             return;
@@ -219,8 +219,11 @@ public:
         // always allocate memory for temperature
         temperature_.resize(bufferSize, 0.0);
 
-        // Only provide restart on restart steps
-        if (!restartConfig.getWriteRestartFile(reportStepNum, log) || substep)
+        // field data should be allocated
+        // 1) when we want to restart
+        // 2) when it is ask for by the user via restartConfig
+        // 3) when it is not a substep
+        if (!isRestart && (!restartConfig.getWriteRestartFile(reportStepNum, log) || substep))
             return;
 
         // always output saturation of active phases
