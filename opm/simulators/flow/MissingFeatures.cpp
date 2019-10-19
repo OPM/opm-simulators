@@ -57,9 +57,10 @@ namespace MissingFeatures {
         for (it = itlow; it != itup; ++it) {
             const auto& record = keyword.getRecord(0);
             if (record.getItem(it->second.item).template get<T>(0) != it->second.item_value) {
+                const auto& location = keyword.location();
                 std::string msg = "For keyword '" + it->first + "' only value " + boost::lexical_cast<std::string>(it->second.item_value)
                     + " in item " + it->second.item + " is supported by flow.\n"
-                    + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
+                    + "In file " + location.filename + ", line " + std::to_string(location.lineno) + "\n";
                 parseContext.handleError(ParseContext::SIMULATOR_KEYWORD_ITEM_NOT_SUPPORTED, msg, errorGuard);
             }
         }
@@ -715,11 +716,12 @@ namespace MissingFeatures {
         // check deck and keyword for flow and parser.
         for (size_t idx = 0; idx < deck.size(); ++idx) {
             const auto& keyword = deck.getKeyword(idx);
+            const auto& location = keyword.location();
             std::unordered_set<std::string>::const_iterator it;
             it = unsupported_keywords.find(keyword.name());
             if (it != unsupported_keywords.end()) {
                 std::string msg = "Keyword '" + keyword.name() + "' is not supported by flow.\n"
-                    + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
+                    + "In file " + location.filename + ", line " + std::to_string(location.lineno) + "\n";
                 parseContext.handleError(ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, msg, errorGuard);
             }
             checkOptions<std::string>(keyword, string_options, parseContext, errorGuard);
