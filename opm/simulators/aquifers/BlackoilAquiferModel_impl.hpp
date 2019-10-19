@@ -1,3 +1,4 @@
+// #include <sstream>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 namespace Opm {
 
@@ -165,10 +166,25 @@ namespace Opm {
       const Aquifetp aquifetp = Aquifetp(deck);
       const Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
 
-      std::vector<Aquifetp::AQUFETP_data> aquifersData = aquifetp.getAquifers();
-      std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
+      const std::vector<Aquifetp::AQUFETP_data>& aquifersData = aquifetp.getAquifers();
+      const std::vector<Aquancon::AquanconOutput>& aquifer_connection = aquifer_connect.getAquOutput();
 
-      assert( aquifersData.size() == aquifer_connection.size() );
+      // it can happen that some aquifer defined while there are no valid connections associated with it
+      assert( aquifersData.size() >= aquifer_connection.size() );
+      std::cout << " aquifersData.size() " << aquifersData.size() << std::endl;
+      std::cout << " aquifer_connection.size() " << aquifer_connection.size() << std::endl;
+      std::cout << " aquifer IDs in aquifersData ";
+      for (const auto& a : aquifersData) {
+          std::cout << " " << a.aquiferID;
+      }
+      std::cout << std::endl;
+
+      std::cout << " aquifer IDs in aquifer_connection ";
+      for (const auto& c : aquifer_connection) {
+          std::cout << " " << c.aquiferID;
+      }
+      std::cout << std::endl;
+
       const auto& ugrid = simulator_.vanguard().grid();
       const auto& gridView = simulator_.gridView();
       const int number_of_cells = gridView.size(0);
@@ -176,11 +192,27 @@ namespace Opm {
       cartesian_to_compressed_ = cartesianToCompressed(number_of_cells,
                                                        Opm::UgGridHelpers::globalCell(ugrid));
 
-      for (size_t i = 0; i < aquifersData.size(); ++i)
-      {
-        aquifers_Fetkovich.push_back(
-          AquiferFetkovich<TypeTag> (aquifer_connection.at(i), cartesian_to_compressed_, this->simulator_ , aquifersData.at(i))
-        );
+      size_t idx_aquifer_data = 0;
+      for (size_t i = 0; i < aquifer_connection.size(); ++i, ++idx_aquifer_data) {
+          const int aquifer_id = aquifer_connection[i].aquiferID;
+
+          for (; idx_aquifer_data < aquifersData.size(); ++idx_aquifer_data) {
+              if (aquifersData[idx_aquifer_data].aquiferID == aquifer_id) {
+                  break;
+              }
+          }
+
+          if (idx_aquifer_data == aquifersData.size()) {
+              std::ostringstream msg;
+              msg << " Connections for aquifer " << aquifer_id << " are defined, while there are no AQUFETP keyword"
+                  << " specified for this aquifer ";
+              throw std::logic_error(msg.str());
+          }
+
+          aquifers_Fetkovich.push_back(
+            AquiferFetkovich<TypeTag> (aquifer_connection.at(i), cartesian_to_compressed_, this->simulator_ , aquifersData.at(idx_aquifer_data)) );
+
+          std::cout << " aquifer " << aquifer_id << " connection idx " << i << " idx_aquifer_data " << idx_aquifer_data << std::endl;
       }
     }
   }
