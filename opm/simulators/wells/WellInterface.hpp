@@ -29,8 +29,6 @@
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
-
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
@@ -90,13 +88,13 @@ namespace Opm
 
         typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
         typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
-        typedef typename SparseMatrixAdapter::IstlMatrix Mat;
         typedef Dune::BlockVector<VectorBlockType> BVector;
         typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
         static const bool has_energy = GET_PROP_VALUE(TypeTag, EnableEnergy);
+        static const bool has_temperature = GET_PROP_VALUE(TypeTag, EnableTemperature);
         // flag for polymer molecular weight related
         static const bool has_polymermw = GET_PROP_VALUE(TypeTag, EnablePolymerMW);
         static const bool has_foam = GET_PROP_VALUE(TypeTag, EnableFoam);
@@ -109,7 +107,13 @@ namespace Opm
         // For the conversion between the surface volume rate and reservoir voidage rate
         using RateConverterType = RateConverter::
         SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
-
+        static const bool compositionSwitchEnabled = Indices::gasEnabled;
+        using FluidState = Opm::BlackOilFluidState<Eval,
+                                                   FluidSystem,
+                                                   has_temperature,
+                                                   has_energy,
+                                                   compositionSwitchEnabled,
+                                                   Indices::numPhases >;
         /// Constructor
         WellInterface(const Well2& well, const int time_step, const Wells* wells,
                       const ModelParameters& param,
@@ -208,7 +212,7 @@ namespace Opm
         void calculateReservoirRates(WellState& well_state) const;
 
         // Add well contributions to matrix
-        virtual void addWellContributions(Mat&) const = 0;
+        virtual void addWellContributions(SparseMatrixAdapter&) const = 0;
 
         void addCellRates(RateVector& rates, int cellIdx) const;
 
@@ -445,6 +449,8 @@ namespace Opm
         void scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger);
 
         void initCompletions();
+
+        WellControls* createWellControlsWithBHPAndTHP(DeferredLogger& deferred_logger) const;
 
         // count the number of times an output log message is created in the productivity
         // index calculations

@@ -30,9 +30,9 @@
 #define EWOMS_INITSTATEEQUIL_HH
 
 #include "equilibrationhelpers.hh"
-#include "regionmapping.hh"
+#include "opm/grid/utility/RegionMapping.hpp"
 
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 
@@ -67,7 +67,7 @@ NEW_PROP_TAG(FluidSystem);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /**
  * Types and routines that collectively implement a basic
@@ -960,7 +960,7 @@ public:
         const std::vector<Opm::EquilRecord> rec = getEquil(eclipseState);
         const auto& tables = eclipseState.getTableManager();
         // Create (inverse) region mapping.
-        const Ewoms::RegionMapping<> eqlmap(equilnum(eclipseState, grid));
+        const Opm::RegionMapping<> eqlmap(equilnum(eclipseState, grid));
         const int invalidRegion = -1;
         regionPvtIdx_.resize(rec.size(), invalidRegion);
         setRegionPvtIdx(grid, eclipseState, eqlmap);

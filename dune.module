@@ -10,4 +10,4 @@ Label: 2019.10-pre
 Maintainer: atgeirr@sintef.no
 MaintainerName: Atgeirr F. Rasmussen
 Url: http://opm-project.org
-Depends: dune-istl (>= 2.4) opm-common opm-material opm-grid ewoms
+Depends: dune-istl (>= 2.4) opm-common opm-material opm-grid opm-models

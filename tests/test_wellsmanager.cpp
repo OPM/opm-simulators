@@ -184,7 +184,7 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Opm::Schedule sched(deck, grid, eclipseProperties, runspec);
-    Opm::SummaryState summaryState;
+    Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
 
     {
         Opm::WellsManager wellsManager(eclipseState, sched, summaryState, 0, *vanguard.c_grid());
@@ -225,7 +225,7 @@ BOOST_AUTO_TEST_CASE(WellsEqual) {
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Opm::Schedule sched(deck, grid, eclipseProperties, runspec);
-    Opm::SummaryState summaryState;
+    Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
 
 
     Opm::WellsManager wellsManager0(eclipseState, sched, summaryState, 0, *vanguard.c_grid());
@@ -246,7 +246,7 @@ BOOST_AUTO_TEST_CASE(ControlsEqual) {
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Opm::Schedule sched(deck, grid, eclipseProperties, runspec);
-    Opm::SummaryState summaryState;
+    Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
 
 
     Opm::WellsManager wellsManager0(eclipseState, sched, summaryState, 0, *vanguard.c_grid());
@@ -274,7 +274,7 @@ BOOST_AUTO_TEST_CASE(WellShutOK) {
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Opm::Schedule sched(deck, grid, eclipseProperties, runspec);
-    Opm::SummaryState summaryState;
+    Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
 
     Opm::WellsManager wellsManager2(eclipseState, sched, summaryState, 2, *vanguard.c_grid());
 
@@ -295,7 +295,7 @@ BOOST_AUTO_TEST_CASE(WellSTOPOK) {
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Opm::Schedule sched(deck, grid, eclipseProperties, runspec);
-    Opm::SummaryState summaryState;
+    Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
 
 
     Opm::WellsManager wellsManager(eclipseState, sched, summaryState, 0, *vanguard.c_grid());
@@ -319,7 +319,7 @@ BOOST_AUTO_TEST_CASE(removeWellWithNoPerforation) {
     const Opm::Eclipse3DProperties eclipseProperties ( deck , table, inputGrid);
     const Opm::Runspec runspec (deck);
     Opm::Schedule sched(deck, inputGrid, eclipseProperties, runspec);
-    Opm::SummaryState summaryState;
+    Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
     const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(*gridManager.c_grid(), inputGrid);
     sched.filterConnections(eclipseGrid);
 

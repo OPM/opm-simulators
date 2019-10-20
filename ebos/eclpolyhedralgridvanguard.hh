@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::EclPolyhedralGridVanguard
+ * \copydoc Opm::EclPolyhedralGridVanguard
  */
 #ifndef EWOMS_ECL_POLYHEDRAL_GRID_VANGUARD_HH
 #define EWOMS_ECL_POLYHEDRAL_GRID_VANGUARD_HH
@@ -31,7 +31,7 @@
 
 #include <opm/grid/polyhedralgrid.hh>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class EclPolyhedralGridVanguard;
 }
@@ -41,13 +41,13 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclPolyhedralGridVanguard, INHERITS_FROM(EclBaseVanguard));
 
 // declare the properties
-SET_TYPE_PROP(EclPolyhedralGridVanguard, Vanguard, Ewoms::EclPolyhedralGridVanguard<TypeTag>);
+SET_TYPE_PROP(EclPolyhedralGridVanguard, Vanguard, Opm::EclPolyhedralGridVanguard<TypeTag>);
 SET_TYPE_PROP(EclPolyhedralGridVanguard, Grid, Dune::PolyhedralGrid<3, 3>);
 SET_TYPE_PROP(EclPolyhedralGridVanguard, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -77,10 +77,11 @@ private:
     typedef CartesianIndexMapper* CartesianIndexMapperPointer;
 
 public:
-    /*!
-     * \brief Inherit the constructors from the base class.
-     */
-    using EclBaseVanguard<TypeTag>::EclBaseVanguard;
+    EclPolyhedralGridVanguard(Simulator& simulator)
+        : EclBaseVanguard<TypeTag>(simulator)
+    {
+        this->callImplementationInit();
+    }
 
     ~EclPolyhedralGridVanguard()
     {
@@ -165,6 +166,6 @@ protected:
     CartesianIndexMapperPointer cartesianIndexMapper_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

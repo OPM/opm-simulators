@@ -30,8 +30,6 @@
 #include <opm/core/wells/WellsGroup.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
-
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -92,26 +90,26 @@ namespace WellsManagerDetail
         }
 
 
-        Mode mode(Opm::WellProducer::ControlModeEnum controlMode)
+        Mode mode(Opm::Well2::ProducerCMode controlMode)
         {
             switch( controlMode ) {
-            case Opm::WellProducer::ORAT:
+            case Opm::Well2::ProducerCMode::ORAT:
                 return ORAT;
-            case Opm::WellProducer::WRAT:
+            case Opm::Well2::ProducerCMode::WRAT:
                 return WRAT;
-            case Opm::WellProducer::GRAT:
+            case Opm::Well2::ProducerCMode::GRAT:
                 return GRAT;
-            case Opm::WellProducer::LRAT:
+            case Opm::Well2::ProducerCMode::LRAT:
                 return LRAT;
-            case Opm::WellProducer::CRAT:
+            case Opm::Well2::ProducerCMode::CRAT:
                 return CRAT;
-            case Opm::WellProducer::RESV:
+            case Opm::Well2::ProducerCMode::RESV:
                 return RESV;
-            case Opm::WellProducer::BHP:
+            case Opm::Well2::ProducerCMode::BHP:
                 return BHP;
-            case Opm::WellProducer::THP:
+            case Opm::Well2::ProducerCMode::THP:
                 return THP;
-            case Opm::WellProducer::GRUP:
+            case Opm::Well2::ProducerCMode::GRUP:
                 return GRUP;
             default:
                 throw std::invalid_argument("unhandled enum value");
@@ -155,18 +153,18 @@ namespace WellsManagerDetail
             }
         }
 
-        Mode mode(Opm::WellInjector::ControlModeEnum controlMode)
-        {
+    Mode mode(Opm::Well2::InjectorCMode controlMode)
+    {
             switch ( controlMode  ) {
-            case Opm::WellInjector::GRUP:
+            case Opm::Well2::InjectorCMode::GRUP:
                 return GRUP;
-            case Opm::WellInjector::RESV:
+            case Opm::Well2::InjectorCMode::RESV:
                 return RESV;
-            case Opm::WellInjector::RATE:
+            case Opm::Well2::InjectorCMode::RATE:
                 return RATE;
-            case Opm::WellInjector::THP:
+            case Opm::Well2::InjectorCMode::THP:
                 return THP;
-            case Opm::WellInjector::BHP:
+            case Opm::Well2::InjectorCMode::BHP:
                 return BHP;
             default:
                 throw std::invalid_argument("unhandled enum value");
@@ -309,12 +307,12 @@ namespace Opm
 
             const auto& well = (*wellIter);
 
-            if (well.getStatus() == WellCommon::SHUT) {
+            if (well.getStatus() == Well2::Status::SHUT) {
                 //SHUT wells are not added to the well list
                 continue;
             }
 
-            if (well.getStatus() == WellCommon::STOP) {
+            if (well.getStatus() == Well2::Status::STOP) {
                 // Stopped wells are kept in the well list but marked as stopped.
                 well_controls_stop_well(w_->ctrls[well_index]);
             }
@@ -326,16 +324,16 @@ namespace Opm
                 int control_pos[5] = { -1, -1, -1, -1, -1 };
 
                 clear_well_controls(well_index, w_);
-                if (controls.hasControl(WellInjector::RATE)) {
+                if (controls.hasControl(Well2::InjectorCMode::RATE)) {
                     control_pos[WellsManagerDetail::InjectionControl::RATE] = well_controls_get_num(w_->ctrls[well_index]);
                     double distr[3] = { 0.0, 0.0, 0.0 };
-                    WellInjector::TypeEnum injectorType = controls.injector_type;
+                    auto injectorType = controls.injector_type;
 
-                    if (injectorType == WellInjector::TypeEnum::WATER) {
+                    if (injectorType == Well2::InjectorType::WATER) {
                         distr[phaseUsage.phase_pos[BlackoilPhases::Aqua]] = 1.0;
-                    } else if (injectorType == WellInjector::TypeEnum::OIL) {
+                    } else if (injectorType == Well2::InjectorType::OIL) {
                         distr[phaseUsage.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                    } else if (injectorType == WellInjector::TypeEnum::GAS) {
+                    } else if (injectorType == Well2::InjectorType::GAS) {
                         distr[phaseUsage.phase_pos[BlackoilPhases::Vapour]] = 1.0;
                     }
 
@@ -348,16 +346,16 @@ namespace Opm
                                               w_);
                 }
 
-                if (ok && controls.hasControl(WellInjector::RESV)) {
+                if (ok && controls.hasControl(Well2::InjectorCMode::RESV)) {
                     control_pos[WellsManagerDetail::InjectionControl::RESV] = well_controls_get_num(w_->ctrls[well_index]);
                     double distr[3] = { 0.0, 0.0, 0.0 };
-                    WellInjector::TypeEnum injectorType = controls.injector_type;
+                    auto injectorType = controls.injector_type;
 
-                    if (injectorType == WellInjector::TypeEnum::WATER) {
+                    if (injectorType == Well2::InjectorType::WATER) {
                         distr[phaseUsage.phase_pos[BlackoilPhases::Aqua]] = 1.0;
-                    } else if (injectorType == WellInjector::TypeEnum::OIL) {
+                    } else if (injectorType == Well2::InjectorType::OIL) {
                         distr[phaseUsage.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                    } else if (injectorType == WellInjector::TypeEnum::GAS) {
+                    } else if (injectorType == Well2::InjectorType::GAS) {
                         distr[phaseUsage.phase_pos[BlackoilPhases::Vapour]] = 1.0;
                     }
 
@@ -370,7 +368,7 @@ namespace Opm
                                               w_);
                 }
 
-                if (ok && controls.hasControl(WellInjector::BHP)) {
+                if (ok && controls.hasControl(Well2::InjectorCMode::BHP)) {
                     control_pos[WellsManagerDetail::InjectionControl::BHP] = well_controls_get_num(w_->ctrls[well_index]);
                     ok = append_well_controls(BHP,
                                               controls.bhp_limit,
@@ -381,7 +379,7 @@ namespace Opm
                                               w_);
                 }
 
-                if (ok && controls.hasControl(WellInjector::THP)) {
+                if (ok && controls.hasControl(Well2::InjectorCMode::THP)) {
                     control_pos[WellsManagerDetail::InjectionControl::THP] = well_controls_get_num(w_->ctrls[well_index]);
                     const double thp_limit  = controls.thp_limit;
                     const int    vfp_number = controls.vfp_table_number;
@@ -398,7 +396,7 @@ namespace Opm
                     OPM_THROW(std::runtime_error, "Failure occured appending controls for well " << well_names[well_index]);
                 }
 
-                if (controls.cmode != WellInjector::CMODE_UNDEFINED) {
+                if (controls.cmode != Well2::InjectorCMode::CMODE_UNDEFINED) {
                     WellsManagerDetail::InjectionControl::Mode mode = WellsManagerDetail::InjectionControl::mode(controls.cmode);
                     int cpos = control_pos[mode];
                     if (cpos == -1 && mode != WellsManagerDetail::InjectionControl::GRUP) {
@@ -411,19 +409,19 @@ namespace Opm
                 // Set well component fraction.
                 double cf[3] = { 0.0, 0.0, 0.0 };
                 {
-                    WellInjector::TypeEnum injectorType = controls.injector_type;
+                    auto injectorType = controls.injector_type;
 
-                    if (injectorType == WellInjector::WATER) {
+                    if (injectorType == Well2::InjectorType::WATER) {
                         if (!phaseUsage.phase_used[BlackoilPhases::Aqua]) {
                             OPM_THROW(std::runtime_error, "Water phase not used, yet found water-injecting well.");
                         }
                         cf[phaseUsage.phase_pos[BlackoilPhases::Aqua]] = 1.0;
-                    } else if (injectorType == WellInjector::OIL) {
+                    } else if (injectorType == Well2::InjectorType::OIL) {
                         if (!phaseUsage.phase_used[BlackoilPhases::Liquid]) {
                             OPM_THROW(std::runtime_error, "Oil phase not used, yet found oil-injecting well.");
                         }
                         cf[phaseUsage.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                    } else if (injectorType == WellInjector::GAS) {
+                    } else if (injectorType == Well2::InjectorType::GAS) {
                         if (!phaseUsage.phase_used[BlackoilPhases::Vapour]) {
                             OPM_THROW(std::runtime_error, "Gas phase not used, yet found gas-injecting well.");
                         }
@@ -442,7 +440,7 @@ namespace Opm
                 int ok = 1;
 
                 clear_well_controls(well_index, w_);
-                if (ok && controls.hasControl(WellProducer::ORAT)) {
+                if (ok && controls.hasControl(Well2::ProducerCMode::ORAT)) {
                     if (!phaseUsage.phase_used[BlackoilPhases::Liquid]) {
                         OPM_THROW(std::runtime_error, "Oil phase not active and ORAT control specified.");
                     }
@@ -459,7 +457,7 @@ namespace Opm
                                               w_);
                 }
 
-                if (ok && controls.hasControl(WellProducer::WRAT)) {
+                if (ok && controls.hasControl(Well2::ProducerCMode::WRAT)) {
                     if (!phaseUsage.phase_used[BlackoilPhases::Aqua]) {
                         OPM_THROW(std::runtime_error, "Water phase not active and WRAT control specified.");
                     }
@@ -475,7 +473,7 @@ namespace Opm
                                               w_);
                 }
 
-                if (ok && controls.hasControl(WellProducer::GRAT)) {
+                if (ok && controls.hasControl(Well2::ProducerCMode::GRAT)) {
                     if (!phaseUsage.phase_used[BlackoilPhases::Vapour]) {
                         OPM_THROW(std::runtime_error, "Gas phase not active and GRAT control specified.");
                     }
@@ -491,7 +489,7 @@ namespace Opm
                                               w_);
                 }
 
-                if (ok && controls.hasControl(WellProducer::LRAT)) {
+                if (ok && controls.hasControl(Well2::ProducerCMode::LRAT)) {
                     if (!phaseUsage.phase_used[BlackoilPhases::Aqua]) {
                         OPM_THROW(std::runtime_error, "Water phase not active and LRAT control specified.");
                     }
@@ -511,7 +509,7 @@ namespace Opm
                                               w_);
                 }
 
-                if (ok && controls.hasControl(WellProducer::RESV)) {
+                if (ok && controls.hasControl(Well2::ProducerCMode::RESV)) {
                     control_pos[WellsManagerDetail::ProductionControl::RESV] = well_controls_get_num(w_->ctrls[well_index]);
                     double distr[3] = { 1.0, 1.0, 1.0 };
                     ok = append_well_controls(RESERVOIR_RATE,
@@ -523,7 +521,7 @@ namespace Opm
                                               w_);
                 }
 
-                if (ok && controls.hasControl(WellProducer::THP)) {
+                if (ok && controls.hasControl(Well2::ProducerCMode::THP)) {
                     const double thp_limit  = controls.thp_limit;
                     const double alq_value  = controls.alq_value;
                     const int    vfp_number = controls.vfp_table_number;
@@ -553,7 +551,7 @@ namespace Opm
                     OPM_THROW(std::runtime_error, "Failure occured appending controls for well " << well_names[well_index]);
                 }
 
-                if (controls.cmode != WellProducer::CMODE_UNDEFINED) {
+                if (controls.cmode != Well2::ProducerCMode::CMODE_UNDEFINED) {
                     WellsManagerDetail::ProductionControl::Mode mode = WellsManagerDetail::ProductionControl::mode(controls.cmode);
                     int cpos = control_pos[mode];
                     if (cpos == -1 && mode != WellsManagerDetail::ProductionControl::GRUP) {
@@ -603,7 +601,7 @@ namespace Opm
         for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
             const auto& well = *wellIter;
 
-            if (well.getStatus() == WellCommon::SHUT) {
+            if (well.getStatus() == Well2::Status::SHUT) {
                 //SHUT wells does not need guide rates
                 continue;
             }
@@ -612,21 +610,21 @@ namespace Opm
             WellNode& wellnode = *well_collection_.getLeafNodes()[wix];
 
             // TODO: looks like only handling OIL phase guide rate for producers
-            if (well.getGuideRatePhase() != GuideRate::UNDEFINED && well.getGuideRate() >= 0.) {
+            if (well.getGuideRatePhase() != Well2::GuideRateTarget::UNDEFINED && well.getGuideRate() >= 0.) {
                 if (well_data[wix].type == PRODUCER) {
                     wellnode.prodSpec().guide_rate_ = well.getGuideRate();
-                    if (well.getGuideRatePhase() == GuideRate::OIL) {
+                    if (well.getGuideRatePhase() == Well2::GuideRateTarget::OIL) {
                         wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::OIL;
                     } else {
-                        OPM_THROW(std::runtime_error, "Guide rate type " << GuideRate::GuideRatePhaseEnum2String(well.getGuideRatePhase()) << " specified for producer "
+                        OPM_THROW(std::runtime_error, "Guide rate type " << Well2::GuideRateTarget2String(well.getGuideRatePhase()) << " specified for producer "
                                   << well.name() << " in WGRUPCON, cannot handle.");
                     }
                 } else if (well_data[wix].type == INJECTOR) {
                     wellnode.injSpec().guide_rate_ = well.getGuideRate();
-                    if (well.getGuideRatePhase() == GuideRate::RAT) {
+                    if (well.getGuideRatePhase() == Well2::GuideRateTarget::RAT) {
                         wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
                     } else {
-                        OPM_THROW(std::runtime_error, "Guide rate type " << GuideRate::GuideRatePhaseEnum2String(well.getGuideRatePhase()) << " specified for injector "
+                        OPM_THROW(std::runtime_error, "Guide rate type " << Well2::GuideRateTarget2String(well.getGuideRatePhase()) << " specified for injector "
                                   << well.name() << " in WGRUPCON, cannot handle.");
                     }
                 } else {

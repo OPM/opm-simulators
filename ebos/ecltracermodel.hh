@@ -23,14 +23,14 @@
 /**
  * \file
  *
- * \copydoc Ewoms::EclTracerModel
+ * \copydoc Opm::EclTracerModel
  */
 #ifndef EWOMS_ECL_TRACER_MODEL_HH
 #define EWOMS_ECL_TRACER_MODEL_HH
 
 #include "tracervdtable.hh"
 
-#include <ewoms/models/blackoil/blackoilmodel.hh>
+#include <opm/models/blackoil/blackoilmodel.hh>
 
 #include <dune/istl/operators.hh>
 #include <dune/istl/solvers.hh>
@@ -48,7 +48,7 @@ NEW_PROP_TAG(EnableTracerModel);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -485,14 +485,14 @@ protected:
         const auto& wells = simulator_.vanguard().schedule().getWells2(episodeIdx);
         for (const auto& well : wells) {
 
-            if (well.getStatus() == Opm::WellCommon::SHUT)
+            if (well.getStatus() == Opm::Well2::Status::SHUT)
                 continue;
 
             const double wtracer = well.getTracerProperties().getConcentration(tracerNames_[tracerIdx]);
             std::array<int, 3> cartesianCoordinate;
             for (auto& connection : well.getConnections()) {
 
-                if (connection.state() == Opm::WellCompletion::SHUT)
+                if (connection.state() == Opm::Connection::State::SHUT)
                     continue;
 
                 cartesianCoordinate[0] = connection.getI();
@@ -521,6 +521,6 @@ protected:
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> storageOfTimeIndex1_;
 
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

@@ -47,7 +47,7 @@ void flowEbosBlackoilSetDeck(double setupTime, Deck &deck, EclipseState& eclStat
 }
 
 // ----------------- Main program -----------------
-int flowEbosBlackoilMain(int argc, char** argv)
+int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -60,7 +60,7 @@ int flowEbosBlackoilMain(int argc, char** argv)
 #endif
 
     Opm::FlowMainEbos<TTAG(EclFlowProblem)> mainfunc;
-    return mainfunc.execute(argc, argv);
+    return mainfunc.execute(argc, argv, outputCout, outputFiles);
 }
 
 }

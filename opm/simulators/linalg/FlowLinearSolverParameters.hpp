@@ -27,7 +27,7 @@
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 
-#include <ewoms/common/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hh>
 
 #include <array>
 #include <memory>

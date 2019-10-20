@@ -4,18 +4,16 @@
 #set -x
 
 declare -a upstreams
-upstreams=(libecl
-           opm-common
+upstreams=(opm-common
            opm-material
            opm-grid
-           ewoms)
+           opm-models)
 
 declare -A upstreamRev
-upstreamRev[libecl]=master
 upstreamRev[opm-common]=master
 upstreamRev[opm-material]=master
 upstreamRev[opm-grid]=master
-upstreamRev[ewoms]=master
+upstreamRev[opm-models]=master
 
 if grep -q "opm-common=" <<< $ghprbCommentBody
 then

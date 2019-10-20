@@ -18,8 +18,10 @@
 */
 
 #include <config.h>
+#include <chrono>
 
 #define BOOST_TEST_MODULE StoppedWellsTests
+
 #include <boost/test/unit_test.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -46,7 +48,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
-    Opm::SummaryState summaryState;
+    Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
 
     double target_surfacerate_inj;
     double target_surfacerate_prod;

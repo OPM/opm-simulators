@@ -21,7 +21,7 @@
 #ifndef OPM_WELLCONNECTIONAUXILIARYMODULE_HEADER_INCLUDED
 #define OPM_WELLCONNECTIONAUXILIARYMODULE_HEADER_INCLUDED
 
-#include <ewoms/disc/common/baseauxiliarymodule.hh>
+#include <opm/models/discretization/common/baseauxiliarymodule.hh>
 
 #include <opm/grid/CpGrid.hpp>
 
@@ -33,7 +33,7 @@ namespace Opm
 {
 template<class TypeTag>
 class WellConnectionAuxiliaryModule
-    : public Ewoms::BaseAuxiliaryModule<TypeTag>
+    : public Opm::BaseAuxiliaryModule<TypeTag>
 {
     typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
     typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
@@ -41,7 +41,7 @@ class WellConnectionAuxiliaryModule
 public:
 
     using NeighborSet = typename
-        Ewoms::BaseAuxiliaryModule<TypeTag>::NeighborSet;
+        Opm::BaseAuxiliaryModule<TypeTag>::NeighborSet;
 
     WellConnectionAuxiliaryModule(const Schedule& schedule,
                                   const Dune::CpGrid& grid)

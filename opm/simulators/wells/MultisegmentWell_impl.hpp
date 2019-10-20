@@ -72,7 +72,7 @@ namespace Opm
         perf_depth_.resize(number_of_perforations_, 0.);
         for (size_t perf = 0; perf < completion_set.size(); ++perf) {
             const Connection& connection = completion_set.get(perf);
-            if (connection.state() == WellCompletion::OPEN) {
+            if (connection.state() == Connection::State::OPEN) {
                 const int segment_index = segmentNumberToIndex(connection.segment());
                 segment_perforations_[segment_index].push_back(i_perf_wells);
                 perf_depth_[i_perf_wells] = connection.depth();
@@ -548,23 +548,29 @@ namespace Opm
                           std::vector<double>& well_potentials,
                           Opm::DeferredLogger& deferred_logger)
     {
+        // creating a copy of the well itself, to avoid messing up the explicit informations
+        // during this copy, the only information not copied properly is the well controls
+        MultisegmentWell<TypeTag> well(*this);
+
+        well.well_controls_ = this->createWellControlsWithBHPAndTHP(deferred_logger);
+
         const int np = number_of_phases_;
         well_potentials.resize(np, 0.0);
 
-        updatePrimaryVariables(well_state, deferred_logger);
+        well.updatePrimaryVariables(well_state, deferred_logger);
 
         // initialize the primary variables in Evaluation, which is used in computePerfRate for computeWellPotentials
         // TODO: for computeWellPotentials, no derivative is required actually
-        initPrimaryVariablesEvaluation();
+        well.initPrimaryVariablesEvaluation();
 
         // get the bhp value based on the bhp constraints
-        const double bhp = Base::mostStrictBhpFromBhpLimits(deferred_logger);
+        const double bhp = well.mostStrictBhpFromBhpLimits(deferred_logger);
 
         // does the well have a THP related constraint?
-        if ( !Base::wellHasTHPConstraints() ) {
+        if ( !well.wellHasTHPConstraints() ) {
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
 
-            computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
+            well.computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
         } else {
 
             const std::string msg = std::string("Well potential calculation is not supported for thp controlled multisegment wells \n")
@@ -573,9 +579,10 @@ namespace Opm
                     + "you will have to change the " + name() + " well to a standard well \n";
 
             deferred_logger.warning("WELL_POTENTIAL_FOR_THP_NOT_IMPLEMENTED_FOR_MULTISEG_WELLS", msg);
-            return;
         }
 
+        // destroy the newly created WellControls
+        well_controls_destroy(well.well_controls_);
     }
 
 
@@ -878,7 +885,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    addWellContributions(Mat& /* mat */) const
+    addWellContributions(SparseMatrixAdapter& /* jacobian */) const
     {
         OPM_THROW(std::runtime_error, "addWellContributions is not supported by multisegment well yet");
     }
@@ -924,7 +931,7 @@ namespace Opm
 
 
     template <typename TypeTag>
-    WellSegment::CompPressureDropEnum
+    WellSegments::CompPressureDrop
     MultisegmentWell<TypeTag>::
     compPressureDrop() const
     {
@@ -936,7 +943,7 @@ namespace Opm
 
 
     template <typename TypeTag>
-    WellSegment::MultiPhaseModelEnum
+    WellSegments::MultiPhaseModel
     MultisegmentWell<TypeTag>::
     multiphaseModel() const
     {
@@ -1862,7 +1869,7 @@ namespace Opm
     frictionalPressureLossConsidered() const
     {
         // HF- and HFA needs to consider frictional pressure loss
-        return (segmentSet().compPressureDrop() != WellSegment::H__);
+        return (segmentSet().compPressureDrop() != WellSegments::CompPressureDrop::H__);
     }
 
 
@@ -1874,7 +1881,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     accelerationalPressureLossConsidered() const
     {
-        return (segmentSet().compPressureDrop() == WellSegment::HFA);
+        return (segmentSet().compPressureDrop() == WellSegments::CompPressureDrop::HFA);
     }
 
 

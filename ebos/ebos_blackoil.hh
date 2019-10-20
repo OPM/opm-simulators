@@ -35,7 +35,7 @@
 #include <memory>
 #include <string>
 
-namespace Ewoms {
+namespace Opm {
 bool ebosBlackOilDeckFileNameIsSet(int argc, char** argv);
 std::string ebosBlackOilGetDeckFileName(int argc, char** argv);
 std::unique_ptr<Opm::ParseContext> ebosBlackOilCreateParseContext(int argc, char** argv);

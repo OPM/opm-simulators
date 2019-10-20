@@ -23,14 +23,14 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::EclTransmissibility
+ * \copydoc Opm::EclTransmissibility
  */
 #ifndef EWOMS_ECL_TRANSMISSIBILITY_HH
 #define EWOMS_ECL_TRANSMISSIBILITY_HH
 
 #include <ebos/nncsorter.hpp>
 
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperties.hpp>
@@ -65,7 +65,7 @@ NEW_PROP_TAG(EnableEnergy);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -502,6 +502,9 @@ private:
         const auto& inputTranx = properties.getDoubleGridProperty("TRANX");
         const auto& inputTrany = properties.getDoubleGridProperty("TRANY");
         const auto& inputTranz = properties.getDoubleGridProperty("TRANZ");
+        const auto& inputTranxData = properties.getDoubleGridProperty("TRANX").getData();
+        const auto& inputTranyData = properties.getDoubleGridProperty("TRANY").getData();
+        const auto& inputTranzData = properties.getDoubleGridProperty("TRANZ").getData();
 
         // compute the transmissibilities for all intersections
         auto elemIt = gridView.template begin</*codim=*/ 0>();
@@ -531,26 +534,26 @@ private:
                 if (gc2 - gc1 == 1) {
                     if (inputTranx.deckAssigned())
                         // set simulator internal transmissibilities to values from inputTranx
-                        trans_[isId] = inputTranx.iget(gc1);
+                        trans_[isId] = inputTranxData[gc1];
                     else
                         // Scale transmissibilities with scale factor from inputTranx
-                        trans_[isId] *= inputTranx.iget(gc1);
+                        trans_[isId] *= inputTranxData[gc1];
                 }
                 else if (gc2 - gc1 == cartDims[0]) {
                     if (inputTrany.deckAssigned())
                         // set simulator internal transmissibilities to values from inputTrany
-                        trans_[isId] = inputTrany.iget(gc1);
+                        trans_[isId] = inputTranyData[gc1];
                     else
                         // Scale transmissibilities with scale factor from inputTrany
-                        trans_[isId] *= inputTrany.iget(gc1);
+                        trans_[isId] *= inputTranyData[gc1];
                 }
                 else if (gc2 - gc1 == cartDims[0]*cartDims[1]) {
                     if (inputTranz.deckAssigned())
                         // set simulator internal transmissibilities to values from inputTranz
-                        trans_[isId] = inputTranz.iget(gc1);
+                        trans_[isId] = inputTranzData[gc1];
                     else
                         // Scale transmissibilities with scale factor from inputTranz
-                        trans_[isId] *= inputTranz.iget(gc1);
+                        trans_[isId] *= inputTranzData[gc1];
                 }
                 //else.. We don't support modification of NNC at the moment.
             }
@@ -910,6 +913,6 @@ private:
                             std::unordered_map<std::uint64_t, Scalar> > thermalHalfTrans_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

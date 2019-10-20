@@ -24,7 +24,7 @@
 
 namespace Opm {
 void flowEbosBlackoilSetDeck(double setupTime, Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
-int flowEbosBlackoilMain(int argc, char** argv);
+int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles);
 }
 
 #endif // FLOW_EBOS_BLACKOIL_HPP

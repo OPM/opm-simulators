@@ -24,13 +24,14 @@
 
 #include <ebos/equil/equilibrationhelpers.hh>
 #include <ebos/eclproblem.hh>
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/grid/GridManager.hpp>
 
 #include <opm/parser/eclipse/Units/Units.hpp>
 
+#include <opm/io/eclipse/ESmry.hpp>
 
 #include <opm/output/eclipse/Summary.hpp>
 #include <ebos/collecttoiorank.hh>
@@ -83,6 +84,26 @@ SET_BOOL_PROP(TestEclOutputTypeTag, EnableAsyncEclOutput, false);
 
 END_PROPERTIES
 
+namespace {
+std::unique_ptr<Opm::EclIO::ESmry> readsum(const std::string& base)
+{
+    return std::make_unique<Opm::EclIO::ESmry>(base);
+}
+
+double ecl_sum_get_field_var(const Opm::EclIO::ESmry* smry,
+                             const int                timeIdx,
+                             const std::string&       var)
+{
+    return smry->get(var)[timeIdx];
+}
+
+double ecl_sum_get_general_var(const Opm::EclIO::ESmry* smry,
+                               const int                timeIdx,
+                               const std::string&       var)
+{
+    return smry->get(var)[timeIdx];
+}
+
 template <class TypeTag>
 std::unique_ptr<typename GET_PROP_TYPE(TypeTag, Simulator)>
 initSimulator(const char *filename)
@@ -97,19 +118,11 @@ initSimulator(const char *filename)
         filenameArg.c_str()
     };
 
-    Ewoms::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/false);
+    Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/false);
 
     return std::unique_ptr<Simulator>(new Simulator);
 }
 
-ERT::ert_unique_ptr<ecl_sum_type, ecl_sum_free> readsum(const std::string& base);
-ERT::ert_unique_ptr<ecl_sum_type, ecl_sum_free> readsum(const std::string& base)
-{
-    return ERT::ert_unique_ptr<ecl_sum_type, ecl_sum_free>(
-            ecl_sum_fread_alloc_case(base.c_str(), ":"));
-}
-
-void test_summary();
 void test_summary()
 {
     typedef typename TTAG(TestEclOutputTypeTag) TypeTag;
@@ -118,11 +131,11 @@ void test_summary()
 
     auto simulator = initSimulator<TypeTag>(filename.data());
     typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
-    typedef Ewoms::CollectDataToIORank< Vanguard > CollectDataToIORankType;
+    typedef Opm::CollectDataToIORank< Vanguard > CollectDataToIORankType;
     CollectDataToIORankType collectToIORank(simulator->vanguard());
-    Ewoms::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, collectToIORank);
+    Opm::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, collectToIORank);
 
-    typedef Ewoms::EclWriter<TypeTag> EclWriterType;
+    typedef Opm::EclWriter<TypeTag> EclWriterType;
     // create the actual ECL writer
     std::unique_ptr<EclWriterType> eclWriter = std::unique_ptr<EclWriterType>(new EclWriterType(*simulator));
 
@@ -180,7 +193,6 @@ void test_summary()
     CHECK_CLOSE(roip2, ecl_sum_get_general_var( resp, 1, "ROIP:2" ), 1e-3 );
 }
 
-void test_readWriteWells();
 void test_readWriteWells()
 {
     using opt = Opm::data::Rates::opt;
@@ -242,6 +254,7 @@ void test_readWriteWells()
     CHECK( wellRatesCopy.get( "OP_1" , opt::wat) , wellRates.get( "OP_1" , opt::wat));
     CHECK( wellRatesCopy.get( "OP_2" , 188 , opt::wat) , wellRates.get( "OP_2" , 188 , opt::wat));
 }
+} // Anonymous namespace
 
 
 int main(int argc, char** argv)
@@ -253,7 +266,7 @@ int main(int argc, char** argv)
 #endif
 
     typedef TTAG(TestEclOutputTypeTag) TypeTag;
-    Ewoms::registerAllParameters_<TypeTag>();
+    Opm::registerAllParameters_<TypeTag>();
     test_summary();
     test_readWriteWells();
 

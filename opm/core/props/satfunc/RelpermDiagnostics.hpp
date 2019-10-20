@@ -27,9 +27,6 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/grid/UnstructuredGrid.h>
-#include <opm/grid/GridManager.hpp>
-#include <opm/grid/GridHelpers.hpp>
 #include <opm/common/utility/numeric/linearInterpolation.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -48,11 +45,11 @@ namespace Opm {
 
     ///This class is intend to be a relpmer diganostics, to detect
     ///wrong input of relperm table and endpoints.
-    class RelpermDiagnostics 
+    class RelpermDiagnostics
     {
     public:
         ///This function is used to diagnosis relperm in
-        ///eclipse data file. Errors and warings will be 
+        ///eclipse data file. Errors and warings will be
         ///output if they're found.
         ///\param[in] eclState  eclipse state.
         ///\param[in] deck      ecliplise data file.
@@ -70,7 +67,7 @@ namespace Opm {
             BlackOil,
             Solvent
         };
-        
+
         FluidSystem fluidSystem_;
 
         enum SaturationFunctionFamily {
@@ -78,7 +75,7 @@ namespace Opm {
             FamilyII,
             NoFamily
         };
-  
+
         SaturationFunctionFamily satFamily_;
 
         std::vector<Opm::EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
@@ -90,7 +87,7 @@ namespace Opm {
 
         ///Check saturation family I and II.
         void satFamilyCheck_(const EclipseState& eclState);
- 
+
         ///Check saturation tables.
         void tableCheck_(const EclipseState& eclState);
 

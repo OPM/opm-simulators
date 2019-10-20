@@ -29,7 +29,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(EclFlowFoamProblem, INHERITS_FROM(EclFlowProblem));
 SET_BOOL_PROP(EclFlowFoamProblem, EnableFoam, true);
@@ -50,7 +50,7 @@ void flowEbosFoamSetDeck(double setupTime, Deck &deck, EclipseState& eclState, S
 
 
 // ----------------- Main program -----------------
-int flowEbosFoamMain(int argc, char** argv)
+int flowEbosFoamMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -64,7 +64,7 @@ int flowEbosFoamMain(int argc, char** argv)
 #endif
 
     Opm::FlowMainEbos<TTAG(EclFlowFoamProblem)> mainfunc;
-    return mainfunc.execute(argc, argv);
+    return mainfunc.execute(argc, argv, outputCout, outputFiles);
 }
 
 }

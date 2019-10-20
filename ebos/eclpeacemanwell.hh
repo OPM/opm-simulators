@@ -23,15 +23,15 @@
 /**
  * \file
  *
- * \copydoc Ewoms::EclPeacemanWell
+ * \copydoc Opm::EclPeacemanWell
  */
 #ifndef EWOMS_ECL_PEACEMAN_WELL_HH
 #define EWOMS_ECL_PEACEMAN_WELL_HH
 
-#include <ewoms/models/blackoil/blackoilproperties.hh>
-#include <ewoms/disc/common/baseauxiliarymodule.hh>
-#include <ewoms/common/propertysystem.hh>
-#include <ewoms/common/alignedallocator.hh>
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/discretization/common/baseauxiliarymodule.hh>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/alignedallocator.hh>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/densead/Evaluation.hpp>
@@ -45,7 +45,7 @@
 
 #include <map>
 
-namespace Ewoms {
+namespace Opm {
 
 template <class TypeTag>
 class EcfvDiscretization;
@@ -289,13 +289,13 @@ public:
     }
 
     /*!
-     * \copydoc Ewoms::BaseAuxiliaryModule::numDofs()
+     * \copydoc Opm::BaseAuxiliaryModule::numDofs()
      */
     virtual unsigned numDofs() const
     { return 1; }
 
     /*!
-     * \copydoc Ewoms::BaseAuxiliaryModule::addNeighbors()
+     * \copydoc Opm::BaseAuxiliaryModule::addNeighbors()
      */
     virtual void addNeighbors(std::vector<NeighborSet>& neighbors) const
     {
@@ -315,7 +315,7 @@ public:
     }
 
     /*!
-     * \copydoc Ewoms::BaseAuxiliaryModule::addNeighbors()
+     * \copydoc Opm::BaseAuxiliaryModule::addNeighbors()
      */
     virtual void applyInitial()
     {
@@ -337,7 +337,7 @@ public:
     }
 
     /*!
-     * \copydoc Ewoms::BaseAuxiliaryModule::linearize()
+     * \copydoc Opm::BaseAuxiliaryModule::linearize()
      */
     virtual void linearize(SparseMatrixAdapter& matrix, GlobalEqVector& residual)
     {
@@ -1641,7 +1641,7 @@ protected:
 
     std::string name_;
 
-    std::vector<DofVariables, Ewoms::aligned_allocator<DofVariables, alignof(DofVariables)> > dofVarsStore_;
+    std::vector<DofVariables, Opm::aligned_allocator<DofVariables, alignof(DofVariables)> > dofVarsStore_;
     std::map<int, DofVariables*> dofVariables_;
 
     // the number of times beginIteration*() was called for the current time step
@@ -1717,6 +1717,6 @@ protected:
 
     unsigned injectedPhaseIdx_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

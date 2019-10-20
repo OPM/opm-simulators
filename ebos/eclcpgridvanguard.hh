@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::EclCpGridVanguard
+ * \copydoc Opm::EclCpGridVanguard
  */
 #ifndef EWOMS_ECL_CP_GRID_VANGUARD_HH
 #define EWOMS_ECL_CP_GRID_VANGUARD_HH
@@ -38,7 +38,7 @@
 
 #include <dune/common/version.hh>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class EclCpGridVanguard;
 }
@@ -48,13 +48,13 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclCpGridVanguard, INHERITS_FROM(EclBaseVanguard));
 
 // declare the properties
-SET_TYPE_PROP(EclCpGridVanguard, Vanguard, Ewoms::EclCpGridVanguard<TypeTag>);
+SET_TYPE_PROP(EclCpGridVanguard, Vanguard, Opm::EclCpGridVanguard<TypeTag>);
 SET_TYPE_PROP(EclCpGridVanguard, Grid, Dune::CpGrid);
 SET_TYPE_PROP(EclCpGridVanguard, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -70,6 +70,7 @@ class EclCpGridVanguard : public EclBaseVanguard<TypeTag>
     typedef EclBaseVanguard<TypeTag> ParentType;
 
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
 
 public:
@@ -81,10 +82,11 @@ private:
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
 
 public:
-    /*!
-     * \brief Inherit the constructors from the base class.
-     */
-    using EclBaseVanguard<TypeTag>::EclBaseVanguard;
+    EclCpGridVanguard(Simulator& simulator)
+        : EclBaseVanguard<TypeTag>(simulator)
+    {
+        this->callImplementationInit();
+    }
 
     ~EclCpGridVanguard()
     {
@@ -289,6 +291,6 @@ protected:
     std::unordered_set<std::string> defunctWellNames_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

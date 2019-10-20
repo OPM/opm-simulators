@@ -34,8 +34,6 @@
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 
-// due to a bug in Equil.hpp, cstddef must be included before Equil.hpp
-#include <cstddef>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 
 #include <memory>
@@ -80,7 +78,7 @@
 
   ---- end of synopsis of EquilibrationHelpers.hpp ----
 */
-namespace Ewoms {
+namespace Opm {
 /**
  * Types and routines that collectively implement a basic
  * ECLIPSE-style equilibration-based initialisation scheme.
@@ -994,6 +992,6 @@ bool isConstPc(const MaterialLawManager& materialLawManager,
 }
 
 } // namespace Equil
-} // namespace Ewoms
+} // namespace Opm
 
 #endif // EWOMS_EQUILIBRATIONHELPERS_HH

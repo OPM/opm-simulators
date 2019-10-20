@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::EclWriter
+ * \copydoc Opm::EclWriter
  */
 #ifndef EWOMS_ECL_WRITER_HH
 #define EWOMS_ECL_WRITER_HH
@@ -31,15 +31,16 @@
 #include "collecttoiorank.hh"
 #include "ecloutputblackoilmodule.hh"
 
-#include <ewoms/models/blackoil/blackoilmodel.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
-#include <ewoms/io/baseoutputwriter.hh>
-#include <ewoms/parallel/tasklets.hh>
+#include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+#include <opm/models/io/baseoutputwriter.hh>
+#include <opm/models/parallel/tasklets.hh>
 
 #include <ebos/nncsorter.hpp>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
+#include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/grid/GridHelpers.hpp>
@@ -53,6 +54,7 @@
 #include <list>
 #include <utility>
 #include <string>
+#include <chrono>
 
 #ifdef HAVE_MPI
 #include <mpi.h>
@@ -66,7 +68,7 @@ NEW_PROP_TAG(EclOutputDoublePrecision);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 template <class TypeTag>
 class EclWriter;
@@ -156,6 +158,8 @@ class EclWriter
     typedef std::vector<Scalar> ScalarBuffer;
 
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
+
 
 public:
     static void registerParameters()
@@ -247,7 +251,7 @@ public:
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
-        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log);
+        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
         ElementIterator elemIt = gridView.template begin</*codim=*/0>();
@@ -322,7 +326,7 @@ public:
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
-        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log);
+        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
         ElementIterator elemIt = gridView.template begin</*codim=*/0>();
@@ -391,6 +395,7 @@ public:
             {"SWAT", Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
             {"SGAS", Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
             {"TEMP" , Opm::UnitSystem::measure::temperature, enableEnergy},
+            {"SSOLVENT" , Opm::UnitSystem::measure::identity, enableSolvent},
             {"RS", Opm::UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
             {"RV", Opm::UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
             {"SOMAX", Opm::UnitSystem::measure::identity, simulator_.problem().vapparsActive()},
@@ -414,19 +419,10 @@ public:
 
         const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
-        eclOutputModule_.allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false);
+        eclOutputModule_.allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false, /*isRestart*/ true);
 
         {
-            /*
-              When running a restarted simulation the restart file is loaded
-              twice, first here as part of the state initialization and then
-              subsequently in the Simulator::run() method. The global
-              SummaryState instance is accumulates total variables like FOPT, if
-              the same instance is used twice when loading the restart file, the
-              cumulatives will be counted doubly, we therefor use a temporary
-              SummaryState instance in this call to loadRestart().
-            */
-            Opm::SummaryState summaryState;
+            Opm::SummaryState& summaryState = simulator_.vanguard().summaryState();
             auto restartValues = eclIO_->loadRestart(summaryState, solutionKeys, extraKeys);
 
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
@@ -441,6 +437,9 @@ public:
                 thpres.setFromRestart(thpresValues);
             }
             restartTimeStepSize_ = restartValues.getExtra("OPMEXTRA")[0];
+
+            // initialize the well model from restart values
+            simulator_.problem().wellModel().initFromRestartFile(restartValues);
         }
     }
 
@@ -474,12 +473,13 @@ private:
             tranz.data[0] = 0.0;
         }
 
-        const auto& globalGridView = globalGrid_.leafGridView();
+        typedef typename Grid :: LeafGridView  GlobalGridView;
+        const GlobalGridView& globalGridView = globalGrid_.leafGridView();
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
-        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
+        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView> ElementMapper;
         ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
 #else
-        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
+        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView, Dune::MCMGElementLayout> ElementMapper;
         ElementMapper globalElemMapper(globalGridView);
 #endif
 
@@ -572,13 +572,14 @@ private:
         // Checked when writing NNC transmissibilities from the simulation.
         std::sort(nncData.begin(), nncData.end(), nncCompare);
 
-        const auto& globalGridView = globalGrid_.leafGridView();
+        typedef typename Grid :: LeafGridView  GlobalGridView;
+        const GlobalGridView& globalGridView = globalGrid_.leafGridView();
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
-        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
+        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView> ElementMapper;
         ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
 
 #else
-        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
+        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView, Dune::MCMGElementLayout> ElementMapper;
         ElementMapper globalElemMapper(globalGridView);
 #endif
 
@@ -711,6 +712,6 @@ private:
 
 
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

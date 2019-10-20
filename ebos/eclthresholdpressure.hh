@@ -23,12 +23,12 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::EclThresholdPressure
+ * \copydoc Opm::EclThresholdPressure
  */
 #ifndef EWOMS_ECL_THRESHOLD_PRESSURE_HH
 #define EWOMS_ECL_THRESHOLD_PRESSURE_HH
 
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
@@ -60,7 +60,7 @@ NEW_PROP_TAG(EnableExperiments);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -399,6 +399,6 @@ private:
     bool enableThresholdPressure_;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

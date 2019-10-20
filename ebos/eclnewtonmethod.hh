@@ -23,13 +23,15 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::EclNewtonMethod
+ * \copydoc Opm::EclNewtonMethod
  */
 #ifndef EWOMS_ECL_NEWTON_METHOD_HH
 #define EWOMS_ECL_NEWTON_METHOD_HH
 
-#include <ewoms/models/blackoil/blackoilnewtonmethod.hh>
-#include <ewoms/common/signum.hh>
+#include <opm/models/blackoil/blackoilnewtonmethod.hh>
+#include <opm/models/utils/signum.hh>
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 
 #include <opm/material/common/Unused.hpp>
 
@@ -43,7 +45,7 @@ NEW_PROP_TAG(EclNewtonRelaxedTolerance);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \brief A newton solver which is ebos specific.
@@ -227,6 +229,16 @@ public:
                                         +std::to_string(double(newtonMaxError)));
     }
 
+    void endIteration_(SolutionVector& nextSolution,
+                       const SolutionVector& currentSolution)
+    {
+        ParentType::endIteration_(nextSolution, currentSolution);
+        OpmLog::debug( "Newton iteration " + std::to_string(this->numIterations_) + ""
+                  + " error: " + std::to_string(double(this->error_))
+                  + this->endIterMsg().str());
+        this->endIterMsg().str("");
+    }
+
 private:
     Scalar errorPvFraction_;
     Scalar errorSum_;
@@ -238,6 +250,6 @@ private:
 
     int numStrictIterations_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

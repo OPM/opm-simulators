@@ -23,6 +23,8 @@
 
 #define BOOST_TEST_MODULE WellModelTest
 
+#include <chrono>
+
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
@@ -31,10 +33,9 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
-#include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/GridManager.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/wells.h>
@@ -45,7 +46,7 @@
 #include <opm/simulators/flow/BlackoilModelEbos.hpp>
 
 #include <ebos/eclproblem.hh>
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
@@ -74,6 +75,7 @@ struct SetupTest {
           const Opm::Eclipse3DProperties eclipseProperties ( deck , table, ecl_state->getInputGrid());
           const Opm::Runspec runspec (deck);
           schedule.reset( new Opm::Schedule(deck, ecl_state->getInputGrid(), eclipseProperties, runspec));
+          summaryState.reset( new Opm::SummaryState(std::chrono::system_clock::from_time_t(schedule->getStartTime())));
         }
 
         // Create grid.
@@ -88,7 +90,7 @@ struct SetupTest {
         // Create wells.
         wells_manager.reset(new Opm::WellsManager(*ecl_state,
                                                   *schedule,
-                                                  summaryState,
+                                                  *summaryState,
                                                   current_timestep,
                                                   Opm::UgGridHelpers::numCells(grid),
                                                   Opm::UgGridHelpers::globalCell(grid),
@@ -104,7 +106,7 @@ struct SetupTest {
     std::unique_ptr<const Opm::WellsManager> wells_manager;
     std::unique_ptr<const Opm::EclipseState> ecl_state;
     std::unique_ptr<const Opm::Schedule> schedule;
-    Opm::SummaryState summaryState;
+    std::unique_ptr<Opm::SummaryState> summaryState;
     int current_timestep;
 };
 

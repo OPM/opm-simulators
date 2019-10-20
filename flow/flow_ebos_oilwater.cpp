@@ -22,7 +22,7 @@
 #include <flow/flow_ebos_oilwater.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
-#include <ewoms/models/blackoil/blackoiltwophaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
@@ -34,7 +34,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(EclFlowOilWaterProblem, INHERITS_FROM(EclFlowProblem));
 
@@ -49,12 +49,12 @@ private:
     typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
 
 public:
-    typedef Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
-                                           GET_PROP_VALUE(TypeTag, EnablePolymer),
-                                           GET_PROP_VALUE(TypeTag, EnableEnergy),
-                                           GET_PROP_VALUE(TypeTag, EnableFoam),
-                                           /*PVOffset=*/0,
-                                           /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
+    typedef Opm::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
+                                         GET_PROP_VALUE(TypeTag, EnablePolymer),
+                                         GET_PROP_VALUE(TypeTag, EnableEnergy),
+                                         GET_PROP_VALUE(TypeTag, EnableFoam),
+                                         /*PVOffset=*/0,
+                                         /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
 };
 }}
 
@@ -72,7 +72,7 @@ void flowEbosOilWaterSetDeck(double setupTime, Deck &deck, EclipseState& eclStat
 }
 
 // ----------------- Main program -----------------
-int flowEbosOilWaterMain(int argc, char** argv)
+int flowEbosOilWaterMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -85,7 +85,7 @@ int flowEbosOilWaterMain(int argc, char** argv)
 #endif
 
     Opm::FlowMainEbos<TTAG(EclFlowOilWaterProblem)> mainfunc;
-    return mainfunc.execute(argc, argv);
+    return mainfunc.execute(argc, argv, outputCout, outputFiles);
 }
 
 }

@@ -28,6 +28,7 @@
 #include "config.h"
 
 #include "ebos.hh"
+#include "startEbos.hh"
 
 BEGIN_PROPERTIES
 
@@ -43,17 +44,17 @@ private:
     typedef typename GET_PROP_TYPE(TTAG(EbosTypeTag), FluidSystem) FluidSystem;
 
 public:
-    typedef Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
-                                           GET_PROP_VALUE(TypeTag, EnablePolymer),
-                                           GET_PROP_VALUE(TypeTag, EnableEnergy),
-                                           GET_PROP_VALUE(TypeTag, EnableFoam),
-                                           /*PVOffset=*/0,
-                                           /*disabledCompIdx=*/FluidSystem::waterCompIdx> type;
+    typedef Opm::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
+                                         GET_PROP_VALUE(TypeTag, EnablePolymer),
+                                         GET_PROP_VALUE(TypeTag, EnableEnergy),
+                                         GET_PROP_VALUE(TypeTag, EnableFoam),
+                                         /*PVOffset=*/0,
+                                         /*disabledCompIdx=*/FluidSystem::waterCompIdx> type;
 };
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 void ebosGasOilSetDeck(Opm::Deck* deck,
                        Opm::ParseContext* parseContext,
@@ -72,7 +73,7 @@ void ebosGasOilSetDeck(Opm::Deck* deck,
 int ebosGasOilMain(int argc, char **argv)
 {
     typedef TTAG(EbosGasOilTypeTag) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 
 }

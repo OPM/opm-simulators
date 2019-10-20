@@ -23,15 +23,15 @@
 /**
  * \file
  *
- * \copydoc Ewoms::EclEquilInitializer
+ * \copydoc Opm::EclEquilInitializer
  */
 #ifndef EWOMS_ECL_EQUIL_INITIALIZER_HH
 #define EWOMS_ECL_EQUIL_INITIALIZER_HH
 
 #include "equil/initstateequil.hh"
 
-#include <ewoms/common/propertysystem.hh>
-#include <ewoms/models/blackoil/blackoilproperties.hh>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
@@ -50,7 +50,7 @@ NEW_PROP_TAG(EnableEnergy);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -182,6 +182,6 @@ protected:
 
     std::vector<ScalarFluidState> initialFluidStates_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

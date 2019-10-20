@@ -28,6 +28,7 @@
 #include "config.h"
 
 #include "ebos.hh"
+#include "startEbos.hh"
 
 BEGIN_PROPERTIES
 
@@ -38,12 +39,12 @@ SET_BOOL_PROP(EbosFoamTypeTag, EnableFoam, true);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 void ebosFoamSetDeck(Opm::Deck* deck,
-                         Opm::ParseContext* parseContext,
-                         Opm::ErrorGuard* errorGuard,
-                         double externalSetupTime)
+                     Opm::ParseContext* parseContext,
+                     Opm::ErrorGuard* errorGuard,
+                     double externalSetupTime)
 {
     typedef TTAG(EbosFoamTypeTag) ProblemTypeTag;
     typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
@@ -57,7 +58,7 @@ void ebosFoamSetDeck(Opm::Deck* deck,
 int ebosFoamMain(int argc, char **argv)
 {
     typedef TTAG(EbosFoamTypeTag) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 
 }

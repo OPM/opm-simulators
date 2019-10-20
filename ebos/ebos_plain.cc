@@ -29,7 +29,7 @@
 
 #include "eclproblem.hh"
 
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 
 BEGIN_PROPERTIES
 
@@ -40,5 +40,5 @@ END_PROPERTIES
 int main(int argc, char **argv)
 {
     typedef TTAG(EbosPlainTypeTag) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv);
 }

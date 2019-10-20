@@ -33,5 +33,5 @@
 
 int main(int argc, char** argv)
 {
-    return Ewoms::ebosPolymerMain(argc, argv);
+    return Opm::ebosPolymerMain(argc, argv);
 }

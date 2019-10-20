@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::EclProblem
+ * \copydoc Opm::EclProblem
  */
 #ifndef EWOMS_ECL_PROBLEM_HH
 #define EWOMS_ECL_PROBLEM_HH
@@ -64,9 +64,9 @@
 #include "ecltracermodel.hh"
 #include "vtkecltracermodule.hh"
 
-#include <ewoms/common/pffgridvector.hh>
-#include <ewoms/models/blackoil/blackoilmodel.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
+#include <opm/models/utils/pffgridvector.hh>
+#include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/thermal/EclThermalLawManager.hpp>
@@ -87,6 +87,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionContext.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RockwnodTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/OverburdTable.hpp>
@@ -108,7 +109,7 @@
 #include <string>
 #include <algorithm>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class EclProblem;
 }
@@ -159,9 +160,10 @@ NEW_PROP_TAG(EclEnableAquifers);
 NEW_PROP_TAG(EclMaxTimeStepSizeAfterWellEvent);
 NEW_PROP_TAG(EclRestartShrinkFactor);
 NEW_PROP_TAG(EclEnableTuning);
+NEW_PROP_TAG(OutputMode);
 
 // Set the problem property
-SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
+SET_TYPE_PROP(EclBaseProblem, Problem, Opm::EclProblem<TypeTag>);
 
 // Select the element centered finite volume method as spatial discretization
 SET_TAG_PROP(EclBaseProblem, SpatialDiscretizationSplice, EcfvDiscretization);
@@ -222,14 +224,14 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
 public:
-    typedef Ewoms::EcfvStencil<Scalar,
-                               GridView,
-                               /*needIntegrationPos=*/false,
-                               /*needNormal=*/false> type;
+    typedef Opm::EcfvStencil<Scalar,
+                             GridView,
+                             /*needIntegrationPos=*/false,
+                             /*needNormal=*/false> type;
 };
 
 // by default use the dummy aquifer "model"
-SET_TYPE_PROP(EclBaseProblem, EclAquiferModel, Ewoms::EclBaseAquiferModel<TypeTag>);
+SET_TYPE_PROP(EclBaseProblem, EclAquiferModel, Opm::EclBaseAquiferModel<TypeTag>);
 
 // use the built-in proof of concept well model by default
 SET_TYPE_PROP(EclBaseProblem, EclWellModel, EclWellManager<TypeTag>);
@@ -322,21 +324,22 @@ SET_BOOL_PROP(EclBaseProblem, EnableIntensiveQuantityCache, true);
 SET_BOOL_PROP(EclBaseProblem, EnableStorageCache, true);
 
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
-SET_TYPE_PROP(EclBaseProblem, FluxModule, Ewoms::EclTransFluxModule<TypeTag>);
+SET_TYPE_PROP(EclBaseProblem, FluxModule, Opm::EclTransFluxModule<TypeTag>);
 
 // Use the dummy gradient calculator in order not to do unnecessary work.
-SET_TYPE_PROP(EclBaseProblem, GradientCalculator, Ewoms::EclDummyGradientCalculator<TypeTag>);
+SET_TYPE_PROP(EclBaseProblem, GradientCalculator, Opm::EclDummyGradientCalculator<TypeTag>);
 
 // Use a custom Newton-Raphson method class for ebos in order to attain more
 // sophisticated update and error computation mechanisms
-SET_TYPE_PROP(EclBaseProblem, NewtonMethod, Ewoms::EclNewtonMethod<TypeTag>);
+SET_TYPE_PROP(EclBaseProblem, NewtonMethod, Opm::EclNewtonMethod<TypeTag>);
 
 // The frequency of writing restart (*.ers) files. This is the number of time steps
 // between writing restart files
 SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
 
 // Drift compensation is an experimental feature, i.e., systematic errors in the
-// conservation quantities are only compensated for if experimental mode is enabled.
+// conservation quantities are only compensated for
+// as default if experimental mode is enabled.
 SET_BOOL_PROP(EclBaseProblem,
               EclEnableDriftCompensation,
               GET_PROP_VALUE(TypeTag, EnableExperiments));
@@ -368,9 +371,13 @@ SET_SCALAR_PROP(EclBaseProblem, EclMaxTimeStepSizeAfterWellEvent, 3600*24*365.25
 SET_SCALAR_PROP(EclBaseProblem, EclRestartShrinkFactor, 3);
 SET_BOOL_PROP(EclBaseProblem, EclEnableTuning, false);
 
+SET_STRING_PROP(EclBaseProblem, OutputMode, "all");
+
+
+
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -479,9 +486,8 @@ public:
                              "The frequencies of which time steps are serialized to disk");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTracerModel,
                              "Transport tracers found in the deck.");
-        if (enableExperiments)
-            EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableDriftCompensation,
-                                 "Enable partial compensation of systematic mass losses via the source term of the next time step");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableDriftCompensation,
+                             "Enable partial compensation of systematic mass losses via the source term of the next time step");
         if (enableExperiments)
             EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableAquifers,
                                  "Enable analytic and numeric aquifer models");
@@ -491,6 +497,9 @@ public:
                              "Factor by which the time step is reduced after convergence failure");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableTuning,
                              "Honor some aspects of the TUNING keyword from the ECL deck.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
+                             "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
+
     }
 
     /*!
@@ -603,10 +612,7 @@ public:
         // create the ECL writer
         eclWriter_.reset(new EclWriterType(simulator));
 
-        if (enableExperiments)
-            enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
-        else
-            enableDriftCompensation_ = false;
+        enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
 
         enableEclOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
 
@@ -638,6 +644,7 @@ public:
 
         // Set the start time of the simulation
         simulator.setStartTime(timeMap.getStartTime(/*reportStepIdx=*/0));
+        simulator.setEndTime(timeMap.getTotalTime());
 
         // We want the episode index to be the same as the report step index to make
         // things simpler, so we have to set the episode index to -1 because it is
@@ -667,17 +674,20 @@ public:
             minTimeStepSize_ = tuning.getTSMINZ(0);
         }
 
+        initFluidSystem_();
+
         // deal with DRSDT
         unsigned ntpvt = eclState.runspec().tabdims().getNumPVTTables();
-        maxDRs_.resize(ntpvt, 1e30);
-        dRsDtOnlyFreeGas_.resize(ntpvt, false);
         size_t numDof = this->model().numGridDof();
-        lastRs_.resize(numDof, 0.0);
-        maxDRv_.resize(ntpvt, 1e30);
-        lastRv_.resize(numDof, 0.0);
-        maxOilSaturation_.resize(numDof, 0.0);
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            maxDRs_.resize(ntpvt, 1e30);
+            dRsDtOnlyFreeGas_.resize(ntpvt, false);
+            lastRs_.resize(numDof, 0.0);
+            maxDRv_.resize(ntpvt, 1e30);
+            lastRv_.resize(numDof, 0.0);
+            maxOilSaturation_.resize(numDof, 0.0);
+        }
 
-        initFluidSystem_();
         updateElementDepths_();
         readRockParameters_();
         readMaterialParameters_();
@@ -776,11 +786,11 @@ public:
     {
         // Proceed to the next report step
         auto& simulator = this->simulator();
+        int episodeIdx = simulator.episodeIndex();
         auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
         const auto& events = schedule.getEvents();
         const auto& timeMap = schedule.getTimeMap();
-        int episodeIdx = simulator.episodeIndex();
 
         if (episodeIdx >= 0 && events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER, episodeIdx)) {
             // bring the contents of the keywords to the current state of the SCHEDULE
@@ -802,14 +812,18 @@ public:
         if (enableExperiments && this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
             // print some useful information in experimental mode. (the production
             // simulator does this externally.)
+            std::ostringstream ss;
+            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
             boost::posix_time::ptime curDateTime =
                 boost::posix_time::from_time_t(timeMap.getStartTime(episodeIdx));
-            std::cout << "Report step " << episodeIdx + 1
+            ss.imbue(std::locale(std::locale::classic(), facet));
+            ss << "Report step " << episodeIdx + 1
                       << "/" << timeMap.numTimesteps()
                       << " at day " << timeMap.getTimePassedUntil(episodeIdx)/(24*3600)
                       << "/" << timeMap.getTotalTime()/(24*3600)
                       << ", date = " << curDateTime.date()
                       << "\n ";
+            OpmLog::info(ss.str());
         }
 
         // react to TUNING changes
@@ -858,9 +872,23 @@ public:
     void beginTimeStep()
     {
         const auto& simulator = this->simulator();
-        int epsiodeIdx = simulator.episodeIndex();
+        int episodeIdx = simulator.episodeIndex();
+
+        if (enableExperiments && this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
+            std::ostringstream ss;
+            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+            boost::posix_time::ptime date = boost::posix_time::from_time_t((this->simulator().startTime())) + boost::posix_time::milliseconds(static_cast<long long>(this->simulator().time() / Opm::prefix::milli));
+            ss.imbue(std::locale(std::locale::classic(), facet));
+            ss <<"\nTime step " << this->simulator().timeStepIndex() << ", stepsize "
+               << unit::convert::to(this->simulator().timeStepSize(), unit::day) << " days,"
+               << " at day " << (double)unit::convert::to(this->simulator().time(), unit::day)
+               << "/" << (double)unit::convert::to(this->simulator().endTime(), unit::day)
+               << ", date = " << date;
+            OpmLog::info(ss.str());
+        }
+
         bool invalidateIntensiveQuantities = false;
-        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(episodeIdx);
         if (drsdtActive_())
             // DRSDT is enabled
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
@@ -871,13 +899,11 @@ public:
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
                 maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*this->simulator().timeStepSize();
 
-        if (enableExperiments) {
-            // update maximum water saturation and minimum pressure
-            // used when ROCKCOMP is activated
-            const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
-            const bool invalidateFromMinPressure = updateMinPressure_();
-            invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure;
-        }
+        // update maximum water saturation and minimum pressure
+        // used when ROCKCOMP is activated
+        const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
+        const bool invalidateFromMinPressure = updateMinPressure_();
+        invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure;
 
         if (invalidateIntensiveQuantities)
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
@@ -966,10 +992,13 @@ public:
     void endEpisode()
     {
         auto& simulator = this->simulator();
-        const auto& schedule = simulator.vanguard().schedule();
+        auto& schedule = simulator.vanguard().schedule();
         const auto& timeMap = schedule.getTimeMap();
 
         int episodeIdx = simulator.episodeIndex();
+        this->applyActions(episodeIdx + 1,
+                           schedule,
+                           simulator.vanguard().summaryState());
 
         // check if we're finished ...
         if (episodeIdx + 1 >= static_cast<int>(timeMap.numTimesteps())) {
@@ -1012,6 +1041,31 @@ public:
         if (enableEclOutput_)
             eclWriter_->writeOutput(isSubStep);
     }
+
+
+    void applyActions(int reportStep,
+                      Opm::Schedule& schedule,
+                      const Opm::SummaryState& summaryState) {
+        const auto& actions = schedule.actions(reportStep);
+        if (actions.empty())
+            return;
+
+        Opm::Action::Context context( summaryState );
+
+        auto simTime = schedule.simTime(reportStep);
+        for (const auto& action : actions.pending(simTime)) {
+            auto actionResult = action->eval(simTime, context);
+            if (actionResult) {
+                std::string msg = "The action: " + action->name() + " evaluated to true at report step: " + std::to_string(reportStep);
+                Opm::OpmLog::info(msg);
+                schedule.applyAction(reportStep, *action, actionResult);
+            } else {
+                std::string msg = "The action: " + action->name() + " evaluated to false sat report step: " + std::to_string(reportStep);
+                Opm::OpmLog::info(msg);
+            }
+        }
+    }
+
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
@@ -1686,7 +1740,7 @@ public:
         const auto& simulator = this->simulator();
         int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
         const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
-        return (oilVaporizationControl.getType() == Opm::OilVaporizationEnum::VAPPARS);
+        return (oilVaporizationControl.getType() == Opm::OilVaporizationProperties::OilVaporization::VAPPARS);
     }
 
     bool nonTrivialBoundaryConditions() const
@@ -1739,7 +1793,7 @@ public:
     template <class LhsEval>
     LhsEval rockCompPoroMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        if (!enableExperiments || rockCompPoroMult_.size() == 0)
+        if (rockCompPoroMult_.empty())
             return 1.0;
 
         unsigned tableIdx = 0;
@@ -1771,7 +1825,7 @@ public:
     template <class LhsEval>
     LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        if (!enableExperiments || rockCompTransMult_.size() == 0)
+        if (rockCompTransMult_.empty())
             return 1.0;
 
         unsigned tableIdx = 0;
@@ -1802,7 +1856,7 @@ public:
      */
     Scalar overburdenPressure(unsigned elementIdx) const
     {
-        if (!enableExperiments || overburdenPressure_.size() == 0)
+        if (overburdenPressure_.empty())
             return 0.0;
 
         return overburdenPressure_[elementIdx];
@@ -2045,7 +2099,7 @@ private:
     bool updateMinPressure_()
     {
         // IRREVERS option is used in ROCKCOMP
-        if (minOilPressure_.size() == 0)
+        if (minOilPressure_.empty())
             return false;
 
         ElementContext elemCtx(this->simulator());
@@ -2091,8 +2145,7 @@ private:
         }
 
         // read the parameters for water-induced rock compaction
-        if (enableExperiments)
-            readRockCompactionParameters_();
+        readRockCompactionParameters_();
 
         // check the kind of region which is supposed to be used by checking the ROCKOPTS
         // keyword. note that for some funny reason, the ROCK keyword uses PVTNUM by
@@ -2408,7 +2461,7 @@ private:
         const auto& simulator = this->simulator();
 
         // initial condition corresponds to hydrostatic conditions.
-        typedef Ewoms::EclEquilInitializer<TypeTag> EquilInitializer;
+        typedef Opm::EclEquilInitializer<TypeTag> EquilInitializer;
         EquilInitializer equilInitializer(simulator, *materialLawManager_);
 
         size_t numElems = this->model().numGridDof();
@@ -2463,12 +2516,14 @@ private:
             eclWriter_->eclOutputModule().initHysteresisParams(simulator, elemIdx);
             eclWriter_->eclOutputModule().assignToFluidState(elemFluidState, elemIdx);
 
-            processRestartSaturations_(elemFluidState);
+            if (enableSolvent)
+                 solventSaturation_[elemIdx] = eclWriter_->eclOutputModule().getSolventSaturation(elemIdx);
+
+            processRestartSaturations_(elemFluidState, solventSaturation_[elemIdx]);
 
             lastRs_[elemIdx] = elemFluidState.Rs();
             lastRv_[elemIdx] = elemFluidState.Rv();
-            if (enableSolvent)
-                 solventSaturation_[elemIdx] = eclWriter_->eclOutputModule().getSolventSaturation(elemIdx);
+
             if (enablePolymer)
                  polymerConcentration_[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
             // if we need to restart for polymer molecular weight simulation, we need to add related here
@@ -2519,7 +2574,7 @@ private:
         eclWriter_->endRestart();
     }
 
-    void processRestartSaturations_(InitialFluidState& elemFluidState)
+    void processRestartSaturations_(InitialFluidState& elemFluidState, Scalar& solventSaturation)
     {
         // each phase needs to be above certain value to be claimed to be existing
         // this is used to recover some RESTART running with the defaulted single-precision format
@@ -2532,6 +2587,13 @@ private:
 
                 sumSaturation += elemFluidState.saturation(phaseIdx);
             }
+
+        }
+        if (enableSolvent) {
+            if (solventSaturation < smallSaturationTolerance)
+                solventSaturation = 0.0;
+
+           sumSaturation += solventSaturation;
         }
 
         assert(sumSaturation > 0.0);
@@ -2541,6 +2603,9 @@ private:
                 const Scalar saturation = elemFluidState.saturation(phaseIdx) / sumSaturation;
                 elemFluidState.setSaturation(phaseIdx, saturation);
             }
+        }
+        if (enableSolvent) {
+            solventSaturation = solventSaturation / sumSaturation;
         }
     }
 
@@ -3155,6 +3220,6 @@ private:
 template <class TypeTag>
 std::string EclProblem<TypeTag>::briefDescription_;
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

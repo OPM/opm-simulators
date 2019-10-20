@@ -37,6 +37,7 @@
 
 #include <opm/grid/GridManager.hpp>
 
+#include <chrono>
 #include <cstddef>
 #include <string>
 
@@ -51,7 +52,7 @@ struct Setup
         , pu   (Opm::phaseUsageFromDeck(es))
         , grid (es.getInputGrid())
         , sched(deck, es)
-        , st()
+        , st(std::chrono::system_clock::from_time_t(sched.getStartTime()))
     {}
 
     Opm::EclipseState es;

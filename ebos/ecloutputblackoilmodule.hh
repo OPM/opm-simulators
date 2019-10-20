@@ -22,17 +22,15 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::EclOutputBlackOilModule
+ * \copydoc Opm::EclOutputBlackOilModule
  */
 #ifndef EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
-#include "eclwriter.hh"
+#include <opm/models/blackoil/blackoilproperties.hh>
 
-#include <ewoms/models/blackoil/blackoilproperties.hh>
-
-#include <ewoms/common/propertysystem.hh>
-#include <ewoms/common/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
 
 #include <opm/material/common/Valgrind.hpp>
 
@@ -57,7 +55,7 @@ SET_BOOL_PROP(EclOutputBlackOil, ForceDisableFluidInPlaceOutput, false);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 // forward declaration
 template <class TypeTag>
@@ -123,9 +121,9 @@ public:
 
         // Initialize block output
         for (const auto& node: summaryConfig) {
-            if (node.type() == ECL_SMSPEC_BLOCK_VAR) {
-                if (collectToIORank.isGlobalIdxOnThisRank(node.num() - 1)) {
-                    std::pair<std::string, int> key = std::make_pair(node.keyword(), node.num());
+            if (node.category() == SummaryNode::Category::Block) {
+                if (collectToIORank.isGlobalIdxOnThisRank(node.number() - 1)) {
+                    std::pair<std::string, int> key = std::make_pair(node.keyword(), node.number());
                     blockData_[key] = 0.0;
                 }
             }
@@ -147,9 +145,9 @@ public:
      * \brief Allocate memory for the scalar fields we would like to
      *        write to ECL output files
      */
-    void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const bool substep, const bool log)
+    void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const bool substep, const bool log, const bool isRestart)
     {
-        if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
+        if (!std::is_same<Discretization, Opm::EcfvDiscretization<TypeTag> >::value)
             return;
 
         // Summary output is for all steps
@@ -221,8 +219,11 @@ public:
         // always allocate memory for temperature
         temperature_.resize(bufferSize, 0.0);
 
-        // Only provide restart on restart steps
-        if (!restartConfig.getWriteRestartFile(reportStepNum, log) || substep)
+        // field data should be allocated
+        // 1) when we want to restart
+        // 2) when it is ask for by the user via restartConfig
+        // 3) when it is not a substep
+        if (!isRestart && (!restartConfig.getWriteRestartFile(reportStepNum, log) || substep))
             return;
 
         // always output saturation of active phases
@@ -376,7 +377,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
+        if (!std::is_same<Discretization, Opm::EcfvDiscretization<TypeTag> >::value)
             return;
 
         const auto& problem = elemCtx.simulator().problem();
@@ -397,7 +398,16 @@ public:
             }
 
             if (oilPressure_.size() > 0) {
-                oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
+                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                    oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
+                }else{
+                    // put pressure in oil pressure for output
+                    if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                        oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(waterPhaseIdx));
+                    } else {
+                        oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(gasPhaseIdx));
+                    }
+                }
                 Opm::Valgrind::CheckDefined(oilPressure_[globalDofIdx]);
             }
 
@@ -787,7 +797,7 @@ public:
      */
     void assignToSolution(Opm::data::Solution& sol)
     {
-        if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag>>::value)
+        if (!std::is_same<Discretization, Opm::EcfvDiscretization<TypeTag>>::value)
             return;
 
         if (oilPressure_.size() > 0) {
@@ -1041,6 +1051,17 @@ public:
             so -= sol.data("SGAS")[globalDofIndex];
         }
 
+        if (sSol_.size() > 0) {
+            // keep the SSOL option for backward compatibility
+            // should be removed after 10.2018 release
+            if (sol.has("SSOL"))
+                sSol_[elemIdx] = sol.data("SSOL")[globalDofIndex];
+            else if (sol.has("SSOLVENT"))
+                sSol_[elemIdx] = sol.data("SSOLVENT")[globalDofIndex];
+
+            so -= sSol_[elemIdx];
+        }
+
         assert(saturation_[oilPhaseIdx].size() > 0);
         saturation_[oilPhaseIdx][elemIdx] = so;
 
@@ -1052,14 +1073,6 @@ public:
             rs_[elemIdx] = sol.data("RS")[globalDofIndex];
         if (rv_.size() > 0 && sol.has("RV"))
             rv_[elemIdx] = sol.data("RV")[globalDofIndex];
-        if (sSol_.size() > 0) {
-            // keep the SSOL option for backward compatibility
-            // should be removed after 10.2018 release
-            if (sol.has("SSOL"))
-                sSol_[elemIdx] = sol.data("SSOL")[globalDofIndex];
-            else if (sol.has("SSOLVENT"))
-                sSol_[elemIdx] = sol.data("SSOLVENT")[globalDofIndex];
-        }
         if (cPolymer_.size() > 0 && sol.has("POLYMER"))
             cPolymer_[elemIdx] = sol.data("POLYMER")[globalDofIndex];
         if (cFoam_.size() > 0 && sol.has("FOAM"))
@@ -1508,6 +1521,6 @@ private:
     std::map<size_t, Scalar> gasConnectionSaturations_;
     std::vector<ScalarBuffer> tracerConcentrations_;
 };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

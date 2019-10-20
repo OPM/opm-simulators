@@ -40,7 +40,7 @@
 #include "ebos_polymer.hh"
 #include "ebos_foam.hh"
 
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/timer.hh>
@@ -58,16 +58,16 @@ int main(int argc, char **argv)
     Dune::Timer externalSetupTimer;
     externalSetupTimer.start();
 
-    if (!Ewoms::ebosBlackOilDeckFileNameIsSet(argc, argv))
+    if (!Opm::ebosBlackOilDeckFileNameIsSet(argc, argv))
         // no deck was specified, e.g., --help. use the black oil variant to figure out
         // what exactly should be done
-        return Ewoms::ebosBlackOilMain(argc, argv);
+        return Opm::ebosBlackOilMain(argc, argv);
 
     std::string deckFileName =
-        Ewoms::ebosBlackOilGetDeckFileName(argc, argv);
+        Opm::ebosBlackOilGetDeckFileName(argc, argv);
 
     std::unique_ptr<Opm::ParseContext> parseContext
-        = Ewoms::ebosBlackOilCreateParseContext(argc, argv);
+        = Opm::ebosBlackOilCreateParseContext(argc, argv);
     std::unique_ptr<Opm::ErrorGuard> errorGuard(new Opm::ErrorGuard);
 
     // deal with parallel runs
@@ -143,21 +143,21 @@ int main(int argc, char **argv)
         if (oilActive && waterActive) {
             if (myRank == 0)
                 std::cout << "Using oil-water mode" << std::endl;
-            Ewoms::ebosOilWaterSetDeck(deck.get(),
-                                       parseContext.get(),
-                                       errorGuard.get(),
-                                       externalSetupTimer.elapsed());
-            return Ewoms::ebosOilWaterMain(argc, argv);
+            Opm::ebosOilWaterSetDeck(deck.get(),
+                                     parseContext.get(),
+                                     errorGuard.get(),
+                                     externalSetupTimer.elapsed());
+            return Opm::ebosOilWaterMain(argc, argv);
         }
         else if (oilActive && gasActive) {
             // run ebos_gasoil
             if (myRank == 0)
                 std::cout << "Using gas-oil mode" << std::endl;
-            Ewoms::ebosGasOilSetDeck(deck.get(),
-                                     parseContext.get(),
-                                     errorGuard.get(),
-                                     externalSetupTimer.elapsed());
-            return Ewoms::ebosGasOilMain(argc, argv);
+            Opm::ebosGasOilSetDeck(deck.get(),
+                                   parseContext.get(),
+                                   errorGuard.get(),
+                                   externalSetupTimer.elapsed());
+            return Opm::ebosGasOilMain(argc, argv);
         }
         else if (waterActive && gasActive) {
             notSupportedErrorStream << "\n"
@@ -191,11 +191,11 @@ int main(int argc, char **argv)
         // run ebos_foam
         if (myRank == 0)
             std::cout << "Using foam mode" << std::endl;
-        Ewoms::ebosFoamSetDeck(deck.get(),
-                               parseContext.get(),
-                               errorGuard.get(),
-                               externalSetupTimer.elapsed());
-        return Ewoms::ebosFoamMain(argc, argv);
+        Opm::ebosFoamSetDeck(deck.get(),
+                             parseContext.get(),
+                             errorGuard.get(),
+                             externalSetupTimer.elapsed());
+        return Opm::ebosFoamMain(argc, argv);
     }
     else if (polymerActive) {
         if (solventActive) {
@@ -222,11 +222,11 @@ int main(int argc, char **argv)
         // run ebos_polymer
         if (myRank == 0)
             std::cout << "Using polymer mode" << std::endl;
-        Ewoms::ebosPolymerSetDeck(deck.get(),
-                                  parseContext.get(),
-                                  errorGuard.get(),
-                                  externalSetupTimer.elapsed());
-        return Ewoms::ebosPolymerMain(argc, argv);
+        Opm::ebosPolymerSetDeck(deck.get(),
+                                parseContext.get(),
+                                errorGuard.get(),
+                                externalSetupTimer.elapsed());
+        return Opm::ebosPolymerMain(argc, argv);
     }
     else if (solventActive) {
         if (polymerActive) {
@@ -253,11 +253,11 @@ int main(int argc, char **argv)
         // run ebos_solvent
         if (myRank == 0)
             std::cout << "Using solvent mode" << std::endl;
-        Ewoms::ebosSolventSetDeck(deck.get(),
-                                  parseContext.get(),
-                                  errorGuard.get(),
-                                  externalSetupTimer.elapsed());
-        return Ewoms::ebosSolventMain(argc, argv);
+        Opm::ebosSolventSetDeck(deck.get(),
+                                parseContext.get(),
+                                errorGuard.get(),
+                                externalSetupTimer.elapsed());
+        return Opm::ebosSolventMain(argc, argv);
     }
     else if (thermalActive) {
         if (solventActive) {
@@ -284,20 +284,20 @@ int main(int argc, char **argv)
         // run ebos_thermal
         if (myRank == 0)
             std::cout << "Using thermal mode" << std::endl;
-        Ewoms::ebosThermalSetDeck(deck.get(),
-                                  parseContext.get(),
-                                  errorGuard.get(),
-                                  externalSetupTimer.elapsed());
-        return Ewoms::ebosThermalMain(argc, argv);
+        Opm::ebosThermalSetDeck(deck.get(),
+                                parseContext.get(),
+                                errorGuard.get(),
+                                externalSetupTimer.elapsed());
+        return Opm::ebosThermalMain(argc, argv);
     }
     else {
         if (myRank == 0)
             std::cout << "Using blackoil mode" << std::endl;
-        Ewoms::ebosBlackOilSetDeck(deck.get(),
-                                   parseContext.get(),
-                                   errorGuard.get(),
-                                   externalSetupTimer.elapsed());
-        return Ewoms::ebosBlackOilMain(argc, argv);
+        Opm::ebosBlackOilSetDeck(deck.get(),
+                                 parseContext.get(),
+                                 errorGuard.get(),
+                                 externalSetupTimer.elapsed());
+        return Opm::ebosBlackOilMain(argc, argv);
     }
 
     if (myRank == 0)

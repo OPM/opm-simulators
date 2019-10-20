@@ -19,7 +19,7 @@
 #ifndef OPM_AMG_HEADER_INCLUDED
 #define OPM_AMG_HEADER_INCLUDED
 
-#include <ewoms/linear/matrixblock.hh>
+#include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/CPRPreconditioner.hpp>
@@ -188,9 +188,9 @@ struct ScalarType<Dune::MatrixBlock<FieldType, ROWS, COLS> >
 };
 
 template<typename FieldType, int ROWS, int COLS>
-struct ScalarType<Ewoms::MatrixBlock<FieldType, ROWS, COLS> >
+struct ScalarType<Opm::MatrixBlock<FieldType, ROWS, COLS> >
 {
-    typedef Ewoms::MatrixBlock<FieldType, 1, 1> value;
+    typedef Opm::MatrixBlock<FieldType, 1, 1> value;
 };
 
 template<typename BlockType, typename Allocator>

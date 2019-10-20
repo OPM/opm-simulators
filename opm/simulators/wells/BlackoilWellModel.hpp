@@ -66,7 +66,7 @@ namespace Opm {
 
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
-        class BlackoilWellModel : public Ewoms::BaseAuxiliaryModule<TypeTag>
+        class BlackoilWellModel : public Opm::BaseAuxiliaryModule<TypeTag>
         {
         public:
             // ---------      Types      ---------
@@ -83,7 +83,7 @@ namespace Opm {
             typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector)      GlobalEqVector;
             typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
 
-            typedef typename Ewoms::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
+            typedef typename Opm::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
             static const int numEq = Indices::numEq;
             static const int solventSaturationIdx = Indices::solventSaturationIdx;
@@ -100,9 +100,8 @@ namespace Opm {
 #else
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
 #endif
-            typedef typename SparseMatrixAdapter::IstlMatrix Mat;
 
-            typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
+            typedef Opm::BlackOilPolymerModule<TypeTag> PolymerModule;
 
             // For the conversion between the surface volume rate and resrevoir voidage rate
             using RateConverterType = RateConverter::
@@ -124,7 +123,7 @@ namespace Opm {
             void applyInitial()
             {}
 
-            void linearize(SparseMatrixAdapter& mat , GlobalEqVector& res);
+            void linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res);
 
             void postSolve(GlobalEqVector& deltaX)
             {
@@ -218,10 +217,10 @@ namespace Opm {
 
             const SimulatorReport& lastReport() const;
 
-            void addWellContributions(Mat& mat) const
+            void addWellContributions(SparseMatrixAdapter& jacobian) const
             {
                 for ( const auto& well: well_container_ ) {
-                    well->addWellContributions(mat);
+                    well->addWellContributions(jacobian);
                 }
             }
 
@@ -251,7 +250,7 @@ namespace Opm {
             std::vector<bool> is_cell_perforated_;
 
             // create the well container
-            std::vector<WellInterfacePtr > createWellContainer(const int time_step, const Wells* wells, const bool allow_closing_opening_wells, Opm::DeferredLogger& deferred_logger);
+            std::vector<WellInterfacePtr > createWellContainer(const int time_step, Opm::DeferredLogger& deferred_logger);
 
             WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, Opm::DeferredLogger& deferred_logger) const;
 

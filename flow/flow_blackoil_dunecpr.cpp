@@ -30,7 +30,7 @@
 BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
 NEW_PROP_TAG(FluidState);
-//SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
+//SET_TYPE_PROP(EclBaseProblem, Problem, Opm::EclProblem<TypeTag>);
 SET_PROP(EclFlowProblemSimple, FluidState)
     {
     private:
@@ -43,7 +43,7 @@ SET_PROP(EclFlowProblemSimple, FluidState)
       typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
       typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
       static const bool compositionSwitchEnabled = Indices::gasEnabled;
- 
+
     public:
 //typedef Opm::BlackOilFluidSystemSimple<Scalar> type;
        typedef Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  Indices::numPhases > type;
@@ -63,7 +63,7 @@ SET_STRING_PROP(EclFlowProblemSimple, LinearSolverConfiguration, "file");
 SET_STRING_PROP(EclFlowProblemSimple, SystemStrategy, "quasiimpes");
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
   namespace Properties {
 
     SET_PROP(EclFlowProblemSimple, FluidSystem)
@@ -77,11 +77,11 @@ namespace Ewoms {
         typedef Opm::BlackOilFluidSystem<Scalar> type;
     };
     //NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
-    SET_TYPE_PROP(EclFlowProblemSimple, IntensiveQuantities, Ewoms::BlackOilIntensiveQuantities<TypeTag>);
+    SET_TYPE_PROP(EclFlowProblemSimple, IntensiveQuantities, Opm::BlackOilIntensiveQuantities<TypeTag>);
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
     //SET_TAG_PROP(EclFlowProblemSimple, LinearSolverSplice, ParallelBiCGStabLinearSolver);
-    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::ParallelBiCGStabSolverBackend<TypeTag>);//not work
-    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::SuperLUBackend<TypeTag>)//not work
+    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>);//not work
+    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::Linear::SuperLUBackend<TypeTag>)//not work
     //SET_TAG_PROP(EclFlowProblem, FluidState, Opm::BlackOilFluidState);
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
     SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbosFlexible<TypeTag>);
@@ -90,7 +90,7 @@ namespace Ewoms {
 #endif
     SET_BOOL_PROP(EclFlowProblemSimple, EnableStorageCache, true);
     SET_BOOL_PROP(EclFlowProblemSimple, EnableIntensiveQuantityCache, true);
-    
+
     //SET_INT_PROP(EclFlowProblemSimple, NumWellAdjoint, 1);
     //SET_BOOL_PROP(EclFlowProblem, EnableStorageCache, true);
     //SET_BOOL_PROP(EclFlowProblem, EnableIntensiveQuantityCache, true);
@@ -99,6 +99,6 @@ namespace Ewoms {
 
 int main(int argc, char** argv)
 {
-  typedef TTAG(EclFlowProblemSimple) TypeTag;
-  return mainFlow<TypeTag>(argc, argv);
+    typedef TTAG(EclFlowProblemSimple) TypeTag;
+    return mainFlow<TypeTag>(argc, argv);
 }

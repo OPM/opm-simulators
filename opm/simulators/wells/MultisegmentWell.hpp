@@ -42,6 +42,7 @@ namespace Opm
         using typename Base::MaterialLaw;
         using typename Base::Indices;
         using typename Base::RateConverterType;
+        using typename Base::SparseMatrixAdapter;
 
 
         /// the number of reservior equations
@@ -73,7 +74,6 @@ namespace Opm
         using typename Base::Scalar;
 
         /// the matrix and vector types for the reservoir
-        using typename Base::Mat;
         using typename Base::BVector;
         using typename Base::Eval;
 
@@ -152,7 +152,7 @@ namespace Opm
                                                  const WellState& well_state,
                                                  Opm::DeferredLogger& deferred_logger) override; // should be const?
 
-        virtual void  addWellContributions(Mat& mat) const override;
+        virtual void  addWellContributions(SparseMatrixAdapter& jacobian) const override;
 
         /// number of segments for this well
         /// int number_of_segments_;
@@ -164,9 +164,9 @@ namespace Opm
         int number_segments_;
 
         // components of the pressure drop to be included
-        WellSegment::CompPressureDropEnum compPressureDrop() const;
+        WellSegments::CompPressureDrop compPressureDrop() const;
         // multi-phase flow model
-        WellSegment::MultiPhaseModelEnum multiphaseModel() const;
+        WellSegments::MultiPhaseModel multiphaseModel() const;
 
         // get the WellSegments from the well_ecl_
         const WellSegments& segmentSet() const;

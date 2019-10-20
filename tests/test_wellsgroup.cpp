@@ -23,6 +23,7 @@
 
 #define BOOST_TEST_MODULE WellsGroupTest
 
+#include <chrono>
 #include <memory>
 #include <vector>
 
@@ -50,8 +51,8 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
-    SummaryState summaryState;
-   PhaseUsage pu = phaseUsageFromDeck(eclipseState);
+    SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
+    PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
    auto wells = sched.getWells2atEnd();
 
@@ -89,7 +90,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
-    SummaryState summaryState;
+    Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
 
     for( const auto& grp_name : sched.groupNames() ) {
         const auto& group = sched.getGroup2(grp_name, 2);
@@ -127,7 +128,7 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
-    SummaryState summaryState;
+    Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
 
     for( const auto& grp_name : sched.groupNames() ) {
         const auto& group = sched.getGroup2(grp_name, 2);

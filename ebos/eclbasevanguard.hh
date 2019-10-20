@@ -22,14 +22,14 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::EclBaseVanguard
+ * \copydoc Opm::EclBaseVanguard
  */
 #ifndef EWOMS_ECL_BASE_VANGUARD_HH
 #define EWOMS_ECL_BASE_VANGUARD_HH
 
-#include <ewoms/io/basevanguard.hh>
-#include <ewoms/common/propertysystem.hh>
-#include <ewoms/common/parametersystem.hh>
+#include <opm/models/io/basevanguard.hh>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
@@ -51,11 +51,12 @@
 #include <mpi.h>
 #endif // HAVE_MPI
 
-#include <vector>
-#include <unordered_set>
 #include <array>
+#include <chrono>
+#include <unordered_set>
+#include <vector>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class EclBaseVanguard;
 }
@@ -86,7 +87,7 @@ SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -343,6 +344,7 @@ public:
         }
         else
             eclSchedule_ = externalEclSchedule_;
+        this->summaryState_.reset( new Opm::SummaryState( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() )));
 
         if (!externalEclSummaryConfig_) {
             // create the schedule object. Note that if eclState is supposed to represent
@@ -371,16 +373,6 @@ public:
         int outputInterval = EWOMS_GET_PARAM(TypeTag, int, EclOutputInterval);
         if (outputInterval >= 0)
             eclState_->getRestartConfig().overrideRestartWriteInterval(outputInterval);
-
-        asImp_().createGrids_();
-        asImp_().filterConnections_();
-        asImp_().updateOutputDir_();
-        asImp_().finalizeInit_();
-
-        if (enableExperiments) {
-            Opm::RelpermDiagnostics relpermDiagnostics;
-            relpermDiagnostics.diagnosis(*eclState_, *deck_, asImp_().grid());
-        }
     }
 
     /*!
@@ -444,10 +436,10 @@ public:
     * the UDQ, WTEST and ACTIONX calculations.
     */
     Opm::SummaryState& summaryState()
-    { return summaryState_; }
+    { return *summaryState_; }
 
     const Opm::SummaryState& summaryState() const
-    { return summaryState_; }
+    { return *summaryState_; }
 
     /*!
      * \brief Parameter deciding the edge-weight strategy of the load balancer.
@@ -536,6 +528,19 @@ public:
     std::unordered_set<std::string> defunctWellNames() const
     { return std::unordered_set<std::string>(); }
 
+protected:
+    void callImplementationInit()
+    {
+        asImp_().createGrids_();
+        asImp_().filterConnections_();
+        asImp_().updateOutputDir_();
+        asImp_().finalizeInit_();
+
+        if (enableExperiments) {
+            Opm::RelpermDiagnostics relpermDiagnostics;
+            relpermDiagnostics.diagnosis(*eclState_, *deck_, asImp_().grid());
+        }
+    }
 private:
     void updateOutputDir_()
     {
@@ -588,6 +593,7 @@ private:
     std::unique_ptr<Opm::EclipseState> internalEclState_;
     std::unique_ptr<Opm::Schedule> internalEclSchedule_;
     std::unique_ptr<Opm::SummaryConfig> internalEclSummaryConfig_;
+    std::unique_ptr<Opm::SummaryState> summaryState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.
@@ -597,8 +603,6 @@ private:
     Opm::EclipseState* eclState_;
     Opm::Schedule* eclSchedule_;
     Opm::SummaryConfig* eclSummaryConfig_;
-
-    Opm::SummaryState summaryState_;
 
     Dune::EdgeWeightMethod edgeWeightsMethod_;
 };
@@ -624,6 +628,6 @@ Opm::Schedule* EclBaseVanguard<TypeTag>::externalEclSchedule_ = nullptr;
 template <class TypeTag>
 Opm::SummaryConfig* EclBaseVanguard<TypeTag>::externalEclSummaryConfig_ = nullptr;
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

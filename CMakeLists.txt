@@ -19,6 +19,7 @@ cmake_minimum_required (VERSION 2.8)
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
+option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
 option(BUILD_EBOS "Build the research oriented ebos simulator?" ON)
 option(BUILD_EBOS_EXTENSIONS "Build the variants for various extensions of ebos by default?" OFF)
 option(BUILD_EBOS_DEBUG_EXTENSIONS "Build the ebos variants which are purely for debugging by default?" OFF)
@@ -79,7 +80,7 @@ include (CMakeLists_files.cmake)
 macro (config_hook)
   opm_need_version_of ("dune-common")
   opm_need_version_of ("dune-istl")
-  opm_need_version_of ("ewoms")
+  opm_need_version_of ("opm-models")
 endmacro (config_hook)
 
 macro (prereqs_hook)
@@ -155,13 +156,21 @@ opm_add_test(flow
   flow/flow_ebos_oilwater_polymer.cpp
   flow/flow_ebos_oilwater_polymer_injectivity.cpp)
 
+if (NOT BUILD_FLOW_VARIANTS)
+  set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "FALSE")
+else()
+  set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "TRUE")
+endif()
+
+# Variant versions of Flow.
 opm_add_test(flow_blackoil_dunecpr
   ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
+  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
   SOURCES flow/flow_blackoil_dunecpr.cpp
   EXE_NAME flow_blackoil_dunecpr
   DEPENDS "opmsimulators"
   LIBRARIES "opmsimulators")
+
 
 opm_add_test(flow_blackoil_dunecpr_noflex
   ONLY_COMPILE
@@ -169,9 +178,22 @@ opm_add_test(flow_blackoil_dunecpr_noflex
   SOURCES flow/flow_blackoil_dunecpr_noflex.cpp
   EXE_NAME flow_blackoil_dunecpr_noflex
   CONDITION NOT MPI_FOUND
+
+opm_add_test(flow_onephase
+  ONLY_COMPILE
+  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
+  SOURCES flow/flow_onephase.cpp
+  EXE_NAME flow_onephase
   DEPENDS "opmsimulators"
   LIBRARIES "opmsimulators")
 
+opm_add_test(flow_onephase_energy
+  ONLY_COMPILE
+  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
+  SOURCES flow/flow_onephase_energy.cpp
+  EXE_NAME flow_onephase_energy
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
 
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)
@@ -191,12 +213,9 @@ endif()
 
 # the research oriented general-purpose ECL simulator ("ebos" == &ecl
 # &black-&oil &simulator)
-get_target_property(ecl_INCLUDE_DIRS ecl INTERFACE_INCLUDE_DIRECTORIES)
-
 set(MEBOS_TARGETS "")
 foreach(OBJ blackoil solvent polymer foam gasoil oilwater thermal)
   add_library(ebos_lib${OBJ} OBJECT EXCLUDE_FROM_ALL ebos/ebos_${OBJ}.cc)
-  target_include_directories(ebos_lib${OBJ} PRIVATE ${ecl_INCLUDE_DIRS})
   list(APPEND MEBOS_TARGETS $<TARGET_OBJECTS:ebos_lib${OBJ}>)
 endforeach()
 

@@ -17,6 +17,12 @@ copyToReferenceDir () {
   DIFF=1
   for filetype in $FILETYPES
   do
+    # Don't flag as changed if both reference and result dir lack a file type
+    # In particular to handle the optional RFT's
+    if [ ! -f $WORKSPACE/$SRC_DIR$STEM.$filetype ] && [ ! -f $DST_DIR/$STEM.$filetype ]
+    then
+      continue
+    fi
     diff -q "$WORKSPACE/$SRC_DIR$STEM.$filetype" "$DST_DIR/$STEM.$filetype"
     if test $? -ne 0
     then
@@ -106,7 +112,7 @@ then
 else
   echo -e "Reason: $REASON\n" >> /tmp/cmsg
 fi
-for dep in libecl opm-common opm-grid opm-material ewoms
+for dep in opm-common opm-grid opm-material opm-models
 do
   pushd $WORKSPACE/deps/$dep > /dev/null
   name=`printf "%-14s" $dep`

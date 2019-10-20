@@ -32,8 +32,9 @@
 #include "config.h"
 
 #include "ebos.hh"
+#include "startEbos.hh"
 
-namespace Ewoms {
+namespace Opm {
 class EclAlternativeBlackOilIndexTraits
 {
     typedef Opm::BlackOilDefaultIndexTraits DIT;
@@ -59,7 +60,7 @@ SET_PROP(EbosAltIdxTypeTag, FluidSystem)
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
 public:
-    typedef Opm::BlackOilFluidSystem<Scalar, Ewoms::EclAlternativeBlackOilIndexTraits> type;
+    typedef Opm::BlackOilFluidSystem<Scalar, Opm::EclAlternativeBlackOilIndexTraits> type;
 };
 
 END_PROPERTIES
@@ -67,5 +68,5 @@ END_PROPERTIES
 int main(int argc, char **argv)
 {
     typedef TTAG(EbosAltIdxTypeTag) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }

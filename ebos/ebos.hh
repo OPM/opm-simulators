@@ -34,9 +34,9 @@
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
-#include <ewoms/common/start.hh>
+#include <opm/models/utils/start.hh>
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class EbosProblem;
 }
@@ -46,7 +46,7 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(EbosTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowModelParameters));
 
 // Set the problem class
-SET_TYPE_PROP(EbosTypeTag, Problem, Ewoms::EbosProblem<TypeTag>);
+SET_TYPE_PROP(EbosTypeTag, Problem, Opm::EbosProblem<TypeTag>);
 
 // Enable experimental features for ebos: ebos is the research simulator of the OPM
 // project. If you're looking for a more stable "production quality" simulator, consider
@@ -111,7 +111,7 @@ SET_BOOL_PROP(EbosTypeTag, ContinueOnConvergenceError, true);
 
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
 template <class TypeTag>
 class EbosProblem : public EclProblem<TypeTag>
 {

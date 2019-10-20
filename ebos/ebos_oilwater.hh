@@ -32,7 +32,7 @@
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 
-namespace Ewoms {
+namespace Opm {
 void ebosOilWaterSetDeck(Opm::Deck* deck,
                          Opm::ParseContext* parseContext,
                          Opm::ErrorGuard* errorGuard,

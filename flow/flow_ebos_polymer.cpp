@@ -29,7 +29,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
-namespace Ewoms {
+namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(EclFlowPolymerProblem, INHERITS_FROM(EclFlowProblem));
 SET_BOOL_PROP(EclFlowPolymerProblem, EnablePolymer, true);
@@ -49,7 +49,7 @@ void flowEbosPolymerSetDeck(double setupTime, Deck &deck, EclipseState& eclState
 }
 
 // ----------------- Main program -----------------
-int flowEbosPolymerMain(int argc, char** argv)
+int flowEbosPolymerMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -63,7 +63,7 @@ int flowEbosPolymerMain(int argc, char** argv)
 #endif
 
     Opm::FlowMainEbos<TTAG(EclFlowPolymerProblem)> mainfunc;
-    return mainfunc.execute(argc, argv);
+    return mainfunc.execute(argc, argv, outputCout, outputFiles);
 }
 
 }

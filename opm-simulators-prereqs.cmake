@@ -3,7 +3,6 @@ set (opm-simulators_CONFIG_VAR
   HAVE_OPM_GRID
   HAVE_PTHREAD
   HAVE_EWOMS
-  HAVE_ERT
   HAVE_MPI
   HAVE_PETSC
   HAVE_SUITESPARSE_UMFPACK_H
@@ -39,7 +38,7 @@ set (opm-simulators_DEPS
   "opm-common REQUIRED"
   "opm-material REQUIRED"
   "opm-grid REQUIRED"
-  "ewoms REQUIRED"
+  "opm-models REQUIRED"
   )
 
 find_package_deps(opm-simulators)

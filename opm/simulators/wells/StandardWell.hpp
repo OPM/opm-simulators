@@ -28,9 +28,9 @@
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
-#include <ewoms/models/blackoil/blackoilpolymermodules.hh>
-#include <ewoms/models/blackoil/blackoilsolventmodules.hh>
-#include <ewoms/models/blackoil/blackoilfoammodules.hh>
+#include <opm/models/blackoil/blackoilpolymermodules.hh>
+#include <opm/models/blackoil/blackoilsolventmodules.hh>
+#include <opm/models/blackoil/blackoilfoammodules.hh>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
 
@@ -58,6 +58,8 @@ namespace Opm
         using typename Base::ModelParameters;
         using typename Base::Indices;
         using typename Base::RateConverterType;
+        using typename Base::SparseMatrixAdapter;
+        using typename Base::FluidState;
 
         using Base::numEq;
 
@@ -66,8 +68,8 @@ namespace Opm
         using Base::has_foam;
         using Base::has_energy;
 
-        using PolymerModule =  Ewoms::BlackOilPolymerModule<TypeTag>;
-        using FoamModule = Ewoms::BlackOilFoamModule<TypeTag>;
+        using PolymerModule =  Opm::BlackOilPolymerModule<TypeTag>;
+        using FoamModule = Opm::BlackOilFoamModule<TypeTag>;
 
         // polymer concentration and temperature are already known by the well, so
         // polymer and energy conservation do not need to be considered explicitly
@@ -110,7 +112,6 @@ namespace Opm
         using Base::Oil;
         using Base::Gas;
 
-        using typename Base::Mat;
         using typename Base::BVector;
         using typename Base::Eval;
 
@@ -191,7 +192,7 @@ namespace Opm
                                                  const WellState& well_state,
                                                  Opm::DeferredLogger& deferred_logger) override; // should be const?
 
-        virtual void  addWellContributions(Mat& mat) const override;
+        virtual void  addWellContributions(SparseMatrixAdapter& mat) const override;
 
         /// \brief Wether the Jacobian will also have well contributions in it.
         virtual bool jacobianContainsWellContributions() const override
@@ -292,6 +293,8 @@ namespace Opm
         EvalWell wellSurfaceVolumeFraction(const int phase) const;
 
         EvalWell extendEval(const Eval& in) const;
+
+        Eval getPerfCellPressure(const FluidState& fs) const;
 
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;

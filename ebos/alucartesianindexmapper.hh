@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Ewoms::AluCartesianIndexMapper
+ * \copydoc Opm::AluCartesianIndexMapper
  */
 #ifndef EWOMS_ALU_CARTESIAN_INDEX_MAPPER_HH
 #define EWOMS_ALU_CARTESIAN_INDEX_MAPPER_HH
@@ -37,7 +37,7 @@
 #include <vector>
 #include <cassert>
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \brief Interface class to access the logical Cartesian grid as used in industry
@@ -248,6 +248,6 @@ protected:
     const int cartesianSize_ ;
 };
 
-} // end namespace Ewoms
+} // end namespace Opm
 
 #endif

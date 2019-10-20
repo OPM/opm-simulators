@@ -33,8 +33,8 @@
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 
-#include <ewoms/common/parametersystem.hh>
-#include <ewoms/common/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <dune/istl/scalarproducts.hh>
 #include <dune/istl/operators.hh>
@@ -63,10 +63,10 @@ SET_PROP(FlowIstlSolver, SparseMatrixAdapter)
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
-    typedef Ewoms::MatrixBlock<Scalar, numEq, numEq> Block;
+    typedef Opm::MatrixBlock<Scalar, numEq, numEq> Block;
 
 public:
-    typedef typename Ewoms::Linear::IstlSparseMatrixAdapter<Block> type;
+    typedef typename Opm::Linear::IstlSparseMatrixAdapter<Block> type;
 };
 
 END_PROPERTIES
@@ -551,7 +551,6 @@ protected:
 #if HAVE_MPI
             if (parallelInformation_.type() == typeid(ParallelISTLInformation))
             {
-                typedef Dune::OwnerOverlapCopyCommunication<int,int> Comm;
                 const ParallelISTLInformation& info =
                     boost::any_cast<const ParallelISTLInformation&>( parallelInformation_);
                 Comm istlComm(info.communicator());

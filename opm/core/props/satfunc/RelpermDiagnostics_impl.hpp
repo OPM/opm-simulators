@@ -25,6 +25,7 @@
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 #include <opm/grid/utility/compressedToCartesian.hpp>
+#include <opm/grid/GridHelpers.hpp>
 
 namespace Opm {
 
@@ -54,18 +55,17 @@ namespace Opm {
         const auto& compressedToCartesianIdx = Opm::compressedToCartesian(nc, global_cell);
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties;
-        epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);       
-        const auto& satnum = eclState.get3DProperties().getIntGridProperty("SATNUM");
-        
+        epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);
+        const auto& satnumData = eclState.get3DProperties().getIntGridProperty("SATNUM").getData();
         const std::string tag = "Scaled endpoints";
         for (int c = 0; c < nc; ++c) {
             const int cartIdx = compressedToCartesianIdx[c];
-            const std::string satnumIdx = std::to_string(satnum.iget(cartIdx));
+            const std::string satnumIdx = std::to_string(satnumData[cartIdx]);
             std::array<int, 3> ijk;
             ijk[0] = cartIdx % dims[0];
             ijk[1] = (cartIdx / dims[0]) % dims[1];
             ijk[2] = cartIdx / dims[0] / dims[1];
-            const std::string cellIdx = "(" + std::to_string(ijk[0]) + ", " + 
+            const std::string cellIdx = "(" + std::to_string(ijk[0]) + ", " +
                                    std::to_string(ijk[1]) + ", " +
                                    std::to_string(ijk[2]) + ")";
             scaledEpsInfo_[c].extractScaled(eclState, epsGridProperties, cartIdx);
@@ -75,7 +75,7 @@ namespace Opm {
                 const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGU exceed 1.0 - SWL";
                 OpmLog::warning(tag, msg);
             }
-            
+
             // SGL <= 1.0 - SWU
             if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu + tolerance)) {
                 const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGL exceed 1.0 - SWU";
@@ -94,7 +94,7 @@ namespace Opm {
                     OpmLog::warning(tag, msg);
                 }
             }
-        } 
+        }
     }
 
 } //namespace Opm

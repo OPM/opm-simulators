@@ -20,7 +20,7 @@
 #ifndef OPM_ISTLSOLVEREBOSFLEXIBLE_HEADER_INCLUDED
 #define OPM_ISTLSOLVEREBOSFLEXIBLE_HEADER_INCLUDED
 
-#include <ewoms/linear/matrixblock.hh>
+#include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>

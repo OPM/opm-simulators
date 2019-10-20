@@ -152,7 +152,7 @@ namespace Opm
 
         int num_active_connections = 0;
         for (int c = 0; c < num_conns; ++c) {
-            if (connections[c].state() == WellCompletion::OPEN) {
+            if (connections[c].state() == Connection::State::OPEN) {
                 completions_[connections[c].complnum()].push_back(num_active_connections++);
             }
         }
@@ -312,7 +312,7 @@ namespace Opm
         }
 
         auto injectorType = well_ecl_.injectorType();
-        if (injectorType == WellInjector::GAS) {
+        if (injectorType == Well2::InjectorType::GAS) {
             double solvent_fraction = well_ecl_.getSolventFraction();
             return solvent_fraction;
         } else {
@@ -336,7 +336,7 @@ namespace Opm
 
         auto injectorType = well_ecl_.injectorType();
 
-        if (injectorType == WellInjector::WATER) {
+        if (injectorType == Well2::InjectorType::WATER) {
             WellPolymerProperties polymer = well_ecl_.getPolymerProperties();
             const double polymer_injection_concentration = polymer.m_polymerConcentration;
             return polymer_injection_concentration;
@@ -361,7 +361,7 @@ namespace Opm
 
         auto injectorType = well_ecl_.injectorType();
 
-        if (injectorType == WellInjector::GAS) {
+        if (injectorType == Well2::InjectorType::GAS) {
             WellFoamProperties fprop = well_ecl_.getFoamProperties();
             return fprop.m_foamConcentration;
         } else {
@@ -923,8 +923,8 @@ namespace Opm
 
         // for the moment, we only handle rate limits, not handling potential limits
         // the potential limits should not be difficult to add
-        const WellEcon::QuantityLimitEnum& quantity_limit = econ_production_limits.quantityLimit();
-        if (quantity_limit == WellEcon::POTN) {
+        const auto& quantity_limit = econ_production_limits.quantityLimit();
+        if (quantity_limit == WellEconProductionLimits::QuantityLimit::POTN) {
             const std::string msg = std::string("POTN limit for well ") + name() + std::string(" is not supported for the moment. \n")
                                   + std::string("All the limits will be evaluated based on RATE. ");
             deferred_logger.warning("NOT_SUPPORTING_POTN", msg);
@@ -973,9 +973,9 @@ namespace Opm
         checkRatioEconLimits(econ_production_limits, well_state, ratio_report, deferred_logger);
 
         if (ratio_report.ratio_limit_violated) {
-            const WellEcon::WorkoverEnum workover = econ_production_limits.workover();
+            const auto workover = econ_production_limits.workover();
             switch (workover) {
-                case WellEcon::CON:
+            case WellEconProductionLimits::EconWorkover::CON:
                 {
                     const int worst_offending_completion = ratio_report.worst_offending_completion;
 
@@ -1014,7 +1014,7 @@ namespace Opm
                     }
                     break;
                 }
-                case WellEcon::WELL:
+            case WellEconProductionLimits::EconWorkover::WELL:
                 {
                 well_test_state.closeWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
                 if (write_message_to_opmlog) {
@@ -1029,12 +1029,12 @@ namespace Opm
                 }
                     break;
                 }
-                case WellEcon::NONE:
-                    break;
+            case WellEconProductionLimits::EconWorkover::NONE:
+                break;
                 default:
                 {
                     deferred_logger.warning("NOT_SUPPORTED_WORKOVER_TYPE",
-                                    "not supporting workover type " + WellEcon::WorkoverEnumToString(workover) );
+                                            "not supporting workover type " + WellEconProductionLimits::EconWorkover2String(workover) );
                 }
             }
         }
@@ -1152,7 +1152,7 @@ namespace Opm
         const auto& connectionSet = well_ecl_.getConnections();
         for (size_t c=0; c<connectionSet.size(); c++) {
             const auto& connection = connectionSet.get(c);
-            if (connection.state() == WellCompletion::OPEN) {
+            if (connection.state() == Connection::State::OPEN) {
                 const int i = connection.getI();
                 const int j = connection.getJ();
                 const int k = connection.getK();
@@ -1175,15 +1175,15 @@ namespace Opm
                     double perf_length; // the length of the well perforation
 
                     switch (connection.dir()) {
-                        case Opm::WellCompletion::DirectionEnum::X:
+                        case Opm::Connection::Direction::X:
                             re = std::sqrt(cubical[1] * cubical[2] / M_PI);
                             perf_length = cubical[0];
                             break;
-                        case Opm::WellCompletion::DirectionEnum::Y:
+                        case Opm::Connection::Direction::Y:
                             re = std::sqrt(cubical[0] * cubical[2] / M_PI);
                             perf_length = cubical[1];
                             break;
-                        case Opm::WellCompletion::DirectionEnum::Z:
+                        case Opm::Connection::Direction::Z:
                             re = std::sqrt(cubical[0] * cubical[1] / M_PI);
                             perf_length = cubical[2];
                             break;
@@ -1208,7 +1208,7 @@ namespace Opm
 
         if (well_controls_get_current(wc) != -1 && well_controls_get_current_type(wc) == RESERVOIR_RATE) {
             if (has_solvent && phaseIdx == contiSolventEqIdx ) {
-                typedef Ewoms::BlackOilSolventModule<TypeTag> SolventModule;
+                typedef Opm::BlackOilSolventModule<TypeTag> SolventModule;
                 double coeff = 0;
                 rateConverter_.template calcCoeffSolvent<SolventModule>(0, pvtRegionIdx_, coeff);
                 return coeff;
@@ -1439,6 +1439,37 @@ namespace Opm
     WellInterface<TypeTag>::
     isOperable() const {
         return operability_status_.isOperable();
+    }
+
+
+
+
+
+
+    template<typename TypeTag>
+    WellControls*
+    WellInterface<TypeTag>::
+    createWellControlsWithBHPAndTHP(DeferredLogger& deferred_logger) const
+    {
+        WellControls* wc = well_controls_create();
+        well_controls_assert_number_of_phases(wc, number_of_phases_);
+
+        // a well always has a bhp limit
+        const double invalid_alq = -1e100;
+        const double invalid_vfp = -2147483647;
+        const double bhp_limit = this->mostStrictBhpFromBhpLimits(deferred_logger);
+        well_controls_add_new(BHP, bhp_limit, invalid_alq, invalid_vfp, NULL, wc);
+
+        if (this->wellHasTHPConstraints()) {
+            // it might be better to do it through EclipseState?
+            const double thp_limit = this->getTHPConstraint(deferred_logger);
+            const double thp_control_index = this->getControlIndex(THP);
+            const  int vfp_number = well_controls_iget_vfp(well_controls_, thp_control_index);
+            const double alq = well_controls_iget_alq(well_controls_, thp_control_index);
+            well_controls_add_new(THP, thp_limit, alq, vfp_number, NULL, wc);
+        }
+
+        return wc;
     }
 
 

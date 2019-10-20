@@ -22,18 +22,18 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::VtkEclTracerModule
+ * \copydoc Opm::VtkEclTracerModule
  */
 #ifndef EWOMS_VTK_ECL_TRACER_MODULE_HH
 #define EWOMS_VTK_ECL_TRACER_MODULE_HH
 
 
-#include <ewoms/io/vtkmultiwriter.hh>
-#include <ewoms/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
+#include <opm/models/io/baseoutputmodule.hh>
 
-#include <ewoms/common/propertysystem.hh>
-#include <ewoms/common/parametersystem.hh>
-#include <ewoms/models/blackoil/blackoilproperties.hh>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/blackoil/blackoilproperties.hh>
 
 
 #include <dune/common/fvector.hh>
@@ -54,7 +54,7 @@ NEW_PROP_TAG(VtkWriteEclTracerConcentration);
 SET_BOOL_PROP(VtkEclTracer, VtkWriteEclTracerConcentration, false);
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
     /*!
  * \ingroup Vtk
  *
@@ -74,7 +74,7 @@ namespace Ewoms {
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
         static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
-        typedef Ewoms::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+        typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
 
         typedef typename ParentType::ScalarBuffer ScalarBuffer;
@@ -165,6 +165,6 @@ namespace Ewoms {
 
         std::vector<ScalarBuffer> eclTracerConcentration_;
     };
-} // namespace Ewoms
+} // namespace Opm
 
 #endif
