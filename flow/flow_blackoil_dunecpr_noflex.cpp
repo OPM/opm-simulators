@@ -58,7 +58,7 @@ SET_INT_PROP(EclFlowProblemSimple, CprSolverVerbose, 0);
 SET_STRING_PROP(EclFlowProblemSimple, SystemStrategy, "quasiimpes");
 END_PROPERTIES
 
-namespace Ewoms {
+namespace Opm {
   namespace Properties {
 
     SET_PROP(EclFlowProblemSimple, FluidSystem)
@@ -72,7 +72,7 @@ namespace Ewoms {
         typedef Opm::BlackOilFluidSystem<Scalar> type;
     };
     //NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
-    SET_TYPE_PROP(EclFlowProblemSimple, IntensiveQuantities, Ewoms::BlackOilIntensiveQuantities<TypeTag>);
+    SET_TYPE_PROP(EclFlowProblemSimple, IntensiveQuantities, Opm::BlackOilIntensiveQuantities<TypeTag>);
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
     //SET_TAG_PROP(EclFlowProblemSimple, LinearSolverSplice, ParallelBiCGStabLinearSolver);
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Ewoms::Linear::ParallelBiCGStabSolverBackend<TypeTag>);//not work

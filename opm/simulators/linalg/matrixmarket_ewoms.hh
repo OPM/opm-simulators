@@ -3,7 +3,7 @@
 #ifndef MATRIXMARKET_EWOMS_HH
 #define MATRIXMARKET_EWOMS_HH
 #include <dune/istl/matrixmarket.hh>
-#include <ewoms/linear/matrixblock.hh>
+#include <opm/simulators/linalg/MatrixBlock.hpp>
 namespace Dune
 {
 
@@ -13,7 +13,7 @@ namespace Dune
 
 
     template<typename T, typename A, int i, int j>
-    struct mm_header_printer<BCRSMatrix<Ewoms::MatrixBlock<T,i,j>,A> >
+    struct mm_header_printer<BCRSMatrix<Opm::MatrixBlock<T,i,j>,A> >
     {
       static void print(std::ostream& os)
       {
@@ -24,7 +24,7 @@ namespace Dune
 
 
     template<typename T, int i, int j>
-    struct mm_header_printer<Ewoms::MatrixBlock<T,i,j> >
+    struct mm_header_printer<Opm::MatrixBlock<T,i,j> >
     {
       static void print(std::ostream& os)
       {
@@ -43,9 +43,9 @@ namespace Dune
      */
 
     template<typename T, typename A, int i, int j>
-    struct mm_block_structure_header<BCRSMatrix<Ewoms::MatrixBlock<T,i,j>,A> >
+    struct mm_block_structure_header<BCRSMatrix<Opm::MatrixBlock<T,i,j>,A> >
     {
-      typedef BCRSMatrix<Ewoms::MatrixBlock<T,i,j>,A> M;
+      typedef BCRSMatrix<Opm::MatrixBlock<T,i,j>,A> M;
 
       static void print(std::ostream& os, const M&)
       {
@@ -56,9 +56,9 @@ namespace Dune
 
 
     template<typename T, int i, int j>
-    struct mm_block_structure_header<Ewoms::MatrixBlock<T,i,j> >
+    struct mm_block_structure_header<Opm::MatrixBlock<T,i,j> >
     {
-      typedef Ewoms::MatrixBlock<T,i,j> M;
+      typedef Opm::MatrixBlock<T,i,j> M;
 
       static void print(std::ostream& os, const M& m)
       {}
@@ -67,11 +67,11 @@ namespace Dune
 
 
     template<typename T, typename A, int brows, int bcols, typename D>
-    void readSparseEntries(Dune::BCRSMatrix<Ewoms::MatrixBlock<T,brows,bcols>,A>& matrix,
+    void readSparseEntries(Dune::BCRSMatrix<Opm::MatrixBlock<T,brows,bcols>,A>& matrix,
                            std::istream& file, std::size_t entries,
                            const MMHeader& mmHeader, const D&)
     {
-      typedef Dune::BCRSMatrix<Ewoms::MatrixBlock<T,brows,bcols>,A> Matrix;
+      typedef Dune::BCRSMatrix<Opm::MatrixBlock<T,brows,bcols>,A> Matrix;
       // First path
       // store entries together with column index in a speparate
       // data structure
@@ -119,7 +119,7 @@ namespace Dune
 
 
   template<typename T, typename A, int brows, int bcols>
-  void readMatrixMarket(Dune::BCRSMatrix<Ewoms::MatrixBlock<T,brows,bcols>,A>& matrix,
+  void readMatrixMarket(Dune::BCRSMatrix<Opm::MatrixBlock<T,brows,bcols>,A>& matrix,
                         std::istream& istr)
   {
     using namespace MatrixMarketImpl;
@@ -158,7 +158,7 @@ namespace Dune
 
 
     matrix.setSize(blockrows, blockcols);
-    matrix.setBuildMode(Dune::BCRSMatrix<Ewoms::MatrixBlock<T,brows,bcols>,A>::row_wise);
+    matrix.setBuildMode(Dune::BCRSMatrix<Opm::MatrixBlock<T,brows,bcols>,A>::row_wise);
 
     if(header.type==array_type)
       DUNE_THROW(Dune::NotImplemented, "Array format currently not supported for matrices!");
@@ -169,7 +169,7 @@ namespace Dune
 
 
   template<typename B, int i, int j, typename A>
-  struct mm_multipliers<BCRSMatrix<Ewoms::MatrixBlock<B,i,j>,A> >
+  struct mm_multipliers<BCRSMatrix<Opm::MatrixBlock<B,i,j>,A> >
   {
     enum {
       rows = i,
@@ -178,13 +178,13 @@ namespace Dune
   };
 
   template<typename B, int i, int j>
-  void mm_print_entry(const Ewoms::MatrixBlock<B,i,j>& entry,
-                      typename Ewoms::MatrixBlock<B,i,j>::size_type rowidx,
-                      typename Ewoms::MatrixBlock<B,i,j>::size_type colidx,
+  void mm_print_entry(const Opm::MatrixBlock<B,i,j>& entry,
+                      typename Opm::MatrixBlock<B,i,j>::size_type rowidx,
+                      typename Opm::MatrixBlock<B,i,j>::size_type colidx,
                       std::ostream& ostr)
   {
-    typedef typename Ewoms::MatrixBlock<B,i,j>::const_iterator riterator;
-    typedef typename Ewoms::MatrixBlock<B,i,j>::ConstColIterator citerator;
+    typedef typename Opm::MatrixBlock<B,i,j>::const_iterator riterator;
+    typedef typename Opm::MatrixBlock<B,i,j>::ConstColIterator citerator;
     for(riterator row=entry.begin(); row != entry.end(); ++row, ++rowidx) {
       int coli=colidx;
       for(citerator col = row->begin(); col != row->end(); ++col, ++coli)
@@ -193,7 +193,7 @@ namespace Dune
   }
 
   template<typename T, int n, int m>
-  std::size_t countEntries(const Ewoms::MatrixBlock<T,n, m>& vector)
+  std::size_t countEntries(const Opm::MatrixBlock<T,n, m>& vector)
   {
     return n*m;
   }
