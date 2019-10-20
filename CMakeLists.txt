@@ -177,7 +177,7 @@ opm_add_test(flow_blackoil_dunecpr_noflex
   DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
   SOURCES flow/flow_blackoil_dunecpr_noflex.cpp
   EXE_NAME flow_blackoil_dunecpr_noflex
-  CONDITION NOT MPI_FOUND
+  CONDITION NOT MPI_FOUND)
 
 opm_add_test(flow_onephase
   ONLY_COMPILE
