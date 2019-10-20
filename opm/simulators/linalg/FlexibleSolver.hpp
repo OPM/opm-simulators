@@ -167,6 +167,9 @@ private:
     {
         initOpPrecSp(matrix, prm, comm);
         initSolver(prm);
+	if(prm.get<int>("verbosity")>10){
+	    boost::property_tree::write_json("flexible_solver_options.json", prm);
+	}
     }
 
     std::shared_ptr<AbstractOperatorType> linearoperator_;
