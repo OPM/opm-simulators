@@ -215,10 +215,11 @@ FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, con
         Opm::OpmLog::addBackend("DEBUGLOG", debugLog);
     }
 
-    std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
-    Opm::OpmLog::addBackend(stdout_log_id, streamLog);
-    streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(true));
-
+    if (mpi_rank_ == 0) {
+        std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
+        Opm::OpmLog::addBackend(stdout_log_id, streamLog);
+        streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(true));
+    }
     return output;
 }
 
@@ -350,7 +351,9 @@ int main(int argc, char** argv)
             eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
             schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
             summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
-            setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
+            if (mpiRank == 0) {
+                setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
+            }
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
 
