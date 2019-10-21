@@ -101,6 +101,7 @@ public:
         IndexMapType& localIndexMap_;
         IndexMapStorageType& indexMaps_;
         std::map<int, int> globalPosition_;
+        std::set<int>& recv_;
         std::vector<int>& ranks_;
 
     public:
@@ -108,21 +109,26 @@ public:
                                const std::vector<int>& distributedGlobalIndex,
                                IndexMapType& localIndexMap,
                                IndexMapStorageType& indexMaps,
-                               std::vector<int>& ranks)
+                               std::vector<int>& ranks,
+                               std::set<int>& recv,
+                               bool isIORank)
             : distributedGlobalIndex_(distributedGlobalIndex)
             , localIndexMap_(localIndexMap)
             , indexMaps_(indexMaps)
             , globalPosition_()
+            , recv_(recv)
             , ranks_(ranks)
         {
             size_t size = globalIndex.size();
             // create mapping globalIndex --> localIndex
-            for (size_t index = 0; index < size; ++index)
-                globalPosition_.insert(std::make_pair(globalIndex[index], index));
+            if ( isIORank ) // ioRank
+                for (size_t index = 0; index < size; ++index)
+                    globalPosition_.insert(std::make_pair(globalIndex[index], index));
 
             // we need to create a mapping from local to global
             if (!indexMaps_.empty()) {
-                ranks_.resize(size, -1);
+                if (isIORank)
+                    ranks_.resize(size, -1);
                 // for the ioRank create a localIndex to index in global state map
                 IndexMapType& indexMap = indexMaps_.back();
                 size_t localSize = localIndexMap_.size();
@@ -130,9 +136,41 @@ public:
                 for (size_t i=0; i<localSize; ++i)
                 {
                     int id = distributedGlobalIndex_[localIndexMap_[i]];
-                    indexMap[i] = globalPosition_[id];
-                    ranks_[indexMap[i]] = ioRank;
+                    indexMap[i] = id;
                 }
+            }
+        }
+
+        ~DistributeIndexMapping()
+        {
+            if (!indexMaps_.size())
+                return;
+
+            if ( ranks_.size() )
+            {
+                auto rankIt = recv_.begin();
+                // translate index maps from global cartesian to index
+                for (auto& indexMap: indexMaps_)
+                {
+                    int rank = 0;
+                    if (rankIt != recv_.end())
+                        rank = *rankIt;
+
+                    for (auto&& entry: indexMap)
+                    {
+                        auto candidate = globalPosition_.find(entry);
+                        assert(candidate != globalPosition_.end());
+                        entry = candidate->second;
+                        // Using max should be backwards compatible
+                        ranks_[entry] = std::max(ranks_[entry], rank);
+                    }
+                    if (rankIt != recv_.end())
+                        ++rankIt;
+                }
+#ifndef NDEBUG
+                for (const auto& rank: ranks_)
+                    assert(rank>=0);
+#endif
             }
         }
 
@@ -163,13 +201,87 @@ public:
             buffer.read(numCells);
             indexMap.resize(numCells);
             for (int index = 0; index < numCells; ++index) {
-                int globalId = -1;
-                buffer.read(globalId);
-                assert(globalPosition_.find(globalId) != globalPosition_.end());
-                indexMap[index] = globalPosition_[globalId];
-                ranks_[indexMap[index]] = link + 1;
+                buffer.read(indexMap[index]);
             }
         }
+    };
+
+    /// \brief Communication handle to scatter the global index
+    template<class Mapper>
+    class ElementIndexScatterHandle
+    {
+    public:
+        ElementIndexScatterHandle(const Mapper& sendMapper, const Mapper& recvMapper, std::vector<int>& elementIndices)
+            : sendMapper_(sendMapper), recvMapper_(recvMapper), elementIndices_(elementIndices)
+        {}
+        using DataType = int;
+        bool fixedsize(int /*dim*/, int /*codim*/)
+        {
+            return true;
+        }
+
+        template<class T>
+        std::size_t size(const T&)
+        {
+            return 1;
+        }
+        template<class B, class T>
+        void gather(B& buffer, const T& t)
+        {
+            buffer.write(sendMapper_.index(t));
+        }
+        template<class B, class T>
+        void scatter(B& buffer, const T& t, std::size_t)
+        {
+            buffer.read(elementIndices_[recvMapper_.index(t)]);
+        }
+
+        bool contains(int dim, int codim)
+        {
+            return dim==3 && codim==0;
+        }
+    private:
+        const Mapper& sendMapper_, recvMapper_;
+        std::vector<int>& elementIndices_;
+    };
+
+    /// \brief Communication handle to scatter the global index
+    template<class Mapper>
+    class ElementIndexHandle
+    {
+    public:
+        ElementIndexHandle(const Mapper& mapper, std::vector<int>& elementIndices)
+            : mapper_(mapper), elementIndices_(elementIndices)
+        {}
+        using DataType = int;
+        bool fixedsize(int /*dim*/, int /*codim*/)
+        {
+            return true;
+        }
+
+        template<class T>
+        std::size_t size(const T&)
+        {
+            return 1;
+        }
+        template<class B, class T>
+        void gather(B& buffer, const T& t)
+        {
+            buffer.write(elementIndices_[mapper_.index(t)]);
+        }
+        template<class B, class T>
+        void scatter(B& buffer, const T& t, std::size_t)
+        {
+            buffer.read(elementIndices_[mapper_.index(t)]);
+        }
+
+        bool contains(int dim, int codim)
+        {
+            return dim==3 && codim==0;
+        }
+    private:
+        const Mapper& mapper_;
+        std::vector<int>& elementIndices_;
     };
 
     enum { ioRank = 0 };
@@ -189,48 +301,6 @@ public:
         {
             std::set<int> send, recv;
             typedef typename Vanguard::EquilGrid::LeafGridView EquilGridView;
-            const EquilGridView equilGridView = vanguard.equilGrid().leafGridView();
-
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
-            typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView> EquilElementMapper;
-            EquilElementMapper equilElemMapper(equilGridView, Dune::mcmgElementLayout());
-#else
-            typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView, Dune::MCMGElementLayout> EquilElementMapper;
-            EquilElementMapper equilElemMapper(equilGridView);
-#endif
-
-            // We need a mapping from local to global grid, here we
-            // use equilGrid which represents a view on the global grid
-            const size_t globalSize = vanguard.equilGrid().leafGridView().size(0);
-            // reserve memory
-            globalCartesianIndex_.resize(globalSize, -1);
-
-            // loop over all elements (global grid) and store Cartesian index
-            auto elemIt = vanguard.equilGrid().leafGridView().template begin<0>();
-            const auto& elemEndIt = vanguard.equilGrid().leafGridView().template end<0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                int elemIdx = equilElemMapper.index(*elemIt);
-                int cartElemIdx = vanguard.equilCartesianIndexMapper().cartesianIndex(elemIdx);
-                globalCartesianIndex_[elemIdx] = cartElemIdx;
-            }
-
-            // the I/O rank receives from all other ranks
-            if (isIORank()) {
-                for (int i = 0; i < comm.size(); ++i) {
-                    if (i != ioRank)
-                        recv.insert(i);
-                }
-            }
-            else // all other simply send to the I/O rank
-                send.insert(ioRank);
-
-            localIndexMap_.clear();
-            const size_t gridSize = vanguard.grid().size(0);
-            localIndexMap_.reserve(gridSize);
-
-            // store the local Cartesian index
-            IndexMapType distributedCartesianIndex;
-            distributedCartesianIndex.resize(gridSize, -1);
 
             typedef typename Vanguard::GridView LocalGridView;
             const LocalGridView localGridView = vanguard.gridView();
@@ -242,6 +312,65 @@ public:
             typedef Dune::MultipleCodimMultipleGeomTypeMapper<LocalGridView, Dune::MCMGElementLayout> ElementMapper;
             ElementMapper elemMapper(localGridView);
 #endif
+
+            localIdxToGlobalIdx_.resize(localGridView.size(0), -1);
+
+            // the I/O rank receives from all other ranks
+            if (isIORank()) {
+                // We need a mapping from local to global grid, here we
+                // use equilGrid which represents a view on the global grid
+                // reserve memory
+                const size_t globalSize = vanguard.equilGrid().leafGridView().size(0);
+                globalCartesianIndex_.resize(globalSize, -1);
+                const EquilGridView equilGridView = vanguard.equilGrid().leafGridView();
+
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
+                typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView> EquilElementMapper;
+                EquilElementMapper equilElemMapper(equilGridView, Dune::mcmgElementLayout());
+#else
+                typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView, Dune::MCMGElementLayout> EquilElementMapper;
+                EquilElementMapper equilElemMapper(equilGridView);
+#endif
+
+                // Scatter the global index to local index for lookup during restart
+                ElementIndexScatterHandle<EquilElementMapper> handle(equilElemMapper, elemMapper, localIdxToGlobalIdx_);
+                vanguard.grid().scatterData(handle);
+
+                // loop over all elements (global grid) and store Cartesian index
+                auto elemIt = vanguard.equilGrid().leafGridView().template begin<0>();
+                const auto& elemEndIt = vanguard.equilGrid().leafGridView().template end<0>();
+                for (; elemIt != elemEndIt; ++elemIt) {
+                    int elemIdx = equilElemMapper.index(*elemIt);
+                    int cartElemIdx = vanguard.equilCartesianIndexMapper().cartesianIndex(elemIdx);
+                    globalCartesianIndex_[elemIdx] = cartElemIdx;
+                }
+
+                for (int i = 0; i < comm.size(); ++i) {
+                    if (i != ioRank)
+                        recv.insert(i);
+                }
+            }
+            else
+            {
+                // all other simply send to the I/O rank
+                send.insert(ioRank);
+
+                // Scatter the global index to local index for lookup during restart
+                ElementIndexScatterHandle<ElementMapper> handle(elemMapper, elemMapper, localIdxToGlobalIdx_);
+                vanguard.grid().scatterData(handle);
+            }
+
+            // Sync the global element indices
+            ElementIndexHandle<ElementMapper> handle(elemMapper, localIdxToGlobalIdx_);
+            vanguard.grid().communicate(handle, Dune::InteriorBorder_All_Interface,
+                                        Dune::ForwardCommunication);
+            localIndexMap_.clear();
+            const size_t gridSize = vanguard.grid().size(0);
+            localIndexMap_.reserve(gridSize);
+
+            // store the local Cartesian index
+            IndexMapType distributedCartesianIndex;
+            distributedCartesianIndex.resize(gridSize, -1);
 
             // A mapping for the whole grid (including the ghosts) is needed for restarts
             auto eIt = localGridView.template begin<0>();
@@ -269,7 +398,9 @@ public:
                                                     distributedCartesianIndex,
                                                     localIndexMap_,
                                                     indexMaps_,
-                                                    globalRanks_);
+                                                    globalRanks_,
+                                                    recv,
+                                                    isIORank());
             toIORankComm_.exchange(distIndexMapping);
         }
     }
@@ -547,15 +678,13 @@ public:
         if (!isParallel())
             return localIdx;
 
-        // the last indexMap is the local one
-        const IndexMapType& indexMap = indexMaps_.back();
-        if (indexMap.empty())
+        if (localIdxToGlobalIdx_.empty())
             throw std::logic_error("index map is not created on this rank");
 
-        if (localIdx > indexMap.size())
+        if (localIdx > localIdxToGlobalIdx_.size())
             throw std::logic_error("local index is outside map range");
 
-        return indexMap[localIdx];
+        return localIdxToGlobalIdx_[localIdx];
     }
 
     size_t numCells () const
@@ -569,12 +698,10 @@ public:
         if (!isParallel())
             return true;
 
-        // the last indexMap is the local one
-        const IndexMapType& indexMap = indexMaps_.back();
-        if (indexMap.empty())
+        if (localIdxToGlobalIdx_.empty())
             throw std::logic_error("index map is not created on this rank");
 
-        return std::find(indexMap.begin(), indexMap.end(), globalIdx) != indexMap.end();
+        return std::find(localIdxToGlobalIdx_.begin(), localIdxToGlobalIdx_.end(), globalIdx) != localIdxToGlobalIdx_.end();
     }
 
 protected:
@@ -586,6 +713,7 @@ protected:
     Opm::data::Solution globalCellData_;
     std::map<std::pair<std::string, int>, double> globalBlockData_;
     Opm::data::Wells globalWellData_;
+    std::vector<int> localIdxToGlobalIdx_;
 };
 
 } // end namespace Opm

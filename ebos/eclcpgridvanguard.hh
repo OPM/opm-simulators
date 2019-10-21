@@ -83,18 +83,12 @@ private:
 
 public:
     EclCpGridVanguard(Simulator& simulator)
-        : EclBaseVanguard<TypeTag>(simulator)
+        : EclBaseVanguard<TypeTag>(simulator), mpiRank()
     {
+#if HAVE_MPI
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+#endif
         this->callImplementationInit();
-    }
-
-    ~EclCpGridVanguard()
-    {
-        delete cartesianIndexMapper_;
-        delete equilCartesianIndexMapper_;
-        delete grid_;
-        delete equilGrid_;
-        delete globalTrans_;
     }
 
     /*!
@@ -119,7 +113,10 @@ public:
      * same as the grid which is used for the actual simulation.
      */
     const EquilGrid& equilGrid() const
-    { return *equilGrid_; }
+    {
+        assert(mpiRank == 0);
+        return *equilGrid_;
+    }
 
     /*!
      * \brief Indicates that the initial condition has been computed and the memory used
@@ -130,11 +127,8 @@ public:
      */
     void releaseEquilGrid()
     {
-        delete equilGrid_;
-        equilGrid_ = 0;
-
-        delete equilCartesianIndexMapper_;
-        equilCartesianIndexMapper_ = 0;
+        equilGrid_.reset();
+        equilCartesianIndexMapper_.reset();
     }
 
     /*!
@@ -145,9 +139,7 @@ public:
     void loadBalance()
     {
 #if HAVE_MPI
-        int mpiRank = 0;
         int mpiSize = 1;
-        MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
         MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
 
         if (mpiSize > 1) {
@@ -155,9 +147,12 @@ public:
             // its edge weights. since this is (kind of) a layering violation and
             // transmissibilities are relatively expensive to compute, we only do it if
             // more than a single process is involved in the simulation.
-            cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
-            globalTrans_ = new EclTransmissibility<TypeTag>(*this);
-            globalTrans_->update();
+            cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
+            if (grid_->size(0))
+            {
+                globalTrans_.reset(new EclTransmissibility<TypeTag>(*this));
+                globalTrans_->update();
+            }
 
             Dune::EdgeWeightMethod edgeWeightsMethod = this->edgeWeightsMethod();
 
@@ -200,12 +195,11 @@ public:
             }
             grid_->switchToDistributedView();
 
-            delete cartesianIndexMapper_;
-            cartesianIndexMapper_ = nullptr;
+            cartesianIndexMapper_.reset();
         }
 #endif
 
-        cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
+        cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
 
         this->updateGridView_();
     }
@@ -217,8 +211,7 @@ public:
      */
     void releaseGlobalTransmissibilities()
     {
-        delete globalTrans_;
-        globalTrans_ = nullptr;
+        globalTrans_.reset();
     }
 
     /*!
@@ -232,18 +225,24 @@ public:
      * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid
      */
     const CartesianIndexMapper& equilCartesianIndexMapper() const
-    { return *equilCartesianIndexMapper_; }
+    {
+        assert(mpiRank == 0);
+        assert(equilCartesianIndexMapper_);
+        return *equilCartesianIndexMapper_;
+    }
 
     std::unordered_set<std::string> defunctWellNames() const
     { return defunctWellNames_; }
 
     const EclTransmissibility<TypeTag>& globalTransmissibility() const
-    { return *globalTrans_; }
+    {
+        assert( globalTrans_ != nullptr );
+        return *globalTrans_;
+    }
 
     void releaseGlobalTransmissibility()
     {
-        delete globalTrans_;
-        globalTrans_ = nullptr;
+        globalTrans_.reset();
     }
 
 protected:
@@ -252,7 +251,7 @@ protected:
         const auto& gridProps = this->eclState().get3DProperties();
         const std::vector<double>& porv = gridProps.getDoubleGridProperty("PORV").getData();
 
-        grid_ = new Dune::CpGrid();
+        grid_.reset(new Dune::CpGrid());
         grid_->processEclipseFormat(this->eclState().getInputGrid(),
                                     /*isPeriodic=*/false,
                                     /*flipNormals=*/false,
@@ -266,29 +265,31 @@ protected:
         // the initial condition is calculated.
         // After loadbalance grid_ will contain a global and distribute view.
         // equilGrid_being a shallow copy only the global view.
-        equilGrid_ = new Dune::CpGrid(*grid_);
-        equilCartesianIndexMapper_ = new CartesianIndexMapper(*equilGrid_);
-
-        globalTrans_ = nullptr;
+        if (mpiRank == 0)
+        {
+            equilGrid_.reset(new Dune::CpGrid(*grid_));
+            equilCartesianIndexMapper_.reset(new CartesianIndexMapper(*equilGrid_));
+        }
     }
 
     // removing some connection located in inactive grid cells
     void filterConnections_()
     {
-        assert(grid_);
-        Grid grid = *grid_;
-        grid.switchToGlobalView();
-        const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(grid, this->eclState().getInputGrid());
-        this->schedule().filterConnections(eclipseGrid);
+        if (equilGrid_)
+        {
+            const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(equilGrid(), this->eclState().getInputGrid());
+            this->schedule().filterConnections(eclipseGrid);
+        }
     }
 
-    Grid* grid_;
-    EquilGrid* equilGrid_;
-    CartesianIndexMapper* cartesianIndexMapper_;
-    CartesianIndexMapper* equilCartesianIndexMapper_;
+    std::unique_ptr<Grid> grid_;
+    std::unique_ptr<EquilGrid> equilGrid_;
+    std::unique_ptr<CartesianIndexMapper> cartesianIndexMapper_;
+    std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
 
-    EclTransmissibility<TypeTag>* globalTrans_;
+    std::unique_ptr<EclTransmissibility<TypeTag> > globalTrans_;
     std::unordered_set<std::string> defunctWellNames_;
+    int mpiRank;
 };
 
 } // namespace Opm
