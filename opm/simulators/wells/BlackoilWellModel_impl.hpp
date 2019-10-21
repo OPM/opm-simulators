@@ -503,6 +503,8 @@ namespace Opm {
 
         const Wells* wells = wellsmanager.c_wells();
 
+        wells_ecl_ = schedule().getWells2(report_step);
+
         const int nw = wells->number_of_wells;
         if (nw > 0) {
             const auto phaseUsage = phaseUsageFromDeck(eclState());
