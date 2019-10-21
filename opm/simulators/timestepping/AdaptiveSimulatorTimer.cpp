@@ -17,12 +17,11 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
 #include <cassert>
 #include <iostream>
-#include <vector>
-
-#include <algorithm>
 #include <numeric>
+#include <vector>
 
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
