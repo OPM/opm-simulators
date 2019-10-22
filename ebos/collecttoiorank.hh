@@ -207,11 +207,11 @@ public:
     };
 
     /// \brief Communication handle to scatter the global index
-    template<class Mapper>
+    template<class EquilMapper, class Mapper>
     class ElementIndexScatterHandle
     {
     public:
-        ElementIndexScatterHandle(const Mapper& sendMapper, const Mapper& recvMapper, std::vector<int>& elementIndices)
+        ElementIndexScatterHandle(const EquilMapper& sendMapper, const Mapper& recvMapper, std::vector<int>& elementIndices)
             : sendMapper_(sendMapper), recvMapper_(recvMapper), elementIndices_(elementIndices)
         {}
         using DataType = int;
@@ -241,7 +241,8 @@ public:
             return dim==3 && codim==0;
         }
     private:
-        const Mapper& sendMapper_, recvMapper_;
+        const EquilMapper& sendMapper_;
+        const Mapper& recvMapper_;
         std::vector<int>& elementIndices_;
     };
 
@@ -333,7 +334,7 @@ public:
 #endif
 
                 // Scatter the global index to local index for lookup during restart
-                ElementIndexScatterHandle<EquilElementMapper> handle(equilElemMapper, elemMapper, localIdxToGlobalIdx_);
+                ElementIndexScatterHandle<EquilElementMapper,ElementMapper> handle(equilElemMapper, elemMapper, localIdxToGlobalIdx_);
                 vanguard.grid().scatterData(handle);
 
                 // loop over all elements (global grid) and store Cartesian index
@@ -356,7 +357,10 @@ public:
                 send.insert(ioRank);
 
                 // Scatter the global index to local index for lookup during restart
-                ElementIndexScatterHandle<ElementMapper> handle(elemMapper, elemMapper, localIdxToGlobalIdx_);
+                // This is a bit hacky since the type differs from the iorank.
+                // But should work since we only receive, i.e. use the second parameter.
+                ElementIndexScatterHandle<ElementMapper, ElementMapper> handle(elemMapper, elemMapper,
+                                                                                   localIdxToGlobalIdx_);
                 vanguard.grid().scatterData(handle);
             }
 
