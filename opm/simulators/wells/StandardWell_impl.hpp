@@ -2338,10 +2338,10 @@ namespace Opm
                 const unsigned oilpos = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                 double rs = 0.0;
                 double rv = 0.0;
-                if (!rsmax_perf.empty() && mix[oilpos] > 0.0) {
+                if (!rsmax_perf.empty() && mix[oilpos] > 1e-12) {
                     rs = std::min(mix[gaspos]/mix[oilpos], rsmax_perf[perf]);
                 }
-                if (!rvmax_perf.empty() && mix[gaspos] > 0.0) {
+                if (!rvmax_perf.empty() && mix[gaspos] > 1e-12) {
                     rv = std::min(mix[oilpos]/mix[gaspos], rvmax_perf[perf]);
                 }
                 if (rs != 0.0) {
