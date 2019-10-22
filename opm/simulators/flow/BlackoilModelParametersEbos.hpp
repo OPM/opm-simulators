@@ -48,6 +48,7 @@ NEW_PROP_TAG(SolveWelleqInitially);
 NEW_PROP_TAG(UpdateEquationsScaling);
 NEW_PROP_TAG(UseUpdateStabilization);
 NEW_PROP_TAG(MatrixAddWellContributions);
+NEW_PROP_TAG(EnableWellOperabilityCheck);
 
 // parameters for multisegment wells
 NEW_PROP_TAG(TolerancePressureMsWells);
@@ -75,6 +76,7 @@ SET_SCALAR_PROP(FlowModelParameters, TolerancePressureMsWells, 0.01 *1e5);
 SET_SCALAR_PROP(FlowModelParameters, MaxPressureChangeMsWells, 1e6);
 SET_BOOL_PROP(FlowModelParameters, UseInnerIterationsMsWells, true);
 SET_INT_PROP(FlowModelParameters, MaxInnerIterMsWells, 100);
+SET_BOOL_PROP(FlowModelParameters, EnableWellOperabilityCheck, true);
 
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
@@ -202,6 +204,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, UpdateEquationsScaling, "Update scaling factors for mass balance equations during the run");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseUpdateStabilization, "Try to detect and correct oscillations or stagnation during the Newton method");
             EWOMS_REGISTER_PARAM(TypeTag, bool, MatrixAddWellContributions, "Explicitly specify the influences of wells between cells in the Jacobian and preconditioner matrices");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheck, "Enable the well operability checking");
         }
     };
 } // namespace Opm
