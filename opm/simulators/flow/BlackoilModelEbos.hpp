@@ -270,12 +270,6 @@ namespace Opm {
                     OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
                 }
             }
-
-             // checking whether the group targets are converged
-             if (wellModel().wellCollection().groupControlActive()) {
-                  report.converged = report.converged && wellModel().wellCollection().groupTargetConverged(wellModel().wellState().wellRates());
-             }
-
             report.update_time += perfTimer.stop();
             residual_norms_history_.push_back(residual_norms);
             if (!report.converged) {
