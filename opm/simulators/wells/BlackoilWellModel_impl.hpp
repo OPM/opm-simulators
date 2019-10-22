@@ -1640,17 +1640,13 @@ namespace Opm {
                 throw("Expected WATER, OIL or GAS as type for group injector: " + group.name());
             }
 
-            if (group.has_control(Group2::InjectionCMode::NONE))
-            {
-                // do nothing??
-            }
-
             if (group.has_control(Group2::InjectionCMode::RATE))
             {
                 double current_rate = 0.0;
                 current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
                 if (controls.surface_max_rate < current_rate) {
                     actionOnBrokenConstraints(group, Group2::InjectionCMode::RATE, reportStepIdx, deferred_logger);
+                    return;
                 }
             }
             if (group.has_control(Group2::InjectionCMode::RESV))
@@ -1659,6 +1655,7 @@ namespace Opm {
                 current_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
                 if (controls.resv_max_rate < current_rate) {
                     actionOnBrokenConstraints(group, Group2::InjectionCMode::RESV, reportStepIdx, deferred_logger);
+                    return;
                 }                    }
             if (group.has_control(Group2::InjectionCMode::REIN))
             {
@@ -1670,6 +1667,7 @@ namespace Opm {
 
                 if (controls.target_reinj_fraction*production_Rate < current_rate) {
                     actionOnBrokenConstraints(group, Group2::InjectionCMode::REIN, reportStepIdx, deferred_logger);
+                    return;
                 }                    }
             if (group.has_control(Group2::InjectionCMode::VREP))
             {
@@ -1684,28 +1682,21 @@ namespace Opm {
 
                 if (controls.target_void_fraction*voidage_Rate < current_rate) {
                     actionOnBrokenConstraints(group, Group2::InjectionCMode::VREP, reportStepIdx, deferred_logger);
+                    return;
                 }
-            }
-            if (group.has_control(Group2::InjectionCMode::FLD))
-            {
-                // do nothing???
-                //OPM_THROW(std::runtime_error, "Group " + group.name() + "FLD control for injecting groups not implemented" );
             }
 
         } else if (group.isProductionGroup())
         {
             const auto controls = group.productionControls(summaryState);
 
-            if (group.has_control(Group2::ProductionCMode::NONE))
-            {
-
-            }
             if (group.has_control(Group2::ProductionCMode::ORAT))
             {
                 double current_rate = 0.0;
                 current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
                 if (controls.oil_target < current_rate  ) {
                     actionOnBrokenConstraints(group, controls.exceed_action, Group2::ProductionCMode::ORAT, reportStepIdx, deferred_logger);
+                    return;
                 }
             }
 
@@ -1716,6 +1707,7 @@ namespace Opm {
 
                 if (controls.water_target < current_rate  ) {
                     actionOnBrokenConstraints(group, controls.exceed_action, Group2::ProductionCMode::WRAT, reportStepIdx, deferred_logger);
+                    return;
                 }
             }
             if (group.has_control(Group2::ProductionCMode::GRAT))
@@ -1724,6 +1716,7 @@ namespace Opm {
                 current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
                 if (controls.gas_target < current_rate  ) {
                     actionOnBrokenConstraints(group, controls.exceed_action, Group2::ProductionCMode::GRAT, reportStepIdx, deferred_logger);
+                    return;
                 }
             }
             if (group.has_control(Group2::ProductionCMode::LRAT))
@@ -1733,6 +1726,7 @@ namespace Opm {
                 current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
                 if (controls.liquid_target < current_rate  ) {
                     actionOnBrokenConstraints(group, controls.exceed_action, Group2::ProductionCMode::LRAT, reportStepIdx, deferred_logger);
+                    return;
                 }
             }
 
@@ -1750,24 +1744,14 @@ namespace Opm {
 
                 if (controls.resv_target < current_rate  ) {
                     actionOnBrokenConstraints(group, controls.exceed_action, Group2::ProductionCMode::RESV, reportStepIdx, deferred_logger);
+                    return;
                 }
-
             }
             if (group.has_control(Group2::ProductionCMode::PRBL))
             {
                 OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "PRBL control for production groups not implemented", deferred_logger);
             }
-            if (group.has_control(Group2::ProductionCMode::FLD))
-            {
-                // do nothing???
-            }
-        } else {
-
-            //neither production or injecting group FIELD?
         }
-
-
-
     }
 
     template<typename TypeTag>

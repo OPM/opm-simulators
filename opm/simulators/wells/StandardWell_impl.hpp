@@ -1659,7 +1659,14 @@ namespace Opm
             }
             case Well2::InjectorCMode::GRUP:
             {
-                //do nothing at the moment
+                const Group2::InjectionCMode& currentGroupControl = well_state.currentInjectionGroupControl(well.groupName());
+                // set default values such that at least one constrain is violated
+                if(currentGroupControl == Group2::InjectionCMode::NONE) {
+                    for (int p = 0; p<np; ++p) {
+                        well_state.wellRates()[well_index*np + p] = 1e20;
+                    }
+                }
+                // do nothing at the moment for the rest of the group controls.
                 break;
             }
             case Well2::InjectorCMode::CMODE_UNDEFINED:
@@ -1785,7 +1792,14 @@ namespace Opm
             }
             case Well2::ProducerCMode::GRUP:
             {
-                //do nothing at the moment
+                const Group2::ProductionCMode& currentGroupControl = well_state.currentProductionGroupControl(well.groupName());
+                // set default values such that at least one constrain is violated
+                if(currentGroupControl == Group2::ProductionCMode::NONE) {
+                    for (int p = 0; p<np; ++p) {
+                        well_state.wellRates()[well_index*np + p] = -1e20;
+                    }
+                }
+                // do nothing at the moment for the rest of the group controls.
                 break;
             }
             case Well2::ProducerCMode::CMODE_UNDEFINED:
@@ -1801,7 +1815,6 @@ namespace Opm
             } // end of switch
         }
     }
-
 
 
 

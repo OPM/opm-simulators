@@ -35,9 +35,9 @@ namespace Opm {
             setCmodeGroup( schedule.getGroup2(groupName, reportStepIdx), schedule, summaryState, reportStepIdx, wellState);
         }
 
-        // use FLD as default control
-        wellState.setCurrentInjectionGroupControl(group.name(), Group2::InjectionCMode::FLD);
-        wellState.setCurrentProductionGroupControl(group.name(), Group2::ProductionCMode::FLD);
+        // use NONE as default control
+        wellState.setCurrentInjectionGroupControl(group.name(), Group2::InjectionCMode::NONE);
+        wellState.setCurrentProductionGroupControl(group.name(), Group2::ProductionCMode::NONE);
 
         if (group.isInjectionGroup()) {
             const auto controls = group.injectionControls(summaryState);
