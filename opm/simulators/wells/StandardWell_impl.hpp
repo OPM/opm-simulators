@@ -1910,6 +1910,12 @@ namespace Opm
                          const WellState& well_state,
                          Opm::DeferredLogger& deferred_logger)
     {
+
+        const bool checkOperability = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheck);
+        if (!checkOperability) {
+            return;
+        }
+
         // focusing on PRODUCER for now
         if (well_type_ == INJECTOR) {
             return;
