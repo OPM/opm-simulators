@@ -98,11 +98,15 @@ namespace Opm
         // TODO: for now, we only use one type to save some implementation efforts, while improve later.
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
 
-        MultisegmentWell(const Well2& well, const int time_step, const Wells* wells,
+        MultisegmentWell(const Well2& well, const int time_step,
                          const ModelParameters& param,
                          const RateConverterType& rate_converter,
                          const int pvtRegionIdx,
-                         const int num_components);
+                         const int num_components,
+                         const int num_phases,
+                         const int index_of_well,
+                         const int first_perf_index,
+                         const std::vector<PerforationData>& perf_data);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
@@ -183,7 +187,6 @@ namespace Opm
         using Base::well_cells_;
         using Base::param_;
         using Base::well_index_;
-        using Base::well_type_;
         using Base::first_perf_;
         using Base::saturation_table_number_;
         using Base::well_efficiency_factor_;

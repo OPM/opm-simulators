@@ -189,6 +189,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/gatherDeferredLogger.hpp
   opm/simulators/utils/moduleVersion.hpp
   opm/simulators/utils/ParallelRestart.hpp
+  opm/simulators/wells/PerforationData.hpp
   opm/simulators/wells/RateConverter.hpp
   opm/simulators/wells/SimFIBODetails.hpp
   opm/simulators/wells/WellConnectionAuxiliaryModule.hpp

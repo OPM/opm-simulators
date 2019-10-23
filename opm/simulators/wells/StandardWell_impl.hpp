@@ -28,12 +28,16 @@ namespace Opm
 
     template<typename TypeTag>
     StandardWell<TypeTag>::
-    StandardWell(const Well2& well, const int time_step, const Wells* wells,
+    StandardWell(const Well2& well, const int time_step,
                  const ModelParameters& param,
                  const RateConverterType& rate_converter,
                  const int pvtRegionIdx,
-                 const int num_components)
-    : Base(well, time_step, wells, param, rate_converter, pvtRegionIdx, num_components)
+                 const int num_components,
+                 const int num_phases,
+                 const int index_of_well,
+                 const int first_perf_index,
+                 const std::vector<PerforationData>& perf_data)
+        : Base(well, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, first_perf_index, perf_data)
     , perf_densities_(number_of_perforations_)
     , perf_pressure_diffs_(number_of_perforations_)
     , F0_(numWellConservationEq)
@@ -68,7 +72,7 @@ namespace Opm
         }
 
         // counting/updating primary variable numbers
-        if (this->has_polymermw && well_type_ == INJECTOR) {
+        if (this->has_polymermw && this->isInjector()) {
             // adding a primary variable for water perforation rate per connection
             numWellEq_ += number_of_perforations_;
             // adding a primary variable for skin pressure per connection
@@ -186,25 +190,33 @@ namespace Opm
         // Note: currently, the WQTotal definition is still depends on Injector/Producer.
         assert(comp_idx < num_components_);
 
-        if (well_type_ == INJECTOR) { // only single phase injection
-            // TODO: using comp_frac here is dangerous, it should be changed later
-            // Most likely, it should be changed to use distr, or at least, we need to update comp_frac_ based on distr
-            // while solvent might complicate the situation
-            const auto pu = phaseUsage();
-            const int legacyCompIdx = ebosCompIdxToFlowCompIdx(comp_idx);
-            double comp_frac = 0.0;
-            if (has_solvent && comp_idx == contiSolventEqIdx) { // solvent
-                comp_frac = comp_frac_[pu.phase_pos[ Gas ]] * wsolvent();
-            } else if (legacyCompIdx == pu.phase_pos[ Gas ]) {
-                comp_frac = comp_frac_[legacyCompIdx];
-                if (has_solvent) {
-                    comp_frac *= (1.0 - wsolvent());
+        if (this->isInjector()) { // only single phase injection
+            double inj_frac = 0.0;
+            switch (this->wellEcl().injectorType()) {
+            case Well2::InjectorType::WATER:
+                if (comp_idx == FluidSystem::waterCompIdx) {
+                    inj_frac = 1.0;
                 }
-            } else {
-                comp_frac = comp_frac_[legacyCompIdx];
+                break;
+            case Well2::InjectorType::GAS:
+                if (has_solvent && comp_idx == contiSolventEqIdx) { // solvent
+                    inj_frac = wsolvent();
+                } else if (comp_idx == FluidSystem::gasCompIdx) {
+                    inj_frac = has_solvent ? 1.0 - wsolvent() : 1.0;
+                }
+                break;
+            case Well2::InjectorType::OIL:
+                if (comp_idx == FluidSystem::oilCompIdx) {
+                    inj_frac = 1.0;
+                }
+                break;
+            case Well2::InjectorType::MULTI:
+                // Not supported.
+                // deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
+                //                         "Multi phase injectors are not supported, requested for well " + name());
+                break;
             }
-
-            return comp_frac * primary_variables_evaluation_[WQTotal];
+            return inj_frac * primary_variables_evaluation_[WQTotal];
         } else { // producers
             return primary_variables_evaluation_[WQTotal] * wellVolumeFractionScaled(comp_idx);
         }
@@ -364,7 +376,7 @@ namespace Opm
         const EvalWell well_pressure = bhp + perf_pressure_diffs_[perf];
         EvalWell drawdown = pressure - well_pressure;
 
-        if (this->has_polymermw && well_type_ == INJECTOR) {
+        if (this->has_polymermw && this->isInjector()) {
             const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
             const EvalWell& skin_pressure = primary_variables_evaluation_[pskin_index];
             drawdown += skin_pressure;
@@ -373,7 +385,7 @@ namespace Opm
         // producing perforations
         if ( drawdown.value() > 0 )  {
             //Do nothing if crossflow is not allowed
-            if (!allow_cf && well_type_ == INJECTOR) {
+            if (!allow_cf && this->isInjector()) {
                 return;
             }
 
@@ -395,7 +407,7 @@ namespace Opm
                 cq_s[oilCompIdx] += vap_oil;
 
                 // recording the perforation solution gas rate and solution oil rates
-                if (well_type_ == PRODUCER) {
+                if (this->isProducer()) {
                     perf_dis_gas_rate = dis_gas.value();
                     perf_vap_oil_rate = vap_oil.value();
                 }
@@ -403,7 +415,7 @@ namespace Opm
 
         } else {
             //Do nothing if crossflow is not allowed
-            if (!allow_cf && well_type_ == PRODUCER) {
+            if (!allow_cf && this->isProducer()) {
                 return;
             }
 
@@ -471,7 +483,7 @@ namespace Opm
             }
 
             // calculating the perforation solution gas rate and solution oil rates
-            if (well_type_ == PRODUCER) {
+            if (this->isProducer()) {
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                     const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
@@ -553,12 +565,12 @@ namespace Opm
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
             // better way to do here is that use the cq_s and then replace the cq_s_water here?
-            if (has_polymer && this->has_polymermw && well_type_ == INJECTOR) {
+            if (has_polymer && this->has_polymermw && this->isInjector()) {
                 handleInjectivityRateAndEquations(intQuants, well_state, perf, cq_s, deferred_logger);
             }
 
             // updating the solution gas rate and solution oil rate
-            if (well_type_ == PRODUCER) {
+            if (this->isProducer()) {
                 well_state.wellDissolvedGasRates()[index_of_well_] += perf_dis_gas_rate;
                 well_state.wellVaporizedOilRates()[index_of_well_] += perf_vap_oil_rate;
             }
@@ -629,7 +641,7 @@ namespace Opm
                     }
 
                     // change temperature for injecting fluids
-                    if (well_type_ == INJECTOR && cq_s[activeCompIdx] > 0.0){
+                    if (this->isInjector() && cq_s[activeCompIdx] > 0.0){
                         // only handles single phase injection now
                         assert(this->well_ecl_.injectorType() != Well2::InjectorType::MULTI);
                         fs.setTemperature(this->well_ecl_.temperature());
@@ -655,7 +667,7 @@ namespace Opm
                 // TODO: the application of well efficiency factor has not been tested with an example yet
                 const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
                 EvalWell cq_s_poly = cq_s[waterCompIdx] * well_efficiency_factor_;
-                if (well_type_ == INJECTOR) {
+                if (this->isInjector()) {
                     cq_s_poly *= wpolymer();
                 } else {
                     cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
@@ -671,7 +683,7 @@ namespace Opm
                 // TODO: the application of well efficiency factor has not been tested with an example yet
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                 EvalWell cq_s_foam = cq_s[gasCompIdx] * well_efficiency_factor_;
-                if (well_type_ == INJECTOR) {
+                if (this->isInjector()) {
                     cq_s_foam *= wfoam();
                 } else {
                     cq_s_foam *= extendEval(intQuants.foamConcentration());
@@ -751,7 +763,7 @@ namespace Opm
 
         if (wellIsStopped_) {
             control_eq = getWQTotal();
-        } else if (well.isInjector()) {
+        } else if (this->isInjector()) {
             const Opm::Well2::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
             const auto& controls = well.injectionControls(summaryState);
             switch(current) {
@@ -1300,7 +1312,7 @@ namespace Opm
 
         // for injectors, very typical one of the fractions will be one, and it is easy to get zero value
         // fractions. not sure what is the best way to handle it yet, so we just use 1.0 here
-        const double relaxation_factor_fractions = (well_type_ == PRODUCER) ?
+        const double relaxation_factor_fractions = (this->isProducer()) ?
                                          relaxationFactorFractionsProducer(old_primary_variables, dwells)
                                        : 1.0;
 
@@ -1359,7 +1371,7 @@ namespace Opm
     updateExtraPrimaryVariables(const BVectorWell& dwells) const
     {
         // for the water velocity and skin pressure
-        if (this->has_polymermw && well_type_ == INJECTOR) {
+        if (this->has_polymermw && this->isInjector()) {
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 const int wat_vel_index = Bhp + 1 + perf;
                 const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
@@ -1511,24 +1523,37 @@ namespace Opm
 
         // calculate the phase rates based on the primary variables
         // for producers, this is not a problem, while not sure for injectors here
-        if (well_type_ == PRODUCER) {
+        if (this->isProducer()) {
             const double g_total = primary_variables_[WQTotal];
             for (int p = 0; p < number_of_phases_; ++p) {
                 well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = g_total * F[p];
             }
         } else { // injectors
-            // TODO: using comp_frac_ here is very dangerous, since we do not update it based on the injection phase
-            // Either we use distr (might conflict with RESV related) or we update comp_frac_ based on the injection phase
             for (int p = 0; p < number_of_phases_; ++p) {
-                const double comp_frac = comp_frac_[p];
-                well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = comp_frac * primary_variables_[WQTotal];
+                well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = 0.0;
+            }
+            switch (this->wellEcl().injectorType()) {
+            case Well2::InjectorType::WATER:
+                well_state.wellRates()[index_of_well_ * number_of_phases_ + Water] = primary_variables_[WQTotal];
+                break;
+            case Well2::InjectorType::GAS:
+                well_state.wellRates()[index_of_well_ * number_of_phases_ + Gas] = primary_variables_[WQTotal];
+                break;
+            case Well2::InjectorType::OIL:
+                well_state.wellRates()[index_of_well_ * number_of_phases_ + Oil] = primary_variables_[WQTotal];
+                break;
+            case Well2::InjectorType::MULTI:
+                // Not supported.
+                deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
+                                        "Multi phase injectors are not supported, requested for well " + name());
+                break;
             }
         }
 
         updateThp(well_state, deferred_logger);
 
         // other primary variables related to polymer injectivity study
-        if (this->has_polymermw && well_type_ == INJECTOR) {
+        if (this->has_polymermw && this->isInjector()) {
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 well_state.perfWaterVelocity()[first_perf_ + perf] = primary_variables_[Bhp + 1 + perf];
                 well_state.perfSkinPressure()[first_perf_ + perf] = primary_variables_[Bhp + 1 + number_of_perforations_ + perf];
@@ -1598,7 +1623,7 @@ namespace Opm
             return;
         }
 
-        if (well.isInjector() )
+        if (this->isInjector() )
         {
             const auto& controls = well.injectionControls(summaryState);
 
@@ -1815,7 +1840,7 @@ namespace Opm
 
         // TODO: it only handles the producers for now
         // the formular for the injectors are not formulated yet
-        if (well_type_ == INJECTOR) {
+        if (this->isInjector()) {
             return;
         }
 
@@ -1911,7 +1936,7 @@ namespace Opm
                          Opm::DeferredLogger& deferred_logger)
     {
         // focusing on PRODUCER for now
-        if (well_type_ == INJECTOR) {
+        if (this->isInjector()) {
             return;
         }
 
@@ -2090,8 +2115,8 @@ namespace Opm
             // for now, if there is one perforation can produce/inject in the correct
             // direction, we consider this well can still produce/inject.
             // TODO: it can be more complicated than this to cause wrong-signed rates
-            if ( (drawdown < 0. && well_type_ == INJECTOR) ||
-                 (drawdown > 0. && well_type_ == PRODUCER) )  {
+            if ( (drawdown < 0. && this->isInjector()) ||
+                 (drawdown > 0. && this->isProducer()) )  {
                 all_drawdown_wrong_direction = false;
                 break;
             }
@@ -2114,15 +2139,15 @@ namespace Opm
         std::vector<double> well_rates;
         computeWellRatesWithBhp(ebos_simulator, bhp, well_rates, deferred_logger);
 
-        const double sign = (well_type_ == PRODUCER) ? -1. : 1.;
+        const double sign = (this->isProducer()) ? -1. : 1.;
         const double threshold = sign * std::numeric_limits<double>::min();
 
         bool can_produce_inject = false;
         for (const auto value : well_rates) {
-            if (well_type_ == PRODUCER && value < threshold) {
+            if (this->isProducer() && value < threshold) {
                 can_produce_inject = true;
                 break;
-            } else if (well_type_ == INJECTOR && value > threshold) {
+            } else if (this->isInjector() && value > threshold) {
                 can_produce_inject = true;
                 break;
             }
@@ -2321,13 +2346,44 @@ namespace Opm
                     mix[component] = std::fabs(q_out_perf[perf*num_comp + component]/tot_surf_rate);
                 }
             } else {
+                std::fill(mix.begin(), mix.end(), 0.0);
                 // No flow => use well specified fractions for mix.
-                for (int component = 0; component < num_comp; ++component) {
-                    if (component < np) {
-                        mix[component] = comp_frac_[ ebosCompIdxToFlowCompIdx(component)];
+                if (this->isInjector()) {
+                    switch (this->wellEcl().injectorType()) {
+                    case Well2::InjectorType::WATER:
+                        mix[FluidSystem::waterCompIdx] = 1.0;
+                        break;
+                    case Well2::InjectorType::GAS:
+                        mix[FluidSystem::gasCompIdx] = 1.0;
+                        break;
+                    case Well2::InjectorType::OIL:
+                        mix[FluidSystem::oilCompIdx] = 1.0;
+                        break;
+                    case Well2::InjectorType::MULTI:
+                        // Not supported.
+                        // deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
+                        //                         "Multi phase injectors are not supported, requested for well " + name());
+                        break;
                     }
+                } else {
+                    assert(this->isProducer());
+                    // Using the preferred phase to decide the mix initialization.
+                    switch (this->wellEcl().getPreferredPhase()) {
+                    case Phase::OIL:
+                        mix[FluidSystem::oilCompIdx] = 1.0;
+                        break;
+                    case Phase::GAS:
+                        mix[FluidSystem::gasCompIdx] = 1.0;
+                        break;
+                    case Phase::WATER:
+                        mix[FluidSystem::waterCompIdx] = 1.0;
+                        break;
+                    default:
+                        // No others supported.
+                        break;
+                    }
+
                 }
-                // intialize 0.0 for comIdx >= np;
             }
             // Compute volume ratio.
             x = mix;
@@ -2812,6 +2868,7 @@ namespace Opm
 
         const int well_index = index_of_well_;
         const int np = number_of_phases_;
+        const auto& pu = phaseUsage();
 
         // the weighted total well rate
         double total_well_rate = 0.0;
@@ -2821,12 +2878,22 @@ namespace Opm
 
         // Not: for the moment, the first primary variable for the injectors is not G_total. The injection rate
         // under surface condition is used here
-        if (well_type_ == INJECTOR) {
-            primary_variables_[WQTotal] = 0.;
-            for (int p = 0; p < np; ++p) {
-                // TODO: the use of comp_frac_ here is dangerous, since the injection phase can be different from
-                // prefered phasse in WELSPECS, while comp_frac_ only reflect the one specified in WELSPECS
-                primary_variables_[WQTotal] += well_state.wellRates()[np * well_index + p] * comp_frac_[p];
+        if (this->isInjector()) {
+            switch (this->wellEcl().injectorType()) {
+            case Well2::InjectorType::WATER:
+                primary_variables_[WQTotal] = well_state.wellRates()[np * well_index + pu.phase_pos[Water]];
+                break;
+            case Well2::InjectorType::GAS:
+                primary_variables_[WQTotal] = well_state.wellRates()[np * well_index + pu.phase_pos[Gas]];
+                break;
+            case Well2::InjectorType::OIL:
+                primary_variables_[WQTotal] = well_state.wellRates()[np * well_index + pu.phase_pos[Oil]];
+                break;
+            case Well2::InjectorType::MULTI:
+                // Not supported.
+                deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
+                                        "Multi phase injectors are not supported, requested for well " + name());
+                break;
             }
         } else {
             for (int p = 0; p < np; ++p) {
@@ -2835,7 +2902,6 @@ namespace Opm
         }
 
         if (std::abs(total_well_rate) > 0.) {
-            const auto pu = phaseUsage();
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / total_well_rate;
             }
@@ -2846,7 +2912,7 @@ namespace Opm
                 primary_variables_[SFrac] = scalingFactor(pu.phase_pos[Gas]) * well_state.solventWellRate(well_index) / total_well_rate ;
             }
         } else { // total_well_rate == 0
-            if (well_type_ == INJECTOR) {
+            if (this->isInjector()) {
                 auto phase = well_ecl_.getInjectionProperties().injectorType;
                 // only single phase injection handled
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
@@ -2871,7 +2937,7 @@ namespace Opm
                 // TODO: it is possible to leave injector as a oil well,
                 // when F_w and F_g both equals to zero, not sure under what kind of circumstance
                 // this will happen.
-            } else if (well_type_ == PRODUCER) { // producers
+            } else if (this->isProducer()) { // producers
                 // TODO: the following are not addressed for the solvent case yet
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     primary_variables_[WFrac] = 1.0 / np;
@@ -2889,7 +2955,7 @@ namespace Opm
         primary_variables_[Bhp] = well_state.bhp()[index_of_well_];
 
         // other primary variables related to polymer injection
-        if (this->has_polymermw && well_type_ == INJECTOR) {
+        if (this->has_polymermw && this->isInjector()) {
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 primary_variables_[Bhp + 1 + perf] = well_state.perfWaterVelocity()[first_perf_ + perf];
                 primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = well_state.perfSkinPressure()[first_perf_ + perf];
@@ -2929,14 +2995,14 @@ namespace Opm
         // TODO: it is possible it should be a Evaluation
         const double rho = perf_densities_[0];
 
-        if (well.isInjector() )
+        if (this->isInjector() )
         {
             const auto& controls = well.injectionControls(summaryState);
             const double vfp_ref_depth = vfp_properties_->getInj()->getTable(controls.vfp_table_number)->getDatumDepth();
             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
             return vfp_properties_->getInj()->bhp(controls.vfp_table_number, aqua, liquid, vapour, controls.thp_limit) - dp;
          }
-         else if (well.isProducer()) {
+         else if (this->isProducer()) {
              const auto& controls = well.productionControls(summaryState);
              const double vfp_ref_depth = vfp_properties_->getProd()->getTable(controls.vfp_table_number)->getDatumDepth();
              const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
@@ -2969,14 +3035,14 @@ namespace Opm
         const double rho = perf_densities_[0];
 
         double thp = 0.0;
-        if (well_type_ == INJECTOR) {
+        if (this->isInjector()) {
             const int table_id = well_ecl_.vfp_table_number();
             const double vfp_ref_depth = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
 
             thp = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp + dp);
         }
-        else if (well_type_ == PRODUCER) {
+        else if (this->isProducer()) {
             const int table_id = well_ecl_.vfp_table_number();
             const double alq = well_ecl_.alq_value();
             const double vfp_ref_depth = vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
@@ -3016,7 +3082,7 @@ namespace Opm
 
         // TODO: not sure should based on the well type or injecting/producing peforations
         // it can be different for crossflow
-        if (well_type_ == INJECTOR) {
+        if (this->isInjector()) {
             // assume fully mixing within injecting wellbore
             const auto& visc_mult_table = PolymerModule::plyviscViscosityMultiplierTable(int_quant.pvtRegionIndex());
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
@@ -3026,7 +3092,7 @@ namespace Opm
         if (PolymerModule::hasPlyshlog()) {
             // we do not calculate the shear effects for injection wells when they do not
             // inject polymer.
-            if (well_type_ == INJECTOR && wpolymer() == 0.) {
+            if (this->isInjector() && wpolymer() == 0.) {
                 return;
             }
             // compute the well water velocity with out shear effects.
@@ -3362,7 +3428,7 @@ namespace Opm
     StandardWell<TypeTag>::
     updateWaterThroughput(const double dt, WellState &well_state) const
     {
-        if (this->has_polymermw && well_type_ == INJECTOR) {
+        if (this->has_polymermw && this->isInjector()) {
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 const double perf_water_vel = primary_variables_[Bhp + 1 + perf];
                 // we do not consider the formation damage due to water flowing from reservoir into wellbore
@@ -3447,7 +3513,7 @@ namespace Opm
             ctrltype = CR::WellFailure::Type::ControlRate;
             control_tolerance = 1.e-6; // use smaller tolerance for zero control?
         }
-        else if (well.isInjector() )
+        else if (this->isInjector() )
         {
             const Opm::Well2::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
             switch(current) {
@@ -3472,7 +3538,7 @@ namespace Opm
                 OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
             }
         }
-        else if (well.isProducer() )
+        else if (this->isProducer() )
         {
             const Well2::ProducerCMode& current = well_state.currentProductionControls()[well_index];
             switch(current) {
@@ -3527,7 +3593,7 @@ namespace Opm
         // if different types of extra equations are involved, this function needs to be refactored further
 
         // checking the convergence of the extra equations related to polymer injectivity
-        if (this->has_polymermw && well_type_ == INJECTOR) {
+        if (this->has_polymermw && this->isInjector()) {
             //  checking the convergence of the perforation rates
             const double wat_vel_tol = 1.e-8;
             const int dummy_component = -1;
@@ -3576,7 +3642,7 @@ namespace Opm
     {
         // the source term related to transport of molecular weight
         EvalWell cq_s_polymw = cq_s_poly;
-        if (well_type_ == INJECTOR) {
+        if (this->isInjector()) {
             const int wat_vel_index = Bhp + 1 + perf;
             const EvalWell water_velocity = primary_variables_evaluation_[wat_vel_index];
             if (water_velocity > 0.) { // injecting
@@ -3588,7 +3654,7 @@ namespace Opm
                 // going-back to the wellbore through injector
                 cq_s_polymw *= 0.;
             }
-        } else if (well_type_ == PRODUCER) {
+        } else if (this->isProducer()) {
             if (cq_s_polymw < 0.) {
                 cq_s_polymw *= extendEval(int_quants.polymerMoleWeight() );
             } else {

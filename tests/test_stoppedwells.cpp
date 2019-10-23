@@ -27,12 +27,6 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
-#include <opm/core/wells/WellsManager.hpp>
-#include <opm/core/wells.h>
-#include <opm/core/well_controls.h>
-#include <opm/simulators/wells/WellState.hpp>
-#include <opm/grid/GridManager.hpp>
-
 
 using namespace Opm;
 
@@ -42,54 +36,26 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
     Opm::Parser parser;
     Opm::Deck deck(parser.parseFile(filename));
     Opm::EclipseState eclipseState(deck);
-    Opm::GridManager vanguard(eclipseState.getInputGrid());
     const auto& grid = eclipseState.getInputGrid();
     const TableManager table ( deck );
     const Eclipse3DProperties eclipseProperties ( deck , table, grid);
     const Opm::Runspec runspec (deck);
     const Schedule sched(deck, grid, eclipseProperties, runspec);
-    Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
-
-    double target_surfacerate_inj;
-    double target_surfacerate_prod;
 
     const std::vector<double> pressure = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
     // Both wells are open in the first schedule step
     {
-    Opm::WellsManager wellsManager(eclipseState , sched, summaryState, 0, *vanguard.c_grid());
-    const Wells* wells = wellsManager.c_wells();
-    const struct WellControls* ctrls0 = wells->ctrls[0];
-    const struct WellControls* ctrls1 = wells->ctrls[1];
-    BOOST_CHECK(well_controls_well_is_open(ctrls0));
-    BOOST_CHECK(well_controls_well_is_open(ctrls1));
-
-    target_surfacerate_inj = well_controls_iget_target(ctrls0 , 0);
-    target_surfacerate_prod = well_controls_iget_target(ctrls1 , 0);
-
-    WellState wellstate;
-    wellstate.init(wells, pressure);
-    const std::vector<double> wellrates = wellstate.wellRates();
-    BOOST_CHECK_EQUAL (target_surfacerate_inj, wellrates[2]); // Gas injector
-    BOOST_CHECK_EQUAL (target_surfacerate_prod, wellrates[4]); // Oil target rate
+        auto wells = sched.getWells2(0);
+        BOOST_CHECK(wells[0].getStatus() == Opm::Well2::Status::OPEN);
+        BOOST_CHECK(wells[1].getStatus() == Opm::Well2::Status::OPEN);
     }
 
 
     // The injector is stopped
     {
-    Opm::WellsManager wellsManager(eclipseState, sched, summaryState, 1 , *vanguard.c_grid());
-    const Wells* wells = wellsManager.c_wells();
-    const struct WellControls* ctrls0 = wells->ctrls[0];
-    const struct WellControls* ctrls1 = wells->ctrls[1];
-    BOOST_CHECK(well_controls_well_is_stopped(ctrls0)); // injector is stopped
-    BOOST_CHECK(well_controls_well_is_open(ctrls1));
-
-    WellState wellstate;
-    wellstate.init(wells, pressure);
-
-    const std::vector<double> wellrates = wellstate.wellRates();
-    BOOST_CHECK_EQUAL (0, wellrates[2]); // Gas injector
-    BOOST_CHECK_EQUAL (target_surfacerate_prod, wellrates[4]); // Oil target rate
+        auto wells = sched.getWells2(1);
+        BOOST_CHECK(wells[0].getStatus() == Opm::Well2::Status::STOP);
+        BOOST_CHECK(wells[1].getStatus() == Opm::Well2::Status::OPEN);
     }
-
 }

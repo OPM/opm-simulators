@@ -118,11 +118,15 @@ namespace Opm
                                                    compositionSwitchEnabled,
                                                    Indices::numPhases >;
         /// Constructor
-        WellInterface(const Well2& well, const int time_step, const Wells* wells,
+        WellInterface(const Well2& well, const int time_step,
                       const ModelParameters& param,
                       const RateConverterType& rate_converter,
                       const int pvtRegionIdx,
-                      const int num_components);
+                      const int num_components,
+                      const int num_phases,
+                      const int index_of_well,
+                      const int first_perf_index,
+                      const std::vector<PerforationData>& perf_data);
 
         /// Virutal destructor
         virtual ~WellInterface() {}
@@ -130,14 +134,17 @@ namespace Opm
         /// Well name.
         const std::string& name() const;
 
+        /// True if the well is an injector.
+        bool isInjector() const;
+
+        /// True if the well is a producer.
+        bool isProducer() const;
+
         /// Index of well in the wells struct and wellState
         int indexOfWell() const;
 
         /// Well cells.
         const std::vector<int>& cells() const {return well_cells_; }
-
-        /// Well type, INJECTOR or PRODUCER.
-        WellType wellType() const;
 
         /// Well controls
         WellControls* wellControls() const;
@@ -286,29 +293,11 @@ namespace Opm
 
         const int current_step_;
 
-        // the index of well in Wells struct
-        int index_of_well_;
-
         // simulation parameters
         const ModelParameters& param_;
 
-        // well type
-        // INJECTOR or PRODUCER
-        enum WellType well_type_;
-
-        // number of phases
-        int number_of_phases_;
-
-        // component fractions for each well
-        // typically, it should apply to injection wells
-        std::vector<double> comp_frac_;
-
         // number of the perforations for this well
         int number_of_perforations_;
-
-        // record the index of the first perforation
-        // of states of individual well.
-        int first_perf_;
 
         // well index for each perforation
         std::vector<double> well_index_;
@@ -371,6 +360,18 @@ namespace Opm
         const int pvtRegionIdx_;
 
         const int num_components_;
+
+        // number of phases
+        int number_of_phases_;
+
+        // the index of well in Wells struct
+        int index_of_well_;
+
+        // record the index of the first perforation
+        // of states of individual well.
+        int first_perf_;
+
+        std::vector<int> originalConnectionIndex_;
 
         std::vector<RateVector> connectionRates_;
 
