@@ -53,13 +53,60 @@ struct Setup
         , grid (es.getInputGrid())
         , sched(deck, es)
         , st(std::chrono::system_clock::from_time_t(sched.getStartTime()))
-    {}
+    {
+        initWellPerfData();
+    }
+
+    void initWellPerfData()
+    {
+        const auto& wells = sched.getWells(0);
+        const auto& cartDims = Opm::UgGridHelpers::cartDims(*grid.c_grid());
+        const int* compressed_to_cartesian = Opm::UgGridHelpers::globalCell(*grid.c_grid());
+        std::vector<int> cartesian_to_compressed(cartDims[0] * cartDims[1] * cartDims[2], -1);
+        for (int ii = 0; ii < Opm::UgGridHelpers::numCells(*grid.c_grid()); ++ii) {
+            cartesian_to_compressed[compressed_to_cartesian[ii]] = ii;
+        }
+        well_perf_data.resize(wells.size());
+        int well_index = 0;
+        for (const auto& well : wells) {
+            well_perf_data[well_index].clear();
+            well_perf_data[well_index].reserve(well.getConnections().size());
+            for (const auto& completion : well.getConnections()) {
+                if (completion.state() == Opm::Connection::State::OPEN) {
+                    const int i = completion.getI();
+                    const int j = completion.getJ();
+                    const int k = completion.getK();
+                    const int cart_grid_indx = i + cartDims[0] * (j + cartDims[1] * k);
+                    const int active_index = cartesian_to_compressed[cart_grid_indx];
+                    if (active_index < 0) {
+                        const std::string msg
+                            = ("Cell with i,j,k indices " + std::to_string(i) + " " + std::to_string(j) + " "
+                               + std::to_string(k) + " not found in grid (well = " + well.name() + ").");
+                        OPM_THROW(std::runtime_error, msg);
+                    } else {
+                        Opm::PerforationData pd;
+                        pd.cell_index = active_index;
+                        pd.connection_transmissibility_factor = completion.CF() * completion.wellPi();
+                        pd.satnum_id = completion.satTableId();
+                        well_perf_data[well_index].push_back(pd);
+                    }
+                } else {
+                    if (completion.state() != Opm::Connection::State::SHUT) {
+                        OPM_THROW(std::runtime_error,
+                                  "Completion state: " << Opm::Connection::State2String(completion.state()) << " not handled");
+                    }
+                }
+            }
+            ++well_index;
+        }
+    }
 
     Opm::EclipseState es;
     Opm::PhaseUsage   pu;
     Opm::GridManager  grid;
     Opm::Schedule     sched;
     Opm::SummaryState st;
+    std::vector<std::vector<Opm::PerforationData>> well_perf_data;
 };
 
 namespace {
@@ -72,14 +119,11 @@ namespace {
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
                                 100.0*Opm::unit::barsa);
 
-        const Opm::WellsManager wmgr{setup.es, setup.sched, setup.st, timeStep, *setup.grid.c_grid()};
-
-        state.init(wmgr.c_wells(), cpress, setup.sched,
+        state.init(cpress, setup.sched,
                    setup.sched.getWells(timeStep),
-                   timeStep, nullptr, setup.pu);
+                   timeStep, nullptr, setup.pu, setup.well_perf_data, setup.st);
 
-        state.initWellStateMSWell(wmgr.c_wells(),
-                                  setup.sched.getWells(timeStep),
+        state.initWellStateMSWell(setup.sched.getWells(timeStep),
                                   setup.pu, nullptr);
 
         return state;

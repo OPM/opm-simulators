@@ -77,36 +77,13 @@ struct SetupTest {
           schedule.reset( new Opm::Schedule(deck, ecl_state->getInputGrid(), eclipseProperties, runspec));
           summaryState.reset( new Opm::SummaryState(std::chrono::system_clock::from_time_t(schedule->getStartTime())));
         }
-
-        // Create grid.
-        const std::vector<double>& porv =
-                            ecl_state->get3DProperties().getDoubleGridProperty("PORV").getData();
-
-        Opm::GridManager gm(ecl_state->getInputGrid(), porv);
-        const Grid& grid = *(gm.c_grid());
-
         current_timestep = 0;
-
-        // Create wells.
-        wells_manager.reset(new Opm::WellsManager(*ecl_state,
-                                                  *schedule,
-                                                  *summaryState,
-                                                  current_timestep,
-                                                  Opm::UgGridHelpers::numCells(grid),
-                                                  Opm::UgGridHelpers::globalCell(grid),
-                                                  Opm::UgGridHelpers::cartDims(grid),
-                                                  Opm::UgGridHelpers::dimensions(grid),
-                                                  Opm::UgGridHelpers::cell2Faces(grid),
-                                                  Opm::UgGridHelpers::beginFaceCentroids(grid),
-                                                  false,
-                                                  std::unordered_set<std::string>() ) );
-
     };
 
-    std::unique_ptr<const Opm::WellsManager> wells_manager;
     std::unique_ptr<const Opm::EclipseState> ecl_state;
     std::unique_ptr<const Opm::Schedule> schedule;
     std::unique_ptr<Opm::SummaryState> summaryState;
+    std::vector<std::vector<Opm::PerforationData>> well_perf_data;
     int current_timestep;
 };
 
@@ -132,7 +109,6 @@ BOOST_GLOBAL_FIXTURE(GlobalFixture);
 
 BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     const SetupTest setup_test;
-    const Wells* wells = setup_test.wells_manager->c_wells();
     const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
     BOOST_CHECK_EQUAL( wells_ecl.size(), 2);
     const Opm::Well& well = wells_ecl[1];
@@ -149,36 +125,24 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     rateConverter.reset(new RateConverterType (phaseUsage,
                                      std::vector<int>(10, 0)));
 
-    const int pvtIdx = 0;
-    const int num_comp = wells->number_of_phases;
+    Opm::PerforationData dummy;
+    std::vector<Opm::PerforationData> pdata(well.getConnections().size(), dummy);
 
-    BOOST_CHECK_THROW( StandardWell( well, -1, wells, param, *rateConverter, pvtIdx, num_comp), std::invalid_argument);
-    BOOST_CHECK_THROW( StandardWell( well, 4, nullptr , param, *rateConverter, pvtIdx, num_comp), std::invalid_argument);
+    BOOST_CHECK_THROW( StandardWell( well, -1, param, *rateConverter, 0, 3, 3, 0, 0, pdata), std::invalid_argument);
 }
 
 
 BOOST_AUTO_TEST_CASE(TestBehavoir) {
     const SetupTest setup_test;
-    const Wells* wells_struct = setup_test.wells_manager->c_wells();
     const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
     const int current_timestep = setup_test.current_timestep;
     std::vector<std::unique_ptr<const StandardWell> >  wells;
 
     {
-        const int nw = wells_struct ? (wells_struct->number_of_wells) : 0;
+        const int nw = wells_ecl.size();
         const Opm::BlackoilModelParametersEbos<TTAG(EclFlowProblem)> param;
 
         for (int w = 0; w < nw; ++w) {
-            const std::string well_name(wells_struct->name[w]);
-
-            size_t index_well = 0;
-            for (; index_well < wells_ecl.size(); ++index_well) {
-                if (well_name == wells_ecl[index_well].name()) {
-                    break;
-                }
-            }
-            // we should always be able to find the well in wells_ecl
-            BOOST_CHECK(index_well !=  wells_ecl.size());
             // For the conversion between the surface volume rate and resrevoir voidage rate
             typedef Opm::BlackOilFluidSystem<double> FluidSystem;
             using RateConverterType = Opm::RateConverter::
@@ -191,11 +155,9 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
             // Compute reservoir volumes for RESV controls.
             rateConverter.reset(new RateConverterType (phaseUsage,
                                              std::vector<int>(10, 0)));
-
-            const int pvtIdx = 0;
-            const int num_comp = wells_struct->number_of_phases;
-
-            wells.emplace_back(new StandardWell(wells_ecl[index_well], current_timestep, wells_struct, param, *rateConverter, pvtIdx, num_comp) );
+            Opm::PerforationData dummy;
+            std::vector<Opm::PerforationData> pdata(wells_ecl[w].getConnections().size(), dummy);
+            wells.emplace_back(new StandardWell(wells_ecl[w], current_timestep, param, *rateConverter, 0, 3, 3, w, 0, pdata) );
         }
     }
 
@@ -203,7 +165,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
     {
         const auto& well = wells[0];
         BOOST_CHECK_EQUAL(well->name(), "PROD1");
-        BOOST_CHECK(well->wellType() == PRODUCER);
+        BOOST_CHECK(well->isProducer());
         BOOST_CHECK(well->numEq == 3);
         BOOST_CHECK(well->numStaticWellEq== 4);
     }
@@ -212,7 +174,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
     {
         const auto& well = wells[1];
         BOOST_CHECK_EQUAL(well->name(), "INJE1");
-        BOOST_CHECK(well->wellType() == INJECTOR);
+        BOOST_CHECK(well->isInjector());
         BOOST_CHECK(well->numEq == 3);
         BOOST_CHECK(well->numStaticWellEq== 4);      
     }

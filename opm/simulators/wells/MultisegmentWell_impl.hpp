@@ -28,12 +28,16 @@ namespace Opm
 
     template <typename TypeTag>
     MultisegmentWell<TypeTag>::
-    MultisegmentWell(const Well& well, const int time_step, const Wells* wells,
+    MultisegmentWell(const Well& well, const int time_step,
                      const ModelParameters& param,
                      const RateConverterType& rate_converter,
                      const int pvtRegionIdx,
-                     const int num_components)
-    : Base(well, time_step, wells, param, rate_converter, pvtRegionIdx, num_components)
+                     const int num_components,
+                     const int num_phases,
+                     const int index_of_well,
+                     const int first_perf_index,
+                     const std::vector<PerforationData>& perf_data)
+        : Base(well, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, first_perf_index, perf_data)
     , segment_perforations_(numberOfSegments())
     , segment_inlets_(numberOfSegments())
     , cell_perforation_depth_diffs_(number_of_perforations_, 0.0)
@@ -756,7 +760,7 @@ namespace Opm
                     primary_variables_[seg][GFrac] = scalingFactor(gas_pos) * segment_rates[number_of_phases_ * seg_index + gas_pos] / total_seg_rate;
                 }
             } else { // total_seg_rate == 0
-                if (well_type_ == INJECTOR) {
+                if (this->isInjector()) {
                     // only single phase injection handled
                     auto phase = well.getInjectionProperties().injectorType;
 
@@ -776,7 +780,7 @@ namespace Opm
                         }
                     }
 
-                } else if (well_type_ == PRODUCER) { // producers
+                } else if (this->isProducer()) { // producers
                     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                         primary_variables_[seg][WFrac] = 1.0 / number_of_phases_;
                     }
@@ -942,7 +946,7 @@ namespace Opm
 
                 // make sure that no injector produce and no producer inject
                 if (seg == 0) {
-                    if (well_type_ == INJECTOR) {
+                    if (this->isInjector()) {
                         primary_variables_[seg][GTotal] = std::max( primary_variables_[seg][GTotal], 0.0);
                     } else {
                         primary_variables_[seg][GTotal] = std::min( primary_variables_[seg][GTotal], 0.0);
@@ -1186,7 +1190,7 @@ namespace Opm
         // producing perforations
         if ( drawdown > 0.0) {
             // Do nothing is crossflow is not allowed
-            if (!allow_cf && well_type_ == INJECTOR) {
+            if (!allow_cf && this->isInjector()) {
                 return;
             }
 
@@ -1206,7 +1210,7 @@ namespace Opm
             }
         } else { // injecting perforations
             // Do nothing if crossflow is not allowed
-            if (!allow_cf && well_type_ == PRODUCER) {
+            if (!allow_cf && this->isProducer()) {
                 return;
             }
 
@@ -1263,7 +1267,7 @@ namespace Opm
         } // end for injection perforations
 
         // calculating the perforation solution gas rate and solution oil rates
-        if (well_type_ == PRODUCER) {
+        if (this->isProducer()) {
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
@@ -1516,7 +1520,7 @@ namespace Opm
         // the result will contain the derivative with resepct to GTotal in segment seg,
         // and the derivatives with respect to WFrac GFrac in segment seg_upwind.
         // the derivative with respect to SPres should be zero.
-        if (seg == 0 && well_type_ == INJECTOR) {
+        if (seg == 0 && this->isInjector()) {
             const Well& well = Base::wellEcl();
             auto phase = well.getInjectionProperties().injectorType;
 
@@ -1630,7 +1634,7 @@ namespace Opm
 
         if (wellIsStopped_) {
             control_eq = getSegmentGTotal(0);
-        } else if (well.isInjector() ) {
+        } else if (this->isInjector() ) {
             const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
             const auto controls = well.injectionControls(summaryState);
 
@@ -1711,13 +1715,16 @@ namespace Opm
                     rates[ Gas ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
                 }
                 control_eq = getSegmentPressure(0) - calculateBhpFromThp(rates, well, summaryState, deferred_logger);
-                break;            }
+                break;
+            }
+
             case Well::InjectorCMode::BHP:
             {
                 const auto& bhp = controls.bhp_limit;
                 control_eq = getSegmentPressure(0) - bhp;
                 break;
             }
+
             case Well::InjectorCMode::GRUP:
             {
                 assert(well.isAvailableForGroupControl());
@@ -1725,6 +1732,7 @@ namespace Opm
                 assembleGroupInjectionControl(group, well_state, schedule, summaryState, controls.injector_type, control_eq, efficiencyFactor, deferred_logger);
                 break;
             }
+
             case Well::InjectorCMode::CMODE_UNDEFINED:
             {
                 OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well "  + name(), deferred_logger);
@@ -1823,7 +1831,8 @@ namespace Opm
                     rates[ Gas ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
                 }
                 control_eq = getSegmentPressure(0) - calculateBhpFromThp(rates, well, summaryState, deferred_logger);
-                break;               }
+                break;
+            }
             case Well::ProducerCMode::GRUP:
             {
                 assert(well.isAvailableForGroupControl());
@@ -1843,7 +1852,6 @@ namespace Opm
 
             }
         }
-
 
         // using control_eq to update the matrix and residuals
         resWell_[0][SPres] = control_eq.value();
@@ -1903,14 +1911,14 @@ namespace Opm
         const double rho = segment_densities_[0].value();
 
         double thp = 0.0;
-        if (well_type_ == INJECTOR) {
+        if (this->isInjector()) {
             const int table_id = well_ecl_.vfp_table_number();
             const double vfp_ref_depth = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
 
             thp = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp + dp);
         }
-        else if (well_type_ == PRODUCER) {
+        else if (this->isProducer()) {
             const int table_id = well_ecl_.vfp_table_number();
             const double alq = well_ecl_.alq_value();
             const double vfp_ref_depth = vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
@@ -2675,7 +2683,7 @@ namespace Opm
                 computePerfRatePressure(int_quants, mob, seg, perf, seg_pressure, allow_cf, cq_s, perf_press, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
                 // updating the solution gas rate and solution oil rate
-                if (well_type_ == PRODUCER) {
+                if (this->isProducer()) {
                     well_state.wellDissolvedGasRates()[index_of_well_] += perf_dis_gas_rate;
                     well_state.wellVaporizedOilRates()[index_of_well_] += perf_vap_oil_rate;
                 }
@@ -2762,8 +2770,8 @@ namespace Opm
                 // for now, if there is one perforation can produce/inject in the correct
                 // direction, we consider this well can still produce/inject.
                 // TODO: it can be more complicated than this to cause wrong-signed rates
-                if ( (drawdown < 0. && well_type_ == INJECTOR) ||
-                     (drawdown > 0. && well_type_ == PRODUCER) )  {
+                if ( (drawdown < 0. && this->isInjector()) ||
+                     (drawdown > 0. && this->isProducer()) )  {
                     all_drawdown_wrong_direction = false;
                     break;
                 }
@@ -3056,9 +3064,8 @@ namespace Opm
     {
         double control_tolerance = 0.;
 
-        const auto& well = well_ecl_;
         const int well_index = index_of_well_;
-        if (well.isInjector() )
+        if (this->isInjector() )
         {
             const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
             switch(current) {
@@ -3080,7 +3087,7 @@ namespace Opm
             }
         }
 
-        if (well.isProducer() )
+        if (this->isProducer() )
         {
             const Well::ProducerCMode& current = well_state.currentProductionControls()[well_index];
             switch(current) {
@@ -3124,9 +3131,8 @@ namespace Opm
         using CR = ConvergenceReport;
         CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
 
-        const auto& well = well_ecl_;
         const int well_index = index_of_well_;
-        if (well.isInjector() )
+        if (this->isInjector() )
         {
             const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
             switch(current) {
@@ -3152,7 +3158,7 @@ namespace Opm
             }
         }
 
-        if (well.isProducer() )
+        if (this->isProducer() )
         {
             const Well::ProducerCMode& current = well_state.currentProductionControls()[well_index];
             switch(current) {
@@ -3208,8 +3214,8 @@ namespace Opm
             // special treatment is needed for segment 0
             if (seg == 0) {
                 // we are not supposed to have injecting producers and producing injectors
-                assert( ! (well_type_ == PRODUCER && primary_variables_evaluation_[seg][GTotal] > 0.) );
-                assert( ! (well_type_ == INJECTOR && primary_variables_evaluation_[seg][GTotal] < 0.) );
+                assert( ! (this->isProducer() && primary_variables_evaluation_[seg][GTotal] > 0.) );
+                assert( ! (this->isInjector() && primary_variables_evaluation_[seg][GTotal] < 0.) );
                 upwinding_segments_[seg] = seg;
                 continue;
             }

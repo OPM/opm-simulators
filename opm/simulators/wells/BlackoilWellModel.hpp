@@ -40,6 +40,7 @@
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
@@ -233,8 +234,10 @@ namespace Opm {
 
         protected:
             Simulator& ebosSimulator_;
-            std::unique_ptr<WellsManager> wells_manager_;
+
             std::vector< Well > wells_ecl_;
+            std::vector< std::vector<PerforationData> > well_perf_data_;
+            std::vector<int> first_perf_index_;
 
             bool wells_active_;
 
@@ -246,8 +249,10 @@ namespace Opm {
 
             std::vector<bool> is_cell_perforated_;
 
+            void initializeWellPerfData();
+
             // create the well container
-            std::vector<WellInterfacePtr > createWellContainer(const int time_step, Opm::DeferredLogger& deferred_logger);
+            std::vector<WellInterfacePtr > createWellContainer(const int time_step);
 
             WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, Opm::DeferredLogger& deferred_logger) const;
 
@@ -277,8 +282,6 @@ namespace Opm {
 
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_;
-
-            const Wells* wells() const { return wells_manager_->c_wells(); }
 
             const Grid& grid() const
             { return ebosSimulator_.vanguard().grid(); }
@@ -373,7 +376,7 @@ namespace Opm {
                                WellStateFullyImplicitBlackoil& state ) const;
 
             // whether there exists any multisegment well open on this process
-            bool anyMSWellOpenLocal(const Wells* wells) const;
+            bool anyMSWellOpenLocal() const;
 
             const Well& getWellEcl(const std::string& well_name) const;
 
