@@ -1650,7 +1650,7 @@ namespace Opm
             switch(current) {
             case Well2::InjectorCMode::RATE:
             {
-                control_eq = getSegmentGTotal(0) * efficiencyFactor - controls.surface_rate*scaling;
+                control_eq = getSegmentGTotal(0) * efficiencyFactor / scaling - controls.surface_rate;
                 break;
             }
 
@@ -1682,7 +1682,7 @@ namespace Opm
 
                 }
 
-                control_eq = coeff*getSegmentGTotal(0)*efficiencyFactor - controls.reservoir_rate*scaling;
+                control_eq = coeff*getSegmentGTotal(0)*efficiencyFactor / scaling - controls.reservoir_rate;
                 break;
             }
 
@@ -1881,7 +1881,7 @@ namespace Opm
         case Group2::InjectionCMode::RATE:
         {
 
-            control_eq = getSegmentGTotal(0) - fraction * scaling * (groupcontrols.surface_max_rate / efficiencyFactor - groupTargetReduction);
+            control_eq = getSegmentGTotal(0) / scaling - fraction * (groupcontrols.surface_max_rate / efficiencyFactor - groupTargetReduction);
             break;
         }
         case Group2::InjectionCMode::RESV:
@@ -1890,7 +1890,7 @@ namespace Opm
             Base::rateConverter_.calcCoeff(/*fipreg*/ 0, Base::pvtRegionIdx_, convert_coeff);
             double coeff = convert_coeff[phasePos];
             double target = std::max(0.0, (groupcontrols.resv_max_rate/coeff/efficiencyFactor - groupTargetReduction));
-            control_eq = getSegmentGTotal(0) - fraction * scaling * target;
+            control_eq = getSegmentGTotal(0) / scaling - fraction * target;
             break;
         }
         case Group2::InjectionCMode::REIN:
@@ -1899,7 +1899,7 @@ namespace Opm
             productionRate += wellGroupHelpers::sumWellRates(group, schedule, well_state, current_step_, phasePos, /*isInjector*/false);
             productionRate /= efficiencyFactor;
             double target = std::max(0.0, (groupcontrols.target_reinj_fraction*productionRate - groupTargetReduction));
-            control_eq = getSegmentGTotal(0) - fraction * scaling * target;
+            control_eq = getSegmentGTotal(0) / scaling - fraction * target;
             break;
         }
         case Group2::InjectionCMode::VREP:
@@ -1913,7 +1913,7 @@ namespace Opm
             voidageRate += wellGroupHelpers::sumWellResRates(group, schedule, well_state, current_step_, pu.phase_pos[BlackoilPhases::Vapour], /*injector*/false);
             voidageRate /= efficiencyFactor;
             double target = std::max(0.0, ( groupcontrols.target_void_fraction*voidageRate/coeff - groupTargetReduction));
-            control_eq = getSegmentGTotal(0) - fraction * scaling * target ;
+            control_eq = getSegmentGTotal(0) / scaling - fraction * target ;
             break;
         }
         case Group2::InjectionCMode::FLD:
