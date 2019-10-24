@@ -30,7 +30,7 @@
 
 #include "discretefractureproperties.hh"
 
-#include <ewoms/models/immiscible/immiscibleintensivequantities.hh>
+#include <opm/models/immiscible/immiscibleintensivequantities.hh>
 
 #include <opm/material/common/Valgrind.hpp>
 

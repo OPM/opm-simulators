@@ -37,7 +37,7 @@
 #error "dune-alugrid not found!"
 #endif
 
-#include <ewoms/models/discretefracture/discretefracturemodel.hh>
+#include <opm/models/discretefracture/discretefracturemodel.hh>
 #include <opm/models/io/dgfvanguard.hh>
 
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>

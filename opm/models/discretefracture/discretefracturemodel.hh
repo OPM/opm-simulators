@@ -37,8 +37,8 @@
 #include "discretefracturelocalresidual.hh"
 #include "discretefractureproblem.hh"
 
-#include <ewoms/models/immiscible/immisciblemodel.hh>
-#include <ewoms/io/vtkdiscretefracturemodule.hh>
+#include <opm/models/immiscible/immisciblemodel.hh>
+#include <opm/models/io/vtkdiscretefracturemodule.hh>
 
 #include <opm/material/common/Exceptions.hpp>
 
