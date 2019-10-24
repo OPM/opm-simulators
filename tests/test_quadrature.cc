@@ -188,12 +188,10 @@ void testTetrahedron()
     std::vector<unsigned int> v = { 0, 1, 2, 3 };
     // in Dune >= 2.6 topologyIds seem to be opaque integers. WTF!?
     gf.insertElement(Dune::GeometryType(/*topologyId=*/0, dim), v);
-    auto *grid = gf.createGrid();
+    const auto& grid = *gf.createGrid();
 
     // write the sub-control volumes to a VTK file.
-    writeTetrahedronSubControlVolumes(*grid);
-
-    delete grid;
+    writeTetrahedronSubControlVolumes(grid);
 #endif // HAVE_DUNE_ALUGRID
 }
 
@@ -283,12 +281,10 @@ void testCube()
     std::vector<unsigned int> v = { 0, 1, 2, 3, 4, 5, 6, 7 };
     // in Dune >= 2.6 topologyIds seem to be opaque integers. WTF!?
     gf.insertElement(Dune::GeometryType((1 << dim) - 1, dim), v);
-    auto *grid = gf.createGrid();
+    const auto& grid = *gf.createGrid();
 
     // write the sub-control volumes to a VTK file.
-    writeCubeSubControlVolumes(*grid);
-
-    delete grid;
+    writeCubeSubControlVolumes(grid);
 #endif // HAVE_DUNE_ALUGRID
 }
 
