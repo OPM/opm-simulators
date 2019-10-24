@@ -43,7 +43,6 @@
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
-#include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
@@ -179,14 +178,12 @@ public:
         , collectToIORank_(simulator_.vanguard())
         , eclOutputModule_(simulator, collectToIORank_)
     {
-        if (collectToIORank_.isIORank()) {
-            globalGrid_ = simulator_.vanguard().grid();
-            globalGrid_.switchToGlobalView();
-            eclIO_.reset(new Opm::EclipseIO(simulator_.vanguard().eclState(),
-                                            Opm::UgGridHelpers::createEclipseGrid(globalGrid_, simulator_.vanguard().eclState().getInputGrid()),
-                                            simulator_.vanguard().schedule(),
-                                            simulator_.vanguard().summaryConfig()));
-        }
+        globalGrid_ = simulator_.vanguard().grid();
+        globalGrid_.switchToGlobalView();
+        eclIO_.reset(new Opm::EclipseIO(simulator_.vanguard().eclState(),
+                                        Opm::UgGridHelpers::createEclipseGrid(globalGrid_, simulator_.vanguard().eclState().getInputGrid()),
+                                        simulator_.vanguard().schedule(),
+                                        simulator_.vanguard().summaryConfig()));
 
         // create output thread if enabled and rank is I/O rank
         // async output is enabled by default if pthread are enabled
@@ -201,10 +198,7 @@ public:
     { }
 
     const Opm::EclipseIO& eclIO() const
-    {
-        assert(eclIO_);
-        return *eclIO_;
-    }
+    { return *eclIO_; }
 
     void writeInit()
     {
@@ -245,6 +239,7 @@ public:
         if (reportStepNum == 0)
             return;
 
+        const auto& summary = eclIO_->summary();
         Scalar curTime = simulator_.time() + simulator_.timeStepSize();
         Scalar totalCpuTime =
             simulator_.executionTimer().realTimeElapsed() +
@@ -277,7 +272,6 @@ public:
 
         std::vector<char> buffer;
         if (collectToIORank_.isIORank()) {
-            const auto& summary = eclIO_->summary();
             const auto& eclState = simulator_.vanguard().eclState();
 
             // Add TCPU
@@ -429,8 +423,7 @@ public:
 
         {
             Opm::SummaryState& summaryState = simulator_.vanguard().summaryState();
-            auto restartValues = loadParallelRestart(eclIO_.get(), summaryState, solutionKeys, extraKeys,
-                                                     gridView.grid().comm());
+            auto restartValues = eclIO_->loadRestart(summaryState, solutionKeys, extraKeys);
 
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
                 unsigned globalIdx = collectToIORank_.localIdxToGlobalIdx(elemIdx);
@@ -491,10 +484,9 @@ private:
 #endif
 
         const auto& cartesianCellIdx = globalGrid_.globalCell();
-        const EclTransmissibility<TypeTag>* globalTrans;
+        const auto* globalTrans = &(simulator_.vanguard().globalTransmissibility());
 
         if (!collectToIORank_.isParallel())
-        {
             // in the sequential case we must use the transmissibilites defined by
             // the problem. (because in the sequential case, the grid manager does
             // not compute "global" transmissibilities for performance reasons. in
@@ -502,11 +494,6 @@ private:
             // because this object refers to the distributed grid and we need the
             // sequential version here.)
             globalTrans = &simulator_.problem().eclTransmissibilities();
-        }
-        else
-        {
-            globalTrans = &(simulator_.vanguard().globalTransmissibility());
-        }
 
         auto elemIt = globalGridView.template begin</*codim=*/0>();
         const auto& elemEndIt = globalGridView.template end</*codim=*/0>();
@@ -596,7 +583,7 @@ private:
         ElementMapper globalElemMapper(globalGridView);
 #endif
 
-        const EclTransmissibility<TypeTag>* globalTrans;
+        const auto* globalTrans = &(simulator_.vanguard().globalTransmissibility());
         if (!collectToIORank_.isParallel()) {
             // in the sequential case we must use the transmissibilites defined by
             // the problem. (because in the sequential case, the grid manager does
@@ -605,10 +592,6 @@ private:
             // because this object refers to the distributed grid and we need the
             // sequential version here.)
             globalTrans = &simulator_.problem().eclTransmissibilities();
-        }
-        else
-        {
-            globalTrans = &(simulator_.vanguard().globalTransmissibility());
         }
 
         auto cartDims = simulator_.vanguard().cartesianIndexMapper().cartesianDimensions();
