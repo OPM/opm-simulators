@@ -30,7 +30,7 @@
 
 #include "discretefractureproperties.hh"
 
-#include <ewoms/models/immiscible/immiscibleprimaryvariables.hh>
+#include <opm/models/immiscible/immiscibleprimaryvariables.hh>
 
 namespace Opm {
 /*!

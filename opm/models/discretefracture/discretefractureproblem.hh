@@ -30,7 +30,7 @@
 
 #include "discretefractureproperties.hh"
 
-#include <ewoms/models/common/multiphasebaseproblem.hh>
+#include <opm/models/common/multiphasebaseproblem.hh>
 
 #include <opm/material/common/Means.hpp>
 #include <opm/material/common/Unused.hpp>

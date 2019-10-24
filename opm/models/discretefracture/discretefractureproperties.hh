@@ -30,9 +30,9 @@
 #ifndef EWOMS_DISCRETE_FRACTIRE_PROPERTIES_HH
 #define EWOMS_DISCRETE_FRACTIRE_PROPERTIES_HH
 
-#include <ewoms/models/immiscible/immiscibleproperties.hh>
+#include <opm/models/immiscible/immiscibleproperties.hh>
 
-#include <ewoms/io/vtkdiscretefracturemodule.hh>
+#include <opm/models/io/vtkdiscretefracturemodule.hh>
 
 BEGIN_PROPERTIES
 

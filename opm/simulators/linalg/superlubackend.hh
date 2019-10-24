@@ -29,7 +29,7 @@
 
 #if HAVE_SUPERLU
 
-#include <ewoms/linear/istlsparsematrixbackend.hh>
+#include <opm/models/linear/istlsparsematrixbackend.hh>
 #include <opm/models/utils/parametersystem.hh>
 
 #include <opm/material/common/Unused.hpp>
