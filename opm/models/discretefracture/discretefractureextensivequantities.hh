@@ -28,7 +28,7 @@
 #ifndef EWOMS_DISCRETE_FRACTURE_EXTENSIVE_QUANTITIES_HH
 #define EWOMS_DISCRETE_FRACTURE_EXTENSIVE_QUANTITIES_HH
 
-#include <ewoms/models/immiscible/immiscibleextensivequantities.hh>
+#include <opm/models/immiscible/immiscibleextensivequantities.hh>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>

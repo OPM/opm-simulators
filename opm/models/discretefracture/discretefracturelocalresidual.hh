@@ -28,7 +28,7 @@
 #ifndef EWOMS_DISCRETE_FRACTURE_LOCAL_RESIDUAL_BASE_HH
 #define EWOMS_DISCRETE_FRACTURE_LOCAL_RESIDUAL_BASE_HH
 
-#include <ewoms/models/immiscible/immisciblelocalresidual.hh>
+#include <opm/models/immiscible/immisciblelocalresidual.hh>
 
 namespace Opm {
 
