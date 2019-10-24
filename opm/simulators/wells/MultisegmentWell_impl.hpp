@@ -1621,10 +1621,36 @@ namespace Opm
         } else if (well.isInjector() ) {
             const Opm::Well2::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
             const auto controls = well.injectionControls(summaryState);
+
+            Well2::InjectorType injectorType = controls.injector_type;
+            double scaling = 1.0;
+
+            const auto& pu = phaseUsage();
+
+            switch (injectorType) {
+            case Well2::InjectorType::WATER:
+            {
+                scaling = scalingFactor(pu.phase_pos[BlackoilPhases::Aqua]);
+                break;
+            }
+            case Well2::InjectorType::OIL:
+            {
+                scaling = scalingFactor(pu.phase_pos[BlackoilPhases::Liquid]);
+                break;
+            }
+            case Well2::InjectorType::GAS:
+            {
+                scaling = scalingFactor(pu.phase_pos[BlackoilPhases::Vapour]);
+                break;
+            }
+            default:
+                throw("Expected WATER, OIL or GAS as type for injectors " + well.name());
+            }
+
             switch(current) {
             case Well2::InjectorCMode::RATE:
             {
-                control_eq = getSegmentGTotal(0) * efficiencyFactor - controls.surface_rate;
+                control_eq = getSegmentGTotal(0) * efficiencyFactor - controls.surface_rate*scaling;
                 break;
             }
 
@@ -1632,9 +1658,7 @@ namespace Opm
             {
                 std::vector<double> convert_coeff(number_of_phases_, 1.0);
                 Base::rateConverter_.calcCoeff(/*fipreg*/ 0, Base::pvtRegionIdx_, convert_coeff);
-                const auto& pu = phaseUsage();
 
-                Well2::InjectorType injectorType = controls.injector_type;
                 double coeff = 1.0;
 
                 switch (injectorType) {
@@ -1658,7 +1682,7 @@ namespace Opm
 
                 }
 
-                control_eq = coeff*getSegmentGTotal(0)*efficiencyFactor - controls.reservoir_rate;
+                control_eq = coeff*getSegmentGTotal(0)*efficiencyFactor - controls.reservoir_rate*scaling;
                 break;
             }
 
@@ -1812,6 +1836,7 @@ namespace Opm
         int phasePos;
         Well2::GuideRateTarget wellTarget;
         Group2::GuideRateTarget groupTarget;
+        double scaling = 1.0;
 
         switch (injectorType) {
         case Well2::InjectorType::WATER:
@@ -1819,6 +1844,7 @@ namespace Opm
             phasePos = pu.phase_pos[BlackoilPhases::Aqua];
             wellTarget = Well2::GuideRateTarget::WAT;
             groupTarget = Group2::GuideRateTarget::WAT;
+            scaling = scalingFactor(pu.phase_pos[BlackoilPhases::Aqua]);
             break;
         }
         case Well2::InjectorType::OIL:
@@ -1826,6 +1852,7 @@ namespace Opm
             phasePos = pu.phase_pos[BlackoilPhases::Liquid];
             wellTarget = Well2::GuideRateTarget::OIL;
             groupTarget = Group2::GuideRateTarget::OIL;
+            scaling = scalingFactor(pu.phase_pos[BlackoilPhases::Liquid]);
             break;
         }
         case Well2::InjectorType::GAS:
@@ -1833,6 +1860,7 @@ namespace Opm
             phasePos = pu.phase_pos[BlackoilPhases::Vapour];
             wellTarget = Well2::GuideRateTarget::GAS;
             groupTarget = Group2::GuideRateTarget::GAS;
+            scaling = scalingFactor(pu.phase_pos[BlackoilPhases::Vapour]);
             break;
         }
         default:
@@ -1853,7 +1881,7 @@ namespace Opm
         case Group2::InjectionCMode::RATE:
         {
 
-            control_eq = getSegmentGTotal(0) - fraction * (groupcontrols.surface_max_rate / efficiencyFactor - groupTargetReduction);
+            control_eq = getSegmentGTotal(0) - fraction * scaling * (groupcontrols.surface_max_rate / efficiencyFactor - groupTargetReduction);
             break;
         }
         case Group2::InjectionCMode::RESV:
@@ -1862,7 +1890,7 @@ namespace Opm
             Base::rateConverter_.calcCoeff(/*fipreg*/ 0, Base::pvtRegionIdx_, convert_coeff);
             double coeff = convert_coeff[phasePos];
             double target = std::max(0.0, (groupcontrols.resv_max_rate/coeff/efficiencyFactor - groupTargetReduction));
-            control_eq = getSegmentGTotal(0) - fraction * target;
+            control_eq = getSegmentGTotal(0) - fraction * scaling * target;
             break;
         }
         case Group2::InjectionCMode::REIN:
@@ -1871,7 +1899,7 @@ namespace Opm
             productionRate += wellGroupHelpers::sumWellRates(group, schedule, well_state, current_step_, phasePos, /*isInjector*/false);
             productionRate /= efficiencyFactor;
             double target = std::max(0.0, (groupcontrols.target_reinj_fraction*productionRate - groupTargetReduction));
-            control_eq = getSegmentGTotal(0) - fraction * target;
+            control_eq = getSegmentGTotal(0) - fraction * scaling * target;
             break;
         }
         case Group2::InjectionCMode::VREP:
@@ -1885,7 +1913,7 @@ namespace Opm
             voidageRate += wellGroupHelpers::sumWellResRates(group, schedule, well_state, current_step_, pu.phase_pos[BlackoilPhases::Vapour], /*injector*/false);
             voidageRate /= efficiencyFactor;
             double target = std::max(0.0, ( groupcontrols.target_void_fraction*voidageRate/coeff - groupTargetReduction));
-            control_eq = getSegmentGTotal(0) - fraction * target ;
+            control_eq = getSegmentGTotal(0) - fraction * scaling * target ;
             break;
         }
         case Group2::InjectionCMode::FLD:
