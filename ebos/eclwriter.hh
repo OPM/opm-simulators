@@ -275,6 +275,13 @@ public:
         std::map<std::string, std::vector<double>> regionData;
         eclOutputModule_.outputFipLog(miscSummaryData, regionData, isSubStep);
 
+        bool forceDisableProdOutput = false;
+        bool forceDisableInjOutput = false;
+        bool forceDisableCumOutput = false;
+        eclOutputModule_.outputProdLog(reportStepNum, isSubStep, forceDisableProdOutput);
+        eclOutputModule_.outputInjLog(reportStepNum, isSubStep, forceDisableInjOutput);
+        eclOutputModule_.outputCumLog(reportStepNum, isSubStep, forceDisableCumOutput);
+
         std::vector<char> buffer;
         if (collectToIORank_.isIORank()) {
             const auto& summary = eclIO_->summary();
