@@ -329,8 +329,14 @@ int mainFlow(int argc, char** argv)
         deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
     }
     catch (const std::exception& e) {
-        Opm::Parameters::printUsage<PreTypeTag>(PreProblem::helpPreamble(argc, const_cast<const char**>(argv)),
-                                                  e.what());
+        if (mpiRank == 0)
+        {
+            Opm::Parameters::printUsage<PreTypeTag>(PreProblem::helpPreamble(argc, const_cast<const char**>(argv)),
+                                                    e.what());
+        }
+#if HAVE_MPI
+        MPI_Finalize();
+#endif
         return 1;
     }
 
