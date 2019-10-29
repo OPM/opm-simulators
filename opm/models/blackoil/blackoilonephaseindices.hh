@@ -30,7 +30,7 @@
 
 #include <cassert>
 
-namespace Ewoms {
+namespace Opm {
 
 /*!
  * \ingroup BlackOilModel
