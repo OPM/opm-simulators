@@ -204,12 +204,12 @@ namespace Opm
                         }
                     }
 
-                    // 3. Thp: assign thp equal to thp target/limit, if applicable,
+                    // 3. Thp: assign thp equal to thp target/limit, if such a limit exists,
                     //    otherwise keep it zero.
-                    const bool is_thp = well.isInjector() ? (inj_controls.cmode == Well2::InjectorCMode::THP)
-                        : (prod_controls.cmode == Well2::ProducerCMode::THP);
+                    const bool has_thp = well.isInjector() ? inj_controls.hasControl(Well2::InjectorCMode::THP)
+                        : prod_controls.hasControl(Well2::ProducerCMode::THP);
                     const double thp_limit = well.isInjector() ? inj_controls.thp_limit : prod_controls.thp_limit;
-                    if (is_thp) {
+                    if (has_thp) {
                         thp_[w] = thp_limit;
                     }
 
