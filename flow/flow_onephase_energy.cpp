@@ -39,7 +39,7 @@ private:
     typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
 
 public:
-    typedef Ewoms::BlackOilOnePhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
+    typedef Opm::BlackOilOnePhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
                                            GET_PROP_VALUE(TypeTag, EnablePolymer),
                                            GET_PROP_VALUE(TypeTag, EnableEnergy),
                                            GET_PROP_VALUE(TypeTag, EnableFoam),
