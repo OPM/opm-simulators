@@ -5,9 +5,65 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 but this project does not use [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 Instead, version numbers indicate the year and month of release.
 
+## [2019-10] - 2019-10-31
 
+### Added
+- Support for additional keywords: ROCKCOMP keyword (water induced rock
+  compaction). COMPDAT, UDQ, UDA, GRUP, FILLEPS
+- Support for GOR checking for WECON
+- Improved support for WTEST
+- Support for one phase simulations
+- Experimental support for driftCompensation (off by default, enable
+  using --ecl-enable-drift-compensation=true)
+- Experimental support for foam module (keywords FOAM; FOAMADS,
+  FOAMFSC, FOAMMOB, FOAMOPTS, FOAMROCK, WFOAM)
+- Many unsupported keywords are now listed as missing features (those
+  starting with A - M, R, T, V, W, Z).
+- Write well potentials to restart files if needed.
+- Support different edge weights when loadbalancing (uniform,
+  transmissibilities, log of transmissibilities)
+- Improved support for multisegment wells (now enabled by default).
+- Many new regression tests.
+- Added an experimental  linear solver subsystem (including complex
+  CPR solvers) that is configurable during runtime (not parallel,
+  needs DUNE>=2.6)
+- Use refactored well implementation from opm-common.
+- Output NNCs in an Eclipse compliant manner.
+- Output several diagnostics when parsing a deck.
 
-## [In current master]
+### Fixed
+- Made dune-fem version information available
+- restart values are only read once (twice before)
+- Fixed several bugs concerning restart
+- ebos now logs to *.PRT and *DBG files
+- Abort runs without reading the deck if command line parameters are incorrect.
+- Use grid region mapping from opm-grid.
+- Fixed negative thp values form extrapolation using VFP tables.
+- Logging from well testing is now in *.PRT and *.LOG files
+- Serveral fixes to multisegement well model.
+- *.INIT and *.GRID files are also output on restart.
+- Do not update RESV for prediction produces.
+- Output FPRP insteas of ovewritung FPR values.
+- Always write transmissibilities between vertical neighbours to TRANZ
+  (even for NNCs).
+- Support upcoming DUNE 2.7
+
+### Renaming / Restructuring
+- former module ewoms was renamed to opm-models. With this move
+  several directories have been renamed (ewoms/blackoil ->
+  opm/models/blackoil, ewoms/common ->  opm/models/utils,
+  ewoms/disc -> opm/models/discretization, ewoms/io -> opm/models/io,
+  ewoms->parallel -> opm/models/parallel, ewoms/linear ->
+  opm/simulators/linalg). The namespace Ewoms was renamed to Opm.
+- Most files from opm/autodiff/ have been moved to
+  opm/simulators/{aquifers,linalg,utils,wells}
+  
+### Removed
+- Dependency on libecl
+
+## [2018.10 - 2019.04] is skipped.
+
+## [2018.04] - 2018-04.30
 
 ### Added
 - More integration tests for Flow, in particular for multisegment wells, solvent and polymer.
