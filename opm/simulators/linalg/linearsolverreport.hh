@@ -78,6 +78,6 @@ private:
     bool converged_;
 };
 
-}} // end namespace Linear, Ewoms
+}} // end namespace Linear, Opm
 
 #endif
