@@ -444,7 +444,7 @@ protected:
 
     PreconditionerWrapper precWrapper_;
 };
-}} // namespace Linear, Ewoms
+}} // namespace Linear, Opm
 
 BEGIN_PROPERTIES
 

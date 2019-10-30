@@ -175,6 +175,6 @@ private:
 
 #undef EWOMS_WRAP_ISTL_SOLVER
 
-}} // namespace Linear, Ewoms
+}} // namespace Linear, Opm
 
 #endif
