@@ -324,7 +324,10 @@ int main(int argc, char** argv)
         std::shared_ptr<Opm::SummaryConfig> summaryConfig;
         {
             Opm::Parser parser;
-            Opm::ParseContext parseContext;
+            Opm::ParseContext parseContext({{Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE},
+                                            {Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN},
+                                            {Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN},
+                                            {Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN}});
             Opm::ErrorGuard errorGuard;
             outputMode = setupLogging(mpiRank,
                                       deckFilename,
@@ -334,12 +337,6 @@ int main(int argc, char** argv)
 
             if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
                 parseContext.update( Opm::InputError::DELAYED_EXIT1);
-            else {
-                parseContext.update(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
-                parseContext.update(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
-                parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
-                parseContext.update(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
-            }
 
             Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout);
 
