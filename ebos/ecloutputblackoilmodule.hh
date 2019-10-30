@@ -2019,6 +2019,28 @@ private:
         }
         return "ERROR";
     }
+    std::string WPEnumToString_(int i)
+    {
+        typedef typename WellProdDataType::WPId WPId;
+        switch(static_cast<WPId>(i))
+        {
+		case WellProdDataType::WellName: return "WName";
+		case WellProdDataType::WellLocationi: return "WLi";
+		case WellProdDataType::WellLocationj: return "WLj";
+		case WellProdDataType::CTRLMode: return "CTRL";
+		case WellProdDataType::OilRate: return "OR";
+        case WellProdDataType::WaterRate: return "WR";
+		case WellProdDataType::GasRate: return "GR";
+		case WellProdDataType::FluidResVol: return "FRV";
+		case WellProdDataType::WaterCut: return "WC";
+		case WellProdDataType::GasOilRatio: return "GOR";
+		case WellProdDataType::WatGasRatio: return "WGR";
+		case WellProdDataType::BHP: return "BHP";
+		case WellProdDataType::THP: return "THP";
+		case WellProdDataType::SteadyStatePI: return "SteadyStatePI";
+        }
+        return "ERROR";
+    }	
     std::string WIEnumToString_(int i)
     {
         typedef typename WellInjDataType::WIId WIId;
