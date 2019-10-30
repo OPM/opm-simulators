@@ -1,3 +1,16 @@
+Changes in opm-material 2019.10
+===============================
+
+- Support one phase simulations
+- Small improvements/bugfixes concerning evaluations.
+
+Changes in opm-material 2019.04
+===============================
+
+- Support changes in indexing of phases and components
+- Support for regular 2d cartesian interpolation for injectivity simulation
+- Several bugfixes (viscosity, swatinit, interpolation 2d miscibility)
+
 Changes in opm-material 2018.10
 ===============================
 
