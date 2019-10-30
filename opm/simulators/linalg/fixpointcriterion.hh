@@ -180,6 +180,6 @@ private:
 
 //! \} end documentation
 
-}} // end namespace Linear, Ewoms
+}} // end namespace Linear, Opm
 
 #endif

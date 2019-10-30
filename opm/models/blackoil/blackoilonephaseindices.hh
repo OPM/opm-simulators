@@ -158,6 +158,6 @@ struct BlackOilOnePhaseIndices
         enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif
