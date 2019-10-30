@@ -280,6 +280,13 @@ protected:
             const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(equilGrid(), this->eclState().getInputGrid());
             this->schedule().filterConnections(eclipseGrid);
         }
+        else
+        {
+            // for the other processes we filter using the local grid since there
+            // are models with connections specified to inactive cells
+            const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(grid(), this->eclState().getInputGrid());
+            this->schedule().filterConnections(eclipseGrid);
+        }
     }
 
     std::unique_ptr<Grid> grid_;
