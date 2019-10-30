@@ -2,20 +2,20 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   This file is part of the Open Porous Media project (OPM).
-  
+
   OPM is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 2 of the License, or
   (at your option) any later version.
-  
+
   OPM is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
-  
+
   Consult the COPYING file in the top-level source directory of this
   module for the precise wording of the license and the list of
   copyright holders.
@@ -1103,7 +1103,7 @@ public:
         }
 
     }
-    
+
     // write production report to output 
     void outputProdLog(size_t reportStepNum, const bool substep, bool forceDisableProdOutput) 
     {
@@ -1487,7 +1487,7 @@ public:
 			}
 		}
     }
-
+    
     void setRestart(const Opm::data::Solution& sol, unsigned elemIdx, unsigned globalDofIndex)
     {
         Scalar so = 1.0;
@@ -1929,7 +1929,7 @@ private:
             else {
                 ss << std::right << std::fixed << ":" << std::setw (8) << wellProdNames[WellProdDataType::WellName] << ":" << std::setprecision(0) << std::setw(5) << wellProd[WellProdDataType::WellLocationi] << "," << std::setw(5) << wellProd[WellProdDataType::WellLocationj] << ":" << std::setw(4) << wellProdNames[WellProdDataType::CTRLMode] << ":" << std::setprecision(1) << std::setw(11) << wellProd[WellProdDataType::OilRate] << ":" << std::setw(11) << wellProd[WellProdDataType::WaterRate] << ":" <<  std::setw(11)<< wellProd[WellProdDataType::GasRate] << ":" <<  std::setw(11) << wellProd[WellProdDataType::FluidResVol] << std::setprecision(3) << ":" <<  std::setw(11) << wellProd[WellProdDataType::WaterCut] << std::setprecision(2) << ":" <<  std::setw(10) << wellProd[WellProdDataType::GasOilRatio] << std::setprecision(4) << ":" <<  std::setw(12) << wellProd[WellProdDataType::WatGasRatio] << std::setprecision(1) << ":" <<  std::setw(8) << wellProd[WellProdDataType::BHP] << ":" <<  std::setw(8) << wellProd[WellProdDataType::THP] << ": \n";//wellProd[WellProdDataType::SteadyStatePI] << std::setw(10) << "\n"
             }
-            ss << ":"<< std::setfill ('-') << std::setw (9) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (5) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (11) << ":" << std::setfill ('-') << std::setw (13) << ":" << std::setfill ('-') << std::setw (9) << ":" << std::setfill ('-') << std::setw (9) << ": \n";
+            ss << ":"<< std::setfill ('-') << std::setw (9) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (5) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (11) << ":" << std::setfill ('-') << std::setw (13) << ":" << std::setfill ('-') << std::setw (9) << ":" << std::setfill ('-') << std::setw (9) << ":" << "\n";
         }
 		Opm::OpmLog::note(ss.str());
     }	 
@@ -2001,7 +2001,6 @@ private:
         }
 		Opm::OpmLog::note(ss.str());
     }
-	
 
     std::string fipEnumToString_(int i)
     {
@@ -2041,7 +2040,7 @@ private:
         }
         return "ERROR";
     }	
-    std::string WIEnumToString_(int i)
+	std::string WIEnumToString_(int i)
     {
         typedef typename WellInjDataType::WIId WIId;
         switch(static_cast<WIId>(i))
@@ -2083,7 +2082,6 @@ private:
         }
         return "ERROR";
     }
-
 
     const Simulator& simulator_;
 
