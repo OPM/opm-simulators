@@ -38,7 +38,7 @@ namespace Opm {
 namespace Linear {
 template <class TypeTag>
 class ParallelBiCGStabSolverBackend;
-}} // namespace Linear, Ewoms
+}} // namespace Linear, Opm
 
 BEGIN_PROPERTIES
 
@@ -165,6 +165,6 @@ protected:
     std::unique_ptr<ConvergenceCriterion<OverlappingVector> > convCrit_;
 };
 
-}} // namespace Linear, Ewoms
+}} // namespace Linear, Opm
 
 #endif

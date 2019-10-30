@@ -192,6 +192,6 @@ protected:
     std::unique_ptr<IstlMatrix> istlMatrix_;
 };
 
-}} // namespace Linear, Ewoms
+}} // namespace Linear, Opm
 
 #endif

@@ -200,6 +200,6 @@ EWOMS_WRAP_ISTL_PRECONDITIONER(ILUn, Dune::SeqILUn)
 #endif
 
 #undef EWOMS_WRAP_ISTL_PRECONDITIONER
-}} // namespace Linear, Ewoms
+}} // namespace Linear, Opm
 
 #endif
