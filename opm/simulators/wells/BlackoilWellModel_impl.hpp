@@ -1309,7 +1309,7 @@ namespace Opm {
         // We only store the conversion coefficients for all the injection wells.
         // Later, more delicate model will be implemented here.
         // And for the moment, group control can only work for serial running.
-        const int nw = numWells();
+        const int nw = numLocalWells();
 
         const int np = numPhases();
 
