@@ -1896,7 +1896,8 @@ namespace Opm
         case Group2::InjectionCMode::REIN:
         {
             double productionRate = 0.0;
-            productionRate += wellGroupHelpers::sumWellRates(group, schedule, well_state, current_step_, phasePos, /*isInjector*/false);
+            const Group2& reinGroup = schedule.getGroup2( groupcontrols.reinj_group, current_step_ );
+            productionRate += wellGroupHelpers::sumWellRates(reinGroup, schedule, well_state, current_step_, phasePos, /*isInjector*/false);
             productionRate /= efficiencyFactor;
             double target = std::max(0.0, (groupcontrols.target_reinj_fraction*productionRate - groupTargetReduction));
             control_eq = getSegmentGTotal(0) / scaling - fraction * target;
@@ -1908,9 +1909,10 @@ namespace Opm
             Base::rateConverter_.calcCoeff(/*fipreg*/ 0, Base::pvtRegionIdx_, convert_coeff);
             double coeff = convert_coeff[phasePos];
             double voidageRate = 0.0;
-            voidageRate += wellGroupHelpers::sumWellResRates(group, schedule, well_state, current_step_, pu.phase_pos[BlackoilPhases::Aqua], /*injector*/false);
-            voidageRate += wellGroupHelpers::sumWellResRates(group, schedule, well_state, current_step_, pu.phase_pos[BlackoilPhases::Liquid], /*injector*/false);
-            voidageRate += wellGroupHelpers::sumWellResRates(group, schedule, well_state, current_step_, pu.phase_pos[BlackoilPhases::Vapour], /*injector*/false);
+            const Group2& voidageGroup = schedule.getGroup2( groupcontrols.voidage_group, current_step_ );
+            voidageRate += wellGroupHelpers::sumWellResRates(voidageGroup, schedule, well_state, current_step_, pu.phase_pos[BlackoilPhases::Aqua], /*injector*/false);
+            voidageRate += wellGroupHelpers::sumWellResRates(voidageGroup, schedule, well_state, current_step_, pu.phase_pos[BlackoilPhases::Liquid], /*injector*/false);
+            voidageRate += wellGroupHelpers::sumWellResRates(voidageGroup, schedule, well_state, current_step_, pu.phase_pos[BlackoilPhases::Vapour], /*injector*/false);
             voidageRate /= efficiencyFactor;
             double target = std::max(0.0, ( groupcontrols.target_void_fraction*voidageRate/coeff - groupTargetReduction));
             control_eq = getSegmentGTotal(0) / scaling - fraction * target ;
