@@ -346,7 +346,7 @@ namespace Opm {
             // The number of components in the model.
             int numComponents() const;
 
-            int numWells() const;
+            int numLocalWells() const;
 
             int numPhases() const;
 

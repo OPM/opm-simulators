@@ -528,7 +528,7 @@ namespace Opm {
     {
         std::vector<WellInterfacePtr> well_container;
 
-        const int nw = numWells();
+        const int nw = numLocalWells();
 
         if (nw > 0) {
             well_container.reserve(nw);
@@ -637,7 +637,7 @@ namespace Opm {
         const Well2& well_ecl = wells_ecl_[index_well_ecl];
 
         // Finding the location of the well in wells struct.
-        const int nw = numWells();
+        const int nw = numLocalWells();
         int well_index_wells = -999;
         for (int w = 0; w < nw; ++w) {
             if (well_name == std::string(wells()->name[w])) {
@@ -862,7 +862,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     localWellsActive() const
     {
-        return numWells() > 0;
+        return numLocalWells() > 0;
     }
 
 
@@ -1074,7 +1074,7 @@ namespace Opm {
     computeWellPotentials(std::vector<double>& well_potentials, Opm::DeferredLogger& deferred_logger)
     {
         // number of wells and phases
-        const int nw = numWells();
+        const int nw = numLocalWells();
         const int np = numPhases();
         well_potentials.resize(nw * np, 0.0);
 
@@ -1550,7 +1550,7 @@ namespace Opm {
 
     template<typename TypeTag>
     int
-    BlackoilWellModel<TypeTag>:: numWells() const
+    BlackoilWellModel<TypeTag>:: numLocalWells() const
     {
         return wells() ? wells()->number_of_wells : 0;
     }
