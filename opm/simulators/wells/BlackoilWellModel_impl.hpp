@@ -1152,6 +1152,10 @@ namespace Opm {
         const int np = numPhases();
         well_potentials.resize(nw * np, 0.0);
 
+        if (nw  == 0) {
+            return;
+        }
+
         auto well_state_copy = well_state_;
 
         // average B factors are required for the convergence checking of well equations
@@ -1380,7 +1384,7 @@ namespace Opm {
     int
     BlackoilWellModel<TypeTag>::numComponents() const
     {
-        if (wellsActive()  && numPhases() < 3) {
+        if (numPhases() < 3) {
             return numPhases();
         }
         int numComp = FluidSystem::numComponents;
