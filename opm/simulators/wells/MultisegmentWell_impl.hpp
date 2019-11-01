@@ -329,7 +329,12 @@ namespace Opm
 
             case Well2::InjectorCMode::THP:
             {
-                OPM_DEFLOG_THROW(std::runtime_error, "THP not supported for MSW wells "  + name(), deferred_logger );
+                std::vector<double> rates(3, 0.0);
+                for (int p = 0; p<np; ++p) {
+                    rates[p] = well_state.wellRates()[well_index*np + p];
+                }
+                double bhp = calculateBhpFromThp(rates, well, summaryState, deferred_logger);
+                well_state.bhp()[well_index] = bhp;
                 break;
             }
             case Well2::InjectorCMode::BHP:
@@ -453,7 +458,12 @@ namespace Opm
             }
             case Well2::ProducerCMode::THP:
             {
-                OPM_DEFLOG_THROW(std::runtime_error, "THP not supported for MSW wells "  + name(), deferred_logger );
+                std::vector<double> rates(3, 0.0);
+                for (int p = 0; p<np; ++p) {
+                    rates[p] = well_state.wellRates()[well_index*np + p];
+                }
+                double bhp = calculateBhpFromThp(rates, well, summaryState, deferred_logger);
+                well_state.bhp()[well_index] = bhp;
                 break;
             }
             case Well2::ProducerCMode::GRUP:
@@ -622,11 +632,11 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x,
                                           WellState& well_state,
-                                          Opm::DeferredLogger& /* deferred_logger*/) const
+                                          Opm::DeferredLogger& deferred_logger) const
     {
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);
-        updateWellState(xw, well_state);
+        updateWellState(xw, well_state, deferred_logger);
     }
 
 
@@ -802,13 +812,13 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& /* deferred_logger */)
+    solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger)
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
-        updateWellState(dx_well, well_state);
+        updateWellState(dx_well, well_state, deferred_logger);
     }
 
 
@@ -893,6 +903,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
                     WellState& well_state,
+                    Opm::DeferredLogger& deferred_logger,
                     const double relaxation_factor) const
     {
         const double dFLimit = param_.dwell_fraction_max_;
@@ -941,7 +952,7 @@ namespace Opm
 
         }
 
-        updateWellStateFromPrimaryVariables(well_state);
+        updateWellStateFromPrimaryVariables(well_state, deferred_logger);
     }
 
 
@@ -1664,8 +1675,18 @@ namespace Opm
 
             case Well2::InjectorCMode::THP:
             {
-                OPM_DEFLOG_THROW(std::runtime_error, "Not handling THP control for Multisegment wells for now", deferred_logger);
-            }
+                std::vector<EvalWell> rates(3, 0.);
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    rates[ Water ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    rates[ Oil ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    rates[ Gas ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
+                }
+                control_eq = getSegmentPressure(0) - calculateBhpFromThp(rates, well, summaryState, deferred_logger);
+                break;            }
             case Well2::InjectorCMode::BHP:
             {
                 const auto& bhp = controls.bhp_limit;
@@ -1766,8 +1787,18 @@ namespace Opm
             }
             case Well2::ProducerCMode::THP:
             {
-                OPM_DEFLOG_THROW(std::runtime_error, "Not handling THP control for Multisegment wells for now", deferred_logger);
-            }
+                std::vector<EvalWell> rates(3, 0.);
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    rates[ Water ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    rates[ Oil ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    rates[ Gas ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
+                }
+                control_eq = getSegmentPressure(0) - calculateBhpFromThp(rates, well, summaryState, deferred_logger);
+                break;               }
             case Well2::ProducerCMode::GRUP:
             {
                 assert(well.isAvailableForGroupControl());
@@ -1794,6 +1825,126 @@ namespace Opm
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
             duneD_[0][0][SPres][pv_idx] = control_eq.derivative(pv_idx + numEq);
         }
+    }
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    updateThp(WellState& well_state, Opm::DeferredLogger& deferred_logger) const
+    {
+        // When there is no vaild VFP table provided, we set the thp to be zero.
+        if (!this->isVFPActive(deferred_logger) || this->wellIsStopped()) {
+            well_state.thp()[index_of_well_] = 0.;
+            return;
+        }
+
+        // the well is under other control types, we calculate the thp based on bhp and rates
+        std::vector<double> rates(3, 0.0);
+
+        const Opm::PhaseUsage& pu = phaseUsage();
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            rates[ Water ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Water ] ];
+        }
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            rates[ Oil ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Oil ] ];
+        }
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            rates[ Gas ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Gas ] ];
+        }
+
+        const double bhp = well_state.bhp()[index_of_well_];
+
+        well_state.thp()[index_of_well_] = calculateThpFromBhp(rates, bhp, deferred_logger);
+
+    }
+
+
+
+    template<typename TypeTag>
+    double
+    MultisegmentWell<TypeTag>::
+    calculateThpFromBhp(const std::vector<double>& rates,
+                        const double bhp,
+                        Opm::DeferredLogger& deferred_logger) const
+    {
+        assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
+
+        const double aqua = rates[Water];
+        const double liquid = rates[Oil];
+        const double vapour = rates[Gas];
+
+        // pick the density in the top segment
+        const double rho = segment_densities_[0].value();
+
+        double thp = 0.0;
+        if (well_type_ == INJECTOR) {
+            const int table_id = well_ecl_.vfp_table_number();
+            const double vfp_ref_depth = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
+            const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
+
+            thp = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp + dp);
+        }
+        else if (well_type_ == PRODUCER) {
+            const int table_id = well_ecl_.vfp_table_number();
+            const double alq = well_ecl_.alq_value();
+            const double vfp_ref_depth = vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
+            const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
+
+            thp = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, bhp + dp, alq);
+        }
+        else {
+            OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well", deferred_logger);
+        }
+
+        return thp;
+    }
+
+
+    template<typename TypeTag>
+    template<class ValueType>
+    ValueType
+    MultisegmentWell<TypeTag>::
+    calculateBhpFromThp(const std::vector<ValueType>& rates,
+                        const Well2& well,
+                        const SummaryState& summaryState,
+                        Opm::DeferredLogger& deferred_logger) const
+    {
+        // TODO: when well is under THP control, the BHP is dependent on the rates,
+        // the well rates is also dependent on the BHP, so it might need to do some iteration.
+        // However, when group control is involved, change of the rates might impacts other wells
+        // so iterations on a higher level will be required. Some investigation might be needed when
+        // we face problems under THP control.
+
+        assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
+
+        const ValueType aqua = rates[Water];
+        const ValueType liquid = rates[Oil];
+        const ValueType vapour = rates[Gas];
+
+        // pick the density in the top layer
+        // TODO: it is possible it should be a Evaluation
+        const double rho = segment_densities_[0].value();
+
+        if (well.isInjector() )
+        {
+            const auto& controls = well.injectionControls(summaryState);
+            const double vfp_ref_depth = vfp_properties_->getInj()->getTable(controls.vfp_table_number)->getDatumDepth();
+            const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
+            return vfp_properties_->getInj()->bhp(controls.vfp_table_number, aqua, liquid, vapour, controls.thp_limit) - dp;
+         }
+         else if (well.isProducer()) {
+             const auto& controls = well.productionControls(summaryState);
+             const double vfp_ref_depth = vfp_properties_->getProd()->getTable(controls.vfp_table_number)->getDatumDepth();
+             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
+             return vfp_properties_->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, controls.thp_limit, controls.alq_value) - dp;
+         }
+         else {
+             OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well", deferred_logger);
+         }
+
+
+
     }
 
     template <typename TypeTag>
@@ -2231,7 +2382,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWellStateFromPrimaryVariables(WellState& well_state) const
+    updateWellStateFromPrimaryVariables(WellState& well_state, Opm::DeferredLogger& deferred_logger) const
     {
         const PhaseUsage& pu = phaseUsage();
         assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
@@ -2281,7 +2432,8 @@ namespace Opm
             if (seg == 0) { // top segment
                 well_state.bhp()[index_of_well_] = well_state.segPress()[seg + top_segment_index];
             }
-        }
+        }               
+        updateThp(well_state, deferred_logger);
     }
 
 
@@ -2368,7 +2520,7 @@ namespace Opm
                 sstr << " relaxation_factor is " << relaxation_factor << " now\n";
                 deferred_logger.debug(sstr.str());
             }
-            updateWellState(dx_well, well_state, relaxation_factor);            
+            updateWellState(dx_well, well_state, deferred_logger, relaxation_factor);
             initPrimaryVariablesEvaluation();
         }
 
