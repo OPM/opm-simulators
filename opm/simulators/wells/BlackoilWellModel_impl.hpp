@@ -1151,6 +1151,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeWellPotentials(std::vector<double>& well_potentials, const int reportStepIdx, Opm::DeferredLogger& deferred_logger)
     {
+        if ( ! wellsActive() ) {
+            return;
+        }
+
         // number of wells and phases
         const int nw = numLocalWells();
         const int np = numPhases();
@@ -1311,6 +1315,9 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeAverageFormationFactor(std::vector<Scalar>& B_avg) const
     {
+        if ( ! wellsActive() ) {
+            return;
+        }
         const auto& grid = ebosSimulator_.vanguard().grid();
         const auto& gridView = grid.leafGridView();
         ElementContext elemCtx(ebosSimulator_);
