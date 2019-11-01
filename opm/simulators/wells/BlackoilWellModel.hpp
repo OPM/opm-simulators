@@ -238,6 +238,8 @@ namespace Opm {
 
             bool wells_active_;
 
+            int global_num_phases_;
+
             // a vector of all the wells.
             std::vector<WellInterfacePtr > well_container_;
 

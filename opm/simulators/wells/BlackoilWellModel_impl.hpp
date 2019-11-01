@@ -233,6 +233,10 @@ namespace Opm {
         // one process.
         wells_active_ = localWellsActive() ? 1 : 0;
         wells_active_ = grid.comm().max(wells_active_);
+        // Number of phases can only be determined globally as it needs
+        // an active well and there might be processes without wells.
+        global_num_phases_ = numPhases();
+        global_num_phases_ = grid.comm().max(global_num_phases_);
 
         // The well state initialize bhp with the cell pressure in the top cell.
         // We must therefore provide it with updated cell pressures
@@ -1380,8 +1384,8 @@ namespace Opm {
     int
     BlackoilWellModel<TypeTag>::numComponents() const
     {
-        if (wellsActive()  && numPhases() < 3) {
-            return numPhases();
+        if (global_num_phases_ < 3) {
+            return global_num_phases_;
         }
         int numComp = FluidSystem::numComponents;
         if (has_solvent_) {
