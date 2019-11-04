@@ -173,6 +173,8 @@ namespace Opm
 
         // protected member variables from the Base class
         using Base::well_ecl_;
+        using Base::vfp_properties_;
+        using Base::ref_depth_;
         using Base::number_of_perforations_; // TODO: can use well_ecl_?
         using Base::current_step_;
         using Base::index_of_well_;
@@ -279,6 +281,7 @@ namespace Opm
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
                              WellState& well_state,
+                             Opm::DeferredLogger& deferred_logger,
                              const double relaxation_factor=1.0) const;
 
 
@@ -317,6 +320,13 @@ namespace Opm
 
         // convert a Eval from reservoir to contain the derivative related to wells
         EvalWell extendEval(const Eval& in) const;
+
+
+        template <class ValueType>
+        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const Well2& well, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger) const;
+
+        double calculateThpFromBhp(const std::vector<double>& rates, const double bhp, Opm::DeferredLogger& deferred_logger) const;
+        void updateThp(WellState& well_state, Opm::DeferredLogger& deferred_logger) const;
 
         // compute the fluid properties, such as densities, viscosities, and so on, in the segments
         // They will be treated implicitly, so they need to be of Evaluation type
@@ -365,7 +375,7 @@ namespace Opm
                                           const WellState& well_state,
                                           Opm::DeferredLogger& deferred_logger) override;
 
-        void updateWellStateFromPrimaryVariables(WellState& well_state) const;
+        void updateWellStateFromPrimaryVariables(WellState& well_state, Opm::DeferredLogger& deferred_logger) const;
 
         bool frictionalPressureLossConsidered() const;
 
