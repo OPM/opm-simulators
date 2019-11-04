@@ -1393,16 +1393,6 @@ namespace Opm
                 }
             }
 
-            if (controls.hasControl(Well2::InjectorCMode::THP) && currentControl != Well2::InjectorCMode::THP)
-            {
-                const auto& thp = controls.thp_limit;
-                double current_thp = well_state.thp()[well_index];
-                if (thp < current_thp) {
-                    currentControl = Well2::InjectorCMode::THP;
-                    return true;
-                }
-            }
-
             if (controls.hasControl(Well2::InjectorCMode::RATE) && currentControl != Well2::InjectorCMode::RATE)
             {
                 Well2::InjectorType injectorType = controls.injector_type;
@@ -1453,6 +1443,16 @@ namespace Opm
                 }
             }
 
+            if (controls.hasControl(Well2::InjectorCMode::THP) && currentControl != Well2::InjectorCMode::THP)
+            {
+                const auto& thp = controls.thp_limit;
+                double current_thp = well_state.thp()[well_index];
+                if (thp < current_thp) {
+                    currentControl = Well2::InjectorCMode::THP;
+                    return true;
+                }
+            }
+
         }
 
         if (well.isProducer( )) {
@@ -1465,16 +1465,6 @@ namespace Opm
                 double current_bhp = well_state.bhp()[well_index];
                 if (bhp > current_bhp) {
                     currentControl = Well2::ProducerCMode::BHP;
-                    return true;
-                }
-            }
-
-            if (controls.hasControl(Well2::ProducerCMode::THP) && currentControl != Well2::ProducerCMode::THP)
-            {
-                const auto& thp = controls.thp_limit;
-                double current_thp =  well_state.thp()[well_index];
-                if (thp > current_thp) {
-                    currentControl = Well2::ProducerCMode::THP;
                     return true;
                 }
             }
@@ -1552,6 +1542,16 @@ namespace Opm
                         currentControl = Well2::ProducerCMode::RESV;
                         return true;
                     }
+                }
+            }
+
+            if (controls.hasControl(Well2::ProducerCMode::THP) && currentControl != Well2::ProducerCMode::THP)
+            {
+                const auto& thp = controls.thp_limit;
+                double current_thp =  well_state.thp()[well_index];
+                if (thp > current_thp) {
+                    currentControl = Well2::ProducerCMode::THP;
+                    return true;
                 }
             }
 
