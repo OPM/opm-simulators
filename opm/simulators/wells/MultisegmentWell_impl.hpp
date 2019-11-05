@@ -2098,11 +2098,11 @@ namespace Opm
         const auto& well = well_ecl_;
         const auto pu = phaseUsage();
 
-        if (!group.isProductionGroup())
+        const Group2::ProductionCMode& currentGroupControl = well_state.currentProductionGroupControl(group.name());
+        if (!group.isProductionGroup() && currentGroupControl != Group2::ProductionCMode::FLD)
             return;
 
         const auto& groupcontrols = group.productionControls(summaryState);
-        const Group2::ProductionCMode& currentGroupControl = well_state.currentProductionGroupControl(group.name());
 
         switch(currentGroupControl) {
         case Group2::ProductionCMode::NONE:
