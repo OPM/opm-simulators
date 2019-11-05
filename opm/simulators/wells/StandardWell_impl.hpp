@@ -3744,7 +3744,7 @@ namespace Opm
             };
             // TODO: replace hardcoded low/high limits.
             const double low = 10.0 * unit::barsa;
-            const double high = 400.0 * unit::barsa;
+            const double high = 600.0 * unit::barsa;
             const int max_iteration = 50;
             const double flo_tolerance = 1e-6 * std::fabs(flo_samples.back());
             int iteration = 0;
