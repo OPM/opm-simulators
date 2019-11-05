@@ -3749,7 +3749,7 @@ namespace Opm
             const double flo_tolerance = 1e-6 * std::fabs(flo_samples.back());
             int iteration = 0;
             try {
-                const double solved_bhp = RegulaFalsi<>::
+                const double solved_bhp = RegulaFalsiBisection<>::
                     solve(eq, low, high, max_iteration, flo_tolerance, iteration);
                 bhp_samples.push_back(solved_bhp);
             }
@@ -3821,7 +3821,7 @@ namespace Opm
             return boost::optional<double>();
         }
         try {
-            const double solved_bhp = RegulaFalsi<>::
+            const double solved_bhp = RegulaFalsiBisection<>::
                 solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
 #ifdef EXTRA_THP_DEBUGGING
             OpmLog::debug("*****    " + name() + "    solved_bhp = " + std::to_string(solved_bhp)
@@ -3949,7 +3949,7 @@ namespace Opm
             const double flo_tolerance = 1e-6 * std::fabs(flo_samples.back());
             int iteration = 0;
             try {
-                const double solved_bhp = RegulaFalsi<>::
+                const double solved_bhp = RegulaFalsiBisection<>::
                         solve(eq, low, high, max_iteration, flo_tolerance, iteration);
                 bhp_samples.push_back(solved_bhp);
             }
@@ -4021,7 +4021,7 @@ namespace Opm
             return boost::optional<double>();
         }
         try {
-            const double solved_bhp = RegulaFalsi<>::
+            const double solved_bhp = RegulaFalsiBisection<>::
                     solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
 #ifdef EXTRA_THP_DEBUGGING
             OpmLog::debug("*****    " + name() + "    solved_bhp = " + std::to_string(solved_bhp)
