@@ -953,6 +953,7 @@ namespace Opm
         }
 
         updateWellStateFromPrimaryVariables(well_state, deferred_logger);
+        Base::calculateReservoirRates(well_state);
     }
 
 
