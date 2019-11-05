@@ -505,6 +505,11 @@ namespace Opm
         boost::optional<double> computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
                                                          const SummaryState& summary_state,
                                                          DeferredLogger& deferred_logger) const;
+
+        boost::optional<double> computeBhpAtThpLimitInj(const Simulator& ebos_simulator,
+                                                        const SummaryState& summary_state,
+                                                        DeferredLogger& deferred_logger) const;
+
     };
 
 }
