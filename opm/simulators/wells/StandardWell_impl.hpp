@@ -3717,7 +3717,7 @@ namespace Opm
         std::vector<double> flo_samples = table.getFloAxis();
         if (flo_samples[0] > 0.0) {
             const double f0 = flo_samples[0];
-            flo_samples.insert(flo_samples.begin(), { 0.0, f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
+            flo_samples.insert(flo_samples.begin(), { f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
         }
         const double flo_bhp_limit = -flo(frates(controls.bhp_limit));
         if (flo_samples.back() < flo_bhp_limit) {
@@ -3920,7 +3920,7 @@ namespace Opm
         std::vector<double> flo_samples = table.getFloAxis();
         if (flo_samples[0] > 0.0) {
             const double f0 = flo_samples[0];
-            flo_samples.insert(flo_samples.begin(), { 0.0, f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
+            flo_samples.insert(flo_samples.begin(), { f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
         }
         const double flo_bhp_limit = flo(frates(controls.bhp_limit));
         if (flo_samples.back() < flo_bhp_limit) {
