@@ -3717,7 +3717,7 @@ namespace Opm
         std::vector<double> flo_samples = table.getFloAxis();
         if (flo_samples[0] > 0.0) {
             const double f0 = flo_samples[0];
-            flo_samples.insert(flo_samples.begin(), { 0.0, f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
+            flo_samples.insert(flo_samples.begin(), { f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
         }
         const double flo_bhp_limit = -flo(frates(controls.bhp_limit));
         if (flo_samples.back() < flo_bhp_limit) {
@@ -3744,12 +3744,12 @@ namespace Opm
             };
             // TODO: replace hardcoded low/high limits.
             const double low = 10.0 * unit::barsa;
-            const double high = 400.0 * unit::barsa;
+            const double high = 600.0 * unit::barsa;
             const int max_iteration = 50;
             const double flo_tolerance = 1e-6 * std::fabs(flo_samples.back());
             int iteration = 0;
             try {
-                const double solved_bhp = RegulaFalsi<>::
+                const double solved_bhp = RegulaFalsiBisection<>::
                     solve(eq, low, high, max_iteration, flo_tolerance, iteration);
                 bhp_samples.push_back(solved_bhp);
             }
@@ -3821,7 +3821,7 @@ namespace Opm
             return boost::optional<double>();
         }
         try {
-            const double solved_bhp = RegulaFalsi<>::
+            const double solved_bhp = RegulaFalsiBisection<>::
                 solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
 #ifdef EXTRA_THP_DEBUGGING
             OpmLog::debug("*****    " + name() + "    solved_bhp = " + std::to_string(solved_bhp)
@@ -3920,7 +3920,7 @@ namespace Opm
         std::vector<double> flo_samples = table.getFloAxis();
         if (flo_samples[0] > 0.0) {
             const double f0 = flo_samples[0];
-            flo_samples.insert(flo_samples.begin(), { 0.0, f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
+            flo_samples.insert(flo_samples.begin(), { f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
         }
         const double flo_bhp_limit = flo(frates(controls.bhp_limit));
         if (flo_samples.back() < flo_bhp_limit) {
@@ -3949,7 +3949,7 @@ namespace Opm
             const double flo_tolerance = 1e-6 * std::fabs(flo_samples.back());
             int iteration = 0;
             try {
-                const double solved_bhp = RegulaFalsi<>::
+                const double solved_bhp = RegulaFalsiBisection<>::
                         solve(eq, low, high, max_iteration, flo_tolerance, iteration);
                 bhp_samples.push_back(solved_bhp);
             }
@@ -4021,7 +4021,7 @@ namespace Opm
             return boost::optional<double>();
         }
         try {
-            const double solved_bhp = RegulaFalsi<>::
+            const double solved_bhp = RegulaFalsiBisection<>::
                     solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
 #ifdef EXTRA_THP_DEBUGGING
             OpmLog::debug("*****    " + name() + "    solved_bhp = " + std::to_string(solved_bhp)
