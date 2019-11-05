@@ -788,7 +788,17 @@ namespace Opm {
             // only check group controls for iterationIdx smaller then nupcol
             const int reportStepIdx = ebosSimulator_.episodeIndex();
             const int nupcol = schedule().getNupcol(reportStepIdx);
-            updateWellControls(local_deferredLogger, iterationIdx < nupcol);
+            if (iterationIdx < nupcol) {
+                const Group2& fieldGroup = schedule().getGroup2("FIELD", reportStepIdx);
+                std::vector<double> groupTargetReduction(numPhases(), 0.0);
+                wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, well_state_, groupTargetReduction);
+                std::vector<double> rein(numPhases(), 0.0);
+                wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, well_state_, rein);
+                double resv = 0.0;
+                wellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_, resv);
+            }
+
+            updateWellControls(local_deferredLogger, true);
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
 
