@@ -287,11 +287,11 @@ namespace Opm {
 
             // only count group under group control from its parent
             if (isInjector) {
-                const Group2::InjectionCMode& currentGroupControl = wellState.currentInjectionGroupControl(group.name());
+                const Group2::InjectionCMode& currentGroupControl = wellState.currentInjectionGroupControl(groupName);
                 if (currentGroupControl != Group2::InjectionCMode::FLD)
                     continue;
             } else {
-                const Group2::ProductionCMode& currentGroupControl = wellState.currentProductionGroupControl(group.name());
+                const Group2::ProductionCMode& currentGroupControl = wellState.currentProductionGroupControl(groupName);
                 if (currentGroupControl != Group2::ProductionCMode::FLD)
                     continue;
             }
@@ -303,13 +303,13 @@ namespace Opm {
             }
         }
         if (groupTotalGuideRate == 0.0)
-            return 0.0;
+            return 1.0;
 
         double groupGuideRate = guideRate->get(group.name(), groupTarget);
         return groupGuideRate / groupTotalGuideRate;
     }
 
-    inline void accumulateGroupFractions(const std::string& groupName, const std::string& controlGroupName, const Schedule& schedule, const WellStateFullyImplicitBlackoil& wellState,const int reportStepIdx, const GuideRate* guideRate, const Group2::GuideRateTarget& groupTarget, const bool isInjector, double fraction) {
+    inline void accumulateGroupFractions(const std::string& groupName, const std::string& controlGroupName, const Schedule& schedule, const WellStateFullyImplicitBlackoil& wellState,const int reportStepIdx, const GuideRate* guideRate, const Group2::GuideRateTarget& groupTarget, const bool isInjector, double& fraction) {
 
         const Group2& group = schedule.getGroup2(groupName, reportStepIdx);
         if (groupName != controlGroupName) {
