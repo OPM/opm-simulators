@@ -1670,7 +1670,8 @@ namespace Opm {
             if (group.has_control(Group2::InjectionCMode::REIN))
             {
                 double production_Rate = 0.0;
-                production_Rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/false);
+                const Group2& groupRein = schedule().getGroup2(controls.reinj_group, reportStepIdx);
+                production_Rate += wellGroupHelpers::sumWellRates(groupRein, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/false);
 
                 double current_rate = 0.0;
                 current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
@@ -1682,10 +1683,10 @@ namespace Opm {
             if (group.has_control(Group2::InjectionCMode::VREP))
             {
                 double voidage_Rate = 0.0;
-                voidage_Rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
-                voidage_Rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
-                voidage_Rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
-
+                const Group2& groupVoidage = schedule().getGroup2(controls.voidage_group, reportStepIdx);
+                voidage_Rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
+                voidage_Rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
+                voidage_Rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
 
                 double current_rate = 0.0;
                 current_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
