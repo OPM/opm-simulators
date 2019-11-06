@@ -1360,10 +1360,10 @@ public:
                                 tmp_values[3] = get("GWPT"); //WellCumDataType::WaterProd
                                 tmp_values[4] = get("GGPT"); //WellCumDataType::GasProd 
                                 tmp_values[5] = get("GVPT");//WellCumDataType::FluidResVolProd          
-                                tmp_values[2] = get("GOIT"); //WellCumDataType::OilInj
-                                tmp_values[3] = get("GWIT"); //WellCumDataType::WaterInj
-                                tmp_values[4] = get("GGIT"); //WellCumDataType::GasInj  
-                                tmp_values[5] = get("GVIT");//WellCumDataType::FluidResVolInj           
+                                tmp_values[6] = get("GOIT"); //WellCumDataType::OilInj
+                                tmp_values[7] = get("GWIT"); //WellCumDataType::WaterInj
+                                tmp_values[8] = get("GGIT"); //WellCumDataType::GasInj  
+                                tmp_values[9] = get("GVIT");//WellCumDataType::FluidResVolInj           
                 
                                 outputCumulativeReport_(tmp_values, tmp_names, forceDisableCumOutput); 
                         }
@@ -1473,10 +1473,10 @@ public:
                                         tmp_values[3] = get("WWPT"); //WellCumDataType::WaterProd
                                         tmp_values[4] = get("WGPT"); //WellCumDataType::GasProd 
                                         tmp_values[5] = get("WVPT");//WellCumDataType::FluidResVolProd          
-                                        tmp_values[2] = get("WOIT"); //WellCumDataType::OilInj
-                                        tmp_values[3] = get("WWIT"); //WellCumDataType::WaterInj
-                                        tmp_values[4] = get("WGIT"); //WellCumDataType::GasInj  
-                                        tmp_values[5] = get("WVIT");//WellCumDataType::FluidResVolInj                                                           
+                                        tmp_values[6] = get("WOIT"); //WellCumDataType::OilInj
+                                        tmp_values[7] = get("WWIT"); //WellCumDataType::WaterInj
+                                        tmp_values[8] = get("WGIT"); //WellCumDataType::GasInj  
+                                        tmp_values[9] = get("WVIT");//WellCumDataType::FluidResVolInj                                                           
                                 
                                         outputCumulativeReport_(tmp_values, tmp_names, forceDisableCumOutput);  
                                 
@@ -1988,10 +1988,10 @@ private:
         }
                 else {
             if (wellCum[WellCumDataType::WellLocationi] < 1) {
-                ss  << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (8) << wellCumNames[WellCumDataType::WellName] << ":" << std::setw(11) <<  "" << ":" << std::setw(8) << wellCumNames[WellCumDataType::WellType] << ":" << std::setw(4) << wellCumNames[WellCumDataType::WellCTRL] << ":" << std::setprecision(1) << std::setw(11) << wellCum[WellCumDataType::OilProd] << ":" << std::setw(11) << wellCum[WellCumDataType::WaterProd] << ":" << std::setw(11)<< wellCum[WellCumDataType::GasProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::FluidResVolProd] << ":" << std::setw(11) << wellCum[WellCumDataType::OilProd] << ":"  << std::setw(11) << wellCum[WellCumDataType::WaterInj] << ":" << std::setw(11) << wellCum[WellCumDataType::GasInj]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::FluidResVolInj] << ": \n";
+                ss  << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (8) << wellCumNames[WellCumDataType::WellName] << ":" << std::setw(11) <<  "" << ":" << std::setw(8) << wellCumNames[WellCumDataType::WellType] << ":" << std::setw(4) << wellCumNames[WellCumDataType::WellCTRL] << ":" << std::setprecision(1) << std::setw(11) << wellCum[WellCumDataType::OilProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::WaterProd]/1000 << ":" << std::setw(11)<< wellCum[WellCumDataType::GasProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::FluidResVolProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::OilInj]/1000 << ":"  << std::setw(11) << wellCum[WellCumDataType::WaterInj]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::GasInj]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::FluidResVolInj]/1000 << ": \n";
             }
             else {        
-                ss  << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (8) << wellCumNames[WellCumDataType::WellName] << ":" << std::setw(5) << wellCum[WellCumDataType::WellLocationi] << "," << std::setw(5) << wellCum[WellCumDataType::WellLocationj] << ":" << std::setw(8) << wellCumNames[WellCumDataType::WellType] << ":" << std::setw(4) << wellCumNames[WellCumDataType::WellCTRL] << ":" << std::setprecision(1) << std::setw(11) << wellCum[WellCumDataType::OilProd] << ":" << std::setw(11) << wellCum[WellCumDataType::WaterProd] << ":" << std::setw(11)<< wellCum[WellCumDataType::GasProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::FluidResVolProd] << ":" << std::setw(11) << wellCum[WellCumDataType::OilProd] << ":"  << std::setw(11) << wellCum[WellCumDataType::WaterInj] << ":" << std::setw(11) << wellCum[WellCumDataType::GasInj]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::FluidResVolInj] << ": \n";
+                ss  << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (8) << wellCumNames[WellCumDataType::WellName] << ":" << std::setw(5) << wellCum[WellCumDataType::WellLocationi] << "," << std::setw(5) << wellCum[WellCumDataType::WellLocationj] << ":" << std::setw(8) << wellCumNames[WellCumDataType::WellType] << ":" << std::setw(4) << wellCumNames[WellCumDataType::WellCTRL] << ":" << std::setprecision(1) << std::setw(11) << wellCum[WellCumDataType::OilProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::WaterProd]/1000 << ":" << std::setw(11)<< wellCum[WellCumDataType::GasProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::FluidResVolProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::OilInj]/1000 << ":"  << std::setw(11) << wellCum[WellCumDataType::WaterInj]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::GasInj]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::FluidResVolInj]/1000 << ": \n";
             }
             ss << ":--------:-----------:--------:----:------------:----------:-----------:-----------:------------:----------:-----------:-----------: \n";      
         }
