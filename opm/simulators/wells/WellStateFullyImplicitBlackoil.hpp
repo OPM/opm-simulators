@@ -160,9 +160,6 @@ namespace Opm
 
             current_injection_controls_.resize(nw);
             current_production_controls_.resize(nw);
-            current_injection_group_controls_.clear();
-            current_production_group_controls_.clear();
-
 
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
@@ -325,6 +322,14 @@ namespace Opm
         /// One current control per producing well.
         std::vector<Well2::ProducerCMode>& currentProductionControls() { return current_production_controls_; }
         const std::vector<Well2::ProducerCMode>& currentProductionControls() const { return current_production_controls_; }
+
+        bool hasProductionGroupControl(const std::string& groupName) {
+            return current_production_group_controls_.count(groupName) > 0;
+        }
+
+        bool hasInjectionGroupControl(const std::string& groupName) {
+            return current_injection_group_controls_.count(groupName) > 0;
+        }
 
         /// One current control per group.
         void setCurrentProductionGroupControl(const std::string& groupName, const Group2::ProductionCMode& groupControl ) {
