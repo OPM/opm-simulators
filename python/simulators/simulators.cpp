@@ -211,12 +211,19 @@ class BlackOilSimulator
 public:
     BlackOilSimulator()
     {
-        argc_ = 2;
-        argv_ = new char*[2];
-        argv_[0] = new char[200];
-        char argv0[] = "flow";
-        std::strcpy(argv_[0], argv0);
-        argv_[1] = new char[200];
+        setupCmdLineArgs();
+    }
+
+    BlackOilSimulator( const Opm::Deck& deck, 
+                       const Opm::EclipseState& eclipseState, 
+                       const Opm::Schedule& schedule,
+                       const Opm::SummaryConfig& summaryConfig )
+    {
+        setupCmdLineArgs();
+        setDeck(deck);
+        setEclipseState(eclipseState);
+        setSchedule(schedule);
+        setSummaryConfig(summaryConfig);
     }
 
     ~BlackOilSimulator() 
@@ -224,6 +231,16 @@ public:
         delete[] argv_[0];
         delete[] argv_[1];
         delete[] argv_;
+    }
+
+    void setupCmdLineArgs()
+    {
+        argc_ = 2;
+        argv_ = new char*[2];
+        argv_[0] = new char[200];
+        char argv0[] = "flow";
+        std::strcpy(argv_[0], argv0);
+        argv_[1] = new char[200];
     }
 
     void setDeck( const Opm::Deck& deck )
@@ -348,6 +365,7 @@ PYBIND11_MODULE(simulators, m)
 {
     py::class_<BlackOilSimulator>(m, "BlackOilSimulator")
         .def(py::init<>())
+        .def(py::init< const Opm::Deck&, const Opm::EclipseState&, const Opm::Schedule&, const Opm::SummaryConfig& >())
         .def("run", &BlackOilSimulator::run)
         .def("setDeck", &BlackOilSimulator::setDeck)
         .def("setEclipseState", &BlackOilSimulator::setEclipseState)
