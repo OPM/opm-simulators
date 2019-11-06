@@ -17,6 +17,8 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
+#include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
+
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
 #else
@@ -24,6 +26,7 @@
 #endif
 
 #include <pybind11/pybind11.h>
+#include <pybind11/embed.h>
 #include <string>
 #include <iostream>
 
@@ -131,7 +134,6 @@ FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, con
     std::string output_dir = cmdline_output_dir;
     if (output_dir.empty()) {
         output_dir = absolute(path(baseName).parent_path()).string();
-        std::cout << "Output dir = " << output_dir << std::endl;
     }
 
     logFileStream << output_dir << "/" << baseName;
@@ -209,9 +211,10 @@ void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string&
 class BlackOilSimulator
 {
 public:
-    BlackOilSimulator()
+    BlackOilSimulator( const std::string& filename )
     {
         setupCmdLineArgs();
+        std::strcpy(argv_[1], filename.c_str());
     }
 
     BlackOilSimulator( const Opm::Deck& deck, 
@@ -316,21 +319,86 @@ public:
         if (mpiRank == 0)
             outputCout = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
 
-        std::string deckFilename = eclipseState_->getIOConfig().fullBasePath();
-        std::string outputDir = eclipseState_->getIOConfig().getOutputDir();
+        std::string deckFilename;
+        std::string outputDir;
+        if ( eclipseState_ )
+        {
+            deckFilename = eclipseState_->getIOConfig().fullBasePath();
+            outputDir = eclipseState_->getIOConfig().getOutputDir();
+        }
+        else
+        {
+            deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
+            typedef typename GET_PROP_TYPE(PreTypeTag, Vanguard) PreVanguard;
+            try {
+                deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
+            }
+            catch (const std::exception& e) {
+                if ( mpiRank == 0 )
+                    std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
+#if HAVE_MPI
+                MPI_Finalize();
+#endif
+                return 1;
+            }
+        }
 
         if (outputCout) {
             Opm::FlowMainEbos<PreTypeTag>::printBanner();
         }
-        Opm::ErrorGuard errorGuard;
-        outputMode = setupLogging(mpiRank,
-                                  deckFilename,
-                                  outputDir,
-                                  EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
-                                  outputCout, "STDOUT_LOGGER");
 
-        if (mpiRank == 0) {
-            setupMessageLimiter(schedule_->getMessageLimits(), "STDOUT_LOGGER");
+        // Create Deck, EclipseState, Schedule and SummaryConfig if they don't exist
+        if ( deck_ && eclipseState_ && schedule_ && summaryConfig_ )
+        {
+            outputMode = setupLogging(mpiRank,
+                                    deckFilename,
+                                    outputDir,
+                                    EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
+                                    outputCout, "STDOUT_LOGGER");
+
+            if (mpiRank == 0) {
+                setupMessageLimiter(schedule_->getMessageLimits(), "STDOUT_LOGGER");
+            }
+        }
+        else
+        {
+            Opm::Parser parser;
+            Opm::ParseContext parseContext({{Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE},
+                                            {Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN},
+                                            {Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN},
+                                            {Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN}});
+            Opm::ErrorGuard errorGuard;
+            outputMode = setupLogging(mpiRank,
+                                      deckFilename,
+                                      EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir),
+                                      EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
+                                      outputCout, "STDOUT_LOGGER");
+
+            if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
+                parseContext.update( Opm::InputError::DELAYED_EXIT1);
+
+            Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout);
+
+            deck_.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
+            Opm::MissingFeatures::checkKeywords(*deck_, parseContext, errorGuard);
+            if ( outputCout )
+                Opm::checkDeck(*deck_, parser, parseContext, errorGuard);
+
+            eclipseState_.reset( new Opm::EclipseState(*deck_, parseContext, errorGuard ));
+            schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard));
+            summaryConfig_.reset( new Opm::SummaryConfig(*deck_, *schedule_, eclipseState_->getTableManager(), parseContext, errorGuard));
+            if (mpiRank == 0) {
+                setupMessageLimiter(schedule_->getMessageLimits(), "STDOUT_LOGGER");
+            }
+
+            Opm::checkConsistentArrayDimensions(*eclipseState_, *schedule_, parseContext, errorGuard);
+
+            if (errorGuard) {
+                errorGuard.dump();
+                errorGuard.clear();
+
+                throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
+            }
         }
 
         const auto& phases = Opm::Runspec(*deck_).phases();
@@ -364,7 +432,7 @@ private:
 PYBIND11_MODULE(simulators, m)
 {
     py::class_<BlackOilSimulator>(m, "BlackOilSimulator")
-        .def(py::init<>())
+        .def(py::init< const std::string& >())
         .def(py::init< const Opm::Deck&, const Opm::EclipseState&, const Opm::Schedule&, const Opm::SummaryConfig& >())
         .def("run", &BlackOilSimulator::run)
         .def("setDeck", &BlackOilSimulator::setDeck)
