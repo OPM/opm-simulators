@@ -94,6 +94,10 @@ namespace Opm {
             }
 
             if (wellEcl.isInjector() && injector) {
+                // only switch if the well phase is the same as the group phase
+                if (group.injection_phase() != wellEcl.getPreferredPhase())
+                    continue;
+
                 if (wellState.currentInjectionControls()[well_index] != Well2::InjectorCMode::GRUP) {
                     wellState.currentInjectionControls()[well_index] = Well2::InjectorCMode::GRUP;
                     ss <<"\n Injector " << wellName << " switches to GRUP control limit";
