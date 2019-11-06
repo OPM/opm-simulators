@@ -32,6 +32,7 @@
 #include "blackoilsolventmodules.hh"
 #include "blackoilpolymermodules.hh"
 #include "blackoilfoammodules.hh"
+#include "blackoilsaltwatermodules.hh"
 #include "blackoilenergymodules.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/common/Valgrind.hpp>
@@ -56,6 +57,7 @@ class BlackOilIntensiveQuantities
     , public BlackOilSolventIntensiveQuantities<TypeTag>
     , public BlackOilPolymerIntensiveQuantities<TypeTag>
     , public BlackOilFoamIntensiveQuantities<TypeTag>
+    , public BlackOilSaltWaterIntensiveQuantities<TypeTag>
     , public BlackOilEnergyIntensiveQuantities<TypeTag>
 {
     typedef typename GET_PROP_TYPE(TypeTag, DiscIntensiveQuantities) ParentType;
@@ -75,6 +77,7 @@ class BlackOilIntensiveQuantities
     enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
     enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
     enum { enableFoam = GET_PROP_VALUE(TypeTag, EnableFoam) };
+    enum { enableSaltWater = GET_PROP_VALUE(TypeTag, EnableSaltWater) };
     enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
     enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
@@ -94,7 +97,7 @@ class BlackOilIntensiveQuantities
     typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
     typedef typename FluxModule::FluxIntensiveQuantities FluxIntensiveQuantities;
-    typedef Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  Indices::numPhases > FluidState;
+    typedef Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  enableSaltWater, Indices::numPhases > FluidState;
 
 public:
     BlackOilIntensiveQuantities()
@@ -124,6 +127,8 @@ public:
         unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
         unsigned pvtRegionIdx = priVars.pvtRegionIndex();
         fluidState_.setPvtRegionIndex(pvtRegionIdx);
+
+        asImp_().updateSaltconcentration_(elemCtx, dofIdx, timeIdx);
 
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
@@ -444,6 +449,8 @@ private:
     friend BlackOilPolymerIntensiveQuantities<TypeTag>;
     friend BlackOilEnergyIntensiveQuantities<TypeTag>;
     friend BlackOilFoamIntensiveQuantities<TypeTag>;
+    friend BlackOilSaltWaterIntensiveQuantities<TypeTag>;
+
 
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }

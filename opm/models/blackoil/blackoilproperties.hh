@@ -54,6 +54,9 @@ NEW_PROP_TAG(EnablePolymerMW);
 NEW_PROP_TAG(BlackoilConserveSurfaceVolume);
 //! Enable the ECL-blackoil extension for foam
 NEW_PROP_TAG(EnableFoam);
+//! Enable the ECL-blackoil extension for salt
+NEW_PROP_TAG(EnableSaltWater);
+
 
 //! Allow the spatial and temporal domains to exhibit non-constant temperature
 //! in the black-oil model
