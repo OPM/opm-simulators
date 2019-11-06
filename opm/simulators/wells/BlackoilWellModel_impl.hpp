@@ -1126,8 +1126,8 @@ namespace Opm {
             bool switched = checkGroupConstraints(fieldGroup, deferred_logger);
             // don't check well constraints if group has switched
             // TODO: check wells not affected by the group that switched
-            if (switched)
-                return;
+            //if (switched)
+            //    return;
         }
 
         for (const auto& well : well_container_) {
