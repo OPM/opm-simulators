@@ -278,3 +278,7 @@ if (BUILD_EBOS_EXTENSIONS)
     opm_add_bash_completion(${TGT})
   endforeach()
 endif()
+
+if (OPM_ENABLE_PYTHON)
+  add_subdirectory(python)
+endif()
