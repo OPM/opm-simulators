@@ -33,6 +33,7 @@
 #include "blackoilpolymermodules.hh"
 #include "blackoilenergymodules.hh"
 #include "blackoilfoammodules.hh"
+#include "blackoilsaltwatermodules.hh"
 
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 
@@ -50,6 +51,9 @@ class BlackOilSolventModule;
 
 template <class TypeTag, bool enablePolymer>
 class BlackOilPolymerModule;
+
+template <class TypeTag, bool enableSaltWater>
+class BlackOilSaltWaterModule;
 
 /*!
  * \ingroup BlackOilModel
@@ -92,6 +96,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
     enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
     enum { enableFoam = GET_PROP_VALUE(TypeTag, EnableFoam) };
+    enum { enableSaltWater = GET_PROP_VALUE(TypeTag, EnableSaltWater) };
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
@@ -103,6 +108,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     typedef BlackOilPolymerModule<TypeTag, enablePolymer> PolymerModule;
     typedef BlackOilEnergyModule<TypeTag, enableEnergy> EnergyModule;
     typedef BlackOilFoamModule<TypeTag, enableFoam> FoamModule;
+    typedef BlackOilSaltWaterModule<TypeTag, enableSaltWater> SaltWaterModule;
 
     static_assert(numPhases == 3, "The black-oil model assumes three phases!");
     static_assert(numComponents == 3, "The black-oil model assumes three components!");
@@ -617,6 +623,14 @@ private:
             return 0.0;
 
         return (*this)[Indices::foamConcentrationIdx];
+    }
+
+    Scalar saltConcentration_() const
+    {
+        if (!enableSaltWater)
+            return 0.0;
+
+        return (*this)[Indices::saltConcentrationIdx];
     }
 
     Scalar temperature_() const
