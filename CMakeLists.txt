@@ -154,6 +154,7 @@ opm_add_test(flow
   flow/flow_ebos_oilwater.cpp
   flow/flow_ebos_polymer.cpp
   flow/flow_ebos_foam.cpp
+  flow/flow_ebos_saltwater.cpp
   flow/flow_ebos_solvent.cpp
   flow/flow_ebos_energy.cpp
   flow/flow_ebos_oilwater_polymer.cpp
@@ -209,7 +210,7 @@ endif()
 # the research oriented general-purpose ECL simulator ("ebos" == &ecl
 # &black-&oil &simulator)
 set(MEBOS_TARGETS "")
-foreach(OBJ blackoil solvent polymer foam gasoil oilwater thermal)
+foreach(OBJ blackoil solvent polymer foam saltwater gasoil oilwater thermal)
   add_library(ebos_lib${OBJ} OBJECT EXCLUDE_FROM_ALL ebos/ebos_${OBJ}.cc)
   list(APPEND MEBOS_TARGETS $<TARGET_OBJECTS:ebos_lib${OBJ}>)
 endforeach()
@@ -233,7 +234,7 @@ else()
   set(EBOS_EXTENSIONS_DEFAULT_ENABLE_IF "TRUE")
 endif()
 
-foreach(OBJ solvent polymer foam gasoil oilwater thermal)
+foreach(OBJ solvent polymer foam saltwater gasoil oilwater thermal)
   opm_add_test(ebos_${OBJ}
     ONLY_COMPILE
     DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
@@ -273,7 +274,7 @@ opm_add_test(ebos_plain
   LIBRARIES opmsimulators)
 
 if (BUILD_EBOS_EXTENSIONS)
-  foreach(TGT ebos_solvent ebos_polymer ebos_foam ebos_gasoil ebos_oilwater ebos_thermal mebos)
+  foreach(TGT ebos_solvent ebos_polymer ebos_foam ebos_saltwater ebos_gasoil ebos_oilwater ebos_thermal mebos)
     install(TARGETS ${TGT} DESTINATION bin)
     opm_add_bash_completion(${TGT})
   endforeach()

@@ -31,6 +31,7 @@
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/blackoil/blackoilfoammodules.hh>
+#include <opm/models/blackoil/blackoilsaltwatermodules.hh>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
 
@@ -68,19 +69,22 @@ namespace Opm
         using Base::has_solvent;
         using Base::has_polymer;
         using Base::has_foam;
+        using Base::has_salt;
         using Base::has_energy;
 
         using PolymerModule =  Opm::BlackOilPolymerModule<TypeTag>;
         using FoamModule = Opm::BlackOilFoamModule<TypeTag>;
+        using SaltWaterModule = Opm::BlackOilSaltWaterModule<TypeTag>;
 
         // polymer concentration and temperature are already known by the well, so
         // polymer and energy conservation do not need to be considered explicitly
         static const int numPolymerEq = Indices::numPolymers;
         static const int numEnergyEq = Indices::numEnergy;
         static const int numFoamEq = Indices::numFoam;
+        static const int numSaltEq = Indices::numSaltWater;
 
         // number of the conservation equations
-        static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq - numFoamEq;
+        static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq - numFoamEq - numSaltEq;
         // number of the well control equations
         static const int numWellControlEq = 1;
         // number of the well equations that will always be used
@@ -138,6 +142,7 @@ namespace Opm
         using Base::contiSolventEqIdx;
         using Base::contiPolymerEqIdx;
         using Base::contiFoamEqIdx;
+        using Base::contiSaltWaterEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
         StandardWell(const Well& well, const int time_step,
@@ -214,6 +219,7 @@ namespace Opm
         using Base::phaseUsage;
         using Base::flowPhaseToEbosCompIdx;
         using Base::ebosCompIdxToFlowCompIdx;
+        using Base::wsalt;
         using Base::wsolvent;
         using Base::wpolymer;
         using Base::wfoam;

@@ -84,6 +84,7 @@ SET_BOOL_PROP(EclFlowProblem, EnableSolvent, false);
 SET_BOOL_PROP(EclFlowProblem, EnableTemperature, true);
 SET_BOOL_PROP(EclFlowProblem, EnableEnergy, false);
 SET_BOOL_PROP(EclFlowProblem, EnableFoam, false);
+SET_BOOL_PROP(EclFlowProblem, EnableSaltWater, false);
 
 SET_TYPE_PROP(EclFlowProblem, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
 SET_TAG_PROP(EclFlowProblem, LinearSolverSplice, FlowIstlSolver);
@@ -124,11 +125,13 @@ namespace Opm {
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
         static const int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;
         static const int contiFoamEqIdx = Indices::contiFoamEqIdx;
+	static const int contiSaltWaterEqIdx = Indices::contiSaltWaterEqIdx;
         static const int solventSaturationIdx = Indices::solventSaturationIdx;
         static const int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
         static const int polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
         static const int temperatureIdx = Indices::temperatureIdx;
         static const int foamConcentrationIdx = Indices::foamConcentrationIdx;
+	static const int saltWaterConcentrationIdx = Indices::saltConcentrationIdx;
 
         typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
         typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
@@ -164,6 +167,7 @@ namespace Opm {
         , has_polymermw_(GET_PROP_VALUE(TypeTag, EnablePolymerMW))
         , has_energy_(GET_PROP_VALUE(TypeTag, EnableEnergy))
         , has_foam_(GET_PROP_VALUE(TypeTag, EnableFoam))
+        , has_salt_(GET_PROP_VALUE(TypeTag, EnableSaltWater))
         , param_( param )
         , well_model_ (well_model)
         , terminal_output_ (terminal_output)
@@ -631,6 +635,12 @@ namespace Opm {
                     R_sum[ contiFoamEqIdx ] += R2;
                     maxCoeff[ contiFoamEqIdx ] = std::max( maxCoeff[ contiFoamEqIdx ], std::abs( R2 ) / pvValue );
                 }
+                if (has_salt_ ) {
+                    B_avg[ contiSaltWaterEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
+                    const auto R2 = ebosResid[cell_idx][contiSaltWaterEqIdx];
+                    R_sum[ contiSaltWaterEqIdx ] += R2;
+                    maxCoeff[ contiSaltWaterEqIdx ] = std::max( maxCoeff[ contiSaltWaterEqIdx ], std::abs( R2 ) / pvValue );
+                }
 
                 if (has_polymermw_) {
                     assert(has_polymer_);
@@ -719,6 +729,9 @@ namespace Opm {
                 }
                 if (has_foam_) {
                     compNames[foamConcentrationIdx] = "Foam";
+                }
+                if (has_salt_) {
+                    compNames[saltWaterConcentrationIdx] = "Salt";
                 }
             }
 
@@ -872,6 +885,7 @@ namespace Opm {
         const bool has_polymermw_;
         const bool has_energy_;
         const bool has_foam_;
+	const bool has_salt_;
 
         ModelParameters                 param_;
         SimulatorReport failureReport_;

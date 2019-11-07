@@ -374,6 +374,29 @@ namespace Opm
 
 
     template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::
+    wsalt() const
+    {
+        if (!has_salt) {
+            return 0.0;
+        }
+
+        auto injectorType = well_ecl_.injectorType();
+
+        if (injectorType == Well::InjectorType::WATER) {
+            WellSaltwaterProperties fprop = well_ecl_.getSaltwaterProperties();
+            return fprop.m_saltwaterConcentration;
+        } else {
+            // Not a water injection well => no salt (?).
+            return 0.0;
+        }
+    }
+
+
+
+
+    template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
     wellHasTHPConstraints(const SummaryState& summaryState) const
