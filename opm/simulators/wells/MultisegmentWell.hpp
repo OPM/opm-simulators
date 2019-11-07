@@ -418,6 +418,17 @@ namespace Opm
 
         void updateUpwindingSegments();
 
+        // turn on crossflow to avoid singular well equations
+        // when the well is banned from cross-flow and the BHP is not properly initialized,
+        // we turn on crossflow to avoid singular well equations. It can result in wrong-signed
+        // well rates, it can cause problem for THP calculation
+        // TODO: looking for better alternative to avoid wrong-signed well rates
+        bool openCrossFlowAvoidSingularity(const Simulator& ebos_simulator) const;
+
+        // for a well, when all drawdown are in the wrong direction, then this well will not
+        // be able to produce/inject .
+        bool allDrawDownWrongDirection(const Simulator& ebos_simulator) const;
+
     };
 
 }

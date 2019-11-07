@@ -2606,7 +2606,7 @@ namespace Opm
         //
         // but for the top segment, the pressure equation will be the well control equation, and the other three will be the same.
 
-        const bool allow_cf = getAllowCrossFlow();
+        const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
 
         const int nseg = numberOfSegments();
 
@@ -2723,9 +2723,55 @@ namespace Opm
             }
         }
     }
+    template<typename TypeTag>
+    bool
+    MultisegmentWell<TypeTag>::
+    openCrossFlowAvoidSingularity(const Simulator& ebos_simulator) const
+    {
+        return !getAllowCrossFlow() && allDrawDownWrongDirection(ebos_simulator);
+    }
 
 
+    template<typename TypeTag>
+    bool
+    MultisegmentWell<TypeTag>::
+    allDrawDownWrongDirection(const Simulator& ebos_simulator) const
+    {
+        bool all_drawdown_wrong_direction = true;
+        const int nseg = numberOfSegments();
 
+        for (int seg = 0; seg < nseg; ++seg) {
+            const EvalWell segment_pressure = getSegmentPressure(seg);
+            for (const int perf : segment_perforations_[seg]) {
+
+                const int cell_idx = well_cells_[perf];
+                const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+                const auto& fs = intQuants.fluidState();
+
+                // pressure difference between the segment and the perforation
+                const EvalWell perf_seg_press_diff = gravity_ * segment_densities_[seg] * perforation_segment_depth_diffs_[perf];
+                // pressure difference between the perforation and the grid cell
+                const double cell_perf_press_diff = cell_perforation_pressure_diffs_[perf];
+
+                const double pressure_cell = (fs.pressure(FluidSystem::oilPhaseIdx)).value();
+                const double perf_press = pressure_cell - cell_perf_press_diff;
+                // Pressure drawdown (also used to determine direction of flow)
+                // TODO: not 100% sure about the sign of the seg_perf_press_diff
+                const EvalWell drawdown = perf_press - (segment_pressure + perf_seg_press_diff);
+
+                // for now, if there is one perforation can produce/inject in the correct
+                // direction, we consider this well can still produce/inject.
+                // TODO: it can be more complicated than this to cause wrong-signed rates
+                if ( (drawdown < 0. && well_type_ == INJECTOR) ||
+                     (drawdown > 0. && well_type_ == PRODUCER) )  {
+                    all_drawdown_wrong_direction = false;
+                    break;
+                }
+            }
+        }
+
+        return all_drawdown_wrong_direction;
+    }
 
 
     template<typename TypeTag>
