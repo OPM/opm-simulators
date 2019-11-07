@@ -691,6 +691,18 @@ namespace Opm
                 connectionRates_[perf][contiFoamEqIdx] = Base::restrictEval(cq_s_foam);
             }
 
+            if (has_salt) {
+                // TODO: the application of well efficiency factor has not been tested with an example yet
+                const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                EvalWell cq_s_sm = cq_s[waterCompIdx] * well_efficiency_factor_;
+                if (this->isInjector()) {
+                    cq_s_sm *= wsalt();
+                } else {
+                    cq_s_sm *= extendEval(intQuants.fluidState().saltconcentration());
+                }
+                connectionRates_[perf][contiSaltWaterEqIdx] = Base::restrictEval(cq_s_sm);
+            }
+
             // Store the perforation pressure for later usage.
             well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[index_of_well_] + perf_pressure_diffs_[perf];
 
@@ -2516,7 +2528,7 @@ namespace Opm
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
         // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells
-        assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy || has_foam);
+        assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy || has_foam || has_salt);
 
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;

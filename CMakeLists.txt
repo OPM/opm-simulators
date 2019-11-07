@@ -168,6 +168,7 @@ opm_add_test(flow
   flow/flow_ebos_oilwater.cpp
   flow/flow_ebos_polymer.cpp
   flow/flow_ebos_foam.cpp
+  flow/flow_ebos_saltwater.cpp
   flow/flow_ebos_solvent.cpp
   flow/flow_ebos_energy.cpp
   flow/flow_ebos_oilwater_polymer.cpp
@@ -247,7 +248,7 @@ else()
   set(EBOS_EXTENSIONS_DEFAULT_ENABLE_IF "TRUE")
 endif()
 
-foreach(OBJ solvent polymer foam gasoil oilwater oilwaterpolymer thermal)
+foreach(OBJ solvent polymer foam saltwater gasoil oilwater oilwaterpolymer thermal)
   opm_add_test(ebos_${OBJ}
     ONLY_COMPILE
     DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
@@ -287,7 +288,7 @@ opm_add_test(ebos_plain
   LIBRARIES opmsimulators)
 
 if (BUILD_EBOS_EXTENSIONS)
-  foreach(TGT ebos_solvent ebos_polymer ebos_foam ebos_gasoil ebos_oilwater ebos_oilwaterpolymer ebos_thermal mebos)
+  foreach(TGT ebos_solvent ebos_polymer ebos_foam ebos_saltwater ebos_gasoil ebos_oilwater ebos_oilwaterpolymer ebos_thermal mebos)
     install(TARGETS ${TGT} DESTINATION bin)
     opm_add_bash_completion(${TGT})
   endforeach()
@@ -296,10 +297,3 @@ endif()
 if (OPM_ENABLE_PYTHON)
   add_subdirectory(python)
 endif()
-
-# must link libraries after target 'flow' has been defined
-if(CUDA_FOUND)
-  target_link_libraries( opmsimulators ${CUDA_cublas_LIBRARY} )
-  target_link_libraries( opmsimulators ${CUDA_cusparse_LIBRARY} )
-endif()
-
