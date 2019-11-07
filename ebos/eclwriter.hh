@@ -532,14 +532,24 @@ private:
                 int gc1 = std::min(cartesianCellIdx[c1], cartesianCellIdx[c2]);
                 int gc2 = std::max(cartesianCellIdx[c1], cartesianCellIdx[c2]);
 
-                if (gc2 - gc1 == 1) {
-                    tranx.data[gc1] = globalTrans->transmissibility(c1, c2);
-                    continue; // skip other if clauses as they are false, last one needs some computation
+                /*
+                  The cartDims[.] > 1 tests is special case treatment for 1D and
+                  2D models the where (gc1 - gc2) tests will identify wrong
+                  cartesian dimension.
+                */
+
+                if (cartDims[0] > 1) {
+                    if (gc2 - gc1 == 1) {
+                        tranx.data[gc1] = globalTrans->transmissibility(c1, c2);
+                        continue; // skip other if clauses as they are false, last one needs some computation
+                    }
                 }
 
-                if (gc2 - gc1 == cartDims[0]) {
-                    trany.data[gc1] = globalTrans->transmissibility(c1, c2);
-                    continue; // skipt next if clause as it needs some computation
+                if (cartDims[1] > 1) {
+                    if (gc2 - gc1 == cartDims[0]) {
+                        trany.data[gc1] = globalTrans->transmissibility(c1, c2);
+                        continue; // skipt next if clause as it needs some computation
+                    }
                 }
 
                 if ( gc2 - gc1 == cartDims[0]*cartDims[1] ||
