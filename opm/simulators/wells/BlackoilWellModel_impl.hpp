@@ -677,6 +677,7 @@ namespace Opm {
                         const int np = numPhases();
                         for (int p = 0; p < np; ++p) {
                             well_state_.wellRates()[np * w + p] = 0.;
+                            well_state_.wellReservoirRates()[np * w + p] = 0.;
                         }
                         continue;
                     } else {
