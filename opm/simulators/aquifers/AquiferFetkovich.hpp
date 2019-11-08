@@ -216,7 +216,8 @@ namespace Opm
       }
 
       // We take the average of the calculated equilibrium pressures.
-      Scalar aquifer_pres_avg = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), 0.)/pw_aquifer.size();
+      const Scalar sum_alpha = std::accumulate(this->alphai_.begin(), this->alphai_.end(), 0.);
+      const Scalar aquifer_pres_avg = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), 0.) / sum_alpha;
       return aquifer_pres_avg;
     }
   }; //Class AquiferFetkovich
