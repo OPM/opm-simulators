@@ -210,7 +210,7 @@ namespace Opm
 
     virtual void initializeConnections(const Aquancon::AquanconOutput& connection) =0;
 
-    virtual Scalar dpai(int idx) = 0;
+    // virtual Scalar dpai(int idx) = 0;
 
     virtual void calculateInflowRate(int idx, const Simulator& simulator) = 0;
 

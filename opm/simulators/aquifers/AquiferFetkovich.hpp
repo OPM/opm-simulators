@@ -145,9 +145,10 @@ namespace Opm
       }
     }
 
-    inline Scalar dpai(int idx)
+    inline Eval dpai(int idx)
     {
-      Scalar dp = aquifer_pressure_ + Base::rhow_.at(idx).value()*Base::gravity_()*(Base::cell_depth_.at(idx) - aqufetp_data_.d0) - Base::pressure_current_.at(idx).value() ;
+      const Eval dp = aquifer_pressure_ - Base::pressure_current_.at(idx)
+                      + Base::rhow_.at(idx) * Base::gravity_()*(Base::cell_depth_.at(idx) - aqufetp_data_.d0);
       return dp;
     }
 
@@ -166,14 +167,14 @@ namespace Opm
     // This function implements Eq 5.14 of the EclipseTechnicalDescription
     inline void calculateInflowRate(int idx, const Simulator& simulator)
     {
-      Scalar td_Tc_ = simulator.timeStepSize() / Base::Tc_ ;
-      Scalar exp_ = (1 - exp(-td_Tc_)) / td_Tc_;
-      Base::Qai_.at(idx) = Base::alphai_.at(idx) * aqufetp_data_.J * dpai(idx) * exp_;
+      const Scalar td_Tc_ = simulator.timeStepSize() / Base::Tc_ ;
+      const Scalar coef = (1 - exp(-td_Tc_)) / td_Tc_;
+      Base::Qai_.at(idx) = Base::alphai_[idx] * aqufetp_data_.J * dpai(idx) * coef;
     }
 
     inline void calculateAquiferCondition()
     {
-      int pvttableIdx = aqufetp_data_.pvttableID - 1;
+      const int pvttableIdx = aqufetp_data_.pvttableID - 1;
       Base::rhow_.resize(Base::cell_idx_.size(),0.);
       if (!aqufetp_data_.p0)
       {
