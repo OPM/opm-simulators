@@ -64,6 +64,7 @@ namespace Opm
 
   protected:
     // Aquifer Fetkovich Specific Variables
+    // TODO: using const reference here will cause segmentation fault, which is very strange
     const Aquifetp::AQUFETP_data aqufetp_data_;
     Scalar aquifer_pressure_; // aquifer
 
@@ -185,24 +186,6 @@ namespace Opm
         Base::pa0_ = *(aqufetp_data_.p0);
       }
       aquifer_pressure_ = Base::pa0_ ;
-
-      // use the thermodynamic state of the first active cell as a
-      // reference. there might be better ways to do this...
-      ElementContext elemCtx(Base::ebos_simulator_);
-      auto elemIt = Base::ebos_simulator_.gridView().template begin</*codim=*/0>();
-      elemCtx.updatePrimaryStencil(*elemIt);
-      elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-      const auto& iq0 = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-      // Initialize a FluidState object first
-      FluidState fs_aquifer;
-      // We use the temperature of the first cell connected to the aquifer
-      // Here we copy the fluidstate of the first cell, so we do not accidentally mess up the reservoir fs
-      fs_aquifer.assign( iq0.fluidState() );
-      Eval temperature_aq, pa0_mean;
-      temperature_aq = fs_aquifer.temperature(0);
-      pa0_mean = Base::pa0_;
-      Eval mu_w_aquifer = FluidSystem::waterPvt().viscosity(pvttableIdx, temperature_aq, pa0_mean);
-      Base::mu_w_ = mu_w_aquifer.value();
     }
 
     inline Scalar calculateReservoirEquilibrium()
