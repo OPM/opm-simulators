@@ -203,6 +203,12 @@ namespace Opm
                             wellRates()[ idx ] = prevState->wellRates()[ oldidx ];
                         }
 
+                        // wellResrates
+                        for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )
+                        {
+                            wellReservoirRates()[ idx ] = prevState->wellReservoirRates()[ oldidx ];
+                        }
+
                         // perfPhaseRates
                         const int oldPerf_idx_beg = (*it).second[ 1 ];
                         const int num_perf_old_well = (*it).second[ 2 ];
