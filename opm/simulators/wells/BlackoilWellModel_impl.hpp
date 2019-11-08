@@ -677,6 +677,7 @@ namespace Opm {
                         const int np = numPhases();
                         for (int p = 0; p < np; ++p) {
                             well_state_.wellRates()[np * w + p] = 0.;
+                            well_state_.wellReservoirRates()[np * w + p] = 0.;
                         }
                         continue;
                     } else {
@@ -785,10 +786,25 @@ namespace Opm {
                 calculateExplicitQuantities(local_deferredLogger);
                 prepareTimeStep(local_deferredLogger);
             }
+            updateWellControls(local_deferredLogger, true);
+
             // only check group controls for iterationIdx smaller then nupcol
             const int reportStepIdx = ebosSimulator_.episodeIndex();
             const int nupcol = schedule().getNupcol(reportStepIdx);
-            updateWellControls(local_deferredLogger, iterationIdx < nupcol);
+            if (iterationIdx < nupcol) {
+                if( localWellsActive() ) {
+                    const Group2& fieldGroup = schedule().getGroup2("FIELD", reportStepIdx);
+                    std::vector<double> groupTargetReduction(numPhases(), 0.0);
+                    wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, well_state_, groupTargetReduction);
+                    std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
+                    wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, well_state_, groupTargetReductionInj);
+                    std::vector<double> rein(numPhases(), 0.0);
+                    wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, well_state_, rein);
+                    double resv = 0.0;
+                    wellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_, resv);
+                }
+            }
+
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
 
@@ -1663,7 +1679,8 @@ namespace Opm {
             if (group.has_control(Group2::InjectionCMode::REIN))
             {
                 double production_Rate = 0.0;
-                production_Rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/false);
+                const Group2& groupRein = schedule().getGroup2(controls.reinj_group, reportStepIdx);
+                production_Rate += wellGroupHelpers::sumWellRates(groupRein, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/false);
 
                 double current_rate = 0.0;
                 current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
@@ -1673,16 +1690,18 @@ namespace Opm {
                 }                    }
             if (group.has_control(Group2::InjectionCMode::VREP))
             {
-                double voidage_Rate = 0.0;
-                voidage_Rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
-                voidage_Rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
-                voidage_Rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
+                double voidage_rate = 0.0;
+                const Group2& groupVoidage = schedule().getGroup2(controls.voidage_group, reportStepIdx);
+                voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
+                voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
+                voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
 
+                double total_rate = 0.0;
+                total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], true);
+                total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], true);
+                total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], true);
 
-                double current_rate = 0.0;
-                current_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
-
-                if (controls.target_void_fraction*voidage_Rate < current_rate) {
+                if (controls.target_void_fraction*voidage_rate < total_rate) {
                     actionOnBrokenConstraints(group, Group2::InjectionCMode::VREP, reportStepIdx, deferred_logger);
                 }
             }
