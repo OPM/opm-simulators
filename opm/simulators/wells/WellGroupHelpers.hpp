@@ -232,7 +232,7 @@ namespace Opm {
                 const Group2::InjectionCMode& currentGroupControl = wellState.currentInjectionGroupControl(groupName);
                 if (currentGroupControl != Group2::InjectionCMode::FLD) {
                     for (int phase = 0; phase < np; phase++) {
-                        groupTargetReduction[phase] += sumWellRates(group, schedule, wellState, reportStepIdx, phase, isInjector);
+                        groupTargetReduction[phase] += sumWellRates(groupTmp, schedule, wellState, reportStepIdx, phase, isInjector);
                     }
                     continue;
                 }
@@ -240,7 +240,7 @@ namespace Opm {
                 const Group2::ProductionCMode& currentGroupControl = wellState.currentProductionGroupControl(groupName);
                 if (currentGroupControl != Group2::ProductionCMode::FLD) {
                     for (int phase = 0; phase < np; phase++) {
-                        groupTargetReduction[phase] += sumWellRates(group, schedule, wellState, reportStepIdx, phase, isInjector);
+                        groupTargetReduction[phase] += sumWellRates(groupTmp, schedule, wellState, reportStepIdx, phase, isInjector);
                     }
                     continue;
                 }
@@ -250,7 +250,6 @@ namespace Opm {
                 groupTargetReduction[phase] += thisGroupTargetReduction[phase];
             }
         }
-        //std::vector<double> groupTargetReduction(np, 0.0);
         for (const std::string& wellName : group.wells()) {
             const auto& wellTmp = schedule.getWell2(wellName, reportStepIdx);
 

@@ -2149,7 +2149,7 @@ namespace Opm
         }
         case Group2::ProductionCMode::GRAT:
         {
-           double groupTargetReduction = groupTargetReductions[pu.phase_pos[Gas]];
+            double groupTargetReduction = groupTargetReductions[pu.phase_pos[Gas]];
             double fraction = wellGroupHelpers::wellFractionFromGuideRates(well, schedule, well_state, current_step_, Base::guide_rate_, Well2::GuideRateTarget::GAS, /*isInjector*/false);
             wellGroupHelpers::accumulateGroupFractions(well.groupName(), group.name(), schedule, well_state, current_step_, Base::guide_rate_, Group2::GuideRateTarget::GAS, /*isInjector*/false, fraction);
             const double rate_target = std::max(0.0, groupcontrols.gas_target / efficiencyFactor - groupTargetReduction);
