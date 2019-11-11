@@ -219,6 +219,19 @@ namespace Opm
             std::cout << "*          For more information, see https://opm-project.org         *\n";
             std::cout << "*                                                                    *\n";
             std::cout << "**********************************************************************\n\n";
+
+            int threads = 1;
+            int mpiSize = 1;
+
+#ifdef _OPENMP
+            threads = omp_get_max_threads();
+#endif
+
+#if HAVE_MPI
+            MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+#endif
+
+            std::cout << "Using "<< mpiSize << " MPI processors with "<< threads <<" OMP threads on each \n\n";
         }
 
         /// This is the main function of Flow.  It runs a complete simulation with the
@@ -470,6 +483,13 @@ namespace Opm
                 if (output_cout) {
                     std::ostringstream ss;
                     ss << "\n\n================    End of simulation     ===============\n\n";
+                    ss << "Number of MPI processors: " << std::setw(6) << mpi_size_ << "\n";
+#if _OPENMP
+                    int threads = omp_get_max_threads();
+#else
+                    int threads = 1;
+#endif
+                    ss << "Threads per MPI processor:  " << std::setw(4) << threads << "\n";
                     successReport.reportFullyImplicit(ss, &failureReport);
                     OpmLog::info(ss.str());
                 }
