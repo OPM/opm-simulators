@@ -224,7 +224,13 @@ namespace Opm
             int mpiSize = 1;
 
 #ifdef _OPENMP
-            threads = omp_get_max_threads();
+            // This function is called before the parallel OpenMP stuff gets initialized.
+            // That initialization happends after the deck is read and we want this message.
+            // Hence we duplicate the code of setupParallelism to get the number of threads.
+            if (getenv("OMP_NUM_THREADS"))
+                threads =  omp_get_max_threads();
+            else
+                threads = std::min(2, omp_get_max_threads());
 #endif
 
 #if HAVE_MPI
