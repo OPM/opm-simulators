@@ -303,4 +303,18 @@ BOOST_AUTO_TEST_CASE(Rates)
     }
 }
 
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(STOP_well)
+{
+    /*
+      This test verifies that the perforation pressures is correctly initialized
+      also for wells in the STOP state.
+    */
+    const Setup setup{ "wells_manager_data_wellSTOP.data" };
+    auto wstate = buildWellState(setup, 0);
+    for (const auto& p : wstate.perfPress())
+        BOOST_CHECK(p > 0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

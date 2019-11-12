@@ -143,18 +143,16 @@ namespace Opm
                 assert((wells->type[w] == INJECTOR) || (wells->type[w] == PRODUCER));
                 const WellControls* ctrl = wells->ctrls[w];
 
-                if (well_controls_well_is_stopped(ctrl)) {
-                    // Shut well: perfphaserates_ are all zero.
-                } else {
-                    const int num_perf_this_well = wells->well_connpos[w + 1] - wells->well_connpos[w];
-                    // Open well: Initialize perfphaserates_ to well
-                    // rates divided by the number of perforations.
-                    for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
+                const int num_perf_this_well = wells->well_connpos[w + 1] - wells->well_connpos[w];
+                // Open well: Initialize perfphaserates_ to well
+                // rates divided by the number of perforations.
+                for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
+                    if (well_controls_well_is_open(ctrl)) {
                         for (int p = 0; p < np; ++p) {
                             perfphaserates_[np*perf + p] = wellRates()[np*w + p] / double(num_perf_this_well);
                         }
-                        perfPress()[perf] = cellPressures[wells->well_cells[perf]];
                     }
+                    perfPress()[perf] = cellPressures[wells->well_cells[perf]];
                 }
             }
 
