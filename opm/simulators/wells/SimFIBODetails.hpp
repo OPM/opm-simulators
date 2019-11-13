@@ -26,17 +26,17 @@
 #include <locale>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 
 #include <opm/core/well_controls.h>
 
 namespace Opm
 {
     namespace SimFIBODetails {
-        typedef std::unordered_map<std::string, Well2 > WellMap;
+        typedef std::unordered_map<std::string, Well > WellMap;
 
         inline WellMap
-        mapWells(const std::vector< Well2 >& wells)
+        mapWells(const std::vector< Well >& wells)
         {
             WellMap wmap;
 
@@ -88,7 +88,7 @@ namespace Opm
 
         inline void
         historyRates(const PhaseUsage&               pu,
-                     const Well2::ProductionControls& p,
+                     const Well::ProductionControls& p,
                      std::vector<double>&            rates)
         {
             assert (! p.prediction_mode);

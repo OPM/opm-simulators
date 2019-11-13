@@ -28,9 +28,9 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group2.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 
 using namespace Opm;
 
@@ -50,11 +50,11 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     WellCollection collection;
 
     // Add groups to WellCollection
-    const auto& fieldGroup =  sched.getGroup2("FIELD", 2);
+    const auto& fieldGroup =  sched.getGroup("FIELD", 2);
     collection.addField(fieldGroup, summaryState, pu);
 
-    collection.addGroup( sched.getGroup2( "G1", 2 ), fieldGroup.name(), summaryState, pu);
-    collection.addGroup( sched.getGroup2( "G2", 2 ), fieldGroup.name(), summaryState, pu);
+    collection.addGroup( sched.getGroup( "G1", 2 ), fieldGroup.name(), summaryState, pu);
+    collection.addGroup( sched.getGroup( "G2", 2 ), fieldGroup.name(), summaryState, pu);
 
     BOOST_CHECK_EQUAL("FIELD", collection.findNode("FIELD")->name());
     BOOST_CHECK_EQUAL("FIELD", collection.findNode("G1")->getParent()->name());
@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
 
     // Add wells to WellCollection
     WellCollection wellCollection;
-    const auto wells = sched.getWells2atEnd();
+    const auto wells = sched.getWellsatEnd();
     for (size_t i=0; i<wells.size(); i++) {
         collection.addWell(wells[i], summaryState, pu);
     }
@@ -89,17 +89,17 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     size_t timestep = 2;
     WellCollection collection;
     // Add groups to WellCollection
-    const auto& fieldGroup =  sched.getGroup2("FIELD", timestep);
+    const auto& fieldGroup =  sched.getGroup("FIELD", timestep);
     collection.addField( fieldGroup, summaryState, pu);
-    collection.addGroup( sched.getGroup2( "G1", timestep ), fieldGroup.name(), summaryState, pu);
-    collection.addGroup( sched.getGroup2( "G2", timestep ), fieldGroup.name(), summaryState, pu);
+    collection.addGroup( sched.getGroup( "G1", timestep ), fieldGroup.name(), summaryState, pu);
+    collection.addGroup( sched.getGroup( "G2", timestep ), fieldGroup.name(), summaryState, pu);
 
     BOOST_CHECK_EQUAL(1.0, collection.findNode("FIELD")->efficiencyFactor());
     BOOST_CHECK_EQUAL(1.0, collection.findNode("G1")->getParent()->efficiencyFactor());
     BOOST_CHECK_EQUAL(1.0, collection.findNode("G2")->getParent()->efficiencyFactor());
 
     // Add wells to WellCollection
-    const auto wells1 = sched.getWells2(timestep);
+    const auto wells1 = sched.getWells(timestep);
     for (size_t i=0; i<wells1.size(); i++) {
         collection.addWell(wells1[i], summaryState, pu);
     }

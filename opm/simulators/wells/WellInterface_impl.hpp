@@ -27,7 +27,7 @@ namespace Opm
 
     template<typename TypeTag>
     WellInterface<TypeTag>::
-    WellInterface(const Well2& well, const int time_step, const Wells* wells,
+    WellInterface(const Well& well, const int time_step, const Wells* wells,
                   const ModelParameters& param,
                   const RateConverterType& rate_converter,
                   const int pvtRegionIdx,
@@ -108,7 +108,7 @@ namespace Opm
         well_productivity_index_logger_counter_ = 0;
 
         wellIsStopped_ = false;
-        if (well.getStatus() == Well2::Status::STOP) {
+        if (well.getStatus() == Well::Status::STOP) {
             wellIsStopped_ = true;
         }
 
@@ -116,7 +116,7 @@ namespace Opm
 
         if (has_solvent && well.isInjector()) {
             auto injectorType = well_ecl_.injectorType();
-            if (injectorType == Well2::InjectorType::GAS) {
+            if (injectorType == Well::InjectorType::GAS) {
                 wsolvent_ = well_ecl_.getSolventFraction();
             }
         }
@@ -250,7 +250,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    const Well2&
+    const Well&
     WellInterface<TypeTag>::
     wellEcl() const
     {
@@ -343,7 +343,7 @@ namespace Opm
 
         auto injectorType = well_ecl_.injectorType();
 
-        if (injectorType == Well2::InjectorType::WATER) {
+        if (injectorType == Well::InjectorType::WATER) {
             WellPolymerProperties polymer = well_ecl_.getPolymerProperties();
             const double polymer_injection_concentration = polymer.m_polymerConcentration;
             return polymer_injection_concentration;
@@ -368,7 +368,7 @@ namespace Opm
 
         auto injectorType = well_ecl_.injectorType();
 
-        if (injectorType == Well2::InjectorType::GAS) {
+        if (injectorType == Well::InjectorType::GAS) {
             WellFoamProperties fprop = well_ecl_.getFoamProperties();
             return fprop.m_foamConcentration;
         } else {
@@ -386,13 +386,13 @@ namespace Opm
     {
         if (well_ecl_.isInjector()) {
             const auto controls = well_ecl_.injectionControls(summaryState);
-            if (controls.hasControl(Well2::InjectorCMode::THP))
+            if (controls.hasControl(Well::InjectorCMode::THP))
                 return true;
         }
 
         if (well_ecl_.isProducer( )) {
             const auto controls = well_ecl_.productionControls(summaryState);
-            if (controls.hasControl(Well2::ProducerCMode::THP))
+            if (controls.hasControl(Well::ProducerCMode::THP))
                 return true;
         }
 
@@ -457,9 +457,9 @@ namespace Opm
         const auto& well = well_ecl_;
         std::string from;
         if (well.isInjector()) {
-            from = Well2::InjectorCMode2String(well_state.currentInjectionControls()[index_of_well_]);
+            from = Well::InjectorCMode2String(well_state.currentInjectionControls()[index_of_well_]);
         } else {
-            from = Well2::ProducerCMode2String(well_state.currentProductionControls()[index_of_well_]);
+            from = Well::ProducerCMode2String(well_state.currentProductionControls()[index_of_well_]);
         }
 
         bool changed = checkConstraints(well_state, summaryState);
@@ -470,9 +470,9 @@ namespace Opm
         if (changed) {
             std::string to;
             if (well.isInjector()) {
-                to = Well2::InjectorCMode2String(well_state.currentInjectionControls()[index_of_well_]);
+                to = Well::InjectorCMode2String(well_state.currentInjectionControls()[index_of_well_]);
             } else {
-                to = Well2::ProducerCMode2String(well_state.currentProductionControls()[index_of_well_]);
+                to = Well::ProducerCMode2String(well_state.currentProductionControls()[index_of_well_]);
             }
             std::ostringstream ss;
             ss << "    Switching control mode for well " << name()
@@ -1381,35 +1381,35 @@ namespace Opm
 
         if (well.isInjector()) {
             const auto controls = well.injectionControls(summaryState);
-            Opm::Well2::InjectorCMode& currentControl = well_state.currentInjectionControls()[well_index];
+            Opm::Well::InjectorCMode& currentControl = well_state.currentInjectionControls()[well_index];
 
-            if (controls.hasControl(Well2::InjectorCMode::BHP) && currentControl != Well2::InjectorCMode::BHP)
+            if (controls.hasControl(Well::InjectorCMode::BHP) && currentControl != Well::InjectorCMode::BHP)
             {
                 const auto& bhp = controls.bhp_limit;
                 double current_bhp = well_state.bhp()[well_index];
                 if (bhp < current_bhp) {
-                    currentControl = Well2::InjectorCMode::BHP;
+                    currentControl = Well::InjectorCMode::BHP;
                     return true;
                 }
             }
 
-            if (controls.hasControl(Well2::InjectorCMode::RATE) && currentControl != Well2::InjectorCMode::RATE)
+            if (controls.hasControl(Well::InjectorCMode::RATE) && currentControl != Well::InjectorCMode::RATE)
             {
-                Well2::InjectorType injectorType = controls.injector_type;
+                Well::InjectorType injectorType = controls.injector_type;
                 double current_rate = 0.0;
 
                 switch (injectorType) {
-                case Well2::InjectorType::WATER:
+                case Well::InjectorType::WATER:
                 {
                     current_rate = well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
                     break;
                 }
-                case Well2::InjectorType::OIL:
+                case Well::InjectorType::OIL:
                 {
                     current_rate = well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ];
                     break;
                 }
-                case Well2::InjectorType::GAS:
+                case Well::InjectorType::GAS:
                 {
                     current_rate = well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ];
                     break;
@@ -1419,13 +1419,13 @@ namespace Opm
                 }
 
                 if (controls.surface_rate < current_rate) {
-                    currentControl = Well2::InjectorCMode::RATE;
+                    currentControl = Well::InjectorCMode::RATE;
                     return true;
                 }
 
             }
 
-            if (controls.hasControl(Well2::InjectorCMode::RESV) && currentControl != Well2::InjectorCMode::RESV)
+            if (controls.hasControl(Well::InjectorCMode::RESV) && currentControl != Well::InjectorCMode::RESV)
             {
                 double current_rate = 0.0;
                 if( pu.phase_used[BlackoilPhases::Aqua] )
@@ -1438,17 +1438,17 @@ namespace Opm
                     current_rate += well_state.wellReservoirRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ];
 
                 if (controls.reservoir_rate < current_rate) {
-                    currentControl = Well2::InjectorCMode::RESV;
+                    currentControl = Well::InjectorCMode::RESV;
                     return true;
                 }
             }
 
-            if (controls.hasControl(Well2::InjectorCMode::THP) && currentControl != Well2::InjectorCMode::THP)
+            if (controls.hasControl(Well::InjectorCMode::THP) && currentControl != Well::InjectorCMode::THP)
             {
                 const auto& thp = controls.thp_limit;
                 double current_thp = well_state.thp()[well_index];
                 if (thp < current_thp) {
-                    currentControl = Well2::InjectorCMode::THP;
+                    currentControl = Well::InjectorCMode::THP;
                     return true;
                 }
             }
@@ -1457,52 +1457,52 @@ namespace Opm
 
         if (well.isProducer( )) {
             const auto controls = well.productionControls(summaryState);
-            Well2::ProducerCMode& currentControl = well_state.currentProductionControls()[well_index];
+            Well::ProducerCMode& currentControl = well_state.currentProductionControls()[well_index];
 
-            if (controls.hasControl(Well2::ProducerCMode::BHP) && currentControl != Well2::ProducerCMode::BHP )
+            if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP )
             {
                 const double bhp = controls.bhp_limit;
                 double current_bhp = well_state.bhp()[well_index];
                 if (bhp > current_bhp) {
-                    currentControl = Well2::ProducerCMode::BHP;
+                    currentControl = Well::ProducerCMode::BHP;
                     return true;
                 }
             }
 
-            if (controls.hasControl(Well2::ProducerCMode::ORAT) && currentControl != Well2::ProducerCMode::ORAT) {
+            if (controls.hasControl(Well::ProducerCMode::ORAT) && currentControl != Well::ProducerCMode::ORAT) {
                 double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ];
                 if (controls.oil_rate < current_rate  ) {
-                    currentControl = Well2::ProducerCMode::ORAT;
+                    currentControl = Well::ProducerCMode::ORAT;
                     return true;
                 }
             }
 
-            if (controls.hasControl(Well2::ProducerCMode::WRAT) && currentControl != Well2::ProducerCMode::WRAT ) {
+            if (controls.hasControl(Well::ProducerCMode::WRAT) && currentControl != Well::ProducerCMode::WRAT ) {
                 double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
                 if (controls.water_rate < current_rate  ) {
-                    currentControl = Well2::ProducerCMode::WRAT;
+                    currentControl = Well::ProducerCMode::WRAT;
                     return true;
                 }
             }
 
-            if (controls.hasControl(Well2::ProducerCMode::GRAT) && currentControl != Well2::ProducerCMode::GRAT ) {
+            if (controls.hasControl(Well::ProducerCMode::GRAT) && currentControl != Well::ProducerCMode::GRAT ) {
                 double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ];
                 if (controls.gas_rate < current_rate  ) {
-                    currentControl = Well2::ProducerCMode::GRAT;
+                    currentControl = Well::ProducerCMode::GRAT;
                     return true;
                 }
             }
 
-            if (controls.hasControl(Well2::ProducerCMode::LRAT) && currentControl != Well2::ProducerCMode::LRAT) {
+            if (controls.hasControl(Well::ProducerCMode::LRAT) && currentControl != Well::ProducerCMode::LRAT) {
                 double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ];
                 current_rate -= well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
                 if (controls.liquid_rate < current_rate  ) {
-                    currentControl = Well2::ProducerCMode::LRAT;
+                    currentControl = Well::ProducerCMode::LRAT;
                     return true;
                 }
             }
 
-            if (controls.hasControl(Well2::ProducerCMode::RESV) && currentControl != Well2::ProducerCMode::RESV ) {
+            if (controls.hasControl(Well::ProducerCMode::RESV) && currentControl != Well::ProducerCMode::RESV ) {
                 double current_rate = 0.0;
                 if( pu.phase_used[BlackoilPhases::Aqua] )
                     current_rate -= well_state.wellReservoirRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
@@ -1514,7 +1514,7 @@ namespace Opm
                     current_rate -= well_state.wellReservoirRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ];
 
                 if (controls.prediction_mode && controls.resv_rate > current_rate) {
-                    currentControl = Well2::ProducerCMode::RESV;
+                    currentControl = Well::ProducerCMode::RESV;
                     return true;
                 }
 
@@ -1539,18 +1539,18 @@ namespace Opm
                     }
 
                     if (resv_rate < current_rate) {
-                        currentControl = Well2::ProducerCMode::RESV;
+                        currentControl = Well::ProducerCMode::RESV;
                         return true;
                     }
                 }
             }
 
-            if (controls.hasControl(Well2::ProducerCMode::THP) && currentControl != Well2::ProducerCMode::THP)
+            if (controls.hasControl(Well::ProducerCMode::THP) && currentControl != Well::ProducerCMode::THP)
             {
                 const auto& thp = controls.thp_limit;
                 double current_thp =  well_state.thp()[well_index];
                 if (thp > current_thp) {
-                    currentControl = Well2::ProducerCMode::THP;
+                    currentControl = Well::ProducerCMode::THP;
                     return true;
                 }
             }

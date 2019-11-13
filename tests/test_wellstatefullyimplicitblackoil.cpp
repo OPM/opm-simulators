@@ -75,18 +75,18 @@ namespace {
         const Opm::WellsManager wmgr{setup.es, setup.sched, setup.st, timeStep, *setup.grid.c_grid()};
 
         state.init(wmgr.c_wells(), cpress, setup.sched,
-                   setup.sched.getWells2(timeStep),
+                   setup.sched.getWells(timeStep),
                    timeStep, nullptr, setup.pu);
 
         state.initWellStateMSWell(wmgr.c_wells(),
-                                  setup.sched.getWells2(timeStep),
+                                  setup.sched.getWells(timeStep),
                                   setup.pu, nullptr);
 
         return state;
     }
 
 
-    void setSegPress(const std::vector<Opm::Well2>& wells,
+    void setSegPress(const std::vector<Opm::Well>& wells,
                      Opm::WellStateFullyImplicitBlackoil& wstate)
     {
         const auto nWell = wells.size();
@@ -118,7 +118,7 @@ namespace {
     }
 
 
-  void setSegRates(const std::vector<Opm::Well2>& wells,
+  void setSegRates(const std::vector<Opm::Well>& wells,
                      const Opm::PhaseUsage&               pu,
                      Opm::WellStateFullyImplicitBlackoil& wstate)
     {
@@ -180,7 +180,7 @@ BOOST_AUTO_TEST_CASE(Linearisation)
 
     BOOST_CHECK_EQUAL(wstate.numSegment(), 6 + 1);
 
-    const auto& wells = setup.sched.getWells2atEnd();
+    const auto& wells = setup.sched.getWellsatEnd();
     BOOST_CHECK_EQUAL(wells.size(), 2);
 
     const auto prod01_first = wells[0].name() == "PROD01";
@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE(Pressure)
 
     auto wstate = buildWellState(setup, tstep);
 
-    const auto& wells = setup.sched.getWells2(tstep);
+    const auto& wells = setup.sched.getWells(tstep);
     const auto prod01_first = wells[0].name() == "PROD01";
 
     setSegPress(wells, wstate);
@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE(Rates)
 
     auto wstate = buildWellState(setup, tstep);
 
-    const auto wells = setup.sched.getWells2(tstep);
+    const auto wells = setup.sched.getWells(tstep);
     const auto prod01_first = wells[0].name() == "PROD01";
 
     const auto& pu = setup.pu;

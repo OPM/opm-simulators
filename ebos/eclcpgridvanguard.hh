@@ -190,7 +190,7 @@ public:
 
             //distribute the grid and switch to the distributed view.
             {
-                const auto wells = this->schedule().getWells2atEnd();
+                const auto wells = this->schedule().getWellsatEnd();
                 defunctWellNames_ = std::get<1>(grid_->loadBalance(edgeWeightsMethod, &wells, faceTrans.data()));
             }
             grid_->switchToDistributedView();

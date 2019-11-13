@@ -28,7 +28,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 
@@ -118,7 +118,7 @@ namespace Opm
                                                    compositionSwitchEnabled,
                                                    Indices::numPhases >;
         /// Constructor
-        WellInterface(const Well2& well, const int time_step, const Wells* wells,
+        WellInterface(const Well& well, const int time_step, const Wells* wells,
                       const ModelParameters& param,
                       const RateConverterType& rate_converter,
                       const int pvtRegionIdx,
@@ -237,7 +237,7 @@ namespace Opm
 
         void closeCompletions(WellTestState& wellTestState);
 
-        const Well2& wellEcl() const;
+        const Well& wellEcl() const;
 
         // TODO: theoretically, it should be a const function
         // Simulator is not const is because that assembleWellEq is non-const Simulator
@@ -282,7 +282,7 @@ namespace Opm
         // to indicate a invalid completion
         static const int INVALIDCOMPLETION = INT_MAX;
 
-        const Well2 well_ecl_;
+        const Well well_ecl_;
 
         const int current_step_;
 

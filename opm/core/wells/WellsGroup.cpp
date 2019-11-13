@@ -1556,14 +1556,14 @@ namespace Opm
         }
     } // anonymous namespace
 
-    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group2& group, const SummaryState& st, const PhaseUsage& phase_usage )
+    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group& group, const SummaryState& st, const PhaseUsage& phase_usage )
     {
         InjectionSpecification injection_specification;
         ProductionSpecification production_specification;
         if (group.isInjectionGroup()) {
             const auto& injection = group.injectionControls(st);
             injection_specification.injector_type_ = toInjectorType(injection.phase);
-            injection_specification.control_mode_ = toInjectionControlMode(Group2::InjectionCMode2String(injection.cmode));
+            injection_specification.control_mode_ = toInjectionControlMode(Group::InjectionCMode2String(injection.cmode));
             injection_specification.surface_flow_max_rate_ = injection.surface_max_rate;
             injection_specification.reservoir_flow_max_rate_ = injection.resv_max_rate;
             injection_specification.reinjection_fraction_target_ = injection.target_reinj_fraction;
@@ -1573,11 +1573,11 @@ namespace Opm
         if (group.isProductionGroup()) {
             const auto& production = group.productionControls(st);
             production_specification.oil_max_rate_ = production.oil_target;
-            production_specification.control_mode_ = toProductionControlMode(Group2::ProductionCMode2String(production.cmode));
+            production_specification.control_mode_ = toProductionControlMode(Group::ProductionCMode2String(production.cmode));
             production_specification.water_max_rate_ = production.water_target;
             production_specification.gas_max_rate_ = production.gas_target;
             production_specification.liquid_max_rate_ = production.liquid_target;
-            production_specification.procedure_ = toProductionProcedure(Group2::ExceedAction2String(production.exceed_action));
+            production_specification.procedure_ = toProductionProcedure(Group::ExceedAction2String(production.exceed_action));
             production_specification.reservoir_flow_max_rate_ = production.resv_target;
         }
 
@@ -1596,19 +1596,19 @@ namespace Opm
       'CMODE_UNDEFINED' - we do not carry that over the specification
       objects here.
      */
-    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(const Well2& well, const SummaryState& summaryState, const PhaseUsage& phase_usage )
+    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(const Well& well, const SummaryState& summaryState, const PhaseUsage& phase_usage )
     {
         InjectionSpecification injection_specification;
         ProductionSpecification production_specification;
         if (well.isInjector()) {
             const auto controls = well.injectionControls(summaryState);
             injection_specification.BHP_limit_ = controls.bhp_limit;
-            injection_specification.injector_type_ = toInjectorType(Well2::InjectorType2String(controls.injector_type));
+            injection_specification.injector_type_ = toInjectorType(Well::InjectorType2String(controls.injector_type));
             injection_specification.surface_flow_max_rate_ = controls.surface_rate;
             injection_specification.reservoir_flow_max_rate_ = controls.reservoir_rate;
             production_specification.guide_rate_ = 0.0; // We know we're not a producer
-            if (controls.cmode != Well2::InjectorCMode::CMODE_UNDEFINED) {
-                injection_specification.control_mode_ = toInjectionControlMode(Well2::InjectorCMode2String(controls.cmode));
+            if (controls.cmode != Well::InjectorCMode::CMODE_UNDEFINED) {
+                injection_specification.control_mode_ = toInjectionControlMode(Well::InjectorCMode2String(controls.cmode));
             }
         }
         else if (well.isProducer()) {
@@ -1618,8 +1618,8 @@ namespace Opm
             production_specification.oil_max_rate_ = controls.oil_rate;
             production_specification.water_max_rate_ = controls.water_rate;
             injection_specification.guide_rate_ = 0.0; // we know we're not an injector
-            if (controls.cmode != Well2::ProducerCMode::CMODE_UNDEFINED) {
-                production_specification.control_mode_ = toProductionControlMode(Well2::ProducerCMode2String(controls.cmode));
+            if (controls.cmode != Well::ProducerCMode::CMODE_UNDEFINED) {
+                production_specification.control_mode_ = toProductionControlMode(Well::ProducerCMode2String(controls.cmode));
             }
         }
         // Efficiency factor given specified with WEFAC
