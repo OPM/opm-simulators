@@ -202,16 +202,12 @@ namespace Opm
     std::vector<Eval> rhow_;
     std::vector<Scalar> alphai_;
 
-    // TODO: Fetkovich does not use mu_w_, it should be moved to CT class
-    Scalar mu_w_; //water viscosity
     Scalar Tc_; // Time constant
     Scalar pa0_; // initial aquifer pressure
 
     Eval W_flux_;
 
     virtual void initializeConnections(const Aquancon::AquanconOutput& connection) =0;
-
-    // virtual Scalar dpai(int idx) = 0;
 
     virtual void calculateInflowRate(int idx, const Simulator& simulator) = 0;
 

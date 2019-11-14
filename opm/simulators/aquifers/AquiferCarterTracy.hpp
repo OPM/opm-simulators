@@ -63,6 +63,8 @@ namespace Opm
             // Variables constants
             const AquiferCT::AQUCT_data aquct_data_;
             Scalar beta_; // Influx constant
+            // TODO: it is possible it should be a AD variable
+            Scalar mu_w_; // water viscosity
 
             // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer
             inline void initializeConnections(const Aquancon::AquanconOutput& connection)
@@ -184,7 +186,7 @@ namespace Opm
                         * aquct_data_.C_t
                         * aquct_data_.r_o * aquct_data_.r_o;
                 // We calculate the time constant
-                Base::Tc_ = Base::mu_w_ * aquct_data_.phi_aq
+                Base::Tc_ = mu_w_ * aquct_data_.phi_aq
                       * aquct_data_.C_t
                       * aquct_data_.r_o * aquct_data_.r_o
                       / ( aquct_data_.k_a * aquct_data_.c1 );
@@ -220,11 +222,12 @@ namespace Opm
                 temperature_aq = fs_aquifer.temperature(0);
                 pa0_mean = Base::pa0_;
                 Eval mu_w_aquifer = FluidSystem::waterPvt().viscosity(pvttableIdx, temperature_aq, pa0_mean);
-                Base::mu_w_ = mu_w_aquifer.value();
+                mu_w_ = mu_w_aquifer.value();
 
             }
 
             // This function is for calculating the aquifer properties from equilibrium state with the reservoir
+            // TODO: this function can be moved to the Inteface class, since it is the same for both Aquifer models
             inline Scalar calculateReservoirEquilibrium()
             {
                 // Since the global_indices are the reservoir index, we just need to extract the fluidstate at those indices

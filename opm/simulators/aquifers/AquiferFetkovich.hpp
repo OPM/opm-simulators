@@ -149,7 +149,7 @@ namespace Opm
     inline Eval dpai(int idx)
     {
       const Eval dp = aquifer_pressure_ - Base::pressure_current_.at(idx)
-                      + Base::rhow_.at(idx) * Base::gravity_()*(Base::cell_depth_.at(idx) - aqufetp_data_.d0);
+                      + Base::rhow_[idx] * Base::gravity_()*(Base::cell_depth_[idx] - aqufetp_data_.d0);
       return dp;
     }
 
@@ -175,7 +175,6 @@ namespace Opm
 
     inline void calculateAquiferCondition()
     {
-      const int pvttableIdx = aqufetp_data_.pvttableID - 1;
       Base::rhow_.resize(Base::cell_idx_.size(),0.);
       if (!aqufetp_data_.p0)
       {
