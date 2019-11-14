@@ -196,6 +196,15 @@ public:
             grid_->switchToDistributedView();
 
             cartesianIndexMapper_.reset();
+
+            if ( ! equilGrid_ )
+            {
+                // for processes that do not hold the global grid we filter here using the local grid.
+                // If we would filter in filterConnection_ our partition would be empty and the connections of all
+                // wells would be removed.
+                const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(grid(), this->eclState().getInputGrid());
+                this->schedule().filterConnections(eclipseGrid);
+            }
         }
 #endif
 
@@ -275,16 +284,13 @@ protected:
     // removing some connection located in inactive grid cells
     void filterConnections_()
     {
+        // We only filter if we hold the global grid. Otherwise the filtering
+        // is done after load balancing as in the future the other processes
+        // will hold an empty partition for the global grid and hence filtering
+        // here would remove all well connections.
         if (equilGrid_)
         {
             const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(equilGrid(), this->eclState().getInputGrid());
-            this->schedule().filterConnections(eclipseGrid);
-        }
-        else
-        {
-            // for the other processes we filter using the local grid since there
-            // are models with connections specified to inactive cells
-            const auto eclipseGrid = Opm::UgGridHelpers::createEclipseGrid(grid(), this->eclState().getInputGrid());
             this->schedule().filterConnections(eclipseGrid);
         }
     }
