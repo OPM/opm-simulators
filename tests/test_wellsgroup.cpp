@@ -34,9 +34,9 @@
 #include <opm/core/wells/WellsGroup.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group2.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 using namespace Opm;
@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
     SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
-   auto wells = sched.getWells2atEnd();
+   auto wells = sched.getWellsatEnd();
 
     for (size_t i=0; i<wells.size(); i++) {
         const auto& well = wells[i];
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
     Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
 
     for( const auto& grp_name : sched.groupNames() ) {
-        const auto& group = sched.getGroup2(grp_name, 2);
+        const auto& group = sched.getGroup(grp_name, 2);
 
         std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, summaryState, pu);
         BOOST_CHECK_EQUAL(group.name(), wellsGroup->name());
@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
     Opm::SummaryState summaryState(std::chrono::system_clock::from_time_t(sched.getStartTime()));
 
     for( const auto& grp_name : sched.groupNames() ) {
-        const auto& group = sched.getGroup2(grp_name, 2);
+        const auto& group = sched.getGroup(grp_name, 2);
 
         std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, summaryState, pu);
         BOOST_CHECK_EQUAL(group.name(), wellsGroup->name());

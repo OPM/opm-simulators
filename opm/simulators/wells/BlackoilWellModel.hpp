@@ -234,7 +234,7 @@ namespace Opm {
         protected:
             Simulator& ebosSimulator_;
             std::unique_ptr<WellsManager> wells_manager_;
-            std::vector< Well2 > wells_ecl_;
+            std::vector< Well > wells_ecl_;
 
             bool wells_active_;
 
@@ -375,19 +375,19 @@ namespace Opm {
             // whether there exists any multisegment well open on this process
             bool anyMSWellOpenLocal(const Wells* wells) const;
 
-            const Well2& getWellEcl(const std::string& well_name) const;
+            const Well& getWellEcl(const std::string& well_name) const;
 
-            void checkGroupConstraints(const Group2& group, Opm::DeferredLogger& deferred_logger);
+            void checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger);
 
-            void actionOnBrokenConstraints(const Group2& group, const Group2::ExceedAction& exceed_action, const Group2::ProductionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
+            void actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
 
-            void actionOnBrokenConstraints(const Group2& group, const Group2::InjectionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
+            void actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
 
             WellInterfacePtr getWell(const std::string& well_name) const;
 
-            void updateWsolvent(const Group2& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState);
+            void updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState);
 
-            void setWsolvent(const Group2& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
+            void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
 
 
 

@@ -26,8 +26,8 @@
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group2.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 
 namespace Opm
 {
@@ -36,11 +36,11 @@ namespace Opm
     {
     public:
 
-        void addField(const Group2& fieldGroup, const SummaryState& summaryState, const PhaseUsage& phaseUsage);
+        void addField(const Group& fieldGroup, const SummaryState& summaryState, const PhaseUsage& phaseUsage);
 
-        void addWell(const Well2& wellChild, const SummaryState& summaryState, const PhaseUsage& phaseUsage);
+        void addWell(const Well& wellChild, const SummaryState& summaryState, const PhaseUsage& phaseUsage);
 
-        void addGroup(const Group2& groupChild, std::string parent_name,
+        void addGroup(const Group& groupChild, std::string parent_name,
                       const SummaryState& summaryState, const PhaseUsage& phaseUsage);
 
         /// Adds the child to the collection

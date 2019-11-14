@@ -98,7 +98,7 @@ namespace Opm
         // TODO: for now, we only use one type to save some implementation efforts, while improve later.
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
 
-        MultisegmentWell(const Well2& well, const int time_step, const Wells* wells,
+        MultisegmentWell(const Well& well, const int time_step, const Wells* wells,
                          const ModelParameters& param,
                          const RateConverterType& rate_converter,
                          const int pvtRegionIdx,
@@ -323,7 +323,7 @@ namespace Opm
 
 
         template <class ValueType>
-        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const Well2& well, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger) const;
+        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const Well& well, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger) const;
 
         double calculateThpFromBhp(const std::vector<double>& rates, const double bhp, Opm::DeferredLogger& deferred_logger) const;
         void updateThp(WellState& well_state, Opm::DeferredLogger& deferred_logger) const;
@@ -352,8 +352,8 @@ namespace Opm
                                               Opm::DeferredLogger& deferred_logger);
 
         void assembleControlEq(const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger);
-        void assembleGroupProductionControl(const Group2& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
-        void assembleGroupInjectionControl(const Group2& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState,  const Well2::InjectorType& injectorType, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
+        void assembleGroupProductionControl(const Group& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
+        void assembleGroupInjectionControl(const Group& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState,  const Well::InjectorType& injectorType, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
 
 
         void assemblePressureEq(const int seg) const;

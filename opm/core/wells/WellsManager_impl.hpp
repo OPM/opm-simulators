@@ -34,7 +34,7 @@ namespace WellsManagerDetail
         Mode mode(const std::string& control);
 
 
-        Mode mode(Opm::Well2::ProducerCMode controlMode);
+        Mode mode(Opm::Well::ProducerCMode controlMode);
     } // namespace ProductionControl
 
 
@@ -50,7 +50,7 @@ namespace WellsManagerDetail
     */
         Mode mode(const std::string& control);
 
-        Mode mode(Opm::Well2::InjectorCMode controlMode);
+        Mode mode(Opm::Well::InjectorCMode controlMode);
 
     } // namespace InjectionControl
 
@@ -102,7 +102,7 @@ getCubeDim(const C2F& c2f,
 namespace Opm
 {
 template<class C2F, class FC, class NTG>
-void WellsManager::createWellsFromSpecs(const std::vector<Well2>& wells, size_t timeStep,
+void WellsManager::createWellsFromSpecs(const std::vector<Well>& wells, size_t timeStep,
                                         const C2F& /* c2f */,
                                         const int* cart_dims,
                                         FC /* begin_face_centroids */,
@@ -136,7 +136,7 @@ void WellsManager::createWellsFromSpecs(const std::vector<Well2>& wells, size_t 
     for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
         const auto& well = (*wellIter);
 
-        if (well.getStatus() == Well2::Status::SHUT) {
+        if (well.getStatus() == Well::Status::SHUT) {
             continue;
         }
 
@@ -327,7 +327,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
     // For easy lookup:
     std::map<std::string, int> well_names_to_index;
 
-    const auto wells = schedule.getWells2(timeStep);
+    const auto wells = schedule.getWells(timeStep);
     std::vector<int> wells_on_proc;
 
     well_names.reserve(wells.size());
@@ -371,16 +371,16 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
     setupWellControls(wells, summaryState, well_names, pu, wells_on_proc);
 
     {
-        const auto& fieldGroup = schedule.getGroup2( "FIELD", timeStep);
+        const auto& fieldGroup = schedule.getGroup( "FIELD", timeStep);
         well_collection_.addField(fieldGroup, summaryState, pu);
         std::vector< std::string > group_stack = { "FIELD" };
 
         do {
-            const auto& parent = schedule.getGroup2(group_stack.back(), timeStep);
+            const auto& parent = schedule.getGroup(group_stack.back(), timeStep);
             group_stack.pop_back();
             for (const auto& child: parent.groups()) {
                 group_stack.push_back(child);
-                well_collection_.addGroup( schedule.getGroup2( child, timeStep ), parent.name(), summaryState, pu );
+                well_collection_.addGroup( schedule.getGroup( child, timeStep ), parent.name(), summaryState, pu );
             }
 
         } while( !group_stack.empty() );

@@ -27,7 +27,7 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 
@@ -70,7 +70,7 @@ namespace Opm
         void init(const Wells* wells,
                   const std::vector<double>& cellPressures,
                   const Schedule& schedule,
-                  const std::vector<Well2>& wells_ecl,
+                  const std::vector<Well>& wells_ecl,
                   const int report_step,
                   const WellStateFullyImplicitBlackoil* prevState,
                   const PhaseUsage& pu)
@@ -303,7 +303,7 @@ namespace Opm
         }
 
 
-        void resize(const Wells* wells, const std::vector<Well2>& wells_ecl, const Schedule& schedule,
+        void resize(const Wells* wells, const std::vector<Well>& wells_ecl, const Schedule& schedule,
                     const bool handle_ms_well, const size_t numCells, const PhaseUsage& pu)
         {
             const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
@@ -319,13 +319,13 @@ namespace Opm
         const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
 
         /// One current control per injecting well.
-        std::vector<Opm::Well2::InjectorCMode>& currentInjectionControls() { return current_injection_controls_; }
-        const std::vector<Opm::Well2::InjectorCMode>& currentInjectionControls() const { return current_injection_controls_; }
+        std::vector<Opm::Well::InjectorCMode>& currentInjectionControls() { return current_injection_controls_; }
+        const std::vector<Opm::Well::InjectorCMode>& currentInjectionControls() const { return current_injection_controls_; }
 
 
         /// One current control per producing well.
-        std::vector<Well2::ProducerCMode>& currentProductionControls() { return current_production_controls_; }
-        const std::vector<Well2::ProducerCMode>& currentProductionControls() const { return current_production_controls_; }
+        std::vector<Well::ProducerCMode>& currentProductionControls() { return current_production_controls_; }
+        const std::vector<Well::ProducerCMode>& currentProductionControls() const { return current_production_controls_; }
 
         bool hasProductionGroupControl(const std::string& groupName) {
             return current_production_group_controls_.count(groupName) > 0;
@@ -336,10 +336,10 @@ namespace Opm
         }
 
         /// One current control per group.
-        void setCurrentProductionGroupControl(const std::string& groupName, const Group2::ProductionCMode& groupControl ) {
+        void setCurrentProductionGroupControl(const std::string& groupName, const Group::ProductionCMode& groupControl ) {
             current_production_group_controls_[groupName] = groupControl;
         }
-        const Group2::ProductionCMode& currentProductionGroupControl(const std::string& groupName) const {
+        const Group::ProductionCMode& currentProductionGroupControl(const std::string& groupName) const {
             auto it = current_production_group_controls_.find(groupName);
 
             if (it == current_production_group_controls_.end())
@@ -349,10 +349,10 @@ namespace Opm
         }
 
         /// One current control per group.
-        void setCurrentInjectionGroupControl(const std::string& groupName, const Group2::InjectionCMode& groupControl ) {
+        void setCurrentInjectionGroupControl(const std::string& groupName, const Group::InjectionCMode& groupControl ) {
             current_injection_group_controls_[groupName] = groupControl;
         }
-        const Group2::InjectionCMode& currentInjectionGroupControl(const std::string& groupName) const {
+        const Group::InjectionCMode& currentInjectionGroupControl(const std::string& groupName) const {
             auto it = current_injection_group_controls_.find(groupName);
 
             if (it == current_injection_group_controls_.end())
@@ -520,7 +520,7 @@ namespace Opm
 
 
         /// init the MS well related.
-        void initWellStateMSWell(const Wells* wells, const std::vector<Well2>& wells_ecl,
+        void initWellStateMSWell(const Wells* wells, const std::vector<Well>& wells_ecl,
                                  const PhaseUsage& pu, const WellStateFullyImplicitBlackoil* prev_well_state)
         {
             // still using the order in wells
@@ -837,10 +837,10 @@ namespace Opm
 
     private:
         std::vector<double> perfphaserates_;
-        std::vector<Opm::Well2::InjectorCMode> current_injection_controls_;
-        std::vector<Well2::ProducerCMode> current_production_controls_;
-        std::map<std::string, Group2::ProductionCMode> current_production_group_controls_;
-        std::map<std::string, Group2::InjectionCMode> current_injection_group_controls_;
+        std::vector<Opm::Well::InjectorCMode> current_injection_controls_;
+        std::vector<Well::ProducerCMode> current_production_controls_;
+        std::map<std::string, Group::ProductionCMode> current_production_group_controls_;
+        std::map<std::string, Group::InjectionCMode> current_injection_group_controls_;
 
         std::map<std::string, std::vector<double>> production_group_reduction_rates;
         std::map<std::string, std::vector<double>> injection_group_reduction_rates;

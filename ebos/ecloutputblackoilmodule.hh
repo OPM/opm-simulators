@@ -257,7 +257,7 @@ public:
         if (!substep) {
             const auto& schedule = simulator_.vanguard().schedule();
             const auto& rft_config = schedule.rftConfig();
-            for (const auto& well: schedule.getWells2(reportStepNum)) {
+            for (const auto& well: schedule.getWells(reportStepNum)) {
 
                 // don't bother with wells not on this process
                 const auto& defunctWellNames = simulator_.vanguard().defunctWellNames();
@@ -811,7 +811,7 @@ public:
     {
         const auto& schedule = simulator_.vanguard().schedule();
         const auto& rft_config = schedule.rftConfig();
-        for (const auto& well: schedule.getWells2(reportStepNum)) {
+        for (const auto& well: schedule.getWells(reportStepNum)) {
 
             // don't bother with wells not on this process
             const auto& defunctWellNames = simulator_.vanguard().defunctWellNames();
@@ -1147,7 +1147,7 @@ public:
                                         continue;
                                 }
 
-                                const auto& well = schedule.getWell2(wname, reportStepNum);                     
+                                const auto& well = schedule.getWell(wname, reportStepNum);                     
                                         
                                 // Ignore injector wells  
                                 if (well.isInjector()){ 
@@ -1166,7 +1166,7 @@ public:
                                 };
                                 
                                 const auto& controls = well.productionControls(st);
-                                using CMode = ::Opm::Well2::ProducerCMode;
+                                using CMode = ::Opm::Well::ProducerCMode;
                                 
                                 auto fctl = [](const auto wmctl) -> std::string
                                 {
@@ -1247,7 +1247,7 @@ public:
                                         continue;
                                 }
 
-                                const auto& well = schedule.getWell2(wname, reportStepNum);                
+                                const auto& well = schedule.getWell(wname, reportStepNum);                
                                         
                                 // Ignore Producer wells  
                                 if (well.isProducer()){  
@@ -1267,8 +1267,8 @@ public:
                                 const auto& controls = well.injectionControls(st);
                                 const auto ctlMode = controls.cmode;
                                 const auto injType = controls.injector_type;                            
-                                using CMode = ::Opm::Well2::InjectorCMode;
-                                using WType = ::Opm::Well2::InjectorType;
+                                using CMode = ::Opm::Well::InjectorCMode;
+                                using WType = ::Opm::Well::InjectorType;
                                 
                                 auto ftype = [](const auto wtype) -> std::string
                                 {
@@ -1376,7 +1376,7 @@ public:
                                         continue;
                                 }               
                 
-                                const auto& well = schedule.getWell2(wname, reportStepNum);
+                                const auto& well = schedule.getWell(wname, reportStepNum);
 
                                 tmp_names[0] = wname; //WellCumDataType::WellName                               
 
@@ -1393,8 +1393,8 @@ public:
                                         const auto& controls = well.injectionControls(st);
                                         const auto ctlMode = controls.cmode;
                                         const auto injType = controls.injector_type;                            
-                                        using CMode = ::Opm::Well2::InjectorCMode;
-                                        using WType = ::Opm::Well2::InjectorType;
+                                        using CMode = ::Opm::Well::InjectorCMode;
+                                        using WType = ::Opm::Well::InjectorType;
                                         
                                         auto ftype = [](const auto wtype) -> std::string
                                         {
@@ -1443,7 +1443,7 @@ public:
                                 else if (well.isProducer()) {
                                         
                                         const auto& controls = well.productionControls(st);
-                                        using CMode = ::Opm::Well2::ProducerCMode;
+                                        using CMode = ::Opm::Well::ProducerCMode;
                                         
                                         auto fctl = [](const auto wmctl) -> std::string
                                         {

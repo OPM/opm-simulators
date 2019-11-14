@@ -60,7 +60,7 @@ public:
           cartesianToCompressed[ *cell ] = cell - begin;
         }
 
-        const auto& schedule_wells = schedule.getWells2atEnd();
+        const auto& schedule_wells = schedule.getWellsatEnd();
         wells_.reserve(schedule_wells.size());
 
         // initialize the additional cell connections introduced by wells.

@@ -20,8 +20,8 @@
 #include "config.h"
 #include <opm/core/wells/WellCollection.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well2.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group2.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 
 #include <boost/lexical_cast.hpp>
@@ -30,7 +30,7 @@
 
 namespace Opm
 {
-    void WellCollection::addField(const Group2& fieldGroup, const SummaryState& summaryState, const PhaseUsage& phaseUsage) {
+    void WellCollection::addField(const Group& fieldGroup, const SummaryState& summaryState, const PhaseUsage& phaseUsage) {
         WellsGroupInterface* fieldNode = findNode(fieldGroup.name());
         if (fieldNode) {
             OPM_THROW(std::runtime_error, "Trying to add FIELD node, but this already exists. Can only have one FIELD node.");
@@ -39,7 +39,7 @@ namespace Opm
         roots_.push_back(createGroupWellsGroup(fieldGroup, summaryState, phaseUsage));
     }
 
-    void WellCollection::addGroup(const Group2& groupChild, std::string parent_name,
+    void WellCollection::addGroup(const Group& groupChild, std::string parent_name,
                                   const SummaryState& summaryState, const PhaseUsage& phaseUsage) {
         WellsGroupInterface* parent = findNode(parent_name);
         if (!parent) {
@@ -68,8 +68,8 @@ namespace Opm
         child->setParent(parent);
     }
 
-    void WellCollection::addWell(const Well2& wellChild, const SummaryState& summaryState, const PhaseUsage& phaseUsage) {
-        if (wellChild.getStatus() == Well2::Status::SHUT) {
+    void WellCollection::addWell(const Well& wellChild, const SummaryState& summaryState, const PhaseUsage& phaseUsage) {
+        if (wellChild.getStatus() == Well::Status::SHUT) {
             //SHUT wells are not added to the well collection
             return;
         }

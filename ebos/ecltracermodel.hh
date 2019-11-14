@@ -482,10 +482,10 @@ protected:
 
         // Wells
         const int episodeIdx = simulator_.episodeIndex();
-        const auto& wells = simulator_.vanguard().schedule().getWells2(episodeIdx);
+        const auto& wells = simulator_.vanguard().schedule().getWells(episodeIdx);
         for (const auto& well : wells) {
 
-            if (well.getStatus() == Opm::Well2::Status::SHUT)
+            if (well.getStatus() == Opm::Well::Status::SHUT)
                 continue;
 
             const double wtracer = well.getTracerProperties().getConcentration(tracerNames_[tracerIdx]);
