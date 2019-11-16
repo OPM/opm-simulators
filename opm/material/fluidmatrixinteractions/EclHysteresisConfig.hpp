@@ -121,7 +121,7 @@ public:
             return;
 
         const auto& satoptsItem = deck.getKeyword("SATOPTS").getRecord(0).getItem(0);
-        for (unsigned i = 0; i < satoptsItem.size(); ++i) {
+        for (unsigned i = 0; i < satoptsItem.data_size(); ++i) {
             std::string satoptsValue = satoptsItem.get< std::string >(0);
             std::transform(satoptsValue.begin(),
                            satoptsValue.end(),
