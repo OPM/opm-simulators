@@ -104,6 +104,7 @@ namespace MissingFeatures {
             "AQANTRC",
             "AQUCON",
             "AQUCWFAC",
+            "AQUFET",
             "AQUFLUX",
             "AQUNNC",
             "AQUNUM",
