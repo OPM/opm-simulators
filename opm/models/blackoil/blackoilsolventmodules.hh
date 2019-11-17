@@ -294,16 +294,18 @@ public:
 
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
                     const auto& tlmixparRecord = deck.getKeyword("TLMIXPAR").getRecord(regionIdx);
-                    const auto& mixParamsViscosity = tlmixparRecord.getItem("TL_VISCOSITY_PARAMETER").getSIDoubleData();
-                    tlMixParamViscosity_[regionIdx] = mixParamsViscosity[0];
-                    const auto& mixParamsDensity = tlmixparRecord.getItem("TL_DENSITY_PARAMETER").getSIDoubleData();
-                    const int numDensityItems = mixParamsDensity.size();
-                    if (numDensityItems == 0)
-                        tlMixParamDensity_[regionIdx] = tlMixParamViscosity_[regionIdx];
-                    else if (numDensityItems == 1)
-                        tlMixParamDensity_[regionIdx] = mixParamsDensity[0];
+                    const auto& mixParamsViscosityItem  = tlmixparRecord.getItem("TL_VISCOSITY_PARAMETER");
+                    const auto& mixParamsDensityItem    = tlmixparRecord.getItem("TL_DENSITY_PARAMETER");
+
+                    if (mixParamsViscosityItem.hasValue(0))
+                        tlMixParamViscosity_[regionIdx] = mixParamsViscosityItem.getSIDouble(0);
                     else
-                        throw std::runtime_error("Only one value can be entered for the TL parameter pr MISC region.");
+                        throw std::invalid_argument("The TL_VISCOSITY parameter can not be defaulted");
+
+                    if (mixParamsDensityItem.hasValue(0))
+                        tlMixParamDensity_[regionIdx] = mixParamsDensityItem.getSIDouble(0);
+                    else
+                        tlMixParamDensity_[regionIdx] = tlMixParamViscosity_[regionIdx];
                 }
             }
             else
