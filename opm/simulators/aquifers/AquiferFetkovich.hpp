@@ -64,6 +64,7 @@ namespace Opm
 
   protected:
     // Aquifer Fetkovich Specific Variables
+    // TODO: using const reference here will cause segmentation fault, which is very strange
     const Aquifetp::AQUFETP_data aqufetp_data_;
     Scalar aquifer_pressure_; // aquifer
 
@@ -145,9 +146,10 @@ namespace Opm
       }
     }
 
-    inline Scalar dpai(int idx)
+    inline Eval dpai(int idx)
     {
-      Scalar dp = aquifer_pressure_ + Base::rhow_.at(idx).value()*Base::gravity_()*(Base::cell_depth_.at(idx) - aqufetp_data_.d0) - Base::pressure_current_.at(idx).value() ;
+      const Eval dp = aquifer_pressure_ - Base::pressure_current_.at(idx)
+                      + Base::rhow_[idx] * Base::gravity_()*(Base::cell_depth_[idx] - aqufetp_data_.d0);
       return dp;
     }
 
@@ -166,14 +168,13 @@ namespace Opm
     // This function implements Eq 5.14 of the EclipseTechnicalDescription
     inline void calculateInflowRate(int idx, const Simulator& simulator)
     {
-      Scalar td_Tc_ = simulator.timeStepSize() / Base::Tc_ ;
-      Scalar exp_ = (1 - exp(-td_Tc_)) / td_Tc_;
-      Base::Qai_.at(idx) = Base::alphai_.at(idx) * aqufetp_data_.J * dpai(idx) * exp_;
+      const Scalar td_Tc_ = simulator.timeStepSize() / Base::Tc_ ;
+      const Scalar coef = (1 - exp(-td_Tc_)) / td_Tc_;
+      Base::Qai_.at(idx) = Base::alphai_[idx] * aqufetp_data_.J * dpai(idx) * coef;
     }
 
     inline void calculateAquiferCondition()
     {
-      int pvttableIdx = aqufetp_data_.pvttableID - 1;
       Base::rhow_.resize(Base::cell_idx_.size(),0.);
       if (!aqufetp_data_.p0)
       {
@@ -184,24 +185,6 @@ namespace Opm
         Base::pa0_ = *(aqufetp_data_.p0);
       }
       aquifer_pressure_ = Base::pa0_ ;
-
-      // use the thermodynamic state of the first active cell as a
-      // reference. there might be better ways to do this...
-      ElementContext elemCtx(Base::ebos_simulator_);
-      auto elemIt = Base::ebos_simulator_.gridView().template begin</*codim=*/0>();
-      elemCtx.updatePrimaryStencil(*elemIt);
-      elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-      const auto& iq0 = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-      // Initialize a FluidState object first
-      FluidState fs_aquifer;
-      // We use the temperature of the first cell connected to the aquifer
-      // Here we copy the fluidstate of the first cell, so we do not accidentally mess up the reservoir fs
-      fs_aquifer.assign( iq0.fluidState() );
-      Eval temperature_aq, pa0_mean;
-      temperature_aq = fs_aquifer.temperature(0);
-      pa0_mean = Base::pa0_;
-      Eval mu_w_aquifer = FluidSystem::waterPvt().viscosity(pvttableIdx, temperature_aq, pa0_mean);
-      Base::mu_w_ = mu_w_aquifer.value();
     }
 
     inline Scalar calculateReservoirEquilibrium()
@@ -232,7 +215,8 @@ namespace Opm
       }
 
       // We take the average of the calculated equilibrium pressures.
-      Scalar aquifer_pres_avg = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), 0.)/pw_aquifer.size();
+      const Scalar sum_alpha = std::accumulate(this->alphai_.begin(), this->alphai_.end(), 0.);
+      const Scalar aquifer_pres_avg = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), 0.) / sum_alpha;
       return aquifer_pres_avg;
     }
   }; //Class AquiferFetkovich
