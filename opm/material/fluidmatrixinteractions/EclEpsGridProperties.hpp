@@ -65,9 +65,9 @@ class EclEpsGridProperties
 
 public:
 #if HAVE_ECL_INPUT
-    void initFromDeck(const Opm::Deck& /* deck */,
-                      const Opm::EclipseState& eclState,
-                      bool useImbibition)
+
+    EclEpsGridProperties(const Opm::EclipseState& eclState,
+                         bool useImbibition)
     {
         std::string kwPrefix = useImbibition?"I":"";
 
@@ -142,5 +142,6 @@ private:
     }
 #endif
 };
-#endif
 }
+#endif
+
