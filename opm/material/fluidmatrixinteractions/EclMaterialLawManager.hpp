@@ -525,43 +525,39 @@ private:
             oilWaterScaledImbPointsVector.resize(numCompressedElems);
         }
 
-        EclEpsGridProperties epsGridProperties(eclState, false);
+        EclEpsGridProperties epsGridProperties(eclState, false, compressedToCartesianElemIdx);
 
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
-            unsigned cartElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx[elemIdx]);
             readGasOilScaledPoints_(gasOilScaledInfoVector,
                                     gasOilScaledPointsVector,
                                     gasOilConfig,
                                     eclState,
                                     epsGridProperties,
-                                    elemIdx,
-                                    cartElemIdx);
+                                    elemIdx);
+
             readOilWaterScaledPoints_(oilWaterScaledEpsInfoDrainage_,
                                       oilWaterScaledEpsPointsDrainage,
                                       oilWaterConfig,
                                       eclState,
                                       epsGridProperties,
-                                      elemIdx,
-                                      cartElemIdx);
+                                      elemIdx);
 
             if (enableHysteresis()) {
-                EclEpsGridProperties epsImbGridProperties(eclState, true);
+                EclEpsGridProperties epsImbGridProperties(eclState, true, compressedToCartesianElemIdx);
 
                 readGasOilScaledPoints_(gasOilScaledImbInfoVector,
                                         gasOilScaledImbPointsVector,
                                         gasOilConfig,
                                         eclState,
                                         epsImbGridProperties,
-                                        elemIdx,
-                                        cartElemIdx);
+                                        elemIdx);
 
                 readOilWaterScaledPoints_(oilWaterScaledImbInfoVector,
                                           oilWaterScaledImbPointsVector,
                                           oilWaterConfig,
                                           eclState,
                                           epsImbGridProperties,
-                                          elemIdx,
-                                          cartElemIdx);
+                                          elemIdx);
             }
         }
 
@@ -969,13 +965,12 @@ private:
                                  std::shared_ptr<EclEpsConfig> config,
                                  const Opm::EclipseState& eclState,
                                  const EclEpsGridProperties& epsGridProperties,
-                                 unsigned elemIdx,
-                                 unsigned cartElemIdx)
+                                 unsigned elemIdx)
     {
-        unsigned satRegionIdx = epsGridProperties.satRegion( cartElemIdx );
+        unsigned satRegionIdx = epsGridProperties.satRegion( elemIdx );
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satRegionIdx]);
-        destInfo[elemIdx]->extractScaled(eclState, epsGridProperties, cartElemIdx);
+        destInfo[elemIdx]->extractScaled(eclState, epsGridProperties, elemIdx);
 
         destPoints[elemIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
         destPoints[elemIdx]->init(*destInfo[elemIdx], *config, EclGasOilSystem);
@@ -987,13 +982,12 @@ private:
                                    std::shared_ptr<EclEpsConfig> config,
                                    const Opm::EclipseState& eclState,
                                    const EclEpsGridProperties& epsGridProperties,
-                                   unsigned elemIdx,
-                                   unsigned cartElemIdx)
+                                   unsigned elemIdx)
     {
-        unsigned satRegionIdx = epsGridProperties.satRegion( cartElemIdx );
+        unsigned satRegionIdx = epsGridProperties.satRegion( elemIdx );
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satRegionIdx]);
-        destInfo[elemIdx]->extractScaled(eclState, epsGridProperties, cartElemIdx);
+        destInfo[elemIdx]->extractScaled(eclState, epsGridProperties, elemIdx);
 
         destPoints[elemIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
         destPoints[elemIdx]->init(*destInfo[elemIdx], *config, EclOilWaterSystem);

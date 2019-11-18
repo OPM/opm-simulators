@@ -248,26 +248,26 @@ struct EclEpsScalingPointsInfo
      */
     void extractScaled(const Opm::EclipseState& eclState,
                        const EclEpsGridProperties& epsProperties,
-                       unsigned cartesianCellIdx)
+                       unsigned activeIndex)
     {
         // overwrite the unscaled values with the values for the cell if it is
         // explicitly specified by the corresponding keyword.
-        update(Swl,     epsProperties.swl(cartesianCellIdx));
-        update(Sgl,     epsProperties.sgl(cartesianCellIdx));
-        update(Swcr,    epsProperties.swcr(cartesianCellIdx));
-        update(Sgcr,    epsProperties.sgcr(cartesianCellIdx));
+        update(Swl,     epsProperties.swl(activeIndex));
+        update(Sgl,     epsProperties.sgl(activeIndex));
+        update(Swcr,    epsProperties.swcr(activeIndex));
+        update(Sgcr,    epsProperties.sgcr(activeIndex));
 
-        update(Sowcr,   epsProperties.sowcr(cartesianCellIdx));
-        update(Sogcr,   epsProperties.sogcr(cartesianCellIdx));
-        update(Swu,     epsProperties.swu(cartesianCellIdx));
-        update(Sgu,     epsProperties.sgu(cartesianCellIdx));
-        update(maxPcow, epsProperties.pcw(cartesianCellIdx));
-        update(maxPcgo, epsProperties.pcg(cartesianCellIdx));
-        update(maxKrw,  epsProperties.krw(cartesianCellIdx));
-        update(maxKrg,  epsProperties.krg(cartesianCellIdx));
+        update(Sowcr,   epsProperties.sowcr(activeIndex));
+        update(Sogcr,   epsProperties.sogcr(activeIndex));
+        update(Swu,     epsProperties.swu(activeIndex));
+        update(Sgu,     epsProperties.sgu(activeIndex));
+        update(maxPcow, epsProperties.pcw(activeIndex));
+        update(maxPcgo, epsProperties.pcg(activeIndex));
+        update(maxKrw,  epsProperties.krw(activeIndex));
+        update(maxKrg,  epsProperties.krg(activeIndex));
         // quite likely that's wrong!
-        update(maxKrow, epsProperties.kro(cartesianCellIdx));
-        update(maxKrog, epsProperties.kro(cartesianCellIdx));
+        update(maxKrow, epsProperties.kro(activeIndex));
+        update(maxKrog, epsProperties.kro(activeIndex));
 
         // compute the Leverett capillary pressure scaling factors if applicable.  note
         // that this needs to be done using non-SI units to make it correspond to the
@@ -280,19 +280,19 @@ struct EclEpsScalingPointsInfo
 
             Scalar perm;
             if (jfuncDir == Opm::JFunc::Direction::X)
-                perm = epsProperties.permx(cartesianCellIdx);
+                perm = epsProperties.permx(activeIndex);
             else if (jfuncDir == Opm::JFunc::Direction::Y)
-                perm = epsProperties.permy(cartesianCellIdx);
+                perm = epsProperties.permy(activeIndex);
             else if (jfuncDir == Opm::JFunc::Direction::Z)
-                perm = epsProperties.permz(cartesianCellIdx);
+                perm = epsProperties.permz(activeIndex);
             else if (jfuncDir == Opm::JFunc::Direction::XY)
                 // TODO: verify that this really is the arithmetic mean. (the
                 // documentation just says that the "average" should be used, IMO the
                 // harmonic mean would be more appropriate because that's what's usually
                 // applied when calculating the fluxes.)
             {
-                double permx = epsProperties.permx(cartesianCellIdx);
-                double permy = epsProperties.permy(cartesianCellIdx);
+                double permx = epsProperties.permx(activeIndex);
+                double permy = epsProperties.permy(activeIndex);
                 perm = Opm::arithmeticMean(permx, permy);
             } else
                 throw std::runtime_error("Illegal direction indicator for the JFUNC "
@@ -301,7 +301,7 @@ struct EclEpsScalingPointsInfo
             // convert permeability from m^2 to mD
             perm *= 1.01325e15;
 
-            Scalar poro = epsProperties.poro(cartesianCellIdx);
+            Scalar poro = epsProperties.poro(activeIndex);
             Scalar alpha = jfunc.alphaFactor();
             Scalar beta = jfunc.betaFactor();
 
