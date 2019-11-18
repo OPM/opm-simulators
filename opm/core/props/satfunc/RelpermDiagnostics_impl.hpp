@@ -56,7 +56,7 @@ namespace Opm {
         const auto dims = Opm::UgGridHelpers::cartDims(grid);
         const auto& compressedToCartesianIdx = Opm::compressedToCartesian(nc, global_cell);
         scaledEpsInfo_.resize(nc);
-        EclEpsGridProperties epsGridProperties(eclState, false);
+        EclEpsGridProperties epsGridProperties(eclState, false, compressedToCartesianIdx);
         const std::string tag = "Scaled endpoints";
         for (int c = 0; c < nc; ++c) {
             const int cartIdx = compressedToCartesianIdx[c];
