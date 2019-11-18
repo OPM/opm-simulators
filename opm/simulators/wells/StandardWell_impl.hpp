@@ -1127,7 +1127,7 @@ namespace Opm
             const double rate_target = std::max(0.0, groupcontrols.oil_target / efficiencyFactor - groupTargetReduction);
             assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
             EvalWell rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
-            std::cout << name() << " " <<fraction << " " <<  groupTargetReduction << " " << groupcontrols.oil_target << std::endl;
+            //std::cout << name() << " " <<fraction << " " <<  groupTargetReduction << " " << groupcontrols.oil_target << std::endl;
             control_eq = rate - fraction * rate_target;
             break;
         }

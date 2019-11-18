@@ -1740,7 +1740,7 @@ namespace Opm {
             {
                 double current_rate = 0.0;
                 current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
-                std::cout << current_rate << " " <<controls.oil_target << std::endl;
+                //std::cout << current_rate << " " <<controls.oil_target << std::endl;
                 if (controls.oil_target < current_rate  ) {
                     actionOnBrokenConstraints(group, controls.exceed_action, Group2::ProductionCMode::ORAT, reportStepIdx, deferred_logger);
                     return true;
@@ -1818,11 +1818,11 @@ namespace Opm {
 
         std::ostringstream ss;
 
-        //if (oldControl != newControl) {
+        if (oldControl != newControl) {
             const std::string from = Group2::ProductionCMode2String(oldControl);
             ss << "Group " << group.name() << " exceeding "
                << from << " limit \n";
-        //}
+        }
         switch(exceed_action) {
         case Group2::ExceedAction::NONE: {
             ss << "The procedure for exceeding limit is NONE. Therefore nothing is done. ";
@@ -1845,10 +1845,10 @@ namespace Opm {
             break;
         }
         case Group2::ExceedAction::RATE: {
-            //if (oldControl != newControl) {
+            if (oldControl != newControl) {
                 well_state.setCurrentProductionGroupControl(group.name(), newControl);
                 ss << "Switching control mode for group to " << Group2::ProductionCMode2String(newControl);
-            //}
+            }
             wellGroupHelpers::setGroupControl(group, schedule(), reportStepIdx, false, well_state, ss);
             break;
         }
