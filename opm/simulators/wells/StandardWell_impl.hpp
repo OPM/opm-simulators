@@ -1111,8 +1111,12 @@ namespace Opm
         switch(currentGroupControl) {
         case Group2::ProductionCMode::NONE:
         {
-            OPM_DEFLOG_THROW(std::runtime_error, "NONE group control not implemented for producers" , deferred_logger);
+            const auto& controls = well.productionControls(summaryState);
+            control_eq = getBhp() - controls.bhp_limit;
             break;
+
+            //OPM_DEFLOG_THROW(std::runtime_error, "NONE group control not implemented for producers" , deferred_logger);
+            //break;
         }
         case Group2::ProductionCMode::ORAT:
         {
@@ -1123,6 +1127,7 @@ namespace Opm
             const double rate_target = std::max(0.0, groupcontrols.oil_target / efficiencyFactor - groupTargetReduction);
             assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
             EvalWell rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
+            std::cout << name() << " " <<fraction << " " <<  groupTargetReduction << " " << groupcontrols.oil_target << std::endl;
             control_eq = rate - fraction * rate_target;
             break;
         }
