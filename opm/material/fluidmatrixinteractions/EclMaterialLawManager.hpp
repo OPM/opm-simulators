@@ -972,7 +972,7 @@ private:
                                  unsigned elemIdx,
                                  unsigned cartElemIdx)
     {
-        unsigned satRegionIdx = static_cast<unsigned>((*epsGridProperties.satnum)[cartElemIdx]) - 1; // ECL uses Fortran indices!
+        unsigned satRegionIdx = epsGridProperties.satRegion( cartElemIdx );
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satRegionIdx]);
         destInfo[elemIdx]->extractScaled(eclState, epsGridProperties, cartElemIdx);
@@ -990,7 +990,7 @@ private:
                                    unsigned elemIdx,
                                    unsigned cartElemIdx)
     {
-        unsigned satRegionIdx = static_cast<unsigned>((*epsGridProperties.satnum)[cartElemIdx]) - 1; // ECL uses Fortran indices!
+        unsigned satRegionIdx = epsGridProperties.satRegion( cartElemIdx );
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satRegionIdx]);
         destInfo[elemIdx]->extractScaled(eclState, epsGridProperties, cartElemIdx);

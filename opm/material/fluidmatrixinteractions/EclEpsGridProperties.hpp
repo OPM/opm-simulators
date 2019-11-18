@@ -60,8 +60,6 @@ namespace Opm {
  */
 class EclEpsGridProperties
 {
-    typedef std::vector<int> IntData;
-    typedef std::vector<double> DoubleData;
 
 public:
 #if HAVE_ECL_INPUT
@@ -70,69 +68,123 @@ public:
                          bool useImbibition)
     {
         std::string kwPrefix = useImbibition?"I":"";
-
         if (useImbibition)
-            satnum = &eclState.get3DProperties().getIntGridProperty("IMBNUM").getData();
+            global_satnum = &eclState.get3DProperties().getIntGridProperty("IMBNUM").getData();
         else
-            satnum = &eclState.get3DProperties().getIntGridProperty("SATNUM").getData();
+            global_satnum = &eclState.get3DProperties().getIntGridProperty("SATNUM").getData();
 
-        retrieveGridPropertyData_(&swl, eclState, kwPrefix+"SWL");
-        retrieveGridPropertyData_(&sgl, eclState, kwPrefix+"SGL");
-        retrieveGridPropertyData_(&swcr, eclState, kwPrefix+"SWCR");
-        retrieveGridPropertyData_(&sgcr, eclState, kwPrefix+"SGCR");
-        retrieveGridPropertyData_(&sowcr, eclState, kwPrefix+"SOWCR");
-        retrieveGridPropertyData_(&sogcr, eclState, kwPrefix+"SOGCR");
-        retrieveGridPropertyData_(&swu, eclState, kwPrefix+"SWU");
-        retrieveGridPropertyData_(&sgu, eclState, kwPrefix+"SGU");
-        retrieveGridPropertyData_(&pcw, eclState, kwPrefix+"PCW");
-        retrieveGridPropertyData_(&pcg, eclState, kwPrefix+"PCG");
-        retrieveGridPropertyData_(&krw, eclState, kwPrefix+"KRW");
-        retrieveGridPropertyData_(&kro, eclState, kwPrefix+"KRO");
-        retrieveGridPropertyData_(&krg, eclState, kwPrefix+"KRG");
+        retrieveGridPropertyData_(&this->global_swl, eclState, kwPrefix+"SWL");
+        retrieveGridPropertyData_(&this->global_sgl, eclState, kwPrefix+"SGL");
+        retrieveGridPropertyData_(&this->global_swcr, eclState, kwPrefix+"SWCR");
+        retrieveGridPropertyData_(&this->global_sgcr, eclState, kwPrefix+"SGCR");
+        retrieveGridPropertyData_(&this->global_sowcr, eclState, kwPrefix+"SOWCR");
+        retrieveGridPropertyData_(&this->global_sogcr, eclState, kwPrefix+"SOGCR");
+        retrieveGridPropertyData_(&this->global_swu, eclState, kwPrefix+"SWU");
+        retrieveGridPropertyData_(&this->global_sgu, eclState, kwPrefix+"SGU");
+        retrieveGridPropertyData_(&this->global_pcw, eclState, kwPrefix+"PCW");
+        retrieveGridPropertyData_(&this->global_pcg, eclState, kwPrefix+"PCG");
+        retrieveGridPropertyData_(&this->global_krw, eclState, kwPrefix+"KRW");
+        retrieveGridPropertyData_(&this->global_kro, eclState, kwPrefix+"KRO");
+        retrieveGridPropertyData_(&this->global_krg, eclState, kwPrefix+"KRG");
 
         // _may_ be needed to calculate the Leverett capillary pressure scaling factor
         const auto& ecl3dProps = eclState.get3DProperties();
-        poro = &ecl3dProps.getDoubleGridProperty("PORO").getData();
+        this->global_poro = &ecl3dProps.getDoubleGridProperty("PORO").getData();
 
         if (ecl3dProps.hasDeckDoubleGridProperty("PERMX")) {
-            permx = &ecl3dProps.getDoubleGridProperty("PERMX").getData();
-            permy = permx;
-            permz = permx;
+            this->global_permx = &ecl3dProps.getDoubleGridProperty("PERMX").getData();
+            this->global_permy = this->global_permx;
+            this->global_permz = this->global_permx;
         }
 
         if (ecl3dProps.hasDeckDoubleGridProperty("PERMY"))
-            permy = &ecl3dProps.getDoubleGridProperty("PERMY").getData();
+            this->global_permy = &ecl3dProps.getDoubleGridProperty("PERMY").getData();
 
         if (ecl3dProps.hasDeckDoubleGridProperty("PERMZ"))
-            permz = &ecl3dProps.getDoubleGridProperty("PERMZ").getData();
+            this->global_permz = &ecl3dProps.getDoubleGridProperty("PERMZ").getData();
     }
 #endif
 
-    const IntData* satnum;
 
-    const DoubleData* swl;
-    const DoubleData* sgl;
-    const DoubleData* swcr;
-    const DoubleData* sgcr;
-    const DoubleData* sowcr;
-    const DoubleData* sogcr;
-    const DoubleData* swu;
-    const DoubleData* sgu;
-    const DoubleData* pcw;
-    const DoubleData* pcg;
-    const DoubleData* krw;
-    const DoubleData* kro;
-    const DoubleData* krg;
-    const DoubleData* poro;
-    const DoubleData* permx;
-    const DoubleData* permy;
-    const DoubleData* permz;
+
+    unsigned satRegion(std::size_t global_index) const {
+        return this->global_satnum->operator[](global_index) - 1;
+    }
+
+    double permx(std::size_t global_index) const {
+        return this->global_permx->operator[](global_index);
+    }
+
+    double permy(std::size_t global_index) const {
+        return this->global_permy->operator[](global_index);
+    }
+
+    double permz(std::size_t global_index) const {
+        return this->global_permz->operator[](global_index);
+    }
+
+    double poro(std::size_t global_index) const {
+        return this->global_poro->operator[](global_index);
+    }
+
+    const double * swl(std::size_t global_index) const {
+        return this->satfunc(this->global_swl, global_index);
+    }
+
+    const double * sgl(std::size_t global_index) const {
+        return this->satfunc(this->global_sgl, global_index);
+    }
+
+    const double * swcr(std::size_t global_index) const {
+        return this->satfunc(this->global_swcr, global_index);
+    }
+
+    const double * sgcr(std::size_t global_index) const {
+        return this->satfunc(this->global_sgcr, global_index);
+    }
+
+    const double * sowcr(std::size_t global_index) const {
+        return this->satfunc(this->global_sowcr, global_index);
+    }
+
+    const double * sogcr(std::size_t global_index) const {
+        return this->satfunc(this->global_sogcr, global_index);
+    }
+
+    const double * swu(std::size_t global_index) const {
+        return this->satfunc(this->global_swu, global_index);
+    }
+
+    const double * sgu(std::size_t global_index) const {
+        return this->satfunc(this->global_sgu, global_index);
+    }
+
+    const double * pcw(std::size_t global_index) const {
+        return this->satfunc(this->global_pcw, global_index);
+    }
+
+    const double * pcg(std::size_t global_index) const {
+        return this->satfunc(this->global_pcg, global_index);
+    }
+
+    const double * krw(std::size_t global_index) const {
+        return this->satfunc(this->global_krw, global_index);
+    }
+
+    const double * krg(std::size_t global_index) const {
+        return this->satfunc(this->global_krg, global_index);
+    }
+
+    const double * kro(std::size_t global_index) const {
+        return this->satfunc(this->global_kro, global_index);
+    }
+
 
 private:
 #if HAVE_ECL_INPUT
     // this method makes sure that a grid property is not created if it is not explicitly
     // mentioned in the deck. (saves memory.)
-    void retrieveGridPropertyData_(const DoubleData **data,
+    void retrieveGridPropertyData_(const std::vector<double> **data,
                                    const Opm::EclipseState& eclState,
                                    const std::string& properyName)
     {
@@ -141,6 +193,33 @@ private:
             (*data) = &eclState.get3DProperties().getDoubleGridProperty(properyName).getData();
     }
 #endif
+
+    const double * satfunc(const std::vector<double>* data, std::size_t global_index) const {
+        if (data)
+            return &(data->operator[](global_index));
+        return nullptr;
+    }
+
+
+    const std::vector<int>*    global_satnum;
+    const std::vector<double>* global_swl;
+    const std::vector<double>* global_sgl;
+    const std::vector<double>* global_swcr;
+    const std::vector<double>* global_sgcr;
+    const std::vector<double>* global_sowcr;
+    const std::vector<double>* global_sogcr;
+    const std::vector<double>* global_swu;
+    const std::vector<double>* global_sgu;
+    const std::vector<double>* global_pcw;
+    const std::vector<double>* global_pcg;
+    const std::vector<double>* global_krw;
+    const std::vector<double>* global_kro;
+    const std::vector<double>* global_krg;
+
+    const std::vector<double>* global_permx;
+    const std::vector<double>* global_permy;
+    const std::vector<double>* global_permz;
+    const std::vector<double>* global_poro;
 };
 }
 #endif

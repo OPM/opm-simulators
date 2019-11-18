@@ -235,6 +235,12 @@ struct EclEpsScalingPointsInfo
         pcgoLeverettFactor = 1.0;
     }
 
+
+    void update(Scalar& targetValue, const double * value_ptr) {
+        if (value_ptr)
+            targetValue = *value_ptr;
+    }
+
     /*!
      * \brief Extract the values of the scaled scaling parameters.
      *
@@ -246,24 +252,22 @@ struct EclEpsScalingPointsInfo
     {
         // overwrite the unscaled values with the values for the cell if it is
         // explicitly specified by the corresponding keyword.
-        extractGridPropertyValue_(Swl, epsProperties.swl, cartesianCellIdx);
-        extractGridPropertyValue_(Sgl, epsProperties.sgl, cartesianCellIdx);
-        extractGridPropertyValue_(Swcr, epsProperties.swcr, cartesianCellIdx);
-        extractGridPropertyValue_(Sgcr, epsProperties.sgcr, cartesianCellIdx);
-        extractGridPropertyValue_(Sowcr, epsProperties.sowcr, cartesianCellIdx);
-        extractGridPropertyValue_(Sogcr, epsProperties.sogcr, cartesianCellIdx);
-        extractGridPropertyValue_(Swu, epsProperties.swu, cartesianCellIdx);
-        extractGridPropertyValue_(Sgu, epsProperties.sgu, cartesianCellIdx);
+        update(Swl,     epsProperties.swl(cartesianCellIdx));
+        update(Sgl,     epsProperties.sgl(cartesianCellIdx));
+        update(Swcr,    epsProperties.swcr(cartesianCellIdx));
+        update(Sgcr,    epsProperties.sgcr(cartesianCellIdx));
 
-        extractGridPropertyValue_(maxPcow, epsProperties.pcw, cartesianCellIdx);
-        extractGridPropertyValue_(maxPcgo, epsProperties.pcg, cartesianCellIdx);
-
-        extractGridPropertyValue_(maxKrw, epsProperties.krw, cartesianCellIdx);
-        extractGridPropertyValue_(maxKrg, epsProperties.krg, cartesianCellIdx);
-
+        update(Sowcr,   epsProperties.sowcr(cartesianCellIdx));
+        update(Sogcr,   epsProperties.sogcr(cartesianCellIdx));
+        update(Swu,     epsProperties.swu(cartesianCellIdx));
+        update(Sgu,     epsProperties.sgu(cartesianCellIdx));
+        update(maxPcow, epsProperties.pcw(cartesianCellIdx));
+        update(maxPcgo, epsProperties.pcg(cartesianCellIdx));
+        update(maxKrw,  epsProperties.krw(cartesianCellIdx));
+        update(maxKrg,  epsProperties.krg(cartesianCellIdx));
         // quite likely that's wrong!
-        extractGridPropertyValue_(maxKrow, epsProperties.kro, cartesianCellIdx);
-        extractGridPropertyValue_(maxKrog, epsProperties.kro, cartesianCellIdx);
+        update(maxKrow, epsProperties.kro(cartesianCellIdx));
+        update(maxKrog, epsProperties.kro(cartesianCellIdx));
 
         // compute the Leverett capillary pressure scaling factors if applicable.  note
         // that this needs to be done using non-SI units to make it correspond to the
@@ -276,30 +280,28 @@ struct EclEpsScalingPointsInfo
 
             Scalar perm;
             if (jfuncDir == Opm::JFunc::Direction::X)
-                perm =
-                    (*epsProperties.permx)[cartesianCellIdx];
+                perm = epsProperties.permx(cartesianCellIdx);
             else if (jfuncDir == Opm::JFunc::Direction::Y)
-                perm =
-                    (*epsProperties.permy)[cartesianCellIdx];
+                perm = epsProperties.permy(cartesianCellIdx);
             else if (jfuncDir == Opm::JFunc::Direction::Z)
-                perm =
-                    (*epsProperties.permz)[cartesianCellIdx];
+                perm = epsProperties.permz(cartesianCellIdx);
             else if (jfuncDir == Opm::JFunc::Direction::XY)
                 // TODO: verify that this really is the arithmetic mean. (the
                 // documentation just says that the "average" should be used, IMO the
                 // harmonic mean would be more appropriate because that's what's usually
                 // applied when calculating the fluxes.)
-                perm =
-                    Opm::arithmeticMean((*epsProperties.permx)[cartesianCellIdx],
-                                        (*epsProperties.permy)[cartesianCellIdx]);
-            else
+            {
+                double permx = epsProperties.permx(cartesianCellIdx);
+                double permy = epsProperties.permy(cartesianCellIdx);
+                perm = Opm::arithmeticMean(permx, permy);
+            } else
                 throw std::runtime_error("Illegal direction indicator for the JFUNC "
                                          "keyword ("+std::to_string(int(jfuncDir))+")");
 
             // convert permeability from m^2 to mD
             perm *= 1.01325e15;
 
-            Scalar poro = (*epsProperties.poro)[cartesianCellIdx];
+            Scalar poro = epsProperties.poro(cartesianCellIdx);
             Scalar alpha = jfunc.alphaFactor();
             Scalar beta = jfunc.betaFactor();
 
