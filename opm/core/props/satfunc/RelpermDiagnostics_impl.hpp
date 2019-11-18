@@ -23,9 +23,11 @@
 #include <vector>
 #include <utility>
 
+#include <opm/material/fluidmatrixinteractions/EclEpsGridProperties.hpp>
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 #include <opm/grid/utility/compressedToCartesian.hpp>
 #include <opm/grid/GridHelpers.hpp>
+
 
 namespace Opm {
 
@@ -54,8 +56,7 @@ namespace Opm {
         const auto dims = Opm::UgGridHelpers::cartDims(grid);
         const auto& compressedToCartesianIdx = Opm::compressedToCartesian(nc, global_cell);
         scaledEpsInfo_.resize(nc);
-        EclEpsGridProperties epsGridProperties;
-        epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);
+        EclEpsGridProperties epsGridProperties(eclState, false);
         const auto& satnumData = eclState.get3DProperties().getIntGridProperty("SATNUM").getData();
         const std::string tag = "Scaled endpoints";
         for (int c = 0; c < nc; ++c) {
