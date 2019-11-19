@@ -182,6 +182,20 @@ namespace Opm
         ///        Invalid        invalid set of components given.
         PermeabilityKind classifyPermeability(const Opm::EclipseState& eclState)
         {
+#ifdef ENABLE_3DPROPS_TESTING
+            auto& props = eclState.fieldProps();
+            const bool xx = props.has<double>("PERMX" );
+            const bool xy = props.has<double>("PERMXY");
+            const bool yx = xy;
+
+            const bool yy = props.has<double>("PERMY" );
+            const bool yz = props.has<double>("PERMYZ");
+            const bool zy = yz;
+
+            const bool zz = props.has<double>("PERMZ" );
+            const bool zx = props.has<double>("PERMZX");
+            const bool xz = zx;
+#else
             auto& props = eclState.get3DProperties();
             const bool xx = props.hasDeckDoubleGridProperty("PERMX" );
             const bool xy = props.hasDeckDoubleGridProperty("PERMXY");
@@ -194,7 +208,7 @@ namespace Opm
             const bool zz = props.hasDeckDoubleGridProperty("PERMZ" );
             const bool zx = props.hasDeckDoubleGridProperty("PERMZX");
             const bool xz = zx;
-
+#endif
             int num_cross_comp = xy + xz + yx + yz + zx + zy;
             int num_comp       = xx + yy + zz + num_cross_comp;
             PermeabilityKind retval = None;
