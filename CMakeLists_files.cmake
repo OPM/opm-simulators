@@ -24,7 +24,6 @@
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
   ebos/nncsorter.cpp
-  opm/core/props/rock/RockFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/core/wells/InjectionSpecification.cpp
@@ -132,7 +131,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/MissingFeatures.hpp
   opm/core/props/BlackoilPhases.hpp
   opm/core/props/phaseUsageFromDeck.hpp
-  opm/core/props/rock/RockFromDeck.hpp
   opm/core/props/satfunc/RelpermDiagnostics.hpp
   opm/core/props/satfunc/RelpermDiagnostics_impl.hpp
   opm/simulators/timestepping/SimulatorReport.hpp
