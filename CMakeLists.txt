@@ -22,6 +22,11 @@ cmake_minimum_required (VERSION 2.8)
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 
+option(ENABLE_3DPROPS_TESTING "Build and use the new experimental 3D properties" OFF)
+if (ENABLE_3DPROPS_TESTING)
+  add_definitions(-DENABLE_3DPROPS_TESTING)
+endif()
+
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
   get_filename_component(_leaf_dir_name ${PROJECT_BINARY_DIR} NAME)
