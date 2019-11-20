@@ -57,11 +57,10 @@ namespace Opm {
         const auto& compressedToCartesianIdx = Opm::compressedToCartesian(nc, global_cell);
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties(eclState, false);
-        const auto& satnumData = eclState.get3DProperties().getIntGridProperty("SATNUM").getData();
         const std::string tag = "Scaled endpoints";
         for (int c = 0; c < nc; ++c) {
             const int cartIdx = compressedToCartesianIdx[c];
-            const std::string satnumIdx = std::to_string(satnumData[cartIdx]);
+            const std::string satnumIdx = std::to_string(epsGridProperties.satRegion(cartIdx));
             std::array<int, 3> ijk;
             ijk[0] = cartIdx % dims[0];
             ijk[1] = (cartIdx / dims[0]) % dims[1];
