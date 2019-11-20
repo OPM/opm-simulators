@@ -4,7 +4,6 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/grid/utility/compressedToCartesian.hpp>
-#include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -101,7 +100,7 @@ getCubeDim(const C2F& c2f,
 
 namespace Opm
 {
-template<class C2F, class FC, class NTG>
+template<class C2F, class FC>
 void WellsManager::createWellsFromSpecs(const std::vector<Well>& wells, size_t timeStep,
                                         const C2F& /* c2f */,
                                         const int* cart_dims,
@@ -113,8 +112,6 @@ void WellsManager::createWellsFromSpecs(const std::vector<Well>& wells, size_t t
                                         std::map<std::string, int>& well_names_to_index,
                                         const PhaseUsage& phaseUsage,
                                         const std::map<int,int>& cartesian_to_compressed,
-                                        const double* /* permeability */,
-                                        const NTG& /* ntg */,
                                         std::vector<int>& wells_on_proc,
                                         const std::unordered_set<std::string>& ignored_wells)
 {
@@ -333,12 +330,6 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
     well_names.reserve(wells.size());
     well_data.reserve(wells.size());
 
-    typedef GridPropertyAccess::ArrayPolicy::ExtractFromDeck<double> DoubleArray;
-    typedef GridPropertyAccess::Compressed<DoubleArray, GridPropertyAccess::Tag::NTG> NTGArray;
-
-    DoubleArray ntg_glob(eclipseState, "NTG", 1.0);
-    NTGArray    ntg(ntg_glob, global_cell);
-
     const auto& eclGrid = eclipseState.getInputGrid();
 
     // use cell thickness (dz) from eclGrid
@@ -351,21 +342,13 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
         }
     }
 
-    std::vector<double> interleavedPerm;
-    RockFromDeck::extractInterleavedPermeability(eclipseState,
-                                                 number_of_cells,
-                                                 global_cell,
-                                                 cart_dims,
-                                                 0.0,
-                                                 interleavedPerm);
-
     createWellsFromSpecs(wells, timeStep, cell_to_faces,
                          cart_dims,
                          begin_face_centroids,
                          dimensions,
                          dz,
                          well_names, well_data, well_names_to_index,
-                         pu, cartesian_to_compressed, interleavedPerm.data(), ntg,
+                         pu, cartesian_to_compressed,
                          wells_on_proc, deactivated_wells);
 
     setupWellControls(wells, summaryState, well_names, pu, wells_on_proc);

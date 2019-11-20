@@ -27,8 +27,6 @@
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/wells/WellsGroup.hpp>
 
-#include <opm/grid/utility/CompressedPropertyAccess.hpp>
-
 struct Wells;
 struct UnstructuredGrid;
 
@@ -173,7 +171,7 @@ namespace Opm
                                std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,
                                const std::vector<int>& wells_on_proc);
 
-        template<class C2F, class FC, class NTG>
+        template<class C2F, class FC>
         void createWellsFromSpecs( const std::vector<Well>& wells, size_t timeStep,
                                    const C2F& cell_to_faces,
                                    const int* cart_dims,
@@ -185,8 +183,6 @@ namespace Opm
                                    std::map<std::string, int> & well_names_to_index,
                                    const PhaseUsage& phaseUsage,
                                    const std::map<int,int>& cartesian_to_compressed,
-                                   const double* permeability,
-                                   const NTG& ntg,
                                    std::vector<int>& wells_on_proc,
                                    const std::unordered_set<std::string>& deactivated_wells);
 
