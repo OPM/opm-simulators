@@ -20,6 +20,10 @@ project(opm-material C CXX)
 cmake_minimum_required (VERSION 2.8)
 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
+option(ENABLE_3DPROPS_TESTING "Enable the testing of 3D properties" OFF)
+if (ENABLE_3DPROPS_TESTING)
+  add_definitions(-DENABLE_3DPROPS_TESTING)
+endif()
 
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
