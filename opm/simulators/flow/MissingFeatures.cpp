@@ -229,7 +229,6 @@ namespace MissingFeatures {
             "FBHPDEF",
             "FHERCHBL",
             "FRICTION", 
-            "FIPNUM",
             "FIPSEP",
             "FLUXREG",
             "FLUXTYPE",
