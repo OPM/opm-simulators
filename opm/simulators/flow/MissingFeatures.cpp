@@ -205,7 +205,6 @@ namespace MissingFeatures {
             "ECLMC",
             "EDITNNCR",
             "EHYSTRR",
-            "ENDACTIO",
             "ENDDYN",
             "ENDFIN",
             "ENDNUM",
