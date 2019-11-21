@@ -525,10 +525,8 @@ private:
             oilWaterScaledImbPointsVector.resize(numCompressedElems);
         }
 
-        EclEpsGridProperties epsGridProperties, epsImbGridProperties;
-        epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);
-        if (enableHysteresis())
-            epsImbGridProperties.initFromDeck(deck, eclState, /*imbibition=*/true);
+        EclEpsGridProperties epsGridProperties(eclState, false);
+
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
             unsigned cartElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx[elemIdx]);
             readGasOilScaledPoints_(gasOilScaledInfoVector,
@@ -547,6 +545,8 @@ private:
                                       cartElemIdx);
 
             if (enableHysteresis()) {
+                EclEpsGridProperties epsImbGridProperties(eclState, true);
+
                 readGasOilScaledPoints_(gasOilScaledImbInfoVector,
                                         gasOilScaledImbPointsVector,
                                         gasOilConfig,
@@ -554,6 +554,7 @@ private:
                                         epsImbGridProperties,
                                         elemIdx,
                                         cartElemIdx);
+
                 readOilWaterScaledPoints_(oilWaterScaledImbInfoVector,
                                           oilWaterScaledImbPointsVector,
                                           oilWaterConfig,
@@ -971,7 +972,7 @@ private:
                                  unsigned elemIdx,
                                  unsigned cartElemIdx)
     {
-        unsigned satRegionIdx = static_cast<unsigned>((*epsGridProperties.satnum)[cartElemIdx]) - 1; // ECL uses Fortran indices!
+        unsigned satRegionIdx = epsGridProperties.satRegion( cartElemIdx );
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satRegionIdx]);
         destInfo[elemIdx]->extractScaled(eclState, epsGridProperties, cartElemIdx);
@@ -989,7 +990,7 @@ private:
                                    unsigned elemIdx,
                                    unsigned cartElemIdx)
     {
-        unsigned satRegionIdx = static_cast<unsigned>((*epsGridProperties.satnum)[cartElemIdx]) - 1; // ECL uses Fortran indices!
+        unsigned satRegionIdx = epsGridProperties.satRegion( cartElemIdx );
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satRegionIdx]);
         destInfo[elemIdx]->extractScaled(eclState, epsGridProperties, cartElemIdx);

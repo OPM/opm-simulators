@@ -28,6 +28,7 @@
 #define OPM_ECL_EPS_SCALING_POINTS_HPP
 
 #include "EclEpsConfig.hpp"
+#include "EclEpsGridProperties.hpp"
 
 #if HAVE_ECL_INPUT
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -54,96 +55,6 @@
 #include <algorithm>
 
 namespace Opm {
-/*!
- * \brief Collects all grid properties which are relevant for end point scaling.
- *
- * This class is used for both, the drainage and the imbibition variants of the ECL
- * keywords.
- */
-class EclEpsGridProperties
-{
-    typedef std::vector<int> IntData;
-    typedef std::vector<double> DoubleData;
-
-public:
-#if HAVE_ECL_INPUT
-    void initFromDeck(const Opm::Deck& /* deck */,
-                      const Opm::EclipseState& eclState,
-                      bool useImbibition)
-    {
-        std::string kwPrefix = useImbibition?"I":"";
-
-        if (useImbibition)
-            satnum = &eclState.get3DProperties().getIntGridProperty("IMBNUM").getData();
-        else
-            satnum = &eclState.get3DProperties().getIntGridProperty("SATNUM").getData();
-
-        retrieveGridPropertyData_(&swl, eclState, kwPrefix+"SWL");
-        retrieveGridPropertyData_(&sgl, eclState, kwPrefix+"SGL");
-        retrieveGridPropertyData_(&swcr, eclState, kwPrefix+"SWCR");
-        retrieveGridPropertyData_(&sgcr, eclState, kwPrefix+"SGCR");
-        retrieveGridPropertyData_(&sowcr, eclState, kwPrefix+"SOWCR");
-        retrieveGridPropertyData_(&sogcr, eclState, kwPrefix+"SOGCR");
-        retrieveGridPropertyData_(&swu, eclState, kwPrefix+"SWU");
-        retrieveGridPropertyData_(&sgu, eclState, kwPrefix+"SGU");
-        retrieveGridPropertyData_(&pcw, eclState, kwPrefix+"PCW");
-        retrieveGridPropertyData_(&pcg, eclState, kwPrefix+"PCG");
-        retrieveGridPropertyData_(&krw, eclState, kwPrefix+"KRW");
-        retrieveGridPropertyData_(&kro, eclState, kwPrefix+"KRO");
-        retrieveGridPropertyData_(&krg, eclState, kwPrefix+"KRG");
-
-        // _may_ be needed to calculate the Leverett capillary pressure scaling factor
-        const auto& ecl3dProps = eclState.get3DProperties();
-        poro = &ecl3dProps.getDoubleGridProperty("PORO").getData();
-
-        if (ecl3dProps.hasDeckDoubleGridProperty("PERMX")) {
-            permx = &ecl3dProps.getDoubleGridProperty("PERMX").getData();
-            permy = permx;
-            permz = permx;
-        }
-
-        if (ecl3dProps.hasDeckDoubleGridProperty("PERMY"))
-            permy = &ecl3dProps.getDoubleGridProperty("PERMY").getData();
-
-        if (ecl3dProps.hasDeckDoubleGridProperty("PERMZ"))
-            permz = &ecl3dProps.getDoubleGridProperty("PERMZ").getData();
-    }
-#endif
-
-    const IntData* satnum;
-
-    const DoubleData* swl;
-    const DoubleData* sgl;
-    const DoubleData* swcr;
-    const DoubleData* sgcr;
-    const DoubleData* sowcr;
-    const DoubleData* sogcr;
-    const DoubleData* swu;
-    const DoubleData* sgu;
-    const DoubleData* pcw;
-    const DoubleData* pcg;
-    const DoubleData* krw;
-    const DoubleData* kro;
-    const DoubleData* krg;
-    const DoubleData* poro;
-    const DoubleData* permx;
-    const DoubleData* permy;
-    const DoubleData* permz;
-
-private:
-#if HAVE_ECL_INPUT
-    // this method makes sure that a grid property is not created if it is not explicitly
-    // mentioned in the deck. (saves memory.)
-    void retrieveGridPropertyData_(const DoubleData **data,
-                                   const Opm::EclipseState& eclState,
-                                   const std::string& properyName)
-    {
-        (*data) = 0;
-        if (eclState.get3DProperties().hasDeckDoubleGridProperty(properyName))
-            (*data) = &eclState.get3DProperties().getDoubleGridProperty(properyName).getData();
-    }
-#endif
-};
 
 /*!
  * \brief This structure represents all values which can be possibly used as scaling
@@ -324,6 +235,12 @@ struct EclEpsScalingPointsInfo
         pcgoLeverettFactor = 1.0;
     }
 
+
+    void update(Scalar& targetValue, const double * value_ptr) {
+        if (value_ptr)
+            targetValue = *value_ptr;
+    }
+
     /*!
      * \brief Extract the values of the scaled scaling parameters.
      *
@@ -335,24 +252,22 @@ struct EclEpsScalingPointsInfo
     {
         // overwrite the unscaled values with the values for the cell if it is
         // explicitly specified by the corresponding keyword.
-        extractGridPropertyValue_(Swl, epsProperties.swl, cartesianCellIdx);
-        extractGridPropertyValue_(Sgl, epsProperties.sgl, cartesianCellIdx);
-        extractGridPropertyValue_(Swcr, epsProperties.swcr, cartesianCellIdx);
-        extractGridPropertyValue_(Sgcr, epsProperties.sgcr, cartesianCellIdx);
-        extractGridPropertyValue_(Sowcr, epsProperties.sowcr, cartesianCellIdx);
-        extractGridPropertyValue_(Sogcr, epsProperties.sogcr, cartesianCellIdx);
-        extractGridPropertyValue_(Swu, epsProperties.swu, cartesianCellIdx);
-        extractGridPropertyValue_(Sgu, epsProperties.sgu, cartesianCellIdx);
+        update(Swl,     epsProperties.swl(cartesianCellIdx));
+        update(Sgl,     epsProperties.sgl(cartesianCellIdx));
+        update(Swcr,    epsProperties.swcr(cartesianCellIdx));
+        update(Sgcr,    epsProperties.sgcr(cartesianCellIdx));
 
-        extractGridPropertyValue_(maxPcow, epsProperties.pcw, cartesianCellIdx);
-        extractGridPropertyValue_(maxPcgo, epsProperties.pcg, cartesianCellIdx);
-
-        extractGridPropertyValue_(maxKrw, epsProperties.krw, cartesianCellIdx);
-        extractGridPropertyValue_(maxKrg, epsProperties.krg, cartesianCellIdx);
-
+        update(Sowcr,   epsProperties.sowcr(cartesianCellIdx));
+        update(Sogcr,   epsProperties.sogcr(cartesianCellIdx));
+        update(Swu,     epsProperties.swu(cartesianCellIdx));
+        update(Sgu,     epsProperties.sgu(cartesianCellIdx));
+        update(maxPcow, epsProperties.pcw(cartesianCellIdx));
+        update(maxPcgo, epsProperties.pcg(cartesianCellIdx));
+        update(maxKrw,  epsProperties.krw(cartesianCellIdx));
+        update(maxKrg,  epsProperties.krg(cartesianCellIdx));
         // quite likely that's wrong!
-        extractGridPropertyValue_(maxKrow, epsProperties.kro, cartesianCellIdx);
-        extractGridPropertyValue_(maxKrog, epsProperties.kro, cartesianCellIdx);
+        update(maxKrow, epsProperties.kro(cartesianCellIdx));
+        update(maxKrog, epsProperties.kro(cartesianCellIdx));
 
         // compute the Leverett capillary pressure scaling factors if applicable.  note
         // that this needs to be done using non-SI units to make it correspond to the
@@ -365,30 +280,28 @@ struct EclEpsScalingPointsInfo
 
             Scalar perm;
             if (jfuncDir == Opm::JFunc::Direction::X)
-                perm =
-                    (*epsProperties.permx)[cartesianCellIdx];
+                perm = epsProperties.permx(cartesianCellIdx);
             else if (jfuncDir == Opm::JFunc::Direction::Y)
-                perm =
-                    (*epsProperties.permy)[cartesianCellIdx];
+                perm = epsProperties.permy(cartesianCellIdx);
             else if (jfuncDir == Opm::JFunc::Direction::Z)
-                perm =
-                    (*epsProperties.permz)[cartesianCellIdx];
+                perm = epsProperties.permz(cartesianCellIdx);
             else if (jfuncDir == Opm::JFunc::Direction::XY)
                 // TODO: verify that this really is the arithmetic mean. (the
                 // documentation just says that the "average" should be used, IMO the
                 // harmonic mean would be more appropriate because that's what's usually
                 // applied when calculating the fluxes.)
-                perm =
-                    Opm::arithmeticMean((*epsProperties.permx)[cartesianCellIdx],
-                                        (*epsProperties.permy)[cartesianCellIdx]);
-            else
+            {
+                double permx = epsProperties.permx(cartesianCellIdx);
+                double permy = epsProperties.permy(cartesianCellIdx);
+                perm = Opm::arithmeticMean(permx, permy);
+            } else
                 throw std::runtime_error("Illegal direction indicator for the JFUNC "
                                          "keyword ("+std::to_string(int(jfuncDir))+")");
 
             // convert permeability from m^2 to mD
             perm *= 1.01325e15;
 
-            Scalar poro = (*epsProperties.poro)[cartesianCellIdx];
+            Scalar poro = epsProperties.poro(cartesianCellIdx);
             Scalar alpha = jfunc.alphaFactor();
             Scalar beta = jfunc.betaFactor();
 
