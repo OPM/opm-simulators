@@ -750,7 +750,6 @@ public:
     {
         Range& md = reorderD(d);
         Domain& mv = reorderV(v);
-        copyOwnerToAll( md );
 
         // iterator types
         typedef typename Range ::block_type  dblock;
@@ -777,8 +776,6 @@ public:
 
           mv[ i ] = rhs;  // Lii = I
         }
-
-        copyOwnerToAll( mv );
 
         for( size_type i=0; i<iEnd; ++ i )
         {

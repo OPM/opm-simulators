@@ -77,7 +77,7 @@ public:
         parameters_.template init<TypeTag>();
         prm_ = setupPropertyTree(parameters_);
         extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
-        detail::findOverlapRowsAndColumns(simulator_.vanguard().grid(), overlapRowAndColumns_);
+        detail::findOverlapAndInterior(simulator_.vanguard().grid(), overlapRows_, interiorRows_);
 #if HAVE_MPI
         if (parallelInformation_.type() == typeid(ParallelISTLInformation)) {
             // Parallel case.
@@ -176,27 +176,23 @@ public:
 
 protected:
     /// Zero out off-diagonal blocks on rows corresponding to overlap cells
-    /// Diagonal blocks on ovelap rows are set to diag(1e100).
+    /// Diagonal blocks on ovelap rows are set to diag(1.0).
     void makeOverlapRowsInvalid(MatrixType& matrix) const
     {
-        // Value to set on diagonal
-        const int numEq = MatrixType::block_type::rows;
-        typename MatrixType::block_type diag_block(0.0);
+        //value to set on diagonal
+        Dune::FieldMatrix<Scalar, numEq, numEq> diag_block(0.0);
         for (int eq = 0; eq < numEq; ++eq)
-            diag_block[eq][eq] = 1.0e100;
+            diag_block[eq][eq] = 1.0;
 
-        // loop over precalculated overlap rows and columns
-        for (auto row = overlapRowAndColumns_.begin(); row != overlapRowAndColumns_.end(); row++) {
-            int lcell = row->first;
-            // diagonal block set to large value diagonal
+        //loop over precalculated overlap rows and columns
+        for (auto row = overlapRows_.begin(); row != overlapRows_.end(); row++ )
+        {
+            int lcell = *row;
+            // Zero out row.
+            matrix[lcell] = 0.0;
+
+            //diagonal block set to diag(1.0).
             matrix[lcell][lcell] = diag_block;
-
-            // loop over off diagonal blocks in overlap row
-            for (auto col = row->second.begin(); col != row->second.end(); ++col) {
-                int ncell = *col;
-                // zero out block
-                matrix[lcell][ncell] = 0.0;
-            }
         }
     }
 
@@ -212,7 +208,8 @@ protected:
 #if HAVE_MPI
     std::unique_ptr<Communication> comm_;
 #endif
-    std::vector<std::pair<int, std::vector<int>>> overlapRowAndColumns_;
+    std::vector<int> overlapRows_;
+    std::vector<int> interiorRows_;
 }; // end ISTLSolverEbosFlexible
 
 } // namespace Opm

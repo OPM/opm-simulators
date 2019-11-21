@@ -99,7 +99,7 @@ namespace Opm
             : SuperClass(simulator), oldMat()
         {
             extractParallelGridInformationToISTL(this->simulator_.vanguard().grid(), this->parallelInformation_);
-            detail::findOverlapRowsAndColumns(this->simulator_.vanguard().grid(), this->overlapRowAndColumns_);
+            detail::findOverlapAndInterior(this->simulator_.vanguard().grid(), this->overlapRows_, this->interiorRows_);
         }
 
         void prepare(const SparseMatrixAdapter& M, Vector& b)
