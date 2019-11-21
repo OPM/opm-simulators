@@ -219,6 +219,25 @@ namespace Opm
             std::cout << "*          For more information, see https://opm-project.org         *\n";
             std::cout << "*                                                                    *\n";
             std::cout << "**********************************************************************\n\n";
+
+            int threads = 1;
+            int mpiSize = 1;
+
+#ifdef _OPENMP
+            // This function is called before the parallel OpenMP stuff gets initialized.
+            // That initialization happends after the deck is read and we want this message.
+            // Hence we duplicate the code of setupParallelism to get the number of threads.
+            if (getenv("OMP_NUM_THREADS"))
+                threads =  omp_get_max_threads();
+            else
+                threads = std::min(2, omp_get_max_threads());
+#endif
+
+#if HAVE_MPI
+            MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+#endif
+
+            std::cout << "Using "<< mpiSize << " MPI processes with "<< threads <<" OMP threads on each \n\n";
         }
 
         /// This is the main function of Flow.  It runs a complete simulation with the
@@ -470,6 +489,13 @@ namespace Opm
                 if (output_cout) {
                     std::ostringstream ss;
                     ss << "\n\n================    End of simulation     ===============\n\n";
+                    ss << "Number of MPI processes: " << std::setw(6) << mpi_size_ << "\n";
+#if _OPENMP
+                    int threads = omp_get_max_threads();
+#else
+                    int threads = 1;
+#endif
+                    ss << "Threads per MPI process:  " << std::setw(5) << threads << "\n";
                     successReport.reportFullyImplicit(ss, &failureReport);
                     OpmLog::info(ss.str());
                 }
