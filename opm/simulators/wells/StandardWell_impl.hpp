@@ -984,8 +984,13 @@ namespace Opm
             return;
         }
 
-        if (!group.isInjectionGroup())
+        if (!group.isInjectionGroup() || currentGroupControl == Group::InjectionCMode::NONE) {
+            // use bhp as control eq and let the updateControl code find a vallied control
+            const auto& controls = well.injectionControls(summaryState);
+            control_eq = getBhp() - controls.bhp_limit;
             return;
+        }
+
 
         int phasePos;
         Well::GuideRateTarget wellTarget;
@@ -1025,7 +1030,8 @@ namespace Opm
         switch(currentGroupControl) {
         case Group::InjectionCMode::NONE:
         {
-            OPM_DEFLOG_THROW(std::runtime_error, "NONE group control not implemented for injectors" , deferred_logger);
+            // The NONE case is handled earlier
+            assert(false);
             break;
         }
         case Group::InjectionCMode::RATE:
@@ -1113,8 +1119,12 @@ namespace Opm
             return;
         }
 
-        if (!group.isProductionGroup())
+        if (!group.isProductionGroup() || currentGroupControl == Group::ProductionCMode::NONE) {
+            // use bhp as control eq and let the updateControl code find a vallied control
+            const auto& controls = well.productionControls(summaryState);
+            control_eq = getBhp() - controls.bhp_limit;
             return;
+        }
 
         const auto& groupcontrols = group.productionControls(summaryState);
 
@@ -1123,8 +1133,8 @@ namespace Opm
         switch(currentGroupControl) {
         case Group::ProductionCMode::NONE:
         {
-            OPM_DEFLOG_THROW(std::runtime_error, "NONE group control not implemented for producers" , deferred_logger);
-            break;
+            // The NONE case is handled earlier
+            assert(false);
         }
         case Group::ProductionCMode::ORAT:
         {
