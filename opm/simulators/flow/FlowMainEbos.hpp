@@ -142,14 +142,14 @@ namespace Opm
 
             EWOMS_END_PARAM_REGISTRATION(TypeTag);
 
-            // read in the command line parameters
-            int status = Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/true);
-            if (status == 0) {
-
-                int mpiRank = 0;
+            int mpiRank = 0;
 #if HAVE_MPI
-                MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+            MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
 #endif
+
+            // read in the command line parameters
+            int status = Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/(mpiRank==0));
+            if (status == 0) {
 
                 // deal with unknown parameters.
 
