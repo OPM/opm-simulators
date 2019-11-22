@@ -794,18 +794,14 @@ namespace Opm {
                 calculateExplicitQuantities(local_deferredLogger);
                 prepareTimeStep(local_deferredLogger);
             }
-            updateWellControls(local_deferredLogger, true);
+            updateWellControls(local_deferredLogger, /*allow for switching to group controls*/true);
 
-            // only check group controls for iterationIdx smaller then nupcol
+            // only update REIN and VREP rates if iterationIdx is smaller than nupcol
             const int reportStepIdx = ebosSimulator_.episodeIndex();
             const int nupcol = schedule().getNupcol(reportStepIdx);
             if (iterationIdx < nupcol) {
                 if( localWellsActive() ) {
                     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-                    std::vector<double> groupTargetReduction(numPhases(), 0.0);
-                    wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, well_state_, groupTargetReduction);
-                    std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
-                    wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, well_state_, groupTargetReductionInj);
                     std::vector<double> rein(numPhases(), 0.0);
                     const auto& summaryState = ebosSimulator_.vanguard().summaryState();
                     wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_, rein);
@@ -1134,15 +1130,25 @@ namespace Opm {
         // For no well active globally we simply return.
         if( !wellsActive() ) return ;
 
+        const int reportStepIdx = ebosSimulator_.episodeIndex();
+        const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
+
         // update group controls
         if (checkGroupControl) {
-            const int reportStepIdx = ebosSimulator_.episodeIndex();
-            const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
             checkGroupConstraints(fieldGroup, deferred_logger);
         }
 
         for (const auto& well : well_container_) {
             well->updateWellControl(ebosSimulator_, well_state_, deferred_logger);
+        }
+
+        // the group target reduction rates needs to be update since wells may have swicthed to/from GRUP control
+        // Currently the group targer reduction does not honor NUPCOL
+        if( localWellsActive() ) {
+            std::vector<double> groupTargetReduction(numPhases(), 0.0);
+            wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, well_state_, groupTargetReduction);
+            std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
+            wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, well_state_, groupTargetReductionInj);
         }
     }
 
