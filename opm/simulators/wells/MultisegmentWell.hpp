@@ -273,6 +273,14 @@ namespace Opm
 
         mutable int debug_cost_counter_ = 0;
 
+        // TODO: this is the old implementation, it is possible the new value does not need it anymore
+        std::vector<EvalWell> segment_reservoir_volume_rates_;
+
+        std::vector<std::vector<EvalWell>> segment_phase_fractions_;
+
+        std::vector<std::vector<EvalWell>> segment_phase_viscosities_;
+
+
         void initMatrixAndVectors(const int num_cells) const;
 
         // protected functions
@@ -453,6 +461,7 @@ namespace Opm
         // be able to produce/inject .
         bool allDrawDownWrongDirection(const Simulator& ebos_simulator) const;
 
+
         boost::optional<double> computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
                                                          const std::vector<Scalar>& B_avg,
                                                          const SummaryState& summary_state,
@@ -464,6 +473,13 @@ namespace Opm
                                                         DeferredLogger& deferred_logger) const;
 
         double maxPerfPress(const Simulator& ebos_simulator) const;
+
+        void assembleSICDPressureEq(const int seg) const;
+
+        void calculateFlowScalingFactors();
+
+        EvalWell pressureDropSpiralICD(const int seg) const;
+
     };
 
 }

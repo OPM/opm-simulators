@@ -49,6 +49,9 @@ namespace Opm
     , segment_mass_rates_(numberOfSegments(), 0.0)
     , segment_depth_diffs_(numberOfSegments(), 0.0)
     , upwinding_segments_(numberOfSegments(), 0)
+    , segment_reservoir_volume_rates_(numberOfSegments(), 0.0)
+    , segment_phase_fractions_(numberOfSegments(), std::vector<EvalWell>(num_components_, 0.0)) // number of phase here?
+    , segment_phase_viscosities_(numberOfSegments(), std::vector<EvalWell>(num_components_, 0.0)) // number of phase here?
     {
         // not handling solvent or polymer for now with multisegment well
         if (has_solvent) {
@@ -107,6 +110,10 @@ namespace Opm
             const double outlet_depth = outlet_segment.depth();
             segment_depth_diffs_[seg] = segment_depth - outlet_depth;
         }
+
+
+        // update the flow scaling factors for sicd segments
+        calculateFlowScalingFactors();
     }
 
 
@@ -1556,6 +1563,8 @@ namespace Opm
                 }
             }
 
+            segment_phase_viscosities_[seg] = visc;
+
             std::vector<EvalWell> mix(mix_s);
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
@@ -1581,11 +1590,21 @@ namespace Opm
                 segment_viscosities_[seg] += visc[comp_idx] * comp_fraction;
             }
 
+
+
             EvalWell density(0.0);
+            EvalWell surface_volume_rate(0.0);
+
             for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 density += surf_dens[comp_idx] * mix_s[comp_idx];
+                surface_volume_rate += getSegmentRate(seg, comp_idx);
+
             }
             segment_densities_[seg] = density / volrat;
+
+            segment_reservoir_volume_rates_[seg] = surface_volume_rate / volrat;
+
+            segment_phase_fractions_[seg] = mix;
 
             // calculate the mass rates
             // TODO: for now, we are not considering the upwinding for this amount
@@ -2884,10 +2903,19 @@ namespace Opm
                 const Opm::Schedule& schedule = ebosSimulator.vanguard().schedule();
                 assembleControlEq(well_state, schedule, summaryState, inj_controls, prod_controls, deferred_logger);
             } else {
-                assemblePressureEq(seg);
+                // TODO: maybe the following should go to the function assemblePressureEq()
+                if (segmentSet()[seg].segmentType() == Segment::SegmentType::SICD) {
+                    assembleSICDPressureEq(seg);
+                } else {
+                    // regular segment
+                    assemblePressureEq(seg);
+                }
             }
         }
     }
+
+
+
     template<typename TypeTag>
     bool
     MultisegmentWell<TypeTag>::
@@ -3586,8 +3614,45 @@ namespace Opm
             deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                     "Robust bhp(thp) solve failed for well " + name());
             return boost::optional<double>();
+	}
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    assembleSICDPressureEq(const int seg) const
+    {
+        // top segment can not be a spiral ICD device
+        assert(seg != 0);
+
+        // the pressure equation is something like
+        // p_seg - deltaP - p_outlet = 0.
+        // the major part is how to calculate the deltaP
+
+        EvalWell pressure_equation = getSegmentPressure(seg);
+
+        pressure_equation = pressure_equation - pressureDropSpiralICD(seg);
+
+        resWell_[seg][SPres] = pressure_equation.value();
+        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+            duneD_[seg][seg][SPres][pv_idx] = pressure_equation.derivative(pv_idx + numEq);
+        }
+
+        // contribution from the outlet segment
+        const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
+        const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
+
+        resWell_[seg][SPres] -= outlet_pressure.value();
+        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+            duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
+
         }
     }
+
 
 
 
@@ -3792,6 +3857,48 @@ namespace Opm
 
 
 
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    calculateFlowScalingFactors()
+    {
+        // top segment will not be spiral ICD segment
+        for (int seg = 1; seg < numberOfSegments(); ++seg) {
+            const Segment& segment = segmentSet()[seg];
+            if (segment.segmentType() == Segment::SegmentType::SICD) {
+                SpiralICD& sicd = *segment.spiralICD();
+
+                // getting the segment length related to this ICD
+                const int parental_segment_number = segmentSet()[seg].outletSegment();
+                const double segment_length = segmentSet().segmentLength(parental_segment_number);
+
+                // getting the total completion length related to this ICD
+                // it should be connections
+                const auto& connections = well_ecl_.getConnections();
+                double total_connection_length = 0.;
+                for (const int conn : segment_perforations_[seg]) {
+                    const auto& connection = connections.get(conn);
+                    const double connection_length = connection.getSegDistEnd() - connection.getSegDistStart();
+                    assert(connection_length > 0.);
+                    total_connection_length += connection_length;
+                }
+
+                if (total_connection_length == 0.) {
+                    OPM_THROW(std::runtime_error, "zero total connection length is obtained when calcualting scaling factor");
+                }
+
+                sicd.updateScalingFactor(segment_length, total_connection_length);
+            }
+        }
+    }
+
+
+
+
+
+
     template<typename TypeTag>
     double
     MultisegmentWell<TypeTag>::
@@ -3809,6 +3916,68 @@ namespace Opm
             }
         }
         return max_pressure;
+    }
+
+
+
+
+
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    pressureDropSpiralICD(const int seg) const
+    {
+        const SpiralICD& sicd = *segmentSet()[seg].spiralICD();
+
+        const double density_cali = sicd.densityCalibration();
+        const double base_strength = sicd.strength() / density_cali;
+
+        const std::vector<EvalWell>& phase_fractions = segment_phase_fractions_[seg];
+        const std::vector<EvalWell>& phase_viscosities = segment_phase_viscosities_[seg];
+
+        EvalWell water_fraction = 0.;
+        EvalWell water_viscosity = 0.;
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const int water_pos = phaseUsage().phase_pos[Water];
+            water_fraction = phase_fractions[water_pos];
+            water_viscosity = phase_viscosities[water_pos];
+        }
+
+        EvalWell oil_fraction = 0.;
+        EvalWell oil_viscosity = 0.;
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            const int oil_pos = phaseUsage().phase_pos[Oil];
+            oil_fraction = phase_fractions[oil_pos];
+            oil_viscosity = phase_viscosities[oil_pos];
+        }
+
+        EvalWell gas_fraction = 0.;
+        EvalWell gas_viscosities = 0.;
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int gas_pos = phaseUsage().phase_pos[Gas];
+            gas_fraction = phase_fractions[gas_pos];
+            gas_viscosities = phase_viscosities[gas_pos];
+        }
+
+        // water_fraction + oil_fraction + gas_fraction should equal to one
+        // calculating the water oil emulsion viscosity
+        // TODO: maybe we should keep the derivative of the fractions
+        const EvalWell liquid_emulsion_viscosity = mswellhelpers::emulsionViscosity(water_fraction.value(), water_viscosity,
+                                                 oil_fraction.value(), oil_viscosity, sicd);
+        const EvalWell mixture_viscosity = (water_fraction + oil_fraction) * liquid_emulsion_viscosity + gas_fraction * gas_viscosities;
+
+        const EvalWell& reservoir_rate = segment_reservoir_volume_rates_[seg];
+
+        const EvalWell reservoir_rate_icd = reservoir_rate * sicd.scalingFactor();
+
+        const double viscosity_cali = sicd.viscosityCalibration();
+
+        using MathTool = MathToolbox<EvalWell>;
+
+        const EvalWell& density = segment_densities_[seg];
+        const EvalWell temp_value1 = MathTool::pow(density / density_cali, 0.75);
+        const EvalWell temp_value2 = MathTool::pow(mixture_viscosity / viscosity_cali, 0.25);
+
+        return temp_value1 * temp_value2 * base_strength * reservoir_rate_icd * reservoir_rate_icd;
     }
 
 
