@@ -1051,7 +1051,7 @@ namespace Opm
         }
         case Group::InjectionCMode::REIN:
         {
-            double productionRate = well_state.currentInjectionVREPRates(groupcontrols.reinj_group);
+            double productionRate = well_state.currentInjectionREINRates(groupcontrols.reinj_group)[phasePos];
             productionRate /= efficiencyFactor;
             double target = std::max(0.0, (groupcontrols.target_reinj_fraction*productionRate - groupTargetReduction));
             control_eq = getWQTotal() - fraction * target;            
