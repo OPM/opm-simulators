@@ -332,12 +332,12 @@ namespace Opm {
         wellState.setCurrentInjectionVREPRates(group.name(), resv);
     }
 
-    inline void updateREINForGroups(const Group& group, const Schedule& schedule, const int reportStepIdx, WellStateFullyImplicitBlackoil& wellState, std::vector<double>& rein) {
+    inline void updateREINForGroups(const Group& group, const Schedule& schedule, const int reportStepIdx, const PhaseUsage& pu, WellStateFullyImplicitBlackoil& wellState, std::vector<double>& rein) {
         const int np = wellState.numPhases();
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
             std::vector<double> thisRein(np, 0.0);
-            updateREINForGroups(groupTmp, schedule, reportStepIdx, wellState, thisRein);
+            updateREINForGroups(groupTmp, schedule, reportStepIdx, pu, wellState, thisRein);
             for (int phase = 0; phase < np; ++phase) {
                 rein[phase] = thisRein[phase];
             }
@@ -345,6 +345,16 @@ namespace Opm {
         for (int phase = 0; phase < np; ++phase) {
             rein[phase] = sumWellPhaseRates(wellState.wellRates(), group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false);
         }
+
+        // add import rate and substract consumption rate for group for gas
+        if (schedule.gConSump(reportStepIdx).has(group.name())) {
+            const auto& gconsump = schedule.gConSump(reportStepIdx).get(group.name());
+            if (pu.phase_used[BlackoilPhases::Vapour]) {
+                rein[pu.phase_pos[BlackoilPhases::Vapour]] += gconsump.import_rate.get<double>();
+                rein[pu.phase_pos[BlackoilPhases::Vapour]] -= gconsump.consumption_rate.get<double>();
+            }
+        }
+
         wellState.setCurrentInjectionREINRates(group.name(), rein);
     }
 

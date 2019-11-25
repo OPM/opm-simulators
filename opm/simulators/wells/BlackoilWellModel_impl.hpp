@@ -807,7 +807,7 @@ namespace Opm {
                     std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
                     wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, well_state_, groupTargetReductionInj);
                     std::vector<double> rein(numPhases(), 0.0);
-                    wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, well_state_, rein);
+                    wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, well_state_, rein);
                     double resv = 0.0;
                     wellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_, resv);
                 }
