@@ -1806,7 +1806,9 @@ namespace Opm {
         }
         switch(exceed_action) {
         case Group::ExceedAction::NONE: {
-            OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit NONE not implemented", deferred_logger);
+            if (oldControl != newControl) {
+                ss << "Group Production exceed Limit NONE for group " + group.name() + " Nothing happens";
+            }
             break;
         }
         case Group::ExceedAction::CON: {
