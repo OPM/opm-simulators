@@ -52,6 +52,8 @@ namespace Opm
     public:
         typedef BaseType :: WellMapType WellMapType;
 
+        virtual ~WellStateFullyImplicitBlackoil() = default;
+
         // TODO: same definition with WellInterface, eventually they should go to a common header file.
         static const int Water = BlackoilPhases::Aqua;
         static const int Oil = BlackoilPhases::Liquid;
@@ -67,29 +69,29 @@ namespace Opm
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
-        void init(const Wells* wells,
-                  const std::vector<double>& cellPressures,
+        void init(const std::vector<double>& cellPressures,
                   const Schedule& schedule,
                   const std::vector<Well>& wells_ecl,
                   const int report_step,
                   const WellStateFullyImplicitBlackoil* prevState,
-                  const PhaseUsage& pu)
+                  const PhaseUsage& pu,
+                  const std::vector<std::vector<PerforationData>>& well_perf_data,
+                  const SummaryState& summary_state)
         {
             // call init on base class
-            BaseType :: init(wells, cellPressures);
+            BaseType :: init(cellPressures, wells_ecl, pu, well_perf_data, summary_state);
 
-            // if there are no well, do nothing in init
-            if (wells == 0) {
-                return;
-            }
-
-            const int nw = wells->number_of_wells;
+            const int nw = wells_ecl.size();
 
             if( nw == 0 ) return ;
 
             // Initialize perfphaserates_, which must be done here.
-            const int np = wells->number_of_phases;
-            const int nperf = wells->well_connpos[nw];
+            const int np = pu.num_phases;
+
+            int nperf = 0;
+            for (const auto& wpd : well_perf_data) {
+                nperf += wpd.size();
+            }
 
             well_reservoir_rates_.resize(nw * np, 0.0);
             well_dissolved_gas_rates_.resize(nw, 0.0);
@@ -107,23 +109,9 @@ namespace Opm
                 const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
                                                      + ScheduleEvents::PRODUCTION_UPDATE
                                                      + ScheduleEvents::INJECTION_UPDATE;
-
-                for (int w = 0; w <nw; ++w) {
-                    const int nw_wells_ecl = wells_ecl.size();
-                    int index_well_ecl = 0;
-                    const std::string well_name(wells->name[w]);
-                    for (; index_well_ecl < nw_wells_ecl; ++index_well_ecl) {
-                        if (well_name == wells_ecl[index_well_ecl].name()) {
-                            break;
-                        }
-                    }
-
-                    // It should be able to find in wells_ecl.
-                    if (index_well_ecl == nw_wells_ecl) {
-                        OPM_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ");
-                    }
-
-                    effective_events_occurred_[w] = (schedule.hasWellEvent(well_name, effective_events_mask, report_step) );
+                for (int w = 0; w < nw; ++w) {
+                    effective_events_occurred_[w]
+                        = schedule.hasWellEvent(wells_ecl[w].name(), effective_events_mask, report_step);
                 }
             } // end of if (!well_ecl.empty() )
 
@@ -139,21 +127,20 @@ namespace Opm
             perf_skin_pressure_.clear();
             perf_skin_pressure_.resize(nperf, 0.0);
 
+            int connpos = 0;
             for (int w = 0; w < nw; ++w) {
-                assert((wells->type[w] == INJECTOR) || (wells->type[w] == PRODUCER));
-                const WellControls* ctrl = wells->ctrls[w];
-
-                const int num_perf_this_well = wells->well_connpos[w + 1] - wells->well_connpos[w];
-                // Open well: Initialize perfphaserates_ to well
+                // Initialize perfphaserates_ to well
                 // rates divided by the number of perforations.
-                for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
-                    if (well_controls_well_is_open(ctrl)) {
+                const int num_perf_this_well = well_perf_data[w].size();
+                for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf) {
+                    if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
                         for (int p = 0; p < np; ++p) {
                             perfphaserates_[np*perf + p] = wellRates()[np*w + p] / double(num_perf_this_well);
                         }
                     }
-                    perfPress()[perf] = cellPressures[wells->well_cells[perf]];
+                    perfPress()[perf] = cellPressures[well_perf_data[w][perf-connpos].cell_index];
                 }
+                connpos += num_perf_this_well;
             }
 
             current_injection_controls_.resize(nw);
@@ -166,13 +153,14 @@ namespace Opm
 
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
-            if(prevState && !prevState->wellMap().empty()) {
-                typedef typename WellMapType :: const_iterator const_iterator;
-                const_iterator end = prevState->wellMap().end();
+            if (prevState && !prevState->wellMap().empty()) {
+                connpos = 0;
+                auto end = prevState->wellMap().end();
                 for (int w = 0; w < nw; ++w) {
-                    const std::string name( wells->name[ w ] );
-                    const_iterator it = prevState->wellMap().find( name );
-                    if( it != end )
+                    const Well& well = wells_ecl[w];
+                    const int num_perf_this_well = well_perf_data[w].size();
+                    auto it = prevState->wellMap().find(well.name());
+                    if ( it != end )
                     {
                         const int oldIndex = (*it).second[ 0 ];
                         const int newIndex = w;
@@ -210,19 +198,18 @@ namespace Opm
                         // perfPhaseRates
                         const int oldPerf_idx_beg = (*it).second[ 1 ];
                         const int num_perf_old_well = (*it).second[ 2 ];
-                        const int num_perf_this_well = wells->well_connpos[newIndex + 1] - wells->well_connpos[newIndex];
                         // copy perforation rates when the number of perforations is equal,
                         // otherwise initialize perfphaserates to well rates divided by the number of perforations.
                         if( num_perf_old_well == num_perf_this_well )
                         {
                             int old_perf_phase_idx = oldPerf_idx_beg *np;
-                            for (int perf_phase_idx = wells->well_connpos[ newIndex ]*np;
-                                 perf_phase_idx < wells->well_connpos[ newIndex + 1]*np; ++perf_phase_idx, ++old_perf_phase_idx )
+                            for (int perf_phase_idx = connpos*np;
+                                 perf_phase_idx < (connpos + num_perf_this_well)*np; ++perf_phase_idx, ++old_perf_phase_idx )
                             {
                                 perfPhaseRates()[ perf_phase_idx ] = prevState->perfPhaseRates()[ old_perf_phase_idx ];
                             }
                         } else {
-                            for (int perf = wells->well_connpos[newIndex]; perf < wells->well_connpos[newIndex + 1]; ++perf) {
+                            for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf) {
                                 for (int p = 0; p < np; ++p) {
                                     perfPhaseRates()[np*perf + p] = wellRates()[np*newIndex + p] / double(num_perf_this_well);
                                 }
@@ -232,8 +219,7 @@ namespace Opm
                         if( num_perf_old_well == num_perf_this_well )
                         {
                             int oldPerf_idx = oldPerf_idx_beg;
-                            for (int perf = wells->well_connpos[ newIndex ];
-                                 perf < wells->well_connpos[ newIndex + 1]; ++perf, ++oldPerf_idx )
+                            for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf, ++oldPerf_idx )
                             {
                                 perfPress()[ perf ] = prevState->perfPress()[ oldPerf_idx ];
                             }
@@ -243,8 +229,7 @@ namespace Opm
                             if( num_perf_old_well == num_perf_this_well )
                             {
                                 int oldPerf_idx = oldPerf_idx_beg;
-                                for (int perf = wells->well_connpos[ newIndex ];
-                                     perf < wells->well_connpos[ newIndex + 1]; ++perf, ++oldPerf_idx )
+                                for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf, ++oldPerf_idx )
                                 {
                                     perfRateSolvent()[ perf ] = prevState->perfRateSolvent()[ oldPerf_idx ];
                                 }
@@ -258,8 +243,7 @@ namespace Opm
                             if( num_perf_old_well == num_perf_this_well )
                             {
                                 int oldPerf_idx = oldPerf_idx_beg;
-                                for (int perf = wells->well_connpos[ newIndex ];
-                                     perf < wells->well_connpos[ newIndex + 1]; ++perf, ++oldPerf_idx )
+                                for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf, ++oldPerf_idx )
                                 {
                                     perf_water_throughput_[ perf ] = prevState->perfThroughput()[ oldPerf_idx ];
                                     perf_skin_pressure_[ perf ] = prevState->perfSkinPressure()[ oldPerf_idx ];
@@ -269,21 +253,16 @@ namespace Opm
                         }
                     }
 
-
                     // If in the new step, there is no THP related target/limit anymore, its thp value should be
                     // set to zero.
-                    const WellControls* ctrl = wells->ctrls[w];
-                    const int nwc = well_controls_get_num(ctrl);
-                    int ctrl_index = 0;
-                    for (; ctrl_index < nwc; ++ctrl_index) {
-                        if (well_controls_iget_type(ctrl, ctrl_index) == THP) {
-                            break;
-                        }
+                    const bool has_thp = well.isInjector() ? well.injectionControls(summary_state).hasControl(Well::InjectorCMode::THP)
+                        : well.productionControls(summary_state).hasControl(Well::ProducerCMode::THP);
+                    if (!has_thp) {
+                        thp()[w] = 0.0;
                     }
-                    // not finding any thp related control/limits
-                    if (ctrl_index == nwc) {
-                        thp()[w] = 0.;
-                    }
+
+                    // Increment connection position offset.
+                    connpos += num_perf_this_well;
                 }
             }
 
@@ -303,14 +282,19 @@ namespace Opm
         }
 
 
-        void resize(const Wells* wells, const std::vector<Well>& wells_ecl, const Schedule& schedule,
-                    const bool handle_ms_well, const size_t numCells, const PhaseUsage& pu)
+        void resize(const std::vector<Well>& wells_ecl,
+                    const Schedule& schedule,
+                    const bool handle_ms_well,
+                    const size_t numCells,
+                    const PhaseUsage& pu,
+                    const std::vector<std::vector<PerforationData>>& well_perf_data,
+                    const SummaryState& summary_state)
         {
             const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-            init(wells, tmp, schedule, wells_ecl, 0, nullptr, pu);
+            init(tmp, schedule, wells_ecl, 0, nullptr, pu, well_perf_data, summary_state);
 
             if (handle_ms_well) {
-                initWellStateMSWell(wells, wells_ecl, pu, nullptr);
+                initWellStateMSWell(wells_ecl, pu, nullptr);
             }
         }
 
@@ -434,13 +418,6 @@ namespace Opm
                 phs.at( pu.phase_pos[Gas] ) = rt::gas;
             }
 
-            if (pu.has_solvent) {
-                // add solvent component
-                for( int w = 0; w < nw; ++w ) {
-                    res.at( wells_->name[ w ]).rates.set( rt::solvent, solventWellRate(w) );
-                }
-            }
-
             /* this is a reference or example on **how** to convert from
              * WellState to something understood by opm-output. it is intended
              * to be properly implemented and maintained as a part of
@@ -491,10 +468,14 @@ namespace Opm
                     well.rates.set( rt::well_potential_gas, this->well_potentials_[well_rate_index + pu.phase_pos[Gas]] );
                 }
 
+                if ( pu.has_solvent ) {
+                    well.rates.set( rt::solvent, solventWellRate(w) );
+                }
+
                 well.rates.set( rt::dissolved_gas, this->well_dissolved_gas_rates_[w] );
                 well.rates.set( rt::vaporized_oil, this->well_vaporized_oil_rates_[w] );
 
-                int local_comp_index = 0;
+                size_t local_comp_index = 0;
                 for( auto& comp : well.connections) {
                     const auto rates = this->perfPhaseRates().begin()
                                      + (np * wt.second[ 1 ])
@@ -505,7 +486,7 @@ namespace Opm
                         comp.rates.set( phs[ i ], *(rates + i) );
                     }
                 }
-                assert(local_comp_index == this->wells_->well_connpos[ w + 1 ] - this->wells_->well_connpos[ w ]);
+                assert(local_comp_index == this->well_perf_data_[w].size());
 
                 const auto nseg = this->numSegments(w);
                 for (auto seg_ix = 0*nseg; seg_ix < nseg; ++seg_ix) {
@@ -520,11 +501,11 @@ namespace Opm
 
 
         /// init the MS well related.
-        void initWellStateMSWell(const Wells* wells, const std::vector<Well>& wells_ecl,
+        void initWellStateMSWell(const std::vector<Well>& wells_ecl,
                                  const PhaseUsage& pu, const WellStateFullyImplicitBlackoil* prev_well_state)
         {
             // still using the order in wells
-            const int nw = wells->number_of_wells;
+            const int nw = wells_ecl.size();
             if (nw == 0) {
                 return;
             }
@@ -538,24 +519,12 @@ namespace Opm
             seg_number_.clear();
 
             nseg_ = 0;
+            int connpos = 0;
             // in the init function, the well rates and perforation rates have been initialized or copied from prevState
             // what we do here, is to set the segment rates and perforation rates
             for (int w = 0; w < nw; ++w) {
-                const int nw_wells_ecl = wells_ecl.size();
-                int index_well_ecl = 0;
-                const std::string well_name(wells->name[w]);
-                for (; index_well_ecl < nw_wells_ecl; ++index_well_ecl) {
-                    if (well_name == wells_ecl[index_well_ecl].name()) {
-                        break;
-                    }
-                }
-
-                // It should be able to find in wells_ecl.
-                if (index_well_ecl == nw_wells_ecl) {
-                    OPM_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ");
-                }
-
-                const auto& well_ecl = wells_ecl[index_well_ecl];
+                const auto& well_ecl = wells_ecl[w];
+                int num_perf_this_well = well_perf_data_[w].size();
                 top_segment_index_.push_back(nseg_);
                 if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
                     nseg_ += 1;
@@ -571,7 +540,6 @@ namespace Opm
                     const WellConnections& completion_set = well_ecl.getConnections();
                     // number of segment for this single well
                     const int well_nseg = segment_set.size();
-                    // const int nperf = completion_set.size();
                     int n_activeperf = 0;
                     nseg_ += well_nseg;
                     for (auto segID = 0*well_nseg; segID < well_nseg; ++segID) {
@@ -605,8 +573,8 @@ namespace Opm
                     // for the segrates_, now it becomes a recursive solution procedure.
                     {
                         const int np = numPhases();
-                        const int start_perf = wells->well_connpos[w];
-                        const int start_perf_next_well = wells->well_connpos[w + 1];
+                        const int start_perf = connpos;
+                        const int start_perf_next_well = connpos + num_perf_this_well;
 
                         // make sure the information from wells_ecl consistent with wells
                         assert(n_activeperf == (start_perf_next_well - start_perf));
@@ -640,7 +608,7 @@ namespace Opm
                         // top segment is always the first one, and its pressure is the well bhp
                         segpress_.push_back(bhp()[w]);
                         const int top_segment = top_segment_index_[w];
-                        const int start_perf = wells->well_connpos[w];
+                        const int start_perf = connpos;
                         for (int seg = 1; seg < well_nseg; ++seg) {
                             if ( !segment_perforations[seg].empty() ) {
                                 const int first_perf = segment_perforations[seg][0];
@@ -654,6 +622,7 @@ namespace Opm
                         }
                     }
                 }
+                connpos += num_perf_this_well;
             }
             assert(int(segpress_.size()) == nseg_);
             assert(int(segrates_.size()) == nseg_ * numPhases() );
@@ -663,8 +632,7 @@ namespace Opm
                 const auto& end = prev_well_state->wellMap().end();
                 const int np = numPhases();
                 for (int w = 0; w < nw; ++w) {
-                    const std::string name( wells->name[w] );
-                    const auto& it = prev_well_state->wellMap().find( name );
+                    const auto& it = prev_well_state->wellMap().find( wells_ecl[w].name() );
 
                     if (it != end) { // the well is found in the prev_well_state
                         // TODO: the well with same name can change a lot, like they might not have same number of segments
@@ -736,8 +704,13 @@ namespace Opm
 
         /// One rate pr well
         double solventWellRate(const int w) const {
+            int connpos = 0;
+            for (int iw = 0; iw < w; ++iw) {
+                connpos += this->well_perf_data_[iw].size();
+            }
             double solvent_well_rate = 0.0;
-            for (int perf = wells_->well_connpos[w]; perf < wells_->well_connpos[w+1]; ++perf ) {
+            const int endperf = connpos + this->well_perf_data_[w].size();
+            for (int perf = connpos; perf < endperf; ++perf ) {
                 solvent_well_rate += perfRateSolvent_[perf];
             }
             return solvent_well_rate;

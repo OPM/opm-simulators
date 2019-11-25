@@ -27,75 +27,58 @@ namespace Opm
 
     template<typename TypeTag>
     WellInterface<TypeTag>::
-    WellInterface(const Well& well, const int time_step, const Wells* wells,
+    WellInterface(const Well& well,
+                  const int time_step,
                   const ModelParameters& param,
                   const RateConverterType& rate_converter,
                   const int pvtRegionIdx,
-                  const int num_components)
+                  const int num_components,
+                  const int num_phases,
+                  const int index_of_well,
+                  const int first_perf_index,
+                  const std::vector<PerforationData>& perf_data)
       : well_ecl_(well)
       , current_step_(time_step)
       , param_(param)
       , rateConverter_(rate_converter)
       , pvtRegionIdx_(pvtRegionIdx)
       , num_components_(num_components)
+      , number_of_phases_(num_phases)
+      , index_of_well_(index_of_well)
+      , first_perf_(first_perf_index)
     {
         if (time_step < 0) {
             OPM_THROW(std::invalid_argument, "Negtive time step is used to construct WellInterface");
         }
 
-        if (!wells) {
-            OPM_THROW(std::invalid_argument, "Null pointer of Wells is used to construct WellInterface");
-        }
+        ref_depth_ = well.getRefDepth();
 
-        const std::string& well_name = well.name();
-
-        // looking for the location of the well in the wells struct
-        int index_well;
-        for (index_well = 0; index_well < wells->number_of_wells; ++index_well) {
-            if (well_name == std::string(wells->name[index_well])) {
-                break;
-            }
-        }
-
-        // should not enter the constructor if the well does not exist in the wells struct
-        // here, just another assertion.
-        assert(index_well != wells->number_of_wells);
-
-        index_of_well_ = index_well;
-        well_type_ = wells->type[index_well];
-        number_of_phases_ = wells->number_of_phases;
-
-        // copying the comp_frac
-        {
-            comp_frac_.resize(number_of_phases_);
-            const int index_begin = index_well * number_of_phases_;
-            std::copy(wells->comp_frac + index_begin,
-                      wells->comp_frac + index_begin + number_of_phases_, comp_frac_.begin() );
-        }
-
-        ref_depth_ = wells->depth_ref[index_well];
+        // We do not want to count SHUT perforations here, so
+        // it would be wrong to use wells.getConnections().size().
+        number_of_perforations_ = perf_data.size();
 
         // perforations related
         {
-            const int perf_index_begin = wells->well_connpos[index_well];
-            const int perf_index_end = wells->well_connpos[index_well + 1];
-            number_of_perforations_ = perf_index_end - perf_index_begin;
-            first_perf_ = perf_index_begin;
-
             well_cells_.resize(number_of_perforations_);
-            std::copy(wells->well_cells + perf_index_begin,
-                      wells->well_cells + perf_index_end,
-                      well_cells_.begin() );
-
             well_index_.resize(number_of_perforations_);
-            std::copy(wells->WI + perf_index_begin,
-                      wells->WI + perf_index_end,
-                      well_index_.begin() );
-
             saturation_table_number_.resize(number_of_perforations_);
-            std::copy(wells->sat_table_id + perf_index_begin,
-                      wells->sat_table_id + perf_index_end,
-                      saturation_table_number_.begin() );
+            int perf = 0;
+            for (const auto& pd : perf_data) {
+                well_cells_[perf] = pd.cell_index;
+                well_index_[perf] = pd.connection_transmissibility_factor;
+                saturation_table_number_[perf] = pd.satnum_id;
+                ++perf;
+            }
+
+            int all_perf = 0;
+            originalConnectionIndex_.reserve(perf_data.size());
+            for (const auto connection : well.getConnections()) {
+                if (connection.state() == Connection::State::OPEN) {
+                    originalConnectionIndex_.push_back(all_perf);
+                }
+                ++all_perf;
+            }
+            assert(originalConnectionIndex_.size() == perf_data.size());
         }
 
         // initialization of the completions mapping
@@ -205,11 +188,22 @@ namespace Opm
 
 
     template<typename TypeTag>
-    WellType
+    bool
     WellInterface<TypeTag>::
-    wellType() const
+    isInjector() const
     {
-        return well_type_;
+        return well_ecl_.isInjector();
+    }
+
+
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    isProducer() const
+    {
+        return well_ecl_.isProducer();
     }
 
 
@@ -781,7 +775,7 @@ namespace Opm
     {
 
         // currently, we only updateWellTestState for producers
-        if (wellType() != PRODUCER) {
+        if (this->isInjector()) {
             return;
         }
 
@@ -930,7 +924,8 @@ namespace Opm
                     bool allCompletionsClosed = true;
                     const auto& connections = well_ecl_.getConnections();
                     for (const auto& connection : connections) {
-                        if (!well_test_state.hasCompletion(name(), connection.complnum())) {
+                        if (connection.state() == Connection::State::OPEN
+                            && !well_test_state.hasCompletion(name(), connection.complnum())) {
                             allCompletionsClosed = false;
                         }
                     }
@@ -1166,7 +1161,7 @@ namespace Opm
         // we need to get the table number through the parser, in case THP constraint/target is not there.
         // When THP control/limit is not active, if available VFP table is provided, we will still need to
         // update THP value. However, it will only used for output purpose.
-        if (well_type_ == PRODUCER) { // producer
+        if (isProducer()) { // producer
             const int table_id = well_ecl_.vfp_table_number();
             if (table_id <= 0) {
                 return false;
@@ -1264,10 +1259,12 @@ namespace Opm
         const auto& connections = well_ecl_.getConnections();
         int perfIdx = 0;
         for (const auto& connection : connections) {
-            if (wellTestState.hasCompletion(name(), connection.complnum())) {
-                well_index_[perfIdx] = 0.0;
+            if (connection.state() == Connection::State::OPEN) {
+                if (wellTestState.hasCompletion(name(), connection.complnum())) {
+                    well_index_[perfIdx] = 0.0;
+                }
+                perfIdx++;
             }
-            perfIdx++;
         }
     }
 
@@ -1295,7 +1292,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger)
     {
-        const auto& connection = well_ecl_.getConnections()[perfIdx];
+        const auto& connection = well_ecl_.getConnections()[originalConnectionIndex_[perfIdx]];
         if (well_ecl_.getDrainageRadius() < 0) {
             if (new_well && perfIdx == 0) {
                 deferred_logger.warning("PRODUCTIVITY_INDEX_WARNING", "Negative drainage radius not supported. The productivity index is set to zero");

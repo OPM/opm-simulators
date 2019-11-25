@@ -140,11 +140,15 @@ namespace Opm
         using Base::contiFoamEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
-        StandardWell(const Well& well, const int time_step, const Wells* wells,
+        StandardWell(const Well& well, const int time_step,
                      const ModelParameters& param,
                      const RateConverterType& rate_converter,
                      const int pvtRegionIdx,
-                     const int num_components);
+                     const int num_components,
+                     const int num_phases,
+                     const int index_of_well,
+                     const int first_perf_index,
+                     const std::vector<PerforationData>& perf_data);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
@@ -231,10 +235,8 @@ namespace Opm
         using Base::number_of_perforations_;
         using Base::number_of_phases_;
         using Base::saturation_table_number_;
-        using Base::comp_frac_;
         using Base::well_index_;
         using Base::index_of_well_;
-        using Base::well_type_;
         using Base::num_components_;
         using Base::connectionRates_;
 
@@ -397,7 +399,6 @@ namespace Opm
 
         void assembleGroupProductionControl(const Group& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
         void assembleGroupInjectionControl(const Group& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState,  const Well::InjectorType& injectorType, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
-
 
         // handle the non reasonable fractions due to numerical overshoot
         void processFractions() const;
