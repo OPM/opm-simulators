@@ -21,7 +21,6 @@
 #define OPM_AUTODIFF_VFPPRODPROPERTIES_HPP_
 
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
-#include <opm/core/wells.h>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>

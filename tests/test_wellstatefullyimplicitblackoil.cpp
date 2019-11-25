@@ -30,10 +30,10 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 
+#include <opm/grid/GridHelpers.hpp>
+
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
-#include <opm/core/wells/WellsManager.hpp>
-#include <opm/core/wells.h>
 
 #include <opm/grid/GridManager.hpp>
 

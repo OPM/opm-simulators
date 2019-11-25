@@ -25,8 +25,6 @@
 
 #include <opm/grid/CpGrid.hpp>
 
-#include <opm/core/wells.h>
-
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 namespace Opm

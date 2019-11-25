@@ -1099,7 +1099,7 @@ namespace Opm
                 {
                     double radius = connection.rw();
                     const std::array<double, 3> cubical =
-                    WellsManagerDetail::getCubeDim<3>(cell_to_faces, begin_face_centroids, cell);
+                        wellhelpers::getCubeDim<3>(cell_to_faces, begin_face_centroids, cell);
 
                     double re; // area equivalent radius of the grid block
                     double perf_length; // the length of the well perforation
