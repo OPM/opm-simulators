@@ -32,10 +32,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 
-#include <opm/core/wells.h>
-#include <opm/core/well_controls.h>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/wells/WellsManager.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 
 #include <opm/simulators/wells/RateConverter.hpp>
@@ -145,9 +142,6 @@ namespace Opm
 
         /// Well cells.
         const std::vector<int>& cells() const {return well_cells_; }
-
-        /// Well controls
-        WellControls* wellControls() const;
 
         void setVFPProperties(const VFPProperties<VFPInjProperties,VFPProdProperties>* vfp_properties_arg);
 
@@ -396,8 +390,6 @@ namespace Opm
                                  Opm::DeferredLogger& deferred_logger) const;
 
         double getTHPConstraint(const SummaryState& summaryState) const;
-
-        int getControlIndex(const WellControlType& type) const;
 
         // Component fractions for each phase for the well
         const std::vector<double>& compFrac() const;

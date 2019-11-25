@@ -21,8 +21,6 @@
 #define OPM_WELLSTATE_HEADER_INCLUDED
 
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/wells.h>
-#include <opm/core/well_controls.h>
 #include <opm/output/data/Wells.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>

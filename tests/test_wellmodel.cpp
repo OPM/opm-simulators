@@ -37,8 +37,6 @@
 
 #include <opm/grid/GridManager.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/core/wells/WellsManager.hpp>
-#include <opm/core/wells.h>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/grid/GridHelpers.hpp>

@@ -28,8 +28,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 
-#include <opm/core/well_controls.h>
-
 namespace Opm
 {
     namespace SimFIBODetails {
@@ -48,43 +46,6 @@ namespace Opm
             return wmap;
         }
 
-        inline int
-        resv_control(const WellControls* ctrl)
-        {
-            int i, n = well_controls_get_num(ctrl);
-
-            bool match = false;
-            for (i = 0; (! match) && (i < n); ++i) {
-                match = well_controls_iget_type(ctrl, i) == RESERVOIR_RATE;
-            }
-
-            if (! match) { i = 0; }
-
-            return i - 1; // -1 if no match, undo final "++" otherwise
-        }
-
-        inline bool
-        is_resv(const Wells& wells,
-                const int    w)
-        {
-            return (0 <= resv_control(wells.ctrls[w]));
-        }
-
-        inline std::vector<int>
-        resvWells(const Wells*      wells)
-        {
-            std::vector<int> resv_wells;
-            if( wells )
-            {
-                for (int w = 0, nw = wells->number_of_wells; w < nw; ++w) {
-                    if ( is_resv(*wells, w) ) {
-                        resv_wells.push_back(w);
-                    }
-                }
-            }
-
-            return resv_wells;
-        }
 
         inline void
         historyRates(const PhaseUsage&               pu,

@@ -21,8 +21,6 @@
 #ifndef OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 #define OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
-#include <opm/core/wells.h>
-#include <opm/core/well_controls.h>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 

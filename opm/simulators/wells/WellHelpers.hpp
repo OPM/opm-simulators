@@ -22,8 +22,6 @@
 #ifndef OPM_WELLHELPERS_HEADER_INCLUDED
 #define OPM_WELLHELPERS_HEADER_INCLUDED
 
-#include <opm/core/wells.h>
-// #include <opm/autodiff/AutoDiffHelpers.hpp>
 
 #include <vector>
 
@@ -35,35 +33,6 @@ namespace Opm {
     namespace wellhelpers
     {
 
-
-         // ---------      Types      ---------
-
-        /**
-         * Simple hydrostatic correction for VFP table
-         * @param wells - wells struct
-         * @param w Well number
-         * @param vfp_table VFP table
-         * @param well_perforation_densities Densities at well perforations
-         * @param gravity Gravitational constant (e.g., 9.81...)
-         */
-        inline
-        double computeHydrostaticCorrection(const Wells& wells, const int w, double vfp_ref_depth,
-                                            const double& rho, const double gravity) {
-            if ( wells.well_connpos[w] == wells.well_connpos[w+1] )
-            {
-                // This is a well with no perforations.
-                // If this is the last well we would subscript over the
-                // bounds below.
-                // we assume well_perforation_densities to be 0
-                return 0;
-            }
-            const double well_ref_depth = wells.depth_ref[w];
-            const double dh = vfp_ref_depth - well_ref_depth;
-            const double dp = rho*gravity*dh;
-
-            return dp;
-        }
-
         inline
         double computeHydrostaticCorrection(const double well_ref_depth, const double vfp_ref_depth,
                                             const double rho, const double gravity) {
@@ -73,40 +42,52 @@ namespace Opm {
             return dp;
         }
 
-        template <class Vector>
-        inline
-        Vector computeHydrostaticCorrection(const Wells& wells, const Vector vfp_ref_depth,
-                const Vector& well_perforation_densities, const double gravity) {
-            const int nw = wells.number_of_wells;
-            Vector retval = Vector::Zero(nw);
 
-#if HAVE_OPENMP
-#pragma omp parallel for schedule(static)
-#endif // HAVE_OPENMP
-            for (int i=0; i<nw; ++i) {
-                const int perf = wells.well_connpos[i];
-                retval[i] = computeHydrostaticCorrection(wells, i, vfp_ref_depth[i], well_perforation_densities[perf], gravity);
+
+
+        template <int dim, class C2F, class FC>
+        std::array<double, dim>
+        getCubeDim(const C2F& c2f,
+                   FC         begin_face_centroids,
+                   int        cell)
+        {
+            std::array< std::vector<double>, dim > X;
+            {
+                const std::vector<double>::size_type
+                    nf = std::distance(c2f[cell].begin(),
+                                       c2f[cell].end  ());
+
+                for (int d = 0; d < dim; ++d) {
+                    X[d].reserve(nf);
+                }
             }
 
-            return retval;
-        }
+            typedef typename C2F::row_type::const_iterator FI;
 
-        inline
-        std::vector<double> computeHydrostaticCorrection(const Wells& wells, const std::vector<double>& vfp_ref_depth,
-                                                         const std::vector<double>& well_perforation_densities, const double gravity) {
-            const int nw = wells.number_of_wells;
-            std::vector<double> retval(nw,0.0);
+            for (FI f = c2f[cell].begin(), e = c2f[cell].end(); f != e; ++f) {
+                using Opm::UgGridHelpers::increment;
+                using Opm::UgGridHelpers::getCoordinate;
 
-#if HAVE_OPENMP
-#pragma omp parallel for schedule(static)
-#endif // HAVE_OPENMP
-            for (int i=0; i<nw; ++i) {
-                const int perf = wells.well_connpos[i];
-                retval[i] = computeHydrostaticCorrection(wells, i, vfp_ref_depth[i], well_perforation_densities[perf], gravity);
+                const FC& fc = increment(begin_face_centroids, *f, dim);
+
+                for (int d = 0; d < dim; ++d) {
+                    X[d].push_back(getCoordinate(fc, d));
+                }
             }
 
-            return retval;
+            std::array<double, dim> cube;
+            for (int d = 0; d < dim; ++d) {
+                typedef std::vector<double>::iterator VI;
+                typedef std::pair<VI,VI>              PVI;
+
+                const PVI m = std::minmax_element(X[d].begin(), X[d].end());
+
+                cube[d] = *m.second - *m.first;
+            }
+
+            return cube;
         }
+
 
     } // namespace wellhelpers
 
