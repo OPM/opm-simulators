@@ -26,13 +26,6 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/nncsorter.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
-  opm/core/wells/InjectionSpecification.cpp
-  opm/core/wells/ProductionSpecification.cpp
-  opm/core/wells/WellCollection.cpp
-  opm/core/wells/WellsGroup.cpp
-  opm/core/wells/WellsManager.cpp
-  opm/core/wells/well_controls.cpp
-  opm/core/wells/wells.c
   opm/simulators/flow/MissingFeatures.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
@@ -66,11 +59,6 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_deferredlogger.cpp
   tests/test_timer.cpp
   tests/test_invert.cpp
-  tests/test_wells.cpp
-  tests/test_wellsmanager.cpp
-  tests/test_wellcontrols.cpp
-  tests/test_wellsgroup.cpp
-  tests/test_wellcollection.cpp
   tests/test_stoppedwells.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_norne_pvt.cpp
@@ -135,14 +123,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/core/props/satfunc/RelpermDiagnostics_impl.hpp
   opm/simulators/timestepping/SimulatorReport.hpp
   opm/simulators/wells/WellState.hpp
-  opm/core/well_controls.h
-  opm/core/wells.h
-  opm/core/wells/InjectionSpecification.hpp
-  opm/core/wells/ProductionSpecification.hpp
-  opm/core/wells/WellCollection.hpp
-  opm/core/wells/WellsGroup.hpp
-  opm/core/wells/WellsManager.hpp
-  opm/core/wells/WellsManager_impl.hpp
   opm/simulators/aquifers/AquiferInterface.hpp
   opm/simulators/aquifers/AquiferCarterTracy.hpp
   opm/simulators/aquifers/AquiferFetkovich.hpp
