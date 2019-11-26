@@ -90,8 +90,8 @@ std::size_t packSize(const std::pair<T1,T2>& data, Dune::MPIHelper::MPICommunica
     return packSize(data.first, comm) + packSize(data.second, comm);
 }
 
-template<class T>
-std::size_t packSize(const std::vector<T>& data, Dune::MPIHelper::MPICommunicator comm)
+template<class T, class A>
+std::size_t packSize(const std::vector<T,A>& data, Dune::MPIHelper::MPICommunicator comm)
 {
     if (std::is_pod<T>::value)
         // size written automatically
@@ -125,8 +125,8 @@ std::size_t packSize(const std::string& str, Dune::MPIHelper::MPICommunicator co
     return packSize(str.c_str(), comm);
 }
 
-template<class T1, class T2>
-std::size_t packSize(const std::map<T1,T2> data, Dune::MPIHelper::MPICommunicator comm)
+template<class T1, class T2, class C, class A>
+std::size_t packSize(const std::map<T1,T2,C,A>& data, Dune::MPIHelper::MPICommunicator comm)
 {
     std::size_t totalSize = packSize(data.size(), comm);
     for (const auto& entry: data)
@@ -136,8 +136,8 @@ std::size_t packSize(const std::map<T1,T2> data, Dune::MPIHelper::MPICommunicato
     return totalSize;
 }
 
-template<class T1, class T2>
-std::size_t packSize(const std::unordered_map<T1,T2> data, Dune::MPIHelper::MPICommunicator comm)
+template<class T1, class T2, class H, class P, class A>
+std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelper::MPICommunicator comm)
 {
     std::size_t totalSize = packSize(data.size(), comm);
     for (const auto& entry: data)
@@ -277,8 +277,8 @@ void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position
     pack(data.second, buffer, position, comm);
 }
 
-template<class T>
-void pack(const std::vector<T>& data, std::vector<char>& buffer, int& position,
+template<class T, class A>
+void pack(const std::vector<T, A>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     if (std::is_pod<T>::value)
@@ -317,8 +317,8 @@ void pack(const std::string& str, std::vector<char>& buffer, int& position,
     pack(str.c_str(), buffer, position, comm);
 }
 
-template<class T1, class T2>
-void pack(const std::map<T1,T2>& data, std::vector<char>& buffer, int& position,
+template<class T1, class T2, class C, class A>
+void pack(const std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.size(), buffer, position, comm);
@@ -329,8 +329,8 @@ void pack(const std::map<T1,T2>& data, std::vector<char>& buffer, int& position,
     }
 }
 
-template<class T1, class T2>
-void pack(const std::unordered_map<T1,T2>& data, std::vector<char>& buffer, int& position,
+template<class T1, class T2, class H, class P, class A>
+void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.size(), buffer, position, comm);
@@ -486,8 +486,8 @@ void unpack(std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
     unpack(data.second, buffer, position, comm);
 }
 
-template<class T>
-void unpack(std::vector<T>& data, std::vector<char>& buffer, int& position,
+template<class T, class A>
+void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     std::size_t length=0;
@@ -529,8 +529,8 @@ void unpack(std::string& str, std::vector<char>& buffer, int& position,
     str.append(cStr.data());
 }
 
-template<class T1, class T2>
-void unpack(std::map<T1,T2>& data, std::vector<char>& buffer, int& position,
+template<class T1, class T2, class C, class A>
+void unpack(std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     std::size_t size=0;
@@ -544,8 +544,8 @@ void unpack(std::map<T1,T2>& data, std::vector<char>& buffer, int& position,
     }
 }
 
-template<class T1, class T2>
-void unpack(std::unordered_map<T1,T2>& data, std::vector<char>& buffer, int& position,
+template<class T1, class T2, class H, class P, class A>
+void unpack(std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     std::size_t size=0;
