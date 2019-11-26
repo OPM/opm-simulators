@@ -1757,8 +1757,9 @@ namespace Opm {
                 }
             }
 
-        } else if (group.isProductionGroup())
-        {
+        }
+
+        if (group.isProductionGroup()) {
             const auto controls = group.productionControls(summaryState);
 
             if (group.has_control(Group::ProductionCMode::NONE))
