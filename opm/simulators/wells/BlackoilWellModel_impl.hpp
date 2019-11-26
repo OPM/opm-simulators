@@ -810,7 +810,8 @@ namespace Opm {
                 if( localWellsActive() ) {
                     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
                     std::vector<double> rein(numPhases(), 0.0);
-                    wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, well_state_, rein);
+                    const auto& summaryState = ebosSimulator_.vanguard().summaryState();
+                    wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_, rein);
                     double resv = 0.0;
                     wellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_, resv);
                 }
@@ -1722,6 +1723,38 @@ namespace Opm {
             {
                 // do nothing???
                 //OPM_THROW(std::runtime_error, "Group " + group.name() + "FLD control for injecting groups not implemented" );
+            }
+
+            // Handle GCONSALE
+            if (schedule().gConSale(reportStepIdx).has(group.name())) {
+
+                if (controls.phase != Phase::GAS)
+                    OPM_THROW(std::runtime_error, "Group " + group.name() + " has GCONSALE control but is not a GAS group" );
+
+                const auto& gconsale = schedule().gConSale(reportStepIdx).get(group.name(), summaryState);
+
+                double sales_rate = 0.0;
+                int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
+                sales_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/false);
+                sales_rate -= wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/true);
+
+                // add import rate and substract consumption rate for group for gas
+                if (schedule().gConSump(reportStepIdx).has(group.name())) {
+                    const auto& gconsump = schedule().gConSump(reportStepIdx).get(group.name(), summaryState);
+                    if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
+                        sales_rate += gconsump.import_rate;
+                        sales_rate -= gconsump.consumption_rate;
+                    }
+                }
+                if (sales_rate > gconsale.max_sales_rate) {
+                    OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate more then the maximum permitted value. Not implemented in Flow" );
+                }
+                if (sales_rate < gconsale.min_sales_rate) {
+                    OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate less then minimum permitted value. Not implemented in Flow" );
+                }
+                if (gconsale.sales_target < 0.0) {
+                    OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate target less then zero. Not implemented in Flow" );
+                }
             }
 
         } else if (group.isProductionGroup())

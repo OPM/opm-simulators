@@ -2093,6 +2093,28 @@ namespace Opm
             assert(false);
             break;
         }
+        case Group::InjectionCMode::SALE:
+        {
+            // only for gas injectors
+            assert (phasePos == pu.phase_pos[BlackoilPhases::Vapour]);
+
+            // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
+            double inj_rate = well_state.currentInjectionREINRates(group.name())[phasePos];
+            if (schedule.gConSump(current_step_).has(group.name())) {
+                const auto& gconsump = schedule.gConSump(current_step_).get(group.name(), summaryState);
+                if (pu.phase_used[BlackoilPhases::Vapour]) {
+                    inj_rate += gconsump.import_rate;
+                    inj_rate -= gconsump.consumption_rate;
+                }
+            }
+            const auto& gconsale = schedule.gConSale(current_step_).get(group.name(), summaryState);
+            inj_rate -= gconsale.sales_target;
+
+            inj_rate /= efficiencyFactor;
+            double target = std::max(0.0, (inj_rate - groupTargetReduction));
+            control_eq = getSegmentGTotal(0) /scaling - fraction * target;
+            break;
+        }
 
         default:
             OPM_DEFLOG_THROW(std::runtime_error, "Unvalid group control specified for group "  + well.groupName(), deferred_logger );
