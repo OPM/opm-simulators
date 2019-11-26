@@ -564,7 +564,7 @@ private:
     {
         std::size_t nx = eclState().getInputGrid().getNX();
         std::size_t ny = eclState().getInputGrid().getNY();
-        auto nncData = sortNncAndApplyEditnnc(eclState().getInputNNC().nncdata(),
+        auto nncData = sortNncAndApplyEditnnc(eclState().getInputNNC().data(),
                                               eclState().getInputEDITNNC().data());
         const auto& unitSystem = simulator_.vanguard().deck().getActiveUnitSystem();
         std::vector<Opm::NNCdata> outputNnc;
