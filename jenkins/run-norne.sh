@@ -9,7 +9,7 @@ cd norne
 mkdir $SIM
 if test -n "$1"
 then
-  mpirun -np $1 $WORKSPACE/$configuration/build-opm-simulators/bin/$SIM --output-dir=$SIM NORNE_ATW2013.DATA
+  mpirun -np $1 $WORKSPACE/$configuration/build-opm-simulators/bin/$SIM --output-dir=${SIM}_${1}_proc NORNE_ATW2013.DATA
 else
   $WORKSPACE/$configuration/build-opm-simulators/bin/$SIM --output-dir=$SIM NORNE_ATW2013.DATA
 fi
