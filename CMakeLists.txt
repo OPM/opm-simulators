@@ -14,8 +14,17 @@
 #                                                                         #
 ###########################################################################
 
+
+set(CUDA_ENABLED false)
+
 # Mandatory call to project
-project(opm-simulators C CXX)
+if(CUDA_ENABLED)
+  project(opm-simulators LANGUAGES CUDA C CXX)
+  # cuda_runtime.h
+  include_directories(/path/to/cuda/include)
+else()
+  project(opm-simulators LANGUAGES C CXX)
+endif()
 
 cmake_minimum_required (VERSION 2.8)
 
@@ -273,3 +282,8 @@ if (BUILD_EBOS_EXTENSIONS)
   install(TARGETS ebos_thermal DESTINATION bin)
 endif()
 
+# must link libraries after target 'flow' has been defined
+if(CUDA_ENABLED)
+  target_link_libraries( flow ${CUDA_cublas_LIBRARY} )
+  target_link_libraries( flow ${CUDA_cusparse_LIBRARY} )
+endif()

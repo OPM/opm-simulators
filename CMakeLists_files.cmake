@@ -29,6 +29,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/VFPProdProperties.cpp
   opm/autodiff/VFPInjProperties.cpp
   opm/autodiff/MissingFeatures.cpp
+  opm/bda/BdaBridge.cpp
   opm/core/props/rock/RockFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/core/simulator/SimulatorReport.cpp
@@ -46,6 +47,10 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/gatherConvergenceReport.cpp
   opm/simulators/gatherDeferredLogger.cpp
   )
+
+if(CUDA_ENABLED)
+  list (APPEND MAIN_SOURCE_FILES opm/bda/cusparseSolverBackend.cu)
+endif()
 
 # originally generated with the command:
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort

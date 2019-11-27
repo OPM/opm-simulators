@@ -46,6 +46,8 @@
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
+#include <opm/bda/BdaBridge.hpp>
+
 BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(FlowIstlSolver, INHERITS_FROM(FlowIstlSolverParams));
@@ -210,6 +212,8 @@ protected:
         enum { pressureVarIndex = Indices::pressureSwitchIdx };
         static const int numEq = Indices::numEq;
 
+        BdaBridge *bdaBridge;
+
     public:
         typedef Dune::AssembledLinearOperator< Matrix, Vector, Vector > AssembledLinearOperatorType;
 
@@ -227,8 +231,21 @@ protected:
               converged_(false)
         {
             parameters_.template init<TypeTag>();
+            const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
+            const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
+            const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
+            const bool matrix_add_well_contributions = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+            if(use_gpu && !matrix_add_well_contributions){
+                std::cerr << "Error cannot use gpu solver if command line parameter --matrix-add-well-contributions is false, due to the changing sparsity pattern" << std::endl;
+                exit(1);
+            }
+            bdaBridge = new BdaBridge(use_gpu, maxit, tolerance);
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
             detail::findOverlapRowsAndColumns(simulator_.vanguard().grid(),overlapRowAndColumns_);
+        }
+
+        ~ISTLSolverEbos(){
+            delete bdaBridge;
         }
 
         // nothing to clean here
@@ -424,11 +441,19 @@ protected:
             else
 #endif
             {
-                // Construct preconditioner.
-                auto precond = constructPrecond(linearOperator, parallelInformation_arg);
+                // tries to solve linear system
+                // solve_system() does nothing if Dune is selected
+                bdaBridge->solve_system(matrix_.get(), istlb, result);
 
-                // Solve.
-                solve(linearOperator, x, istlb, *sp, *precond, result);
+                if(result.converged){
+                    // get result vector x from non-Dune backend, iff solve was successful
+                    bdaBridge->get_result(x);
+                }else{
+                    // CPU fallback, or default case for Dune
+                    auto precond = constructPrecond(linearOperator, parallelInformation_arg);
+                    solve(linearOperator, x, istlb, *sp, *precond, result);
+                } // end Dune call
+
             }
         }
 
