@@ -1,6 +1,9 @@
 #!/bin/bash
 
 OPM_TESTS_ROOT=$1
+TMPDIR=`mktemp -d`
+mkdir $TMPDIR/orig
+mkdir $TMPDIR/new
 
 # Copy results from a test run to refence dir
 # $1 = source directory to copy data from
@@ -26,6 +29,11 @@ copyToReferenceDir () {
     diff -q "$WORKSPACE/$SRC_DIR$STEM.$filetype" "$DST_DIR/$STEM.$filetype"
     if test $? -ne 0
     then
+      cp $WORKSPACE/$SRC_DIR$STEM.$filetype $TMPDIR/new
+      $configuration/install/bin/convertECL $TMPDIR/new/$STEM.$filetype
+      cp $DST_DIR/$STEM.$filetype $TMPDIR/orig
+      $configuration/install/bin/convertECL $TMPDIR/orig/$STEM.$filetype
+      diff -u $TMPDIR/orig/$STEM.F$filetype $TMPDIR/new/$STEM.F$filetype >> $WORKSPACE/data_diff
       cp "$WORKSPACE/$SRC_DIR$STEM.$filetype" $DST_DIR
       DIFF=0
     fi
@@ -141,3 +149,5 @@ then
 else
   git commit -a -F /tmp/cmsg
 fi
+
+rm -rf $TMPDIR
