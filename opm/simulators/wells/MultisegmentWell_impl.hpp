@@ -3635,7 +3635,16 @@ namespace Opm
 
         EvalWell pressure_equation = getSegmentPressure(seg);
 
-        pressure_equation = pressure_equation - pressureDropSpiralICD(seg);
+        const int seg_upwind = upwinding_segments_[seg];
+
+        if (seg != seg_upwind) {
+            std::cout << " seg " << seg << " seg_upwind " << seg_upwind << std::endl;
+        }
+
+        const EvalWell pressure_drop_sicd = pressureDropSpiralICD(seg);
+        // std::cout << " pressure_drop_sicd for seg " << seg << " is " << pressure_drop_sicd.value()/1.e5 << std::endl;
+        // pressure_equation = pressure_equation - pressureDropSpiralICD(seg);
+        pressure_equation = pressure_equation - pressure_drop_sicd;
 
         resWell_[seg][SPres] = pressure_equation.value();
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -3926,10 +3935,9 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     pressureDropSpiralICD(const int seg) const
     {
+        // TODO: We have to consider the upwinding here
         const SpiralICD& sicd = *segmentSet()[seg].spiralICD();
 
-        const double density_cali = sicd.densityCalibration();
-        const double base_strength = sicd.strength() / density_cali;
 
         const std::vector<EvalWell>& phase_fractions = segment_phase_fractions_[seg];
         const std::vector<EvalWell>& phase_viscosities = segment_phase_viscosities_[seg];
@@ -3961,8 +3969,8 @@ namespace Opm
         // water_fraction + oil_fraction + gas_fraction should equal to one
         // calculating the water oil emulsion viscosity
         // TODO: maybe we should keep the derivative of the fractions
-        const EvalWell liquid_emulsion_viscosity = mswellhelpers::emulsionViscosity(water_fraction.value(), water_viscosity,
-                                                 oil_fraction.value(), oil_viscosity, sicd);
+        const EvalWell liquid_emulsion_viscosity = mswellhelpers::emulsionViscosity(water_fraction, water_viscosity,
+                                                     oil_fraction, oil_viscosity, sicd);
         const EvalWell mixture_viscosity = (water_fraction + oil_fraction) * liquid_emulsion_viscosity + gas_fraction * gas_viscosities;
 
         const EvalWell& reservoir_rate = segment_reservoir_volume_rates_[seg];
@@ -3974,10 +3982,15 @@ namespace Opm
         using MathTool = MathToolbox<EvalWell>;
 
         const EvalWell& density = segment_densities_[seg];
+        const double density_cali = sicd.densityCalibration();
         const EvalWell temp_value1 = MathTool::pow(density / density_cali, 0.75);
         const EvalWell temp_value2 = MathTool::pow(mixture_viscosity / viscosity_cali, 0.25);
 
-        return temp_value1 * temp_value2 * base_strength * reservoir_rate_icd * reservoir_rate_icd;
+        // const double base_strength = sicd.strength();// / density_cali;
+        // It looks like in 2016, they changed the formulation
+        const double strength = sicd.strength();
+
+        return temp_value1 * temp_value2 * strength * reservoir_rate_icd * reservoir_rate_icd;
     }
 
 
