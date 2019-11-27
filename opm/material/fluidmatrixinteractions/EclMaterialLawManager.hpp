@@ -542,9 +542,11 @@ private:
                                       epsGridProperties,
                                       elemIdx);
 
-            if (enableHysteresis()) {
-                EclEpsGridProperties epsImbGridProperties(eclState, true, compressedToCartesianElemIdx);
+        }
 
+        if (enableHysteresis()) {
+            EclEpsGridProperties epsImbGridProperties(eclState, true, compressedToCartesianElemIdx);
+            for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
                 readGasOilScaledPoints_(gasOilScaledImbInfoVector,
                                         gasOilScaledImbPointsVector,
                                         gasOilConfig,
