@@ -276,7 +276,7 @@ namespace Opm {
                                                  + ScheduleEvents::INJECTION_UPDATE
                                                  + ScheduleEvents::NEW_WELL;
 
-            if(!schedule().hasWellEvent(well.name(), effective_events_mask, timeStepIdx))
+            if(!schedule().hasWellGroupEvent(well_name, effective_events_mask, timeStepIdx))
                 continue;
 
             if (well.isProducer()) {
