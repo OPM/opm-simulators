@@ -36,11 +36,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
     Opm::Parser parser;
     Opm::Deck deck(parser.parseFile(filename));
     Opm::EclipseState eclipseState(deck);
-    const auto& grid = eclipseState.getInputGrid();
-    const TableManager table ( deck );
-    const Eclipse3DProperties eclipseProperties ( deck , table, grid);
-    const Opm::Runspec runspec (deck);
-    const Schedule sched(deck, grid, eclipseProperties, runspec);
+    const Schedule sched(deck, eclipseState);
 
     // Both wells are open in the first schedule step
     {
