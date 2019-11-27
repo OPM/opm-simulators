@@ -476,7 +476,8 @@ namespace Opm
 
         void assembleSICDPressureEq(const int seg) const;
 
-        void calculateFlowScalingFactors();
+        // TODO: when more ICD devices join, we should have a better interface to do this
+        void calculateSICDFlowScalingFactors();
 
         EvalWell pressureDropSpiralICD(const int seg) const;
 

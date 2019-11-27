@@ -113,7 +113,7 @@ namespace Opm
 
 
         // update the flow scaling factors for sicd segments
-        calculateFlowScalingFactors();
+        calculateSICDFlowScalingFactors();
     }
 
 
@@ -1570,11 +1570,13 @@ namespace Opm
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                 const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
 
+                const EvalWell d = 1.0 - rs * rv;
+
                 if (rs != 0.0) { // rs > 0.0?
-                    mix[gasCompIdx] = (mix_s[gasCompIdx] - mix_s[oilCompIdx] * rs) / (1. - rs * rv);
+                    mix[gasCompIdx] = (mix_s[gasCompIdx] - mix_s[oilCompIdx] * rs) / d;
                 }
                 if (rv != 0.0) { // rv > 0.0?
-                    mix[oilCompIdx] = (mix_s[oilCompIdx] - mix_s[gasCompIdx] * rv) / (1. - rs * rv);
+                    mix[oilCompIdx] = (mix_s[oilCompIdx] - mix_s[gasCompIdx] * rv) / d;
                 }
             }
 
@@ -1586,8 +1588,11 @@ namespace Opm
             segment_viscosities_[seg] = 0.;
             // calculate the average viscosity
             for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                const EvalWell comp_fraction = mix[comp_idx] / b[comp_idx] / volrat;
-                segment_viscosities_[seg] += visc[comp_idx] * comp_fraction;
+                const EvalWell fraction =  mix[comp_idx] / b[comp_idx] / volrat;
+                // TODO: a little more work needs to be done to handle the negative fractions here
+                // segment_phase_fractions_[seg][comp_idx] = fraction >= 0.0 ? fraction : 0.0;
+                segment_phase_fractions_[seg][comp_idx] = fraction; // >= 0.0 ? fraction : 0.0;
+                segment_viscosities_[seg] += visc[comp_idx] * segment_phase_fractions_[seg][comp_idx];
             }
 
 
@@ -1598,13 +1603,11 @@ namespace Opm
             for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 density += surf_dens[comp_idx] * mix_s[comp_idx];
                 surface_volume_rate += getSegmentRate(seg, comp_idx);
-
             }
             segment_densities_[seg] = density / volrat;
 
-            segment_reservoir_volume_rates_[seg] = surface_volume_rate / volrat;
-
-            segment_phase_fractions_[seg] = mix;
+            // TODO: the following can be alternative way to calculate the volume rates
+            // segment_reservoir_volume_rates_[seg] = surface_volume_rate * volrat;
 
             // calculate the mass rates
             // TODO: for now, we are not considering the upwinding for this amount
@@ -1616,6 +1619,8 @@ namespace Opm
                 const EvalWell rate = getSegmentRate(seg, comp_idx);
                 segment_mass_rates_[seg] += rate * surf_dens[comp_idx];
             }
+
+            segment_reservoir_volume_rates_[seg] = segment_mass_rates_[seg] / segment_densities_[seg];
         }
     }
 
@@ -3626,6 +3631,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     assembleSICDPressureEq(const int seg) const
     {
+        // TODO: upwinding needs to be taken care of
         // top segment can not be a spiral ICD device
         assert(seg != 0);
 
@@ -3635,16 +3641,7 @@ namespace Opm
 
         EvalWell pressure_equation = getSegmentPressure(seg);
 
-        const int seg_upwind = upwinding_segments_[seg];
-
-        if (seg != seg_upwind) {
-            std::cout << " seg " << seg << " seg_upwind " << seg_upwind << std::endl;
-        }
-
-        const EvalWell pressure_drop_sicd = pressureDropSpiralICD(seg);
-        // std::cout << " pressure_drop_sicd for seg " << seg << " is " << pressure_drop_sicd.value()/1.e5 << std::endl;
-        // pressure_equation = pressure_equation - pressureDropSpiralICD(seg);
-        pressure_equation = pressure_equation - pressure_drop_sicd;
+        pressure_equation = pressure_equation - pressureDropSpiralICD(seg);
 
         resWell_[seg][SPres] = pressure_equation.value();
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -3871,7 +3868,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    calculateFlowScalingFactors()
+    calculateSICDFlowScalingFactors()
     {
         // top segment will not be spiral ICD segment
         for (int seg = 1; seg < numberOfSegments(); ++seg) {
@@ -3892,10 +3889,6 @@ namespace Opm
                     const double connection_length = connection.getSegDistEnd() - connection.getSegDistStart();
                     assert(connection_length > 0.);
                     total_connection_length += connection_length;
-                }
-
-                if (total_connection_length == 0.) {
-                    OPM_THROW(std::runtime_error, "zero total connection length is obtained when calcualting scaling factor");
                 }
 
                 sicd.updateScalingFactor(segment_length, total_connection_length);
@@ -3938,14 +3931,13 @@ namespace Opm
         // TODO: We have to consider the upwinding here
         const SpiralICD& sicd = *segmentSet()[seg].spiralICD();
 
-
         const std::vector<EvalWell>& phase_fractions = segment_phase_fractions_[seg];
         const std::vector<EvalWell>& phase_viscosities = segment_phase_viscosities_[seg];
 
         EvalWell water_fraction = 0.;
         EvalWell water_viscosity = 0.;
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            const int water_pos = phaseUsage().phase_pos[Water];
+            const int water_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
             water_fraction = phase_fractions[water_pos];
             water_viscosity = phase_viscosities[water_pos];
         }
@@ -3953,7 +3945,7 @@ namespace Opm
         EvalWell oil_fraction = 0.;
         EvalWell oil_viscosity = 0.;
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            const int oil_pos = phaseUsage().phase_pos[Oil];
+            const int oil_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
             oil_fraction = phase_fractions[oil_pos];
             oil_viscosity = phase_viscosities[oil_pos];
         }
@@ -3961,14 +3953,11 @@ namespace Opm
         EvalWell gas_fraction = 0.;
         EvalWell gas_viscosities = 0.;
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            const int gas_pos = phaseUsage().phase_pos[Gas];
+            const int gas_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             gas_fraction = phase_fractions[gas_pos];
             gas_viscosities = phase_viscosities[gas_pos];
         }
 
-        // water_fraction + oil_fraction + gas_fraction should equal to one
-        // calculating the water oil emulsion viscosity
-        // TODO: maybe we should keep the derivative of the fractions
         const EvalWell liquid_emulsion_viscosity = mswellhelpers::emulsionViscosity(water_fraction, water_viscosity,
                                                      oil_fraction, oil_viscosity, sicd);
         const EvalWell mixture_viscosity = (water_fraction + oil_fraction) * liquid_emulsion_viscosity + gas_fraction * gas_viscosities;
@@ -3986,11 +3975,13 @@ namespace Opm
         const EvalWell temp_value1 = MathTool::pow(density / density_cali, 0.75);
         const EvalWell temp_value2 = MathTool::pow(mixture_viscosity / viscosity_cali, 0.25);
 
-        // const double base_strength = sicd.strength();// / density_cali;
+        // const double base_strength = sicd.strength() / density_cali;
         // It looks like in 2016, they changed the formulation
         const double strength = sicd.strength();
 
-        return temp_value1 * temp_value2 * strength * reservoir_rate_icd * reservoir_rate_icd;
+        const double sign = reservoir_rate_icd <= 0. ? 1.0 : -1.0;
+
+        return sign * temp_value1 * temp_value2 * strength * reservoir_rate_icd * reservoir_rate_icd;
     }
 
 
