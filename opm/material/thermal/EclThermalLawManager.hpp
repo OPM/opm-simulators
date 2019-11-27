@@ -180,6 +180,11 @@ private:
         solidEnergyApproach_ = SolidEnergyLawParams::specrockApproach;
 
         // initialize the element index -> SATNUM index mapping
+#ifdef ENABLE_3DPROPS_TESTING
+        const auto& fp = eclState.fieldProps();
+        elemToSatnumIdx_ = fp.get<int>("SATNUM");
+        std::transform(elemToSatnumIdx_.begin(), elemToSatnumIdx_.end(), elemToSatnumIdx_.begin(), [](const int& satnum_value) { return satnum_value - 1; });
+#else
         const auto& props = eclState.get3DProperties();
         const std::vector<int>& satnumData = props.getIntGridProperty("SATNUM").getData();
         elemToSatnumIdx_.resize(compressedToCartesianElemIdx.size());
@@ -190,7 +195,7 @@ private:
             // of 0!
             elemToSatnumIdx_[elemIdx] = satnumData[cartesianElemIdx] - 1;
         }
-
+#endif
         // internalize the SPECROCK table
         unsigned numSatRegions = eclState.runspec().tabdims().getNumSatTables();
         const auto& tableManager = eclState.getTableManager();
