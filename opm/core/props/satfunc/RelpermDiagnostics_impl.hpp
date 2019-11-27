@@ -59,16 +59,19 @@ namespace Opm {
         EclEpsGridProperties epsGridProperties(eclState, false, compressedToCartesianIdx);
         const std::string tag = "Scaled endpoints";
         for (int c = 0; c < nc; ++c) {
-            const int cartIdx = compressedToCartesianIdx[c];
-            const std::string satnumIdx = std::to_string(epsGridProperties.satRegion(cartIdx));
-            std::array<int, 3> ijk;
-            ijk[0] = cartIdx % dims[0];
-            ijk[1] = (cartIdx / dims[0]) % dims[1];
-            ijk[2] = cartIdx / dims[0] / dims[1];
-            const std::string cellIdx = "(" + std::to_string(ijk[0]) + ", " +
-                                   std::to_string(ijk[1]) + ", " +
-                                   std::to_string(ijk[2]) + ")";
-            scaledEpsInfo_[c].extractScaled(eclState, epsGridProperties, cartIdx);
+            const std::string satnumIdx = std::to_string(epsGridProperties.satRegion(c));
+            std::string cellIdx;
+            {
+                std::array<int, 3> ijk;
+                const int cartIdx = compressedToCartesianIdx[c];
+                ijk[0] = cartIdx % dims[0];
+                ijk[1] = (cartIdx / dims[0]) % dims[1];
+                ijk[2] = cartIdx / dims[0] / dims[1];
+                cellIdx = "(" + std::to_string(ijk[0]) + ", " +
+                    std::to_string(ijk[1]) + ", " +
+                    std::to_string(ijk[2]) + ")";
+            }
+            scaledEpsInfo_[c].extractScaled(eclState, epsGridProperties, c);
 
             // SGU <= 1.0 - SWL
             if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl + tolerance)) {
