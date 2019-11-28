@@ -40,6 +40,7 @@ class EDITNNC;
 class NNC;
 struct NNCdata;
 class Rock2dTable;
+class Rock2dtrTable;
 class ThresholdPressure;
 
 namespace Mpi
@@ -196,6 +197,7 @@ ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(Rock2dTable)
+ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(ThresholdPressure)
 

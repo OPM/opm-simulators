@@ -26,6 +26,7 @@
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
 namespace Opm
@@ -230,6 +231,12 @@ std::size_t packSize(const EDITNNC& data, Dune::MPIHelper::MPICommunicator comm)
 std::size_t packSize(const Rock2dTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
    return packSize(data.pvmultValues(), comm) +
+          packSize(data.pressureValues(), comm);
+}
+
+std::size_t packSize(const Rock2dtrTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.transMultValues(), comm) +
           packSize(data.pressureValues(), comm);
 }
 
@@ -469,6 +476,13 @@ void pack(const Rock2dTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.pvmultValues(), buffer, position, comm);
+    pack(data.pressureValues(), buffer, position, comm);
+}
+
+void pack(const Rock2dtrTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.transMultValues(), buffer, position, comm);
     pack(data.pressureValues(), buffer, position, comm);
 }
 
@@ -728,6 +742,16 @@ void unpack(Rock2dTable& data, std::vector<char>& buffer, int& position,
     unpack(pvmultValues, buffer, position, comm);
     unpack(pressureValues, buffer, position, comm);
     data = Rock2dTable(pvmultValues, pressureValues);
+}
+
+void unpack(Rock2dtrTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<std::vector<double>> transMultValues;
+    std::vector<double> pressureValues;
+    unpack(transMultValues, buffer, position, comm);
+    unpack(pressureValues, buffer, position, comm);
+    data = Rock2dtrTable(transMultValues, pressureValues);
 }
 
 } // end namespace Mpi
