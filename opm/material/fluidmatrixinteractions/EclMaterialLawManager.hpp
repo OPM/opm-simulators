@@ -126,6 +126,17 @@ public:
 
         // copy the SATNUM grid property. in some cases this is not necessary, but it
         // should not require much memory anyway...
+#ifdef ENABLE_3DPROPS_TESTING
+        const auto& fp = eclState.fieldProps();
+        satnumRegionArray_ = fp.get<int>("SATNUM");
+        std::transform(satnumRegionArray_.begin(), satnumRegionArray_.end(), satnumRegionArray_.begin(), [](const int& satnum_value) { return satnum_value - 1; });
+
+        if (fp.has<double>("IMBNUM")) {
+            imbnumRegionArray_ = fp.get<int>("IMBNUM");
+            std::transform(imbnumRegionArray_.begin(), imbnumRegionArray_.end(), imbnumRegionArray_.begin(), [](const int& imbnum_value) { return imbnum_value - 1; });
+        } else
+            imbnumRegionArray_ = satnumRegionArray_;
+#else
         satnumRegionArray_.resize(numCompressedElems);
         if (eclState.get3DProperties().hasDeckIntGridProperty("SATNUM")) {
             const auto& satnumRawData = eclState.get3DProperties().getIntGridProperty("SATNUM").getData();
@@ -147,7 +158,7 @@ public:
                 imbnumRegionArray_[elemIdx] = imbnumRawData[cartesianElemIdx] - 1;
             }
         }
-
+#endif
         readGlobalEpsOptions_(deck, eclState);
         readGlobalHysteresisOptions_(deck);
         readGlobalThreePhaseOptions_(deck);
