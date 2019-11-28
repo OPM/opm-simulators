@@ -23,6 +23,8 @@
 
 #include <opm/simulators/aquifers/AquiferInterface.hpp>
 
+#include <opm/output/data/Aquifer.hpp>
+
 namespace Opm
 {
 
@@ -144,6 +146,9 @@ namespace Opm
                     : ( connection.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx) )/denom_face_areas;
                 }
             }
+
+            void assignRestartData(const data::AquiferData& /* xaq */) override
+            {}
 
             inline void getInfluenceTableValues(Scalar& pitd, Scalar& pitd_prime, const Scalar& td)
             {
