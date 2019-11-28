@@ -25,6 +25,7 @@
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
 namespace Opm
@@ -224,6 +225,12 @@ std::size_t packSize(const NNC& data, Dune::MPIHelper::MPICommunicator comm)
 std::size_t packSize(const EDITNNC& data, Dune::MPIHelper::MPICommunicator comm)
 {
    return packSize(data.data(), comm);
+}
+
+std::size_t packSize(const Rock2dTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.pvmultValues(), comm) +
+          packSize(data.pressureValues(), comm);
 }
 
 ////// pack routines
@@ -456,6 +463,13 @@ void pack(const EDITNNC& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.data(), buffer, position, comm);
+}
+
+void pack(const Rock2dTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.pvmultValues(), buffer, position, comm);
+    pack(data.pressureValues(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -704,6 +718,16 @@ void unpack(EDITNNC& data, std::vector<char>& buffer, int& position,
     std::vector<NNCdata> res;
     unpack(res, buffer, position, comm);
     data = EDITNNC(res);
+}
+
+void unpack(Rock2dTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<std::vector<double>> pvmultValues;
+    std::vector<double> pressureValues;
+    unpack(pvmultValues, buffer, position, comm);
+    unpack(pressureValues, buffer, position, comm);
+    data = Rock2dTable(pvmultValues, pressureValues);
 }
 
 } // end namespace Mpi

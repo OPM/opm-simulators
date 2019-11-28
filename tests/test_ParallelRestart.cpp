@@ -28,6 +28,7 @@
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
 
@@ -266,6 +267,17 @@ BOOST_AUTO_TEST_CASE(NNC)
 {
 #if HAVE_MPI
     Opm::NNC val1({{1,2,1.0},{2,3,2.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Rock2dTable)
+{
+#if HAVE_MPI
+    Opm::Rock2dTable val1({{1.0,2.0},{3.0,4.0}}, {1.0, 2.0, 3.0});
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
