@@ -22,6 +22,8 @@
 #endif
 
 #include "ParallelRestart.hpp"
+#include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+#include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
@@ -212,6 +214,16 @@ std::size_t packSize(const ThresholdPressure& data, Dune::MPIHelper::MPICommunic
           packSize(data.restart(), comm) +
           packSize(data.thresholdPressureTable(), comm) +
           packSize(data.pressureTable(), comm);
+}
+
+std::size_t packSize(const NNC& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.data(), comm);
+}
+
+std::size_t packSize(const EDITNNC& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.data(), comm);
 }
 
 ////// pack routines
@@ -432,6 +444,18 @@ void pack(const ThresholdPressure& data, std::vector<char>& buffer, int& positio
     pack(data.restart(), buffer, position, comm);
     pack(data.thresholdPressureTable(), buffer, position, comm);
     pack(data.pressureTable(), buffer, position, comm);
+}
+
+void pack(const NNC& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.data(), buffer, position, comm);
+}
+
+void pack(const EDITNNC& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.data(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -664,6 +688,22 @@ void unpack(ThresholdPressure& data, std::vector<char>& buffer, int& position,
     unpack(pTable, buffer, position, comm);
 
     data = ThresholdPressure(active, restart, thpTable, pTable);
+}
+
+void unpack(NNC& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<NNCdata> res;
+    unpack(res, buffer, position, comm);
+    data = NNC(res);
+}
+
+void unpack(EDITNNC& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<NNCdata> res;
+    unpack(res, buffer, position, comm);
+    data = EDITNNC(res);
 }
 
 } // end namespace Mpi

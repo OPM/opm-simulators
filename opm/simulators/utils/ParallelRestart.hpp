@@ -36,6 +36,9 @@
 namespace Opm
 {
 
+class EDITNNC;
+class NNC;
+struct NNCdata;
 class ThresholdPressure;
 
 namespace Mpi
@@ -186,6 +189,9 @@ ADD_PACK_PROTOTYPES(data::Segment)
 ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
+ADD_PACK_PROTOTYPES(EDITNNC)
+ADD_PACK_PROTOTYPES(NNC)
+ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(std::string)
