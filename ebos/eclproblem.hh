@@ -1748,6 +1748,9 @@ public:
     EclWellModel& wellModel()
     { return wellModel_; }
 
+    EclAquiferModel& mutableAquiferModel()
+    { return aquiferModel_; }
+
     // temporary solution to facilitate output of initial state from flow
     const InitialFluidState& initialFluidState(unsigned globalDofIdx) const
     { return initialFluidStates_[globalDofIdx]; }
