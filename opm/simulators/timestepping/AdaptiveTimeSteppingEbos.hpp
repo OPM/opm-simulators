@@ -27,6 +27,7 @@ NEW_PROP_TAG(SolverRestartFactor);
 NEW_PROP_TAG(SolverGrowthFactor);
 NEW_PROP_TAG(SolverMaxGrowth);
 NEW_PROP_TAG(SolverMaxTimeStepInDays);
+NEW_PROP_TAG(SolverMinTimeStep);
 NEW_PROP_TAG(SolverMaxRestarts);
 NEW_PROP_TAG(SolverVerbosity);
 NEW_PROP_TAG(TimeStepVerbosity);
@@ -45,6 +46,7 @@ SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverRestartFactor, 0.33);
 SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverGrowthFactor, 2.0);
 SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverMaxGrowth, 3.0);
 SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverMaxTimeStepInDays, 365.0);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverMinTimeStep, 0.0);
 SET_INT_PROP(FlowTimeSteppingParameters, SolverMaxRestarts, 10);
 SET_INT_PROP(FlowTimeSteppingParameters, SolverVerbosity, 1);
 SET_INT_PROP(FlowTimeSteppingParameters, TimeStepVerbosity, 1);
@@ -101,6 +103,7 @@ namespace Opm {
             , growthFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverGrowthFactor)) // 2.0
             , maxGrowth_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxGrowth)) // 3.0
             , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60) // 365.25
+            , minTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep)) // 0.0
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
             , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
@@ -125,6 +128,7 @@ namespace Opm {
             , growthFactor_(tuning.getTFDIFF(timeStep))
             , maxGrowth_(tuning.getTSFMAX(timeStep))
             , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60) // 365.25
+            , minTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep)) // 0.0
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
             , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
@@ -147,6 +151,8 @@ namespace Opm {
                                  "The maximum factor time steps are elongated after a report step");
             EWOMS_REGISTER_PARAM(TypeTag, double, SolverMaxTimeStepInDays,
                                  "The maximum size of a time step in days");
+            EWOMS_REGISTER_PARAM(TypeTag, double, SolverMinTimeStep,
+                                 "The minimum size of a time step in seconds. If a step cannot converge without getting cut below this step size the simulator will stop");
             EWOMS_REGISTER_PARAM(TypeTag, int, SolverMaxRestarts,
                                  "The maximum number of breakdowns before a substep is given up and the simulator is terminated");
             EWOMS_REGISTER_PARAM(TypeTag, int, SolverVerbosity,
@@ -359,6 +365,19 @@ namespace Opm {
                     // The new, chopped timestep.
                     const double newTimeStep = restartFactor_ * dt;
 
+
+                    // If we have restarted (i.e. cut the timestep) too
+                    // much, we have failed and throw an exception.
+                    if (newTimeStep < minTimeStep_) {
+                        const auto msg = std::string("Solver failed to converge after cutting timestep to ")
+                                + std::to_string(minTimeStep_) + "\n which is the minimum threshold given"
+                                +  "by option --solver-min-time-step= \n";
+                        if (solverVerbose_) {
+                            OpmLog::error(msg);
+                        }
+                        OPM_THROW_NOLOG(Opm::NumericalIssue, msg);
+                    }
+
                     // Define utility function for chopping timestep.
                     auto chopTimestep = [&]() {
                         substepTimer.provideTimeStepEstimate(newTimeStep);
@@ -550,7 +569,8 @@ namespace Opm {
         double restartFactor_;               //!< factor to multiply time step with when solver fails to converge
         double growthFactor_;                //!< factor to multiply time step when solver recovered from failed convergence
         double maxGrowth_;                   //!< factor that limits the maximum growth of a time step
-        double maxTimeStep_;                //!< maximal allowed time step size
+        double maxTimeStep_;                //!< maximal allowed time step size in days
+        double minTimeStep_;                //!< minimal allowed time step size before throwing
         int solverRestartMax_;        //!< how many restart of solver are allowed
         bool solverVerbose_;           //!< solver verbosity
         bool timestepVerbose_;         //!< timestep verbosity
