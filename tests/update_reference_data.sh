@@ -90,19 +90,30 @@ tests[udq]="flow udq_actionx UDQ_WCONPROD udq_wconprod"
 tests[spe1_foam]="flow spe1_foam SPE1FOAM"
 
 changed_tests=""
-for test_name in ${!tests[*]}
+
+# Read failed tests
+FAILED_TESTS=`cat $WORKSPACE/$configuration/build-opm-simulators/Testing/Temporary/LastTestsFailed*.log`
+
+for failed_test in $FAILED_TESTS
 do
-  binary=`echo ${tests[$test_name]} | awk -F ' ' '{print $1}'`
-  dirname=`echo ${tests[$test_name]} | awk -F ' ' '{print $2}'`
-  casename=`echo ${tests[$test_name]} | awk -F ' ' '{print $3}'`
-  tname=`echo ${tests[$test_name]} | awk -F ' ' '{print $4}'`
-  test -z "$tname" && tname=$dirname
-  copyToReferenceDir \
-      $configuration/build-opm-simulators/tests/results/$binary+$tname/ \
-      $OPM_TESTS_ROOT/$dirname/opm-simulation-reference/$binary \
-      $casename \
-      EGRID INIT RFT SMSPEC UNRST UNSMRY
-  test $? -eq 0 && changed_tests="$changed_tests $test_name"
+  failed=`echo $failed_test | sed -e 's/.*:compareECLFiles_//g'`
+  for test_name in ${!tests[*]}
+  do
+    binary=`echo ${tests[$test_name]} | awk -F ' ' '{print $1}'`
+    dirname=`echo ${tests[$test_name]} | awk -F ' ' '{print $2}'`
+    casename=`echo ${tests[$test_name]} | awk -F ' ' '{print $3}'`
+    tname=`echo ${tests[$test_name]} | awk -F ' ' '{print $4}'`
+    test -z "$tname" && tname=$dirname
+    if grep -q "$failed" <<< "$binary+$casename"
+    then
+      copyToReferenceDir \
+          $configuration/build-opm-simulators/tests/results/$binary+$tname/ \
+          $OPM_TESTS_ROOT/$dirname/opm-simulation-reference/$binary \
+          $casename \
+          EGRID INIT RFT SMSPEC UNRST UNSMRY
+      test $? -eq 0 && changed_tests="$changed_tests $test_name"
+    fi
+  done
 done
 
 # special tests
