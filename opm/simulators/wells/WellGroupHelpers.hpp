@@ -89,12 +89,12 @@ namespace Opm {
             wellState.setCurrentProductionGroupControl(group.name(), Group::ProductionCMode::NONE);
         }
 
-        if (group.isInjectionGroup() && schedule.hasGroupEvent(group.name(),  ScheduleEvents::GROUP_INJECTION_UPDATE, reportStepIdx)) {
+        if (group.isInjectionGroup() && schedule.hasWellGroupEvent(group.name(),  ScheduleEvents::GROUP_INJECTION_UPDATE, reportStepIdx)) {
             const auto controls = group.injectionControls(summaryState);
             wellState.setCurrentInjectionGroupControl(group.name(), controls.cmode);
         }
 
-        if (group.isProductionGroup() && schedule.hasGroupEvent(group.name(),  ScheduleEvents::GROUP_PRODUCTION_UPDATE, reportStepIdx)) {
+        if (group.isProductionGroup() && schedule.hasWellGroupEvent(group.name(),  ScheduleEvents::GROUP_PRODUCTION_UPDATE, reportStepIdx)) {
             const auto controls = group.productionControls(summaryState);
             wellState.setCurrentProductionGroupControl(group.name(), controls.cmode);
         }
