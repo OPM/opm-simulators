@@ -454,6 +454,9 @@ public:
 
             // initialize the well model from restart values
             simulator_.problem().wellModel().initFromRestartFile(restartValues);
+
+            if (!restartValues.aquifer.empty())
+                simulator_.problem().mutableAquiferModel().initFromRestart(restartValues.aquifer);
         }
     }
 
