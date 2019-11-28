@@ -31,6 +31,26 @@ namespace Opm {
 
   template<typename TypeTag>
   void
+  BlackoilAquiferModel<TypeTag>::initFromRestart(const std::vector<data::AquiferData>& aquiferSoln)
+  {
+    if(aquiferCarterTracyActive())
+    {
+      for (auto& aquifer : aquifers_CarterTracy)
+      {
+        aquifer.initFromRestart(aquiferSoln);
+      }
+    }
+    if(aquiferFetkovichActive())
+    {
+      for (auto& aquifer : aquifers_Fetkovich)
+      {
+        aquifer.initFromRestart(aquiferSoln);
+      }
+    }
+  }
+
+  template<typename TypeTag>
+  void
   BlackoilAquiferModel<TypeTag>::beginEpisode()
   { }
 
