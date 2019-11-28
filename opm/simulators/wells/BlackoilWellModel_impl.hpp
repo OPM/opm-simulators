@@ -276,7 +276,7 @@ namespace Opm {
                                                  + ScheduleEvents::INJECTION_UPDATE
                                                  + ScheduleEvents::NEW_WELL;
 
-            if(!schedule().hasWellEvent(well.name(), effective_events_mask, timeStepIdx))
+            if(!schedule().hasWellGroupEvent(well.name(), effective_events_mask, timeStepIdx))
                 continue;
 
             if (well.isProducer()) {
@@ -1806,14 +1806,11 @@ namespace Opm {
 
         std::ostringstream ss;
 
-        if (oldControl != newControl) {
-            const std::string from = Group::ProductionCMode2String(oldControl);
-            ss << "Group " << group.name() << " exceeding "
-               << from << " limit \n";
-        }
         switch(exceed_action) {
         case Group::ExceedAction::NONE: {
-            OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit NONE not implemented", deferred_logger);
+            if (oldControl != newControl && oldControl != Group::ProductionCMode::NONE) {
+                ss << "Group production exceed limit is NONE for group " + group.name() + ". Nothing happens";
+            }
             break;
         }
         case Group::ExceedAction::CON: {

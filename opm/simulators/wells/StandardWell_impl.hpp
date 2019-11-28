@@ -707,7 +707,7 @@ namespace Opm
                     const auto& fs = intQuants.fluidState();
                     Eval perf_pressure = getPerfCellPressure(fs);
                     const double drawdown  = well_state.perfPress()[first_perf_ + perf] - perf_pressure.value();
-                    const bool new_well = schedule.hasWellEvent(name(), ScheduleEvents::NEW_WELL, current_step_);
+                    const bool new_well = schedule.hasWellGroupEvent(name(), ScheduleEvents::NEW_WELL, current_step_);
                     double productivity_index = cq_s[compIdx].value() / drawdown;
                     scaleProductivityIndex(perf, productivity_index, new_well, deferred_logger);
                     well_state.productivityIndex()[np*index_of_well_ + p] += productivity_index;
