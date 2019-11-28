@@ -58,6 +58,7 @@ tests[spe12p]="flow spe1 SPE1CASE2_2P spe1_2p"
 tests[spe1oilgas]="flow spe1 SPE1CASE2_OILGAS spe1_oilgas"
 tests[spe1nowells]="flow spe1 SPE1CASE2_NOWELLS spe1_nowells"
 tests[spe1thermal]="flow spe1 SPE1CASE2_THERMAL spe1_thermal"
+tests[spe1rockcomp]="flow spe1 SPE1CASE2_ROCK2DTR spe1_rockcomp"
 tests[ctaquifer_2d_oilwater]="flow aquifer-oilwater 2D_OW_CTAQUIFER ctaquifer_2d_oilwater"
 tests[fetkovich_2d]="flow aquifer-fetkovich 2D_FETKOVICHAQUIFER fetkovich_2d"
 tests[msw_2d_h]="flow msw_2d_h 2D_H__"
@@ -89,19 +90,30 @@ tests[udq]="flow udq_actionx UDQ_WCONPROD udq_wconprod"
 tests[spe1_foam]="flow spe1_foam SPE1FOAM"
 
 changed_tests=""
-for test_name in ${!tests[*]}
+
+# Read failed tests
+FAILED_TESTS=`cat $WORKSPACE/$configuration/build-opm-simulators/Testing/Temporary/LastTestsFailed*.log`
+
+for failed_test in $FAILED_TESTS
 do
-  binary=`echo ${tests[$test_name]} | awk -F ' ' '{print $1}'`
-  dirname=`echo ${tests[$test_name]} | awk -F ' ' '{print $2}'`
-  casename=`echo ${tests[$test_name]} | awk -F ' ' '{print $3}'`
-  tname=`echo ${tests[$test_name]} | awk -F ' ' '{print $4}'`
-  test -z "$tname" && tname=$dirname
-  copyToReferenceDir \
-      $configuration/build-opm-simulators/tests/results/$binary+$tname/ \
-      $OPM_TESTS_ROOT/$dirname/opm-simulation-reference/$binary \
-      $casename \
-      EGRID INIT RFT SMSPEC UNRST UNSMRY
-  test $? -eq 0 && changed_tests="$changed_tests $test_name"
+  failed=`echo $failed_test | sed -e 's/.*:compareECLFiles_//g'`
+  for test_name in ${!tests[*]}
+  do
+    binary=`echo ${tests[$test_name]} | awk -F ' ' '{print $1}'`
+    dirname=`echo ${tests[$test_name]} | awk -F ' ' '{print $2}'`
+    casename=`echo ${tests[$test_name]} | awk -F ' ' '{print $3}'`
+    tname=`echo ${tests[$test_name]} | awk -F ' ' '{print $4}'`
+    test -z "$tname" && tname=$dirname
+    if grep -q "$failed" <<< "$binary+$casename"
+    then
+      copyToReferenceDir \
+          $configuration/build-opm-simulators/tests/results/$binary+$tname/ \
+          $OPM_TESTS_ROOT/$dirname/opm-simulation-reference/$binary \
+          $casename \
+          EGRID INIT RFT SMSPEC UNRST UNSMRY
+      test $? -eq 0 && changed_tests="$changed_tests $test_name"
+    fi
+  done
 done
 
 # special tests
