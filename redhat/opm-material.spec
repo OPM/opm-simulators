@@ -15,8 +15,10 @@ Source0:        https://github.com/OPM/%{name}/archive/release/%{version}/%{tag}
 BuildRequires:  blas-devel lapack-devel dune-common-devel
 BuildRequires:  git suitesparse-devel doxygen bc
 BuildRequires:  tinyxml-devel dune-istl-devel
-BuildRequires:  opm-common-devel opm-common-openmpi-devel devtoolset-6-toolchain openmpi-devel opm-common-mpich-devel mpich-devel
-BuildRequires:  cmake3 rh-mariadb102-boost-devel
+BuildRequires:  opm-common-devel opm-common-openmpi-devel openmpi-devel opm-common-mpich-devel mpich-devel
+BuildRequires:  cmake3
+%{?!el8:BuildRequires: devtoolset-6-toolchain rh-mariadb102-boost-devel}
+%{?el8:BuildRequires: boost-devel}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -53,16 +55,16 @@ BuildArch:	noarch
 %description doc
 This package contains the documentation files for opm-material
 
+%global debug_package %{nil}
+
 %prep
 %setup -q -n %{name}-release-%{version}-%{tag}
 
 # consider using -DUSE_VERSIONED_DIR=ON if backporting
 %build
-scl enable devtoolset-6 bash
-
 mkdir serial
 cd serial
-cmake3 -DENABLE_MPI=0 -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRIP_DEBUGGING_SYMBOLS=ON -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_INSTALL_DOCDIR=share/doc/%{name}-%{version} -DUSE_RUNPATH=OFF -DWITH_NATIVE=OFF -DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gcc -DCMAKE_Fortran_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gfortran -DBOOST_LIBRARYDIR=/opt/rh/rh-mariadb102/root/usr/lib64 -DBOOST_INCLUDEDIR=/opt/rh/rh-mariadb102/root/usr/include -DBUILD_TESTING=0 ..
+cmake3 -DENABLE_MPI=0 -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRIP_DEBUGGING_SYMBOLS=ON -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_INSTALL_DOCDIR=share/doc/%{name}-%{version} -DUSE_RUNPATH=OFF -DWITH_NATIVE=OFF %{?!el8:-DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gcc -DCMAKE_Fortran_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gfortran -DBOOST_LIBRARYDIR=/opt/rh/rh-mariadb102/root/usr/lib64 -DBOOST_INCLUDEDIR=/opt/rh/rh-mariadb102/root/usr/include} -DBUILD_TESTING=0 ..
 make %{?_smp_mflags}
 #make test
 cd ..
@@ -71,7 +73,7 @@ mkdir openmpi
 cd openmpi
 %{?el6:module load openmpi-x86_64}
 %{?!el6:module load mpi/openmpi-x86_64}
-cmake3 -DUSE_MPI=1 -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRIP_DEBUGGING_SYMBOLS=ON -DCMAKE_INSTALL_PREFIX=%{_prefix}/lib64/openmpi -DCMAKE_INSTALL_LIBDIR=lib -DUSE_RUNPATH=OFF -DWITH_NATIVE=OFF -DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gcc -DCMAKE_Fortran_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gfortran -DBOOST_LIBRARYDIR=/opt/rh/rh-mariadb102/root/usr/lib64 -DBOOST_INCLUDEDIR=/opt/rh/rh-mariadb102/root/usr/include -DCMAKE_INSTALL_INCLUDE_DIR=%{_prefix}/include/openmpi-x86_64 -DBUILD_TESTING=0 ..
+cmake3 -DUSE_MPI=1 -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRIP_DEBUGGING_SYMBOLS=ON -DCMAKE_INSTALL_PREFIX=%{_prefix}/lib64/openmpi -DCMAKE_INSTALL_LIBDIR=lib -DUSE_RUNPATH=OFF -DWITH_NATIVE=OFF %{?!el8:-DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gcc -DCMAKE_Fortran_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gfortran -DBOOST_LIBRARYDIR=/opt/rh/rh-mariadb102/root/usr/lib64 -DBOOST_INCLUDEDIR=/opt/rh/rh-mariadb102/root/usr/include} -DCMAKE_INSTALL_INCLUDE_DIR=%{_prefix}/include/openmpi-x86_64 -DBUILD_TESTING=0 ..
 make %{?_smp_mflags}
 #make test
 cd ..
@@ -82,7 +84,7 @@ cd mpich
 %{?el6:module load mpich-x86_64}
 %{?!el6:module rm mpi/openmpi-x86_64}
 %{?!el6:module load mpi/mpich-x86_64}
-cmake3 -DUSE_MPI=1 -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRIP_DEBUGGING_SYMBOLS=ON -DCMAKE_INSTALL_PREFIX=%{_prefix}/lib64/mpich -DCMAKE_INSTALL_LIBDIR=lib -DUSE_RUNPATH=OFF -DWITH_NATIVE=OFF -DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gcc -DCMAKE_Fortran_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gfortran -DBOOST_LIBRARYDIR=/opt/rh/rh-mariadb102/root/usr/lib64 -DBOOST_INCLUDEDIR=/opt/rh/rh-mariadb102/root/usr/include -DCMAKE_INSTALL_INCLUDE_DIR=%{_prefix}/include/mpich-x86_64 -DBUILD_TESTING=0 ..
+cmake3 -DUSE_MPI=1 -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRIP_DEBUGGING_SYMBOLS=ON -DCMAKE_INSTALL_PREFIX=%{_prefix}/lib64/mpich -DCMAKE_INSTALL_LIBDIR=lib -DUSE_RUNPATH=OFF -DWITH_NATIVE=OFF %{?!el8:-DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gcc -DCMAKE_Fortran_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gfortran -DBOOST_LIBRARYDIR=/opt/rh/rh-mariadb102/root/usr/lib64 -DBOOST_INCLUDEDIR=/opt/rh/rh-mariadb102/root/usr/include} -DCMAKE_INSTALL_INCLUDE_DIR=%{_prefix}/include/mpich-x86_64 -DBUILD_TESTING=0 ..
 make %{?_smp_mflags}
 #make test
 
