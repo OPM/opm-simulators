@@ -62,6 +62,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_stoppedwells.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_norne_pvt.cpp
+  tests/test_ParallelRestart.cpp
   tests/test_wellstatefullyimplicitblackoil.cpp
   )
 
