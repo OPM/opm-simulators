@@ -22,6 +22,7 @@
 #endif
 
 #include "ParallelRestart.hpp"
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
 namespace Opm
@@ -203,6 +204,14 @@ std::size_t packSize(const data::WellRates& data, Dune::MPIHelper::MPICommunicat
 std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.solution, comm) + packSize(data.wells, comm) + packSize(data.extra, comm);
+}
+
+std::size_t packSize(const ThresholdPressure& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.active(), comm) +
+          packSize(data.restart(), comm) +
+          packSize(data.thresholdPressureTable(), comm) +
+          packSize(data.pressureTable(), comm);
 }
 
 ////// pack routines
@@ -414,6 +423,15 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.solution, buffer, position, comm);
     pack(data.wells, buffer, position, comm);
     pack(data.extra, buffer, position, comm);
+}
+
+void pack(const ThresholdPressure& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.active(), buffer, position, comm);
+    pack(data.restart(), buffer, position, comm);
+    pack(data.thresholdPressureTable(), buffer, position, comm);
+    pack(data.pressureTable(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -632,6 +650,20 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.solution, buffer, position, comm);
     unpack(data.wells, buffer, position, comm);
     unpack(data.extra, buffer, position, comm);
+}
+
+void unpack(ThresholdPressure& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    ThresholdPressure::ThresholdPressureTable thpTable;
+    ThresholdPressure::PressureTable pTable;
+    bool active, restart;
+    unpack(active, buffer, position, comm);
+    unpack(restart, buffer, position, comm);
+    unpack(thpTable, buffer, position, comm);
+    unpack(pTable, buffer, position, comm);
+
+    data = ThresholdPressure(active, restart, thpTable, pTable);
 }
 
 } // end namespace Mpi

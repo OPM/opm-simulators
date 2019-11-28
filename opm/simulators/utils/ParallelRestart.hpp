@@ -35,6 +35,9 @@
 
 namespace Opm
 {
+
+class ThresholdPressure;
+
 namespace Mpi
 {
 template<class T>
@@ -186,6 +189,7 @@ ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(std::string)
+ADD_PACK_PROTOTYPES(ThresholdPressure)
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,

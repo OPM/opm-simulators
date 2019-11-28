@@ -25,6 +25,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
 
@@ -104,6 +105,13 @@ Opm::data::Well getWell()
     return well1;
 }
 #endif
+
+
+Opm::ThresholdPressure getThresholdPressure()
+{
+    return Opm::ThresholdPressure(false, true, {{true, 1.0}, {false, 2.0}},
+                                  {{{1,2},{false,3.0}},{{2,3},{true,4.0}}});
+}
 
 
 }
@@ -223,6 +231,17 @@ BOOST_AUTO_TEST_CASE(RestartValue)
     Opm::data::WellRates wells1;
     wells1.insert({"test_well", getWell()});
     Opm::RestartValue val1(getSolution(), wells1);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(ThresholdPressure)
+{
+#if HAVE_MPI
+    Opm::ThresholdPressure val1 = getThresholdPressure();
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
