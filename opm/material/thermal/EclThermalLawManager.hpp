@@ -142,30 +142,35 @@ private:
                      const std::vector<int>& compressedToCartesianElemIdx)
     {
         solidEnergyApproach_ = SolidEnergyLawParams::heatcrApproach;
-
-        const auto& props = eclState.get3DProperties();
-
-        const std::vector<double>& heatcrData = props.getDoubleGridProperty("HEATCR").getData();
-        const std::vector<double>& heatcrtData = props.getDoubleGridProperty("HEATCRT").getData();
-
         // actually the value of the reference temperature does not matter for energy
         // conservation. We set it anyway to faciliate comparisons with ECL
         HeatcrLawParams::setReferenceTemperature(FluidSystem::surfaceTemperature);
 
+#ifdef ENABLE_3DPROPS_TESTING
+        const auto& fp = eclState.fieldProps();
+        const std::vector<double>& heatcrData  = fp.get<double>("HEATCR");
+        const std::vector<double>& heatcrtData = fp.get<double>("HEATCRT");
+#else
+        const auto& props = eclState.get3DProperties();
+        const std::vector<double>& heatcrData = props.getDoubleGridProperty("HEATCR").getData();
+        const std::vector<double>& heatcrtData = props.getDoubleGridProperty("HEATCRT").getData();
+#endif
         unsigned numElems = compressedToCartesianElemIdx.size();
         solidEnergyLawParams_.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            int cartElemIdx = compressedToCartesianElemIdx[elemIdx];
-
             auto& elemParam = solidEnergyLawParams_[elemIdx];
-
             elemParam.setSolidEnergyApproach(SolidEnergyLawParams::heatcrApproach);
-
             auto& heatcrElemParams = elemParam.template getRealParams<SolidEnergyLawParams::heatcrApproach>();
+
+#ifdef ENABLE_3DPROPS_TESTING
+            heatcrElemParams.setReferenceRockHeatCapacity(heatcrData[elemIdx]);
+            heatcrElemParams.setDRockHeatCapacity_dT(heatcrtData[elemIdx]);
+#else
+            int cartElemIdx = compressedToCartesianElemIdx[elemIdx];
             heatcrElemParams.setReferenceRockHeatCapacity(heatcrData[cartElemIdx]);
             heatcrElemParams.setDRockHeatCapacity_dT(heatcrtData[cartElemIdx]);
+#endif
             heatcrElemParams.finalize();
-
             elemParam.finalize();
         }
     }
@@ -239,25 +244,32 @@ private:
     {
         thermalConductivityApproach_ = ThermalConductionLawParams::thconrApproach;
 
+#ifdef  ENABLE_3DPROPS_TESTING
+        const auto& fp = eclState.fieldProps();
+        const std::vector<double>& thconrData  = fp.get<double>("THCONR");
+        const std::vector<double>& thconsfData = fp.get<double>("THCONSF");
+#else
         const auto& props = eclState.get3DProperties();
-
         const std::vector<double>& thconrData = props.getDoubleGridProperty("THCONR").getData();
         const std::vector<double>& thconsfData = props.getDoubleGridProperty("THCONSF").getData();
-
+#endif
         unsigned numElems = compressedToCartesianElemIdx.size();
         thermalConductionLawParams_.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            int cartElemIdx = compressedToCartesianElemIdx[elemIdx];
-
             auto& elemParams = thermalConductionLawParams_[elemIdx];
-
             elemParams.setThermalConductionApproach(ThermalConductionLawParams::thconrApproach);
-
             auto& thconrElemParams = elemParams.template getRealParams<ThermalConductionLawParams::thconrApproach>();
+
+#ifdef ENABLE_3DPROPS_TESTING
+            thconrElemParams.setReferenceTotalThermalConductivity(thconrData[elemIdx]);
+            thconrElemParams.setDTotalThermalConductivity_dSg(thconsfData[elemIdx]);
+#else
+            int cartElemIdx = compressedToCartesianElemIdx[elemIdx];
             thconrElemParams.setReferenceTotalThermalConductivity(thconrData[cartElemIdx]);
             thconrElemParams.setDTotalThermalConductivity_dSg(thconsfData[cartElemIdx]);
-            thconrElemParams.finalize();
+#endif
 
+            thconrElemParams.finalize();
             elemParams.finalize();
         }
     }
