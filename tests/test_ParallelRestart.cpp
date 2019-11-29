@@ -28,6 +28,7 @@
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
@@ -293,6 +294,22 @@ BOOST_AUTO_TEST_CASE(Rock2dtrTable)
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(ColumnSchema)
+{
+#if HAVE_MPI
+    Opm::ColumnSchema val1("test1", Opm::Table::INCREASING,
+                           Opm::Table::DEFAULT_LINEAR);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+    Opm::ColumnSchema val3("test2", Opm::Table::DECREASING, 1.0);
+    val2 = PackUnpack(val3);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val3 == std::get<0>(val2));
 #endif
 }
 

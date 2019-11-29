@@ -25,6 +25,7 @@
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <dune/common/parallel/mpitraits.hh>
@@ -238,6 +239,18 @@ std::size_t packSize(const Rock2dtrTable& data, Dune::MPIHelper::MPICommunicator
 {
    return packSize(data.transMultValues(), comm) +
           packSize(data.pressureValues(), comm);
+}
+
+std::size_t packSize(const ColumnSchema& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t res = packSize(data.name(), comm) +
+                      packSize(data.order(), comm) +
+                      packSize(data.getDefaultMode(), comm);
+    if (data.getDefaultMode() == Table::DEFAULT_CONST) {
+        res += packSize(data.getDefaultValue(), comm);
+    }
+
+    return res;
 }
 
 ////// pack routines
@@ -484,6 +497,16 @@ void pack(const Rock2dtrTable& data, std::vector<char>& buffer, int& position,
 {
     pack(data.transMultValues(), buffer, position, comm);
     pack(data.pressureValues(), buffer, position, comm);
+}
+
+void pack(const ColumnSchema& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name(), buffer, position, comm);
+    pack(data.order(), buffer, position, comm);
+    pack(data.getDefaultMode(), buffer, position, comm);
+    if (data.getDefaultMode() == Table::DEFAULT_CONST)
+        pack(data.getDefaultValue(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -752,6 +775,23 @@ void unpack(Rock2dtrTable& data, std::vector<char>& buffer, int& position,
     unpack(transMultValues, buffer, position, comm);
     unpack(pressureValues, buffer, position, comm);
     data = Rock2dtrTable(transMultValues, pressureValues);
+}
+
+void unpack(ColumnSchema& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    Table::ColumnOrderEnum order;
+    Table::DefaultAction action;
+    unpack(name, buffer, position, comm);
+    unpack(order, buffer, position, comm);
+    unpack(action, buffer, position, comm);
+    if (action == Table::DEFAULT_CONST) {
+        double value;
+        unpack(value, buffer, position, comm);
+        data = ColumnSchema(name, order, value);
+    } else
+        data = ColumnSchema(name, order, action);
 }
 
 } // end namespace Mpi
