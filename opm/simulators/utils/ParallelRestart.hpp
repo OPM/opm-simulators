@@ -26,6 +26,7 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>
+#include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -84,6 +85,9 @@ std::size_t packSize(const std::map<T1,T2,C,A>& data, Dune::MPIHelper::MPICommun
 template<class T1, class T2, class H, class P, class A>
 std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelper::MPICommunicator comm);
 
+template<class Key, class Value>
+std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPICommunicator comm);
+
 ////// pack routines
 
 template<class T>
@@ -126,6 +130,10 @@ void pack(const std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& posit
 template<class T1, class T2, class H, class P, class A>
 void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
+
+template<class Key, class Value>
+void pack(const OrderedMap<Key,Value>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm);
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
@@ -171,6 +179,10 @@ void unpack(std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
 
 template<class T1, class T2, class H, class P, class A>
 void unpack(std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm);
+
+template<class Key, class Value>
+void unpack(OrderedMap<Key,Value>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
