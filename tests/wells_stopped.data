@@ -29,6 +29,8 @@ TOPS
 PERMX
 100*1.0 /
 
+PORO
+  100*0.15 /
 
 COPY
   PERMX PERMY /
