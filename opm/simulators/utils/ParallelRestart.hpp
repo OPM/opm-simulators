@@ -45,6 +45,7 @@ class Rock2dTable;
 class Rock2dtrTable;
 class SimpleTable;
 class TableColumn;
+class TableContainer;
 class TableSchema;
 class ThresholdPressure;
 
@@ -229,6 +230,7 @@ ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(TableColumn)
+ADD_PACK_PROTOTYPES(TableContainer)
 ADD_PACK_PROTOTYPES(TableSchema)
 ADD_PACK_PROTOTYPES(ThresholdPressure)
 

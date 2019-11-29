@@ -30,6 +30,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
@@ -291,6 +292,18 @@ std::size_t packSize(const SimpleTable& data, Dune::MPIHelper::MPICommunicator c
    return packSize(data.schema(), comm) +
           packSize(data.columns(), comm) +
           packSize(data.jfunc(), comm);
+}
+
+std::size_t packSize(const TableContainer& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    size_t res = 2*packSize(data.max(), comm);
+    for (const auto& it : data.tables()) {
+        if (it.second) {
+            res += packSize(it.first, comm) + packSize(*it.second, comm);
+        }
+    }
+
+    return res;
 }
 
 ////// pack routines
@@ -569,6 +582,25 @@ void pack(const SimpleTable& data, std::vector<char>& buffer, int& position,
     pack(data.schema(), buffer, position, comm);
     pack(data.columns(), buffer, position, comm);
     pack(data.jfunc(), buffer, position, comm);
+}
+
+void pack(const TableContainer& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.max(), buffer, position, comm);
+    size_t entries = 0;
+    for (const auto& it : data.tables()) {
+        if (it.second) {
+          ++entries;
+        }
+    }
+    pack(entries, buffer, position, comm);
+    for (const auto& it : data.tables()) {
+        if (it.second) {
+          pack(it.first, buffer, position, comm);
+          pack(*it.second, buffer, position, comm);
+        }
+    }
 }
 
 /// unpack routines
@@ -895,6 +927,23 @@ void unpack(SimpleTable& data, std::vector<char>& buffer, int& position,
     unpack(columns, buffer, position, comm);
     unpack(jf, buffer, position, comm);
     data = SimpleTable(schema, columns, jf);
+}
+
+void unpack(TableContainer& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    size_t max;
+    unpack(max, buffer, position, comm);
+    data = TableContainer(max);
+    size_t entries;
+    unpack(entries, buffer, position, comm);
+    for (size_t i = 0; i < entries; ++i) {
+        size_t id;
+        unpack(id, buffer, position, comm);
+        SimpleTable table;
+        unpack(table, buffer, position, comm);
+        data.addTable(id, std::make_shared<const SimpleTable>(table));
+    }
 }
 
 } // end namespace Mpi

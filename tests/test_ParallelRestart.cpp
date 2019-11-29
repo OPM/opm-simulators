@@ -33,6 +33,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
@@ -369,6 +370,22 @@ BOOST_AUTO_TEST_CASE(SimpleTable)
 {
 #if HAVE_MPI
     Opm::SimpleTable val1 = getSimpleTable();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(TableContainer)
+{
+#if HAVE_MPI
+    Opm::OrderedMap<std::string, Opm::TableColumn> data;
+    data.insert({"test3", getTableColumn()});
+    Opm::SimpleTable tab1(getTableSchema(), data, true);
+    Opm::TableContainer val1(2);
+    val1.addTable(0, std::make_shared<const Opm::SimpleTable>(tab1));
+    val1.addTable(1, std::make_shared<const Opm::SimpleTable>(tab1));
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
