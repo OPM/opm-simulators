@@ -25,6 +25,7 @@
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
@@ -318,6 +319,16 @@ std::size_t packSize(const Equil& data, Dune::MPIHelper::MPICommunicator comm)
 std::size_t packSize(const FoamConfig& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.records(), comm);
+}
+
+std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getEquil(), comm) +
+           packSize(data.getFoamConfig(), comm) +
+           packSize(data.filleps(), comm) +
+           packSize(data.restartRequested(), comm) +
+           packSize(data.getRestartStep(), comm) +
+           packSize(data.getRestartRootName(), comm);
 }
 
 ////// pack routines
@@ -627,6 +638,17 @@ void pack(const FoamConfig& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.records(), buffer, position, comm);
+}
+
+void pack(const InitConfig& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getEquil(), buffer, position, comm);
+    pack(data.getFoamConfig(), buffer, position, comm);
+    pack(data.filleps(), buffer, position, comm);
+    pack(data.restartRequested(), buffer, position, comm);
+    pack(data.getRestartStep(), buffer, position, comm);
+    pack(data.getRestartRootName(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -986,6 +1008,24 @@ void unpack(FoamConfig& data, std::vector<char>& buffer, int& position,
     std::vector<FoamData> records;
     unpack(records, buffer, position, comm);
     data = FoamConfig(records);
+}
+
+void unpack(InitConfig& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    Equil equil;
+    FoamConfig foam;
+    bool filleps, restartRequested;
+    int restartStep;
+    std::string restartRootName;
+    unpack(equil, buffer, position, comm);
+    unpack(foam, buffer, position, comm);
+    unpack(filleps, buffer, position, comm);
+    unpack(restartRequested, buffer, position, comm);
+    unpack(restartStep, buffer, position, comm);
+    unpack(restartRootName, buffer, position, comm);
+    data = InitConfig(equil, foam, filleps, restartRequested,
+                      restartStep, restartRootName);
 }
 
 } // end namespace Mpi
