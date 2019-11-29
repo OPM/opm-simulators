@@ -28,6 +28,7 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
@@ -198,6 +199,7 @@ HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
 HANDLE_AS_POD(RestartSchedule)
+HANDLE_AS_POD(TimeMap::StepData)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -341,6 +343,13 @@ std::size_t packSize(const SimulationConfig& data, Dune::MPIHelper::MPICommunica
            packSize(data.hasDISGAS(), comm) +
            packSize(data.hasVAPOIL(), comm) +
            packSize(data.isThermal(), comm);
+}
+
+std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.timeList(), comm) +
+           packSize(data.firstTimeStepMonths(), comm) +
+           packSize(data.firstTimeStepYears(), comm);
 }
 
 ////// pack routines
@@ -671,6 +680,14 @@ void pack(const SimulationConfig& data, std::vector<char>& buffer, int& position
     pack(data.hasDISGAS(), buffer, position, comm);
     pack(data.hasVAPOIL(), buffer, position, comm);
     pack(data.isThermal(), buffer, position, comm);
+}
+
+void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.timeList(), buffer, position, comm);
+    pack(data.firstTimeStepMonths(), buffer, position, comm);
+    pack(data.firstTimeStepYears(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1061,6 +1078,19 @@ void unpack(SimulationConfig& data, std::vector<char>& buffer, int& position,
     unpack(VAPOIL, buffer, position, comm);
     unpack(isThermal, buffer, position, comm);
     data = SimulationConfig(thresholdPressure, useCPR, DISGAS, VAPOIL, isThermal);
+}
+
+void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<std::time_t> timeList;
+    std::vector<TimeMap::StepData> firstStepMonths;
+    std::vector<TimeMap::StepData> firstStepYears;
+    unpack(timeList, buffer, position, comm);
+    unpack(firstStepMonths, buffer, position, comm);
+    unpack(firstStepYears, buffer, position, comm);
+
+    data = TimeMap(timeList, firstStepMonths, firstStepYears);
 }
 
 } // end namespace Mpi

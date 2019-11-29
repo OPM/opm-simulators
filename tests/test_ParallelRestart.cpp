@@ -31,6 +31,7 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
@@ -165,6 +166,14 @@ Opm::FoamData getFoamData()
 }
 
 #endif
+
+
+Opm::TimeMap getTimeMap()
+{
+    return Opm::TimeMap({123},
+                        {{1, Opm::TimeStampUTC(123)}},
+                        {{2, Opm::TimeStampUTC(456)}});
+}
 
 
 }
@@ -483,6 +492,28 @@ BOOST_AUTO_TEST_CASE(RestartSchedule)
 {
 #if HAVE_MPI
     Opm::RestartSchedule val1(1, 2, 3);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(StepData)
+{
+#if HAVE_MPI
+    Opm::TimeMap::StepData val1{1, Opm::TimeStampUTC(123456)};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(TimeMap)
+{
+#if HAVE_MPI
+    Opm::TimeMap val1 = getTimeMap();
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
