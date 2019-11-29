@@ -315,6 +315,11 @@ std::size_t packSize(const Equil& data, Dune::MPIHelper::MPICommunicator comm)
     return packSize(data.records(), comm);
 }
 
+std::size_t packSize(const FoamConfig& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.records(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -613,6 +618,12 @@ void pack(const TableContainer& data, std::vector<char>& buffer, int& position,
 }
 
 void pack(const Equil& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.records(), buffer, position, comm);
+}
+
+void pack(const FoamConfig& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.records(), buffer, position, comm);
@@ -967,6 +978,14 @@ void unpack(Equil& data, std::vector<char>& buffer, int& position,
     std::vector<EquilRecord> records;
     unpack(records, buffer, position, comm);
     data = Equil(records);
+}
+
+void unpack(FoamConfig& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<FoamData> records;
+    unpack(records, buffer, position, comm);
+    data = FoamConfig(records);
 }
 
 } // end namespace Mpi

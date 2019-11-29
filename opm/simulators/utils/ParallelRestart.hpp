@@ -41,6 +41,7 @@ class ColumnSchema;
 class EDITNNC;
 class Equil;
 class EquilRecord;
+class FoamConfig;
 class FoamData;
 class NNC;
 struct NNCdata;
@@ -226,6 +227,7 @@ ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(EDITNNC)
 ADD_PACK_PROTOTYPES(Equil)
 ADD_PACK_PROTOTYPES(EquilRecord)
+ADD_PACK_PROTOTYPES(FoamConfig)
 ADD_PACK_PROTOTYPES(FoamData)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
