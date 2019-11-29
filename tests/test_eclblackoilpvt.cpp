@@ -85,6 +85,8 @@ static const char* deckString1 =
     "TOPS\n"
     "	100*1234 /\n"
     "\n"
+    "PORO\n"
+    "  300*0.15 /\n"
     "PROPS\n"
     "\n"
     "DENSITY\n"
