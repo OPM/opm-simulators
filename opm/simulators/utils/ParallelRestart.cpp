@@ -308,6 +308,11 @@ std::size_t packSize(const TableContainer& data, Dune::MPIHelper::MPICommunicato
     return res;
 }
 
+std::size_t packSize(const Equil& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.records(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -603,6 +608,12 @@ void pack(const TableContainer& data, std::vector<char>& buffer, int& position,
           pack(*it.second, buffer, position, comm);
         }
     }
+}
+
+void pack(const Equil& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.records(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -946,6 +957,14 @@ void unpack(TableContainer& data, std::vector<char>& buffer, int& position,
         unpack(table, buffer, position, comm);
         data.addTable(id, std::make_shared<const SimpleTable>(table));
     }
+}
+
+void unpack(Equil& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<EquilRecord> records;
+    unpack(records, buffer, position, comm);
+    data = Equil(records);
 }
 
 } // end namespace Mpi
