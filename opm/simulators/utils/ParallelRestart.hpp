@@ -39,6 +39,7 @@ namespace Opm
 
 class ColumnSchema;
 class EDITNNC;
+class EquilRecord;
 class NNC;
 struct NNCdata;
 class Rock2dTable;
@@ -221,6 +222,7 @@ ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(EDITNNC)
+ADD_PACK_PROTOTYPES(EquilRecord)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(RestartKey)

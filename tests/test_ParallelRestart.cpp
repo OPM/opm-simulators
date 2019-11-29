@@ -27,6 +27,7 @@
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
@@ -146,6 +147,12 @@ Opm::SimpleTable getSimpleTable()
     Opm::OrderedMap<std::string, Opm::TableColumn> data;
     data.insert({"test3", getTableColumn()});
     return Opm::SimpleTable(getTableSchema(), data, true);
+}
+
+
+Opm::EquilRecord getEquilRecord()
+{
+    return Opm::EquilRecord(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, true, false, 1);
 }
 
 
@@ -386,6 +393,17 @@ BOOST_AUTO_TEST_CASE(TableContainer)
     Opm::TableContainer val1(2);
     val1.addTable(0, std::make_shared<const Opm::SimpleTable>(tab1));
     val1.addTable(1, std::make_shared<const Opm::SimpleTable>(tab1));
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(EquilRecord)
+{
+#if HAVE_MPI
+    Opm::EquilRecord val1 = getEquilRecord();
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
