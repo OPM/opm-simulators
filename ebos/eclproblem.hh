@@ -1056,11 +1056,18 @@ public:
         for (const auto& action : actions.pending(simTime)) {
             auto actionResult = action->eval(simTime, context);
             if (actionResult) {
-                std::string msg = "The action: " + action->name() + " evaluated to true at report step: " + std::to_string(reportStep);
+                std::string wells_string;
+                const auto& matching_wells = actionResult.wells();
+                if (matching_wells.size() > 0) {
+                    for (std::size_t iw = 0; iw < matching_wells.size() - 1; iw++)
+                        wells_string += matching_wells[iw] + ", ";
+                    wells_string += matching_wells.back();
+                }
+                std::string msg = "The action: " + action->name() + " evaluated to true at report step: " + std::to_string(reportStep) + " wells: " + wells_string;
                 Opm::OpmLog::info(msg);
                 schedule.applyAction(reportStep, *action, actionResult);
             } else {
-                std::string msg = "The action: " + action->name() + " evaluated to false sat report step: " + std::to_string(reportStep);
+                std::string msg = "The action: " + action->name() + " evaluated to false at report step: " + std::to_string(reportStep);
                 Opm::OpmLog::info(msg);
             }
         }
