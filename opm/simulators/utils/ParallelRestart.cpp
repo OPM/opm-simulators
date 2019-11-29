@@ -28,6 +28,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <dune/common/parallel/mpitraits.hh>
@@ -283,6 +284,13 @@ std::size_t packSize(const TableColumn& data, Dune::MPIHelper::MPICommunicator c
           packSize(data.values(), comm) +
           packSize(data.defaults(), comm) +
           packSize(data.defaultCount(), comm);
+}
+
+std::size_t packSize(const SimpleTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.schema(), comm) +
+          packSize(data.columns(), comm) +
+          packSize(data.jfunc(), comm);
 }
 
 ////// pack routines
@@ -553,6 +561,14 @@ void pack(const TableColumn& data, std::vector<char>& buffer, int& position,
     pack(data.values(), buffer, position, comm);
     pack(data.defaults(), buffer, position, comm);
     pack(data.defaultCount(), buffer, position, comm);
+}
+
+void pack(const SimpleTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.schema(), buffer, position, comm);
+    pack(data.columns(), buffer, position, comm);
+    pack(data.jfunc(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -867,6 +883,18 @@ void unpack(TableColumn& data, std::vector<char>& buffer, int& position,
     unpack(defaults, buffer, position, comm);
     unpack(defaultCount, buffer, position, comm);
     data = TableColumn(schema, name, values, defaults, defaultCount);
+}
+
+void unpack(SimpleTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TableSchema schema;
+    OrderedMap<std::string, TableColumn> columns;
+    bool jf;
+    unpack(schema, buffer, position, comm);
+    unpack(columns, buffer, position, comm);
+    unpack(jf, buffer, position, comm);
+    data = SimpleTable(schema, columns, jf);
 }
 
 } // end namespace Mpi
