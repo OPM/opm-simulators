@@ -43,6 +43,7 @@ class NNC;
 struct NNCdata;
 class Rock2dTable;
 class Rock2dtrTable;
+class TableColumn;
 class TableSchema;
 class ThresholdPressure;
 
@@ -225,6 +226,7 @@ ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(std::string)
+ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableSchema)
 ADD_PACK_PROTOTYPES(ThresholdPressure)
 
