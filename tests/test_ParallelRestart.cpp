@@ -31,6 +31,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
 
@@ -116,6 +117,16 @@ Opm::ThresholdPressure getThresholdPressure()
 {
     return Opm::ThresholdPressure(false, true, {{true, 1.0}, {false, 2.0}},
                                   {{{1,2},{false,3.0}},{{2,3},{true,4.0}}});
+}
+
+
+Opm::TableSchema getTableSchema()
+{
+    Opm::OrderedMap<std::string, Opm::ColumnSchema> data;
+    data.insert({"test1", Opm::ColumnSchema("test1", Opm::Table::INCREASING,
+                                                     Opm::Table::DEFAULT_LINEAR)});
+    data.insert({"test2", Opm::ColumnSchema("test2", Opm::Table::INCREASING, 1.0)});
+    return Opm::TableSchema(data);
 }
 
 
@@ -310,6 +321,17 @@ BOOST_AUTO_TEST_CASE(ColumnSchema)
     val2 = PackUnpack(val3);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val3 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(TableSchema)
+{
+#if HAVE_MPI
+    Opm::TableSchema val1 = getTableSchema();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
 #endif
 }
 

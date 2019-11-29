@@ -28,6 +28,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
 namespace Opm
@@ -257,6 +258,11 @@ std::size_t packSize(const ColumnSchema& data, Dune::MPIHelper::MPICommunicator 
     }
 
     return res;
+}
+
+std::size_t packSize(const TableSchema& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.getColumns(), comm);
 }
 
 ////// pack routines
@@ -521,6 +527,12 @@ void pack(const ColumnSchema& data, std::vector<char>& buffer, int& position,
     pack(data.getDefaultMode(), buffer, position, comm);
     if (data.getDefaultMode() == Table::DEFAULT_CONST)
         pack(data.getDefaultValue(), buffer, position, comm);
+}
+
+void pack(const TableSchema& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getColumns(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -817,6 +829,14 @@ void unpack(ColumnSchema& data, std::vector<char>& buffer, int& position,
         data = ColumnSchema(name, order, value);
     } else
         data = ColumnSchema(name, order, action);
+}
+
+void unpack(TableSchema& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    OrderedMap<std::string, ColumnSchema> columns;
+    unpack(columns, buffer, position, comm);
+    data = TableSchema(columns);
 }
 
 } // end namespace Mpi
