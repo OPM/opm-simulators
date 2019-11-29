@@ -150,6 +150,11 @@ std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPIComm
   return packSize(data.getIndex(), comm) + packSize(data.getStorage(), comm);
 }
 
+template<class T>
+std::size_t packSize(const DynamicState<T>& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.data(), comm) + packSize(data.initialRange(), comm);
+}
 
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -458,6 +463,14 @@ void pack(const OrderedMap<Key, Value>& data, std::vector<char>& buffer, int& po
 {
     pack(data.getIndex(), buffer, position, comm);
     pack(data.getStorage(), buffer, position, comm);
+}
+
+template<class T>
+void pack(const DynamicState<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.data(), buffer, position, comm);
+    pack(data.initialRange(), buffer, position, comm);
 }
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
@@ -802,6 +815,17 @@ void unpack(OrderedMap<Key,Value>& data, std::vector<char>& buffer, int& positio
   unpack(index, buffer, position, comm);
   unpack(storage, buffer, position, comm);
   data = OrderedMap<Key,Value>(index, storage);
+}
+
+template<class T>
+void unpack(DynamicState<T>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<T> ddata;
+    size_t initial_range;
+    unpack(ddata, buffer, position, comm);
+    unpack(initial_range, buffer, position, comm);
+    data = DynamicState<T>(ddata, initial_range);
 }
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
