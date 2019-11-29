@@ -30,6 +30,7 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
@@ -459,6 +460,17 @@ BOOST_AUTO_TEST_CASE(InitConfig)
     Opm::InitConfig val1(Opm::Equil({getEquilRecord(), getEquilRecord()}),
                          Opm::FoamConfig({getFoamData(), getFoamData()}),
                          true, true, 20, "test1");
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(SimulationConfig)
+{
+#if HAVE_MPI
+    Opm::SimulationConfig val1(getThresholdPressure(), false, true, false, true);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

@@ -48,6 +48,7 @@ class NNC;
 struct NNCdata;
 class Rock2dTable;
 class Rock2dtrTable;
+class SimulationConfig;
 class SimpleTable;
 class TableColumn;
 class TableContainer;
@@ -238,6 +239,7 @@ ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(std::string)
+ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)

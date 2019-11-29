@@ -27,6 +27,7 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
@@ -329,6 +330,15 @@ std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator co
            packSize(data.restartRequested(), comm) +
            packSize(data.getRestartStep(), comm) +
            packSize(data.getRestartRootName(), comm);
+}
+
+std::size_t packSize(const SimulationConfig& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getThresholdPressure(), comm) +
+           packSize(data.useCPR(), comm) +
+           packSize(data.hasDISGAS(), comm) +
+           packSize(data.hasVAPOIL(), comm) +
+           packSize(data.isThermal(), comm);
 }
 
 ////// pack routines
@@ -649,6 +659,16 @@ void pack(const InitConfig& data, std::vector<char>& buffer, int& position,
     pack(data.restartRequested(), buffer, position, comm);
     pack(data.getRestartStep(), buffer, position, comm);
     pack(data.getRestartRootName(), buffer, position, comm);
+}
+
+void pack(const SimulationConfig& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getThresholdPressure(), buffer, position, comm);
+    pack(data.useCPR(), buffer, position, comm);
+    pack(data.hasDISGAS(), buffer, position, comm);
+    pack(data.hasVAPOIL(), buffer, position, comm);
+    pack(data.isThermal(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1026,6 +1046,19 @@ void unpack(InitConfig& data, std::vector<char>& buffer, int& position,
     unpack(restartRootName, buffer, position, comm);
     data = InitConfig(equil, foam, filleps, restartRequested,
                       restartStep, restartRootName);
+}
+
+void unpack(SimulationConfig& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    ThresholdPressure thresholdPressure;
+    bool useCPR, DISGAS, VAPOIL, isThermal;
+    unpack(thresholdPressure, buffer, position, comm);
+    unpack(useCPR, buffer, position, comm);
+    unpack(DISGAS, buffer, position, comm);
+    unpack(VAPOIL, buffer, position, comm);
+    unpack(isThermal, buffer, position, comm);
+    data = SimulationConfig(thresholdPressure, useCPR, DISGAS, VAPOIL, isThermal);
 }
 
 } // end namespace Mpi
