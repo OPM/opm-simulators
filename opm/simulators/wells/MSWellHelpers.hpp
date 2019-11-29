@@ -188,7 +188,15 @@ namespace mswellhelpers
     }
 
 
-
+    template <typename ValueType>
+    ValueType valveContrictionPressureLoss(const ValueType& mass_rate, const ValueType& density,
+                                           const double area_con, const double cv)
+    {
+        // the formulation is adjusted a little bit for convinience
+        // velocity = mass_rate / (density * area) is applied to the original formulation
+        const double area = (area_con > 1.e-10 ? area_con : 1.e-10);
+        return mass_rate * mass_rate / (2. * density * cv * cv * area * area);
+    }
 
 
     template <typename ValueType>

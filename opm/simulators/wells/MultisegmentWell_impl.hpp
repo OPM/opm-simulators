@@ -21,6 +21,7 @@
 
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 
 namespace Opm
 {
@@ -2654,7 +2655,7 @@ namespace Opm
             if (seg == 0) { // top segment
                 well_state.bhp()[index_of_well_] = well_state.segPress()[seg + top_segment_index];
             }
-        }               
+        }
         updateThp(well_state, deferred_logger);
     }
 
@@ -2754,7 +2755,7 @@ namespace Opm
                 std::ostringstream sstr;
                 if (is_stagnate) {
                     sstr << " well " << name() << " observes stagnation in inner iteration " << it << "\n";
-                    
+
                 }
                 if (is_oscillate) {
                     sstr << " well " << name() << " observes oscillation in inner iteration " << it << "\n";
@@ -2936,12 +2937,16 @@ namespace Opm
                 assembleControlEq(well_state, schedule, summaryState, inj_controls, prod_controls, deferred_logger);
             } else {
                 // TODO: maybe the following should go to the function assemblePressureEq()
-                if (segmentSet()[seg].segmentType() == Segment::SegmentType::SICD) {
-                    assembleSICDPressureEq(seg);
-                } else {
-                    // regular segment
-                    assemblePressureEq(seg);
-                }
+		switch(segmentSet()[seg].segmentType()) {
+		    case Segment::SegmentType::SICD :
+		        assembleSICDPressureEq(seg);
+			break;
+		    case Segment::SegmentType::VALVE :
+		        assembleValvePressureEq(seg);
+			break;
+		    default :
+		        assemblePressureEq(seg);
+		}
             }
         }
     }
@@ -3452,6 +3457,88 @@ namespace Opm
 
 
 
+
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    assembleSICDPressureEq(const int seg) const
+    {
+        // TODO: upwinding needs to be taken care of
+        // top segment can not be a spiral ICD device
+        assert(seg != 0);
+
+        // the pressure equation is something like
+        // p_seg - deltaP - p_outlet = 0.
+        // the major part is how to calculate the deltaP
+
+        EvalWell pressure_equation = getSegmentPressure(seg);
+
+        pressure_equation = pressure_equation - pressureDropSpiralICD(seg);
+
+        resWell_[seg][SPres] = pressure_equation.value();
+        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+            duneD_[seg][seg][SPres][pv_idx] = pressure_equation.derivative(pv_idx + numEq);
+        }
+
+        // contribution from the outlet segment
+        const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
+        const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
+
+        resWell_[seg][SPres] -= outlet_pressure.value();
+        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+            duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
+
+        }
+    }
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    assembleValvePressureEq(const int seg) const
+    {
+        // TODO: upwinding needs to be taken care of
+        // top segment can not be a spiral ICD device
+        assert(seg != 0);
+
+        // const Valve& valve = *segmentSet()[seg].Valve();
+
+        // the pressure equation is something like
+        // p_seg - deltaP - p_outlet = 0.
+        // the major part is how to calculate the deltaP
+
+        EvalWell pressure_equation = getSegmentPressure(seg);
+
+        // const int seg_upwind = upwinding_segments_[seg];
+
+        pressure_equation = pressure_equation - pressureDropValve(seg);
+
+        resWell_[seg][SPres] = pressure_equation.value();
+        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+            duneD_[seg][seg][SPres][pv_idx] = pressure_equation.derivative(pv_idx + numEq);
+        }
+
+        // contribution from the outlet segment
+        const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
+        const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
+
+        resWell_[seg][SPres] -= outlet_pressure.value();
+        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+            duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
+        }
+    }
+
+
+
+
+
     template<typename TypeTag>
     boost::optional<double>
     MultisegmentWell<TypeTag>::
@@ -3647,43 +3734,6 @@ namespace Opm
                                     "Robust bhp(thp) solve failed for well " + name());
             return boost::optional<double>();
 	}
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
-    assembleSICDPressureEq(const int seg) const
-    {
-        // TODO: upwinding needs to be taken care of
-        // top segment can not be a spiral ICD device
-        assert(seg != 0);
-
-        // the pressure equation is something like
-        // p_seg - deltaP - p_outlet = 0.
-        // the major part is how to calculate the deltaP
-
-        EvalWell pressure_equation = getSegmentPressure(seg);
-
-        pressure_equation = pressure_equation - pressureDropSpiralICD(seg);
-
-        resWell_[seg][SPres] = pressure_equation.value();
-        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-            duneD_[seg][seg][SPres][pv_idx] = pressure_equation.derivative(pv_idx + numEq);
-        }
-
-        // contribution from the outlet segment
-        const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
-        const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
-
-        resWell_[seg][SPres] -= outlet_pressure.value();
-        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-            duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
-
-        }
     }
 
 
@@ -3925,8 +3975,6 @@ namespace Opm
 
 
 
-
-
     template<typename TypeTag>
     double
     MultisegmentWell<TypeTag>::
@@ -4012,5 +4060,35 @@ namespace Opm
         return sign * temp_value1 * temp_value2 * strength * reservoir_rate_icd * reservoir_rate_icd;
     }
 
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    pressureDropValve(const int seg) const
+    {
+        const Valve& valve = *segmentSet()[seg].valve();
+
+        const EvalWell& mass_rate = segment_mass_rates_[seg];
+        const EvalWell& visc = segment_viscosities_[seg];
+        const EvalWell& density = segment_densities_[seg];
+        const double additional_length = valve.pipeAdditionalLength();
+        const double roughness = valve.pipeRoughness();
+        const double diameter = valve.pipeDiameter();
+        const double area = valve.pipeCrossArea();
+
+        const EvalWell friction_pressure_loss =
+            mswellhelpers::frictionPressureLoss(additional_length, diameter, area, roughness, density, mass_rate, visc);
+
+        const double area_con = valve.conCrossArea();
+        const double cv = valve.conFlowCoefficient();
+
+        const EvalWell constriction_pressure_loss =
+            mswellhelpers::valveContrictionPressureLoss(mass_rate, density, area_con, cv);
+
+        const double sign = mass_rate <= 0. ? 1.0 : -1.0;
+        return sign * (friction_pressure_loss + constriction_pressure_loss);
+    }
 
 }
