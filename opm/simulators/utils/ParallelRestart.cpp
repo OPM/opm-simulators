@@ -22,6 +22,7 @@
 #endif
 
 #include "ParallelRestart.hpp"
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
@@ -383,6 +384,11 @@ std::size_t packSize(const IOConfig& data, Dune::MPIHelper::MPICommunicator comm
            packSize(data.getNoSim(), comm) +
            packSize(data.getBaseName(), comm) +
            packSize(data.getEclCompatibleRST(), comm);
+}
+
+std::size_t packSize(const Phases& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getBits(), comm);
 }
 
 ////// pack routines
@@ -758,6 +764,12 @@ void pack(const IOConfig& data, std::vector<char>& buffer, int& position,
     pack(data.getNoSim(), buffer, position, comm);
     pack(data.getBaseName(), buffer, position, comm);
     pack(data.getEclCompatibleRST(), buffer, position, comm);
+}
+
+void pack(const Phases& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getBits(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1217,6 +1229,14 @@ void unpack(IOConfig& data, std::vector<char>& buffer, int& position,
     data = IOConfig(write_init, write_egrid, unifin, unifout, fmtin, fmtout,
                     firstRestartStep, deck_name, output_enabled, output_dir,
                     no_sim, base_name, ecl_compatible_rst);
+}
+
+void unpack(Phases& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unsigned long bits;
+    unpack(bits, buffer, position, comm);
+    data = Phases(std::bitset<NUM_PHASES_IN_ENUM>(bits));
 }
 
 } // end namespace Mpi

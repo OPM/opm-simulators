@@ -25,6 +25,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
@@ -540,6 +541,17 @@ BOOST_AUTO_TEST_CASE(IOConfig)
 #if HAVE_MPI
     Opm::IOConfig val1(true, false, true, false, false, true, 1, "test1", true,
                        "test2", true, "test3", false);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Phases)
+{
+#if HAVE_MPI
+    Opm::Phases val1(true, true, true, false, true, false, true, false);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
