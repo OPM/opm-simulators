@@ -31,6 +31,7 @@
 namespace {
 
 
+#if HAVE_MPI
 Opm::data::Solution getSolution()
 {
     Opm::data::Solution sol1;
@@ -102,6 +103,7 @@ Opm::data::Well getWell()
     well1.segments.insert({0, getSegment()});
     return well1;
 }
+#endif
 
 
 }
@@ -119,7 +121,7 @@ std::tuple<T,int,int> PackUnpack(const T& in)
     T out;
     Opm::Mpi::unpack(out, buffer, pos2, comm);
 
-    return {out, pos1, pos2};
+    return std::make_tuple(out, pos1, pos2);
 }
 
 
