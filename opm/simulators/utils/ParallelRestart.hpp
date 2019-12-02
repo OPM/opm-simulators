@@ -62,6 +62,7 @@ class TableColumn;
 class TableContainer;
 class TableSchema;
 class ThresholdPressure;
+class UDQParams;
 class Welldims;
 class WellSegmentDims;
 
@@ -274,6 +275,7 @@ ADD_PACK_PROTOTYPES(TableSchema)
 ADD_PACK_PROTOTYPES(ThresholdPressure)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeMap::StepData)
+ADD_PACK_PROTOTYPES(UDQParams)
 ADD_PACK_PROTOTYPES(Welldims)
 ADD_PACK_PROTOTYPES(WellSegmentDims)
 
