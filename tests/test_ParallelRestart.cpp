@@ -121,7 +121,7 @@ std::tuple<T,int,int> PackUnpack(const T& in)
     T out;
     Opm::Mpi::unpack(out, buffer, pos2, comm);
 
-    return {out, pos1, pos2};
+    return std::make_tuple(out, pos1, pos2);
 }
 
 
