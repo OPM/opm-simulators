@@ -34,6 +34,8 @@
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
@@ -420,6 +422,26 @@ std::size_t packSize(const Runspec& data, Dune::MPIHelper::MPICommunicator comm)
            packSize(data.udqParams(), comm) +
            packSize(data.hysterPar(), comm) +
            packSize(data.actdims(), comm);
+}
+
+std::size_t packSize(const PvtxTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getOuterColumnSchema(), comm) +
+           packSize(data.getOuterColumn(), comm) +
+           packSize(data.getUnderSaturatedSchema(), comm) +
+           packSize(data.getSaturatedSchema(), comm) +
+           packSize(data.getUnderSaturatedTables(), comm) +
+           packSize(data.getSaturatedTable(), comm);
+}
+
+std::size_t packSize(const PvtgTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const PvtxTable&>(data), comm);
+}
+
+std::size_t packSize(const PvtoTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const PvtxTable&>(data), comm);
 }
 
 ////// pack routines
@@ -830,6 +852,29 @@ void pack(const Runspec& data, std::vector<char>& buffer, int& position,
     pack(data.udqParams(), buffer, position, comm);
     pack(data.hysterPar(), buffer, position, comm);
     pack(data.actdims(), buffer, position, comm);
+}
+
+void pack(const PvtxTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getOuterColumnSchema(), buffer, position, comm);
+    pack(data.getOuterColumn(), buffer, position, comm);
+    pack(data.getUnderSaturatedSchema(), buffer, position, comm);
+    pack(data.getSaturatedSchema(), buffer, position, comm);
+    pack(data.getUnderSaturatedTables(), buffer, position, comm);
+    pack(data.getSaturatedTable(), buffer, position, comm);
+}
+
+void pack(const PvtgTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const PvtxTable&>(data), buffer, position, comm);
+}
+
+void pack(const PvtoTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const PvtxTable&>(data), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1344,6 +1389,38 @@ void unpack(Runspec& data, std::vector<char>& buffer, int& position,
     data = Runspec(phases, tabdims, endScale, wellDims, wsegDims,
                    udqparams, hystPar, actdims);
 }
+
+template<class PVTType>
+void unpack_pvt(PVTType& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    ColumnSchema outer_schema;
+    TableColumn outer_column;
+    TableSchema undersat_schema, sat_schema;
+    std::vector<SimpleTable> undersat_tables;
+    SimpleTable sat_table;
+    unpack(outer_schema, buffer, position, comm);
+    unpack(outer_column, buffer, position, comm);
+    unpack(undersat_schema, buffer, position, comm);
+    unpack(sat_schema, buffer, position, comm);
+    unpack(undersat_tables, buffer, position, comm);
+    unpack(sat_table, buffer, position, comm);
+    data = PVTType(outer_schema, outer_column, undersat_schema, sat_schema,
+                   undersat_tables, sat_table);
+}
+
+void unpack(PvtgTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack_pvt(data, buffer, position, comm);
+}
+
+void unpack(PvtoTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack_pvt(data, buffer, position, comm);
+}
+
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
