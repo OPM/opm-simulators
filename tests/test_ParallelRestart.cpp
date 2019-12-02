@@ -750,6 +750,17 @@ BOOST_AUTO_TEST_CASE(PVCDORecord)
 }
 
 
+BOOST_AUTO_TEST_CASE(PvcdoTable)
+{
+#if HAVE_MPI
+    Opm::PvcdoTable val1({Opm::PVCDORecord{1.0, 2.0, 3.0, 4.0, 5.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;
