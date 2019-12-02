@@ -208,6 +208,7 @@ HANDLE_AS_POD(FoamData)
 HANDLE_AS_POD(RestartSchedule)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeMap::StepData)
+HANDLE_AS_POD(Welldims)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
 {
