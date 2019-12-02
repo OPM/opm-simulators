@@ -75,6 +75,7 @@ class TableContainer;
 class TableSchema;
 class ThresholdPressure;
 class UDQParams;
+class VISCREFRecord;
 class Welldims;
 class WellSegmentDims;
 
@@ -300,6 +301,7 @@ ADD_PACK_PROTOTYPES(ThresholdPressure)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeMap::StepData)
 ADD_PACK_PROTOTYPES(UDQParams)
+ADD_PACK_PROTOTYPES(VISCREFRecord)
 ADD_PACK_PROTOTYPES(Welldims)
 ADD_PACK_PROTOTYPES(WellSegmentDims)
 
