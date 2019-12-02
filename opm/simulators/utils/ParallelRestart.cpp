@@ -392,6 +392,11 @@ std::size_t packSize(const Phases& data, Dune::MPIHelper::MPICommunicator comm)
     return packSize(data.getBits(), comm);
 }
 
+std::size_t packSize(const EndpointScaling& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getBits(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -768,6 +773,12 @@ void pack(const IOConfig& data, std::vector<char>& buffer, int& position,
 }
 
 void pack(const Phases& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getBits(), buffer, position, comm);
+}
+
+void pack(const EndpointScaling& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getBits(), buffer, position, comm);
@@ -1238,6 +1249,14 @@ void unpack(Phases& data, std::vector<char>& buffer, int& position,
     unsigned long bits;
     unpack(bits, buffer, position, comm);
     data = Phases(std::bitset<NUM_PHASES_IN_ENUM>(bits));
+}
+
+void unpack(EndpointScaling& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unsigned long bits;
+    unpack(bits, buffer, position, comm);
+    data = EndpointScaling(std::bitset<4>(bits));
 }
 
 } // end namespace Mpi

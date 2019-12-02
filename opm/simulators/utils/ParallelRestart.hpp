@@ -41,6 +41,7 @@ namespace Opm
 
 class ColumnSchema;
 class EDITNNC;
+class EndpointScaling;
 class Equil;
 class EquilRecord;
 class FoamConfig;
@@ -245,6 +246,7 @@ ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(EDITNNC)
+ADD_PACK_PROTOTYPES(EndpointScaling)
 ADD_PACK_PROTOTYPES(Equil)
 ADD_PACK_PROTOTYPES(EquilRecord)
 ADD_PACK_PROTOTYPES(FoamConfig)
