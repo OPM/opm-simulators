@@ -36,6 +36,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PolyInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
@@ -475,6 +476,14 @@ std::size_t packSize(const ViscrefTable& data, Dune::MPIHelper::MPICommunicator 
 std::size_t packSize(const WatdentTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const std::vector<WATDENTRecord>&>(data), comm);
+}
+
+std::size_t packSize(const PolyInjTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getThroughputs(), comm) +
+           packSize(data.getVelocities(), comm) +
+           packSize(data.getTableNumber(), comm) +
+           packSize(data.getTableData(), comm);
 }
 
 ////// pack routines
@@ -938,6 +947,15 @@ void pack(const WatdentTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const std::vector<WATDENTRecord>&>(data), buffer, position, comm);
+}
+
+void pack(const PolyInjTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getThroughputs(), buffer, position, comm);
+    pack(data.getVelocities(), buffer, position, comm);
+    pack(data.getTableNumber(), buffer, position, comm);
+    pack(data.getTableData(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1522,6 +1540,19 @@ void unpack(WatdentTable& data, std::vector<char>& buffer, int& position,
     std::vector<WATDENTRecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = WatdentTable(pdata);
+}
+
+void unpack(PolyInjTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<double> throughputs, velocities;
+    int tableNumber;
+    std::vector<std::vector<double>> tableData;
+    unpack(throughputs, buffer, position, comm);
+    unpack(velocities, buffer, position, comm);
+    unpack(tableNumber, buffer, position, comm);
+    unpack(tableData, buffer, position, comm);
+    data = PolyInjTable(throughputs, velocities, tableNumber, tableData);
 }
 
 } // end namespace Mpi
