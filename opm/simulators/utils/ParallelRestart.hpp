@@ -41,6 +41,7 @@ namespace Opm
 
 class Actdims;
 class ColumnSchema;
+class DENSITYRecord;
 class EclHysterConfig;
 class EDITNNC;
 class EndpointScaling;
@@ -259,6 +260,7 @@ ADD_PACK_PROTOTYPES(data::Segment)
 ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
+ADD_PACK_PROTOTYPES(DENSITYRecord)
 ADD_PACK_PROTOTYPES(EDITNNC)
 ADD_PACK_PROTOTYPES(EndpointScaling)
 ADD_PACK_PROTOTYPES(Equil)
