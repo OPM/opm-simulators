@@ -472,6 +472,11 @@ std::size_t packSize(const ViscrefTable& data, Dune::MPIHelper::MPICommunicator 
     return packSize(static_cast<const std::vector<VISCREFRecord>&>(data), comm);
 }
 
+std::size_t packSize(const WatdentTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<WATDENTRecord>&>(data), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -927,6 +932,12 @@ void pack(const ViscrefTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const std::vector<VISCREFRecord>&>(data), buffer, position, comm);
+}
+
+void pack(const WatdentTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<WATDENTRecord>&>(data), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1503,6 +1514,14 @@ void unpack(ViscrefTable& data, std::vector<char>& buffer, int& position,
     std::vector<VISCREFRecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = ViscrefTable(pdata);
+}
+
+void unpack(WatdentTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<WATDENTRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = WatdentTable(pdata);
 }
 
 } // end namespace Mpi
