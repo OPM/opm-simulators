@@ -63,6 +63,7 @@ class TableContainer;
 class TableSchema;
 class ThresholdPressure;
 class Welldims;
+class WellSegmentDims;
 
 namespace Mpi
 {
@@ -274,6 +275,7 @@ ADD_PACK_PROTOTYPES(ThresholdPressure)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeMap::StepData)
 ADD_PACK_PROTOTYPES(Welldims)
+ADD_PACK_PROTOTYPES(WellSegmentDims)
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
