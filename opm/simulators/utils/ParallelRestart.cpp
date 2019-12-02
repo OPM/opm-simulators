@@ -466,6 +466,11 @@ std::size_t packSize(const DensityTable& data, Dune::MPIHelper::MPICommunicator 
     return packSize(static_cast<const std::vector<DENSITYRecord>&>(data), comm);
 }
 
+std::size_t packSize(const ViscrefTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<VISCREFRecord>&>(data), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -915,6 +920,12 @@ void pack(const DensityTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const std::vector<DENSITYRecord>&>(data), buffer, position, comm);
+}
+
+void pack(const ViscrefTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<VISCREFRecord>&>(data), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1483,6 +1494,14 @@ void unpack(DensityTable& data, std::vector<char>& buffer, int& position,
     std::vector<DENSITYRecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = DensityTable(pdata);
+}
+
+void unpack(ViscrefTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<VISCREFRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = ViscrefTable(pdata);
 }
 
 } // end namespace Mpi
