@@ -40,6 +40,7 @@ namespace Opm
 {
 
 class ColumnSchema;
+class EclHysterConfig;
 class EDITNNC;
 class EndpointScaling;
 class Equil;
@@ -254,6 +255,7 @@ ADD_PACK_PROTOTYPES(Equil)
 ADD_PACK_PROTOTYPES(EquilRecord)
 ADD_PACK_PROTOTYPES(FoamConfig)
 ADD_PACK_PROTOTYPES(FoamData)
+ADD_PACK_PROTOTYPES(EclHysterConfig)
 ADD_PACK_PROTOTYPES(InitConfig)
 ADD_PACK_PROTOTYPES(IOConfig)
 ADD_PACK_PROTOTYPES(NNC)

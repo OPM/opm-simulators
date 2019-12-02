@@ -203,6 +203,7 @@ std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelpe
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
+HANDLE_AS_POD(EclHysterConfig)
 HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
 HANDLE_AS_POD(RestartSchedule)
