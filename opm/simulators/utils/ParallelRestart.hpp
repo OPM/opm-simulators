@@ -57,6 +57,7 @@ class Phases;
 class PvtgTable;
 class PvtoTable;
 class PVTWRecord;
+class PvtwTable;
 class RestartConfig;
 class RestartSchedule;
 class Rock2dTable;
@@ -272,6 +273,7 @@ ADD_PACK_PROTOTYPES(Phases)
 ADD_PACK_PROTOTYPES(PvtgTable)
 ADD_PACK_PROTOTYPES(PvtoTable)
 ADD_PACK_PROTOTYPES(PVTWRecord)
+ADD_PACK_PROTOTYPES(PvtwTable)
 ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartSchedule)

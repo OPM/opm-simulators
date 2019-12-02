@@ -448,6 +448,11 @@ std::size_t packSize(const PvtoTable& data, Dune::MPIHelper::MPICommunicator com
     return packSize(static_cast<const PvtxTable&>(data), comm);
 }
 
+std::size_t packSize(const PvtwTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<PVTWRecord>&>(data), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -879,6 +884,12 @@ void pack(const PvtoTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const PvtxTable&>(data), buffer, position, comm);
+}
+
+void pack(const PvtwTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<PVTWRecord>&>(data), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1423,6 +1434,14 @@ void unpack(PvtoTable& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     unpack_pvt(data, buffer, position, comm);
+}
+
+void unpack(PvtwTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<PVTWRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = PvtwTable(pdata);
 }
 
 } // end namespace Mpi
