@@ -997,6 +997,7 @@ public:
 
         int episodeIdx = simulator.episodeIndex();
         this->applyActions(episodeIdx + 1,
+                           simulator.time() + simulator.timeStepSize(),
                            schedule,
                            simulator.vanguard().summaryState());
 
@@ -1044,6 +1045,7 @@ public:
 
 
     void applyActions(int reportStep,
+                      double sim_time,
                       Opm::Schedule& schedule,
                       const Opm::SummaryState& summaryState) {
         const auto& actions = schedule.actions(reportStep);
@@ -1051,6 +1053,16 @@ public:
             return;
 
         Opm::Action::Context context( summaryState );
+        auto now = Opm::TimeStampUTC( schedule.getStartTime() ) + std::chrono::duration<double>(sim_time);
+        std::string ts;
+        {
+            std::ostringstream os;
+            os << std::setw(4) <<                      std::to_string(now.year())  << '/'
+               << std::setw(2) << std::setfill('0') << std::to_string(now.month()) << '/'
+               << std::setw(2) << std::setfill('0') << std::to_string(now.day()) << "  report:" << std::to_string(reportStep);
+
+            ts = os.str();
+        }
 
         auto simTime = schedule.simTime(reportStep);
         for (const auto& action : actions.pending(simTime)) {
@@ -1063,11 +1075,11 @@ public:
                         wells_string += matching_wells[iw] + ", ";
                     wells_string += matching_wells.back();
                 }
-                std::string msg = "The action: " + action->name() + " evaluated to true at report step: " + std::to_string(reportStep) + " wells: " + wells_string;
+                std::string msg = "The action: " + action->name() + " evaluated to true at " + ts + " wells: " + wells_string;
                 Opm::OpmLog::info(msg);
                 schedule.applyAction(reportStep, *action, actionResult);
             } else {
-                std::string msg = "The action: " + action->name() + " evaluated to false at report step: " + std::to_string(reportStep);
+                std::string msg = "The action: " + action->name() + " evaluated to false at " + ts;
                 Opm::OpmLog::info(msg);
             }
         }
