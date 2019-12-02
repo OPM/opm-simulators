@@ -44,6 +44,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SkprwatTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
@@ -497,6 +498,11 @@ std::size_t packSize(const SkprpolyTable& data, Dune::MPIHelper::MPICommunicator
 {
     return packSize(static_cast<const PolyInjTable&>(data), comm) +
            packSize(data.referenceConcentration(), comm);
+}
+
+std::size_t packSize(const SkprwatTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const PolyInjTable&>(data), comm);
 }
 
 ////// pack routines
@@ -982,6 +988,12 @@ void pack(const SkprpolyTable& data, std::vector<char>& buffer, int& position,
 {
     pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
     pack(data.referenceConcentration(), buffer, position, comm);
+}
+
+void pack(const SkprwatTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1594,6 +1606,12 @@ void unpack(SkprpolyTable& data, std::vector<char>& buffer, int& position,
     double refConcentration;
     unpack(refConcentration, buffer, position, comm);
     data.setReferenceConcentration(refConcentration);
+}
+
+void unpack(SkprwatTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(static_cast<PolyInjTable&>(data), buffer, position, comm);
 }
 
 } // end namespace Mpi
