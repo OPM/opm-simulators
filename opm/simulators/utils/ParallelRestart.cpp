@@ -357,6 +357,16 @@ std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
            packSize(data.firstTimeStepYears(), comm);
 }
 
+std::size_t packSize(const RestartConfig& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.timeMap(), comm) +
+           packSize(data.getFirstRestartStep(), comm) +
+           packSize(data.writeInitialRst(), comm) +
+           packSize(data.restartSchedule(), comm) +
+           packSize(data.restartKeywords(), comm) +
+           packSize(data.saveKeywords(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -701,6 +711,17 @@ void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
     pack(data.timeList(), buffer, position, comm);
     pack(data.firstTimeStepMonths(), buffer, position, comm);
     pack(data.firstTimeStepYears(), buffer, position, comm);
+}
+
+void pack(const RestartConfig& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.timeMap(), buffer, position, comm);
+    pack(data.getFirstRestartStep(), buffer, position, comm);
+    pack(data.writeInitialRst(), buffer, position, comm);
+    pack(data.restartSchedule(), buffer, position, comm);
+    pack(data.restartKeywords(), buffer, position, comm);
+    pack(data.saveKeywords(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1115,6 +1136,25 @@ void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
     unpack(firstStepYears, buffer, position, comm);
 
     data = TimeMap(timeList, firstStepMonths, firstStepYears);
+}
+
+void unpack(RestartConfig& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TimeMap timemap;
+    int firstRstStep;
+    bool writeInitialRst;
+    DynamicState<RestartSchedule> restart_sched;
+    DynamicState<std::map<std::string,int>> restart_keyw;
+    std::vector<bool> save_keyw;
+    unpack(timemap, buffer, position, comm);
+    unpack(firstRstStep, buffer, position, comm);
+    unpack(writeInitialRst, buffer, position, comm);
+    unpack(restart_sched, buffer, position, comm);
+    unpack(restart_keyw, buffer, position, comm);
+    unpack(save_keyw, buffer, position, comm);
+    data = RestartConfig(timemap, firstRstStep, writeInitialRst, restart_sched,
+                         restart_keyw, save_keyw);
 }
 
 } // end namespace Mpi

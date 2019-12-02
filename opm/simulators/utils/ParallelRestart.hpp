@@ -48,6 +48,7 @@ class FoamData;
 class InitConfig;
 class NNC;
 struct NNCdata;
+class RestartConfig;
 class RestartSchedule;
 class Rock2dTable;
 class Rock2dtrTable;
@@ -248,6 +249,7 @@ ADD_PACK_PROTOTYPES(FoamData)
 ADD_PACK_PROTOTYPES(InitConfig)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
+ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)

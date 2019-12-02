@@ -521,6 +521,19 @@ BOOST_AUTO_TEST_CASE(TimeMap)
 }
 
 
+BOOST_AUTO_TEST_CASE(RestartConfig)
+{
+#if HAVE_MPI
+    Opm::DynamicState<Opm::RestartSchedule> rsched({Opm::RestartSchedule(1, 2, 3)}, 2);
+    Opm::DynamicState<std::map<std::string,int>> rkw({{{"test",3}}}, 3);
+    Opm::RestartConfig val1(getTimeMap(), 1, true, rsched, rkw, {false, true});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;
