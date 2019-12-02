@@ -460,6 +460,11 @@ std::size_t packSize(const PvcdoTable& data, Dune::MPIHelper::MPICommunicator co
     return packSize(static_cast<const std::vector<PVCDORecord>&>(data), comm);
 }
 
+std::size_t packSize(const DensityTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<DENSITYRecord>&>(data), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -903,6 +908,12 @@ void pack(const PvcdoTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const std::vector<PVCDORecord>&>(data), buffer, position, comm);
+}
+
+void pack(const DensityTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<DENSITYRecord>&>(data), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1463,6 +1474,14 @@ void unpack(PvcdoTable& data, std::vector<char>& buffer, int& position,
     std::vector<PVCDORecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = PvcdoTable(pdata);
+}
+
+void unpack(DensityTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<DENSITYRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = DensityTable(pdata);
 }
 
 } // end namespace Mpi
