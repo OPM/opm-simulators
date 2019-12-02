@@ -40,6 +40,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/PolyInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
@@ -217,6 +218,7 @@ HANDLE_AS_POD(EclHysterConfig)
 HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
 HANDLE_AS_POD(JFunc)
+HANDLE_AS_POD(Regdims)
 HANDLE_AS_POD(RestartSchedule)
 HANDLE_AS_POD(PVTWRecord)
 HANDLE_AS_POD(PVCDORecord)

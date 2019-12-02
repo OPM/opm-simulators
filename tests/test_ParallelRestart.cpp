@@ -42,6 +42,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/PlymwinjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
@@ -856,6 +857,17 @@ BOOST_AUTO_TEST_CASE(SkprwatTable)
 {
 #if HAVE_MPI
     Opm::SkprwatTable val1({1.0}, {2.0}, 1, {{1.0}, {2.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Regdims)
+{
+#if HAVE_MPI
+    Opm::Regdims val1(1,2,3,4,5);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
