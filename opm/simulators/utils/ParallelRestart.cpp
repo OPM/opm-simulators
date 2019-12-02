@@ -36,6 +36,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PlymwinjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PolyInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
@@ -484,6 +485,11 @@ std::size_t packSize(const PolyInjTable& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.getVelocities(), comm) +
            packSize(data.getTableNumber(), comm) +
            packSize(data.getTableData(), comm);
+}
+
+std::size_t packSize(const PlymwinjTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const PolyInjTable&>(data), comm);
 }
 
 ////// pack routines
@@ -956,6 +962,12 @@ void pack(const PolyInjTable& data, std::vector<char>& buffer, int& position,
     pack(data.getVelocities(), buffer, position, comm);
     pack(data.getTableNumber(), buffer, position, comm);
     pack(data.getTableData(), buffer, position, comm);
+}
+
+void pack(const PlymwinjTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1553,6 +1565,12 @@ void unpack(PolyInjTable& data, std::vector<char>& buffer, int& position,
     unpack(tableNumber, buffer, position, comm);
     unpack(tableData, buffer, position, comm);
     data = PolyInjTable(throughputs, velocities, tableNumber, tableData);
+}
+
+void unpack(PlymwinjTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(static_cast<PolyInjTable&>(data), buffer, position, comm);
 }
 
 } // end namespace Mpi

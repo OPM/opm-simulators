@@ -56,6 +56,7 @@ class JFunc;
 class NNC;
 struct NNCdata;
 class Phases;
+class PlymwinjTable;
 class PolyInjTable;
 class PVCDORecord;
 class PvcdoTable;
@@ -281,6 +282,7 @@ ADD_PACK_PROTOTYPES(JFunc)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(Phases)
+ADD_PACK_PROTOTYPES(PlymwinjTable)
 ADD_PACK_PROTOTYPES(PolyInjTable)
 ADD_PACK_PROTOTYPES(PVCDORecord)
 ADD_PACK_PROTOTYPES(PvcdoTable)
