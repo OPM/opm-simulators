@@ -637,6 +637,25 @@ BOOST_AUTO_TEST_CASE(Actdims)
 }
 
 
+BOOST_AUTO_TEST_CASE(Runspec)
+{
+#if HAVE_MPI
+    Opm::Runspec val1(Opm::Phases(true, true, true, false, true, false, true, false),
+                      Opm::Tabdims(1,2,3,4,5,6),
+                      Opm::EndpointScaling(std::bitset<4>(13)),
+                      Opm::Welldims(1,2,3,4),
+                      Opm::WellSegmentDims(1,2,3),
+                      Opm::UDQParams(true, 1, 2.0, 3.0, 4.0),
+                      Opm::EclHysterConfig(true, 1, 2),
+                      Opm::Actdims(1,2,3,4));
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;

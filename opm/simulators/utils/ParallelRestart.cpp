@@ -410,6 +410,18 @@ std::size_t packSize(const UDQParams& data, Dune::MPIHelper::MPICommunicator com
            packSize(data.cmpEpsilon(), comm);
 }
 
+std::size_t packSize(const Runspec& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.phases(), comm) +
+           packSize(data.tabdims(), comm) +
+           packSize(data.endpointScaling(), comm) +
+           packSize(data.wellDimensions(), comm) +
+           packSize(data.wellSegmentDimensions(), comm) +
+           packSize(data.udqParams(), comm) +
+           packSize(data.hysterPar(), comm) +
+           packSize(data.actdims(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -807,14 +819,17 @@ void pack(const UDQParams& data, std::vector<char>& buffer, int& position,
     pack(data.cmpEpsilon(), buffer, position, comm);
 }
 
-<<<<<<< HEAD
-=======
-void pack(const EclHysterConfig& data, std::vector<char>& buffer, int& position,
+void pack(const Runspec& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
-    pack(data.active(), buffer, position, comm);
-    pack(data.pcHysteresisModel(), buffer, position, comm);
-    pack(data.krHysteresisModel(), buffer, position, comm);
+    pack(data.phases(), buffer, position, comm);
+    pack(data.tabdims(), buffer, position, comm);
+    pack(data.endpointScaling(), buffer, position, comm);
+    pack(data.wellDimensions(), buffer, position, comm);
+    pack(data.wellSegmentDimensions(), buffer, position, comm);
+    pack(data.udqParams(), buffer, position, comm);
+    pack(data.hysterPar(), buffer, position, comm);
+    pack(data.actdims(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1307,17 +1322,27 @@ void unpack(UDQParams& data, std::vector<char>& buffer, int& position,
     data = UDQParams(reseed, rand_seed, range, undefVal, cmp_eps);
 }
 
-<<<<<<< HEAD
-=======
-void unpack(EclHysterConfig& data, std::vector<char>& buffer, int& position,
+void unpack(Runspec& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
-    bool active;
-    int pc, kr;
-    unpack(active, buffer, position, comm);
-    unpack(pc, buffer, position, comm);
-    unpack(kr, buffer, position, comm);
-    data = EclHysterConfig(active, pc, kr);
+    Phases phases;
+    Tabdims tabdims;
+    EndpointScaling endScale;
+    Welldims wellDims;
+    WellSegmentDims wsegDims;
+    UDQParams udqparams;
+    EclHysterConfig hystPar;
+    Actdims actdims;
+    unpack(phases, buffer, position, comm);
+    unpack(tabdims, buffer, position, comm);
+    unpack(endScale, buffer, position, comm);
+    unpack(wellDims, buffer, position, comm);
+    unpack(wsegDims, buffer, position, comm);
+    unpack(udqparams, buffer, position, comm);
+    unpack(hystPar, buffer, position, comm);
+    unpack(actdims, buffer, position, comm);
+    data = Runspec(phases, tabdims, endScale, wellDims, wsegDims,
+                   udqparams, hystPar, actdims);
 }
 
 } // end namespace Mpi

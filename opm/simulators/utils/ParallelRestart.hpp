@@ -57,6 +57,7 @@ class RestartConfig;
 class RestartSchedule;
 class Rock2dTable;
 class Rock2dtrTable;
+class Runspec;
 class SimulationConfig;
 class SimpleTable;
 class Tabdims;
@@ -269,6 +270,7 @@ ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
+ADD_PACK_PROTOTYPES(Runspec)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
