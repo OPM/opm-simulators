@@ -200,6 +200,7 @@ std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelpe
     return totalSize;
 }
 
+HANDLE_AS_POD(Actdims)
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
@@ -806,6 +807,16 @@ void pack(const UDQParams& data, std::vector<char>& buffer, int& position,
     pack(data.cmpEpsilon(), buffer, position, comm);
 }
 
+<<<<<<< HEAD
+=======
+void pack(const EclHysterConfig& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.active(), buffer, position, comm);
+    pack(data.pcHysteresisModel(), buffer, position, comm);
+    pack(data.krHysteresisModel(), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -1294,6 +1305,19 @@ void unpack(UDQParams& data, std::vector<char>& buffer, int& position,
     unpack(undefVal, buffer, position, comm);
     unpack(cmp_eps, buffer, position, comm);
     data = UDQParams(reseed, rand_seed, range, undefVal, cmp_eps);
+}
+
+<<<<<<< HEAD
+=======
+void unpack(EclHysterConfig& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    bool active;
+    int pc, kr;
+    unpack(active, buffer, position, comm);
+    unpack(pc, buffer, position, comm);
+    unpack(kr, buffer, position, comm);
+    data = EclHysterConfig(active, pc, kr);
 }
 
 } // end namespace Mpi
