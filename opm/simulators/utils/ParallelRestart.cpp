@@ -26,6 +26,7 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
@@ -365,6 +366,23 @@ std::size_t packSize(const RestartConfig& data, Dune::MPIHelper::MPICommunicator
            packSize(data.restartSchedule(), comm) +
            packSize(data.restartKeywords(), comm) +
            packSize(data.saveKeywords(), comm);
+}
+
+std::size_t packSize(const IOConfig& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getWriteINITFile(), comm) +
+           packSize(data.getWriteEGRIDFile(), comm) +
+           packSize(data.getUNIFIN(), comm) +
+           packSize(data.getUNIFOUT(), comm) +
+           packSize(data.getFMTIN(), comm) +
+           packSize(data.getFMTOUT(), comm) +
+           packSize(data.getFirstRestartStep(), comm) +
+           packSize(data.getDeckFileName(), comm) +
+           packSize(data.getOutputEnabled(), comm) +
+           packSize(data.getOutputDir(), comm) +
+           packSize(data.getNoSim(), comm) +
+           packSize(data.getBaseName(), comm) +
+           packSize(data.getEclCompatibleRST(), comm);
 }
 
 ////// pack routines
@@ -722,6 +740,24 @@ void pack(const RestartConfig& data, std::vector<char>& buffer, int& position,
     pack(data.restartSchedule(), buffer, position, comm);
     pack(data.restartKeywords(), buffer, position, comm);
     pack(data.saveKeywords(), buffer, position, comm);
+}
+
+void pack(const IOConfig& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getWriteINITFile(), buffer, position, comm);
+    pack(data.getWriteEGRIDFile(), buffer, position, comm);
+    pack(data.getUNIFIN(), buffer, position, comm);
+    pack(data.getUNIFOUT(), buffer, position, comm);
+    pack(data.getFMTIN(), buffer, position, comm);
+    pack(data.getFMTOUT(), buffer, position, comm);
+    pack(data.getFirstRestartStep(), buffer, position, comm);
+    pack(data.getDeckFileName(), buffer, position, comm);
+    pack(data.getOutputEnabled(), buffer, position, comm);
+    pack(data.getOutputDir(), buffer, position, comm);
+    pack(data.getNoSim(), buffer, position, comm);
+    pack(data.getBaseName(), buffer, position, comm);
+    pack(data.getEclCompatibleRST(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1155,6 +1191,32 @@ void unpack(RestartConfig& data, std::vector<char>& buffer, int& position,
     unpack(save_keyw, buffer, position, comm);
     data = RestartConfig(timemap, firstRstStep, writeInitialRst, restart_sched,
                          restart_keyw, save_keyw);
+}
+
+void unpack(IOConfig& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    bool write_init, write_egrid, unifin, unifout, fmtin, fmtout;
+    int firstRestartStep;
+    std::string deck_name, output_dir, base_name;
+    bool output_enabled, no_sim, ecl_compatible_rst;
+
+    unpack(write_init, buffer, position, comm);
+    unpack(write_egrid, buffer, position, comm);
+    unpack(unifin, buffer, position, comm);
+    unpack(unifout, buffer, position, comm);
+    unpack(fmtin, buffer, position, comm);
+    unpack(fmtout, buffer, position, comm);
+    unpack(firstRestartStep, buffer, position, comm);
+    unpack(deck_name, buffer, position, comm);
+    unpack(output_enabled, buffer, position, comm);
+    unpack(output_dir, buffer, position, comm);
+    unpack(no_sim, buffer, position, comm);
+    unpack(base_name, buffer, position, comm);
+    unpack(ecl_compatible_rst, buffer, position, comm);
+    data = IOConfig(write_init, write_egrid, unifin, unifout, fmtin, fmtout,
+                    firstRestartStep, deck_name, output_enabled, output_dir,
+                    no_sim, base_name, ecl_compatible_rst);
 }
 
 } // end namespace Mpi

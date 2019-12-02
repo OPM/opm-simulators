@@ -46,6 +46,7 @@ class EquilRecord;
 class FoamConfig;
 class FoamData;
 class InitConfig;
+class IOConfig;
 class NNC;
 struct NNCdata;
 class RestartConfig;
@@ -247,6 +248,7 @@ ADD_PACK_PROTOTYPES(EquilRecord)
 ADD_PACK_PROTOTYPES(FoamConfig)
 ADD_PACK_PROTOTYPES(FoamData)
 ADD_PACK_PROTOTYPES(InitConfig)
+ADD_PACK_PROTOTYPES(IOConfig)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(RestartConfig)
