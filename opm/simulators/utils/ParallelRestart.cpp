@@ -34,6 +34,7 @@
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
@@ -209,6 +210,7 @@ HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(EclHysterConfig)
 HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
+HANDLE_AS_POD(JFunc)
 HANDLE_AS_POD(RestartSchedule)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeMap::StepData)
@@ -1420,7 +1422,6 @@ void unpack(PvtoTable& data, std::vector<char>& buffer, int& position,
 {
     unpack_pvt(data, buffer, position, comm);
 }
-
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,

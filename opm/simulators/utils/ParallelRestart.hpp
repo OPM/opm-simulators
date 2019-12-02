@@ -50,6 +50,7 @@ class FoamConfig;
 class FoamData;
 class InitConfig;
 class IOConfig;
+class JFunc;
 class NNC;
 struct NNCdata;
 class Phases;
@@ -263,6 +264,7 @@ ADD_PACK_PROTOTYPES(FoamData)
 ADD_PACK_PROTOTYPES(EclHysterConfig)
 ADD_PACK_PROTOTYPES(InitConfig)
 ADD_PACK_PROTOTYPES(IOConfig)
+ADD_PACK_PROTOTYPES(JFunc)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(Phases)
