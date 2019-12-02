@@ -206,6 +206,7 @@ HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
 HANDLE_AS_POD(RestartSchedule)
+HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeMap::StepData)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)

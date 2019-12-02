@@ -56,6 +56,7 @@ class Rock2dTable;
 class Rock2dtrTable;
 class SimulationConfig;
 class SimpleTable;
+class Tabdims;
 class TableColumn;
 class TableContainer;
 class TableSchema;
@@ -262,6 +263,7 @@ ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
+ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)
 ADD_PACK_PROTOTYPES(TableSchema)

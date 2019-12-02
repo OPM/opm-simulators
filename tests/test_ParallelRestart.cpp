@@ -40,6 +40,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Tabdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
@@ -552,6 +553,17 @@ BOOST_AUTO_TEST_CASE(Phases)
 {
 #if HAVE_MPI
     Opm::Phases val1(true, true, true, false, true, false, true, false);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Tabdims)
+{
+#if HAVE_MPI
+    Opm::Tabdims val1(1,2,3,4,5,6);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
