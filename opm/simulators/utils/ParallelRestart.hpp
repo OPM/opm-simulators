@@ -71,6 +71,7 @@ class Rock2dtrTable;
 class Runspec;
 class SimulationConfig;
 class SimpleTable;
+class SkprpolyTable;
 class Tabdims;
 class TableColumn;
 class TableContainer;
@@ -300,6 +301,7 @@ ADD_PACK_PROTOTYPES(Runspec)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
+ADD_PACK_PROTOTYPES(SkprpolyTable)
 ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)

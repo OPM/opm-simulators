@@ -43,6 +43,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
@@ -490,6 +491,12 @@ std::size_t packSize(const PolyInjTable& data, Dune::MPIHelper::MPICommunicator 
 std::size_t packSize(const PlymwinjTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const PolyInjTable&>(data), comm);
+}
+
+std::size_t packSize(const SkprpolyTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const PolyInjTable&>(data), comm) +
+           packSize(data.referenceConcentration(), comm);
 }
 
 ////// pack routines
@@ -968,6 +975,13 @@ void pack(const PlymwinjTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
+}
+
+void pack(const SkprpolyTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
+    pack(data.referenceConcentration(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1571,6 +1585,15 @@ void unpack(PlymwinjTable& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     unpack(static_cast<PolyInjTable&>(data), buffer, position, comm);
+}
+
+void unpack(SkprpolyTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(static_cast<PolyInjTable&>(data), buffer, position, comm);
+    double refConcentration;
+    unpack(refConcentration, buffer, position, comm);
+    data.setReferenceConcentration(refConcentration);
 }
 
 } // end namespace Mpi
