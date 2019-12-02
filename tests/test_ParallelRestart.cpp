@@ -31,6 +31,7 @@
 namespace {
 
 
+#if HAVE_MPI
 Opm::data::Solution getSolution()
 {
     Opm::data::Solution sol1;
@@ -102,6 +103,7 @@ Opm::data::Well getWell()
     well1.segments.insert({0, getSegment()});
     return well1;
 }
+#endif
 
 
 }
