@@ -14,8 +14,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef FLOW_EBOS_SALTWATER_HPP
-#define FLOW_EBOS_SALTWATER_HPP
+#ifndef FLOW_EBOS_BRINE_HPP
+#define FLOW_EBOS_BRINE_HPP
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -24,8 +24,8 @@
 
 
 namespace Opm {
-void flowEbosSaltWaterSetDeck(double setupTime, Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
-int flowEbosSaltWaterMain(int argc, char** argv, bool outputCout, bool outputFiles);
+void flowEbosBrineSetDeck(double setupTime, Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
+int flowEbosBrineMain(int argc, char** argv, bool outputCout, bool outputFiles);
 }
 
-#endif // FLOW_EBOS_SALTWATER_HPP
+#endif // FLOW_EBOS_BRINE_HPP

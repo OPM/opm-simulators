@@ -312,7 +312,7 @@ public:
             cPolymer_.resize(bufferSize, 0.0);
         if (GET_PROP_VALUE(TypeTag, EnableFoam))
             cFoam_.resize(bufferSize, 0.0);
-        if (GET_PROP_VALUE(TypeTag, EnableSaltWater))
+        if (GET_PROP_VALUE(TypeTag, EnableBrine))
             cSalt_.resize(bufferSize, 0.0);
 
         if (simulator_.problem().vapparsActive())
@@ -570,7 +570,7 @@ public:
             }
 
             if (cSalt_.size() > 0) {
-                cSalt_[globalDofIdx] = fs.saltconcentration().value();
+                cSalt_[globalDofIdx] = fs.saltConcentration().value();
             }
 
             if (bubblePointPressure_.size() > 0) {

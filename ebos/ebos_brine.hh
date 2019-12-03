@@ -23,42 +23,22 @@
 /*!
  * \file
  *
- * \brief A general-purpose simulator for ECL decks using the black-oil model.
+ * \brief The function prototypes required to start the brine variant of ebos
  */
-#include "config.h"
+#ifndef EBOS_BRINE_HH
+#define EBOS_BRINE_HH
 
-#include "ebos.hh"
-#include "startEbos.hh"
-
-BEGIN_PROPERTIES
-
-NEW_TYPE_TAG(EbosSaltWaterTypeTag, INHERITS_FROM(EbosTypeTag));
-
-// enable the salt extension of the black oil model
-SET_BOOL_PROP(EbosSaltWaterTypeTag, EnableSaltWater, true);
-
-END_PROPERTIES
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
+#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 
 namespace Opm {
-
-void ebosSaltWaterSetDeck(Opm::Deck* deck,
+void ebosBrineSetDeck(Opm::Deck* deck,
                      Opm::ParseContext* parseContext,
                      Opm::ErrorGuard* errorGuard,
-                     double externalSetupTime)
-{
-    typedef TTAG(EbosSaltWaterTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+                     double externalSetupTime);
 
-    Vanguard::setExternalSetupTime(externalSetupTime);
-    Vanguard::setExternalParseContext(parseContext);
-    Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
+int ebosBrineMain(int argc, char** argv);
 }
 
-int ebosSaltWaterMain(int argc, char **argv)
-{
-    typedef TTAG(EbosSaltWaterTypeTag) ProblemTypeTag;
-    return Opm::startEbos<ProblemTypeTag>(argc, argv);
-}
-
-}
+#endif

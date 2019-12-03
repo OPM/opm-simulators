@@ -53,7 +53,7 @@ public:
                                          GET_PROP_VALUE(TypeTag, EnablePolymer),
                                          GET_PROP_VALUE(TypeTag, EnableEnergy),
                                          GET_PROP_VALUE(TypeTag, EnableFoam),
-                                         GET_PROP_VALUE(TypeTag, EnableSaltWater),
+                                         GET_PROP_VALUE(TypeTag, EnableBrine),
                                          /*PVOffset=*/0,
                                          /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
 };

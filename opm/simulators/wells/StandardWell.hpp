@@ -31,7 +31,7 @@
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/blackoil/blackoilfoammodules.hh>
-#include <opm/models/blackoil/blackoilsaltwatermodules.hh>
+#include <opm/models/blackoil/blackoilbrinemodules.hh>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
 
@@ -69,22 +69,22 @@ namespace Opm
         using Base::has_solvent;
         using Base::has_polymer;
         using Base::has_foam;
-        using Base::has_salt;
+        using Base::has_brine;
         using Base::has_energy;
 
         using PolymerModule =  Opm::BlackOilPolymerModule<TypeTag>;
         using FoamModule = Opm::BlackOilFoamModule<TypeTag>;
-        using SaltWaterModule = Opm::BlackOilSaltWaterModule<TypeTag>;
+        using BrineModule = Opm::BlackOilBrineModule<TypeTag>;
 
         // polymer concentration and temperature are already known by the well, so
         // polymer and energy conservation do not need to be considered explicitly
         static const int numPolymerEq = Indices::numPolymers;
         static const int numEnergyEq = Indices::numEnergy;
         static const int numFoamEq = Indices::numFoam;
-        static const int numSaltEq = Indices::numSaltWater;
+        static const int numBrineEq = Indices::numBrine;
 
         // number of the conservation equations
-        static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq - numFoamEq - numSaltEq;
+        static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq - numFoamEq - numBrineEq;
         // number of the well control equations
         static const int numWellControlEq = 1;
         // number of the well equations that will always be used
@@ -142,7 +142,7 @@ namespace Opm
         using Base::contiSolventEqIdx;
         using Base::contiPolymerEqIdx;
         using Base::contiFoamEqIdx;
-        using Base::contiSaltWaterEqIdx;
+        using Base::contiBrineEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
         StandardWell(const Well& well, const int time_step,
