@@ -984,6 +984,9 @@ public:
                     drift_[globalDofIdx] *= this->model().dofTotalVolume(globalDofIdx);
             }
         }
+
+        bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
+        eclWriter_->evalSummaryState(isSubStep);
     }
 
     /*!
@@ -1037,8 +1040,6 @@ public:
         ParentType::writeOutput(verbose);
 
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
-
-        eclWriter_->evalSummaryState(isSubStep);
         if (enableEclOutput_)
             eclWriter_->writeOutput(isSubStep);
     }
