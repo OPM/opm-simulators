@@ -668,14 +668,7 @@ namespace Opm {
                     wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::PHYSICAL) ) {
                     if( well_ecl.getAutomaticShutIn() ) {
                         // shut wells are not added to the well container
-                        // TODO: make a function from well_state side to handle the following
-                        well_state_.thp()[w] = 0.;
-                        well_state_.bhp()[w] = 0.;
-                        const int np = numPhases();
-                        for (int p = 0; p < np; ++p) {
-                            well_state_.wellRates()[np * w + p] = 0.;
-                            well_state_.wellReservoirRates()[np * w + p] = 0.;
-                        }
+                        well_state_.shutWell(w);
                         continue;
                     } else {
                         // stopped wells are added to the container but marked as stopped
