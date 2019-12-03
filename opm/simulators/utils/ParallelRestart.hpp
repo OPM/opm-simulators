@@ -40,6 +40,7 @@ namespace Opm
 {
 
 class Actdims;
+class Aqudims;
 class ColumnSchema;
 class DENSITYRecord;
 class DensityTable;
@@ -263,6 +264,7 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
               Dune::MPIHelper::MPICommunicator comm);
 
 ADD_PACK_PROTOTYPES(Actdims)
+ADD_PACK_PROTOTYPES(Aqudims)
 ADD_PACK_PROTOTYPES(ColumnSchema)
 ADD_PACK_PROTOTYPES(data::CellData)
 ADD_PACK_PROTOTYPES(data::Connection)
