@@ -48,6 +48,7 @@ namespace Opm {
 namespace BlackOil {
 OPM_GENERATE_HAS_MEMBER(Rs, ) // Creates 'HasMember_Rs<T>'.
 OPM_GENERATE_HAS_MEMBER(Rv, ) // Creates 'HasMember_Rv<T>'.
+OPM_GENERATE_HAS_MEMBER(saltConcentration, )
 
 template <class FluidSystem, class FluidState, class LhsEval>
 LhsEval getRs_(typename std::enable_if<!HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,
@@ -80,19 +81,15 @@ auto getRv_(typename std::enable_if<HasMember_Rv<FluidState>::value, const Fluid
 { return Opm::decay<LhsEval>(fluidState.Rv()); }
 
 template <class FluidSystem, class FluidState, class LhsEval>
-LhsEval getSaltconcentration_(typename std::enable_if<!HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,
+LhsEval getSaltConcentration_(typename std::enable_if<!HasMember_saltConcentration<FluidState>::value, const FluidState&>::type fluidState,
                unsigned regionIdx)
-{
-    //const auto& XoG =
-    //    Opm::decay<LhsEval>(fluidState.massFraction(FluidSystem::oilPhaseIdx, FluidSystem::gasCompIdx));
-    //return FluidSystem::convertXoGToRs(XoG, regionIdx);
-}
+{return 0.0;}
 
 template <class FluidSystem, class FluidState, class LhsEval>
-auto getSaltconcentration_(typename std::enable_if<HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,
+auto getSaltConcentration_(typename std::enable_if<HasMember_saltConcentration<FluidState>::value, const FluidState&>::type fluidState,
             unsigned regionIdx OPM_UNUSED)
-    -> decltype(Opm::decay<LhsEval>(fluidState.saltconcentration()))
-{ return Opm::decay<LhsEval>(fluidState.saltconcentration()); }
+    -> decltype(Opm::decay<LhsEval>(fluidState.saltConcentration()))
+{ return Opm::decay<LhsEval>(fluidState.saltConcentration()); }
 
 }
 

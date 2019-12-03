@@ -28,7 +28,7 @@
 #define OPM_WATER_PVT_MULTIPLEXER_HPP
 
 #include "ConstantCompressibilityWaterPvt.hpp"
-#include "ConstantCompressibilitySaltWaterPvt.hpp"
+#include "ConstantCompressibilityBrinePvt.hpp"
 #include "WaterPvtThermal.hpp"
 
 #define OPM_WATER_PVT_MULTIPLEXER_CALL(codeToCall)                      \
@@ -38,8 +38,8 @@
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
-    case ConstantCompressibilitySaltWaterPvt: {                             \
-        auto& pvtImpl = getRealPvt<ConstantCompressibilitySaltWaterPvt>();  \
+    case ConstantCompressibilityBrinePvt: {                             \
+        auto& pvtImpl = getRealPvt<ConstantCompressibilityBrinePvt>();  \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
@@ -57,7 +57,7 @@ namespace Opm {
  * \brief This class represents the Pressure-Volume-Temperature relations of the water
  *        phase in the black-oil model.
  */
-template <class Scalar, bool enableThermal = true, bool enableSaltWater = true>
+template <class Scalar, bool enableThermal = true, bool enableBrine = true>
 class WaterPvtMultiplexer
 {
 public:
@@ -65,7 +65,7 @@ public:
 
     enum WaterPvtApproach {
         NoWaterPvt,
-        ConstantCompressibilitySaltWaterPvt,
+        ConstantCompressibilityBrinePvt,
         ConstantCompressibilityWaterPvt,
         ThermalWaterPvt
     };
@@ -93,8 +93,8 @@ public:
             delete &getRealPvt<ConstantCompressibilityWaterPvt>();
             break;
         }
-        case ConstantCompressibilitySaltWaterPvt: {
-            delete &getRealPvt<ConstantCompressibilitySaltWaterPvt>();
+        case ConstantCompressibilityBrinePvt: {
+            delete &getRealPvt<ConstantCompressibilityBrinePvt>();
             break;
         }
         case ThermalWaterPvt: {
@@ -122,8 +122,8 @@ public:
             setApproach(ThermalWaterPvt);
         else if (deck.hasKeyword("PVTW"))
             setApproach(ConstantCompressibilityWaterPvt);
-        else if (enableSaltWater && deck.hasKeyword("PVTWSALT"))
-            setApproach(ConstantCompressibilitySaltWaterPvt);
+        else if (enableBrine && deck.hasKeyword("PVTWSALT"))
+            setApproach(ConstantCompressibilityBrinePvt);
 
         OPM_WATER_PVT_MULTIPLEXER_CALL(pvtImpl.initFromDeck(deck, eclState));
     }
@@ -155,7 +155,7 @@ public:
                          const Evaluation& temperature,
                          const Evaluation& pressure) const
     {
-       // assert(realWaterPvt_ != ConstantCompressibilitySaltWaterPvt );
+       // assert(realWaterPvt_ != ConstantCompressibilityBrinePvt );
         const Evaluation saltconcentration = 0.0;
         OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.viscosity(regionIdx, temperature, pressure, saltconcentration));
         return 0;
@@ -206,8 +206,8 @@ public:
             realWaterPvt_ = new Opm::ConstantCompressibilityWaterPvt<Scalar>;
             break;
 
-        case ConstantCompressibilitySaltWaterPvt:
-            realWaterPvt_ = new Opm::ConstantCompressibilitySaltWaterPvt<Scalar>;
+        case ConstantCompressibilityBrinePvt:
+            realWaterPvt_ = new Opm::ConstantCompressibilityBrinePvt<Scalar>;
             break;
 
         case ThermalWaterPvt:
@@ -245,17 +245,17 @@ public:
     }
 
     template <WaterPvtApproach approachV>
-    typename std::enable_if<approachV == ConstantCompressibilitySaltWaterPvt, Opm::ConstantCompressibilitySaltWaterPvt<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == ConstantCompressibilityBrinePvt, Opm::ConstantCompressibilityBrinePvt<Scalar> >::type& getRealPvt()
     {
     assert(approach() == approachV);
-    return *static_cast<Opm::ConstantCompressibilitySaltWaterPvt<Scalar>* >(realWaterPvt_);
+    return *static_cast<Opm::ConstantCompressibilityBrinePvt<Scalar>* >(realWaterPvt_);
     }
 
     template <WaterPvtApproach approachV>
-    typename std::enable_if<approachV == ConstantCompressibilitySaltWaterPvt, const Opm::ConstantCompressibilitySaltWaterPvt<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == ConstantCompressibilityBrinePvt, const Opm::ConstantCompressibilityBrinePvt<Scalar> >::type& getRealPvt() const
     {
     assert(approach() == approachV);
-    return *static_cast<Opm::ConstantCompressibilitySaltWaterPvt<Scalar>* >(realWaterPvt_);
+    return *static_cast<Opm::ConstantCompressibilityBrinePvt<Scalar>* >(realWaterPvt_);
     }
 
     template <WaterPvtApproach approachV>

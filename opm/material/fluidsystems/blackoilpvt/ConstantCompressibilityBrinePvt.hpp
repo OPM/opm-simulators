@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::ConstantCompressibilitySaltWaterPvt
+ * \copydoc Opm::ConstantCompressibilityBrinePvt
  */
-#ifndef OPM_CONSTANT_COMPRESSIBILITY_SALTWATER_PVT_HPP
-#define OPM_CONSTANT_COMPRESSIBILITY_SALTWATER_PVT_HPP
+#ifndef OPM_CONSTANT_COMPRESSIBILITY_BRINE_PVT_HPP
+#define OPM_CONSTANT_COMPRESSIBILITY_BRINE_PVT_HPP
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
@@ -41,14 +41,14 @@
 #include <vector>
 
 namespace Opm {
-template <class Scalar, bool enableThermal, bool enableSaltWater>
+template <class Scalar, bool enableThermal, bool enableBrine>
 class WaterPvtMultiplexer;
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the gas phase
  *        without vaporized oil.
  */
 template <class Scalar>
-class ConstantCompressibilitySaltWaterPvt
+class ConstantCompressibilityBrinePvt
 {
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef typename Opm::Tabulated1DFunction<Scalar> TabulatedFunction;
@@ -94,7 +94,7 @@ public:
             }
         }
         else {
-            throw std::runtime_error("PVTWSALT must be specified in SALTWATER runs\n");
+            throw std::runtime_error("PVTWSALT must be specified in BRINE runs\n");
         }
 
 
@@ -161,17 +161,17 @@ public:
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,
                          const Evaluation& pressure,
-                         const Evaluation& saltwaterconcentration) const
+                         const Evaluation& saltconcentration) const
     {
         // cf. ECLiPSE 2013.2 technical description, p. 114
         Scalar pRef = referencePressure_[regionIdx];
-        const Evaluation C = compressibilityTables_[regionIdx].eval(saltwaterconcentration, /*extrapolate=*/true);
-        const Evaluation Cv = viscosibilityTables_[regionIdx].eval(saltwaterconcentration, /*extrapolate=*/true);
-        const Evaluation BwRef = formationVolumeTables_[regionIdx].eval(saltwaterconcentration, /*extrapolate=*/true);
+        const Evaluation C = compressibilityTables_[regionIdx].eval(saltconcentration, /*extrapolate=*/true);
+        const Evaluation Cv = viscosibilityTables_[regionIdx].eval(saltconcentration, /*extrapolate=*/true);
+        const Evaluation BwRef = formationVolumeTables_[regionIdx].eval(saltconcentration, /*extrapolate=*/true);
         const Evaluation Y = (C-Cv)* (pressure - pRef);
-        Evaluation MuwRef = viscosityTables_[regionIdx].eval(saltwaterconcentration, /*extrapolate=*/true);
+        Evaluation MuwRef = viscosityTables_[regionIdx].eval(saltconcentration, /*extrapolate=*/true);
 
-        const Evaluation& bw = inverseFormationVolumeFactor(regionIdx, temperature, pressure, saltwaterconcentration);
+        const Evaluation& bw = inverseFormationVolumeFactor(regionIdx, temperature, pressure, saltconcentration);
 
         return MuwRef*BwRef*bw/(1 + Y*(1 + Y/2));
     }
@@ -183,12 +183,12 @@ public:
     Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
                                             const Evaluation& /*temperature*/,
                                             const Evaluation& pressure,
-                                            const Evaluation& saltwaterconcentration) const
+                                            const Evaluation& saltconcentration) const
     {
         Scalar pRef = referencePressure_[regionIdx];
 
-        const Evaluation BwRef = formationVolumeTables_[regionIdx].eval(saltwaterconcentration, /*extrapolate=*/true);
-        const Evaluation C = compressibilityTables_[regionIdx].eval(saltwaterconcentration, /*extrapolate=*/true);
+        const Evaluation BwRef = formationVolumeTables_[regionIdx].eval(saltconcentration, /*extrapolate=*/true);
+        const Evaluation C = compressibilityTables_[regionIdx].eval(saltconcentration, /*extrapolate=*/true);
         const Evaluation X = C * (pressure - pRef);
 
         return (1.0 + X*(1.0 + X/2.0))/BwRef;

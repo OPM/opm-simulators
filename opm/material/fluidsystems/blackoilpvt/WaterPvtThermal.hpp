@@ -42,7 +42,7 @@
 #endif
 
 namespace Opm {
-template <class Scalar, bool enableThermal, bool enableSaltWater>
+template <class Scalar, bool enableThermal, bool enableBrine>
 class WaterPvtMultiplexer;
 
 /*!
@@ -270,9 +270,9 @@ public:
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,
                          const Evaluation& pressure,
-                         const Evaluation& saltwaterconcentration) const
+                         const Evaluation& saltconcentration) const
     {
-        const auto& isothermalMu = isothermalPvt_->viscosity(regionIdx, temperature, pressure, saltwaterconcentration);
+        const auto& isothermalMu = isothermalPvt_->viscosity(regionIdx, temperature, pressure, saltconcentration);
         if (!enableThermalViscosity())
             return isothermalMu;
 
@@ -291,10 +291,10 @@ public:
     Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
                                             const Evaluation& temperature,
                                             const Evaluation& pressure,
-                                            const Evaluation& saltwaterconcentration) const
+                                            const Evaluation& saltconcentration) const
     {
         if (!enableThermalDensity())
-            return isothermalPvt_->inverseFormationVolumeFactor(regionIdx, temperature, pressure, saltwaterconcentration);
+            return isothermalPvt_->inverseFormationVolumeFactor(regionIdx, temperature, pressure, saltconcentration);
 
         Scalar BwRef = pvtwRefB_[regionIdx];
         Scalar TRef = watdentRefTemp_[regionIdx];
