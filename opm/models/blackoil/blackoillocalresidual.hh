@@ -33,7 +33,7 @@
 #include "blackoilpolymermodules.hh"
 #include "blackoilenergymodules.hh"
 #include "blackoilfoammodules.hh"
-#include "blackoilsaltwatermodules.hh"
+#include "blackoilbrinemodules.hh"
 
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
@@ -83,7 +83,7 @@ class BlackOilLocalResidual : public GET_PROP_TYPE(TypeTag, DiscLocalResidual)
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
     typedef BlackOilEnergyModule<TypeTag> EnergyModule;
     typedef BlackOilFoamModule<TypeTag> FoamModule;
-    typedef BlackOilSaltWaterModule<TypeTag> SaltWaterModule;
+    typedef BlackOilBrineModule<TypeTag> BrineModule;
 
 public:
     /*!
@@ -153,7 +153,7 @@ public:
         FoamModule::addStorage(storage, intQuants);
 
         // deal with salt (if present)
-        SaltWaterModule::addStorage(storage, intQuants);
+        BrineModule::addStorage(storage, intQuants);
     }
 
     /*!
@@ -196,7 +196,7 @@ public:
         FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with salt (if present)
-        SaltWaterModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
     }
 
     /*!
