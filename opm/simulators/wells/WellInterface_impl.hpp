@@ -378,15 +378,15 @@ namespace Opm
     WellInterface<TypeTag>::
     wsalt() const
     {
-        if (!has_salt) {
+        if (!has_brine) {
             return 0.0;
         }
 
         auto injectorType = well_ecl_.injectorType();
 
         if (injectorType == Well::InjectorType::WATER) {
-            WellSaltwaterProperties fprop = well_ecl_.getSaltwaterProperties();
-            return fprop.m_saltwaterConcentration;
+            WellBrineProperties fprop = well_ecl_.getBrineProperties();
+            return fprop.m_saltConcentration;
         } else {
             // Not a water injection well => no salt (?).
             return 0.0;

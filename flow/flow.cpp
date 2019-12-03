@@ -26,7 +26,7 @@
 #include <flow/flow_ebos_solvent.hpp>
 #include <flow/flow_ebos_polymer.hpp>
 #include <flow/flow_ebos_foam.hpp>
-#include <flow/flow_ebos_saltwater.hpp>
+#include <flow/flow_ebos_brine.hpp>
 #include <flow/flow_ebos_energy.hpp>
 #include <flow/flow_ebos_oilwater_polymer.hpp>
 #include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
@@ -420,10 +420,10 @@ int main(int argc, char** argv)
             Opm::flowEbosFoamSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
             return Opm::flowEbosFoamMain(argc, argv, outputCout, outputFiles);
         }
-        // Salt case
-        else if ( phases.active( Opm::Phase::SALTWATER ) ) {
-            Opm::flowEbosSaltWaterSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
-            return Opm::flowEbosSaltWaterMain(argc, argv, outputCout, outputFiles);
+        // Brine case
+        else if ( phases.active( Opm::Phase::BRINE ) ) {
+            Opm::flowEbosBrineSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
+            return Opm::flowEbosBrineMain(argc, argv, outputCout, outputFiles);
         }
         // Solvent case
         else if ( phases.active( Opm::Phase::SOLVENT ) ) {
@@ -443,7 +443,7 @@ int main(int argc, char** argv)
         else
         {
             if (outputCout)
-                std::cerr << "No suitable configuration found, valid are Twophase, polymer, foam, salt, solvent, energy, blackoil." << std::endl;
+                std::cerr << "No suitable configuration found, valid are Twophase, polymer, foam, brine, solvent, energy, blackoil." << std::endl;
             return EXIT_FAILURE;
         }
     }

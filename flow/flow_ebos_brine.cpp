@@ -16,7 +16,7 @@
 */
 #include "config.h"
 
-#include <flow/flow_ebos_saltwater.hpp>
+#include <flow/flow_ebos_brine.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/grid/CpGrid.hpp>
@@ -31,14 +31,14 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowSaltWaterProblem, INHERITS_FROM(EclFlowProblem));
-SET_BOOL_PROP(EclFlowSaltWaterProblem, EnableSaltWater, true);
+NEW_TYPE_TAG(EclFlowBrineProblem, INHERITS_FROM(EclFlowProblem));
+SET_BOOL_PROP(EclFlowBrineProblem, EnableBrine, true);
 }}
 
 namespace Opm {
-void flowEbosSaltWaterSetDeck(double setupTime, Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosBrineSetDeck(double setupTime, Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
-    typedef TTAG(EclFlowSaltWaterProblem) TypeTag;
+    typedef TTAG(EclFlowBrineProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalSetupTime(setupTime);
@@ -50,7 +50,7 @@ void flowEbosSaltWaterSetDeck(double setupTime, Deck &deck, EclipseState& eclSta
 
 
 // ----------------- Main program -----------------
-int flowEbosSaltWaterMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowEbosBrineMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -63,7 +63,7 @@ int flowEbosSaltWaterMain(int argc, char** argv, bool outputCout, bool outputFil
     Dune::MPIHelper::instance(argc, argv).rank();
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowSaltWaterProblem)> mainfunc;
+    Opm::FlowMainEbos<TTAG(EclFlowBrineProblem)> mainfunc;
     return mainfunc.execute(argc, argv, outputCout, outputFiles);
 }
 

@@ -23,15 +23,15 @@
 /*!
  * \file
  *
- * \brief The main function for the stand alone salt variant of ebos.
+ * \brief The main function for the stand alone brine variant of ebos.
  *
- * This only calls the ebosSaltWaterMain() function.
+ * This only calls the ebosBrineMain() function.
  */
 #include "config.h"
 
-#include "ebos_saltwater.hh"
+#include "ebos_brine.hh"
 
 int main(int argc, char** argv)
 {
-    return Opm::ebosSaltWaterMain(argc, argv);
+    return Opm::ebosBrineMain(argc, argv);
 }
