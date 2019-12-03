@@ -557,6 +557,19 @@ std::size_t packSize(const Tabulated1DFunction<Scalar>& data,
 template std::size_t packSize(const Tabulated1DFunction<double>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
+template<class Scalar>
+std::size_t packSize(const SolventPvt<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.solventReferenceDensity(), comm) +
+           packSize(data.inverseSolventB(), comm) +
+           packSize(data.solventMu(), comm) +
+           packSize(data.inverseSolventBMu(), comm);
+}
+
+template std::size_t packSize(const SolventPvt<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
 ////// pack routines
 
 template<class T>
@@ -1094,6 +1107,20 @@ void pack(const Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
 
 template void pack(const Tabulated1DFunction<double>& data, std::vector<char>& buffer,
                    int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const SolventPvt<Scalar>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.solventReferenceDensity(), buffer, position, comm);
+    pack(data.inverseSolventB(), buffer, position, comm);
+    pack(data.solventMu(), buffer, position, comm);
+    pack(data.inverseSolventBMu(), buffer, position, comm);
+}
+
+template void pack(const SolventPvt<double>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
 
 /// unpack routines
 
@@ -1794,6 +1821,26 @@ void unpack(Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
 
 template void unpack(Tabulated1DFunction<double>& data, std::vector<char>& buffer,
                      int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(SolventPvt<Scalar>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Scalar> solventReferenceDensity;
+    std::vector<typename SolventPvt<Scalar>::TabulatedOneDFunction> inverseSolventB;
+    std::vector<typename SolventPvt<Scalar>::TabulatedOneDFunction> solventMu;
+    std::vector<typename SolventPvt<Scalar>::TabulatedOneDFunction> inverseSolventBMu;
+    unpack(solventReferenceDensity, buffer, position, comm);
+    unpack(inverseSolventB, buffer, position, comm);
+    unpack(solventMu, buffer, position, comm);
+    unpack(inverseSolventBMu, buffer, position, comm);
+    data = SolventPvt<Scalar>(solventReferenceDensity, inverseSolventB,
+                              solventMu, inverseSolventBMu);
+}
+
+template void unpack(SolventPvt<double>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,

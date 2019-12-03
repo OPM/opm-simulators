@@ -145,6 +145,9 @@ std::size_t packSize(const DynamicState<T>& data, Dune::MPIHelper::MPICommunicat
 template<class Scalar>
 std::size_t packSize(const Tabulated1DFunction<Scalar>& data, Dune::MPIHelper::MPICommunicator comm);
 
+template<class Scalar>
+std::size_t packSize(const SolventPvt<Scalar>& data, Dune::MPIHelper::MPICommunicator comm);
+
 ////// pack routines
 
 template<class T>
@@ -202,6 +205,10 @@ void pack(const DynamicState<T>& data, std::vector<char>& buffer,
 
 template<class Scalar>
 void pack(const Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const SolventPvt<Scalar>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm);
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
@@ -264,6 +271,10 @@ void unpack(DynamicState<T>& data, std::vector<char>& buffer, int& position,
 
 template<class Scalar>
 void unpack(Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
+            int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(SolventPvt<Scalar>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm);
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
