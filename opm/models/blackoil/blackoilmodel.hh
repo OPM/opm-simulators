@@ -44,7 +44,7 @@
 #include "blackoilsolventmodules.hh"
 #include "blackoilpolymermodules.hh"
 #include "blackoilfoammodules.hh"
-#include "blackoilsaltwatermodules.hh"
+#include "blackoilbrinemodules.hh"
 #include "blackoildarcyfluxmodule.hh"
 
 #include <opm/models/common/multiphasebasemodel.hh>
@@ -114,7 +114,7 @@ SET_TYPE_PROP(BlackOilModel, Indices,
                                    GET_PROP_VALUE(TypeTag, EnablePolymer),
                                    GET_PROP_VALUE(TypeTag, EnableEnergy),
                                    GET_PROP_VALUE(TypeTag, EnableFoam),
-                                   GET_PROP_VALUE(TypeTag, EnableSaltWater),
+                                   GET_PROP_VALUE(TypeTag, EnableBrine),
                                    /*PVOffset=*/0>);
 
 //! Set the fluid system to the black-oil fluid system by default
@@ -133,7 +133,7 @@ SET_BOOL_PROP(BlackOilModel, EnableSolvent, false);
 SET_BOOL_PROP(BlackOilModel, EnablePolymer, false);
 SET_BOOL_PROP(BlackOilModel, EnablePolymerMW, false);
 SET_BOOL_PROP(BlackOilModel, EnableFoam, false);
-SET_BOOL_PROP(BlackOilModel, EnableSaltWater, false);
+SET_BOOL_PROP(BlackOilModel, EnableBrine, false);
 
 //! By default, the blackoil model is isothermal and does not conserve energy
 SET_BOOL_PROP(BlackOilModel, EnableTemperature, false);

@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \brief Contains the classes required to extend the black-oil model by SALTwater.
+ * \brief Contains the classes required to extend the black-oil model by brine.
  */
-#ifndef EWOMS_BLACK_OIL_SALTWATER_MODULE_HH
-#define EWOMS_BLACK_OIL_SALTWATER_MODULE_HH
+#ifndef EWOMS_BLACK_OIL_BRINE_MODULE_HH
+#define EWOMS_BLACK_OIL_BRINE_MODULE_HH
 
 #include "blackoilproperties.hh"
 #include <opm/models/common/quantitycallbacks.hh>
@@ -54,10 +54,10 @@ namespace Opm {
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
- *        model by saltwater.
+ *        model by brine.
  */
-template <class TypeTag, bool enableSaltWaterV = GET_PROP_VALUE(TypeTag, EnableSaltWater)>
-class BlackOilSaltWaterModule
+template <class TypeTag, bool enableBrineV = GET_PROP_VALUE(TypeTag, EnableBrine)>
+class BlackOilBrineModule
 {
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
@@ -78,10 +78,10 @@ class BlackOilSaltWaterModule
     typedef typename Opm::IntervalTabulated2DFunction<Scalar> TabulatedTwoDFunction;
 
     static constexpr unsigned saltConcentrationIdx = Indices::saltConcentrationIdx;
-    static constexpr unsigned contiSaltWaterEqIdx = Indices::contiSaltWaterEqIdx;
+    static constexpr unsigned contiBrineEqIdx = Indices::contiBrineEqIdx;
     static constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
-    static constexpr unsigned enableSaltWater = enableSaltWaterV;
+    static constexpr unsigned enableBrine = enableBrineV;
 
     static constexpr unsigned numEq = GET_PROP_VALUE(TypeTag, NumEq);
     static constexpr unsigned numPhases = FluidSystem::numPhases;
@@ -90,24 +90,24 @@ public:
 
 #if HAVE_ECL_INPUT
     /*!
-     * \brief Initialize all internal data structures needed by the saltwater module
+     * \brief Initialize all internal data structures needed by the brine module
      */
     static void initFromDeck(const Opm::Deck& deck, const Opm::EclipseState& eclState)
     {
-        // some sanity checks: if saltwaters are enabled, the BRINE keyword must be
-        // present, if saltwater are disabled the keyword must not be present.
-        if (enableSaltWater && !deck.hasKeyword("BRINE")) {
-            throw std::runtime_error("Non-trivial saltwater treatment requested at compile time, but "
+        // some sanity checks: if brine are enabled, the BRINE keyword must be
+        // present, if brine are disabled the keyword must not be present.
+        if (enableBrine && !deck.hasKeyword("BRINE")) {
+            throw std::runtime_error("Non-trivial brine treatment requested at compile time, but "
                                      "the deck does not contain the BRINE keyword");
         }
-        else if (!enableSaltWater && deck.hasKeyword("BRINE")) {
-            throw std::runtime_error("SaltWater treatment disabled at compile time, but the deck "
+        else if (!enableBrine && deck.hasKeyword("BRINE")) {
+            throw std::runtime_error("Brine treatment disabled at compile time, but the deck "
                                      "contains the BRINE keyword");
         }
 
 
         if (!deck.hasKeyword("BRINE"))
-            return; // saltwater treatment is supposed to be disabled
+            return; // brine treatment is supposed to be disabled
 
         const auto& tableManager = eclState.getTableManager();
 
@@ -133,43 +133,43 @@ public:
 #endif
 
     /*!
-     * \brief Register all run-time parameters for the black-oil saltwater module.
+     * \brief Register all run-time parameters for the black-oil brine module.
      */
     static void registerParameters()
     {
-        if (!enableSaltWater)
-            // saltwater have been disabled at compile time
+        if (!enableBrine)
+            // brine have been disabled at compile time
             return;
     }
 
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
-        if (!enableSaltWater)
-            // saltwaters have been disabled at compile time
+        if (!enableBrine)
+            // brine have been disabled at compile time
             return false;
 
         return pvIdx == saltConcentrationIdx;
     }
 
     /*!
-     * \brief Assign the solvent specific primary variables to a PrimaryVariables object
+     * \brief Assign the brine specific primary variables to a PrimaryVariables object
      */
     template <class FluidState>
     static void assignPrimaryVars(PrimaryVariables& priVars,
                                   const FluidState& fluidState)
     {
-        if (!enableSaltWater)
+        if (!enableBrine)
             return;
 
-        priVars[saltConcentrationIdx] = fluidState.saltconcentration();
+        priVars[saltConcentrationIdx] = fluidState.saltConcentration();
     }
 
     static std::string primaryVarName(unsigned pvIdx)
     {
         assert(primaryVarApplies(pvIdx));
 
-        return "saltwater_waterconcentration";
+        return "saltConcentration";
     }
 
     static Scalar primaryVarWeight(unsigned pvIdx OPM_OPTIM_UNUSED)
@@ -182,17 +182,17 @@ public:
 
     static bool eqApplies(unsigned eqIdx)
     {
-        if (!enableSaltWater)
+        if (!enableBrine)
             return false;
 
-        return eqIdx == contiSaltWaterEqIdx;
+        return eqIdx == contiBrineEqIdx;
     }
 
     static std::string eqName(unsigned eqIdx)
     {
         assert(eqApplies(eqIdx));
 
-        return "conti^saltwater";
+        return "conti^brine";
     }
 
     static Scalar eqWeight(unsigned eqIdx OPM_OPTIM_UNUSED)
@@ -208,7 +208,7 @@ public:
     static void addStorage(Dune::FieldVector<LhsEval, numEq>& storage,
                            const IntensiveQuantities& intQuants)
     {
-        if (!enableSaltWater)
+        if (!enableBrine)
             return;
 
         const auto& fs = intQuants.fluidState();
@@ -221,11 +221,11 @@ public:
         // avoid singular matrix if no water is present.
         surfaceVolumeWater = Opm::max(surfaceVolumeWater, 1e-10);
 
-        // Saltwater in water phase
-        const LhsEval massSaltWater = surfaceVolumeWater
-                * Toolbox::template decay<LhsEval>(fs.saltconcentration());
+        // Brine in water phase
+        const LhsEval massBrine = surfaceVolumeWater
+                * Toolbox::template decay<LhsEval>(fs.saltConcentration());
 
-        storage[contiSaltWaterEqIdx] += massSaltWater;
+        storage[contiBrineEqIdx] += massBrine;
     }
 
     static void computeFlux(RateVector& flux,
@@ -234,7 +234,7 @@ public:
                             unsigned timeIdx)
 
     {
-        if (!enableSaltWater)
+        if (!enableBrine)
             return;
 
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
@@ -242,20 +242,18 @@ public:
         const unsigned upIdx = extQuants.upstreamIndex(FluidSystem::waterPhaseIdx);
         const unsigned inIdx = extQuants.interiorIndex();
         const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
-        //const unsigned contiWaterEqIdx = Indices::conti0EqIdx + Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-
 
         if (upIdx == inIdx) {
-            flux[contiSaltWaterEqIdx] =
+            flux[contiBrineEqIdx] =
                     extQuants.volumeFlux(waterPhaseIdx)
                     *up.fluidState().invB(waterPhaseIdx)
-                    *up.fluidState().saltconcentration();
+                    *up.fluidState().saltConcentration();
         }
         else {
-            flux[contiSaltWaterEqIdx] =
+            flux[contiBrineEqIdx] =
                     extQuants.volumeFlux(waterPhaseIdx)
                     *Opm::decay<Scalar>(up.fluidState().invB(waterPhaseIdx))
-                    *Opm::decay<Scalar>(up.fluidState().saltconcentration());
+                    *Opm::decay<Scalar>(up.fluidState().saltConcentration());
         }
     }
 
@@ -265,7 +263,7 @@ public:
     static Scalar computeUpdateError(const PrimaryVariables& oldPv OPM_OPTIM_UNUSED,
                                      const EqVector& delta OPM_OPTIM_UNUSED)
     {
-        // do not consider consider the cange of Saltwater primary variables for
+        // do not consider consider the cange of Brine primary variables for
         // convergence
         // TODO: maybe this should be changed
         return static_cast<Scalar>(0.0);
@@ -274,7 +272,7 @@ public:
     template <class DofEntity>
     static void serializeEntity(const Model& model, std::ostream& outstream, const DofEntity& dof)
     {
-        if (!enableSaltWater)
+        if (!enableBrine)
             return;
 
         unsigned dofIdx = model.dofMapper().index(dof);
@@ -285,7 +283,7 @@ public:
     template <class DofEntity>
     static void deserializeEntity(Model& model, std::istream& instream, const DofEntity& dof)
     {
-        if (!enableSaltWater)
+        if (!enableBrine)
             return;
 
         unsigned dofIdx = model.dofMapper().index(dof);
@@ -326,23 +324,23 @@ private:
 };
 
 
-template <class TypeTag, bool enableSaltWaterV>
-std::vector<typename BlackOilSaltWaterModule<TypeTag, enableSaltWaterV>::TabulatedFunction>
-BlackOilSaltWaterModule<TypeTag, enableSaltWaterV>::bdensityTable_;
+template <class TypeTag, bool enableBrineV>
+std::vector<typename BlackOilBrineModule<TypeTag, enableBrineV>::TabulatedFunction>
+BlackOilBrineModule<TypeTag, enableBrineV>::bdensityTable_;
 
-template <class TypeTag, bool enableSaltWaterV>
-std::vector<typename BlackOilSaltWaterModule<TypeTag, enableSaltWaterV>::Scalar>
-BlackOilSaltWaterModule<TypeTag, enableSaltWaterV>::referencePressure_;
+template <class TypeTag, bool enableBrineV>
+std::vector<typename BlackOilBrineModule<TypeTag, enableBrineV>::Scalar>
+BlackOilBrineModule<TypeTag, enableBrineV>::referencePressure_;
 
 /*!
  * \ingroup BlackOil
- * \class Ewoms::BlackOilSaltWaterIntensiveQuantities
+ * \class Ewoms::BlackOilBrineIntensiveQuantities
  *
  * \brief Provides the volumetric quantities required for the equations needed by the
- *        Saltwaters extension of the black-oil model.
+ *        brine extension of the black-oil model.
  */
-template <class TypeTag, bool enableSaltWaterV = GET_PROP_VALUE(TypeTag, EnableSaltWater)>
-class BlackOilSaltWaterIntensiveQuantities
+template <class TypeTag, bool enableBrineV = GET_PROP_VALUE(TypeTag, EnableBrine)>
+class BlackOilBrineIntensiveQuantities
 {
     typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) Implementation;
 
@@ -354,23 +352,23 @@ class BlackOilSaltWaterIntensiveQuantities
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
 
-    typedef BlackOilSaltWaterModule<TypeTag> SaltWaterModule;
+    typedef BlackOilBrineModule<TypeTag> BrineModule;
 
     enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
     static constexpr int saltConcentrationIdx = Indices::saltConcentrationIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
-    static constexpr unsigned enableSaltWater = enableSaltWaterV;
-    static constexpr int contiSaltWaterEqIdx = Indices::contiSaltWaterEqIdx;
+    static constexpr unsigned enableBrine = enableBrineV;
+    static constexpr int contiBrineEqIdx = Indices::contiBrineEqIdx;
 
 public:
 
     /*!
-     * \brief Update the intensive properties needed to handle Saltwaters from the
+     * \brief Update the intensive properties needed to handle brine from the
      *        primary variables
      *
      */
-    void updateSaltconcentration_(const ElementContext& elemCtx,
+    void updateSaltConcentration_(const ElementContext& elemCtx,
                                   unsigned dofIdx,
                                   unsigned timeIdx)
     {
@@ -378,43 +376,43 @@ public:
 
         auto& fs = asImp_().fluidState_;
         // set saltconcentration
-        fs.setSaltconcentration(priVars.makeEvaluation(saltConcentrationIdx, timeIdx));
+        fs.setSaltConcentration(priVars.makeEvaluation(saltConcentrationIdx, timeIdx));
 
     }
 
-    const Evaluation& saltconcentration() const
-    { return saltconcentration_; }
+    const Evaluation& saltConcentration() const
+    { return saltConcentration_; }
 
-    const Evaluation& saltwaterRefDensity() const
+    const Evaluation& brineRefDensity() const
     { return refDensity_; }
 
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 
-    Evaluation saltconcentration_;
+    Evaluation saltConcentration_;
     Evaluation refDensity_;
 
 };
 
 template <class TypeTag>
-class BlackOilSaltWaterIntensiveQuantities<TypeTag, false>
+class BlackOilBrineIntensiveQuantities<TypeTag, false>
 {
     typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
 public:
-    void updateSaltconcentration_(const ElementContext& elemCtx OPM_OPTIM_UNUSED,
+    void updateSaltConcentration_(const ElementContext& elemCtx OPM_OPTIM_UNUSED,
                                   unsigned dofIdx OPM_OPTIM_UNUSED,
                                   unsigned timeIdx OPM_OPTIM_UNUSED)
     { }
 
-    const Evaluation& saltwaterConcentration() const
-    { throw std::runtime_error("saltwaterConcentration() called but saltwaters are disabled"); }
+    const Evaluation& saltConcentration() const
+    { throw std::runtime_error("saltConcentration() called but brine are disabled"); }
 
-    const Evaluation& saltwaterRefDensity() const
-    { throw std::runtime_error("saltwaterRockDensity() called but saltwaters are disabled"); }
+    const Evaluation& brineRefDensity() const
+    { throw std::runtime_error("brineRefDensity() called but brine are disabled"); }
 
 };
 

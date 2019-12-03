@@ -188,7 +188,7 @@ protected:
         static constexpr bool enablePolymerWeight = Indices::polymerMoleWeightIdx >= 0;
         static constexpr bool enableEnergy = Indices::temperatureIdx >= 0;
         static constexpr bool enableFoam = Indices::foamConcentrationIdx >= 0;
-        static constexpr bool enableSaltWater = Indices::saltConcentrationIdx >= 0;
+        static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
 
         currentValue.checkDefined();
         Opm::Valgrind::CheckDefined(update);
@@ -291,7 +291,7 @@ protected:
                 nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0);
 
             // keep the salt concentration above 0
-            if (enableSaltWater && pvIdx == Indices::saltConcentrationIdx)
+            if (enableBrine && pvIdx == Indices::saltConcentrationIdx)
                 nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0);
 
             // keep the temperature above 100 and below 1000 Kelvin

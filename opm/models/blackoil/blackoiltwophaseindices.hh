@@ -37,7 +37,7 @@ namespace Opm {
  *
  * \brief The primary variable and equation indices for the black-oil model.
  */
-template <unsigned numSolventsV, unsigned numPolymersV, unsigned numEnergyV, bool enableFoam, bool enableSaltWater, unsigned PVOffset, unsigned disabledCanonicalCompIdx>
+template <unsigned numSolventsV, unsigned numPolymersV, unsigned numEnergyV, bool enableFoam, bool enableBrine, unsigned PVOffset, unsigned disabledCanonicalCompIdx>
 struct BlackOilTwoPhaseIndices
 {
     //! Is phase enabled or not
@@ -67,13 +67,13 @@ struct BlackOilTwoPhaseIndices
     static const int numFoam = enableFoam? 1 : 0;
 
     //! Number of salt equations to be considered
-    static const int numSaltWater = enableSaltWater? 1 : 0;
+    static const int numBrine = enableBrine? 1 : 0;
 
     //! The number of fluid phases
     static const int numPhases = 2;
 
     //! The number of equations
-    static const int numEq = numPhases + numSolvents + numPolymers + numEnergy + numFoam + numSaltWater;
+    static const int numEq = numPhases + numSolvents + numPolymers + numEnergy + numFoam + numBrine;
 
     //////////////////////////////
     // Primary variable indices
@@ -111,11 +111,11 @@ struct BlackOilTwoPhaseIndices
 
     //! Index of the primary variable for the salt
     static const int saltConcentrationIdx =
-        enableSaltWater ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
+        enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
 
     //! Index of the primary variable for temperature
     static const int temperatureIdx  =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam + numSaltWater : - 1000;
+        enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam + numBrine : - 1000;
 
     //////////////////////
     // Equation indices
@@ -179,12 +179,12 @@ struct BlackOilTwoPhaseIndices
         enableFoam ? PVOffset + numPhases + numSolvents + numPolymers : -1000;
 
     //! Index of the continuity equation for the salt component
-    static const int contiSaltWaterEqIdx =
-        enableSaltWater ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
+    static const int contiBrineEqIdx =
+        enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
 
     //! Index of the continuity equation for energy
     static const int contiEnergyEqIdx =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam + numSaltWater : -1000;
+        enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam + numBrine : -1000;
 };
 
 } // namespace Opm
