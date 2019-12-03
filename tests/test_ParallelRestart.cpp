@@ -25,6 +25,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
@@ -961,6 +962,18 @@ BOOST_AUTO_TEST_CASE(TableManager)
                            true,
                            jfunc,
                            1.0);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(TabulatedOneDFunction)
+{
+#ifdef HAVE_MPI
+    Opm::Tabulated1DFunction<double> val1(2, std::vector<double>{1.0, 2.0},
+                                             std::vector<double>{3.0, 4.0});
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

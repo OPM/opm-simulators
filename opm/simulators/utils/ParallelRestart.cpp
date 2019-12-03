@@ -546,6 +546,17 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.rtemp(), comm);
 }
 
+template<class Scalar>
+std::size_t packSize(const Tabulated1DFunction<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.xValues(), comm) +
+           packSize(data.yValues(), comm);
+}
+
+template std::size_t packSize(const Tabulated1DFunction<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
 ////// pack routines
 
 template<class T>
@@ -1072,6 +1083,17 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
         pack(data.getJFunc(), buffer, position, comm);
     pack(data.rtemp(), buffer, position, comm);
 }
+
+template<class Scalar>
+void pack(const Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.xValues(), buffer, position, comm);
+    pack(data.yValues(), buffer, position, comm);
+}
+
+template void pack(const Tabulated1DFunction<double>& data, std::vector<char>& buffer,
+                   int& position, Dune::MPIHelper::MPICommunicator comm);
 
 /// unpack routines
 
@@ -1759,6 +1781,19 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
                         skprwatTables, skprpolyTables, tabdims, regdims, eqldims,
                         aqudims, hasImptvd, hasEntpvd, hasEqlnum, jfunc, rtemp);
 }
+
+template<class Scalar>
+void unpack(Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
+            int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Scalar> xValues, yValues;
+    unpack(xValues, buffer, position, comm);
+    unpack(yValues, buffer, position, comm);
+    data = Tabulated1DFunction<Scalar>(xValues, yValues, false);
+}
+
+template void unpack(Tabulated1DFunction<double>& data, std::vector<char>& buffer,
+                     int& position, Dune::MPIHelper::MPICommunicator comm);
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
