@@ -31,6 +31,22 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
+#define HANDLE_AS_POD(T) \
+  std::size_t packSize(const T& data, Dune::MPIHelper::MPICommunicator comm) \
+  { \
+      return packSize(data, comm, std::integral_constant<bool,true>()); \
+  } \
+  void pack(const T& data, std::vector<char>& buffer, int& position, \
+            Dune::MPIHelper::MPICommunicator comm) \
+  { \
+      pack(data, buffer, position, comm, std::integral_constant<bool,true>()); \
+  } \
+  void unpack(T& data, std::vector<char>& buffer, int& position, \
+              Dune::MPIHelper::MPICommunicator comm) \
+  { \
+      unpack(data, buffer, position, comm, std::integral_constant<bool,true>()); \
+  }
+
 namespace Opm
 {
 namespace Mpi
@@ -160,23 +176,9 @@ std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelpe
     return totalSize;
 }
 
-std::size_t packSize(const data::Rates& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    return packSize(data, comm, std::integral_constant<bool,true>());
-}
-
-std::size_t packSize(const data::Connection& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    return packSize(data, comm, std::integral_constant<bool,true>());
-}
-
-std::size_t packSize(const data::Segment& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    return packSize(data, comm, std::integral_constant<bool,true>());
-}
+HANDLE_AS_POD(data::Connection)
+HANDLE_AS_POD(data::Rates)
+HANDLE_AS_POD(data::Segment)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -407,27 +409,6 @@ void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer
     {
         pack(entry, buffer, position, comm);
     }
-}
-
-void pack(const data::Rates& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    pack(data, buffer, position, comm, std::integral_constant<bool,true>());
-}
-
-void pack(const data::Connection& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    pack(data, buffer, position, comm, std::integral_constant<bool,true>());
-}
-
-void pack(const data::Segment& data,std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    pack(data, buffer, position, comm, std::integral_constant<bool,true>());
 }
 
 void pack(const data::Well& data, std::vector<char>& buffer, int& position,
@@ -687,27 +668,6 @@ void unpack(std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, in
         unpack(entry, buffer, position, comm);
         data.insert(entry);
     }
-}
-
-void unpack(data::Rates& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    unpack(data, buffer, position, comm, std::integral_constant<bool,true>());
-}
-
-void unpack(data::Connection& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    unpack(data, buffer, position, comm, std::integral_constant<bool,true>());
-}
-
-void unpack(data::Segment& data,std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    unpack(data, buffer, position, comm, std::integral_constant<bool,true>());
 }
 
 void unpack(data::Well& data, std::vector<char>& buffer, int& position,
