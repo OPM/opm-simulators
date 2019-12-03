@@ -512,6 +512,11 @@ std::size_t packSize(const SkprwatTable& data, Dune::MPIHelper::MPICommunicator 
     return packSize(static_cast<const PolyInjTable&>(data), comm);
 }
 
+std::size_t packSize(const RockTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<ROCKRecord>&>(data), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -1001,6 +1006,12 @@ void pack(const SkprwatTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
+}
+
+void pack(const RockTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<ROCKRecord>&>(data), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1619,6 +1630,14 @@ void unpack(SkprwatTable& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     unpack(static_cast<PolyInjTable&>(data), buffer, position, comm);
+}
+
+void unpack(RockTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<ROCKRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = RockTable(pdata);
 }
 
 } // end namespace Mpi
