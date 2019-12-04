@@ -20,8 +20,8 @@
 #include <config.h>
 #include <memory>
 
-#include <opm/bda/BdaBridge.hpp>
-#include <opm/bda/BdaResult.hpp>
+#include <opm/simulators/linalg/bda/BdaBridge.hpp>
+#include <opm/simulators/linalg/bda/BdaResult.hpp>
 
 #define PRINT_TIMERS_BRIDGE_BRIDGE 0
 
@@ -210,25 +210,24 @@ void BdaBridge::get_result(BridgeVector &x){
 #endif
 }
 
-#if HAVE_CUDA
 template void BdaBridge::solve_system< \
-Dune::BCRSMatrix<Ewoms::MatrixBlock<double, 2, 2>, std::allocator<Ewoms::MatrixBlock<double, 2, 2> > > , \
+Dune::BCRSMatrix<Opm::MatrixBlock<double, 2, 2>, std::allocator<Opm::MatrixBlock<double, 2, 2> > > , \
 Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > > \
-(Dune::BCRSMatrix<Ewoms::MatrixBlock<double, 2, 2>, std::allocator<Ewoms::MatrixBlock<double, 2, 2> > > *mat, \
+(Dune::BCRSMatrix<Opm::MatrixBlock<double, 2, 2>, std::allocator<Opm::MatrixBlock<double, 2, 2> > > *mat, \
 	Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > &b, \
 	InverseOperatorResult &res);
 
 template void BdaBridge::solve_system< \
-Dune::BCRSMatrix<Ewoms::MatrixBlock<double, 3, 3>, std::allocator<Ewoms::MatrixBlock<double, 3, 3> > > , \
+Dune::BCRSMatrix<Opm::MatrixBlock<double, 3, 3>, std::allocator<Opm::MatrixBlock<double, 3, 3> > > , \
 Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > > \
-(Dune::BCRSMatrix<Ewoms::MatrixBlock<double, 3, 3>, std::allocator<Ewoms::MatrixBlock<double, 3, 3> > > *mat, \
+(Dune::BCRSMatrix<Opm::MatrixBlock<double, 3, 3>, std::allocator<Opm::MatrixBlock<double, 3, 3> > > *mat, \
 	Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > &b, \
 	InverseOperatorResult &res);
 
 template void BdaBridge::solve_system< \
-Dune::BCRSMatrix<Ewoms::MatrixBlock<double, 4, 4>, std::allocator<Ewoms::MatrixBlock<double, 4, 4> > > , \
+Dune::BCRSMatrix<Opm::MatrixBlock<double, 4, 4>, std::allocator<Opm::MatrixBlock<double, 4, 4> > > , \
 Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > > \
-(Dune::BCRSMatrix<Ewoms::MatrixBlock<double, 4, 4>, std::allocator<Ewoms::MatrixBlock<double, 4, 4> > > *mat, \
+(Dune::BCRSMatrix<Opm::MatrixBlock<double, 4, 4>, std::allocator<Opm::MatrixBlock<double, 4, 4> > > *mat, \
 	Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > &b, \
 	InverseOperatorResult &res);
 
@@ -244,7 +243,7 @@ Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector
 template void BdaBridge::get_result< \
 Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > > \
 (Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > &x);
-#endif
+
 
 
 }

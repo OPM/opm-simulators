@@ -24,10 +24,10 @@
 #include "dune/istl/solver.hh" // for struct InverseOperatorResult
 
 #include "dune/istl/bcrsmatrix.hh"
-#include <ewoms/linear/matrixblock.hh>
+#include <opm/simulators/linalg/matrixblock.hh>
 
 #if HAVE_CUDA
-#include <opm/bda/cusparseSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
 #endif
 
 namespace Opm

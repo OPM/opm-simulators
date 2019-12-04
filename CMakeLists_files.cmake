@@ -29,6 +29,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/MissingFeatures.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
+  opm/simulators/linalg/bda/BdaBridge.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
@@ -42,7 +43,7 @@ list (APPEND MAIN_SOURCE_FILES
   )
 
 if(CUDA_FOUND)
-  list (APPEND MAIN_SOURCE_FILES opm/bda/cusparseSolverBackend.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cusparseSolverBackend.cu)
 endif()
 
 # originally generated with the command:

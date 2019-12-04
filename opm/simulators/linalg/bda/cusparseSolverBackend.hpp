@@ -24,7 +24,7 @@
 #include "cublas_v2.h"
 #include "cusparse_v2.h"
 
-#include "opm/bda/BdaResult.hpp"
+#include "opm/simulators/linalg/bda/BdaResult.hpp"
 
 namespace Opm
 {
@@ -72,10 +72,10 @@ public:
 
     void finalize();
 
-    void copy_system_to_gpu(double *vals, int *rows, int *cols, double *f);
+    void copy_system_to_gpu(double *vals, int *rows, int *cols, double *b);
 
     // don't copy rowpointers and colindices, they stay the same
-    void update_system_on_gpu(double *vals, double *f);
+    void update_system_on_gpu(double *vals, double *b);
 
     void reset_prec_on_gpu();
 

@@ -4,6 +4,7 @@
   Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2015 NTNU
   Copyright 2015 Statoil AS
+  Copyright 2019 Big Data Accelerate
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -67,6 +68,7 @@ NEW_PROP_TAG(CprMaxEllIter);
 NEW_PROP_TAG(CprEllSolvetype);
 NEW_PROP_TAG(CprReuseSetup);
 NEW_PROP_TAG(LinearSolverConfigurationJsonFile);
+NEW_PROP_TAG(UseGpu);
 
 SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
 SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
@@ -92,6 +94,7 @@ SET_INT_PROP(FlowIstlSolverParams, CprMaxEllIter, 20);
 SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
 SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 0);
 SET_STRING_PROP(FlowIstlSolverParams, LinearSolverConfigurationJsonFile, "none");
+SET_BOOL_PROP(FlowIstlSolverParams, UseGpu, false);
 
 
 
@@ -163,6 +166,7 @@ namespace Opm
         std::string system_strategy_;
         bool scale_linear_system_;
         std::string linear_solver_configuration_json_file_;
+        bool use_gpu_;
 
         template <class TypeTag>
         void init()
@@ -190,6 +194,7 @@ namespace Opm
             cpr_ell_solvetype_  =  EWOMS_GET_PARAM(TypeTag, int, CprEllSolvetype);
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
             linear_solver_configuration_json_file_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolverConfigurationJsonFile);
+            use_gpu_ = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
         }
 
         template <class TypeTag>
@@ -217,6 +222,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "Solver type of elliptic pressure solve (0: bicgstab, 1: cg, 2: only amg preconditioner)");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse Amg Setup");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfigurationJsonFile, "Filename of JSON configuration for flexible linear solver system.");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, UseGpu, "Use GPU cusparseSolver as the linear solver");
         }
 
         FlowLinearSolverParameters() { reset(); }
@@ -238,6 +244,7 @@ namespace Opm
             ilu_milu_                 = MILU_VARIANT::ILU;
             ilu_redblack_             = false;
             ilu_reorder_sphere_       = true;
+            use_gpu_                  = false;
         }
     };
 

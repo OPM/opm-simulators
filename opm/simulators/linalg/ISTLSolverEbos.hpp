@@ -46,6 +46,8 @@
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
+#include <opm/simulators/linalg/bda/BdaBridge.hpp>
+
 BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(FlowIstlSolver, INHERITS_FROM(FlowIstlSolverParams));
@@ -223,13 +225,10 @@ protected:
         enum { pressureVarIndex = Indices::pressureSwitchIdx };
         static const int numEq = Indices::numEq;
 
-<<<<<<< HEAD:opm/simulators/linalg/ISTLSolverEbos.hpp
-=======
 #if HAVE_CUDA
         BdaBridge *bdaBridge;
 #endif
 
->>>>>>> 200e000... Changed cusparseSolver. Use find_package(CUDA) instead of setting a flag manually. Use HAVE_CUDA in sources to disable the BdaBridge when no GPU can be found anyway.:opm/autodiff/ISTLSolverEbos.hpp
     public:
         typedef Dune::AssembledLinearOperator< Matrix, Vector, Vector > AssembledLinearOperatorType;
 
@@ -247,15 +246,13 @@ protected:
               converged_(false)
         {
             parameters_.template init<TypeTag>();
-<<<<<<< HEAD:opm/simulators/linalg/ISTLSolverEbos.hpp
-=======
 #if HAVE_CUDA
             const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
             const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
             const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
             const bool matrix_add_well_contributions = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
             if(use_gpu && !matrix_add_well_contributions){
-                std::cerr << "Error cannot use GPU solver if command line parameter --matrix-add-well-contributions is false, due to the changing sparsity pattern" << std::endl;
+                std::cerr << "Error cannot use GPU solver if command line parameter --matrix-add-well-contributions is false, because the GPU solver performs a standard bicgstab" << std::endl;
                 exit(1);
             }
             bdaBridge = new BdaBridge(use_gpu, maxit, tolerance);
@@ -266,20 +263,16 @@ protected:
                 exit(1);
             }
 #endif
->>>>>>> 200e000... Changed cusparseSolver. Use find_package(CUDA) instead of setting a flag manually. Use HAVE_CUDA in sources to disable the BdaBridge when no GPU can be found anyway.:opm/autodiff/ISTLSolverEbos.hpp
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
             detail::findOverlapRowsAndColumns(simulator_.vanguard().grid(),overlapRowAndColumns_);
         }
 
-<<<<<<< HEAD:opm/simulators/linalg/ISTLSolverEbos.hpp
-=======
         ~ISTLSolverEbos(){
 #if HAVE_CUDA
             delete bdaBridge;
 #endif
         }
 
->>>>>>> 200e000... Changed cusparseSolver. Use find_package(CUDA) instead of setting a flag manually. Use HAVE_CUDA in sources to disable the BdaBridge when no GPU can be found anyway.:opm/autodiff/ISTLSolverEbos.hpp
         // nothing to clean here
         void eraseMatrix() {
             matrix_for_preconditioner_.reset();
@@ -472,10 +465,6 @@ protected:
             else
 #endif
             {
-<<<<<<< HEAD:opm/simulators/linalg/ISTLSolverEbos.hpp
-                // Construct preconditioner.
-                auto precond = constructPrecond(linearOperator, parallelInformation_arg);
-=======
                 // tries to solve linear system
                 // solve_system() does nothing if Dune is selected
 #if HAVE_CUDA
@@ -490,13 +479,12 @@ protected:
                     solve(linearOperator, x, istlb, *sp, *precond, result);
                 } // end Dune call
 #else
+                // Construct preconditioner.
                 auto precond = constructPrecond(linearOperator, parallelInformation_arg);
-                solve(linearOperator, x, istlb, *sp, *precond, result);
-#endif
->>>>>>> 200e000... Changed cusparseSolver. Use find_package(CUDA) instead of setting a flag manually. Use HAVE_CUDA in sources to disable the BdaBridge when no GPU can be found anyway.:opm/autodiff/ISTLSolverEbos.hpp
 
                 // Solve.
                 solve(linearOperator, x, istlb, *sp, *precond, result);
+#endif
             }
         }
 

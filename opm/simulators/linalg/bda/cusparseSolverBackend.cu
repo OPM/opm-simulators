@@ -27,9 +27,9 @@
 #include <iostream>
 #include <sys/time.h>
 
-#include <opm/bda/cusparseSolverBackend.hpp>
-#include <opm/bda/BdaResult.hpp>
-#include <opm/bda/cuda_header.h>
+#include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/BdaResult.hpp>
+#include <opm/simulators/linalg/bda/cuda_header.h>
 
 #include "cublas_v2.h"
 #include "cusparse_v2.h"
@@ -89,11 +89,11 @@ namespace Opm
 		printf("Tolerance: %.0e, nnzb: %d\n", tolerance, nnzb);
 #endif
 
-		for (it = 0.5; it < maxit; it+=0.5){
+		for(it = 0.5; it < maxit; it+=0.5){
 			rhop = rho;
 			cublasDdot(cublasHandle, n, d_rw, 1, d_r, 1, &rho);
 
-			if (it > 1){
+			if(it > 1){
 				beta = (rho/rhop) * (alpha/omega);
 				nomega = -omega;
 				cublasDaxpy(cublasHandle, n, &nomega, d_v, 1, d_p, 1);
@@ -116,14 +116,16 @@ namespace Opm
 
 			cublasDdot(cublasHandle, n, d_rw, 1, d_v, 1, &tmp1);
 			alpha = rho / tmp1;
-			nalpha = -(alpha);
+			nalpha = -alpha;
 			cublasDaxpy(cublasHandle, n, &nalpha, d_v, 1, d_r, 1);
 			cublasDaxpy(cublasHandle, n, &alpha, d_pw, 1, d_x, 1);
 			cublasDnrm2(cublasHandle, n, d_r, 1, &norm);
 
-			if (norm < tolerance * norm_0 && it > minit){
+			if(norm < tolerance * norm_0 && it > minit){
 				break;
 			}
+
+			it += 0.5;
 
 			// apply ilu0
 			cusparseDbsrsv2_solve(cusparseHandle, order, \
@@ -141,18 +143,18 @@ namespace Opm
 			cublasDdot(cublasHandle, n, d_t, 1, d_r, 1, &tmp1);
 			cublasDdot(cublasHandle, n, d_t, 1, d_t, 1, &tmp2);
 			omega = tmp1 / tmp2;
-			nomega = -(omega);
+			nomega = -omega;
 			cublasDaxpy(cublasHandle, n, &omega, d_s, 1, d_x, 1);
 			cublasDaxpy(cublasHandle, n, &nomega, d_t, 1, d_r, 1);
 
 			cublasDnrm2(cublasHandle, n, d_r, 1, &norm);
 
 
-			if (norm < tolerance * norm_0 && it > minit){
+			if(norm < tolerance * norm_0 && it > minit){
 				break;
 			}
 #if VERBOSE_BACKEND
-			if(i % 1 == 0){
+			if((int)it % 10 == 0){
 				printf("it: %.1f, norm: %.5e\n", it, norm);
 			}
 #endif
@@ -162,15 +164,16 @@ namespace Opm
 #if PRINT_TIMERS_BACKEND
 		printf("Total solve time: %.6f s\n", t_total2-t_total1);
 #endif
-#if VERBOSE_BACKEND
-		printf("Iterations: %.1f\n", it);
-		printf("Final norm: %.5e\n", norm);
-#endif
 		res.iterations = std::min(it, (float)maxit);
 		res.reduction = norm/norm_0;
 		res.conv_rate  = static_cast<double>(pow(res.reduction,1.0/it));
 		res.elapsed = t_total2-t_total1;
 		res.converged = (it != (maxit + 0.5));
+#if VERBOSE_BACKEND
+		printf("Iterations: %.1f\n", it);
+		printf("Final norm: %.5e\n", norm);
+		printf("GPU converged: %d\n", res.converged);
+#endif
 		return res.converged;
 	}
 
@@ -395,6 +398,7 @@ namespace Opm
 		cusparseDbsrilu02(cusparseHandle, order, \
 			Nb, nnzb, descr_M, d_mVals, d_mRows, d_mCols, \
 			BLOCK_SIZE, info_M, policy, d_buffer);
+
 		int structural_zero;
 		cusparseStatus_t status = cusparseXbsrilu02_zeroPivot(cusparseHandle, info_M, &structural_zero);
 		if(CUSPARSE_STATUS_ZERO_PIVOT == status){

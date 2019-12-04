@@ -297,5 +297,7 @@ endif()
 if(CUDA_FOUND)
   target_link_libraries( flow ${CUDA_cublas_LIBRARY} )
   target_link_libraries( flow ${CUDA_cusparse_LIBRARY} )
+  target_link_libraries( ebos ${CUDA_cublas_LIBRARY} )
+  target_link_libraries( ebos ${CUDA_cusparse_LIBRARY} )
 endif()
 

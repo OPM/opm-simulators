@@ -20,7 +20,7 @@
 #ifndef CUDA_HEADER_H
 #define CUDA_HEADER_H
 
-#include <stdio.h>
+#include <iostream>
 
 typedef double Block[9];
 
