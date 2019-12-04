@@ -645,27 +645,6 @@ protected:
 #endif
         }
 
-        /// Zero out off-diagonal blocks on rows corresponding to overlap cells
-        /// Diagonal blocks on ovelap rows are set to diag(1.0).
-        void makeOverlapRowsInvalid(Matrix& ebosJacIgnoreOverlap) const
-        {
-            //value to set on diagonal
-            Dune::FieldMatrix<Scalar, numEq, numEq> diag_block(0.0);
-            for (int eq = 0; eq < numEq; ++eq)
-                diag_block[eq][eq] = 1.0;
-
-            //loop over precalculated overlap rows and columns
-            for (auto row = overlapRows_.begin(); row != overlapRows_.end(); row++ )
-            {
-                int lcell = *row;
-                // Zero out row.
-                ebosJacIgnoreOverlap[lcell] = 0.0;
-
-                //diagonal block set to diag(1.0).
-                ebosJacIgnoreOverlap[lcell][lcell] = diag_block;
-            }
-        }
-
         /// Create sparsity pattern of matrix without off-diagonal ghost entries.
         void noGhostAdjacency()
         {
