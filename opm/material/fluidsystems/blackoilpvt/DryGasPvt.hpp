@@ -50,10 +50,22 @@ namespace Opm {
 template <class Scalar>
 class DryGasPvt
 {
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
+    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+
+    explicit DryGasPvt() = default;
+    DryGasPvt(const std::vector<Scalar>& gasReferenceDensity,
+              const std::vector<TabulatedOneDFunction>& inverseGasB,
+              const std::vector<TabulatedOneDFunction>& gasMu,
+              const std::vector<TabulatedOneDFunction>& inverseGasBMu)
+        : gasReferenceDensity_(gasReferenceDensity)
+        , inverseGasB_(inverseGasB)
+        , gasMu_(gasMu)
+        , inverseGasBMu_(inverseGasBMu)
+    {
+    }
 #if HAVE_ECL_INPUT
     /*!
      * \brief Initialize the parameters for dry gas using an ECL deck.
@@ -277,6 +289,26 @@ public:
                                               const Evaluation& /*temperature*/,
                                               const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dry gas! */ }
+
+    const std::vector<Scalar>& gasReferenceDensity() const
+    { return gasReferenceDensity_; }
+
+    const std::vector<TabulatedOneDFunction>& inverseGasB() const
+    { return inverseGasB_; }
+
+    const std::vector<TabulatedOneDFunction>& gasMu() const
+    { return gasMu_; }
+
+    const std::vector<TabulatedOneDFunction> inverseGasBMu() const
+    { return inverseGasBMu_; }
+
+    bool operator==(const DryGasPvt<Scalar>& data) const
+    {
+        return gasReferenceDensity_ == data.gasReferenceDensity_ &&
+               inverseGasB_ == data.inverseGasB_ &&
+               gasMu_ == data.gasMu_ &&
+               inverseGasBMu_ == data.inverseGasBMu_;
+    }
 
 private:
     std::vector<Scalar> gasReferenceDensity_;
