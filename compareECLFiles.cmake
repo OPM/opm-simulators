@@ -474,4 +474,10 @@ if(MPI_FOUND)
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${coarse_rel_tol_parallel})
+
+  add_test_compare_parallel_simulation(CASENAME polymer_simple2D
+                                       FILENAME 2D_THREEPHASE_POLY_HETER
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol}
+                                       REL_TOL ${coarse_rel_tol})
 endif()
