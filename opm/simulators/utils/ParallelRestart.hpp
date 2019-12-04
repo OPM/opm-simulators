@@ -736,6 +736,31 @@ ADD_PACK_PROTOTYPES(WellTracerProperties)
 ADD_PACK_PROTOTYPES(WList)
 ADD_PACK_PROTOTYPES(WListManager)
 
+template<class T>
+const T& packAndSend(const T& in, const auto& comm)
+{
+    if (comm.size() == 0)
+        return in;
+
+    std::size_t size = packSize(in, comm);
+    std::vector<char> buffer(size);
+    int pos = 0;
+    Mpi::pack(in, buffer, pos, comm);
+    comm.broadcast(&pos, 1, 0);
+    comm.broadcast(buffer.data(), pos, 0);
+    return in;
+}
+
+template<class T>
+void receiveAndUnpack(T& result, const auto& comm)
+{
+    int size;
+    comm.broadcast(&size, 1, 0);
+    std::vector<char> buffer(size);
+    comm.broadcast(buffer.data(), size, 0);
+    int pos = 0;
+    unpack(result, buffer, pos, comm);
+}
 } // end namespace Mpi
 
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
