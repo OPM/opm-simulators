@@ -180,7 +180,8 @@ protected:
     void makeOverlapRowsInvalid(MatrixType& matrix) const
     {
         //value to set on diagonal
-        Dune::FieldMatrix<Scalar, numEq, numEq> diag_block(0.0);
+	const int numEq = MatrixType::block_type::rows;
+        typename MatrixType::block_type diag_block(0.0);
         for (int eq = 0; eq < numEq; ++eq)
             diag_block[eq][eq] = 1.0;
 
