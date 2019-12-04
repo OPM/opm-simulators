@@ -63,6 +63,7 @@ namespace Opm
                 const int nw = wells_ecl.size();
                 // const int np = wells->number_of_phases;
                 const int np = pu.num_phases;
+                open_for_output_.resize(nw, true);
                 bhp_.resize(nw, 0.0);
                 thp_.resize(nw, 0.0);
                 temperature_.resize(nw, 273.15 + 20); // standard temperature for now
@@ -152,6 +153,17 @@ namespace Opm
             return wellRates().size() / numWells();
         }
 
+
+        virtual void shutWell(int well_index) {
+            this->open_for_output_[well_index] = false;
+            this->thp_[well_index] = 0;
+            this->bhp_[well_index] = 0;
+            const int np = numPhases();
+            for (int p = 0; p < np; ++p)
+                this->wellrates_[np * well_index + p] = 0;
+        }
+
+
         virtual data::Wells report(const PhaseUsage& pu, const int* globalCellIdxMap) const
         {
             using rt = data::Rates::opt;
@@ -159,6 +171,8 @@ namespace Opm
             data::Wells dw;
             for( const auto& itr : this->wellMap_ ) {
                 const auto well_index = itr.second[ 0 ];
+                if (!this->open_for_output_[well_index])
+                    continue;
 
                 auto& well = dw[ itr.first ];
                 well.bhp = this->bhp().at( well_index );
@@ -208,6 +222,9 @@ namespace Opm
         std::vector<double> wellrates_;
         std::vector<double> perfrates_;
         std::vector<double> perfpress_;
+    protected:
+        std::vector<bool>   open_for_output_;
+    private:
 
         WellMapType wellMap_;
 

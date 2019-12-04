@@ -425,6 +425,9 @@ namespace Opm
 
             for( const auto& wt : this->wellMap() ) {
                 const auto w = wt.second[ 0 ];
+                if (!this->open_for_output_[w])
+                    continue;
+
                 auto& well = res.at( wt.first );
                 //well.injectionControl = static_cast<int>(this->currentInjectionControls()[ w ]);
                 //well.productionControl = static_cast<int>(this->currentProductionControls()[ w ]);
@@ -805,6 +808,14 @@ namespace Opm
         const std::vector<double>& perfWaterVelocity() const {
             return perf_water_velocity_;
         }
+
+        virtual void shutWell(int well_index) {
+            WellState::shutWell(well_index);
+            const int np = numPhases();
+            for (int p = 0; p < np; ++p)
+                this->well_reservoir_rates_[np * well_index + p] = 0;
+        }
+
 
     private:
         std::vector<double> perfphaserates_;
