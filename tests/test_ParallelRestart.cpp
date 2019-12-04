@@ -981,6 +981,20 @@ BOOST_AUTO_TEST_CASE(TabulatedOneDFunction)
 }
 
 
+BOOST_AUTO_TEST_CASE(IntervalTabulatedTwoDFunction)
+{
+#ifdef HAVE_MPI
+    std::vector<double> xPos{1.0, 2.0};
+    std::vector<double> yPos{3.0, 4.0};
+    std::vector<std::vector<double>> samples{{1.0, 2.0}, {3.0, 4.0}};
+    Opm::IntervalTabulated2DFunction<double> val1(xPos, yPos, samples, true, true);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 BOOST_AUTO_TEST_CASE(SolventPvt)
 {
 #ifdef HAVE_MPI
