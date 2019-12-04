@@ -180,7 +180,7 @@ protected:
     void makeOverlapRowsInvalid(MatrixType& matrix) const
     {
         //value to set on diagonal
-	const int numEq = MatrixType::block_type::rows;
+        const int numEq = MatrixType::block_type::rows;
         typename MatrixType::block_type diag_block(0.0);
         for (int eq = 0; eq < numEq; ++eq)
             diag_block[eq][eq] = 1.0;
