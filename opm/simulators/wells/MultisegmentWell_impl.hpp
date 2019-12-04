@@ -1998,8 +1998,12 @@ namespace Opm
             return;
         }
 
-        if (!group.isInjectionGroup())
+        if (!group.isInjectionGroup() || currentGroupControl == Group::InjectionCMode::NONE) {
+            // use bhp as control eq and let the updateControl code find a valid control
+            const auto& controls = well.injectionControls(summaryState);
+            control_eq = getSegmentPressure(0) - controls.bhp_limit;
             return;
+        }
 
         const auto& groupcontrols = group.injectionControls(summaryState);
 
@@ -2045,7 +2049,8 @@ namespace Opm
         switch(currentGroupControl) {
         case Group::InjectionCMode::NONE:
         {
-            OPM_DEFLOG_THROW(std::runtime_error, "NONE group control not implemented for injectors" , deferred_logger);
+            // The NONE case is handled earlier
+            assert(false);
             break;
         }
         case Group::InjectionCMode::RATE:
@@ -2119,8 +2124,12 @@ namespace Opm
             assembleGroupProductionControl(parent, well_state, schedule, summaryState, control_eq, efficiencyFactor, deferred_logger);
             return;
         }
-        if (!group.isProductionGroup())
+        if (!group.isProductionGroup() || currentGroupControl == Group::ProductionCMode::NONE) {
+            // use bhp as control eq and let the updateControl code find a vallied control
+            const auto& controls = well.productionControls(summaryState);
+            control_eq = getSegmentPressure(0) - controls.bhp_limit;
             return;
+        }
 
         const auto& groupcontrols = group.productionControls(summaryState);
         const std::vector<double>& groupTargetReductions = well_state.currentProductionGroupReductionRates(group.name());
@@ -2128,7 +2137,8 @@ namespace Opm
         switch(currentGroupControl) {
         case Group::ProductionCMode::NONE:
         {
-            OPM_DEFLOG_THROW(std::runtime_error, "NONE group control not implemented for producers" , deferred_logger);
+            // The NONE case is handled earlier
+            assert(false);
             break;
         }
         case Group::ProductionCMode::ORAT:
