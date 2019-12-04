@@ -480,4 +480,10 @@ if(MPI_FOUND)
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol}
                                        REL_TOL ${coarse_rel_tol})
+
+  add_test_compare_parallel_simulation(CASENAME spe1_foam
+                                       FILENAME SPE1FOAM
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol}
+                                       REL_TOL ${rel_tol})
 endif()
