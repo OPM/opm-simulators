@@ -271,6 +271,12 @@ std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelpe
     return totalSize;
 }
 
+template<class T, std::size_t N>
+std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return N*packSize(data[0], comm);
+}
+
 HANDLE_AS_POD(Actdims)
 HANDLE_AS_POD(Aqudims)
 HANDLE_AS_POD(data::Connection)
@@ -1484,6 +1490,14 @@ void pack(const std::unordered_set<T,H,KE,A>& data,
     {
         pack(entry, buffer, position, comm);
     }
+}
+
+template<class T, size_t N>
+void pack(const std::array<T,N>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    for (const T& entry : data)
+        pack(entry, buffer, position, comm);
 }
 
 template<class A>
@@ -2929,6 +2943,14 @@ void unpack(std::unordered_set<T,H,KE,A>& data,
         unpack(entry, buffer, position, comm);
         data.insert(entry);
     }
+}
+
+template<class T, size_t N>
+void unpack(std::array<T,N>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    for (T& entry : data)
+        unpack(entry, buffer, position, comm);
 }
 
 template<class Key, class Value>
