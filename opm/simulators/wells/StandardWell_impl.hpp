@@ -985,7 +985,7 @@ namespace Opm
         }
 
         if (!group.isInjectionGroup() || currentGroupControl == Group::InjectionCMode::NONE) {
-            // use bhp as control eq and let the updateControl code find a vallied control
+            // use bhp as control eq and let the updateControl code find a valid control
             const auto& controls = well.injectionControls(summaryState);
             control_eq = getBhp() - controls.bhp_limit;
             return;
