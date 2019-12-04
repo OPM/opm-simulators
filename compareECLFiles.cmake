@@ -469,4 +469,9 @@ if(MPI_FOUND)
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${coarse_rel_tol_parallel})
 
+  add_test_compare_parallel_simulation(CASENAME spe1_solvent
+                                       FILENAME SPE1CASE2_SOLVENT
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${coarse_rel_tol_parallel})
 endif()
