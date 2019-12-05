@@ -826,12 +826,12 @@ namespace Opm {
             std::vector< Scalar > B_avg(numComponents(), Scalar() );
             computeAverageFormationFactor(B_avg);
 
-            if (param_.solve_welleq_initially_ && iterationIdx == 0) {
+            if (param_.solve_welleq_initially_) {
                 // solve the well equations as a pre-processing step
                 last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
 
 
-                if (initial_step_) {
+                if (initial_step_ && iterationIdx == 0 ) {
                     // update the explicit quantities to get the initial fluid distribution in the well correct.
                     calculateExplicitQuantities(local_deferredLogger);
                     prepareTimeStep(local_deferredLogger);
