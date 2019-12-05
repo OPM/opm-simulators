@@ -31,6 +31,8 @@
 
 #include <opm/models/utils/propertysystem.hh>
 
+#include <exception>
+#include <stdexcept>
 #include <vector>
 
 BEGIN_PROPERTIES
@@ -78,7 +80,12 @@ public:
      *        volume from the model's aquifers.
      */
     void initFromRestart(const std::vector<data::AquiferData>& aquiferSoln OPM_UNUSED)
-    { }
+    {
+        throw std::logic_error {
+            "Initialization from restart data not supported "
+            "for base aquifer model"
+        };
+    }
 
     /*!
      * \brief This method is called when a new episode (report step) starts.

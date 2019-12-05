@@ -25,6 +25,9 @@
 
 #include <opm/output/data/Aquifer.hpp>
 
+#include <exception>
+#include <stdexcept>
+
 namespace Opm
 {
 
@@ -148,7 +151,12 @@ namespace Opm
             }
 
             void assignRestartData(const data::AquiferData& /* xaq */) override
-            {}
+            {
+                throw std::runtime_error {
+                    "Restart-based initialization not currently supported "
+                    "for Carter-Tracey analytic aquifers"
+                };
+            }
 
             inline void getInfluenceTableValues(Scalar& pitd, Scalar& pitd_prime, const Scalar& td)
             {

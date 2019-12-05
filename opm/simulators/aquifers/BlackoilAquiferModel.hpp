@@ -34,7 +34,6 @@
 
 #include <opm/simulators/aquifers/AquiferCarterTracy.hpp>
 #include <opm/simulators/aquifers/AquiferFetkovich.hpp>
-#include <opm/simulators/timestepping/SimulatorTimer.hpp>
 
 #include <opm/material/densead/Math.hpp>
 
