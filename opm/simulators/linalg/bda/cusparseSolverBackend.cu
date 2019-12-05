@@ -264,6 +264,7 @@ namespace Opm
 		cudaHostRegister(vals, nnz * sizeof(double), cudaHostRegisterDefault);
 		cudaHostRegister(cols, nnz * sizeof(int), cudaHostRegisterDefault);
 		cudaHostRegister(rows, (Nb+1) * sizeof(int), cudaHostRegisterDefault);
+		cudaHostRegister(b, N * sizeof(double), cudaHostRegisterDefault);
 		cudaMemcpyAsync(d_bVals, vals, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
 		cudaMemcpyAsync(d_bCols, cols, nnz * sizeof(int), cudaMemcpyHostToDevice, stream);
 		cudaMemcpyAsync(d_bRows, rows, (Nb+1) * sizeof(int), cudaMemcpyHostToDevice, stream);
@@ -275,6 +276,7 @@ namespace Opm
 		this->rows = rows;
 
 		if(verbosity > 2){
+			cudaStreamSynchronize(stream);
 			t2 = second();
 			printf("cusparseSolver::copy_system_to_gpu(): %f s\n", t2-t1);
 		}
@@ -294,6 +296,7 @@ namespace Opm
 		cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
 
 		if(verbosity > 2){
+			cudaStreamSynchronize(stream);
 			t2 = second();
 			printf("cusparseSolver::update_system_on_gpu(): %f s\n", t2-t1);
 		}
@@ -380,6 +383,7 @@ namespace Opm
 		cudaCheckLastError("Could not analyse level information");
 
 		if(verbosity > 2){
+			cudaStreamSynchronize(stream);
 			t2 = second();
 			printf("cusparseSolver::analyse_matrix(): %f s\n", t2-t1);
 		}
@@ -400,6 +404,7 @@ namespace Opm
 			BLOCK_SIZE, info_M, policy, d_buffer);
 
 		int structural_zero;
+		// cusparseXbsrilu02_zeroPivot() calls cudaDeviceSynchronize()
 		cusparseStatus_t status = cusparseXbsrilu02_zeroPivot(cusparseHandle, info_M, &structural_zero);
 		if(CUSPARSE_STATUS_ZERO_PIVOT == status){
 			fprintf(stderr, "WARNING block U(%d,%d) is not invertible\n", structural_zero, structural_zero);
@@ -429,6 +434,10 @@ namespace Opm
 	// copy result to host memory
 	// caller must be sure that x is a valid array
 	void cusparseSolverBackend::post_process(double *x){
+
+		if(!initialized){
+			cudaHostRegister(x, N * sizeof(double), cudaHostRegisterDefault);
+		}
 
 		double t1, t2;
 		if(verbosity > 2){

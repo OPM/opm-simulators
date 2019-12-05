@@ -134,6 +134,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/AquiferFetkovich.hpp
   opm/simulators/aquifers/BlackoilAquiferModel.hpp
   opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp
+  opm/simulators/linalg/BdaBridge.hpp
+  opm/simulators/linalg/BdaResult.hpp
+  opm/simulators/linalg/cuda_header.h
+  opm/simulators/linalg/cusparseSolverBackend.hpp
   opm/simulators/linalg/BlackoilAmg.hpp
   opm/simulators/linalg/BlackoilAmgCpr.hpp
   opm/simulators/linalg/amgcpr.hh

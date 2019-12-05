@@ -475,6 +475,7 @@ protected:
                     bdaBridge->get_result(x);
                 }else{
                     // CPU fallback, or default case for Dune
+                    OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
                     auto precond = constructPrecond(linearOperator, parallelInformation_arg);
                     solve(linearOperator, x, istlb, *sp, *precond, result);
                 } // end Dune call
