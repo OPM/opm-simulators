@@ -1038,6 +1038,21 @@ BOOST_AUTO_TEST_CASE(DryGasPvt)
 }
 
 
+BOOST_AUTO_TEST_CASE(GasPvtThermal)
+{
+#ifdef HAVE_MPI
+    Opm::Tabulated1DFunction<double> func(2, std::vector<double>{1.0, 2.0},
+                                             std::vector<double>{3.0, 4.0});
+    Opm::GasPvtThermal<double>::IsothermalPvt* pvt = new Opm::GasPvtThermal<double>::IsothermalPvt;
+    Opm::GasPvtThermal<double> val1(pvt, {func}, {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0},
+                                    {func}, true, true, false);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 BOOST_AUTO_TEST_CASE(WetGasPvt)
 {
 #ifdef HAVE_MPI
