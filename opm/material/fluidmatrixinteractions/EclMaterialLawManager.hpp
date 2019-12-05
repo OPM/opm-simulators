@@ -122,7 +122,6 @@ public:
     {
         // get the number of saturation regions and the number of cells in the deck
         const size_t numSatRegions = eclState.runspec().tabdims().getNumSatTables();
-        size_t numCompressedElems = compressedToCartesianElemIdx.size();
 
         // copy the SATNUM grid property. in some cases this is not necessary, but it
         // should not require much memory anyway...
@@ -137,6 +136,7 @@ public:
         } else
             imbnumRegionArray_ = satnumRegionArray_;
 #else
+        size_t numCompressedElems = compressedToCartesianElemIdx.size();
         satnumRegionArray_.resize(numCompressedElems);
         if (eclState.get3DProperties().hasDeckIntGridProperty("SATNUM")) {
             const auto& satnumRawData = eclState.get3DProperties().getIntGridProperty("SATNUM").getData();
