@@ -1086,6 +1086,19 @@ BOOST_AUTO_TEST_CASE(ConstantCompressibilityOilPvt)
 }
 
 
+BOOST_AUTO_TEST_CASE(DeadOilPvt)
+{
+#ifdef HAVE_MPI
+    Opm::Tabulated1DFunction<double> func(2, std::vector<double>{1.0, 2.0},
+                                             std::vector<double>{3.0, 4.0});
+    Opm::DeadOilPvt<double> val1({1.0, 2.0}, {func}, {func}, {func});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;

@@ -712,6 +712,19 @@ std::size_t packSize(const ConstantCompressibilityOilPvt<Scalar>& data,
 template std::size_t packSize(const ConstantCompressibilityOilPvt<double>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
+template<class Scalar>
+std::size_t packSize(const DeadOilPvt<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.oilReferenceDensity(), comm) +
+           packSize(data.inverseOilB(), comm) +
+           packSize(data.oilMu(), comm) +
+           packSize(data.inverseOilBMu(), comm);
+}
+
+template std::size_t packSize(const DeadOilPvt<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
 ////// pack routines
 
 template<class T>
@@ -1423,6 +1436,21 @@ void pack(const ConstantCompressibilityOilPvt<Scalar>& data,
 }
 
 template void pack(const ConstantCompressibilityOilPvt<double>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const DeadOilPvt<Scalar>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.oilReferenceDensity(), buffer, position, comm);
+    pack(data.inverseOilB(), buffer, position, comm);
+    pack(data.oilMu(), buffer, position, comm);
+    pack(data.inverseOilBMu(), buffer, position, comm);
+}
+
+template void pack(const DeadOilPvt<double>& data,
                    std::vector<char>& buffer, int& position,
                    Dune::MPIHelper::MPICommunicator comm);
 
@@ -2353,6 +2381,27 @@ void unpack(ConstantCompressibilityOilPvt<Scalar>& data,
 }
 
 template void unpack(ConstantCompressibilityOilPvt<double>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(DeadOilPvt<Scalar>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Scalar> oilReferenceDensity;
+    using FuncVec = std::vector<typename DeadOilPvt<Scalar>::TabulatedOneDFunction>;
+    FuncVec inverseOilB, oilMu, inverseOilBMu;
+
+    unpack(oilReferenceDensity, buffer, position, comm);
+    unpack(inverseOilB, buffer, position, comm);
+    unpack(oilMu, buffer, position, comm);
+    unpack(inverseOilBMu, buffer, position, comm);
+    data = DeadOilPvt<Scalar>(oilReferenceDensity, inverseOilB,
+                              oilMu, inverseOilBMu);
+}
+
+template void unpack(DeadOilPvt<double>& data,
                      std::vector<char>& buffer, int& position,
                      Dune::MPIHelper::MPICommunicator comm);
 
