@@ -158,6 +158,26 @@ std::size_t packSize(const std::vector<bool,A>& data, Dune::MPIHelper::MPICommun
     return packSize(data.size(), comm) + data.size()*packSize(entry,comm);
 }
 
+template<std::size_t I = 0, typename Tuple>
+typename std::enable_if<I == std::tuple_size<Tuple>::value, std::size_t>::type
+pack_size_tuple_entry(const Tuple&, Dune::MPIHelper::MPICommunicator)
+{
+    return 0;
+}
+
+template<std::size_t I = 0, typename Tuple>
+typename std::enable_if<I != std::tuple_size<Tuple>::value, std::size_t>::type
+pack_size_tuple_entry(const Tuple& tuple, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(std::get<I>(tuple), comm) + pack_size_tuple_entry<I+1>(tuple, comm);
+}
+
+template<class... Ts>
+std::size_t packSize(const std::tuple<Ts...>& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return pack_size_tuple_entry(data, comm);
+}
+
 template<class Key, class Value>
 std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -695,6 +715,29 @@ void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& posit
         bool b = entry;
         pack(b, buffer, position, comm);
     }
+}
+
+template<std::size_t I = 0, typename Tuple>
+typename std::enable_if<I == std::tuple_size<Tuple>::value, void>::type
+pack_tuple_entry(const Tuple&, std::vector<char>&, int&,
+                      Dune::MPIHelper::MPICommunicator)
+{
+}
+
+template<std::size_t I = 0, typename Tuple>
+typename std::enable_if<I != std::tuple_size<Tuple>::value, void>::type
+pack_tuple_entry(const Tuple& tuple, std::vector<char>& buffer,
+                 int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(std::get<I>(tuple), buffer, position, comm);
+    pack_tuple_entry<I+1>(tuple, buffer, position, comm);
+}
+
+template<class... Ts>
+void pack(const std::tuple<Ts...>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    pack_tuple_entry(data, buffer, position, comm);
 }
 
 template<class Key, class Value>
@@ -1279,6 +1322,29 @@ void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
         unpack(entry, buffer, position, comm);
         data.push_back(entry);
     }
+}
+
+template<std::size_t I = 0, typename Tuple>
+typename std::enable_if<I == std::tuple_size<Tuple>::value, void>::type
+unpack_tuple_entry(Tuple&, std::vector<char>&, int&,
+                   Dune::MPIHelper::MPICommunicator)
+{
+}
+
+template<std::size_t I = 0, typename Tuple>
+typename std::enable_if<I != std::tuple_size<Tuple>::value, void>::type
+unpack_tuple_entry(Tuple& tuple, std::vector<char>& buffer,
+                   int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(std::get<I>(tuple), buffer, position, comm);
+    unpack_tuple_entry<I+1>(tuple, buffer, position, comm);
+}
+
+template<class... Ts>
+void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
+            int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack_tuple_entry(data, buffer, position, comm);
 }
 
 template<class Key, class Value>
