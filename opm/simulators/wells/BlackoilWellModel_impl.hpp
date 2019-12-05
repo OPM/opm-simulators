@@ -824,7 +824,7 @@ namespace Opm {
                 last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
 
 
-                if (initial_step_) {
+                if (initial_step_ && iterationIdx == 0) {
                     // update the explicit quantities to get the initial fluid distribution in the well correct.
                     calculateExplicitQuantities(local_deferredLogger);
                     prepareTimeStep(local_deferredLogger);
@@ -997,70 +997,77 @@ namespace Opm {
         WellState well_state0 = well_state_;
 
         const int max_iter = param_.max_welleq_iter_;
-
-        int it  = 0;
-        bool converged;
-        int exception_thrown = 0;
-        do {
-            try {
-                assembleWellEq(B_avg, dt, deferred_logger);
-            } catch (std::exception& e) {
-                exception_thrown = 1;
-            }
-            // We need to check on all processes, as getWellConvergence() below communicates on all processes.
-            logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "solveWellEq() failed.", terminal_output_);
-
-            const auto report = getWellConvergence(B_avg);
-            converged = report.converged();
-
-            if (converged) {
-                break;
-            }
-
-            try {
-                if( localWellsActive() )
-                {
-                    for (auto& well : well_container_) {
-                        well->solveEqAndUpdateWellState(well_state_, deferred_logger);
-                    }
-                }
-                // updateWellControls uses communication
-                // Therefore the following is executed if there
-                // are active wells anywhere in the global domain.
-                if( wellsActive() )
-                {
-                    updateWellControls(deferred_logger, /*don't switch group controls*/false);
-                    initPrimaryVariablesEvaluation();
-                }
-            } catch (std::exception& e) {
-                exception_thrown = 1;
-            }
-
-            logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "solveWellEq() failed.", terminal_output_);
-            ++it;
-        } while (it < max_iter);
-
-        try {
-            if (converged) {
-                if (terminal_output_) {
-                    deferred_logger.debug("Well equation solution gets converged with " + std::to_string(it) + " iterations");
-                }
-            } else {
-                if (terminal_output_) {
-                    deferred_logger.debug("Well equation solution failed in getting converged with " + std::to_string(it) + " iterations");
-                }
-                well_state_ = well_state0;
-                updatePrimaryVariables(deferred_logger);
-            }
-        } catch (std::exception& e) {
-            exception_thrown = 1;
-        }
-
-        logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "solveWellEq() failed.", terminal_output_);
-
+        //Opm::DeferredLogger local_deferredLogger;
+        // Get global (from all processes) convergence report.
+        ConvergenceReport local_report;
         SimulatorReport report;
-        report.converged = converged;
-        report.total_well_iterations = it;
+
+        int numIter = ebosSimulator_.model().newtonMethod().numIterations();
+
+        for (auto& well : well_container_) {
+
+            const int w = well->indexOfWell();
+            if ( (numIter > 0 || !well_state_.effectiveEventsOccurred(w)) &&
+                    !well_state_.wellSwitched(w) )
+            {
+                continue;
+            }
+            well_state_.setWellSwitched(w, false);
+            std::cout << well->name() << " solve" << std::endl;
+
+            int it  = 0;
+            bool converged;
+            int exception_thrown = 0;
+            do {
+                try {
+                     well->assembleWellEq(ebosSimulator_, B_avg, dt, well_state_, deferred_logger);
+                } catch (std::exception& e) {
+                    exception_thrown = 1;
+                }
+                // We need to check on all processes, as getWellConvergence() below communicates on all processes.
+                logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "solveWellEq() failed.", terminal_output_);
+
+                if (well->isOperable() ) {
+                    local_report = well->getWellConvergence(well_state_, B_avg, deferred_logger);
+                }
+                converged = local_report.converged();
+
+                if (converged) {
+                    break;
+                }
+
+                try {
+                    well->solveEqAndUpdateWellState(well_state_, deferred_logger);
+                    well->updateWellControl(ebosSimulator_, well_state_, deferred_logger);
+                    well->initPrimaryVariablesEvaluation();
+                } catch (std::exception& e) {
+                    exception_thrown = 1;
+                }
+
+                logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "solveWellEq() failed.", terminal_output_);
+                ++it;
+            } while (it < max_iter);
+
+            try {
+                if (converged) {
+                    if (terminal_output_) {
+                        deferred_logger.debug("Well equation solution gets converged with " + std::to_string(it) + " iterations");
+                    }
+                } else {
+                    if (terminal_output_) {
+                        deferred_logger.debug("Well equation solution failed in getting converged with " + std::to_string(it) + " iterations");
+                    }
+                    well_state_ = well_state0;
+                    well->updatePrimaryVariables(well_state_, deferred_logger);
+                }
+            } catch (std::exception& e) {
+                exception_thrown = 1;
+            }
+
+            logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "solveWellEq() failed.", terminal_output_);
+            report.converged = report.converged && converged;
+            report.total_well_iterations += it;
+        }
         return report;
     }
 
@@ -1248,9 +1255,9 @@ namespace Opm {
                 // we do not need to set it to false
                 // TODO: we should do this at the end of the time step in case we will need it within
                 // this time step somewhere
-                if (well_state_.effectiveEventsOccurred(w) ) {
-                    well_state_.setEffectiveEventsOccurred(w, false);
-                }
+                //if (well_state_.effectiveEventsOccurred(w) ) {
+                    //well_state_.setEffectiveEventsOccurred(w, false);
+                //}
             }  // end of for (const auto& well : well_container_)
             updatePrimaryVariables(deferred_logger);
         } catch (std::exception& e) {

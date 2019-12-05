@@ -478,6 +478,7 @@ namespace Opm
             deferred_logger.info(ss.str());
             updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
+            well_state.setWellSwitched(index_of_well_, true);
         }
     }
 

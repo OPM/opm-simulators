@@ -97,6 +97,7 @@ namespace Opm
 
             // checking whether some effective well control happens
             effective_events_occurred_.resize(nw, true);
+            well_switched_.resize(nw, false);
 
             // a hack to make the resize() function used in RESTART related work
             if (!wells_ecl.empty() ) {
@@ -699,6 +700,16 @@ namespace Opm
         }
 
 
+        bool wellSwitched(const int w) const {
+            return well_switched_[w];
+        }
+
+
+        void setWellSwitched(const int w, const bool well_switched) {
+            well_switched_[w] = well_switched;
+        }
+
+
         /// One rate pr well connection.
         std::vector<double>& perfRateSolvent() { return perfRateSolvent_; }
         const std::vector<double>& perfRateSolvent() const { return perfRateSolvent_; }
@@ -860,6 +871,8 @@ namespace Opm
         // or new well control keywords happens
         // \Note: for now, only WCON* keywords, and well status change is considered
         std::vector<bool> effective_events_occurred_;
+
+        std::vector<bool> well_switched_;
 
         // MS well related
         // for StandardWell, the number of segments will be one
