@@ -23,6 +23,11 @@
 
 #include <opm/simulators/aquifers/AquiferInterface.hpp>
 
+#include <opm/output/data/Aquifer.hpp>
+
+#include <exception>
+#include <stdexcept>
+
 namespace Opm
 {
 
@@ -143,6 +148,14 @@ namespace Opm
                     0.
                     : ( connection.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx) )/denom_face_areas;
                 }
+            }
+
+            void assignRestartData(const data::AquiferData& /* xaq */) override
+            {
+                throw std::runtime_error {
+                    "Restart-based initialization not currently supported "
+                    "for Carter-Tracey analytic aquifers"
+                };
             }
 
             inline void getInfluenceTableValues(Scalar& pitd, Scalar& pitd_prime, const Scalar& td)

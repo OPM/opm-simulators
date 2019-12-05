@@ -29,10 +29,15 @@
 #include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
-#include <opm/simulators/timestepping/SimulatorTimer.hpp>
+
+#include <opm/output/data/Aquifer.hpp>
+
 #include <opm/simulators/aquifers/AquiferCarterTracy.hpp>
 #include <opm/simulators/aquifers/AquiferFetkovich.hpp>
+
 #include <opm/material/densead/Math.hpp>
+
+#include <vector>
 
 namespace Opm {
 
@@ -47,6 +52,8 @@ namespace Opm {
             explicit BlackoilAquiferModel(Simulator& simulator);
 
             void initialSolutionApplied();
+            void initFromRestart(const std::vector<data::AquiferData>& aquiferSoln);
+
             void beginEpisode();
             void beginTimeStep();
             void beginIteration();

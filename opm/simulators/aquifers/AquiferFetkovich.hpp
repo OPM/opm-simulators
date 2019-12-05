@@ -23,6 +23,11 @@ along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <opm/simulators/aquifers/AquiferInterface.hpp>
 
+#include <opm/output/data/Aquifer.hpp>
+
+#include <exception>
+#include <stdexcept>
+
 namespace Opm
 {
 
@@ -146,6 +151,19 @@ namespace Opm
       }
     }
 
+    void assignRestartData(const data::AquiferData& xaq) override
+    {
+      if (xaq.type != data::AquiferType::Fetkovich)
+      {
+        throw std::invalid_argument {
+          "Analytic aquifer data for unexpected aquifer type "
+          "passed to Fetkovich aquifer"
+        };
+      }
+
+      this->aquifer_pressure_ = xaq.pressure;
+    }
+
     inline Eval dpai(int idx)
     {
       const Eval dp = aquifer_pressure_ - Base::pressure_current_.at(idx)
@@ -176,6 +194,11 @@ namespace Opm
     inline void calculateAquiferCondition()
     {
       Base::rhow_.resize(Base::cell_idx_.size(),0.);
+
+      if (this->solution_set_from_restart_) {
+        return;
+      }
+
       if (!aqufetp_data_.p0)
       {
         Base::pa0_ = calculateReservoirEquilibrium();

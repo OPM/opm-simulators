@@ -27,7 +27,13 @@
 #ifndef EWOMS_ECL_BASE_AQUIFER_MODEL_HH
 #define EWOMS_ECL_BASE_AQUIFER_MODEL_HH
 
+#include <opm/output/data/Aquifer.hpp>
+
 #include <opm/models/utils/propertysystem.hh>
+
+#include <exception>
+#include <stdexcept>
+#include <vector>
 
 BEGIN_PROPERTIES
 
@@ -63,6 +69,23 @@ public:
      */
     void initialSolutionApplied()
     { }
+
+    /*!
+     * \brief Called if aquifers are being initialized from values retrieved
+     *        from a restart file.
+     *
+     * \param[in] aquiferSoln Set of aquifer-related initial values, mostly
+     *        pertaining to analytic aquifers.  Contains at minimum the
+     *        aquifer pressure and the base run's total produced liquid
+     *        volume from the model's aquifers.
+     */
+    void initFromRestart(const std::vector<data::AquiferData>& aquiferSoln OPM_UNUSED)
+    {
+        throw std::logic_error {
+            "Initialization from restart data not supported "
+            "for base aquifer model"
+        };
+    }
 
     /*!
      * \brief This method is called when a new episode (report step) starts.
