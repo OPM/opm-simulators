@@ -996,6 +996,21 @@ BOOST_AUTO_TEST_CASE(IntervalTabulatedTwoDFunction)
 }
 
 
+BOOST_AUTO_TEST_CASE(UniformXTabulatedTwoDFunction)
+{
+#ifdef HAVE_MPI
+    std::vector<double> xPos{1.0, 2.0};
+    std::vector<double> yPos{3.0, 4.0};
+    std::vector<std::vector<std::tuple<double,double,double>>> samples{{{1.0, 2.0, 3.0}}, {{4.0, 5.0, 6.0}}};
+    using FFuncType = Opm::UniformXTabulated2DFunction<double>;
+    FFuncType val1(xPos, yPos, samples, FFuncType::Vertical);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 BOOST_AUTO_TEST_CASE(SolventPvt)
 {
 #ifdef HAVE_MPI
