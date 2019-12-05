@@ -382,6 +382,12 @@ add_test_compareECLFiles(CASENAME editnnc_model2
 			  REL_TOL ${rel_tol}
 			  DIR model2)
 
+add_test_compareECLFiles(CASENAME wsegsicd
+			  FILENAME TEST_WSEGSICD
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol})
+
 add_test_compareECLFiles(CASENAME nnc
                          FILENAME NNC_AND_EDITNNC
                          SIMULATOR flow
