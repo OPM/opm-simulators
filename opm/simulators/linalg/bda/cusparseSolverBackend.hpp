@@ -94,7 +94,7 @@ public:
     // return true iff converged
     bool solve_system(BdaResult &res);
 
-    double* post_process();
+    void post_process(double *x);
 
     bool isInitialized();
 

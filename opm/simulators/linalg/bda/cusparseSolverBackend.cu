@@ -427,7 +427,8 @@ namespace Opm
 
 
 	// copy result to host memory
-	double* cusparseSolverBackend::post_process(){
+	// caller must be sure that x is a valid array
+	void cusparseSolverBackend::post_process(double *x){
 
 		double t1, t2;
 		if(verbosity > 2){
@@ -441,8 +442,6 @@ namespace Opm
 			t2 = second();
 			printf("cusparseSolver::post_process(): %f s\n", t2-t1);
 		}
-
-		return x;
 	} // end post_process()
 
 

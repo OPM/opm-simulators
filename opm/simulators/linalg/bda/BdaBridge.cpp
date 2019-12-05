@@ -203,9 +203,7 @@ template <class BridgeVector>
 void BdaBridge::get_result(BridgeVector &x){
 #if HAVE_CUDA
 	if(use_gpu){
-		double *h_x = backend->post_process();
-        // convert flat array to blockvector
-        memcpy(&(x[0]), h_x, sizeof(double) * x.N() * x[0].dim());
+		backend->post_process(&(x[0][0]));
 	}
 #endif
 }
