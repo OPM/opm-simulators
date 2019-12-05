@@ -30,6 +30,7 @@
 #include <opm/material/fluidsystems/blackoilpvt/DeadOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/GasPvtMultiplexer.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
@@ -187,6 +188,10 @@ template<class Scalar>
 std::size_t packSize(const DeadOilPvt<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm);
 
+template<class Scalar>
+std::size_t packSize(const LiveOilPvt<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm);
+
 ////// pack routines
 
 template<class T>
@@ -286,6 +291,11 @@ void pack(const ConstantCompressibilityOilPvt<Scalar>& data,
 
 template<class Scalar>
 void pack(const DeadOilPvt<Scalar>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const LiveOilPvt<Scalar>& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
@@ -390,6 +400,10 @@ void unpack(ConstantCompressibilityOilPvt<Scalar>& data, std::vector<char>& buff
 
 template<class Scalar>
 void unpack(DeadOilPvt<Scalar>& data, std::vector<char>& buffer,
+            int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(LiveOilPvt<Scalar>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm);
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,

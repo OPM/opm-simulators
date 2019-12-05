@@ -1099,6 +1099,27 @@ BOOST_AUTO_TEST_CASE(DeadOilPvt)
 }
 
 
+BOOST_AUTO_TEST_CASE(LiveOilPvt)
+{
+#ifdef HAVE_MPI
+    Opm::Tabulated1DFunction<double> func(2, std::vector<double>{1.0, 2.0},
+                                             std::vector<double>{3.0, 4.0});
+    std::vector<double> xPos{1.0, 2.0};
+    std::vector<double> yPos{3.0, 4.0};
+    using FFuncType = Opm::UniformXTabulated2DFunction<double>;
+    using Samples = std::vector<std::vector<FFuncType::SamplePoint>>;
+    Samples samples({{{1.0, 2.0, 3.0}, {3.0, 4.0, 5.0}}});
+    FFuncType func2(xPos, yPos, samples, FFuncType::Vertical);
+    Opm::LiveOilPvt<double> val1({1.0, 2.0}, {3.0, 4.0},
+                                 {func2}, {func2}, {func2},
+                                 {func}, {func}, {func}, {func}, {func}, 5.0);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;

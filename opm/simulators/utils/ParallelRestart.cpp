@@ -725,6 +725,26 @@ std::size_t packSize(const DeadOilPvt<Scalar>& data,
 template std::size_t packSize(const DeadOilPvt<double>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
+template<class Scalar>
+std::size_t packSize(const LiveOilPvt<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.gasReferenceDensity(), comm) +
+           packSize(data.oilReferenceDensity(), comm) +
+           packSize(data.inverseOilBTable(), comm) +
+           packSize(data.oilMuTable(), comm) +
+           packSize(data.inverseOilBMuTable(), comm) +
+           packSize(data.saturatedOilMuTable(), comm) +
+           packSize(data.inverseSaturatedOilBTable(), comm) +
+           packSize(data.inverseSaturatedOilBMuTable(), comm) +
+           packSize(data.saturatedGasDissolutionFactorTable(), comm) +
+           packSize(data.saturationPressure(), comm) +
+           packSize(data.vapPar2(), comm);
+}
+
+template std::size_t packSize(const LiveOilPvt<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
 ////// pack routines
 
 template<class T>
@@ -1451,6 +1471,28 @@ void pack(const DeadOilPvt<Scalar>& data,
 }
 
 template void pack(const DeadOilPvt<double>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const LiveOilPvt<Scalar>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.gasReferenceDensity(), buffer, position, comm);
+    pack(data.oilReferenceDensity(), buffer, position, comm);
+    pack(data.inverseOilBTable(), buffer, position, comm);
+    pack(data.oilMuTable(), buffer, position, comm);
+    pack(data.inverseOilBMuTable(), buffer, position, comm);
+    pack(data.saturatedOilMuTable(), buffer, position, comm);
+    pack(data.inverseSaturatedOilBTable(), buffer, position, comm);
+    pack(data.inverseSaturatedOilBMuTable(), buffer, position, comm);
+    pack(data.saturatedGasDissolutionFactorTable(), buffer, position, comm);
+    pack(data.saturationPressure(), buffer, position, comm);
+    pack(data.vapPar2(), buffer, position, comm);
+}
+
+template void pack(const LiveOilPvt<double>& data,
                    std::vector<char>& buffer, int& position,
                    Dune::MPIHelper::MPICommunicator comm);
 
@@ -2402,6 +2444,48 @@ void unpack(DeadOilPvt<Scalar>& data,
 }
 
 template void unpack(DeadOilPvt<double>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(LiveOilPvt<Scalar>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Scalar> gasReferenceDensity, oilReferenceDensity;
+    using FuncVec = std::vector<typename LiveOilPvt<Scalar>::TabulatedOneDFunction>;
+    using FuncVec2 = std::vector<typename LiveOilPvt<Scalar>::TabulatedTwoDFunction>;
+    FuncVec2 inverseOilBTable, oilMuTable, inverseOilBMuTable;
+    FuncVec saturatedOilMuTable, inverseSaturatedOilBTable,
+            inverseSaturatedOilBMuTable,
+            saturatedGasDissolutionFactorTable, saturationPressure;
+    Scalar vapPar2;
+
+    unpack(gasReferenceDensity, buffer, position, comm);
+    unpack(oilReferenceDensity, buffer, position, comm);
+    unpack(inverseOilBTable, buffer, position, comm);
+    unpack(oilMuTable, buffer, position, comm);
+    unpack(inverseOilBMuTable, buffer, position, comm);
+    unpack(saturatedOilMuTable, buffer, position, comm);
+    unpack(inverseSaturatedOilBTable, buffer, position, comm);
+    unpack(inverseSaturatedOilBMuTable, buffer, position, comm);
+    unpack(saturatedGasDissolutionFactorTable, buffer, position, comm);
+    unpack(saturationPressure, buffer, position, comm);
+    unpack(vapPar2, buffer, position, comm);
+    data = LiveOilPvt<Scalar>(gasReferenceDensity,
+                              oilReferenceDensity,
+                              inverseOilBTable,
+                              oilMuTable,
+                              inverseOilBMuTable,
+                              saturatedOilMuTable,
+                              inverseSaturatedOilBTable,
+                              inverseSaturatedOilBMuTable,
+                              saturatedGasDissolutionFactorTable,
+                              saturationPressure,
+                              vapPar2);
+}
+
+template void unpack(LiveOilPvt<double>& data,
                      std::vector<char>& buffer, int& position,
                      Dune::MPIHelper::MPICommunicator comm);
 
