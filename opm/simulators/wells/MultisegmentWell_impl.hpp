@@ -111,7 +111,6 @@ namespace Opm
             segment_depth_diffs_[seg] = segment_depth - outlet_depth;
         }
 
-
         // update the flow scaling factors for sicd segments
         calculateSICDFlowScalingFactors();
     }
@@ -1590,24 +1589,15 @@ namespace Opm
             for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 const EvalWell fraction =  mix[comp_idx] / b[comp_idx] / volrat;
                 // TODO: a little more work needs to be done to handle the negative fractions here
-                // segment_phase_fractions_[seg][comp_idx] = fraction >= 0.0 ? fraction : 0.0;
                 segment_phase_fractions_[seg][comp_idx] = fraction; // >= 0.0 ? fraction : 0.0;
                 segment_viscosities_[seg] += visc[comp_idx] * segment_phase_fractions_[seg][comp_idx];
             }
 
-
-
             EvalWell density(0.0);
-            EvalWell surface_volume_rate(0.0);
-
             for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 density += surf_dens[comp_idx] * mix_s[comp_idx];
-                surface_volume_rate += getSegmentRate(seg, comp_idx);
             }
             segment_densities_[seg] = density / volrat;
-
-            // TODO: the following can be alternative way to calculate the volume rates
-            // segment_reservoir_volume_rates_[seg] = surface_volume_rate * volrat;
 
             // calculate the mass rates
             // TODO: for now, we are not considering the upwinding for this amount
@@ -3874,8 +3864,6 @@ namespace Opm
         for (int seg = 1; seg < numberOfSegments(); ++seg) {
             const Segment& segment = segmentSet()[seg];
             if (segment.segmentType() == Segment::SegmentType::SICD) {
-                SpiralICD& sicd = *segment.spiralICD();
-
                 // getting the segment length related to this ICD
                 const int parental_segment_number = segmentSet()[seg].outletSegment();
                 const double segment_length = segmentSet().segmentLength(parental_segment_number);
@@ -3891,6 +3879,7 @@ namespace Opm
                     total_connection_length += connection_length;
                 }
 
+                SpiralICD& sicd = *segment.spiralICD();
                 sicd.updateScalingFactor(segment_length, total_connection_length);
             }
         }
@@ -3975,8 +3964,9 @@ namespace Opm
         const EvalWell temp_value1 = MathTool::pow(density / density_cali, 0.75);
         const EvalWell temp_value2 = MathTool::pow(mixture_viscosity / viscosity_cali, 0.25);
 
+        // formulation before 2016, base_strength is used
         // const double base_strength = sicd.strength() / density_cali;
-        // It looks like in 2016, they changed the formulation
+        // formulation since 2016, strength is used instead
         const double strength = sicd.strength();
 
         const double sign = reservoir_rate_icd <= 0. ? 1.0 : -1.0;

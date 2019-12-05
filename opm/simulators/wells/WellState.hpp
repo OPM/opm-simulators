@@ -283,7 +283,6 @@ namespace Opm
                 //    pressure in first perforation cell.
                 const int first_cell = well_perf_data_[w][0].cell_index;
                 const double safety_factor = well.isInjector() ? 1.01 : 0.99;
-                // const double safety_factor = well.isInjector() ? 1.05 : 0.90;
                 bhp_[w] = safety_factor*cellPressures[first_cell];
             } else {
                 // Open well, under own control:

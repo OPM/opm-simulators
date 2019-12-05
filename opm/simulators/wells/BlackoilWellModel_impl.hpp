@@ -1216,6 +1216,7 @@ namespace Opm {
 
         // Store it in the well state
         well_state_.wellPotentials() = well_potentials;
+
     }
 
 
