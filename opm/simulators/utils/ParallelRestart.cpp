@@ -697,6 +697,21 @@ std::size_t packSize(const WetGasPvt<Scalar>& data,
 template std::size_t packSize(const WetGasPvt<double>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
+template<class Scalar>
+std::size_t packSize(const ConstantCompressibilityOilPvt<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.oilReferenceDensity(), comm) +
+           packSize(data.oilReferencePressure(), comm) +
+           packSize(data.oilReferenceFormationVolumeFactor(), comm) +
+           packSize(data.oilCompressibility(), comm) +
+           packSize(data.oilViscosity(), comm) +
+           packSize(data.oilViscosibility(), comm);
+}
+
+template std::size_t packSize(const ConstantCompressibilityOilPvt<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
 ////// pack routines
 
 template<class T>
@@ -1391,6 +1406,23 @@ void pack(const WetGasPvt<Scalar>& data, std::vector<char>& buffer, int& positio
 }
 
 template void pack(const WetGasPvt<double>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const ConstantCompressibilityOilPvt<Scalar>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.oilReferenceDensity(), buffer, position, comm);
+    pack(data.oilReferencePressure(), buffer, position, comm);
+    pack(data.oilReferenceFormationVolumeFactor(), buffer, position, comm);
+    pack(data.oilCompressibility(), buffer, position, comm);
+    pack(data.oilViscosity(), buffer, position, comm);
+    pack(data.oilViscosibility(), buffer, position, comm);
+}
+
+template void pack(const ConstantCompressibilityOilPvt<double>& data,
                    std::vector<char>& buffer, int& position,
                    Dune::MPIHelper::MPICommunicator comm);
 
@@ -2294,6 +2326,33 @@ void unpack(WetGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
 }
 
 template void unpack(WetGasPvt<double>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(ConstantCompressibilityOilPvt<Scalar>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Scalar> oilReferenceDensity, oilReferencePressure,
+                        oilReferenceFormationVolumeFactor,
+                        oilCompressibility, oilViscosity, oilViscosibility;
+
+    unpack(oilReferenceDensity, buffer, position, comm);
+    unpack(oilReferencePressure, buffer, position, comm);
+    unpack(oilReferenceFormationVolumeFactor, buffer, position, comm);
+    unpack(oilCompressibility, buffer, position, comm);
+    unpack(oilViscosity, buffer, position, comm);
+    unpack(oilViscosibility, buffer, position, comm);
+    data = ConstantCompressibilityOilPvt<Scalar>(oilReferenceDensity,
+                                                 oilReferencePressure,
+                                                 oilReferenceFormationVolumeFactor,
+                                                 oilCompressibility,
+                                                 oilViscosity,
+                                                 oilViscosibility);
+}
+
+template void unpack(ConstantCompressibilityOilPvt<double>& data,
                      std::vector<char>& buffer, int& position,
                      Dune::MPIHelper::MPICommunicator comm);
 
