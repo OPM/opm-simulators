@@ -35,12 +35,6 @@
 #include "cusparse_v2.h"
 // For more information about cusparse, check https://docs.nvidia.com/cuda/cusparse/index.html
 
-// print initial, intermediate and final norms, and used iterations
-#define VERBOSE_BACKEND 0
-
-// print more detailed timers of various solve elements and backend functions
-#define PRINT_TIMERS_BACKEND 0
-
 namespace Opm
 {
 
@@ -54,7 +48,7 @@ namespace Opm
 		return (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0;
 	}
 
-	cusparseSolverBackend::cusparseSolverBackend(int maxit_, double tolerance_) : maxit(maxit_), tolerance(tolerance_), minit(0){
+	cusparseSolverBackend::cusparseSolverBackend(int verbosity_, int maxit_, double tolerance_) : verbosity(verbosity_), maxit(maxit_), tolerance(tolerance_), minit(0){
 	}
 
 	cusparseSolverBackend::~cusparseSolverBackend(){
@@ -84,10 +78,9 @@ namespace Opm
 		cublasDcopy(cublasHandle, n, d_r, 1, d_p, 1); 
 		cublasDnrm2(cublasHandle, n, d_r, 1, &norm_0);
 
-#if VERBOSE_BACKEND
-		printf("Initial norm: %.5e\n", norm_0);
-		printf("Tolerance: %.0e, nnzb: %d\n", tolerance, nnzb);
-#endif
+		if(verbosity > 1){
+			printf("Initial norm: %.5e\n", norm_0);
+		}
 
 		for(it = 0.5; it < maxit; it+=0.5){
 			rhop = rho;
@@ -153,27 +146,23 @@ namespace Opm
 			if(norm < tolerance * norm_0 && it > minit){
 				break;
 			}
-#if VERBOSE_BACKEND
-			if((int)it % 10 == 0){
+
+			if(verbosity > 1){
 				printf("it: %.1f, norm: %.5e\n", it, norm);
 			}
-#endif
 		}
 
 		t_total2 = second();
-#if PRINT_TIMERS_BACKEND
-		printf("Total solve time: %.6f s\n", t_total2-t_total1);
-#endif
+
 		res.iterations = std::min(it, (float)maxit);
 		res.reduction = norm/norm_0;
 		res.conv_rate  = static_cast<double>(pow(res.reduction,1.0/it));
-		res.elapsed = t_total2-t_total1;
+		res.elapsed = t_total2 - t_total1;
 		res.converged = (it != (maxit + 0.5));
-#if VERBOSE_BACKEND
-		printf("Iterations: %.1f\n", it);
-		printf("Final norm: %.5e\n", norm);
-		printf("GPU converged: %d\n", res.converged);
-#endif
+
+		if(verbosity > 0){
+			printf("=== converged: %d, conv_rate: %.2f, time: %f, time per iteration: %f, iterations: %.1f\n", res.converged, res.conv_rate, res.elapsed, res.elapsed/it, it);
+		}
 		return res.converged;
 	}
 
@@ -265,10 +254,10 @@ namespace Opm
 
 	void cusparseSolverBackend::copy_system_to_gpu(double *vals, int *rows, int *cols, double *b){
 
-#if PRINT_TIMERS_BACKEND
 		double t1, t2;
-		t1 = second();
-#endif
+		if(verbosity > 2){
+			t1 = second();
+		}
 
 		// information cudaHostRegister: https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html#group__CUDART__MEMORY_1ge8d5c17670f16ac4fc8fcb4181cb490c
 		// possible flags for cudaHostRegister: cudaHostRegisterDefault, cudaHostRegisterPortable, cudaHostRegisterMapped, cudaHostRegisterIoMemory
@@ -285,29 +274,29 @@ namespace Opm
 		this->cols = cols;
 		this->rows = rows;
 
-#if PRINT_TIMERS_BACKEND
-		t2 = second();
-		printf("copy_system_to_gpu(): %f s\n", t2-t1);
-#endif
+		if(verbosity > 2){
+			t2 = second();
+			printf("cusparseSolver::copy_system_to_gpu(): %f s\n", t2-t1);
+		}
 	} // end copy_system_to_gpu()
 
 
 	// don't copy rowpointers and colindices, they stay the same
 	void cusparseSolverBackend::update_system_on_gpu(double *vals, double *b){
 
-#if PRINT_TIMERS_BACKEND
 		double t1, t2;
-		t1 = second();
-#endif
+		if(verbosity > 2){
+			t1 = second();
+		}
 
 		cudaMemcpyAsync(d_bVals, vals, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
 		cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
 		cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
 
-#if PRINT_TIMERS_BACKEND
-		t2 = second();
-		printf("update_system_on_gpu(): %f s\n", t2-t1);
-#endif
+		if(verbosity > 2){
+			t2 = second();
+			printf("cusparseSolver::update_system_on_gpu(): %f s\n", t2-t1);
+		}
 	} // end update_system_on_gpu()
 
 
@@ -319,6 +308,11 @@ namespace Opm
 	void cusparseSolverBackend::analyse_matrix(){
 
 		int d_bufferSize_M, d_bufferSize_L, d_bufferSize_U, d_bufferSize;
+		double t1, t2;
+
+		if(verbosity > 2){
+			t1 = second();
+		}
 
 		cusparseCreateMatDescr(&descr_B);
 		cusparseCreateMatDescr(&descr_M);
@@ -385,14 +379,20 @@ namespace Opm
 			BLOCK_SIZE, info_U, policy, d_buffer);
 		cudaCheckLastError("Could not analyse level information");
 
+		if(verbosity > 2){
+			t2 = second();
+			printf("cusparseSolver::analyse_matrix(): %f s\n", t2-t1);
+		}
+
 	} // end analyse_matrix()
 
 	bool cusparseSolverBackend::create_preconditioner(){
 
-#if PRINT_TIMERS_BACKEND
 		double t1, t2;
-		t1 = second();
-#endif
+		if(verbosity > 2){
+			t1 = second();
+		}
+
 		d_mCols = d_bCols;
 		d_mRows = d_bRows;
 		cusparseDbsrilu02(cusparseHandle, order, \
@@ -407,11 +407,11 @@ namespace Opm
 			return false;
 		}
 
-#if PRINT_TIMERS_BACKEND
-		cudaStreamSynchronize(stream);
-		t2 = second();
-		printf("Decomp time: %.6f s\n", t2-t1);
-#endif
+		if(verbosity > 2){
+			cudaStreamSynchronize(stream);
+			t2 = second();
+			printf("cusparseSolver::create_preconditioner(): %f s\n", t2-t1);
+		}
 		return true;
 	} // end create_preconditioner()
 
@@ -429,18 +429,18 @@ namespace Opm
 	// copy result to host memory
 	double* cusparseSolverBackend::post_process(){
 
-#if PRINT_TIMERS_BACKEND
 		double t1, t2;
-		t1 = second();
-#endif
+		if(verbosity > 2){
+			t1 = second();
+		}
 
 		cudaMemcpyAsync(x, d_x, N * sizeof(double), cudaMemcpyDeviceToHost, stream);
 		cudaStreamSynchronize(stream);
 
-#if PRINT_TIMERS_BACKEND
-		t2 = second();
-		printf("Copy result back to CPU: %.6f s\n", t2-t1);
-#endif
+		if(verbosity > 2){
+			t2 = second();
+			printf("cusparseSolver::post_process(): %f s\n", t2-t1);
+		}
 
 		return x;
 	} // end post_process()

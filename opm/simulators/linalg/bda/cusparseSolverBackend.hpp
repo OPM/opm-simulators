@@ -59,9 +59,17 @@ private:
 
     bool initialized = false;
 
+    // verbosity
+    // 0: print nothing during solves, only when initializing
+    // 1: print number of iterations and final norm
+    // 2: also print norm each iteration
+    // 3: also print timings of different backend functions
+
+    int verbosity = 0;
+
 public:
 
-    cusparseSolverBackend(int maxit, double tolerance);
+    cusparseSolverBackend(int linear_solver_verbosity, int maxit, double tolerance);
 
     ~cusparseSolverBackend();
 

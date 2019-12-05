@@ -251,11 +251,12 @@ protected:
             const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
             const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
             const bool matrix_add_well_contributions = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+            const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
             if(use_gpu && !matrix_add_well_contributions){
                 std::cerr << "Error cannot use GPU solver if command line parameter --matrix-add-well-contributions is false, because the GPU solver performs a standard bicgstab" << std::endl;
                 exit(1);
             }
-            bdaBridge = new BdaBridge(use_gpu, maxit, tolerance);
+            bdaBridge = new BdaBridge(use_gpu, linear_solver_verbosity, maxit, tolerance);
 #else
             const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
             if(use_gpu){

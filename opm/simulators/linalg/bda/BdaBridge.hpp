@@ -45,7 +45,7 @@ private:
 	bool use_gpu;
 
 public:
-	BdaBridge(bool use_gpu, int maxit, double tolerance);
+	BdaBridge(bool use_gpu, int linear_solver_verbosity, int maxit, double tolerance);
 
 	~BdaBridge();
 

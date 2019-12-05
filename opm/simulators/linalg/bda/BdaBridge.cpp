@@ -30,10 +30,10 @@ typedef Dune::InverseOperatorResult InverseOperatorResult;
 namespace Opm
 {
 
-BdaBridge::BdaBridge(bool use_gpu_, int maxit, double tolerance) : use_gpu(use_gpu_){
+BdaBridge::BdaBridge(bool use_gpu_, int linear_solver_verbosity, int maxit, double tolerance) : use_gpu(use_gpu_) {
 #if HAVE_CUDA
     if(use_gpu){
-    	backend = new cusparseSolverBackend(maxit, tolerance);
+    	backend = new cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance);
     }
 #endif
 }
