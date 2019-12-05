@@ -1120,6 +1120,22 @@ BOOST_AUTO_TEST_CASE(LiveOilPvt)
 }
 
 
+BOOST_AUTO_TEST_CASE(OilPvtThermal)
+{
+#ifdef HAVE_MPI
+    Opm::Tabulated1DFunction<double> func(2, std::vector<double>{1.0, 2.0},
+                                             std::vector<double>{3.0, 4.0});
+    Opm::OilPvtThermal<double>::IsothermalPvt* pvt = new Opm::OilPvtThermal<double>::IsothermalPvt;
+    Opm::OilPvtThermal<double> val1(pvt, {func}, {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0},
+                                    {7.0, 8.0}, {9.0, 10.0}, {11.0, 12.0},
+                                    {func}, true, true, false);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;

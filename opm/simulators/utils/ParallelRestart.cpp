@@ -697,6 +697,35 @@ std::size_t packSize(const WetGasPvt<Scalar>& data,
 template std::size_t packSize(const WetGasPvt<double>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
+template<class Scalar, bool enableThermal>
+std::size_t packSize(const OilPvtMultiplexer<Scalar,enableThermal>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size = packSize(data.approach(), comm);
+    const void* realOilPvt = data.realOilPvt();
+    using PvtApproach = OilPvtMultiplexer<Scalar,enableThermal>;
+    if (data.approach() == PvtApproach::ConstantCompressibilityOilPvt) {
+        const auto& pvt = *static_cast<const ConstantCompressibilityOilPvt<Scalar>*>(realOilPvt);
+        size += packSize(pvt, comm);
+    } else if (data.approach() == PvtApproach::DeadOilPvt) {
+        const auto& pvt = *static_cast<const DeadOilPvt<Scalar>*>(realOilPvt);
+        size += packSize(pvt, comm);
+    } else if (data.approach() == PvtApproach::LiveOilPvt) {
+        const auto& pvt = *static_cast<const LiveOilPvt<Scalar>*>(realOilPvt);
+        size += packSize(pvt, comm);
+    } else if (data.approach() == PvtApproach::ThermalOilPvt) {
+        const auto& pvt = *static_cast<const OilPvtThermal<Scalar>*>(realOilPvt);
+        size += packSize(pvt, comm);
+    }
+
+    return size;
+}
+
+template std::size_t packSize(const OilPvtMultiplexer<double,true>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+template std::size_t packSize(const OilPvtMultiplexer<double,false>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
 template<class Scalar>
 std::size_t packSize(const ConstantCompressibilityOilPvt<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -743,6 +772,31 @@ std::size_t packSize(const LiveOilPvt<Scalar>& data,
 }
 
 template std::size_t packSize(const LiveOilPvt<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+std::size_t packSize(const OilPvtThermal<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size = packSize(data.oilvisctCurves(), comm) +
+                       packSize(data.viscrefPress(), comm) +
+                       packSize(data.viscrefRs(), comm) +
+                       packSize(data.viscRef(), comm) +
+                       packSize(data.oildentRefTemp(), comm) +
+                       packSize(data.oildentCT1(), comm) +
+                       packSize(data.oildentCT2(), comm) +
+                       packSize(data.internalEnergyCurves(), comm) +
+                       packSize(data.enableThermalDensity(), comm) +
+                       packSize(data.enableThermalViscosity(), comm) +
+                       packSize(data.enableInternalEnergy(), comm);
+    size += packSize(bool(), comm);
+    if (data.isoThermalPvt())
+        size += packSize(*data.isoThermalPvt(), comm);
+
+    return size;
+}
+
+template std::size_t packSize(const OilPvtThermal<double>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
 ////// pack routines
@@ -1442,6 +1496,36 @@ template void pack(const WetGasPvt<double>& data,
                    std::vector<char>& buffer, int& position,
                    Dune::MPIHelper::MPICommunicator comm);
 
+template<class Scalar, bool enableThermal>
+void pack(const OilPvtMultiplexer<Scalar,enableThermal>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.approach(), buffer, position, comm);
+    const void* realOilPvt = data.realOilPvt();
+    using PvtApproach = OilPvtMultiplexer<Scalar,enableThermal>;
+    if (data.approach() == PvtApproach::ConstantCompressibilityOilPvt) {
+        const auto& pvt = *static_cast<const ConstantCompressibilityOilPvt<Scalar>*>(realOilPvt);
+        pack(pvt, buffer, position, comm);
+    } else if (data.approach() == PvtApproach::DeadOilPvt) {
+        const auto& pvt = *static_cast<const DeadOilPvt<Scalar>*>(realOilPvt);
+        pack(pvt, buffer, position, comm);
+    } else if (data.approach() == PvtApproach::LiveOilPvt) {
+        const auto& pvt = *static_cast<const LiveOilPvt<Scalar>*>(realOilPvt);
+        pack(pvt, buffer, position, comm);
+    } else if (data.approach() == PvtApproach::ThermalOilPvt) {
+        const auto& pvt = *static_cast<const OilPvtThermal<Scalar>*>(realOilPvt);
+        pack(pvt, buffer, position, comm);
+    }
+}
+
+template void pack(const OilPvtMultiplexer<double,true>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+template void pack(const OilPvtMultiplexer<double,false>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+
 template<class Scalar>
 void pack(const ConstantCompressibilityOilPvt<Scalar>& data,
           std::vector<char>& buffer, int& position,
@@ -1493,6 +1577,31 @@ void pack(const LiveOilPvt<Scalar>& data,
 }
 
 template void pack(const LiveOilPvt<double>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const OilPvtThermal<Scalar>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.oilvisctCurves(), buffer, position, comm);
+    pack(data.viscrefPress(), buffer, position, comm);
+    pack(data.viscrefRs(), buffer, position, comm);
+    pack(data.viscRef(), buffer, position, comm);
+    pack(data.oildentRefTemp(), buffer, position, comm);
+    pack(data.oildentCT1(), buffer, position, comm);
+    pack(data.oildentCT2(), buffer, position, comm);
+    pack(data.internalEnergyCurves(), buffer, position, comm);
+    pack(data.enableThermalDensity(), buffer, position, comm);
+    pack(data.enableThermalViscosity(), buffer, position, comm);
+    pack(data.enableInternalEnergy(), buffer, position, comm);
+    pack(data.isoThermalPvt() != nullptr, buffer, position, comm);
+    if (data.isoThermalPvt())
+        pack(*data.isoThermalPvt(), buffer, position, comm);
+}
+
+template void pack(const OilPvtThermal<double>& data,
                    std::vector<char>& buffer, int& position,
                    Dune::MPIHelper::MPICommunicator comm);
 
@@ -2399,6 +2508,42 @@ template void unpack(WetGasPvt<double>& data,
                      std::vector<char>& buffer, int& position,
                      Dune::MPIHelper::MPICommunicator comm);
 
+template<class Scalar, bool enableThermal>
+void unpack(OilPvtMultiplexer<Scalar,enableThermal>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    typename OilPvtMultiplexer<Scalar,enableThermal>::OilPvtApproach approach;
+    unpack(approach, buffer, position, comm);
+    using PvtApproach = OilPvtMultiplexer<Scalar,enableThermal>;
+    void* pvt = nullptr;
+    if (approach == PvtApproach::ConstantCompressibilityOilPvt) {
+        auto* realPvt = new ConstantCompressibilityOilPvt<Scalar>;
+        unpack(*realPvt, buffer, position, comm);
+        pvt = realPvt;
+    } else if (approach == PvtApproach::DeadOilPvt) {
+        auto* realPvt = new DeadOilPvt<Scalar>;
+        unpack(*realPvt, buffer, position, comm);
+        pvt = realPvt;
+    } else if (approach == PvtApproach::LiveOilPvt) {
+        auto* realPvt = new LiveOilPvt<Scalar>;
+        unpack(*realPvt, buffer, position, comm);
+        pvt = realPvt;
+    } else if (approach == PvtApproach::ThermalOilPvt) {
+        auto* realPvt = new OilPvtThermal<Scalar>;
+        unpack(*realPvt, buffer, position, comm);
+        pvt = realPvt;
+    }
+    data = OilPvtMultiplexer<Scalar,enableThermal>(approach, pvt);
+}
+
+template void unpack(OilPvtMultiplexer<double,true>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+template void unpack(OilPvtMultiplexer<double,false>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+
 template<class Scalar>
 void unpack(ConstantCompressibilityOilPvt<Scalar>& data,
             std::vector<char>& buffer, int& position,
@@ -2486,6 +2631,47 @@ void unpack(LiveOilPvt<Scalar>& data,
 }
 
 template void unpack(LiveOilPvt<double>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(OilPvtThermal<Scalar>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<typename OilPvtThermal<Scalar>::TabulatedOneDFunction> oilvisctCurves;
+    std::vector<Scalar> oildentRefTemp, oildentCT1, oildentCT2, viscrefPress, viscrefRs, viscRef;
+    std::vector<typename OilPvtThermal<Scalar>::TabulatedOneDFunction> internalEnergyCurves;
+    bool enableThermalDensity, enableThermalViscosity, enableInternalEnergy;
+    unpack(oilvisctCurves, buffer, position, comm);
+    unpack(viscrefPress, buffer, position, comm);
+    unpack(viscrefRs, buffer, position, comm);
+    unpack(viscRef, buffer, position, comm);
+    unpack(oildentRefTemp, buffer, position, comm);
+    unpack(oildentCT1, buffer, position, comm);
+    unpack(oildentCT2, buffer, position, comm);
+    unpack(internalEnergyCurves, buffer, position, comm);
+    unpack(enableThermalDensity, buffer, position, comm);
+    unpack(enableThermalViscosity, buffer, position, comm);
+    unpack(enableInternalEnergy, buffer, position, comm);
+    bool isothermal;
+    unpack(isothermal, buffer, position, comm);
+    typename OilPvtThermal<Scalar>::IsothermalPvt* pvt = nullptr;
+    if (isothermal) {
+        pvt = new typename OilPvtThermal<Scalar>::IsothermalPvt;
+        unpack(*pvt, buffer, position, comm);
+    }
+    data = OilPvtThermal<Scalar>(pvt, oilvisctCurves,
+                                 viscrefPress, viscrefRs, viscRef,
+                                 oildentRefTemp,
+                                 oildentCT1, oildentCT2,
+                                 internalEnergyCurves,
+                                 enableThermalDensity,
+                                 enableThermalViscosity,
+                                 enableInternalEnergy);
+}
+
+template void unpack(OilPvtThermal<double>& data,
                      std::vector<char>& buffer, int& position,
                      Dune::MPIHelper::MPICommunicator comm);
 
