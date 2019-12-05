@@ -212,18 +212,6 @@ public:
 
 
 private:
-#if HAVE_ECL_INPUT
-    // this method makes sure that a grid property is not created if it is not explicitly
-    // mentioned in the deck. (saves memory.)
-    void retrieveGridPropertyData_(const std::vector<double> **data,
-                                   const Opm::EclipseState& eclState,
-                                   const std::string& properyName)
-    {
-        (*data) = 0;
-        if (eclState.get3DProperties().hasDeckDoubleGridProperty(properyName))
-            (*data) = &eclState.get3DProperties().getDoubleGridProperty(properyName).getData();
-    }
-#endif
 
     const double * satfunc(const std::unique_ptr<std::vector<double>>& data, std::size_t active_index) const {
         if (data)
