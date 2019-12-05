@@ -159,6 +159,7 @@ public:
             }
 
             Dune::EdgeWeightMethod edgeWeightsMethod = this->edgeWeightsMethod();
+            bool ownersFirst = this->ownersFirst();
 
             // convert to transmissibility for faces
             // TODO: grid_->numFaces() is not generic. use grid_->size(1) instead? (might
@@ -192,6 +193,9 @@ public:
             {
                 const auto wells = this->schedule().getWellsatEnd();
 
+                auto& eclState = static_cast<ParallelEclipseState&>(this->eclState());
+                const EclipseGrid* eclGrid = nullptr;
+
                 try
                 {
                     auto& eclState = dynamic_cast<ParallelEclipseState&>(this->eclState());
@@ -205,6 +209,7 @@ public:
                     PropsCentroidsDataHandle<Dune::CpGrid> handle(*grid_, eclState, eclGrid, this->centroids_,
                                                                   cartesianIndexMapper());
                     defunctWellNames_ = std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, faceTrans.data()));
+                    //defunctWellNames_ = std::get<1>(grid_->loadBalance(edgeWeightsMethod, ownersFirst, &wells, faceTrans.data()));
                 }
                 catch(const std::bad_cast& e)
                 {
