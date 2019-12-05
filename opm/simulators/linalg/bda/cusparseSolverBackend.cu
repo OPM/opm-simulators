@@ -1,5 +1,5 @@
 /*
-  Copyright 2019 Big Data Accelerate
+  Copyright 2019 Equinor ASA
 
   This file is part of the Open Porous Media project (OPM).
 

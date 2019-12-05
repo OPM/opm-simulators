@@ -1,7 +1,6 @@
 /*
   Copyright 2016 IRIS AS
   Copyright 2019 Equinor ASA
-  Copyright 2019 Big Data Accelerate
 
   This file is part of the Open Porous Media project (OPM).
 
