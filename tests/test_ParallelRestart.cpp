@@ -27,6 +27,7 @@
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
@@ -1030,6 +1031,27 @@ BOOST_AUTO_TEST_CASE(DryGasPvt)
     Opm::Tabulated1DFunction<double> func(2, std::vector<double>{1.0, 2.0},
                                              std::vector<double>{3.0, 4.0});
     Opm::DryGasPvt<double> val1({1.0, 2.0}, {func}, {func}, {func});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WetGasPvt)
+{
+#ifdef HAVE_MPI
+    Opm::Tabulated1DFunction<double> func(2, std::vector<double>{1.0, 2.0},
+                                             std::vector<double>{3.0, 4.0});
+    std::vector<double> xPos{1.0, 2.0};
+    std::vector<double> yPos{3.0, 4.0};
+    using FFuncType = Opm::UniformXTabulated2DFunction<double>;
+    using Samples = std::vector<std::vector<FFuncType::SamplePoint>>;
+    Samples samples({{{1.0, 2.0, 3.0}, {3.0, 4.0, 5.0}}});
+    FFuncType func2(xPos, yPos, samples, FFuncType::Vertical);
+    Opm::WetGasPvt<double> val1({1.0, 2.0}, {3.0, 4.0},
+                                {func2}, {func}, {func2},
+                                {func2}, {func}, {func}, {func}, 5.0);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

@@ -630,6 +630,25 @@ std::size_t packSize(const DryGasPvt<Scalar>& data,
 template std::size_t packSize(const DryGasPvt<double>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
+template<class Scalar>
+std::size_t packSize(const WetGasPvt<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.gasReferenceDensity(), comm) +
+           packSize(data.oilReferenceDensity(), comm) +
+           packSize(data.inverseGasB(), comm) +
+           packSize(data.inverseSaturatedGasB(), comm) +
+           packSize(data.gasMu(), comm) +
+           packSize(data.inverseGasBMu(), comm) +
+           packSize(data.inverseSaturatedGasBMu(), comm) +
+           packSize(data.saturatedOilVaporizationFactorTable(), comm) +
+           packSize(data.saturationPressure(), comm) +
+           packSize(data.vapPar1(), comm);
+}
+
+template std::size_t packSize(const WetGasPvt<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
 ////// pack routines
 
 template<class T>
@@ -1255,6 +1274,26 @@ void pack(const DryGasPvt<Scalar>& data, std::vector<char>& buffer, int& positio
 }
 
 template void pack(const DryGasPvt<double>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const WetGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.gasReferenceDensity(), buffer, position, comm);
+    pack(data.oilReferenceDensity(), buffer, position, comm);
+    pack(data.inverseGasB(), buffer, position, comm);
+    pack(data.inverseSaturatedGasB(), buffer, position, comm);
+    pack(data.gasMu(), buffer, position, comm);
+    pack(data.inverseGasBMu(), buffer, position, comm);
+    pack(data.inverseSaturatedGasBMu(), buffer, position, comm);
+    pack(data.saturatedOilVaporizationFactorTable(), buffer, position, comm);
+    pack(data.saturationPressure(), buffer, position, comm);
+    pack(data.vapPar1(), buffer, position, comm);
+}
+
+template void pack(const WetGasPvt<double>& data,
                    std::vector<char>& buffer, int& position,
                    Dune::MPIHelper::MPICommunicator comm);
 
@@ -2057,6 +2096,39 @@ void unpack(DryGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
 }
 
 template void unpack(DryGasPvt<double>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(WetGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Scalar> gasReferenceDensity, oilReferenceDensity;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedTwoDFunction> inverseGasB;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedOneDFunction> inverseSaturatedGasB;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedTwoDFunction> gasMu;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedTwoDFunction> inverseGasBMu;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedOneDFunction> inverseSaturatedGasBMu;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedOneDFunction> satOilVapFacTable;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedOneDFunction> saturationPressure;
+    Scalar vapPar1;
+    unpack(gasReferenceDensity, buffer, position, comm);
+    unpack(oilReferenceDensity, buffer, position, comm);
+    unpack(inverseGasB, buffer, position, comm);
+    unpack(inverseSaturatedGasB, buffer, position, comm);
+    unpack(gasMu, buffer, position, comm);
+    unpack(inverseGasBMu, buffer, position, comm);
+    unpack(inverseSaturatedGasBMu, buffer, position, comm);
+    unpack(satOilVapFacTable, buffer, position, comm);
+    unpack(saturationPressure, buffer, position, comm);
+    unpack(vapPar1, buffer, position, comm);
+    data = WetGasPvt<Scalar>(gasReferenceDensity, oilReferenceDensity, inverseGasB,
+                             inverseSaturatedGasB, gasMu, inverseGasBMu,
+                             inverseSaturatedGasBMu, satOilVapFacTable,
+                             saturationPressure, vapPar1);
+}
+
+template void unpack(WetGasPvt<double>& data,
                      std::vector<char>& buffer, int& position,
                      Dune::MPIHelper::MPICommunicator comm);
 
