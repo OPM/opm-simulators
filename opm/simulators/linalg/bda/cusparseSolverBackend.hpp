@@ -58,6 +58,7 @@ private:
     int BLOCK_SIZE;
 
     bool initialized = false;
+    bool analysis_done = false;
 
     // verbosity
     // 0: print nothing during solves, only when initializing
@@ -67,14 +68,8 @@ private:
 
     int verbosity = 0;
 
-public:
 
-    cusparseSolverBackend(int linear_solver_verbosity, int maxit, double tolerance);
-
-    ~cusparseSolverBackend();
-
-    // return true iff converged
-    bool gpu_pbicgstab(BdaResult& res);
+    void gpu_pbicgstab(BdaResult& res);
 
     void initialize(int N, int nnz, int dim);
 
@@ -87,16 +82,28 @@ public:
 
     void reset_prec_on_gpu();
 
-    void analyse_matrix();
+    bool analyse_matrix();
 
     bool create_preconditioner();
 
-    // return true iff converged
-    bool solve_system(BdaResult &res);
+    void solve_system(BdaResult &res);
+
+public:
+
+    enum class cusparseSolverStatus {
+      CUSPARSE_SOLVER_SUCCESS,
+      CUSPARSE_SOLVER_ANALYSIS_FAILED,
+      CUSPARSE_SOLVER_CREATE_PRECONDITIONER_FAILED,
+      CUSPARSE_SOLVER_UNKNOWN_ERROR
+    };
+
+    cusparseSolverBackend(int linear_solver_verbosity, int maxit, double tolerance);
+
+    ~cusparseSolverBackend();
+
+    cusparseSolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, BdaResult &res);
 
     void post_process(double *x);
-
-    bool isInitialized();
 
 }; // end class cusparseSolverBackend
 

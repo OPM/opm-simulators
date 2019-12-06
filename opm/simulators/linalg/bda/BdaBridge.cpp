@@ -20,6 +20,8 @@
 #include <config.h>
 #include <memory>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
@@ -91,7 +93,7 @@ int checkZeroDiagonal(BridgeMatrix& mat) {
 // if only_vals, do not convert rowPointers and colIndices
 // sparsity pattern should stay the same due to matrix-add-well-contributions
 template <class BridgeMatrix>
-void convertMatrixBsr(BridgeMatrix& mat, std::vector<double> &h_vals, std::vector<int> &h_rows, std::vector<int> &h_cols, int dim, bool only_vals) {
+void convertMatrixBsr(BridgeMatrix& mat, std::vector<double> &h_vals, std::vector<int> &h_rows, std::vector<int> &h_cols, int dim) {
 	int sum_nnzs = 0;
 	int nnz = mat.nonzeroes()*dim*dim;
 
@@ -99,7 +101,7 @@ void convertMatrixBsr(BridgeMatrix& mat, std::vector<double> &h_vals, std::vecto
 	memcpy(h_vals.data(), &(mat[0][0][0][0]), sizeof(double)*nnz);
 
 	// convert colIndices and rowPointers
-	if(only_vals == false){
+	if(h_rows.size() == 0){
 		h_rows.emplace_back(0);
 			for(typename BridgeMatrix::const_iterator r = mat.begin(); r != mat.end(); ++r){
 				int size_row = 0;
@@ -160,13 +162,11 @@ void BdaBridge::solve_system(BridgeMatrix *mat, BridgeVector &b, InverseOperator
 		checkZeroDiagonal(*mat);
 #endif
 
-		bool initialized = backend->isInitialized();
-
 #if PRINT_TIMERS_BRIDGE
 		Dune::Timer t;
 #endif
 
-		convertMatrixBsr(*mat, h_vals, h_rows, h_cols, dim, initialized);
+		convertMatrixBsr(*mat, h_vals, h_rows, h_cols, dim);
 		convertBlockVectorToArray(b, h_b);
 
 #if PRINT_TIMERS_BRIDGE
@@ -176,17 +176,23 @@ void BdaBridge::solve_system(BridgeMatrix *mat, BridgeVector &b, InverseOperator
 		/////////////////////////
 		// actually solve
 
-		if(initialized == false){
-			backend->initialize(N, nnz, dim);
-			backend->copy_system_to_gpu(h_vals.data(), h_rows.data(), h_cols.data(), h_b.data());
-			backend->analyse_matrix();
-		}else{
-			backend->update_system_on_gpu(h_vals.data(), h_b.data());
+		typedef cusparseSolverBackend::cusparseSolverStatus cusparseSolverStatus;
+
+		cusparseSolverStatus status = backend->solve_system(N, nnz, dim, h_vals.data(), h_rows.data(), h_cols.data(), h_b.data(), result);
+		switch(status){
+		case cusparseSolverStatus::CUSPARSE_SOLVER_SUCCESS:
+			//OpmLog::info("cusparseSolver converged");
+			break;
+		case cusparseSolverStatus::CUSPARSE_SOLVER_ANALYSIS_FAILED:
+			OpmLog::warning("cusparseSolver could not analyse level information of matrix, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
+			break;
+		case cusparseSolverStatus::CUSPARSE_SOLVER_CREATE_PRECONDITIONER_FAILED:
+			OpmLog::warning("cusparseSolver could not create preconditioner, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
+			break;
+		default:
+			OpmLog::warning("cusparseSolver returned unknown status code");
 		}
-		backend->reset_prec_on_gpu();
-		if(backend->create_preconditioner()){
-			backend->solve_system(result);
-		}
+
 		res.iterations = result.iterations;
 		res.reduction = result.reduction;
 		res.converged = result.converged;

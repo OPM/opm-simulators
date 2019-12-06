@@ -55,8 +55,7 @@ namespace Opm
 		finalize();
 	}
 
-	// return true iff converged
-	bool cusparseSolverBackend::gpu_pbicgstab(BdaResult& res){
+	void cusparseSolverBackend::gpu_pbicgstab(BdaResult& res){
 		double t_total1, t_total2;
 		int n = N;
 		double rho = 1.0, rhop;
@@ -163,7 +162,6 @@ namespace Opm
 		if(verbosity > 0){
 			printf("=== converged: %d, conv_rate: %.2f, time: %f, time per iteration: %f, iterations: %.1f\n", res.converged, res.conv_rate, res.elapsed, res.elapsed/it, it);
 		}
-		return res.converged;
 	}
 
 
@@ -308,7 +306,7 @@ namespace Opm
 	}
 
 
-	void cusparseSolverBackend::analyse_matrix(){
+	bool cusparseSolverBackend::analyse_matrix(){
 
 		int d_bufferSize_M, d_bufferSize_L, d_bufferSize_U, d_bufferSize;
 		double t1, t2;
@@ -367,9 +365,7 @@ namespace Opm
 		int structural_zero;
 		cusparseStatus_t status = cusparseXbsrilu02_zeroPivot(cusparseHandle, info_M, &structural_zero);
 		if(CUSPARSE_STATUS_ZERO_PIVOT == status){
-			fprintf(stderr, "ERROR block U(%d,%d) is not invertible\n", structural_zero, structural_zero);
-			fprintf(stderr, "cusparse fails when a block has a 0.0 on its diagonal, these should be replaced in BdaBridge::checkZeroDiagonal()\n");
-			exit(1);
+			return false;
 		}
 
 		// analysis of ilu apply
@@ -388,6 +384,7 @@ namespace Opm
 			printf("cusparseSolver::analyse_matrix(): %f s\n", t2-t1);
 		}
 
+		return true;
 	} // end analyse_matrix()
 
 	bool cusparseSolverBackend::create_preconditioner(){
@@ -407,8 +404,6 @@ namespace Opm
 		// cusparseXbsrilu02_zeroPivot() calls cudaDeviceSynchronize()
 		cusparseStatus_t status = cusparseXbsrilu02_zeroPivot(cusparseHandle, info_M, &structural_zero);
 		if(CUSPARSE_STATUS_ZERO_PIVOT == status){
-			fprintf(stderr, "WARNING block U(%d,%d) is not invertible\n", structural_zero, structural_zero);
-			fprintf(stderr, "cusparse fails when a block has a 0.0 on its diagonal, these should be replaced in BdaBridge::checkZeroDiagonal()\n");
 			return false;
 		}
 
@@ -421,13 +416,11 @@ namespace Opm
 	} // end create_preconditioner()
 
 
-	// return true iff converged
-	bool cusparseSolverBackend::solve_system(BdaResult &res){
+	void cusparseSolverBackend::solve_system(BdaResult &res){
 		// actually solve
-		bool converged = gpu_pbicgstab(res);
+		gpu_pbicgstab(res);
 		cudaStreamSynchronize(stream);
 		cudaCheckLastError("Something went wrong during the GPU solve");
-		return converged;
 	} // end solve_system()
 
 
@@ -454,9 +447,29 @@ namespace Opm
 	} // end post_process()
 
 
-	bool cusparseSolverBackend::isInitialized(){
-		return initialized;
-	}
+	typedef cusparseSolverBackend::cusparseSolverStatus cusparseSolverStatus;
+
+    cusparseSolverStatus cusparseSolverBackend::solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, BdaResult &res){    	
+		if(initialized == false){
+			initialize(N, nnz, dim);
+			copy_system_to_gpu(vals, rows, cols, b);
+		}else{
+			update_system_on_gpu(vals, b);
+		}
+		if(analysis_done == false){
+			if(!analyse_matrix()){
+				return cusparseSolverStatus::CUSPARSE_SOLVER_ANALYSIS_FAILED;
+			}
+		}
+		reset_prec_on_gpu();
+		if(create_preconditioner()){
+			solve_system(res);
+		}else{
+			return cusparseSolverStatus::CUSPARSE_SOLVER_CREATE_PRECONDITIONER_FAILED;
+		}
+		return cusparseSolverStatus::CUSPARSE_SOLVER_SUCCESS;
+    }
+
 
 }
 
