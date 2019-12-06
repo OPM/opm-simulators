@@ -677,6 +677,18 @@ namespace Opm {
                     }
                 }
 
+                // Due to ACTIONX the well might have been closed 'behind our back'.
+                const auto well_status = schedule().getWell(well_name, time_step).getStatus();
+                if (well_status == Well::Status::SHUT) {
+                    well_state_.shutWell(w);
+                    continue;
+                }
+
+                if (well_status == Well::Status::STOP) {
+                    well_state_.thp()[w] = 0.;
+                    wellIsStopped = true;
+                }
+
                 // Use the pvtRegionIdx from the top cell
                 const int well_cell_top = well_perf_data_[w][0].cell_index;
                 const int pvtreg = pvt_region_idx_[well_cell_top];
