@@ -168,6 +168,15 @@ namespace Opm
                                     Opm::DeferredLogger& deferred_logger
                                     ) = 0;
 
+        virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
+                                                    const std::vector<Scalar>& B_avg,
+                                                    const double dt,
+                                                    const Well::InjectionControls& inj_controls,
+                                                    const Well::ProductionControls& prod_controls,
+                                                    WellState& well_state,
+                                                    Opm::DeferredLogger& deferred_logger
+                                                    ) = 0;
+
         void updateWellTestState(const WellState& well_state,
                                  const double& simulationTime,
                                  const bool& writeMessageToOPMLog,
