@@ -21,18 +21,19 @@
 #include <memory>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
-#define PRINT_TIMERS_BRIDGE_BRIDGE 0
+#define PRINT_TIMERS_BRIDGE 0
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
 
 namespace Opm
 {
 
-BdaBridge::BdaBridge(bool use_gpu_, int linear_solver_verbosity, int maxit, double tolerance) : use_gpu(use_gpu_) {
+BdaBridge::BdaBridge(bool use_gpu_, int linear_solver_verbosity OPM_UNUSED, int maxit OPM_UNUSED, double tolerance OPM_UNUSED) : use_gpu(use_gpu_) {
 #if HAVE_CUDA
     if(use_gpu){
     	backend = new cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance);
@@ -125,7 +126,7 @@ void convertBlockVectorToArray(BridgeVector& b, std::vector<double> &h_b) {
 #endif
 
 template <class BridgeMatrix, class BridgeVector>
-void BdaBridge::solve_system(BridgeMatrix *mat, BridgeVector &b, InverseOperatorResult &res)
+void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_UNUSED, InverseOperatorResult &res OPM_UNUSED)
 {
 
 #if HAVE_CUDA
@@ -206,7 +207,7 @@ void BdaBridge::solve_system(BridgeMatrix *mat, BridgeVector &b, InverseOperator
 
 
 template <class BridgeVector>
-void BdaBridge::get_result(BridgeVector &x){
+void BdaBridge::get_result(BridgeVector &x OPM_UNUSED){
 #if HAVE_CUDA
 	if(use_gpu){
 		backend->post_process(&(x[0][0]));
