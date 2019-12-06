@@ -36,6 +36,7 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
@@ -1159,6 +1160,26 @@ BOOST_AUTO_TEST_CASE(WaterPvtThermal)
                                       {13.0, 14.0}, {15.0, 16.0}, {17.0, 18.0},
                                       {func}, {func}, true, true, false);
     auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(OilVaporizationProperties)
+{
+#ifdef HAVE_MPI
+    using VapType = Opm::OilVaporizationProperties::OilVaporization;
+    Opm::OilVaporizationProperties val1(VapType::VAPPARS,
+                                        {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0},
+                                        {false, true}, {7.0, 8.0});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+    val1 = Opm::OilVaporizationProperties(VapType::DRDT,
+                                          {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0},
+                                          {false, true}, {7.0, 8.0});
+    val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
 #endif

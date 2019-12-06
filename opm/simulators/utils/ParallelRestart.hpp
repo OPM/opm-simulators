@@ -71,6 +71,7 @@ class IOConfig;
 class JFunc;
 class NNC;
 struct NNCdata;
+class OilVaporizationProperties;
 class Phases;
 class PlymwinjTable;
 class PolyInjTable;
@@ -509,6 +510,7 @@ ADD_PACK_PROTOTYPES(IOConfig)
 ADD_PACK_PROTOTYPES(JFunc)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
+ADD_PACK_PROTOTYPES(OilVaporizationProperties)
 ADD_PACK_PROTOTYPES(Phases)
 ADD_PACK_PROTOTYPES(PlymwinjTable)
 ADD_PACK_PROTOTYPES(PolyInjTable)

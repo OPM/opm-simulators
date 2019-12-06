@@ -30,6 +30,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
@@ -864,6 +865,17 @@ std::size_t packSize(const WaterPvtThermal<Scalar>& data,
 
 template std::size_t packSize(const WaterPvtThermal<double>& data,
                               Dune::MPIHelper::MPICommunicator comm);
+
+std::size_t packSize(const OilVaporizationProperties& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getType(), comm) +
+           packSize(data.vap1(), comm) +
+           packSize(data.vap2(), comm) +
+           packSize(data.maxDRSDT(), comm) +
+           packSize(data.maxDRSDT_allCells(), comm) +
+           packSize(data.maxDRVDT(), comm);
+}
 
 ////// pack routines
 
@@ -1739,6 +1751,18 @@ void pack(const WaterPvtThermal<Scalar>& data,
 template void pack(const WaterPvtThermal<double>& data,
                    std::vector<char>& buffer, int& position,
                    Dune::MPIHelper::MPICommunicator comm);
+
+void pack(const OilVaporizationProperties& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getType(), buffer, position, comm);
+    pack(data.vap1(), buffer, position, comm);
+    pack(data.vap2(), buffer, position, comm);
+    pack(data.maxDRSDT(), buffer, position, comm);
+    pack(data.maxDRSDT_allCells(), buffer, position, comm);
+    pack(data.maxDRVDT(), buffer, position, comm);
+}
 
 /// unpack routines
 
@@ -2913,6 +2937,23 @@ void unpack(WaterPvtThermal<Scalar>& data,
 template void unpack(WaterPvtThermal<double>& data,
                      std::vector<char>& buffer, int& position,
                      Dune::MPIHelper::MPICommunicator comm);
+
+void unpack(OilVaporizationProperties& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    OilVaporizationProperties::OilVaporization type;
+    std::vector<double> vap1, vap2, maxDRSDT, maxDRVDT;
+    std::vector<bool> maxDRSDT_allCells;
+    unpack(type, buffer, position, comm);
+    unpack(vap1, buffer, position, comm);
+    unpack(vap2, buffer, position, comm);
+    unpack(maxDRSDT, buffer, position, comm);
+    unpack(maxDRSDT_allCells, buffer, position, comm);
+    unpack(maxDRVDT, buffer, position, comm);
+    data = OilVaporizationProperties(type, vap1, vap2, maxDRSDT,
+                                     maxDRSDT_allCells, maxDRVDT);
+}
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
