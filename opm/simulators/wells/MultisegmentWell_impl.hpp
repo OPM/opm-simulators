@@ -3913,6 +3913,7 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     pressureDropSpiralICD(const int seg) const
