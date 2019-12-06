@@ -1210,6 +1210,18 @@ BOOST_AUTO_TEST_CASE(MLimits)
 }
 
 
+BOOST_AUTO_TEST_CASE(MessageLimits)
+{
+#ifdef HAVE_MPI
+    std::vector<Opm::MLimits> limits{Opm::MLimits{1,2,3,4,5,6,7,8,9,10,11,12}};
+    Opm::MessageLimits val1(Opm::DynamicState<Opm::MLimits>(limits,2));
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;
