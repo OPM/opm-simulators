@@ -1289,13 +1289,15 @@ namespace Opm
                               WellState& well_state,
                               Opm::DeferredLogger& deferred_logger)
     {
-        const int max_iter = param_.max_welleq_iter_;
+        const int max_iter = param_.max_inner_iter_wells_;
         int it = 0;
-        const double dt = 1.0; //not used for the well tests
+        const double dt = ebosSimulator.timeStepSize();
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+        const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
         bool converged;
-        WellState well_state0 = well_state;
         do {
-            assembleWellEq(ebosSimulator, B_avg, dt, well_state, deferred_logger);
+            assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
 
             auto report = getWellConvergence(well_state, B_avg, deferred_logger);
 
@@ -1369,7 +1371,7 @@ namespace Opm
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + name() +  " converged");
         } else {
-            const int max_iter = param_.max_welleq_iter_;
+            const int max_iter = param_.max_inner_iter_wells_;
             deferred_logger.debug("WellTest: Well equation for well " +name() + " failed converging in "
                           + std::to_string(max_iter) + " iterations");
             well_state = well_state0;

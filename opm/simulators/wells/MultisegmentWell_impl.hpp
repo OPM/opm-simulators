@@ -262,13 +262,13 @@ namespace Opm
         const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
         const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
 
-        const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
+        const bool use_inner_iterations = param_.use_inner_iterations_wells_;
         if (use_inner_iterations) {
 
             iterateWellEquations(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
         }
 
-        assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
+        assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
     }
 
 
@@ -2383,7 +2383,7 @@ namespace Opm
                          WellState& well_state,
                          Opm::DeferredLogger& deferred_logger)
     {
-        const int max_iter_number = param_.max_inner_iter_ms_wells_;
+        const int max_iter_number = param_.max_inner_iter_wells_;
         const WellState well_state0 = well_state;
         const std::vector<Scalar> residuals0 = getWellResiduals(B_avg);
         std::vector<std::vector<Scalar> > residual_history;
@@ -2397,7 +2397,7 @@ namespace Opm
         bool relax_convergence = false;
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
 
-            assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
+            assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
 
             const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
@@ -2491,6 +2491,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
+                                   const std::vector<Scalar>& /* B_avg */,
                                    const double dt,
                                    const Well::InjectionControls& inj_controls,
                                    const Well::ProductionControls& prod_controls,
