@@ -821,14 +821,14 @@ namespace Opm {
 
             if (param_.solve_welleq_initially_) {
                 // solve the well equations as a pre-processing step
-                last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
+                //last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
 
 
                 if (initial_step_ && iterationIdx == 0) {
                     // update the explicit quantities to get the initial fluid distribution in the well correct.
+                    assembleWellEq(B_avg, dt, local_deferredLogger);
                     calculateExplicitQuantities(local_deferredLogger);
                     prepareTimeStep(local_deferredLogger);
-                    last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
                     initial_step_ = false;
                 }
                 // TODO: should we update the explicit related here again, or even prepareTimeStep().

@@ -508,17 +508,34 @@ namespace Opm
     }
 
 
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    assembleWellEq(const Simulator& ebosSimulator,
+                   const std::vector<Scalar>& B_avg,
+                   const double dt,
+                   WellState& well_state,
+                   Opm::DeferredLogger& deferred_logger)
+    {
+        const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
+        if (use_inner_iterations) {
+            const bool converged = Base::solveWellEqUntilConverged(ebosSimulator, B_avg, well_state, deferred_logger);
+        }
+        assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, well_state, deferred_logger);
+    }
+
+
 
 
 
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    assembleWellEq(const Simulator& ebosSimulator,
-                   const std::vector<Scalar>& /* B_avg */,
-                   const double dt,
-                   WellState& well_state,
-                   Opm::DeferredLogger& deferred_logger)
+    assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
+                                   const std::vector<Scalar>& /* B_avg */,
+                                   const double dt,
+                                   WellState& well_state,
+                                   Opm::DeferredLogger& deferred_logger)
     {
         // TODO: only_wells should be put back to save some computation
         // for example, the matrices B C does not need to update if only_wells

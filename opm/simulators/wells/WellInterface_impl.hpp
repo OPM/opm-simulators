@@ -1204,11 +1204,10 @@ namespace Opm
     {
         const int max_iter = param_.max_welleq_iter_;
         int it = 0;
-        const double dt = 1.0; //not used for the well tests
+        const double dt = ebosSimulator.timeStepSize();
         bool converged;
-        WellState well_state0 = well_state;
         do {
-            assembleWellEq(ebosSimulator, B_avg, dt, well_state, deferred_logger);
+            assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, well_state, deferred_logger);
 
             auto report = getWellConvergence(well_state, B_avg, deferred_logger);
 
@@ -1221,7 +1220,7 @@ namespace Opm
             solveEqAndUpdateWellState(well_state, deferred_logger);
 
             // We don't allow for switching well controls while computing well potentials and testing wells
-            // updateWellControl(ebosSimulator, well_state, deferred_logger);
+            //updateWellControl(ebosSimulator, well_state, deferred_logger);
             initPrimaryVariablesEvaluation();
         } while (it < max_iter);
 
