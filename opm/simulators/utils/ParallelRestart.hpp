@@ -65,6 +65,7 @@ class EDITNNC;
 class EndpointScaling;
 class Equil;
 class EquilRecord;
+class Events;
 class FoamConfig;
 class FoamData;
 class InitConfig;
@@ -513,6 +514,7 @@ ADD_PACK_PROTOTYPES(EDITNNC)
 ADD_PACK_PROTOTYPES(EndpointScaling)
 ADD_PACK_PROTOTYPES(Equil)
 ADD_PACK_PROTOTYPES(EquilRecord)
+ADD_PACK_PROTOTYPES(Events)
 ADD_PACK_PROTOTYPES(FoamConfig)
 ADD_PACK_PROTOTYPES(FoamData)
 ADD_PACK_PROTOTYPES(EclHysterConfig)

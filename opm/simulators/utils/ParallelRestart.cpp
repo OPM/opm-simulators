@@ -30,6 +30,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
@@ -881,6 +882,12 @@ std::size_t packSize(const OilVaporizationProperties& data,
            packSize(data.maxDRSDT(), comm) +
            packSize(data.maxDRSDT_allCells(), comm) +
            packSize(data.maxDRVDT(), comm);
+}
+
+std::size_t packSize(const Events& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.events(), comm);
 }
 
 ////// pack routines
@@ -1775,6 +1782,14 @@ void pack(const OilVaporizationProperties& data,
     pack(data.maxDRSDT(), buffer, position, comm);
     pack(data.maxDRSDT_allCells(), buffer, position, comm);
     pack(data.maxDRVDT(), buffer, position, comm);
+
+}
+
+void pack(const Events& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.events(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -2975,6 +2990,15 @@ void unpack(OilVaporizationProperties& data,
     unpack(maxDRVDT, buffer, position, comm);
     data = OilVaporizationProperties(type, vap1, vap2, maxDRSDT,
                                      maxDRSDT_allCells, maxDRVDT);
+}
+
+void unpack(Events& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    DynamicVector<uint64_t> events;
+    unpack(events, buffer, position, comm);
+    data = Events(events);
 }
 
 } // end namespace Mpi
