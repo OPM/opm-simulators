@@ -806,20 +806,17 @@ namespace Opm {
                 calculateExplicitQuantities(local_deferredLogger);
                 prepareTimeStep(local_deferredLogger);
             }
-            updateWellControls(local_deferredLogger, true);
+            updateWellControls(local_deferredLogger, /*allow for switching to group controls*/true);
 
-            // only check group controls for iterationIdx smaller then nupcol
+            // only update REIN and VREP rates if iterationIdx is smaller than nupcol
             const int reportStepIdx = ebosSimulator_.episodeIndex();
             const int nupcol = schedule().getNupcol(reportStepIdx);
             if (iterationIdx < nupcol) {
                 if( localWellsActive() ) {
                     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-                    std::vector<double> groupTargetReduction(numPhases(), 0.0);
-                    wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, well_state_, groupTargetReduction);
-                    std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
-                    wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, well_state_, groupTargetReductionInj);
                     std::vector<double> rein(numPhases(), 0.0);
-                    wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, well_state_, rein);
+                    const auto& summaryState = ebosSimulator_.vanguard().summaryState();
+                    wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_, rein);
                     double resv = 0.0;
                     wellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_, resv);
                 }
@@ -1145,15 +1142,25 @@ namespace Opm {
         // For no well active globally we simply return.
         if( !wellsActive() ) return ;
 
+        const int reportStepIdx = ebosSimulator_.episodeIndex();
+        const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
+
         // update group controls
         if (checkGroupControl) {
-            const int reportStepIdx = ebosSimulator_.episodeIndex();
-            const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
             checkGroupConstraints(fieldGroup, deferred_logger);
         }
 
         for (const auto& well : well_container_) {
             well->updateWellControl(ebosSimulator_, well_state_, deferred_logger);
+        }
+
+        // the group target reduction rates needs to be update since wells may have swicthed to/from GRUP control
+        // Currently the group targer reduction does not honor NUPCOL
+        if( localWellsActive() ) {
+            std::vector<double> groupTargetReduction(numPhases(), 0.0);
+            wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, well_state_, groupTargetReduction);
+            std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
+            wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, well_state_, groupTargetReductionInj);
         }
     }
 
@@ -1723,8 +1730,41 @@ namespace Opm {
                 //OPM_THROW(std::runtime_error, "Group " + group.name() + "FLD control for injecting groups not implemented" );
             }
 
-        } else if (group.isProductionGroup())
-        {
+            // Handle GCONSALE
+            if (schedule().gConSale(reportStepIdx).has(group.name())) {
+
+                if (controls.phase != Phase::GAS)
+                    OPM_THROW(std::runtime_error, "Group " + group.name() + " has GCONSALE control but is not a GAS group" );
+
+                const auto& gconsale = schedule().gConSale(reportStepIdx).get(group.name(), summaryState);
+
+                double sales_rate = 0.0;
+                int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
+                sales_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/false);
+                sales_rate -= wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/true);
+
+                // add import rate and substract consumption rate for group for gas
+                if (schedule().gConSump(reportStepIdx).has(group.name())) {
+                    const auto& gconsump = schedule().gConSump(reportStepIdx).get(group.name(), summaryState);
+                    if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
+                        sales_rate += gconsump.import_rate;
+                        sales_rate -= gconsump.consumption_rate;
+                    }
+                }
+                if (sales_rate > gconsale.max_sales_rate) {
+                    OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate more then the maximum permitted value. Not implemented in Flow" );
+                }
+                if (sales_rate < gconsale.min_sales_rate) {
+                    OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate less then minimum permitted value. Not implemented in Flow" );
+                }
+                if (gconsale.sales_target < 0.0) {
+                    OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate target less then zero. Not implemented in Flow" );
+                }
+            }
+
+        }
+
+        if (group.isProductionGroup()) {
             const auto controls = group.productionControls(summaryState);
 
             if (group.has_control(Group::ProductionCMode::NONE))

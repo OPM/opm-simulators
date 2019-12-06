@@ -29,38 +29,6 @@ namespace Opm {
     namespace wellGroupHelpers
     {
 
-    inline void setCmodeGroup(const Group& group, const Schedule& schedule, const SummaryState& summaryState, const int reportStepIdx, WellStateFullyImplicitBlackoil& wellState) {
-
-        for (const std::string& groupName : group.groups()) {
-            setCmodeGroup( schedule.getGroup(groupName, reportStepIdx), schedule, summaryState, reportStepIdx, wellState);
-        }
-
-        // use NONE as default control
-        if (!wellState.hasInjectionGroupControl(group.name())) {
-            wellState.setCurrentInjectionGroupControl(group.name(), Group::InjectionCMode::NONE);
-        }
-        if (!wellState.hasProductionGroupControl(group.name())) {
-            wellState.setCurrentProductionGroupControl(group.name(), Group::ProductionCMode::NONE);
-        }
-
-        if (group.isInjectionGroup() && schedule.hasWellGroupEvent(group.name(),  ScheduleEvents::GROUP_INJECTION_UPDATE, reportStepIdx)) {
-            const auto controls = group.injectionControls(summaryState);
-            wellState.setCurrentInjectionGroupControl(group.name(), controls.cmode);
-        }
-
-        if (group.isProductionGroup() && schedule.hasWellGroupEvent(group.name(),  ScheduleEvents::GROUP_PRODUCTION_UPDATE, reportStepIdx)) {
-            const auto controls = group.productionControls(summaryState);
-            wellState.setCurrentProductionGroupControl(group.name(), controls.cmode);
-        }
-    }
-
-
-    inline void accumulateGroupEfficiencyFactor(const Group& group, const Schedule& schedule, const int reportStepIdx, double& factor) {
-        factor *= group.getGroupEfficiencyFactor();
-        if (group.parent() != "FIELD")
-            accumulateGroupEfficiencyFactor(schedule.getGroup(group.parent(), reportStepIdx), schedule, reportStepIdx, factor);
-    }
-
     inline void setGroupControl(const Group& group, const Schedule& schedule, const int reportStepIdx, const bool injector, WellStateFullyImplicitBlackoil& wellState, std::ostringstream& ss) {
 
         for (const std::string& groupName : group.groups()) {
@@ -105,6 +73,44 @@ namespace Opm {
                 }
             }
         }
+    }
+
+    inline void setCmodeGroup(const Group& group, const Schedule& schedule, const SummaryState& summaryState, const int reportStepIdx, WellStateFullyImplicitBlackoil& wellState) {
+
+        for (const std::string& groupName : group.groups()) {
+            setCmodeGroup( schedule.getGroup(groupName, reportStepIdx), schedule, summaryState, reportStepIdx, wellState);
+        }
+
+        // use NONE as default control
+        if (!wellState.hasInjectionGroupControl(group.name())) {
+            wellState.setCurrentInjectionGroupControl(group.name(), Group::InjectionCMode::NONE);
+        }
+        if (!wellState.hasProductionGroupControl(group.name())) {
+            wellState.setCurrentProductionGroupControl(group.name(), Group::ProductionCMode::NONE);
+        }
+
+        if (group.isInjectionGroup() && schedule.hasWellGroupEvent(group.name(),  ScheduleEvents::GROUP_INJECTION_UPDATE, reportStepIdx)) {
+            const auto controls = group.injectionControls(summaryState);
+            wellState.setCurrentInjectionGroupControl(group.name(), controls.cmode);
+        }
+
+        if (group.isProductionGroup() && schedule.hasWellGroupEvent(group.name(),  ScheduleEvents::GROUP_PRODUCTION_UPDATE, reportStepIdx)) {
+            const auto controls = group.productionControls(summaryState);
+            wellState.setCurrentProductionGroupControl(group.name(), controls.cmode);
+        }
+
+        if (schedule.gConSale(reportStepIdx).has(group.name())) {
+            wellState.setCurrentInjectionGroupControl(group.name(), Group::InjectionCMode::SALE);
+            std::ostringstream ss;
+            setGroupControl(group, schedule, reportStepIdx, /*injector*/true, wellState, ss);
+        }
+    }
+
+
+    inline void accumulateGroupEfficiencyFactor(const Group& group, const Schedule& schedule, const int reportStepIdx, double& factor) {
+        factor *= group.getGroupEfficiencyFactor();
+        if (group.parent() != "FIELD")
+            accumulateGroupEfficiencyFactor(schedule.getGroup(group.parent(), reportStepIdx), schedule, reportStepIdx, factor);
     }
 
 
@@ -332,12 +338,12 @@ namespace Opm {
         wellState.setCurrentInjectionVREPRates(group.name(), resv);
     }
 
-    inline void updateREINForGroups(const Group& group, const Schedule& schedule, const int reportStepIdx, WellStateFullyImplicitBlackoil& wellState, std::vector<double>& rein) {
+    inline void updateREINForGroups(const Group& group, const Schedule& schedule, const int reportStepIdx, const PhaseUsage& pu, const SummaryState& st, WellStateFullyImplicitBlackoil& wellState, std::vector<double>& rein) {
         const int np = wellState.numPhases();
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
             std::vector<double> thisRein(np, 0.0);
-            updateREINForGroups(groupTmp, schedule, reportStepIdx, wellState, thisRein);
+            updateREINForGroups(groupTmp, schedule, reportStepIdx, pu, st, wellState, thisRein);
             for (int phase = 0; phase < np; ++phase) {
                 rein[phase] = thisRein[phase];
             }
@@ -345,6 +351,16 @@ namespace Opm {
         for (int phase = 0; phase < np; ++phase) {
             rein[phase] = sumWellPhaseRates(wellState.wellRates(), group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false);
         }
+
+        // add import rate and substract consumption rate for group for gas
+        if (schedule.gConSump(reportStepIdx).has(group.name())) {
+            const auto& gconsump = schedule.gConSump(reportStepIdx).get(group.name(), st);
+            if (pu.phase_used[BlackoilPhases::Vapour]) {
+                rein[pu.phase_pos[BlackoilPhases::Vapour]] += gconsump.import_rate;
+                rein[pu.phase_pos[BlackoilPhases::Vapour]] -= gconsump.consumption_rate;
+            }
+        }
+
         wellState.setCurrentInjectionREINRates(group.name(), rein);
     }
 

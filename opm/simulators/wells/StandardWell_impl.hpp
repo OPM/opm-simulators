@@ -1051,7 +1051,7 @@ namespace Opm
         }
         case Group::InjectionCMode::REIN:
         {
-            double productionRate = well_state.currentInjectionVREPRates(groupcontrols.reinj_group);
+            double productionRate = well_state.currentInjectionREINRates(groupcontrols.reinj_group)[phasePos];
             productionRate /= efficiencyFactor;
             double target = std::max(0.0, (groupcontrols.target_reinj_fraction*productionRate - groupTargetReduction));
             control_eq = getWQTotal() - fraction * target;            
@@ -1062,7 +1062,7 @@ namespace Opm
             std::vector<double> convert_coeff(number_of_phases_, 1.0);
             Base::rateConverter_.calcCoeff(/*fipreg*/ 0, Base::pvtRegionIdx_, convert_coeff);
             double coeff = convert_coeff[phasePos];
-            double voidageRate = well_state.currentInjectionVREPRates(groupcontrols.voidage_group);
+            double voidageRate = well_state.currentInjectionVREPRates(groupcontrols.voidage_group)*groupcontrols.target_void_fraction;
 
             double injReduction = 0.0;
 
@@ -1079,7 +1079,7 @@ namespace Opm
 
             voidageRate /= efficiencyFactor;
 
-            double target = std::max(0.0, ( groupcontrols.target_void_fraction*voidageRate/coeff - groupTargetReduction));
+            double target = std::max(0.0, ( voidageRate/coeff - groupTargetReduction));
             control_eq = getWQTotal() - fraction * target;
             break;
         }
@@ -1087,6 +1087,28 @@ namespace Opm
         {
             // The FLD case is handled earlier
             assert(false);
+            break;
+        }
+        case Group::InjectionCMode::SALE:
+        {
+            // only for gas injectors
+            assert (phasePos == pu.phase_pos[BlackoilPhases::Vapour]);
+
+            // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
+            double inj_rate = well_state.currentInjectionREINRates(group.name())[phasePos];
+            if (schedule.gConSump(current_step_).has(group.name())) {
+                const auto& gconsump = schedule.gConSump(current_step_).get(group.name(), summaryState);
+                if (pu.phase_used[BlackoilPhases::Vapour]) {
+                    inj_rate += gconsump.import_rate;
+                    inj_rate -= gconsump.consumption_rate;
+                }
+            }
+            const auto& gconsale = schedule.gConSale(current_step_).get(group.name(), summaryState);
+            inj_rate -= gconsale.sales_target;
+
+            inj_rate /= efficiencyFactor;
+            double target = std::max(0.0, (inj_rate - groupTargetReduction));
+            control_eq = getWQTotal() - fraction * target;
             break;
         }
         default:

@@ -2180,8 +2180,8 @@ namespace Opm
             throw("Expected WATER, OIL or GAS as type for injectors " + well.name());
         }
 
-        const std::vector<double>& groupTargetReductions = well_state.currentProductionGroupReductionRates(group.name());
-        double groupTargetReduction = groupTargetReductions[phasePos];
+        const std::vector<double>& groupInjectionReductions = well_state.currentInjectionGroupReductionRates(group.name());
+        double groupTargetReduction = groupInjectionReductions[phasePos];
         double fraction = wellGroupHelpers::wellFractionFromGuideRates(well, schedule, well_state, current_step_, Base::guide_rate_, wellTarget, /*isInjector*/true);
         wellGroupHelpers::accumulateGroupFractions(well.groupName(), group.name(), schedule, well_state, current_step_, Base::guide_rate_, groupTarget, /*isInjector*/true, fraction);
 
@@ -2209,7 +2209,7 @@ namespace Opm
         }
         case Group::InjectionCMode::REIN:
         {
-            double productionRate = well_state.currentInjectionVREPRates(groupcontrols.reinj_group);
+            double productionRate = well_state.currentInjectionREINRates(groupcontrols.reinj_group)[phasePos];
             productionRate /= efficiencyFactor;
             double target = std::max(0.0, (groupcontrols.target_reinj_fraction*productionRate - groupTargetReduction));
             control_eq = getSegmentGTotal(0) / scaling - fraction * target;
@@ -2220,16 +2220,53 @@ namespace Opm
             std::vector<double> convert_coeff(number_of_phases_, 1.0);
             Base::rateConverter_.calcCoeff(/*fipreg*/ 0, Base::pvtRegionIdx_, convert_coeff);
             double coeff = convert_coeff[phasePos];
-            double voidageRate = well_state.currentInjectionVREPRates(groupcontrols.voidage_group);
+            double voidageRate = well_state.currentInjectionVREPRates(groupcontrols.voidage_group)*groupcontrols.target_void_fraction;
+
+            double injReduction = 0.0;
+
+            if (groupcontrols.phase != Phase::WATER)
+                injReduction += groupInjectionReductions[pu.phase_pos[BlackoilPhases::Aqua]]*convert_coeff[pu.phase_pos[BlackoilPhases::Aqua]];
+
+            if (groupcontrols.phase != Phase::OIL)
+                injReduction += groupInjectionReductions[pu.phase_pos[BlackoilPhases::Liquid]]*convert_coeff[pu.phase_pos[BlackoilPhases::Liquid]];
+
+            if (groupcontrols.phase != Phase::GAS)
+                injReduction += groupInjectionReductions[pu.phase_pos[BlackoilPhases::Vapour]]*convert_coeff[pu.phase_pos[BlackoilPhases::Vapour]];
+
+            voidageRate -= injReduction;
+
             voidageRate /= efficiencyFactor;
-            double target = std::max(0.0, ( groupcontrols.target_void_fraction*voidageRate/coeff - groupTargetReduction));
-            control_eq = getSegmentGTotal(0) / scaling - fraction * target ;
+
+            double target = std::max(0.0, ( voidageRate/coeff - groupTargetReduction));
+            control_eq = getSegmentGTotal(0) / scaling  - fraction * target;
             break;
         }
         case Group::InjectionCMode::FLD:
         {
             // The FLD case is handled earlier
             assert(false);
+            break;
+        }
+        case Group::InjectionCMode::SALE:
+        {
+            // only for gas injectors
+            assert (phasePos == pu.phase_pos[BlackoilPhases::Vapour]);
+
+            // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
+            double inj_rate = well_state.currentInjectionREINRates(group.name())[phasePos];
+            if (schedule.gConSump(current_step_).has(group.name())) {
+                const auto& gconsump = schedule.gConSump(current_step_).get(group.name(), summaryState);
+                if (pu.phase_used[BlackoilPhases::Vapour]) {
+                    inj_rate += gconsump.import_rate;
+                    inj_rate -= gconsump.consumption_rate;
+                }
+            }
+            const auto& gconsale = schedule.gConSale(current_step_).get(group.name(), summaryState);
+            inj_rate -= gconsale.sales_target;
+
+            inj_rate /= efficiencyFactor;
+            double target = std::max(0.0, (inj_rate - groupTargetReduction));
+            control_eq = getSegmentGTotal(0) /scaling - fraction * target;
             break;
         }
 
