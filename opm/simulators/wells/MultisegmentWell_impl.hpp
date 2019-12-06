@@ -2041,8 +2041,8 @@ namespace Opm
             throw("Expected WATER, OIL or GAS as type for injectors " + well.name());
         }
 
-        const std::vector<double>& groupTargetReductions = well_state.currentProductionGroupReductionRates(group.name());
-        double groupTargetReduction = groupTargetReductions[phasePos];
+        const std::vector<double>& groupInjectionReductions = well_state.currentInjectionGroupReductionRates(group.name());
+        double groupTargetReduction = groupInjectionReductions[phasePos];
         double fraction = wellGroupHelpers::wellFractionFromGuideRates(well, schedule, well_state, current_step_, Base::guide_rate_, wellTarget, /*isInjector*/true);
         wellGroupHelpers::accumulateGroupFractions(well.groupName(), group.name(), schedule, well_state, current_step_, Base::guide_rate_, groupTarget, /*isInjector*/true, fraction);
 
@@ -2081,10 +2081,25 @@ namespace Opm
             std::vector<double> convert_coeff(number_of_phases_, 1.0);
             Base::rateConverter_.calcCoeff(/*fipreg*/ 0, Base::pvtRegionIdx_, convert_coeff);
             double coeff = convert_coeff[phasePos];
-            double voidageRate = well_state.currentInjectionVREPRates(groupcontrols.voidage_group);
+            double voidageRate = well_state.currentInjectionVREPRates(groupcontrols.voidage_group)*groupcontrols.target_void_fraction;
+
+            double injReduction = 0.0;
+
+            if (groupcontrols.phase != Phase::WATER)
+                injReduction += groupInjectionReductions[pu.phase_pos[BlackoilPhases::Aqua]]*convert_coeff[pu.phase_pos[BlackoilPhases::Aqua]];
+
+            if (groupcontrols.phase != Phase::OIL)
+                injReduction += groupInjectionReductions[pu.phase_pos[BlackoilPhases::Liquid]]*convert_coeff[pu.phase_pos[BlackoilPhases::Liquid]];
+
+            if (groupcontrols.phase != Phase::GAS)
+                injReduction += groupInjectionReductions[pu.phase_pos[BlackoilPhases::Vapour]]*convert_coeff[pu.phase_pos[BlackoilPhases::Vapour]];
+
+            voidageRate -= injReduction;
+
             voidageRate /= efficiencyFactor;
-            double target = std::max(0.0, ( groupcontrols.target_void_fraction*voidageRate/coeff - groupTargetReduction));
-            control_eq = getSegmentGTotal(0) / scaling - fraction * target ;
+
+            double target = std::max(0.0, ( voidageRate/coeff - groupTargetReduction));
+            control_eq = getSegmentGTotal(0) / scaling  - fraction * target;
             break;
         }
         case Group::InjectionCMode::FLD:

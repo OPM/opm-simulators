@@ -1062,7 +1062,7 @@ namespace Opm
             std::vector<double> convert_coeff(number_of_phases_, 1.0);
             Base::rateConverter_.calcCoeff(/*fipreg*/ 0, Base::pvtRegionIdx_, convert_coeff);
             double coeff = convert_coeff[phasePos];
-            double voidageRate = well_state.currentInjectionVREPRates(groupcontrols.voidage_group);
+            double voidageRate = well_state.currentInjectionVREPRates(groupcontrols.voidage_group)*groupcontrols.target_void_fraction;
 
             double injReduction = 0.0;
 
@@ -1079,7 +1079,7 @@ namespace Opm
 
             voidageRate /= efficiencyFactor;
 
-            double target = std::max(0.0, ( groupcontrols.target_void_fraction*voidageRate/coeff - groupTargetReduction));
+            double target = std::max(0.0, ( voidageRate/coeff - groupTargetReduction));
             control_eq = getWQTotal() - fraction * target;
             break;
         }
