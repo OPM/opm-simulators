@@ -342,10 +342,6 @@ namespace Opm
 		cusparseCreateBsrsv2Info(&info_U);
 		cudaCheckLastError("Could not create analysis info");
 
-		cudaMemcpyAsync(d_bRows, rows, sizeof(int)*(Nb+1), cudaMemcpyHostToDevice, stream);
-		cudaMemcpyAsync(d_bCols, cols, sizeof(int)*nnz, cudaMemcpyHostToDevice, stream);
-		cudaMemcpyAsync(d_bVals, vals, sizeof(double)*nnz, cudaMemcpyHostToDevice, stream);
-
 		cusparseDbsrilu02_bufferSize(cusparseHandle, order, Nb, nnzb,
 			descr_M, d_bVals, d_bRows, d_bCols, BLOCK_SIZE, info_M, &d_bufferSize_M);
 		cusparseDbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzb,
