@@ -518,10 +518,13 @@ namespace Opm
                    Opm::DeferredLogger& deferred_logger)
     {
         const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+        const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
         if (use_inner_iterations) {
             const bool converged = Base::solveWellEqUntilConverged(ebosSimulator, B_avg, well_state, deferred_logger);
         }
-        assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, well_state, deferred_logger);
+        assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
     }
 
 
@@ -534,6 +537,8 @@ namespace Opm
     assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                    const std::vector<Scalar>& /* B_avg */,
                                    const double dt,
+                                   const Well::InjectionControls& /*inj_controls*/,
+                                   const Well::ProductionControls& /*prod_controls*/,
                                    WellState& well_state,
                                    Opm::DeferredLogger& deferred_logger)
     {

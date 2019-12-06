@@ -257,7 +257,7 @@ namespace Opm
             iterateWellEquations(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
         }
 
-        assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, well_state, deferred_logger);
+        assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
     }
 
 
@@ -2659,7 +2659,7 @@ namespace Opm
         int stagnate_count = 0;
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
 
-            assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, deferred_logger);
+            assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
 
             const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 

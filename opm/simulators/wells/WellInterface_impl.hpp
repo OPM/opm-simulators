@@ -1205,9 +1205,12 @@ namespace Opm
         const int max_iter = param_.max_welleq_iter_;
         int it = 0;
         const double dt = ebosSimulator.timeStepSize();
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+        const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
         bool converged;
         do {
-            assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, well_state, deferred_logger);
+            assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
 
             auto report = getWellConvergence(well_state, B_avg, deferred_logger);
 
