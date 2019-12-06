@@ -842,21 +842,13 @@ namespace Opm {
             std::vector< Scalar > B_avg(numComponents(), Scalar() );
             computeAverageFormationFactor(B_avg);
 
-            if (param_.solve_welleq_initially_ && iterationIdx == 0) {
-                // solve the well equations as a pre-processing step
-                last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
-
-
-                if (initial_step_) {
-                    // update the explicit quantities to get the initial fluid distribution in the well correct.
-                    calculateExplicitQuantities(local_deferredLogger);
-                    prepareTimeStep(local_deferredLogger);
-                    last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
-                    initial_step_ = false;
-                }
-                // TODO: should we update the explicit related here again, or even prepareTimeStep().
-                // basically, this is a more updated state from the solveWellEq based on fixed
-                // reservoir state, will tihs be a better place to inialize the explict information?
+            if (param_.solve_welleq_initially_ && iterationIdx == 0  && initial_step_) {
+                // update the explicit quantities to get the initial fluid distribution in the well correct.
+                // the assembleWellEq will iterate the well solution until convergece.
+                assembleWellEq(B_avg, dt, local_deferredLogger);
+                calculateExplicitQuantities(local_deferredLogger);
+                prepareTimeStep(local_deferredLogger);
+                initial_step_ = false;
             }
 
             assembleWellEq(B_avg, dt, local_deferredLogger);
@@ -1007,86 +999,6 @@ namespace Opm {
             well->initPrimaryVariablesEvaluation();
         }
     }
-
-
-
-
-
-    template<typename TypeTag>
-    SimulatorReport
-    BlackoilWellModel<TypeTag>::
-    solveWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger)
-    {
-        WellState well_state0 = well_state_;
-
-        const int max_iter = param_.max_welleq_iter_;
-
-        int it  = 0;
-        bool converged;
-        int exception_thrown = 0;
-        do {
-            try {
-                assembleWellEq(B_avg, dt, deferred_logger);
-            } catch (std::exception& e) {
-                exception_thrown = 1;
-            }
-            // We need to check on all processes, as getWellConvergence() below communicates on all processes.
-            logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "solveWellEq() failed.", terminal_output_);
-
-            const auto report = getWellConvergence(B_avg);
-            converged = report.converged();
-
-            if (converged) {
-                break;
-            }
-
-            try {
-                if( localWellsActive() )
-                {
-                    for (auto& well : well_container_) {
-                        well->solveEqAndUpdateWellState(well_state_, deferred_logger);
-                    }
-                }
-                // updateWellControls uses communication
-                // Therefore the following is executed if there
-                // are active wells anywhere in the global domain.
-                if( wellsActive() )
-                {
-                    updateWellControls(deferred_logger, /*don't switch group controls*/false);
-                    initPrimaryVariablesEvaluation();
-                }
-            } catch (std::exception& e) {
-                exception_thrown = 1;
-            }
-
-            logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "solveWellEq() failed.", terminal_output_);
-            ++it;
-        } while (it < max_iter);
-
-        try {
-            if (converged) {
-                if (terminal_output_) {
-                    deferred_logger.debug("Well equation solution gets converged with " + std::to_string(it) + " iterations");
-                }
-            } else {
-                if (terminal_output_) {
-                    deferred_logger.debug("Well equation solution failed in getting converged with " + std::to_string(it) + " iterations");
-                }
-                well_state_ = well_state0;
-                updatePrimaryVariables(deferred_logger);
-            }
-        } catch (std::exception& e) {
-            exception_thrown = 1;
-        }
-
-        logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "solveWellEq() failed.", terminal_output_);
-
-        SimulatorReport report;
-        report.converged = converged;
-        report.total_well_iterations = it;
-        return report;
-    }
-
 
 
 
