@@ -994,8 +994,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     solveWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger)
     {
-        WellState well_state0 = well_state_;
-
         const int max_iter = param_.max_welleq_iter_;
         //Opm::DeferredLogger local_deferredLogger;
         // Get global (from all processes) convergence report.
@@ -1038,7 +1036,8 @@ namespace Opm {
 
                 try {
                     well->solveEqAndUpdateWellState(well_state_, deferred_logger);
-                    well->updateWellControl(ebosSimulator_, well_state_, deferred_logger);
+                    well->updatePrimaryVariables(well_state_, deferred_logger);
+                    //well->updateWellControl(ebosSimulator_, well_state_, deferred_logger);
                     well->initPrimaryVariablesEvaluation();
                 } catch (std::exception& e) {
                     exception_thrown = 1;
@@ -1057,7 +1056,7 @@ namespace Opm {
                     if (terminal_output_) {
                         deferred_logger.debug("Well equation solution failed in getting converged with " + std::to_string(it) + " iterations");
                     }
-                    well_state_ = well_state0;
+                    well->updateWellStateWithTarget(ebosSimulator_, well_state_, deferred_logger);
                     well->updatePrimaryVariables(well_state_, deferred_logger);
                 }
             } catch (std::exception& e) {
