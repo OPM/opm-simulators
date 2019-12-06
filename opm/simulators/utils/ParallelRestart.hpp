@@ -40,6 +40,7 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/DynamicVector.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
 
@@ -157,6 +158,9 @@ template<class Key, class Value>
 std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPICommunicator comm);
 
 template<class T>
+std::size_t packSize(const DynamicVector<T>& data, Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
 std::size_t packSize(const DynamicState<T>& data, Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
@@ -271,6 +275,10 @@ void pack(const OrderedMap<Key,Value>& data, std::vector<char>& buffer,
 
 template<class T>
 void pack(const DynamicState<T>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
+void pack(const DynamicVector<T>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
@@ -404,6 +412,10 @@ void unpack(OrderedMap<Key,Value>& data, std::vector<char>& buffer, int& positio
 
 template<class T>
 void unpack(DynamicState<T>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
+void unpack(DynamicVector<T>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
