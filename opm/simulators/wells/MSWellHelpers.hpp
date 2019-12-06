@@ -25,6 +25,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <dune/istl/solvers.hh>
 #if HAVE_UMFPACK
 #include <dune/istl/umfpack.hh>
@@ -196,6 +197,85 @@ namespace mswellhelpers
         return (0.5 * mass_rate * mass_rate / (area * area * density));
     }
 
+
+
+    // water in oil emulsion viscosity
+    // TODO: maybe it should be two different ValueTypes. When we calculate the viscosity for transitional zone
+    template <typename ValueType>
+    ValueType WIOEmulsionViscosity(const ValueType& oil_viscosity, const ValueType& water_liquid_fraction,
+                                   const double max_visco_ratio)
+    {
+        const ValueType temp_value = 1. / (1. - (0.8415 / 0.7480 * water_liquid_fraction) );
+        const ValueType viscosity_ratio = Opm::pow(temp_value, 2.5);
+
+        if (viscosity_ratio <= max_visco_ratio) {
+            return oil_viscosity * viscosity_ratio;
+        } else {
+            return oil_viscosity * max_visco_ratio;
+        }
+    }
+
+
+
+
+
+    // oil in water emulsion viscosity
+    template <typename ValueType>
+    ValueType OIWEmulsionViscosity(const ValueType& water_viscosity, const ValueType& water_liquid_fraction,
+                                   const double max_visco_ratio)
+    {
+        const ValueType temp_value = 1. / (1. - (0.6019 / 0.6410) * (1. - water_liquid_fraction) );
+        const ValueType viscosity_ratio = Opm::pow(temp_value, 2.5);
+
+        if (viscosity_ratio <= max_visco_ratio) {
+            return water_viscosity * viscosity_ratio;
+        } else {
+            return water_viscosity * max_visco_ratio;
+        }
+    }
+
+
+
+
+
+    // calculating the viscosity of oil-water emulsion at local conditons
+    template <typename ValueType>
+    ValueType emulsionViscosity(const ValueType& water_fraction, const ValueType& water_viscosity,
+                                const ValueType& oil_fraction, const ValueType& oil_viscosity,
+                                const SpiralICD& sicd)
+    {
+        const double width_transition = sicd.widthTransitionRegion();
+
+        // it is just for now, we should be able to treat it.
+        if (width_transition <= 0.) {
+            OPM_THROW(std::runtime_error, "Not handling non-positive transition width now");
+        }
+
+        const double critical_value = sicd.criticalValue();
+        const ValueType transition_start_value = critical_value - width_transition / 2.0;
+        const ValueType transition_end_value = critical_value + width_transition / 2.0;
+
+        const ValueType liquid_fraction = water_fraction + oil_fraction;
+        // if there is no liquid, we just return zero
+        if (liquid_fraction == 0.) {
+            return 0.;
+        }
+
+        const ValueType water_liquid_fraction = water_fraction / liquid_fraction;
+
+        const double max_visco_ratio = sicd.maxViscosityRatio();
+        if (water_liquid_fraction <= transition_start_value) {
+            return WIOEmulsionViscosity(oil_viscosity, water_liquid_fraction, max_visco_ratio);
+        } else if(water_liquid_fraction >= transition_end_value) {
+            return OIWEmulsionViscosity(water_viscosity, water_liquid_fraction, max_visco_ratio);
+        } else { // in the transition region
+            const ValueType viscosity_start_transition = WIOEmulsionViscosity(oil_viscosity, transition_start_value, max_visco_ratio);
+            const ValueType viscosity_end_transition = OIWEmulsionViscosity(water_viscosity, transition_end_value, max_visco_ratio);
+            const ValueType emulsion_viscosity = (viscosity_start_transition * (transition_end_value - water_liquid_fraction)
+                                               + viscosity_end_transition * (water_liquid_fraction - transition_start_value) ) / width_transition;
+            return emulsion_viscosity;
+        }
+    }
 
 } // namespace mswellhelpers
 
