@@ -907,7 +907,7 @@ equilnum(const Opm::EclipseState& eclipseState,
     if (eclipseState.fieldProps().has<double>("EQLNUM")) {
         const auto& e = eclipseState.fieldProps().get<double>("EQLNUM");
         for (std::size_t i = 0; i < e.size(); i++)
-            eqlnum[i] = e - 1;
+            eqlnum[i] = e[i] - 1;
     }
 #else
     if (eclipseState.get3DProperties().hasDeckIntGridProperty("EQLNUM")) {
@@ -950,11 +950,8 @@ public:
             swatInit_.resize(nc);
 
 #ifdef ENABLE_3DPROPS_TESTING
-            if (eclipseState.fieldProps().has<double>("SWATINIT")) {
-                const std::vector<double>& swatInitEcl = eclipseState.fieldProps().get<double>("SWATINIT");
-                for (int c = 0; c < nc; ++c)
-                    swatInit_[c] = swatInitEcl[c];
-            }
+            if (eclipseState.fieldProps().has<double>("SWATINIT"))
+                swatInit_ = eclipseState.fieldProps().get<double>("SWATINIT");
 #else
             if (eclipseState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT")) {
                 const std::vector<double>& swatInitEcl = eclipseState.get3DProperties().getDoubleGridProperty("SWATINIT").getData();
@@ -1097,11 +1094,11 @@ private:
     {
         // Get the initial temperature data
 #ifdef ENABLE_3DPROPS_TESTING
-        std::vector<double> tempiData = eclState.fieldProps().get_global<double>("TEMPI");
+        //std::vector<double> tempiData = eclState.fieldProps().get_global<double>("TEMPI");
 #else
         const std::vector<double>& tempiData = eclState.get3DProperties().getDoubleGridProperty("TEMPI").getData();
-#endif
         temperature_ = tempiData;
+#endif
     }
 
     typedef EquilReg EqReg;
@@ -1124,7 +1121,7 @@ private:
 
         //Get the PVTNUM data
 #ifdef ENABLE_3DPROPS_TESTING
-        const auto pvtnumData = eclState.fieldProps().get_global<double>("PVTNUM");
+        const auto pvtnumData = eclState.fieldProps().get_global<int>("PVTNUM");
 #else
         const std::vector<int>& pvtnumData = eclState.get3DProperties().getIntGridProperty("PVTNUM").getData();
 #endif

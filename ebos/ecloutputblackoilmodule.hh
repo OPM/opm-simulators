@@ -325,9 +325,13 @@ public:
             krnSwMdcGo_.resize(bufferSize, 0.0);
         }
 
+#ifdef ENABLE_3DPROPS_TESTING
+        if (simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT"))
+            ppcw_.resize(bufferSize, 0.0);
+#else
         if (simulator_.vanguard().eclState().get3DProperties().hasDeckDoubleGridProperty("SWATINIT"))
             ppcw_.resize(bufferSize, 0.0);
-
+#endif
         if (FluidSystem::enableDissolvedGas() && rstKeywords["RSSAT"] > 0) {
             rstKeywords["RSSAT"] = 0;
             gasDissolutionFactor_.resize(bufferSize, 0.0);
@@ -1605,11 +1609,17 @@ public:
             }
         }
 
+#ifdef ENABLE_3DPROPS_TESTING
+        if (simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT")) {
+            auto oilWaterScaledEpsInfoDrainage = simulator.problem().materialLawManager()->oilWaterScaledEpsInfoDrainagePointerReferenceHack(elemIdx);
+            oilWaterScaledEpsInfoDrainage->maxPcow =  ppcw_[elemIdx];
+        }
+#else
         if (simulator_.vanguard().eclState().get3DProperties().hasDeckDoubleGridProperty("SWATINIT")) {
             auto oilWaterScaledEpsInfoDrainage = simulator.problem().materialLawManager()->oilWaterScaledEpsInfoDrainagePointerReferenceHack(elemIdx);
             oilWaterScaledEpsInfoDrainage->maxPcow =  ppcw_[elemIdx];
         }
-
+#endif
 
     }
 
@@ -1744,7 +1754,11 @@ private:
 
     void createLocalFipnum_()
     {
+#ifdef ENABLE_3DPROPS_TESTING
+        const std::vector<int> fipnumGlobal = simulator_.vanguard().eclState().fieldProps().get_global_int("FIPNUM");
+#else
         const std::vector<int>& fipnumGlobal = simulator_.vanguard().eclState().get3DProperties().getIntGridProperty("FIPNUM").getData();
+#endif
         // Get compressed cell fipnum.
         const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);

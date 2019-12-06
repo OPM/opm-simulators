@@ -284,7 +284,6 @@ protected:
             equilCartesianIndexMapper_.reset(new CartesianIndexMapper(*equilGrid_));
 
 #ifdef ENABLE_3DPROPS_TESTING
-            grid_->switchToGlobalView();
             auto actnum = Opm::UgGridHelpers::createACTNUM(*grid_);
             auto & field_props = this->eclState().fieldProps();
             const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);

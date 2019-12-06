@@ -35,6 +35,7 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperty.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
@@ -122,14 +123,20 @@ public:
         }
 
         // internalize the data specified using the EQLNUM keyword
-        const std::vector<int>& equilRegionData =
-            eclState.get3DProperties().getIntGridProperty("EQLNUM").getData();
+#ifdef ENABLE_3DPROPS_TESTING
+        const auto& fp = eclState.fieldProps();
+        const auto& equilRegionData = fp.get_int("EQLNUM");
+#else
+        const std::vector<int>& equilRegionData = eclState.get3DProperties().getIntGridProperty("EQLNUM").getData();
+#endif
         elemEquilRegion_.resize(numElements, 0);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
+#ifdef ENABLE_3DPROPS_TESTING
+            elemEquilRegion_[elemIdx] = equilRegionData[elemIdx] - 1;
+#else
             int cartElemIdx = vanguard.cartesianIndex(elemIdx);
-
-            // ECL uses Fortran-style indices but we want C-style ones!
             elemEquilRegion_[elemIdx] = equilRegionData[cartElemIdx] - 1;
+#endif
         }
 
         /*
