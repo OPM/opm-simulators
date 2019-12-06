@@ -247,14 +247,17 @@ namespace Opm
                    WellState& well_state,
                    Opm::DeferredLogger& deferred_logger)
     {
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+        const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
 
         const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
         if (use_inner_iterations) {
 
-            iterateWellEquations(ebosSimulator, B_avg, dt, well_state, deferred_logger);
+            iterateWellEquations(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
         }
 
-        assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, deferred_logger);
+        assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
     }
 
 
@@ -656,12 +659,41 @@ namespace Opm
                           std::vector<double>& well_potentials,
                           Opm::DeferredLogger& deferred_logger)
     {
+        const int np = number_of_phases_;
+        well_potentials.resize(np, 0.0);
+
+        // Stopped wells have zero potential.
+        if (this->wellIsStopped()) {
+            return;
+        }
+
+        // If the well is pressure controlled the potential equals the rate.
+        {
+            bool pressure_controlled_well = false;
+            if (this->isInjector()) {
+                const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[index_of_well_];
+                if (current == Well::InjectorCMode::BHP || current == Well::InjectorCMode::THP) {
+                    pressure_controlled_well = true;
+                }
+            } else {
+                const Opm::Well::ProducerCMode& current = well_state.currentProductionControls()[index_of_well_];
+                if (current == Well::ProducerCMode::BHP || current == Well::ProducerCMode::THP) {
+                    pressure_controlled_well = true;
+                }
+            }
+            if (pressure_controlled_well) {
+                for (int compIdx = 0; compIdx < num_components_; ++compIdx) {
+                    const EvalWell rate = this->getSegmentRate(0, compIdx);
+                    well_potentials[ebosCompIdxToFlowCompIdx(compIdx)] = rate.value();
+                }
+                return;
+            }
+        }
+
         // creating a copy of the well itself, to avoid messing up the explicit informations
         // during this copy, the only information not copied properly is the well controls
         MultisegmentWell<TypeTag> well(*this);
-
-        const int np = number_of_phases_;
-        well_potentials.resize(np, 0.0);
+        well.debug_cost_counter_ = 0;
 
         well.updatePrimaryVariables(well_state, deferred_logger);
 
@@ -669,55 +701,142 @@ namespace Opm
         // TODO: for computeWellPotentials, no derivative is required actually
         well.initPrimaryVariablesEvaluation();
 
-        // get the bhp value based on the bhp constraints
-        const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        const double bhp = well.Base::mostStrictBhpFromBhpLimits(summaryState);
-
         // does the well have a THP related constraint?
-        if ( !well.Base::wellHasTHPConstraints(summaryState) ) {
-            assert(std::abs(bhp) != std::numeric_limits<double>::max());
-
-            computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
+        const auto& summaryState = ebosSimulator.vanguard().summaryState();
+        const Well::ProducerCMode& current_control = well_state.currentProductionControls()[this->index_of_well_];
+        if ( !well.Base::wellHasTHPConstraints(summaryState) || current_control == Well::ProducerCMode::BHP) {
+            well.computeWellRatesAtBhpLimit(ebosSimulator, B_avg, well_potentials, deferred_logger);
         } else {
-
-            const std::string msg = std::string("Well potential calculation is not supported for thp controlled multisegment wells \n")
-                    + "A well potential of zero is returned for output purposes. \n"
-                    + "If you need well potential computed from thp to set the guide rate for group controled wells \n"
-                    + "you will have to change the " + name() + " well to a standard well \n";
-
-            deferred_logger.warning("WELL_POTENTIAL_FOR_THP_NOT_IMPLEMENTED_FOR_MULTISEG_WELLS", msg);
-            return;
+            well_potentials = well.computeWellPotentialWithTHP(ebosSimulator, B_avg, deferred_logger);
         }
-
+        deferred_logger.debug("Cost in iterations of finding well potential for well "
+                              + name() + ": " + std::to_string(well.debug_cost_counter_));
     }
+
+
 
 
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
-                                     const std::vector<Scalar>& B_avg,
-                                     const double& bhp OPM_UNUSED,
-                                     std::vector<double>& well_flux,
-                                     Opm::DeferredLogger& deferred_logger)
+    computeWellRatesAtBhpLimit(const Simulator& ebosSimulator,
+                               const std::vector<Scalar>& B_avg,
+                               std::vector<double>& well_flux,
+                               Opm::DeferredLogger& deferred_logger) const
     {
+        if (well_ecl_.isInjector()) {
+            const auto controls = well_ecl_.injectionControls(ebosSimulator.vanguard().summaryState());
+            computeWellRatesWithBhp(ebosSimulator, B_avg, controls.bhp_limit, well_flux, deferred_logger);
+        } else {
+            const auto controls = well_ecl_.productionControls(ebosSimulator.vanguard().summaryState());
+            computeWellRatesWithBhp(ebosSimulator, B_avg, controls.bhp_limit, well_flux, deferred_logger);
+        }
+    }
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    computeWellRatesWithBhp(const Simulator& ebosSimulator,
+                            const std::vector<Scalar>& B_avg,
+                            const Scalar bhp,
+                            std::vector<double>& well_flux,
+                            Opm::DeferredLogger& deferred_logger) const
+    {
+        // creating a copy of the well itself, to avoid messing up the explicit informations
+        // during this copy, the only information not copied properly is the well controls
+        MultisegmentWell<TypeTag> well_copy(*this);
+        well_copy.debug_cost_counter_ = 0;
 
         // store a copy of the well state, we don't want to update the real well state
-        WellState copy = ebosSimulator.problem().wellModel().wellState();
+        WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
 
-        initPrimaryVariablesEvaluation();
+        // Get the current controls.
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        auto inj_controls = well_copy.well_ecl_.isInjector()
+            ? well_copy.well_ecl_.injectionControls(summary_state)
+            : Well::InjectionControls(0);
+        auto prod_controls = well_copy.well_ecl_.isProducer()
+            ? well_copy.well_ecl_.productionControls(summary_state) :
+            Well::ProductionControls(0);
+
+        //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
+        if (well_copy.well_ecl_.isInjector()) {
+            inj_controls.bhp_limit = bhp;
+            well_state_copy.currentInjectionControls()[index_of_well_] = Well::InjectorCMode::BHP;
+        } else {
+            prod_controls.bhp_limit = bhp;
+            well_state_copy.currentProductionControls()[index_of_well_] = Well::ProducerCMode::BHP;
+        }
+        well_state_copy.bhp()[well_copy.index_of_well_] = bhp;
+
+        well_copy.updatePrimaryVariables(well_state_copy, deferred_logger);
+        well_copy.initPrimaryVariablesEvaluation();
         const double dt = ebosSimulator.timeStepSize();
-        // iterate to get a solution that satisfies the bhp potential.
-        iterateWellEquations(ebosSimulator, B_avg, dt, copy, deferred_logger);
+        // iterate to get a solution at the given bhp.
+        well_copy.iterateWellEquations(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state_copy, deferred_logger);
 
         // compute the potential and store in the flux vector.
+        well_flux.clear();
         const int np = number_of_phases_;
         well_flux.resize(np, 0.0);
-        for(int compIdx = 0; compIdx < num_components_; ++compIdx) {
-            const EvalWell rate = getSegmentRate(0, compIdx);
-            well_flux[ebosCompIdxToFlowCompIdx(compIdx)] += rate.value();
+        for (int compIdx = 0; compIdx < num_components_; ++compIdx) {
+            const EvalWell rate = well_copy.getSegmentRate(0, compIdx);
+            well_flux[ebosCompIdxToFlowCompIdx(compIdx)] = rate.value();
+        }
+        debug_cost_counter_ += well_copy.debug_cost_counter_;
+    }
+
+
+
+    template<typename TypeTag>
+    std::vector<double>
+    MultisegmentWell<TypeTag>::
+    computeWellPotentialWithTHP(const Simulator& ebos_simulator,
+                                const std::vector<Scalar>& B_avg,
+                                Opm::DeferredLogger& deferred_logger) const
+    {
+        std::vector<double> potentials(number_of_phases_, 0.0);
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+
+        const auto& well = well_ecl_;
+        if (well.isInjector()){
+            auto bhp_at_thp_limit = computeBhpAtThpLimitInj(ebos_simulator, B_avg, summary_state, deferred_logger);
+            if (bhp_at_thp_limit) {
+                const auto& controls = well_ecl_.injectionControls(summary_state);
+                const double bhp = std::min(*bhp_at_thp_limit, controls.bhp_limit);
+                computeWellRatesWithBhp(ebos_simulator, B_avg, bhp, potentials, deferred_logger);
+                deferred_logger.debug("Converged thp based potential calculation for well "
+                                      + name() + ", at bhp = " + std::to_string(bhp));
+            } else {
+                deferred_logger.warning("FAILURE_GETTING_CONVERGED_POTENTIAL",
+                                        "Failed in getting converged thp based potential calculation for well "
+                                        + name() + ". Instead the bhp based value is used");
+                const auto& controls = well_ecl_.injectionControls(summary_state);
+                const double bhp = controls.bhp_limit;
+                computeWellRatesWithBhp(ebos_simulator, B_avg, bhp, potentials, deferred_logger);
+            }
+        } else {
+            auto bhp_at_thp_limit = computeBhpAtThpLimitProd(ebos_simulator, B_avg, summary_state, deferred_logger);
+            if (bhp_at_thp_limit) {
+                const auto& controls = well_ecl_.productionControls(summary_state);
+                const double bhp = std::max(*bhp_at_thp_limit, controls.bhp_limit);
+                computeWellRatesWithBhp(ebos_simulator, B_avg, bhp, potentials, deferred_logger);
+                deferred_logger.debug("Converged thp based potential calculation for well "
+                                      + name() + ", at bhp = " + std::to_string(bhp));
+            } else {
+                deferred_logger.warning("FAILURE_GETTING_CONVERGED_POTENTIAL",
+                                        "Failed in getting converged thp based potential calculation for well "
+                                        + name() + ". Instead the bhp based value is used");
+                const auto& controls = well_ecl_.productionControls(summary_state);
+                const double bhp = controls.bhp_limit;
+                computeWellRatesWithBhp(ebos_simulator, B_avg, bhp, potentials, deferred_logger);
+            }
         }
 
+        return potentials;
     }
 
 
@@ -1624,8 +1743,14 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    assembleControlEq(const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger)
+    assembleControlEq(const WellState& well_state,
+                      const Opm::Schedule& schedule,
+                      const SummaryState& summaryState,
+                      const Well::InjectionControls& inj_controls,
+                      const Well::ProductionControls& prod_controls,
+                      Opm::DeferredLogger& deferred_logger)
     {
+
         EvalWell control_eq(0.0);
 
         const auto& well = well_ecl_;
@@ -1636,7 +1761,7 @@ namespace Opm
             control_eq = getSegmentGTotal(0);
         } else if (this->isInjector() ) {
             const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
-            const auto controls = well.injectionControls(summaryState);
+            const auto& controls = inj_controls;
 
             Well::InjectorType injectorType = controls.injector_type;
             double scaling = 1.0;
@@ -1745,7 +1870,7 @@ namespace Opm
         else
         {
             const Well::ProducerCMode& current = well_state.currentProductionControls()[well_index];
-            const auto controls = well.productionControls(summaryState);
+            const auto& controls = prod_controls;
 
             switch (current) {
             case Well::ProducerCMode::ORAT:
@@ -2516,6 +2641,8 @@ namespace Opm
     iterateWellEquations(const Simulator& ebosSimulator,
                          const std::vector<Scalar>& B_avg,
                          const double dt,
+                         const Well::InjectionControls& inj_controls,
+                         const Well::ProductionControls& prod_controls,
                          WellState& well_state,
                          Opm::DeferredLogger& deferred_logger)
     {
@@ -2528,15 +2655,18 @@ namespace Opm
         // relaxation factor
         double relaxation_factor = 1.;
         const double min_relaxation_factor = 0.2;
-        for (; it < max_iter_number; ++it) {
+        bool converged = false;
+        int stagnate_count = 0;
+        for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
 
-            assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, deferred_logger);
+            assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
 
             const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
 
             const auto report = getWellConvergence(well_state, B_avg, deferred_logger);
             if (report.converged()) {
+                converged = true;
                 break;
             }
 
@@ -2550,7 +2680,21 @@ namespace Opm
             // TODO: maybe we should have more sophiscated strategy to recover the relaxation factor,
             // for example, to recover it to be bigger
 
+            if (!is_stagnate) {
+                stagnate_count = 0;
+            }
             if (is_oscillate || is_stagnate) {
+                // HACK!
+                if (is_stagnate && relaxation_factor == min_relaxation_factor) {
+                    // Still stagnating, terminate iterations if 5 iterations pass.
+                    ++stagnate_count;
+                    if (stagnate_count == 5) {
+                        // break;
+                    }
+                } else {
+                    stagnate_count = 0;
+                }
+
                 // a factor value to reduce the relaxation_factor
                 const double reduction_mutliplier = 0.9;
                 relaxation_factor = std::max(relaxation_factor * reduction_mutliplier, min_relaxation_factor);
@@ -2558,10 +2702,11 @@ namespace Opm
                 // debug output
                 std::ostringstream sstr;
                 if (is_stagnate) {
-                    sstr << " well " << name() << " observes stagnation within " << it << "th inner iterations\n";
+                    sstr << " well " << name() << " observes stagnation in inner iteration " << it << "\n";
+                    
                 }
                 if (is_oscillate) {
-                    sstr << " well " << name() << " osbserves oscillation within " << it <<"th inner iterations\n";
+                    sstr << " well " << name() << " observes oscillation in inner iteration " << it << "\n";
                 }
                 sstr << " relaxation_factor is " << relaxation_factor << " now\n";
                 deferred_logger.debug(sstr.str());
@@ -2571,7 +2716,7 @@ namespace Opm
         }
 
         // TODO: we should decide whether to keep the updated well_state, or recover to use the old well_state
-        if (it < max_iter_number) {
+        if (converged) {
             std::ostringstream sstr;
             sstr << " well " << name() << " manage to get converged within " << it << " inner iterations";
             deferred_logger.debug(sstr.str());
@@ -2600,6 +2745,8 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                    const double dt,
+                                   const Well::InjectionControls& inj_controls,
+                                   const Well::ProductionControls& prod_controls,
                                    WellState& well_state,
                                    Opm::DeferredLogger& deferred_logger)
     {
@@ -2735,7 +2882,7 @@ namespace Opm
             if (seg == 0) { // top segment, pressure equation is the control equation
                 const auto& summaryState = ebosSimulator.vanguard().summaryState();
                 const Opm::Schedule& schedule = ebosSimulator.vanguard().schedule();
-                assembleControlEq(well_state, schedule, summaryState, deferred_logger);
+                assembleControlEq(well_state, schedule, summaryState, inj_controls, prod_controls, deferred_logger);
             } else {
                 assemblePressureEq(seg);
             }
@@ -3239,5 +3386,430 @@ namespace Opm
             }
         }
     }
+
+
+
+
+
+
+    template<typename TypeTag>
+    boost::optional<double>
+    MultisegmentWell<TypeTag>::
+    computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
+                             const std::vector<Scalar>& B_avg,
+                             const SummaryState& summary_state,
+                             DeferredLogger& deferred_logger) const
+    {
+        // Given a VFP function returning bhp as a function of phase
+        // rates and thp:
+        //     fbhp(rates, thp),
+        // a function extracting the particular flow rate used for VFP
+        // lookups:
+        //     flo(rates)
+        // and the inflow function (assuming the reservoir is fixed):
+        //     frates(bhp)
+        // we want to solve the equation:
+        //     fbhp(frates(bhp, thplimit)) - bhp = 0
+        // for bhp.
+        //
+        // This may result in 0, 1 or 2 solutions. If two solutions,
+        // the one corresponding to the lowest bhp (and therefore
+        // highest rate) should be returned.
+
+        // Make the fbhp() function.
+        const auto& controls = well_ecl_.productionControls(summary_state);
+        const auto& table = *(vfp_properties_->getProd()->getTable(controls.vfp_table_number));
+        const double vfp_ref_depth = table.getDatumDepth();
+        const double rho = segment_densities_[0].value(); // Use the density at the top perforation.
+        const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
+        auto fbhp = [this, &controls, dp](const std::vector<double>& rates) {
+            assert(rates.size() == 3);
+            return this->vfp_properties_->getProd()
+            ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], controls.thp_limit, controls.alq_value) - dp;
+        };
+
+        // Make the flo() function.
+        auto flo_type = table.getFloType();
+        auto flo = [flo_type](const std::vector<double>& rates) {
+            return detail::getFlo(rates[Water], rates[Oil], rates[Gas], flo_type);
+        };
+
+        // Make the frates() function.
+        auto frates = [this, &ebos_simulator, &B_avg, &deferred_logger](const double bhp) {
+            // Not solving the well equations here, which means we are
+            // calculating at the current Fg/Fw values of the
+            // well. This does not matter unless the well is
+            // crossflowing, and then it is likely still a good
+            // approximation.
+            std::vector<double> rates(3);
+            computeWellRatesWithBhp(ebos_simulator, B_avg, bhp, rates, deferred_logger);
+            return rates;
+        };
+
+        // Find the bhp-point where production becomes nonzero.
+        double bhp_max = 0.0;
+        {
+            auto fflo = [&flo, &frates](double bhp) { return flo(frates(bhp)); };
+            double low = controls.bhp_limit;
+            double high = maxPerfPress(ebos_simulator) + 1.0 * unit::barsa;
+            double f_low = fflo(low);
+            double f_high = fflo(high);
+            deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + name() +
+                                  "  low = " + std::to_string(low) +
+                                  "  high = " + std::to_string(high) +
+                                  "  f(low) = " + std::to_string(f_low) +
+                                  "  f(high) = " + std::to_string(f_high));
+            int adjustments = 0;
+            const int max_adjustments = 10;
+            const double adjust_amount = 5.0 * unit::barsa;
+            while (f_low * f_high > 0.0 && adjustments < max_adjustments) {
+                // Same sign, adjust high to see if we can flip it.
+                high += adjust_amount;
+                f_high = fflo(high);
+                ++adjustments;
+            }
+            if (f_low * f_high > 0.0) {
+                if (f_low > 0.0) {
+                    // Even at the BHP limit, we are injecting.
+                    // There will be no solution here, return an
+                    // empty optional.
+                    deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+                                            "Robust bhp(thp) solve failed due to inoperability for well " + name());
+                    return boost::optional<double>();
+                } else {
+                    // Still producing, even at high bhp.
+                    assert(f_high < 0.0);
+                    bhp_max = high;
+                }
+            } else {
+                // Bisect to find a bhp point where we produce, but
+                // not a large amount ('eps' below).
+                const double eps = 0.1 * std::fabs(table.getFloAxis().front());
+                const int maxit = 50;
+                int it = 0;
+                while (std::fabs(f_low) > eps && it < maxit) {
+                    const double curr = 0.5*(low + high);
+                    const double f_curr = fflo(curr);
+                    if (f_curr * f_low > 0.0) {
+                        low = curr;
+                        f_low = f_curr;
+                    } else {
+                        high = curr;
+                        f_high = f_curr;
+                    }
+                    ++it;
+                }
+                bhp_max = low;
+            }
+            deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + name() +
+                                  "  low = " + std::to_string(low) +
+                                  "  high = " + std::to_string(high) +
+                                  "  f(low) = " + std::to_string(f_low) +
+                                  "  f(high) = " + std::to_string(f_high) +
+                                  "  bhp_max = " + std::to_string(bhp_max));
+        }
+
+        // Define the equation we want to solve.
+        auto eq = [&fbhp, &frates](double bhp) {
+            return fbhp(frates(bhp)) - bhp;
+        };
+
+        // Find appropriate brackets for the solution.
+        double low = controls.bhp_limit;
+        double high = bhp_max;
+        {
+            double eq_high = eq(high);
+            double eq_low = eq(low);
+            const double eq_bhplimit = eq_low;
+            deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + name() +
+                                  "  low = " + std::to_string(low) +
+                                  "  high = " + std::to_string(high) +
+                                  "  eq(low) = " + std::to_string(eq_low) +
+                                  "  eq(high) = " + std::to_string(eq_high));
+            if (eq_low * eq_high > 0.0) {
+                // Failed to bracket the zero.
+                // If this is due to having two solutions, bisect until bracketed.
+                double abs_low = std::fabs(eq_low);
+                double abs_high = std::fabs(eq_high);
+                int bracket_attempts = 0;
+                const int max_bracket_attempts = 20;
+                double interval = high - low;
+                const double min_interval = 1.0 * unit::barsa;
+                while (eq_low * eq_high > 0.0 && bracket_attempts < max_bracket_attempts && interval > min_interval) {
+                    if (abs_high < abs_low) {
+                        low = 0.5 * (low + high);
+                        eq_low = eq(low);
+                        abs_low = std::fabs(eq_low);
+                    } else {
+                        high = 0.5 * (low + high);
+                        eq_high = eq(high);
+                        abs_high = std::fabs(eq_high);
+                    }
+                    ++bracket_attempts;
+                }
+                if (eq_low * eq_high > 0.0) {
+                    // Still failed bracketing!
+                    const double limit = 3.0 * unit::barsa;
+                    if (std::min(abs_low, abs_high) < limit) {
+                        // Return the least bad solution if less off than 3 bar.
+                        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
+                                                "Robust bhp(thp) not solved precisely for well " + name());
+                        return abs_low < abs_high ? low : high;
+                    } else {
+                        // Return failure.
+                        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
+                                                "Robust bhp(thp) solve failed due to bracketing failure for well " + name());
+                        return boost::optional<double>();
+                    }
+                }
+            }
+            // We have a bracket!
+            // Now, see if (bhplimit, low) is a bracket in addition to (low, high).
+            // If so, that is the bracket we shall use, choosing the solution with the
+            // highest flow.
+            if (eq_low * eq_bhplimit <= 0.0) {
+                high = low;
+                low = controls.bhp_limit;
+            }
+        }
+
+        // Solve for the proper solution in the given interval.
+        const int max_iteration = 100;
+        const double bhp_tolerance = 0.01 * unit::barsa;
+        int iteration = 0;
+        try {
+            const double solved_bhp = RegulaFalsiBisection<ThrowOnError>::
+                solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
+            return solved_bhp;
+        }
+        catch (...) {
+            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
+                                    "Robust bhp(thp) solve failed for well " + name());
+            return boost::optional<double>();
+        }
+    }
+
+
+
+    template<typename TypeTag>
+    boost::optional<double>
+    MultisegmentWell<TypeTag>::
+    computeBhpAtThpLimitInj(const Simulator& ebos_simulator,
+                            const std::vector<Scalar>& B_avg,
+                            const SummaryState& summary_state,
+                            DeferredLogger& deferred_logger) const
+    {
+        // Given a VFP function returning bhp as a function of phase
+        // rates and thp:
+        //     fbhp(rates, thp),
+        // a function extracting the particular flow rate used for VFP
+        // lookups:
+        //     flo(rates)
+        // and the inflow function (assuming the reservoir is fixed):
+        //     frates(bhp)
+        // we want to solve the equation:
+        //     fbhp(frates(bhp, thplimit)) - bhp = 0
+        // for bhp.
+        //
+        // This may result in 0, 1 or 2 solutions. If two solutions,
+        // the one corresponding to the lowest bhp (and therefore
+        // highest rate) is returned.
+        //
+        // In order to detect these situations, we will find piecewise
+        // linear approximations both to the inverse of the frates
+        // function and to the fbhp function.
+        //
+        // We first take the FLO sample points of the VFP curve, and
+        // find the corresponding bhp values by solving the equation:
+        //     flo(frates(bhp)) - flo_sample = 0
+        // for bhp, for each flo_sample. The resulting (flo_sample,
+        // bhp_sample) values give a piecewise linear approximation to
+        // the true inverse inflow function, at the same flo values as
+        // the VFP data.
+        //
+        // Then we extract a piecewise linear approximation from the
+        // multilinear fbhp() by evaluating it at the flo_sample
+        // points, with fractions given by the frates(bhp_sample)
+        // values.
+        //
+        // When we have both piecewise linear curves defined on the
+        // same flo_sample points, it is easy to distinguish between
+        // the 0, 1 or 2 solution cases, and obtain the right interval
+        // in which to solve for the solution we want (with highest
+        // flow in case of 2 solutions).
+
+        // Make the fbhp() function.
+        const auto& controls = well_ecl_.injectionControls(summary_state);
+        const auto& table = *(vfp_properties_->getInj()->getTable(controls.vfp_table_number));
+        const double vfp_ref_depth = table.getDatumDepth();
+        const double rho = segment_densities_[0].value(); // Use the density at the top perforation.
+        const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
+        auto fbhp = [this, &controls, dp](const std::vector<double>& rates) {
+            assert(rates.size() == 3);
+            return this->vfp_properties_->getInj()
+                    ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], controls.thp_limit) - dp;
+        };
+
+        // Make the flo() function.
+        auto flo_type = table.getFloType();
+        auto flo = [flo_type](const std::vector<double>& rates) {
+            return detail::getFlo(rates[Water], rates[Oil], rates[Gas], flo_type);
+        };
+
+        // Make the frates() function.
+        auto frates = [this, &ebos_simulator, &B_avg, &deferred_logger](const double bhp) {
+            // Not solving the well equations here, which means we are
+            // calculating at the current Fg/Fw values of the
+            // well. This does not matter unless the well is
+            // crossflowing, and then it is likely still a good
+            // approximation.
+            std::vector<double> rates(3);
+            computeWellRatesWithBhp(ebos_simulator, B_avg, bhp, rates, deferred_logger);
+            return rates;
+        };
+
+        // Get the flo samples, add extra samples at low rates and bhp
+        // limit point if necessary.
+        std::vector<double> flo_samples = table.getFloAxis();
+        if (flo_samples[0] > 0.0) {
+            const double f0 = flo_samples[0];
+            flo_samples.insert(flo_samples.begin(), { f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
+        }
+        const double flo_bhp_limit = flo(frates(controls.bhp_limit));
+        if (flo_samples.back() < flo_bhp_limit) {
+            flo_samples.push_back(flo_bhp_limit);
+        }
+
+        // Find bhp values for inflow relation corresponding to flo samples.
+        std::vector<double> bhp_samples;
+        for (double flo_sample : flo_samples) {
+            if (flo_sample > flo_bhp_limit) {
+                // We would have to go over the bhp limit to obtain a
+                // flow of this magnitude. We associate all such flows
+                // with simply the bhp limit. The first one
+                // encountered is considered valid, the rest not. They
+                // are therefore skipped.
+                bhp_samples.push_back(controls.bhp_limit);
+                break;
+            }
+            auto eq = [&flo, &frates, flo_sample](double bhp) {
+                return flo(frates(bhp)) - flo_sample;
+            };
+            // TODO: replace hardcoded low/high limits.
+            const double low = 10.0 * unit::barsa;
+            const double high = 800.0 * unit::barsa;
+            const int max_iteration = 100;
+            const double flo_tolerance = 0.05 * std::fabs(flo_samples.back());
+            int iteration = 0;
+            try {
+                const double solved_bhp = RegulaFalsiBisection<WarnAndContinueOnError>::
+                        solve(eq, low, high, max_iteration, flo_tolerance, iteration);
+                bhp_samples.push_back(solved_bhp);
+            }
+            catch (...) {
+                // Use previous value (or max value if at start) if we failed.
+                bhp_samples.push_back(bhp_samples.empty() ? low : bhp_samples.back());
+                deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_EXTRACT_SAMPLES",
+                                        "Robust bhp(thp) solve failed extracting bhp values at flo samples for well " + name());
+            }
+        }
+
+        // Find bhp values for VFP relation corresponding to flo samples.
+        const int num_samples = bhp_samples.size(); // Note that this can be smaller than flo_samples.size()
+        std::vector<double> fbhp_samples(num_samples);
+        for (int ii = 0; ii < num_samples; ++ii) {
+            fbhp_samples[ii] = fbhp(frates(bhp_samples[ii]));
+        }
+// #define EXTRA_THP_DEBUGGING
+#ifdef EXTRA_THP_DEBUGGING
+        std::string dbgmsg;
+        dbgmsg += "flo: ";
+        for (int ii = 0; ii < num_samples; ++ii) {
+            dbgmsg += "  " + std::to_string(flo_samples[ii]);
+        }
+        dbgmsg += "\nbhp: ";
+        for (int ii = 0; ii < num_samples; ++ii) {
+            dbgmsg += "  " + std::to_string(bhp_samples[ii]);
+        }
+        dbgmsg += "\nfbhp: ";
+        for (int ii = 0; ii < num_samples; ++ii) {
+            dbgmsg += "  " + std::to_string(fbhp_samples[ii]);
+        }
+        OpmLog::debug(dbgmsg);
+#endif // EXTRA_THP_DEBUGGING
+
+        // Look for sign changes for the (fbhp_samples - bhp_samples) piecewise linear curve.
+        // We only look at the valid
+        int sign_change_index = -1;
+        for (int ii = 0; ii < num_samples - 1; ++ii) {
+            const double curr = fbhp_samples[ii] - bhp_samples[ii];
+            const double next = fbhp_samples[ii + 1] - bhp_samples[ii + 1];
+            if (curr * next < 0.0) {
+                // Sign change in the [ii, ii + 1] interval.
+                sign_change_index = ii; // May overwrite, thereby choosing the highest-flo solution.
+            }
+        }
+
+        // Handle the no solution case.
+        if (sign_change_index == -1) {
+            return boost::optional<double>();
+        }
+
+        // Solve for the proper solution in the given interval.
+        auto eq = [&fbhp, &frates](double bhp) {
+            return fbhp(frates(bhp)) - bhp;
+        };
+        // TODO: replace hardcoded low/high limits.
+        const double low = bhp_samples[sign_change_index + 1];
+        const double high = bhp_samples[sign_change_index];
+        const int max_iteration = 100;
+        const double bhp_tolerance = 0.01 * unit::barsa;
+        int iteration = 0;
+        if (low == high) {
+            // We are in the high flow regime where the bhp_samples
+            // are all equal to the bhp_limit.
+            assert(low == controls.bhp_limit);
+            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
+                                    "Robust bhp(thp) solve failed for well " + name());
+            return boost::optional<double>();
+        }
+        try {
+            const double solved_bhp = RegulaFalsiBisection<WarnAndContinueOnError>::
+                    solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
+#ifdef EXTRA_THP_DEBUGGING
+            OpmLog::debug("*****    " + name() + "    solved_bhp = " + std::to_string(solved_bhp)
+                          + "    flo_bhp_limit = " + std::to_string(flo_bhp_limit));
+#endif // EXTRA_THP_DEBUGGING
+            return solved_bhp;
+        }
+        catch (...) {
+            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
+                                    "Robust bhp(thp) solve failed for well " + name());
+            return boost::optional<double>();
+        }
+
+    }
+
+
+
+    template<typename TypeTag>
+    double
+    MultisegmentWell<TypeTag>::
+    maxPerfPress(const Simulator& ebos_simulator) const
+    {
+        double max_pressure = 0.0;
+        const int nseg = numberOfSegments();
+        for (int seg = 0; seg < nseg; ++seg) {
+            for (const int perf : segment_perforations_[seg]) {
+                const int cell_idx = well_cells_[perf];
+                const auto& int_quants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+                const auto& fs = int_quants.fluidState();
+                double pressure_cell = fs.pressure(FluidSystem::oilPhaseIdx).value();
+                max_pressure = std::max(max_pressure, pressure_cell);
+            }
+        }
+        return max_pressure;
+    }
+
 
 }

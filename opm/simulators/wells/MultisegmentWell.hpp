@@ -271,6 +271,8 @@ namespace Opm
         // the upwinding segment for each segment based on the flow direction
         std::vector<int> upwinding_segments_;
 
+        mutable int debug_cost_counter_ = 0;
+
         void initMatrixAndVectors(const int num_cells) const;
 
         // protected functions
@@ -348,13 +350,29 @@ namespace Opm
                          const int perf,
                          std::vector<EvalWell>& mob) const;
 
-        void computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
-                                              const std::vector<Scalar>& B_avg,
-                                              const double& bhp,
-                                              std::vector<double>& well_flux,
-                                              Opm::DeferredLogger& deferred_logger);
+        void computeWellRatesAtBhpLimit(const Simulator& ebosSimulator,
+                                        const std::vector<Scalar>& B_avg,
+                                        std::vector<double>& well_flux,
+                                        Opm::DeferredLogger& deferred_logger) const;
 
-        void assembleControlEq(const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger);
+        void computeWellRatesWithBhp(const Simulator& ebosSimulator,
+                                     const std::vector<Scalar>& B_avg,
+                                     const Scalar bhp,
+                                     std::vector<double>& well_flux,
+                                     Opm::DeferredLogger& deferred_logger) const;
+
+        std::vector<double>
+        computeWellPotentialWithTHP(const Simulator& ebos_simulator,
+                                    const std::vector<Scalar>& B_avg,
+                                    Opm::DeferredLogger& deferred_logger) const;
+
+        void assembleControlEq(const WellState& well_state,
+                               const Opm::Schedule& schedule,
+                               const SummaryState& summaryState,
+                               const Well::InjectionControls& inj_controls,
+                               const Well::ProductionControls& prod_controls,
+                               Opm::DeferredLogger& deferred_logger);
+
         void assembleGroupProductionControl(const Group& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
         void assembleGroupInjectionControl(const Group& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState,  const Well::InjectorType& injectorType, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
 
@@ -387,11 +405,15 @@ namespace Opm
         void iterateWellEquations(const Simulator& ebosSimulator,
                                   const std::vector<Scalar>& B_avg,
                                   const double dt,
+                                  const Well::InjectionControls& inj_controls,
+                                  const Well::ProductionControls& prod_controls,
                                   WellState& well_state,
                                   Opm::DeferredLogger& deferred_logger);
 
         void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                             const double dt,
+                                            const Well::InjectionControls& inj_controls,
+                                            const Well::ProductionControls& prod_controls,
                                             WellState& well_state,
                                             Opm::DeferredLogger& deferred_logger);
 
@@ -431,6 +453,17 @@ namespace Opm
         // be able to produce/inject .
         bool allDrawDownWrongDirection(const Simulator& ebos_simulator) const;
 
+        boost::optional<double> computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
+                                                         const std::vector<Scalar>& B_avg,
+                                                         const SummaryState& summary_state,
+                                                         DeferredLogger& deferred_logger) const;
+
+        boost::optional<double> computeBhpAtThpLimitInj(const Simulator& ebos_simulator,
+                                                        const std::vector<Scalar>& B_avg,
+                                                        const SummaryState& summary_state,
+                                                        DeferredLogger& deferred_logger) const;
+
+        double maxPerfPress(const Simulator& ebos_simulator) const;
     };
 
 }

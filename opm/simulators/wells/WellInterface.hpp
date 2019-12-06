@@ -283,7 +283,7 @@ namespace Opm
         // to indicate a invalid completion
         static const int INVALIDCOMPLETION = INT_MAX;
 
-        const Well well_ecl_;
+        Well well_ecl_;
 
         const int current_step_;
 
