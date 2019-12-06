@@ -71,6 +71,7 @@ class FoamData;
 class InitConfig;
 class IOConfig;
 class JFunc;
+class MLimits;
 class NNC;
 struct NNCdata;
 class OilVaporizationProperties;
@@ -522,6 +523,7 @@ ADD_PACK_PROTOTYPES(Eqldims)
 ADD_PACK_PROTOTYPES(InitConfig)
 ADD_PACK_PROTOTYPES(IOConfig)
 ADD_PACK_PROTOTYPES(JFunc)
+ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)

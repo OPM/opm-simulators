@@ -31,6 +31,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
@@ -251,6 +252,7 @@ HANDLE_AS_POD(Eqldims)
 HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
 HANDLE_AS_POD(JFunc)
+HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PVTWRecord)
 HANDLE_AS_POD(PVCDORecord)
 HANDLE_AS_POD(Regdims)
