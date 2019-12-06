@@ -966,7 +966,7 @@ public:
         }
 #endif // NDEBUG
 
-        const auto& simulator = this->simulator();
+        auto& simulator = this->simulator();
         wellModel_.endTimeStep();
         if (enableAquifers_)
             aquiferModel_.endTimeStep();
@@ -987,6 +987,13 @@ public:
 
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
         eclWriter_->evalSummaryState(isSubStep);
+
+        auto& schedule = simulator.vanguard().schedule();
+        int episodeIdx = simulator.episodeIndex();
+        this->applyActions(episodeIdx,
+                           simulator.time() + simulator.timeStepSize(),
+                           schedule,
+                           simulator.vanguard().summaryState());
     }
 
     /*!
@@ -999,10 +1006,6 @@ public:
         const auto& timeMap = schedule.getTimeMap();
 
         int episodeIdx = simulator.episodeIndex();
-        this->applyActions(episodeIdx + 1,
-                           simulator.time() + simulator.timeStepSize(),
-                           schedule,
-                           simulator.vanguard().summaryState());
 
         // check if we're finished ...
         if (episodeIdx + 1 >= static_cast<int>(timeMap.numTimesteps())) {
