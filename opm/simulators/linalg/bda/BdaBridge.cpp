@@ -19,6 +19,7 @@
 
 #include <config.h>
 #include <memory>
+#include <sstream>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/material/common/Unused.hpp>
@@ -93,7 +94,7 @@ int checkZeroDiagonal(BridgeMatrix& mat) {
 // iterate sparsity pattern from Matrix and put colIndices and rowPointers in arrays
 // sparsity pattern should stay the same due to matrix-add-well-contributions
 template <class BridgeMatrix>
-void getSparsityPattern(BridgeMatrix& mat, std::vector<int> &h_rows, std::vector<int> &h_cols, int dim) {
+void getSparsityPattern(BridgeMatrix& mat, std::vector<int> &h_rows, std::vector<int> &h_cols) {
 	int sum_nnzs = 0;
 
 	// convert colIndices and rowPointers
@@ -130,8 +131,8 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
 		int nnz = mat->nonzeroes()*dim*dim;
 
 		if(dim != 3){
-			std::cerr << "Error can only use cusparseSolver with blocksize = 3 at this time" << std::endl;
-			exit(1);
+			OpmLog::error("cusparseSolver only accepts blocksize = 3 at this time");
+			use_gpu = false;
 		}
 
 		if(h_rows.capacity() == 0){
@@ -140,16 +141,20 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
 #if PRINT_TIMERS_BRIDGE
 			Dune::Timer t;
 #endif
-			getSparsityPattern(*mat, h_rows, h_cols, dim);
+			getSparsityPattern(*mat, h_rows, h_cols);
 #if PRINT_TIMERS_BRIDGE
-			printf("getSparsityPattern(): %.4f s\n", t.stop());
+			std::ostringstream out;
+			out << "getSparsityPattern() took: " << t.stop() << " s";
+			OpmLog::info(out.str());
 #endif
 		}
 
 #if PRINT_TIMERS_BRIDGE
 		Dune::Timer t_zeros;
 		int numZeros = checkZeroDiagonal(*mat);
-		printf("Checking zeros took %f s, found %d zeros\n", t_zeros.stop(), numZeros);
+		std::ostringstream out;
+		out << "Checking zeros took: " << t_zeros.stop() << " s, found " << numZeros << " zeros";
+		OpmLog::info(out.str());
 #else
 		checkZeroDiagonal(*mat);
 #endif

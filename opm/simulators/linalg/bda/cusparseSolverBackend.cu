@@ -26,6 +26,9 @@
 #include <cuda_runtime.h>
 #include <iostream>
 #include <sys/time.h>
+#include <sstream>
+
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
@@ -78,7 +81,9 @@ namespace Opm
 		cublasDnrm2(cublasHandle, n, d_r, 1, &norm_0);
 
 		if(verbosity > 1){
-			printf("Initial norm: %.5e\n", norm_0);
+			std::ostringstream out;
+			out << std::scientific << "cusparseSolver initial norm: " << norm_0;
+			OpmLog::info(out.str());
 		}
 
 		for(it = 0.5; it < maxit; it+=0.5){
@@ -147,7 +152,9 @@ namespace Opm
 			}
 
 			if(verbosity > 1){
-				printf("it: %.1f, norm: %.5e\n", it, norm);
+				std::ostringstream out;
+				out << "it: " << it << std::scientific << ", norm: " << norm;
+				OpmLog::info(out.str());
 			}
 		}
 
@@ -160,7 +167,10 @@ namespace Opm
 		res.converged = (it != (maxit + 0.5));
 
 		if(verbosity > 0){
-			printf("=== converged: %d, conv_rate: %.2f, time: %f, time per iteration: %f, iterations: %.1f\n", res.converged, res.conv_rate, res.elapsed, res.elapsed/it, it);
+			std::ostringstream out;
+			out << "=== converged: " << res.converged << ", conv_rate: " << res.conv_rate << ", time: " << res.elapsed << \
+			       ", time per iteration: " << res.elapsed/it << ", iterations: " << it;
+			OpmLog::info(out.str());
 		}
 	}
 
@@ -171,8 +181,13 @@ namespace Opm
 		this->BLOCK_SIZE = dim;
 		this->nnzb = nnz/BLOCK_SIZE/BLOCK_SIZE;
 		Nb = (N + dim - 1) / dim;
-		printf("Initializing GPU, N: %d, nnz: %d, Nb: %d\n", N, nnz, Nb);
-		printf("Minit: %d, maxit: %d, tolerance: %.1e\n", minit, maxit, tolerance);
+		std::ostringstream out;
+		out << "Initializing GPU, matrix size: " << N << " blocks, nnz: " << nnzb << " blocks";
+		OpmLog::info(out.str());
+		out.str("");
+		out.clear();
+		out << "Minit: " << minit << ", maxit: " << maxit << std::scientific << ", tolerance: " << tolerance;
+		OpmLog::info(out.str());
 
 		int deviceID = 0;
 		cudaSetDevice(deviceID);
@@ -180,8 +195,10 @@ namespace Opm
 		struct cudaDeviceProp props;
 		cudaGetDeviceProperties(&props, deviceID);
 		cudaCheckLastError("Could not get device properties");
-		std::cout << "Name: " << props.name << "\n";
-		printf("CC: %d.%d\n", props.major, props.minor);
+		out.str("");
+		out.clear();
+		out << "Name GPU: " << props.name << ", Compute Capability: " << props.major << "." << props.minor;
+		OpmLog::info(out.str());
 
 		cudaStreamCreate(&stream);
 		cudaCheckLastError("Could not create stream");
@@ -276,7 +293,9 @@ namespace Opm
 		if(verbosity > 2){
 			cudaStreamSynchronize(stream);
 			t2 = second();
-			printf("cusparseSolver::copy_system_to_gpu(): %f s\n", t2-t1);
+			std::ostringstream out;
+			out << "cusparseSolver::copy_system_to_gpu(): " << t2-t1 << " s";
+			OpmLog::info(out.str());
 		}
 	} // end copy_system_to_gpu()
 
@@ -296,7 +315,9 @@ namespace Opm
 		if(verbosity > 2){
 			cudaStreamSynchronize(stream);
 			t2 = second();
-			printf("cusparseSolver::update_system_on_gpu(): %f s\n", t2-t1);
+			std::ostringstream out;
+			out << "cusparseSolver::update_system_on_gpu(): " << t2-t1 << " s";
+			OpmLog::info(out.str());
 		}
 	} // end update_system_on_gpu()
 
@@ -377,7 +398,9 @@ namespace Opm
 		if(verbosity > 2){
 			cudaStreamSynchronize(stream);
 			t2 = second();
-			printf("cusparseSolver::analyse_matrix(): %f s\n", t2-t1);
+			std::ostringstream out;
+			out << "cusparseSolver::analyse_matrix(): " << t2-t1 << " s";
+			OpmLog::info(out.str());
 		}
 
 		return true;
@@ -406,7 +429,9 @@ namespace Opm
 		if(verbosity > 2){
 			cudaStreamSynchronize(stream);
 			t2 = second();
-			printf("cusparseSolver::create_preconditioner(): %f s\n", t2-t1);
+			std::ostringstream out;
+			out << "cusparseSolver::create_preconditioner(): " << t2-t1 << " s";
+			OpmLog::info(out.str());
 		}
 		return true;
 	} // end create_preconditioner()
@@ -438,7 +463,9 @@ namespace Opm
 
 		if(verbosity > 2){
 			t2 = second();
-			printf("cusparseSolver::post_process(): %f s\n", t2-t1);
+			std::ostringstream out;
+			out << "cusparseSolver::post_process(): " << t2-t1 << " s";
+			OpmLog::info(out.str());
 		}
 	} // end post_process()
 
