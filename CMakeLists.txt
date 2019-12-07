@@ -49,6 +49,10 @@ if(opm-common_DIR AND NOT IS_DIRECTORY ${opm-common_DIR})
   message(WARNING "Value ${opm-common_DIR} passed to variable"
     " opm-common_DIR is not a directory")
 endif()
+option(ENABLE_3DPROPS_TESTING "Enable the in-constructor testing of 3D properties" OFF)
+if (ENABLE_3DPROPS_TESTING)
+  add_definitions(-DENABLE_3DPROPS_TESTING)
+endif()
 
 find_package(opm-common REQUIRED)
 
