@@ -61,6 +61,17 @@ namespace Opm {
 
 namespace {
 
+#ifdef ENABLE_3DPROPS_TESTING
+
+std::unique_ptr<std::vector<double>> try_get(const FieldPropsManager& fp, const std::string& keyword) {
+    if (fp.has<double>(keyword))
+        return std::make_unique<std::vector<double>>( fp.get<double>(keyword) );
+
+    return {};
+}
+
+#else
+
 template <typename T>
 std::unique_ptr<std::vector<T>> compressed_copy(const std::vector<T>& global_vector, const std::vector<int>& compressedToCartesianElemIdx) {
     std::unique_ptr<std::vector<T>> compressed = std::make_unique<std::vector<T>>(compressedToCartesianElemIdx.size());
@@ -81,6 +92,7 @@ std::unique_ptr<std::vector<double>> try_get(const Eclipse3DProperties& props, c
     return {};
 }
 
+#endif
 }
 
 
@@ -91,11 +103,59 @@ class EclEpsGridProperties
 public:
 #if HAVE_ECL_INPUT
 
+#ifdef ENABLE_3DPROPS_TESTING
+    EclEpsGridProperties(const Opm::EclipseState& eclState,
+                         bool useImbibition,
+                         const std::vector<int>& )
+#else
     EclEpsGridProperties(const Opm::EclipseState& eclState,
                          bool useImbibition,
                          const std::vector<int>& compressedToCartesianElemIdx)
+#endif
     {
         std::string kwPrefix = useImbibition?"I":"";
+
+#ifdef ENABLE_3DPROPS_TESTING
+        const auto& fp = eclState.fieldProps();
+
+        if (useImbibition)
+            compressed_satnum = std::make_unique<std::vector<int>>(fp.get<int>("IMBNUM"));
+        else
+            compressed_satnum = std::make_unique<std::vector<int>>(fp.get<int>("SATNUM"));
+
+        this->compressed_swl = try_get( fp, kwPrefix+"SWL");
+        this->compressed_sgl = try_get( fp, kwPrefix+"SGL");
+        this->compressed_swcr = try_get( fp, kwPrefix+"SWCR");
+        this->compressed_sgcr = try_get( fp, kwPrefix+"SGCR");
+        this->compressed_sowcr = try_get( fp, kwPrefix+"SOWCR");
+        this->compressed_sogcr = try_get( fp, kwPrefix+"SOGCR");
+        this->compressed_swu = try_get( fp, kwPrefix+"SWU");
+        this->compressed_sgu = try_get( fp, kwPrefix+"SGU");
+        this->compressed_pcw = try_get( fp, kwPrefix+"PCW");
+        this->compressed_pcg = try_get( fp, kwPrefix+"PCG");
+        this->compressed_krw = try_get( fp, kwPrefix+"KRW");
+        this->compressed_kro = try_get( fp, kwPrefix+"KRO");
+        this->compressed_krg = try_get( fp, kwPrefix+"KRG");
+
+        // _may_ be needed to calculate the Leverett capillary pressure scaling factor
+        if (fp.has<double>("PORO"))
+            this->compressed_poro = std::make_unique<std::vector<double>>(fp.get<double>("PORO"));
+
+        if (fp.has<double>("PERMX"))
+            this->compressed_permx = std::make_unique<std::vector<double>>(fp.get<double>("PERMX"));
+        else
+            this->compressed_permx = std::make_unique<std::vector<double>>(this->compressed_satnum->size());
+
+        if (fp.has<double>("PERMY"))
+            this->compressed_permy= std::make_unique<std::vector<double>>(fp.get<double>("PERMY"));
+        else
+            this->compressed_permy= std::make_unique<std::vector<double>>(*this->compressed_permx);
+
+        if (fp.has<double>("PERMZ"))
+            this->compressed_permz= std::make_unique<std::vector<double>>(fp.get<double>("PERMZ"));
+        else
+            this->compressed_permz= std::make_unique<std::vector<double>>(*this->compressed_permx);
+#else
         const auto& ecl3dProps = eclState.get3DProperties();
 
         if (useImbibition)
@@ -132,6 +192,7 @@ public:
             this->compressed_permz = compressed_copy(ecl3dProps.getDoubleGridProperty("PERMZ").getData(), compressedToCartesianElemIdx);
         else
             this->compressed_permz = compressed_copy(ecl3dProps.getDoubleGridProperty("PERMZ").getData(), compressedToCartesianElemIdx);
+#endif
     }
 
 #endif
@@ -212,18 +273,6 @@ public:
 
 
 private:
-#if HAVE_ECL_INPUT
-    // this method makes sure that a grid property is not created if it is not explicitly
-    // mentioned in the deck. (saves memory.)
-    void retrieveGridPropertyData_(const std::vector<double> **data,
-                                   const Opm::EclipseState& eclState,
-                                   const std::string& properyName)
-    {
-        (*data) = 0;
-        if (eclState.get3DProperties().hasDeckDoubleGridProperty(properyName))
-            (*data) = &eclState.get3DProperties().getDoubleGridProperty(properyName).getData();
-    }
-#endif
 
     const double * satfunc(const std::unique_ptr<std::vector<double>>& data, std::size_t active_index) const {
         if (data)

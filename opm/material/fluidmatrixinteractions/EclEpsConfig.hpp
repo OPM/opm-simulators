@@ -178,19 +178,11 @@ public:
             enableKrnScaling_ = false;
             return;
         }
-
         // endpoint scaling is used, i.e., at least saturation scaling needs to be enabled
         enableSatScaling_ = true;
-
         enableThreePointKrSatScaling_ = endscale.threepoint();
 
-        auto& props = eclState.get3DProperties();
-        // check if we are supposed to scale the Y axis of the capillary pressure
         if (twoPhaseSystemType == EclOilWaterSystem) {
-            enablePcScaling_ =
-                props.hasDeckDoubleGridProperty("PCW")
-                || props.hasDeckDoubleGridProperty("SWATINIT");
-
             // check if Leverett capillary pressure scaling is requested
             if (eclState.getTableManager().useJFunc()) {
                 const auto& jfunc = eclState.getTableManager().getJFunc();
@@ -198,16 +190,7 @@ public:
                 if (flag == Opm::JFunc::Flag::BOTH || flag == Opm::JFunc::Flag::WATER)
                     enableLeverettScaling_ = true;
             }
-
-            if (enablePcScaling_ && enableLeverettScaling_)
-                throw std::runtime_error("Capillary pressure scaling and the Leverett scaling function are "
-                                         "mutually exclusive: The deck contains the PCW property and the "
-                                         "JFUNC keyword applies to the water phase.");
-        }
-        else {
-            assert(twoPhaseSystemType == EclGasOilSystem);
-            enablePcScaling_ = props.hasDeckDoubleGridProperty("PCG");
-
+        } else {
             // check if Leverett capillary pressure scaling is requested
             if (eclState.getTableManager().useJFunc()) {
                 const auto& jfunc = eclState.getTableManager().getJFunc();
@@ -215,28 +198,41 @@ public:
                 if (flag == Opm::JFunc::Flag::BOTH || flag == Opm::JFunc::Flag::GAS)
                     enableLeverettScaling_ = true;
             }
-
-            if (enablePcScaling_ && enableLeverettScaling_)
-                throw std::runtime_error("Capillary pressure scaling and the Leverett scaling function are "
-                                         "mutually exclusive: The deck contains the PCG property and the "
-                                         "JFUNC keyword applies to the gas phase.");
         }
 
-        // check if we are supposed to scale the Y axis of the wetting phase relperm
-        if (twoPhaseSystemType == EclOilWaterSystem)
-            enableKrwScaling_ = props.hasDeckDoubleGridProperty("KRW");
-        else {
+
+#ifdef ENABLE_3DPROPS_TESTING
+        const auto& fp = eclState.fieldProps();
+        // check if we are supposed to scale the Y axis of the capillary pressure
+        if (twoPhaseSystemType == EclOilWaterSystem) {
+            enableKrnScaling_ = fp.has<double>("KRO");
+            enableKrwScaling_ = fp.has<double>("KRW");
+            enablePcScaling_  = fp.has<double>("PCW") || fp.has<double>("SWATINIT");
+        } else {
             assert(twoPhaseSystemType == EclGasOilSystem);
-            enableKrwScaling_ = props.hasDeckDoubleGridProperty("KRO");
+            enableKrnScaling_ = fp.has<double>("KRG");
+            enableKrwScaling_ = fp.has<double>("KRO");
+            enablePcScaling_  = fp.has<double>("PCG");
         }
-
-        // check if we are supposed to scale the Y axis of the non-wetting phase relperm
-        if (twoPhaseSystemType == EclOilWaterSystem)
+#else
+        auto& props = eclState.get3DProperties();
+        // check if we are supposed to scale the Y axis of the capillary pressure
+        if (twoPhaseSystemType == EclOilWaterSystem) {
             enableKrnScaling_ = props.hasDeckDoubleGridProperty("KRO");
-        else {
+            enableKrwScaling_ = props.hasDeckDoubleGridProperty("KRW");
+            enablePcScaling_  = props.hasDeckDoubleGridProperty("PCW") || props.hasDeckDoubleGridProperty("SWATINIT");
+        } else {
             assert(twoPhaseSystemType == EclGasOilSystem);
             enableKrnScaling_ = props.hasDeckDoubleGridProperty("KRG");
+            enableKrwScaling_ = props.hasDeckDoubleGridProperty("KRO");
+            enablePcScaling_  = props.hasDeckDoubleGridProperty("PCG");
         }
+#endif
+        if (enablePcScaling_ && enableLeverettScaling_)
+            throw std::runtime_error("Capillary pressure scaling and the Leverett scaling function are "
+                                     "mutually exclusive: The deck contains the PCW/PCG property and the "
+                                     "JFUNC keyword applies to the water phase.");
+
     }
 #endif
 
