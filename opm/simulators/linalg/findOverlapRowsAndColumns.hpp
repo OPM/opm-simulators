@@ -112,6 +112,28 @@ namespace detail
             }
         }
     }
+    template <class Grid>
+    size_t numInteriorCells(const Grid& grid, bool ownerFirst)
+    {
+        size_t numInterior = 0;
+        if (!ownerFirst)
+            return grid.numCells();
+        const auto& gridView = grid.leafGridView();
+        auto elemIt = gridView.template begin<0>();
+        const auto& elemEndIt = gridView.template end<0>();
+
+        // loop over cells in mesh
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const auto& elem = *elemIt;
+
+            // If cell has partition type not equal to interior save row
+            if (elem.partitionType() == Dune::InteriorEntity) {
+                numInterior++;
+            }
+        }
+
+        return numInterior;
+    }
 } // namespace detail
 } // namespace Opm
 

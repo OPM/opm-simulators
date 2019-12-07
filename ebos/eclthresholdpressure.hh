@@ -310,7 +310,7 @@ private:
                 const auto& intersection = *isIt;
 
                 // ignore boundary intersections for now (TODO?)
-                if (intersection.boundary())
+                if (!intersection.neighbor())
                     continue;
 
                 const auto& inside = intersection.inside();

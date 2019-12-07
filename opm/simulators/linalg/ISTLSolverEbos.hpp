@@ -185,6 +185,198 @@ protected:
   std::shared_ptr< communication_type > comm_;
 };
 
+
+/*!
+   \brief Adapter to turn a matrix into a linear operator.
+   Adapts a matrix to the assembled linear operator interface.
+   We assume parallel ordering, where ghost rows are located after interior rows
+ */
+template<class M, class X, class Y, class WellModel, bool overlapping >
+class WellModelGhostLastMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
+{
+    typedef Dune::AssembledLinearOperator<M,X,Y> BaseType;
+
+public:
+    typedef M matrix_type;
+    typedef X domain_type;
+    typedef Y range_type;
+    typedef typename X::field_type field_type;
+
+#if HAVE_MPI
+    typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
+#else
+    typedef Dune::CollectiveCommunication< int > communication_type;
+#endif
+
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+    Dune::SolverCategory::Category category() const override
+    {
+        return overlapping ?
+            Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
+    }
+#else
+    enum {
+        //! \brief The solver category.
+        category = overlapping ?
+        Dune::SolverCategory::overlapping :
+        Dune::SolverCategory::sequential
+    };
+#endif
+    
+    //! constructor: just store a reference to a matrix
+    WellModelGhostLastMatrixAdapter (const M& A,
+                                     const M& A_for_precond,
+                                     const WellModel& wellMod,
+                                     const size_t interiorSize,
+                                     const boost::any& parallelInformation = boost::any() )
+        : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), interiorSize_(interiorSize), comm_()
+    {
+#if HAVE_MPI
+        if( parallelInformation.type() == typeid(ParallelISTLInformation) )
+        {
+            const ParallelISTLInformation& info =
+                boost::any_cast<const ParallelISTLInformation&>( parallelInformation);
+            comm_.reset( new communication_type( info.communicator() ) );
+        }
+#endif
+    }
+    
+    virtual void apply( const X& x, Y& y ) const
+    {
+        unsigned row_count = 0;
+        for (auto row = A_.begin(); row_count < interiorSize_; ++row, ++row_count)
+        {
+            y[row.index()]=0;
+            auto endc = (*row).end();
+            for (auto col = (*row).begin(); col != endc; ++col)
+                (*col).umv(x[col.index()], y[row.index()]);
+        }
+        
+        // add well model modification to y
+        wellMod_.apply(x, y );
+
+        ghostLastProject( y );
+    }
+
+    // y += \alpha * A * x
+    virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
+    {
+        //auto first_row = A_.begin();
+        unsigned row_count = 0;
+        for (auto row = A_.begin(); row_count < interiorSize_; ++row, ++row_count)
+        {
+            auto endc = (*row).end();
+            for (auto col = (*row).begin(); col != endc; ++col)
+                (*col).usmv(alpha, x[col.index()], y[row.index()]);
+        }
+        // add scaled well model modification to y
+        wellMod_.applyScaleAdd( alpha, x, y );
+        
+        ghostLastProject( y );
+    }
+
+    virtual const matrix_type& getmat() const { return A_for_precond_; }
+
+    communication_type* comm()
+    {
+        return comm_.operator->();
+    }
+    
+protected:
+    void ghostLastProject(Y& y) const
+    {
+        size_t end = y.size();
+        for (size_t i = interiorSize_; i < end; ++i)
+            y[i] = 0;
+    }
+    
+    const matrix_type& A_ ;
+    const matrix_type& A_for_precond_ ;
+    const WellModel& wellMod_;
+    size_t interiorSize_;
+    
+    std::unique_ptr< communication_type > comm_;
+};
+
+/*!
+  \brief parallel ScalarProduct, that assumes ghost cells are ordered last 
+  Implements the Dune ScalarProduct interface
+ */
+template<class X, class C>
+class GhostLastScalarProduct : public Dune::ScalarProduct<X>
+{
+public:
+    typedef X domain_type;
+    typedef typename X::field_type field_type;
+    typedef typename Dune::FieldTraits<field_type>::real_type real_type;
+    typedef typename X::size_type size_type;
+
+    typedef C communication_type;
+    
+    enum {
+        category = Dune::SolverCategory::overlapping
+    };
+
+    GhostLastScalarProduct (const communication_type& com, size_type interiorSize)
+        : interiorSize_(interiorSize)
+    {        
+        comm_.reset(new communication_type(com.communicator()) );
+    }
+    virtual field_type dot (const X& x, const X& y)
+    {
+        field_type result = field_type(0.0);
+        for (size_type i = 0; i < interiorSize_; ++i)
+            result += x[i]*(y[i]);
+        return comm_->communicator().sum(result);
+    }
+    
+    virtual real_type norm (const X& x)
+    {
+        field_type result = field_type(0.0);
+        for (size_type i = 0; i < interiorSize_; ++i)
+            result += x[i].two_norm2();
+        return static_cast<double>(std::sqrt(comm_->communicator().sum(result)));
+    }
+    
+private:
+    std::unique_ptr< communication_type > comm_;
+    size_type interiorSize_;
+};
+
+template <class  X, class C, int c>
+struct GhostLastSPChooser
+{
+    typedef C communication_type;
+
+    enum { solverCategory = c};
+};
+
+template <class  X, class C>
+struct GhostLastSPChooser<X,C,Dune::SolverCategory::sequential>
+{
+    typedef Dune::SeqScalarProduct<X> ScalarProduct;
+    enum { category = Dune::SolverCategory::sequential};
+
+    static ScalarProduct* construct(const C& comm, size_t is)
+    {
+        return new ScalarProduct();
+    }
+};
+
+template <class  X, class C>
+struct GhostLastSPChooser<X,C,Dune::SolverCategory::overlapping>
+{
+    typedef  GhostLastScalarProduct<X,C> ScalarProduct;
+    typedef C communication_type;
+
+    enum {category = Dune::SolverCategory::overlapping};
+
+    static ScalarProduct* construct(const communication_type& comm, size_t is)
+    {
+        return new ScalarProduct(comm, is);
+    }
+};
+
     /// This class solves the fully implicit black-oil system by
     /// solving the reduced system (after eliminating well variables)
     /// as a block-structured matrix (one block for all cell variables) for a fixed
@@ -253,15 +445,24 @@ protected:
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
+
             const auto& gridForConn = simulator_.vanguard().grid();
+
             const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
             const bool useWellConn = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
 
-            detail::setWellConnections(gridForConn, wellsForConn, useWellConn, wellConnectionsGraph_);
-            detail::findOverlapAndInterior(gridForConn, overlapRows_, interiorRows_);
-            if (gridForConn.comm().size() > 1) {
-                noGhostAdjacency();
-                setGhostsInNoGhost(*noGhostMat_);
+            ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnersFirst);
+            interiorCellNum_ = detail::numInteriorCells(simulator_.vanguard().grid(), ownersFirst_);
+
+            if (!ownersFirst_) {
+                detail::setWellConnections(gridForConn, wellsForConn, useWellConn, wellConnectionsGraph_);
+                detail::findOverlapAndInterior(gridForConn, overlapRows_, interiorRows_);
+
+                if (gridForConn.comm().size() > 1) {
+
+                    noGhostAdjacency();
+                    setGhostsInNoGhost(*noGhostMat_);
+                }
             }
         }
 
@@ -342,13 +543,24 @@ protected:
 
             if( isParallel() )
             {
-                typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
+                if ( ownersFirst_ ) {
+                    typedef WellModelGhostLastMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
+                    Operator opA(*matrix_, *matrix_, wellModel, interiorCellNum_,
+                                 parallelInformation_ );
+                    
+                    assert( opA.comm() );
+                    solve( opA, x, *rhs_, *(opA.comm()) );
+                }
+                else {
+                    typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
 
-                copyJacToNoGhost(*matrix_, *noGhostMat_);
-                Operator opA(*noGhostMat_, *noGhostMat_, wellModel,
-                             parallelInformation_ );
-                assert( opA.comm() );
-                solve( opA, x, *rhs_, *(opA.comm()) );
+                    copyJacToNoGhost(*matrix_, *noGhostMat_);
+                    Operator opA(*noGhostMat_, *noGhostMat_, wellModel,
+                                 parallelInformation_ );
+                    assert( opA.comm() );
+                    solve( opA, x, *rhs_, *(opA.comm()) );
+                    
+                }
             }
             else
             {
@@ -388,12 +600,13 @@ protected:
                                              const POrComm& parallelInformation_arg,
                                              Dune::InverseOperatorResult& result) const
         {
+
             // Construct scalar product.
             auto sp = Dune::createScalarProduct<Vector,POrComm>(parallelInformation_arg, category);
 
 #if FLOW_SUPPORT_AMG // activate AMG if either flow_ebos is used or UMFPack is not available
             if( parameters_.linear_solver_use_amg_ || parameters_.use_cpr_)
-            {
+            {                
                 typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
                 typedef typename CPRSelectorType::Operator MatrixOperator;
 
@@ -457,12 +670,13 @@ protected:
                     solve(linearOperator, x, istlb, *sp, *precond, result);
                 } // end Dune call
 #else
-                // Construct preconditioner.
-                auto precond = constructPrecond(linearOperator, parallelInformation_arg);
+		// Construct preconditioner.
+		auto precond = constructPrecond(linearOperator, parallelInformation_arg);
 
-                // Solve.
-                solve(linearOperator, x, istlb, *sp, *precond, result);
+		// Solve.
+		solve(linearOperator, x, istlb, *sp, *precond, result);
 #endif
+
             }
         }
 
@@ -492,7 +706,9 @@ protected:
         typedef Dune::OwnerOverlapCopyCommunication<int, int> Comm;
         // 3x3 matrix block inversion was unstable from at least 2.3 until and
         // including 2.5.0
-        typedef ParallelOverlappingILU0<Matrix,Vector,Vector,Comm> ParPreconditioner;
+
+        typedef GhostLastParallelOverlappingILU0<Matrix,Vector,Vector,Comm> ParPreconditioner;
+
         template <class Operator>
         std::unique_ptr<ParPreconditioner>
         constructPrecond(Operator& opA, const Comm& comm) const
@@ -502,7 +718,7 @@ protected:
             const MILU_VARIANT ilu_milu  = parameters_.ilu_milu_;
             const bool ilu_redblack = parameters_.ilu_redblack_;
             const bool ilu_reorder_spheres = parameters_.ilu_reorder_sphere_;
-            return Pointer(new ParPreconditioner(opA.getmat(), comm, relax, ilu_milu, ilu_redblack, ilu_reorder_spheres));
+            return Pointer(new ParPreconditioner(opA.getmat(), comm, relax, ilu_milu, interiorCellNum_, ilu_redblack, ilu_reorder_spheres));
         }
 #endif
 
@@ -946,9 +1162,14 @@ protected:
         Vector *rhs_;
         std::unique_ptr<Matrix> matrix_for_preconditioner_;
 
+
         std::vector<int> overlapRows_;
         std::vector<int> interiorRows_;
         std::vector<std::set<int>> wellConnectionsGraph_;
+
+        bool ownersFirst_;
+        size_t interiorCellNum_;
+
         FlowLinearSolverParameters parameters_;
         Vector weights_;
         bool scale_variables_;
