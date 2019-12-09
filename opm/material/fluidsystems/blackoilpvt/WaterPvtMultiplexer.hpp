@@ -66,6 +66,17 @@ public:
     WaterPvtMultiplexer()
     {
         approach_ = NoWaterPvt;
+        realWaterPvt_ = nullptr;
+    }
+
+    WaterPvtMultiplexer(WaterPvtApproach approach, void* realWaterPvt)
+        : approach_(approach)
+        , realWaterPvt_(realWaterPvt)
+    { }
+
+    WaterPvtMultiplexer(const WaterPvtMultiplexer<Scalar,enableThermal>& data)
+    {
+        *this = data;
     }
 
     ~WaterPvtMultiplexer()
@@ -194,6 +205,42 @@ public:
     {
         assert(approach() == approachV);
         return *static_cast<Opm::WaterPvtThermal<Scalar>* >(realWaterPvt_);
+    }
+
+    const void* realWaterPvt() const { return realWaterPvt_; }
+
+    bool operator==(const WaterPvtMultiplexer<Scalar,enableThermal>& data) const
+    {
+        if (this->approach() != data.approach())
+            return false;
+
+        switch (approach_) {
+        case ConstantCompressibilityWaterPvt:
+            return *static_cast<const Opm::ConstantCompressibilityWaterPvt<Scalar>*>(realWaterPvt_) ==
+                   *static_cast<const Opm::ConstantCompressibilityWaterPvt<Scalar>*>(data.realWaterPvt_);
+        case ThermalWaterPvt:
+            return *static_cast<const Opm::WaterPvtThermal<Scalar>*>(realWaterPvt_) ==
+                   *static_cast<const Opm::WaterPvtThermal<Scalar>*>(data.realWaterPvt_);
+        default:
+            return true;
+        }
+    }
+
+    WaterPvtMultiplexer<Scalar,enableThermal>& operator=(const WaterPvtMultiplexer<Scalar,enableThermal>& data)
+    {
+        approach_ = data.approach_;
+        switch (approach_) {
+        case ConstantCompressibilityWaterPvt:
+            realWaterPvt_ = new Opm::ConstantCompressibilityWaterPvt<Scalar>(*static_cast<const Opm::ConstantCompressibilityWaterPvt<Scalar>*>(data.realWaterPvt_));
+            break;
+        case ThermalWaterPvt:
+            realWaterPvt_ = new Opm::WaterPvtThermal<Scalar>(*static_cast<const Opm::WaterPvtThermal<Scalar>*>(data.realWaterPvt_));
+            break;
+        default:
+            break;
+        }
+
+        return *this;
     }
 
 private:
