@@ -42,6 +42,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicVector.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
@@ -572,6 +573,7 @@ ADD_PACK_PROTOTYPES(WATDENTRecord)
 ADD_PACK_PROTOTYPES(WatdentTable)
 ADD_PACK_PROTOTYPES(Welldims)
 ADD_PACK_PROTOTYPES(WellSegmentDims)
+ADD_PACK_PROTOTYPES(WellTestConfig::WTESTWell)
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,

@@ -930,6 +930,17 @@ std::size_t packSize(const VFPProdTable& data,
            packSize(double(), comm);
 }
 
+std::size_t packSize(const WellTestConfig::WTESTWell& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.name, comm) +
+           packSize(data.shut_reason, comm) +
+           packSize(data.test_interval, comm) +
+           packSize(data.num_test, comm) +
+           packSize(data.startup_time, comm) +
+           packSize(data.begin_report_step, comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -1868,6 +1879,18 @@ void pack(const VFPProdTable& data,
     pack(data.getALQAxis(), buffer, position, comm);
     for (size_t i = 0; i < data.getTable().num_elements(); ++i)
         pack(*(data.getTable().data() + i), buffer, position, comm);
+}
+
+void pack(const WellTestConfig::WTESTWell& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name, buffer, position, comm);
+    pack(data.shut_reason, buffer, position, comm);
+    pack(data.test_interval, buffer, position, comm);
+    pack(data.num_test, buffer, position, comm);
+    pack(data.startup_time, buffer, position, comm);
+    pack(data.begin_report_step, buffer, position, comm);
 }
 
 /// unpack routines
@@ -3153,7 +3176,20 @@ void unpack(VFPProdTable& data,
                         wfrAxis, gfrAxis, alqAxis, table);
 }
 
+void unpack(WellTestConfig::WTESTWell& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.name, buffer, position, comm);
+    unpack(data.shut_reason, buffer, position, comm);
+    unpack(data.test_interval, buffer, position, comm);
+    unpack(data.num_test, buffer, position, comm);
+    unpack(data.startup_time, buffer, position, comm);
+    unpack(data.begin_report_step, buffer, position, comm);
+}
+
 } // end namespace Mpi
+
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
                                  const std::vector<Opm::RestartKey>& solutionKeys,
                                  const std::vector<Opm::RestartKey>& extraKeys,

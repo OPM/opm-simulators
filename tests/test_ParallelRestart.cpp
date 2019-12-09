@@ -1287,6 +1287,18 @@ BOOST_AUTO_TEST_CASE(VFPProdTable)
 }
 
 
+BOOST_AUTO_TEST_CASE(WTESTWell)
+{
+#ifdef HAVE_MPI
+    Opm::WellTestConfig::WTESTWell val1{"test", Opm::WellTestConfig::ECONOMIC,
+                                         1.0, 2, 3.0, 4};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;
