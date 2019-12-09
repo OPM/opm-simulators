@@ -1348,6 +1348,21 @@ BOOST_AUTO_TEST_CASE(WellTracerProperties)
 }
 
 
+BOOST_AUTO_TEST_CASE(UDAValue)
+{
+#ifdef HAVE_MPI
+    Opm::UDAValue val1("test");
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+    val1 = Opm::UDAValue(1.0);
+    auto val22 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val22) == std::get<2>(val22));
+    BOOST_CHECK(val1 == std::get<0>(val22));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;

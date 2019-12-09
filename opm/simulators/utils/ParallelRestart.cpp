@@ -958,6 +958,14 @@ std::size_t packSize(const WellTracerProperties& data,
     return packSize(data.getConcentrations(), comm);
 }
 
+std::size_t packSize(const UDAValue& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.is<double>(), comm) +
+           (data.is<double>() ? packSize(data.get<double>(), comm) :
+                                packSize(data.get<std::string>(), comm));
+}
+
 ////// pack routines
 
 template<class T>
@@ -1922,6 +1930,17 @@ void pack(const WellTracerProperties& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getConcentrations(), buffer, position, comm);
+}
+
+void pack(const UDAValue& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.is<double>(), buffer, position, comm);
+    if (data.is<double>())
+        pack(data.get<double>(), buffer, position, comm);
+    else
+        pack(data.get<std::string>(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -3235,6 +3254,23 @@ void unpack(WellTracerProperties& data,
     WellTracerProperties::ConcentrationMap ddata;
     unpack(ddata, buffer, position, comm);
     data = WellTracerProperties(ddata);
+}
+
+void unpack(UDAValue& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    bool isDouble;
+    unpack(isDouble, buffer, position, comm);
+    if (isDouble) {
+        double val;
+        unpack(val, buffer, position, comm);
+        data = UDAValue(val);
+    } else {
+        std::string val;
+        unpack(val, buffer, position, comm);
+        data = UDAValue(val);
+    }
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
