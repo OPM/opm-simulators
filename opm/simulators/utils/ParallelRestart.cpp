@@ -34,6 +34,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
@@ -896,6 +897,18 @@ std::size_t packSize(const MessageLimits& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getLimits(), comm);
+}
+
+std::size_t packSize(const VFPInjTable& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getTableNum(), comm) +
+           packSize(data.getDatumDepth(), comm) +
+           packSize(data.getFloType(), comm) +
+           packSize(data.getFloAxis(), comm) +
+           packSize(data.getTHPAxis(), comm) +
+           data.getTable().num_elements() *
+           packSize(double(), comm);
 }
 
 ////// pack routines
@@ -1805,6 +1818,18 @@ void pack(const MessageLimits& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getLimits(), buffer, position, comm);
+}
+void pack(const VFPInjTable& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getTableNum(), buffer, position, comm);
+    pack(data.getDatumDepth(), buffer, position, comm);
+    pack(data.getFloType(), buffer, position, comm);
+    pack(data.getFloAxis(), buffer, position, comm);
+    pack(data.getTHPAxis(), buffer, position, comm);
+    for (size_t i = 0; i < data.getTable().num_elements(); ++i)
+        pack(*(data.getTable().data() + i), buffer, position, comm);
 }
 /// unpack routines
 
@@ -3023,6 +3048,33 @@ void unpack(MessageLimits& data,
     unpack(limits, buffer, position, comm);
     data = MessageLimits(limits);
 }
+
+void unpack(VFPInjTable& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    int tableNum;
+    double datumDepth;
+    VFPInjTable::FLO_TYPE floType;
+    std::vector<double> floAxis, thpAxis;
+    VFPInjTable::array_type table;
+
+    unpack(tableNum, buffer, position, comm);
+    unpack(datumDepth, buffer, position, comm);
+    unpack(floType, buffer, position, comm);
+    unpack(floAxis, buffer, position, comm);
+    unpack(thpAxis, buffer, position, comm);
+    VFPInjTable::extents extents;
+    extents[0] = thpAxis.size();
+    extents[1] = floAxis.size();
+    table.resize(extents);
+    for (size_t i = 0; i < table.num_elements(); ++i)
+        unpack(*(table.data() + i), buffer, position, comm);
+
+    data = VFPInjTable(tableNum, datumDepth, floType,
+                       floAxis, thpAxis, table);
+}
+
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
                                  const std::vector<Opm::RestartKey>& solutionKeys,
