@@ -3210,6 +3210,38 @@ void unpack(WellTestConfig& data,
     data = WellTestConfig(ddata);
 }
 
+#define INSTANTIATE_PACK_VECTOR(T) \
+template std::size_t packSize(const std::vector<T>& data, \
+                              Dune::MPIHelper::MPICommunicator comm); \
+template void pack(const std::vector<T>& data, \
+                   std::vector<char>& buffer, int& position, \
+                   Dune::MPIHelper::MPICommunicator comm); \
+template void unpack(std::vector<T>& data, \
+                     std::vector<char>& buffer, int& position, \
+                     Dune::MPIHelper::MPICommunicator comm);
+
+INSTANTIATE_PACK_VECTOR(double);
+INSTANTIATE_PACK_VECTOR(std::vector<double>);
+INSTANTIATE_PACK_VECTOR(bool);
+INSTANTIATE_PACK_VECTOR(char);
+#undef INSTANTIATE_PACK_VECTOR
+
+#define INSTANTIATE_PACK(T) \
+template std::size_t packSize(const T& data, \
+                              Dune::MPIHelper::MPICommunicator comm); \
+template void pack(const T& data,                                                     \
+                   std::vector<char>& buffer, int& position, \
+                   Dune::MPIHelper::MPICommunicator comm); \
+template void unpack(T& data, \
+                     std::vector<char>& buffer, int& position, \
+                     Dune::MPIHelper::MPICommunicator comm);
+
+INSTANTIATE_PACK(double);
+INSTANTIATE_PACK(std::size_t);
+INSTANTIATE_PACK(bool);
+INSTANTIATE_PACK(int);
+#undef INSTANTIATE_PACK
+
 } // end namespace Mpi
 
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
@@ -3248,4 +3280,5 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summarySt
     return eclIO->loadRestart(summaryState, solutionKeys, extraKeys);
 #endif
 }
+
 } // end namespace Opm
