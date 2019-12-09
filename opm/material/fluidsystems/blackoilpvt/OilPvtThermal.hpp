@@ -54,16 +54,46 @@ class OilPvtMultiplexer;
 template <class Scalar>
 class OilPvtThermal
 {
+public:
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef OilPvtMultiplexer<Scalar, /*enableThermal=*/false> IsothermalPvt;
 
-public:
     OilPvtThermal()
     {
         enableThermalDensity_ = false;
         enableThermalViscosity_ = false;
         enableInternalEnergy_ = false;
+        isothermalPvt_ = nullptr;
     }
+
+    OilPvtThermal(IsothermalPvt* isothermalPvt,
+                  const std::vector<TabulatedOneDFunction>& oilvisctCurves,
+                  const std::vector<Scalar>& viscrefPress,
+                  const std::vector<Scalar>& viscrefRs,
+                  const std::vector<Scalar>& viscRef,
+                  const std::vector<Scalar>& oildentRefTemp,
+                  const std::vector<Scalar>& oildentCT1,
+                  const std::vector<Scalar>& oildentCT2,
+                  const std::vector<TabulatedOneDFunction>& internalEnergyCurves,
+                  bool enableThermalDensity,
+                  bool enableThermalViscosity,
+                  bool enableInternalEnergy)
+        : isothermalPvt_(isothermalPvt)
+        , oilvisctCurves_(oilvisctCurves)
+        , viscrefPress_(viscrefPress)
+        , viscrefRs_(viscrefRs)
+        , viscRef_(viscRef)
+        , oildentRefTemp_(oildentRefTemp)
+        , oildentCT1_(oildentCT1)
+        , oildentCT2_(oildentCT2)
+        , internalEnergyCurves_(internalEnergyCurves)
+        , enableThermalDensity_(enableThermalDensity)
+        , enableThermalViscosity_(enableThermalViscosity)
+        , enableInternalEnergy_(enableInternalEnergy)
+    { }
+
+    OilPvtThermal(const OilPvtThermal& data)
+    { *this = data; }
 
     ~OilPvtThermal()
     { delete isothermalPvt_; }
@@ -350,6 +380,79 @@ public:
                                   const Evaluation& temperature,
                                   const Evaluation& pressure) const
     { return isothermalPvt_->saturationPressure(regionIdx, temperature, pressure); }
+
+    const IsothermalPvt* isoThermalPvt() const
+    { return isothermalPvt_; }
+
+    const std::vector<TabulatedOneDFunction>& oilvisctCurves() const
+    { return oilvisctCurves_; }
+
+    const std::vector<Scalar>& viscrefPress() const
+    { return viscrefPress_; }
+
+    const std::vector<Scalar>& viscrefRs() const
+    { return viscrefRs_; }
+
+    const std::vector<Scalar>& viscRef() const
+    { return viscRef_; }
+
+    const std::vector<Scalar>& oildentRefTemp() const
+    { return oildentRefTemp_; }
+
+    const std::vector<Scalar>& oildentCT1() const
+    { return oildentCT1_; }
+
+    const std::vector<Scalar>& oildentCT2() const
+    { return oildentCT2_; }
+
+    const std::vector<TabulatedOneDFunction> internalEnergyCurves() const
+    { return internalEnergyCurves_; }
+
+    bool enableInternalEnergy() const
+    { return enableInternalEnergy_; }
+
+    bool operator==(const OilPvtThermal<Scalar>& data) const
+    {
+        if (isothermalPvt_ && !data.isothermalPvt_)
+            return false;
+        if (!isothermalPvt_ && data.isothermalPvt_)
+            return false;
+
+        return (!this->isoThermalPvt() ||
+                (*this->isoThermalPvt() == *data.isoThermalPvt())) &&
+                this->oilvisctCurves() == data.oilvisctCurves() &&
+                this->viscrefPress() == data.viscrefPress() &&
+                this->viscrefRs() == data.viscrefRs() &&
+                this->viscRef() == data.viscRef() &&
+                this->oildentRefTemp() == data.oildentRefTemp() &&
+                this->oildentCT1() == data.oildentCT1() &&
+                this->oildentCT2() == data.oildentCT2() &&
+                this->internalEnergyCurves() == data.internalEnergyCurves() &&
+                this->enableThermalDensity() == data.enableThermalDensity() &&
+                this->enableThermalViscosity() == data.enableThermalViscosity() &&
+                this->enableInternalEnergy() == data.enableInternalEnergy();
+    }
+
+    OilPvtThermal<Scalar>& operator=(const OilPvtThermal<Scalar>& data)
+    {
+        if (data.isothermalPvt_)
+            isothermalPvt_ = new IsothermalPvt(*data.isothermalPvt_);
+        else
+            isothermalPvt_ = nullptr;
+        oilvisctCurves_ = data.oilvisctCurves_;
+        viscrefPress_ = data.viscrefPress_;
+        viscrefRs_ = data.viscrefRs_;
+        viscRef_ = data.viscRef_;
+        oildentRefTemp_ = data.oildentRefTemp_;
+        oildentCT1_ = data.oildentCT1_;
+        oildentCT2_ = data.oildentCT2_;
+        internalEnergyCurves_ = data.internalEnergyCurves_;
+        enableThermalDensity_ = data.enableThermalDensity_;
+        enableThermalViscosity_ = data.enableThermalViscosity_;
+        enableInternalEnergy_ = data.enableInternalEnergy_;
+
+        return *this;
+    }
 
 private:
     IsothermalPvt* isothermalPvt_;
