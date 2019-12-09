@@ -52,9 +52,8 @@ namespace Opm {
 template <class Scalar>
 class UniformXTabulated2DFunction
 {
-    typedef std::tuple</*x=*/Scalar, /*y=*/Scalar, /*value=*/Scalar> SamplePoint;
-
 public:
+    typedef std::tuple</*x=*/Scalar, /*y=*/Scalar, /*value=*/Scalar> SamplePoint;
 
     /*!
      * \brief Indicates how interpolation will be performed.
@@ -74,6 +73,16 @@ public:
 
     explicit UniformXTabulated2DFunction(const InterpolationPolicy interpolationGuide = Vertical)
         : interpolationGuide_(interpolationGuide)
+    { }
+
+    UniformXTabulated2DFunction(const std::vector<Scalar>& xPos,
+                                const std::vector<Scalar>& yPos,
+                                const std::vector<std::vector<SamplePoint>>& samples,
+                                InterpolationPolicy interpolationGuide)
+        : samples_(samples)
+        , xPos_(xPos)
+        , yPos_(yPos)
+        , interpolationGuide_(interpolationGuide)
     { }
 
     /*!
@@ -138,6 +147,26 @@ public:
         assert(0 <= i && i < numX());
 
         return xPos_.at(i);
+    }
+
+    const std::vector<std::vector<SamplePoint>>& samples() const
+    {
+        return samples_;
+    }
+
+    const std::vector<Scalar>& xPos() const
+    {
+        return xPos_;
+    }
+
+    const std::vector<Scalar>& yPos() const
+    {
+        return yPos_;
+    }
+
+    InterpolationPolicy interpolationGuide() const
+    {
+        return interpolationGuide_;
     }
 
     /*!
@@ -434,6 +463,13 @@ public:
             }
             os << "\n";
         }
+    }
+
+    bool operator==(const UniformXTabulated2DFunction<Scalar>& data) const {
+        return this->xPos() == data.xPos() &&
+               this->yPos() == data.yPos() &&
+               this->samples() == data.samples() &&
+               this->interpolationGuide() == data.interpolationGuide();
     }
 
 private:
