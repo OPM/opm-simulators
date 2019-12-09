@@ -45,10 +45,22 @@ namespace Opm {
 template <class Scalar>
 class DeadOilPvt
 {
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
+    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+
+    DeadOilPvt() = default;
+    DeadOilPvt(const std::vector<Scalar>& oilReferenceDensity,
+               const std::vector<TabulatedOneDFunction>& inverseOilB,
+               const std::vector<TabulatedOneDFunction>& oilMu,
+               const std::vector<TabulatedOneDFunction>& inverseOilBMu)
+        : oilReferenceDensity_(oilReferenceDensity)
+        , inverseOilB_(inverseOilB)
+        , oilMu_(oilMu)
+        , inverseOilBMu_(inverseOilBMu)
+    { }
+
 #if HAVE_ECL_INPUT
     /*!
      * \brief Initialize the oil parameters via the data specified by the PVDO ECL keyword.
@@ -265,6 +277,26 @@ public:
                                         const Evaluation& /*temperature*/,
                                         const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dead oil! */ }
+
+    const std::vector<Scalar>& oilReferenceDensity() const
+    { return oilReferenceDensity_; }
+
+    const std::vector<TabulatedOneDFunction>& inverseOilB() const
+    { return inverseOilB_; }
+
+    const std::vector<TabulatedOneDFunction>& oilMu() const
+    { return oilMu_; }
+
+    const std::vector<TabulatedOneDFunction>& inverseOilBMu() const
+    { return inverseOilBMu_; }
+
+    bool operator==(const DeadOilPvt<Scalar>& data) const
+    {
+        return this->oilReferenceDensity() == data.oilReferenceDensity() &&
+               this->inverseOilB() == data.inverseOilB() &&
+               this->oilMu() == data.oilMu() &&
+               this->inverseOilBMu() == data.inverseOilBMu();
+    }
 
 private:
     std::vector<Scalar> oilReferenceDensity_;
