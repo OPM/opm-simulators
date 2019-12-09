@@ -941,6 +941,12 @@ std::size_t packSize(const WellTestConfig::WTESTWell& data,
            packSize(data.begin_report_step, comm);
 }
 
+std::size_t packSize(const WellTestConfig& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getWells(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -1891,6 +1897,13 @@ void pack(const WellTestConfig::WTESTWell& data,
     pack(data.num_test, buffer, position, comm);
     pack(data.startup_time, buffer, position, comm);
     pack(data.begin_report_step, buffer, position, comm);
+}
+
+void pack(const WellTestConfig& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getWells(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -3186,6 +3199,15 @@ void unpack(WellTestConfig::WTESTWell& data,
     unpack(data.num_test, buffer, position, comm);
     unpack(data.startup_time, buffer, position, comm);
     unpack(data.begin_report_step, buffer, position, comm);
+}
+
+void unpack(WellTestConfig& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<WellTestConfig::WTESTWell> ddata;
+    unpack(ddata, buffer, position, comm);
+    data = WellTestConfig(ddata);
 }
 
 } // end namespace Mpi
