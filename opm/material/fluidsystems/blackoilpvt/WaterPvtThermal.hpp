@@ -54,16 +54,52 @@ class WaterPvtMultiplexer;
 template <class Scalar>
 class WaterPvtThermal
 {
+public:
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef WaterPvtMultiplexer<Scalar, /*enableThermal=*/false> IsothermalPvt;
 
-public:
     WaterPvtThermal()
     {
         enableThermalDensity_ = false;
         enableThermalViscosity_ = false;
         enableInternalEnergy_ = false;
+        isothermalPvt_ = nullptr;
     }
+
+    WaterPvtThermal(IsothermalPvt* isothermalPvt,
+                    const std::vector<Scalar>& viscrefPress,
+                    const std::vector<Scalar>& watdentRefTemp,
+                    const std::vector<Scalar>& watdentCT1,
+                    const std::vector<Scalar>& watdentCT2,
+                    const std::vector<Scalar>& pvtwRefPress,
+                    const std::vector<Scalar>& pvtwRefB,
+                    const std::vector<Scalar>& pvtwCompressibility,
+                    const std::vector<Scalar>& pvtwViscosity,
+                    const std::vector<Scalar>& pvtwViscosibility,
+                    const std::vector<TabulatedOneDFunction>& watvisctCurves,
+                    const std::vector<TabulatedOneDFunction>& internalEnergyCurves,
+                    bool enableThermalDensity,
+                    bool enableThermalViscosity,
+                    bool enableInternalEnergy)
+        : isothermalPvt_(isothermalPvt)
+        , viscrefPress_(viscrefPress)
+        , watdentRefTemp_(watdentRefTemp)
+        , watdentCT1_(watdentCT1)
+        , watdentCT2_(watdentCT2)
+        , pvtwRefPress_(pvtwRefPress)
+        , pvtwRefB_(pvtwRefB)
+        , pvtwCompressibility_(pvtwCompressibility)
+        , pvtwViscosity_(pvtwViscosity)
+        , pvtwViscosibility_(pvtwViscosibility)
+        , watvisctCurves_(watvisctCurves)
+        , internalEnergyCurves_(internalEnergyCurves)
+        , enableThermalDensity_(enableThermalDensity)
+        , enableThermalViscosity_(enableThermalViscosity)
+        , enableInternalEnergy_(enableInternalEnergy)
+    { }
+
+    WaterPvtThermal(const WaterPvtThermal& data)
+    { *this = data; }
 
     ~WaterPvtThermal()
     { delete isothermalPvt_; }
@@ -269,6 +305,94 @@ public:
         // case (it misses the quadratic pressure term), but it is the equation given in
         // the documentation.
         return 1.0/(((1 - X)*(1 + cT1*Y + cT2*Y*Y))*BwRef);
+    }
+
+    const IsothermalPvt* isoThermalPvt() const
+    { return isothermalPvt_; }
+
+    const std::vector<Scalar>& viscrefPress() const
+    { return viscrefPress_; }
+
+    const std::vector<Scalar>& watdentRefTemp() const
+    { return watdentRefTemp_; }
+
+    const std::vector<Scalar>& watdentCT1() const
+    { return watdentCT1_; }
+
+    const std::vector<Scalar>& watdentCT2() const
+    { return watdentCT2_; }
+
+    const std::vector<Scalar>& pvtwRefPress() const
+    { return pvtwRefPress_; }
+
+    const std::vector<Scalar>& pvtwRefB() const
+    { return pvtwRefB_; }
+
+    const std::vector<Scalar>& pvtwCompressibility() const
+    { return pvtwCompressibility_; }
+
+    const std::vector<Scalar>& pvtwViscosity() const
+    { return pvtwViscosity_; }
+
+    const std::vector<Scalar>& pvtwViscosibility() const
+    { return pvtwViscosibility_; }
+
+    const std::vector<TabulatedOneDFunction>& watvisctCurves() const
+    { return watvisctCurves_; }
+
+    const std::vector<TabulatedOneDFunction> internalEnergyCurves() const
+    { return internalEnergyCurves_; }
+
+    bool enableInternalEnergy() const
+    { return enableInternalEnergy_; }
+
+    bool operator==(const WaterPvtThermal<Scalar>& data) const
+    {
+        if (isothermalPvt_ && !data.isothermalPvt_)
+            return false;
+        if (!isothermalPvt_ && data.isothermalPvt_)
+            return false;
+
+        return (!this->isoThermalPvt() ||
+               (*this->isoThermalPvt() == *data.isoThermalPvt())) &&
+               this->viscrefPress() == data.viscrefPress() &&
+               this->watdentRefTemp() == data.watdentRefTemp() &&
+               this->watdentCT1() == data.watdentCT1() &&
+               this->watdentCT2() == data.watdentCT2() &&
+               this->pvtwRefPress() == data.pvtwRefPress() &&
+               this->pvtwRefB() == data.pvtwRefB() &&
+               this->pvtwCompressibility() == data.pvtwCompressibility() &&
+               this->pvtwViscosity() == data.pvtwViscosity() &&
+               this->pvtwViscosibility() == data.pvtwViscosibility() &&
+               this->watvisctCurves() == data.watvisctCurves() &&
+               this->internalEnergyCurves() == data.internalEnergyCurves() &&
+               this->enableThermalDensity() == data.enableThermalDensity() &&
+               this->enableThermalViscosity() == data.enableThermalViscosity() &&
+               this->enableInternalEnergy() == data.enableInternalEnergy();
+    }
+
+    WaterPvtThermal<Scalar>& operator=(const WaterPvtThermal<Scalar>& data)
+    {
+        if (data.isothermalPvt_)
+            isothermalPvt_ = new IsothermalPvt(*data.isothermalPvt_);
+        else
+            isothermalPvt_ = nullptr;
+        viscrefPress_ = data.viscrefPress_;
+        watdentRefTemp_ = data.watdentRefTemp_;
+        watdentCT1_ = data.watdentCT1_;
+        watdentCT2_ = data.watdentCT2_;
+        pvtwRefPress_ = data.pvtwRefPress_;
+        pvtwRefB_ = data.pvtwRefB_;
+        pvtwCompressibility_ = data.pvtwCompressibility_;
+        pvtwViscosity_ = data.pvtwViscosity_;
+        pvtwViscosibility_ = data.pvtwViscosibility_;
+        watvisctCurves_ = data.watvisctCurves_;
+        internalEnergyCurves_ = data.internalEnergyCurves_;
+        enableThermalDensity_ = data.enableThermalDensity_;
+        enableThermalViscosity_ = data.enableThermalViscosity_;
+        enableInternalEnergy_ = data.enableInternalEnergy_;
+
+        return *this;
     }
 
 private:
