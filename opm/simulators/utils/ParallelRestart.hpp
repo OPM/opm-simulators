@@ -105,6 +105,7 @@ class TableSchema;
 class ThresholdPressure;
 class UDQParams;
 class VFPInjTable;
+class VFPProdTable;
 class VISCREFRecord;
 class ViscrefTable;
 class WATDENTRecord;
@@ -564,6 +565,7 @@ ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeMap::StepData)
 ADD_PACK_PROTOTYPES(UDQParams)
 ADD_PACK_PROTOTYPES(VFPInjTable)
+ADD_PACK_PROTOTYPES(VFPProdTable)
 ADD_PACK_PROTOTYPES(VISCREFRecord)
 ADD_PACK_PROTOTYPES(ViscrefTable)
 ADD_PACK_PROTOTYPES(WATDENTRecord)

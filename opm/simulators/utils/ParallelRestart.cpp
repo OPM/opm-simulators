@@ -35,6 +35,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
@@ -907,6 +908,24 @@ std::size_t packSize(const VFPInjTable& data,
            packSize(data.getFloType(), comm) +
            packSize(data.getFloAxis(), comm) +
            packSize(data.getTHPAxis(), comm) +
+           data.getTable().num_elements() *
+           packSize(double(), comm);
+}
+
+std::size_t packSize(const VFPProdTable& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getTableNum(), comm) +
+           packSize(data.getDatumDepth(), comm) +
+           packSize(data.getFloType(), comm) +
+           packSize(data.getWFRType(), comm) +
+           packSize(data.getGFRType(), comm) +
+           packSize(data.getALQType(), comm) +
+           packSize(data.getFloAxis(), comm) +
+           packSize(data.getTHPAxis(), comm) +
+           packSize(data.getWFRAxis(), comm) +
+           packSize(data.getGFRAxis(), comm) +
+           packSize(data.getALQAxis(), comm) +
            data.getTable().num_elements() *
            packSize(double(), comm);
 }
@@ -1831,6 +1850,26 @@ void pack(const VFPInjTable& data,
     for (size_t i = 0; i < data.getTable().num_elements(); ++i)
         pack(*(data.getTable().data() + i), buffer, position, comm);
 }
+
+void pack(const VFPProdTable& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getTableNum(), buffer, position, comm);
+    pack(data.getDatumDepth(), buffer, position, comm);
+    pack(data.getFloType(), buffer, position, comm);
+    pack(data.getWFRType(), buffer, position, comm);
+    pack(data.getGFRType(), buffer, position, comm);
+    pack(data.getALQType(), buffer, position, comm);
+    pack(data.getFloAxis(), buffer, position, comm);
+    pack(data.getTHPAxis(), buffer, position, comm);
+    pack(data.getWFRAxis(), buffer, position, comm);
+    pack(data.getGFRAxis(), buffer, position, comm);
+    pack(data.getALQAxis(), buffer, position, comm);
+    for (size_t i = 0; i < data.getTable().num_elements(); ++i)
+        pack(*(data.getTable().data() + i), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -3073,6 +3112,45 @@ void unpack(VFPInjTable& data,
 
     data = VFPInjTable(tableNum, datumDepth, floType,
                        floAxis, thpAxis, table);
+}
+
+void unpack(VFPProdTable& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    int tableNum;
+    double datumDepth;
+    VFPProdTable::FLO_TYPE floType;
+    VFPProdTable::WFR_TYPE wfrType;
+    VFPProdTable::GFR_TYPE gfrType;
+    VFPProdTable::ALQ_TYPE alqType;
+    std::vector<double> floAxis, thpAxis, wfrAxis, gfrAxis, alqAxis;
+    VFPProdTable::array_type table;
+
+    unpack(tableNum, buffer, position, comm);
+    unpack(datumDepth, buffer, position, comm);
+    unpack(floType, buffer, position, comm);
+    unpack(wfrType, buffer, position, comm);
+    unpack(gfrType, buffer, position, comm);
+    unpack(alqType, buffer, position, comm);
+    unpack(floAxis, buffer, position, comm);
+    unpack(thpAxis, buffer, position, comm);
+    unpack(wfrAxis, buffer, position, comm);
+    unpack(gfrAxis, buffer, position, comm);
+    unpack(alqAxis, buffer, position, comm);
+    VFPProdTable::extents extents;
+    extents[0] = thpAxis.size();
+    extents[1] = wfrAxis.size();
+    extents[2] = gfrAxis.size();
+    extents[3] = alqAxis.size();
+    extents[4] = floAxis.size();
+    table.resize(extents);
+    for (size_t i = 0; i < table.num_elements(); ++i)
+      unpack(*(table.data() + i), buffer, position, comm);
+
+    data = VFPProdTable(tableNum, datumDepth, floType, wfrType,
+                        gfrType, alqType, floAxis, thpAxis,
+                        wfrAxis, gfrAxis, alqAxis, table);
 }
 
 } // end namespace Mpi
