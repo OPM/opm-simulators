@@ -300,7 +300,12 @@ protected:
 
         auto & field_props = this->eclState().fieldProps();
         const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);
+        int active_cells = 0;
+        for (const int a : actnum)
+            active_cells += a;
+        printf("Calling reset_actnum PE: %d   sum(actnum): %d\n", mpiRank, active_cells);
 #endif
+
     }
 
     // removing some connection located in inactive grid cells
