@@ -992,6 +992,24 @@ std::size_t packSize(const Connection& data,
            packSize(data.wellPi(), comm);
 }
 
+std::size_t packSize(const Well::WellInjectionProperties& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.name, comm) +
+           packSize(data.surfaceInjectionRate, comm) +
+           packSize(data.reservoirInjectionRate, comm) +
+           packSize(data.BHPLimit, comm) +
+           packSize(data.THPLimit, comm) +
+           packSize(data.temperature, comm) +
+           packSize(data.BHPH, comm) +
+           packSize(data.THPH, comm) +
+           packSize(data.VFPTableNumber, comm) +
+           packSize(data.predictionMode, comm) +
+           packSize(data.injectionControls, comm) +
+           packSize(data.injectorType, comm) +
+           packSize(data.controlMode, comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -1993,6 +2011,25 @@ void pack(const Connection& data,
     pack(data.getCompSegSeqIndex(), buffer, position, comm);
     pack(data.segment(), buffer, position, comm);
     pack(data.wellPi(), buffer, position, comm);
+}
+
+void pack(const Well::WellInjectionProperties& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name, buffer, position, comm);
+    pack(data.surfaceInjectionRate, buffer, position, comm);
+    pack(data.reservoirInjectionRate, buffer, position, comm);
+    pack(data.BHPLimit, buffer, position, comm);
+    pack(data.THPLimit, buffer, position, comm);
+    pack(data.temperature, buffer, position, comm);
+    pack(data.BHPH, buffer, position, comm);
+    pack(data.THPH, buffer, position, comm);
+    pack(data.VFPTableNumber, buffer, position, comm);
+    pack(data.predictionMode, buffer, position, comm);
+    pack(data.injectionControls, buffer, position, comm);
+    pack(data.injectorType, buffer, position, comm);
+    pack(data.controlMode, buffer, position, comm);
 }
 
 /// unpack routines
@@ -3368,6 +3405,25 @@ void unpack(Connection& data,
                       segDistStart, segDistEnd,
                       defaultSatTabId, compSegSeqIndex,
                       segment, wellPi);
+}
+
+void unpack(Well::WellInjectionProperties& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.name, buffer, position, comm);
+    unpack(data.surfaceInjectionRate, buffer, position, comm);
+    unpack(data.reservoirInjectionRate, buffer, position, comm);
+    unpack(data.BHPLimit, buffer, position, comm);
+    unpack(data.THPLimit, buffer, position, comm);
+    unpack(data.temperature, buffer, position, comm);
+    unpack(data.BHPH, buffer, position, comm);
+    unpack(data.THPH, buffer, position, comm);
+    unpack(data.VFPTableNumber, buffer, position, comm);
+    unpack(data.predictionMode, buffer, position, comm);
+    unpack(data.injectionControls, buffer, position, comm);
+    unpack(data.injectorType, buffer, position, comm);
+    unpack(data.controlMode, buffer, position, comm);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
