@@ -1444,6 +1444,30 @@ BOOST_AUTO_TEST_CASE(WellConnections)
 }
 
 
+BOOST_AUTO_TEST_CASE(WellProductionProperties)
+{
+#ifdef HAVE_MPI
+    Opm::Well::WellProductionProperties val1("test",
+                                             Opm::UDAValue(1.0),
+                                             Opm::UDAValue("test"),
+                                             Opm::UDAValue(2.0),
+                                             Opm::UDAValue(3.0),
+                                             Opm::UDAValue(4.0),
+                                             Opm::UDAValue(5.0),
+                                             Opm::UDAValue(6.0),
+                                             7.0, 8.0,
+                                             9,
+                                             10.0,
+                                             true,
+                                             Opm::Well::ProducerCMode::CRAT,
+                                             Opm::Well::ProducerCMode::BHP, 11);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;

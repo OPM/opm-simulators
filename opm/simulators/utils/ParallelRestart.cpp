@@ -1041,6 +1041,27 @@ std::size_t packSize(const WellConnections& data,
            packSize(data.getConnections(), comm);
 }
 
+std::size_t packSize(const Well::WellProductionProperties& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.name, comm) +
+           packSize(data.OilRate, comm) +
+           packSize(data.WaterRate, comm) +
+           packSize(data.GasRate, comm) +
+           packSize(data.LiquidRate, comm) +
+           packSize(data.ResVRate, comm) +
+           packSize(data.BHPLimit, comm) +
+           packSize(data.THPLimit, comm) +
+           packSize(data.BHPH, comm) +
+           packSize(data.THPH, comm) +
+           packSize(data.VFPTableNumber, comm) +
+           packSize(data.ALQValue, comm) +
+           packSize(data.predictionMode, comm) +
+           packSize(data.controlMode, comm) +
+           packSize(data.whistctl_cmode, comm) +
+           packSize(data.getNumProductionControls(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -2092,6 +2113,28 @@ void pack(const WellConnections& data,
     pack(data.getHeadJ(), buffer, position, comm);
     pack(data.getNumRemoved(), buffer, position, comm);
     pack(data.getConnections(), buffer, position, comm);
+}
+
+void pack(const Well::WellProductionProperties& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name, buffer, position, comm);
+    pack(data.OilRate, buffer, position, comm);
+    pack(data.WaterRate, buffer, position, comm);
+    pack(data.GasRate, buffer, position, comm);
+    pack(data.LiquidRate, buffer, position, comm);
+    pack(data.ResVRate, buffer, position, comm);
+    pack(data.BHPLimit, buffer, position, comm);
+    pack(data.THPLimit, buffer, position, comm);
+    pack(data.BHPH, buffer, position, comm);
+    pack(data.THPH, buffer, position, comm);
+    pack(data.VFPTableNumber, buffer, position, comm);
+    pack(data.ALQValue, buffer, position, comm);
+    pack(data.predictionMode, buffer, position, comm);
+    pack(data.controlMode, buffer, position, comm);
+    pack(data.whistctl_cmode, buffer, position, comm);
+    pack(data.getNumProductionControls(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -3537,6 +3580,43 @@ void unpack(WellConnections& data,
     unpack(connections, buffer, position, comm),
 
     data = WellConnections(headI, headJ, numRemoved, connections);
+}
+
+void unpack(Well::WellProductionProperties& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    UDAValue OilRate, WaterRate, GasRate, LiquidRate, ResVRate;
+    UDAValue BHPLimit, THPLimit;
+    double BHPH, THPH;
+    int VFPTableNumber;
+    double ALQValue;
+    bool predictionMode;
+    Well::ProducerCMode controlMode, whistctl_cmode;
+    int prodCtrls;
+
+    unpack(name, buffer, position, comm);
+    unpack(OilRate, buffer, position, comm);
+    unpack(WaterRate, buffer, position, comm);
+    unpack(GasRate, buffer, position, comm);
+    unpack(LiquidRate, buffer, position, comm);
+    unpack(ResVRate, buffer, position, comm);
+    unpack(BHPLimit, buffer, position, comm);
+    unpack(THPLimit, buffer, position, comm);
+    unpack(BHPH, buffer, position, comm);
+    unpack(THPH, buffer, position, comm);
+    unpack(VFPTableNumber, buffer, position, comm);
+    unpack(ALQValue, buffer, position, comm);
+    unpack(predictionMode, buffer, position, comm);
+    unpack(controlMode, buffer, position, comm);
+    unpack(whistctl_cmode, buffer, position, comm);
+    unpack(prodCtrls, buffer, position, comm);
+    data = Well::WellProductionProperties(name, OilRate, WaterRate, GasRate,
+                                          LiquidRate, ResVRate, BHPLimit,
+                                          THPLimit, BHPH, THPH, VFPTableNumber,
+                                          ALQValue, predictionMode, controlMode,
+                                          whistctl_cmode, prodCtrls);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
