@@ -1093,6 +1093,17 @@ std::size_t packSize(const Valve& data,
            packSize(data.status(), comm);
 }
 
+template<class T>
+std::size_t packSize(const std::shared_ptr<T>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size = packSize(bool(), comm);
+    if (data)
+         size += packSize(*data, comm);
+
+    return size;
+}
+
 ////// pack routines
 
 template<class T>
@@ -2197,6 +2208,15 @@ void pack(const Valve& data,
     pack(data.pipeRoughness(), buffer, position, comm);
     pack(data.pipeCrossArea(), buffer, position, comm);
     pack(data.status(), buffer, position, comm);
+}
+
+template<class T>
+void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data != nullptr, buffer, position, comm);
+    if (data)
+        pack(*data, buffer, position, comm);
 }
 
 /// unpack routines
@@ -3736,6 +3756,18 @@ void unpack(Valve& data,
     data = Valve(conFlowCoefficient, conCrossArea, conMaxCrossArea,
                  pipeAdditionalLength, pipeDiameter, pipeRoughness,
                  pipeCrossArea, status);
+}
+
+template<class T>
+void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    bool hasVal;
+    unpack(hasVal, buffer, position, comm);
+    if (hasVal) {
+        data = std::make_shared<T>();
+        unpack(*data, buffer, position, comm);
+    }
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

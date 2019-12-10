@@ -160,6 +160,10 @@ std::size_t packSize(const std::vector<bool,A>& data, Dune::MPIHelper::MPICommun
 template<class... Ts>
 std::size_t packSize(const std::tuple<Ts...>& data, Dune::MPIHelper::MPICommunicator comm);
 
+template<class T>
+std::size_t packSize(const std::shared_ptr<T>& data,
+                     Dune::MPIHelper::MPICommunicator comm);
+
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm);
 
 std::size_t packSize(const std::string& str, Dune::MPIHelper::MPICommunicator comm);
@@ -276,6 +280,10 @@ void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& posit
 template<class... Ts>
 void pack(const std::tuple<Ts...>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
+void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
 
 template<class T1, class T2, class C, class A>
 void pack(const std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
@@ -413,6 +421,10 @@ void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
 template<class... Ts>
 void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
+void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
 
 template<class T1, class T2, class C, class A>
 void unpack(std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
