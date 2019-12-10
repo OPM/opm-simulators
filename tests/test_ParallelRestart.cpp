@@ -330,7 +330,7 @@ BOOST_AUTO_TEST_CASE(dataConnection)
 }
 
 
-BOOST_AUTO_TEST_CASE(Segment)
+BOOST_AUTO_TEST_CASE(dataSegment)
 {
 #if HAVE_MPI
     Opm::data::Segment seg1 = getSegment();
@@ -1486,6 +1486,20 @@ BOOST_AUTO_TEST_CASE(Valve)
 {
 #ifdef HAVE_MPI
     Opm::Valve val1(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, Opm::Valve::Status::OPEN);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Segment)
+{
+#ifdef HAVE_MPI
+    Opm::Segment val1(1, 2, 3, {1, 2}, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, false,
+                      Opm::Segment::SegmentType::SICD,
+                      std::make_shared<Opm::SpiralICD>(),
+                      std::make_shared<Opm::Valve>());
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

@@ -96,6 +96,7 @@ class RockTable;
 class Rock2dTable;
 class Rock2dtrTable;
 class Runspec;
+class Segment;
 class SimulationConfig;
 class SimpleTable;
 class SkprpolyTable;
@@ -575,6 +576,7 @@ ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(Runspec)
 ADD_PACK_PROTOTYPES(std::string)
+ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(SkprpolyTable)

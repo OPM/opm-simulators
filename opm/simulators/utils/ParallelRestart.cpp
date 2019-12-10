@@ -1093,6 +1093,25 @@ std::size_t packSize(const Valve& data,
            packSize(data.status(), comm);
 }
 
+std::size_t packSize(const Segment& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.segmentNumber(), comm) +
+           packSize(data.branchNumber(), comm) +
+           packSize(data.outletSegment(), comm) +
+           packSize(data.inletSegments(), comm) +
+           packSize(data.totalLength(), comm) +
+           packSize(data.depth(), comm) +
+           packSize(data.internalDiameter(), comm) +
+           packSize(data.roughness(), comm) +
+           packSize(data.crossArea(), comm) +
+           packSize(data.volume(), comm) +
+           packSize(data.dataReady(), comm) +
+           packSize(data.segmentType(), comm) +
+           packSize(data.spiralICD(), comm) +
+           packSize(data.getValve(), comm);
+}
+
 template<class T>
 std::size_t packSize(const std::shared_ptr<T>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -1103,6 +1122,9 @@ std::size_t packSize(const std::shared_ptr<T>& data,
 
     return size;
 }
+
+template std::size_t packSize(const std::shared_ptr<SpiralICD>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
 
 ////// pack routines
 
@@ -2210,6 +2232,26 @@ void pack(const Valve& data,
     pack(data.status(), buffer, position, comm);
 }
 
+void pack(const Segment& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.segmentNumber(), buffer, position, comm);
+    pack(data.branchNumber(), buffer, position, comm);
+    pack(data.outletSegment(), buffer, position, comm);
+    pack(data.inletSegments(), buffer, position, comm);
+    pack(data.totalLength(), buffer, position, comm);
+    pack(data.depth(), buffer, position, comm);
+    pack(data.internalDiameter(), buffer, position, comm);
+    pack(data.roughness(), buffer, position, comm);
+    pack(data.crossArea(), buffer, position, comm);
+    pack(data.volume(), buffer, position, comm);
+    pack(data.dataReady(), buffer, position, comm);
+    pack(data.segmentType(), buffer, position, comm);
+    pack(data.spiralICD(), buffer, position, comm);
+    pack(data.getValve(), buffer, position, comm);
+}
+
 template<class T>
 void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -2218,6 +2260,9 @@ void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& positi
     if (data)
         pack(*data, buffer, position, comm);
 }
+
+template void pack(const std::shared_ptr<SpiralICD>& data, std::vector<char>& buffer,
+                   int& position, Dune::MPIHelper::MPICommunicator comm);
 
 /// unpack routines
 
@@ -3758,6 +3803,38 @@ void unpack(Valve& data,
                  pipeCrossArea, status);
 }
 
+void unpack(Segment& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    int segmentNumber, branchNumber, outletSegment;
+    std::vector<int> inletSegments;
+    double totalLength, depth, internalDiameter, roughness, crossArea, volume;
+    bool dataReady;
+    Segment::SegmentType segmentType;
+    std::shared_ptr<SpiralICD> spiralICD;
+    std::shared_ptr<Valve> valve;
+
+    unpack(segmentNumber, buffer, position, comm);
+    unpack(branchNumber, buffer, position, comm);
+    unpack(outletSegment, buffer, position, comm);
+    unpack(inletSegments, buffer, position, comm);
+    unpack(totalLength, buffer, position, comm);
+    unpack(depth, buffer, position, comm);
+    unpack(internalDiameter, buffer, position, comm);
+    unpack(roughness, buffer, position, comm);
+    unpack(crossArea, buffer, position, comm);
+    unpack(volume, buffer, position, comm);
+    unpack(dataReady, buffer, position, comm);
+    unpack(segmentType, buffer, position, comm);
+    unpack(spiralICD, buffer, position, comm);
+    unpack(valve, buffer, position, comm);
+    data = Segment(segmentNumber, branchNumber, outletSegment,
+                   inletSegments, totalLength, depth,
+                   internalDiameter, roughness, crossArea,
+                   volume, dataReady, segmentType, spiralICD, valve);
+}
+
 template<class T>
 void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -3769,6 +3846,10 @@ void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
         unpack(*data, buffer, position, comm);
     }
 }
+
+template void unpack(std::shared_ptr<SpiralICD>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
 
 #define INSTANTIATE_PACK_VECTOR(T) \
 template std::size_t packSize(const std::vector<T>& data, \
