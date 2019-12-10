@@ -126,15 +126,28 @@ public:
         // copy the SATNUM grid property. in some cases this is not necessary, but it
         // should not require much memory anyway...
 #ifdef ENABLE_3DPROPS_TESTING
-        const auto& fp = eclState.fieldProps();
-        satnumRegionArray_ = fp.get<int>("SATNUM");
-        std::transform(satnumRegionArray_.begin(), satnumRegionArray_.end(), satnumRegionArray_.begin(), [](const int& satnum_value) { return satnum_value - 1; });
+        size_t numCompressedElems = compressedToCartesianElemIdx.size();
+        satnumRegionArray_.resize(numCompressedElems);
+        if (eclState.fieldProps().has<int>("SATNUM")) {
+            const auto& satnumRawData = eclState.fieldProps().get_global<int>("SATNUM");
+            for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+                unsigned cartesianElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx[elemIdx]);
+                satnumRegionArray_[elemIdx] = satnumRawData[cartesianElemIdx] - 1;
+            }
+        }
+        else
+            std::fill(satnumRegionArray_.begin(), satnumRegionArray_.end(), 0);
 
-        if (fp.has<double>("IMBNUM")) {
-            imbnumRegionArray_ = fp.get<int>("IMBNUM");
-            std::transform(imbnumRegionArray_.begin(), imbnumRegionArray_.end(), imbnumRegionArray_.begin(), [](const int& imbnum_value) { return imbnum_value - 1; });
-        } else
-            imbnumRegionArray_ = satnumRegionArray_;
+        // create the information for the imbibition region (IMBNUM). By default this is
+        // the same as the saturation region (SATNUM)
+        imbnumRegionArray_ = satnumRegionArray_;
+        if (eclState.fieldProps().has<int>("IMBNUM")) {
+            const auto& imbnumRawData = eclState.fieldProps().get_global<int>("IMBNUM");
+            for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+                int cartesianElemIdx = compressedToCartesianElemIdx[elemIdx];
+                imbnumRegionArray_[elemIdx] = imbnumRawData[cartesianElemIdx] - 1;
+            }
+        }
 #else
         size_t numCompressedElems = compressedToCartesianElemIdx.size();
         satnumRegionArray_.resize(numCompressedElems);
