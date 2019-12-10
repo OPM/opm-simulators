@@ -737,14 +737,17 @@ phaseSaturations(const Grid& grid,
             if (isConstPc<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager,FluidSystem::waterPhaseIdx, cell)){
                 const double cellDepth = Opm::UgGridHelpers::cellCenterDepth(grid,
                                                                              cell);
+                printf("SawtFromDepth\n");
                 sw = satFromDepth<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager,cellDepth,reg.zwoc(),waterpos,cell,false);
                 phaseSaturations[waterpos][localIndex] = sw;
             }
             else {
                 const double pcov = phasePressures[oilpos][localIndex] - phasePressures[waterpos][localIndex];
+                printf("Else swatinit.size(): %ld\n", swatInit.size());
                 if (swatInit.empty()) { // Invert Pc to find sw
                     sw = satFromPc<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager, waterpos, cell, pcov);
                     phaseSaturations[waterpos][localIndex] = sw;
+                    printf("satFromPc\n");
                 }
                 else { // Scale Pc to reflect imposed sw
                     sw = swatInit[cell];
@@ -752,6 +755,7 @@ phaseSaturations(const Grid& grid,
                     phaseSaturations[waterpos][localIndex] = sw;
                 }
             }
+            printf("Setting sw[%d] = %lg\n", cell, sw);
         }
         double sg = 0.0;
         if (gas) {
@@ -947,21 +951,21 @@ public:
         //Check for presence of kw SWATINIT
         if (applySwatInit) {
             const int nc = grid.size(/*codim=*/0);
-            swatInit_.resize(nc);
 
 #ifdef ENABLE_3DPROPS_TESTING
-            if (eclipseState.fieldProps().has<double>("SWATINIT"))
-                swatInit_ = eclipseState.fieldProps().get<double>("SWATINIT");
+            if (eclipseState.fieldProps().has<double>("SWATINIT")) {
+                const std::vector<double>& swatInitEcl = eclipseState.fieldProps().get_global<double>("SWATINIT");
 #else
             if (eclipseState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT")) {
                 const std::vector<double>& swatInitEcl = eclipseState.get3DProperties().getDoubleGridProperty("SWATINIT").getData();
+#endif
                 const int* gc = Opm::UgGridHelpers::globalCell(grid);
+                swatInit_.resize(nc);
                 for (int c = 0; c < nc; ++c) {
                     const int deckPos = (gc == NULL) ? c : gc[c];
                     swatInit_[c] = swatInitEcl[deckPos];
                 }
             }
-#endif
         }
 
 

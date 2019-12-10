@@ -822,6 +822,12 @@ public:
         const auto& schedule = simulator.vanguard().schedule();
         const auto& events = schedule.getEvents();
         const auto& timeMap = schedule.getTimeMap();
+#ifdef ENABLE_3DPROPS_TESTING
+        auto & field_props = eclState.fieldProps();
+        auto meminfo = field_props.meminfo();
+        printf("%ld/%ld  int: %ld  double: %ld  size:%ld bytes (%ld MB)\n", meminfo.global_size, meminfo.active_size, meminfo.int_fields, meminfo.double_fields, meminfo.total, meminfo.total / (1024*1024));
+#endif
+
 
         if (episodeIdx >= 0 && events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER, episodeIdx)) {
             // bring the contents of the keywords to the current state of the SCHEDULE
@@ -2719,7 +2725,7 @@ private:
 #endif
 
         // make sure all required quantities are enables
-        if (FluidSystem::phaseIsActive(waterPhaseIdx) && has_swat)
+        if (FluidSystem::phaseIsActive(waterPhaseIdx) && !has_swat)
             throw std::runtime_error("The ECL input file requires the presence of the SWAT keyword if "
                                      "the water phase is active");
         if (FluidSystem::phaseIsActive(gasPhaseIdx) && !has_sgas)

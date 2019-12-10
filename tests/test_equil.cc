@@ -482,8 +482,8 @@ void test_DeckWithCapillary()
     const auto& sats = comp.saturation();
     std::vector<double> s[3];
     s[FluidSystem::waterPhaseIdx] = { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.42190294373815257, 0.77800802072306474, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
-    s[FluidSystem::oilPhaseIdx] = { 0, 0, 0, 0.0073481611123183965, 0.79272270823081337, 0.8, 0.8, 0.8, 0.8, 0.57809705626184749, 0.22199197927693526, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    s[FluidSystem::gasPhaseIdx] = { 0.8, 0.8, 0.8, 0.79265183888768165, 0.0072772917691866562, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    s[FluidSystem::oilPhaseIdx]   = { 0, 0, 0, 0.0073481611123183965, 0.79272270823081337, 0.8, 0.8, 0.8, 0.8, 0.57809705626184749, 0.22199197927693526, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    s[FluidSystem::gasPhaseIdx]   = { 0.8, 0.8, 0.8, 0.79265183888768165, 0.0072772917691866562, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     for (int phase = 0; phase < 3; ++phase) {
         REQUIRE(sats[phase].size() == s[phase].size());
         for (size_t i = 0; i < s[phase].size(); ++i) {
@@ -1056,17 +1056,21 @@ int main(int argc, char** argv)
     typedef TTAG(TestEquilTypeTag) TypeTag;
     Opm::registerAllParameters_<TypeTag>();
 
+    /*
     test_PhasePressure();
     test_CellSubset();
     test_RegMapping();
     test_DeckAllDead();
     test_CapillaryInversion();
+    */
     test_DeckWithCapillary();
+    /*
     test_DeckWithCapillaryOverlap();
     test_DeckWithLiveOil();
     test_DeckWithLiveGas();
     test_DeckWithRSVDAndRVVD();
     test_DeckWithPBVDAndPDVD();
+    */
     //test_DeckWithSwatinit();
 
     return 0;
