@@ -282,14 +282,7 @@ protected:
         {
             equilGrid_.reset(new Dune::CpGrid(*grid_));
             equilCartesianIndexMapper_.reset(new CartesianIndexMapper(*equilGrid_));
-
-#ifdef ENABLE_3DPROPS_TESTING
-            auto actnum = Opm::UgGridHelpers::createACTNUM(*grid_);
-            auto & field_props = this->eclState().fieldProps();
-            const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);
-#endif
         }
-
 
 #ifdef ENABLE_3DPROPS_TESTING
         std::vector<int> actnum;
