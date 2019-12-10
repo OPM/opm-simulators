@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
@@ -1029,6 +1030,15 @@ std::size_t packSize(const WellEconProductionLimits& data,
            packSize(data.minLiquidRate(), comm) +
            packSize(data.maxTemperature(), comm) +
            packSize(data.minReservoirFluidRate(), comm);
+}
+
+std::size_t packSize(const WellConnections& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getHeadI(), comm) +
+           packSize(data.getHeadJ(), comm) +
+           packSize(data.getNumRemoved(), comm) +
+           packSize(data.getConnections(), comm);
 }
 
 ////// pack routines
@@ -2072,6 +2082,16 @@ void pack(const WellEconProductionLimits& data,
     pack(data.minLiquidRate(), buffer, position, comm);
     pack(data.maxTemperature(), buffer, position, comm);
     pack(data.minReservoirFluidRate(), buffer, position, comm);
+}
+
+void pack(const WellConnections& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getHeadI(), buffer, position, comm);
+    pack(data.getHeadJ(), buffer, position, comm);
+    pack(data.getNumRemoved(), buffer, position, comm);
+    pack(data.getConnections(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -3501,6 +3521,22 @@ void unpack(WellEconProductionLimits& data,
                                     workoverSecondary, maxGasLiquidRatio,
                                     minLiquidRate, maxTemperature,
                                     minReservoirFluidRate);
+}
+
+void unpack(WellConnections& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    int headI, headJ;
+    size_t numRemoved;
+    std::vector<Connection> connections;
+
+    unpack(headI, buffer, position, comm),
+    unpack(headJ, buffer, position, comm),
+    unpack(numRemoved, buffer, position, comm),
+    unpack(connections, buffer, position, comm),
+
+    data = WellConnections(headI, headJ, numRemoved, connections);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

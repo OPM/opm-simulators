@@ -114,6 +114,7 @@ class VISCREFRecord;
 class ViscrefTable;
 class WATDENTRecord;
 class WatdentTable;
+class WellConnections;
 class Welldims;
 class WellEconProductionLimits;
 class WellFoamProperties;
@@ -582,6 +583,7 @@ ADD_PACK_PROTOTYPES(WATDENTRecord)
 ADD_PACK_PROTOTYPES(WatdentTable)
 ADD_PACK_PROTOTYPES(Well::WellInjectionProperties)
 ADD_PACK_PROTOTYPES(Well::WellGuideRate)
+ADD_PACK_PROTOTYPES(WellConnections)
 ADD_PACK_PROTOTYPES(Welldims)
 ADD_PACK_PROTOTYPES(WellEconProductionLimits)
 ADD_PACK_PROTOTYPES(WellFoamProperties)
