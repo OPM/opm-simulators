@@ -58,6 +58,7 @@ namespace Opm
 class Actdims;
 class Aqudims;
 class ColumnSchema;
+class Connection;
 class DENSITYRecord;
 class DensityTable;
 class EclHysterConfig;
@@ -510,6 +511,7 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
 ADD_PACK_PROTOTYPES(Actdims)
 ADD_PACK_PROTOTYPES(Aqudims)
 ADD_PACK_PROTOTYPES(ColumnSchema)
+ADD_PACK_PROTOTYPES(Connection)
 ADD_PACK_PROTOTYPES(data::CellData)
 ADD_PACK_PROTOTYPES(data::Connection)
 ADD_PACK_PROTOTYPES(data::Rates)

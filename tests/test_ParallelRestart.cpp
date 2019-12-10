@@ -42,6 +42,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
@@ -316,7 +317,7 @@ BOOST_AUTO_TEST_CASE(Rates)
 }
 
 
-BOOST_AUTO_TEST_CASE(Connection)
+BOOST_AUTO_TEST_CASE(dataConnection)
 {
 #if HAVE_MPI
     Opm::data::Connection con1 = getConnection();
@@ -1359,6 +1360,21 @@ BOOST_AUTO_TEST_CASE(UDAValue)
     auto val22 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val22) == std::get<2>(val22));
     BOOST_CHECK(val1 == std::get<0>(val22));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Connection)
+{
+#ifdef HAVE_MPI
+    Opm::Connection val1(Opm::Connection::Direction::Y,
+                         1.0, Opm::Connection::State::SHUT,
+                         2, 3, 4.0, 5.0, 6.0, 7.0, 8.0,
+                         {9, 10, 11}, 12, 13.0, 14.0, true,
+                         15, 16, 17.0);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
 #endif
 }
 
