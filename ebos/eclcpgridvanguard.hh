@@ -300,10 +300,8 @@ protected:
 
         auto & field_props = this->eclState().fieldProps();
         const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);
-        int active_cells = 0;
-        for (const int a : actnum)
-            active_cells += a;
-        printf("Calling reset_actnum PE: %d   sum(actnum): %d\n", mpiRank, active_cells);
+        auto meminfo = field_props.meminfo();
+        printf("%ld/%ld  int: %ld  double: %ld  size:%ld bytes (%ld MB)\n", meminfo.global_size, meminfo.active_size, meminfo.int_fields, meminfo.double_fields, meminfo.total, meminfo.total / (1024*1024));
 #endif
 
     }

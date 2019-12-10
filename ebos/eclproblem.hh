@@ -2231,11 +2231,15 @@ private:
             propName = "ROCKNUM";
 
         if (eclState.fieldProps().has_int(propName)) {
-            const auto& tmp = eclState.fieldProps().get_int(propName);
+            const auto& tmp = eclState.fieldProps().get_global_int(propName);
             unsigned numElem = vanguard.gridView().size(0);
             rockTableIdx_.resize(numElem);
-            for (std::size_t g=0; g< tmp.size(); g++)
-                rockTableIdx_[g] = tmp[g];
+            for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
+                unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
+
+                // reminder: Eclipse uses FORTRAN-style indices
+                rockTableIdx_[elemIdx] = tmp[cartElemIdx] - 1;
+            }
         }
 #else
         if (deck.hasKeyword("ROCKCOMP") && eclState.get3DProperties().hasDeckIntGridProperty("ROCKNUM"))
