@@ -59,7 +59,7 @@ namespace Opm
     , aqufetp_data_(aqufetp_data)
     {}
 
-    void endTimeStep()
+    void endTimeStep() override
     {
       for (const auto& Qai: Base::Qai_) {
         Base::W_flux_ += Qai*Base::ebos_simulator_.timeStepSize();
@@ -73,7 +73,7 @@ namespace Opm
     const Aquifetp::AQUFETP_data aqufetp_data_;
     Scalar aquifer_pressure_; // aquifer
 
-    inline void initializeConnections(const Aquancon::AquanconOutput& connection)
+    inline void initializeConnections(const Aquancon::AquanconOutput& connection) override
     {
       const auto& eclState = Base::ebos_simulator_.vanguard().eclState();
       const auto& ugrid = Base::ebos_simulator_.vanguard().grid();
@@ -179,19 +179,19 @@ namespace Opm
       return pa_;
     }
 
-    inline void calculateAquiferConstants()
+    inline void calculateAquiferConstants() override
     {
       Base::Tc_ = ( aqufetp_data_.C_t * aqufetp_data_.V0 ) / aqufetp_data_.J ;
     }
     // This function implements Eq 5.14 of the EclipseTechnicalDescription
-    inline void calculateInflowRate(int idx, const Simulator& simulator)
+    inline void calculateInflowRate(int idx, const Simulator& simulator) override
     {
       const Scalar td_Tc_ = simulator.timeStepSize() / Base::Tc_ ;
       const Scalar coef = (1 - exp(-td_Tc_)) / td_Tc_;
       Base::Qai_.at(idx) = Base::alphai_[idx] * aqufetp_data_.J * dpai(idx) * coef;
     }
 
-    inline void calculateAquiferCondition()
+    inline void calculateAquiferCondition() override
     {
       Base::rhow_.resize(Base::cell_idx_.size(),0.);
 
@@ -210,7 +210,7 @@ namespace Opm
       aquifer_pressure_ = Base::pa0_ ;
     }
 
-    inline Scalar calculateReservoirEquilibrium()
+    inline Scalar calculateReservoirEquilibrium() override
     {
       // Since the global_indices are the reservoir index, we just need to extract the fluidstate at those indices
       std::vector<Scalar> pw_aquifer;

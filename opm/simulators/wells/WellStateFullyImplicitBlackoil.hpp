@@ -809,7 +809,7 @@ namespace Opm
             return perf_water_velocity_;
         }
 
-        virtual void shutWell(int well_index) {
+        virtual void shutWell(int well_index) override {
             WellState::shutWell(well_index);
             const int np = numPhases();
             for (int p = 0; p < np; ++p)
