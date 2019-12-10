@@ -100,6 +100,7 @@ class SimulationConfig;
 class SimpleTable;
 class SkprpolyTable;
 class SkprwatTable;
+class SpiralICD;
 class Tabdims;
 class TableColumn;
 class TableContainer;
@@ -565,6 +566,7 @@ ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(SkprpolyTable)
 ADD_PACK_PROTOTYPES(SkprwatTable)
+ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)

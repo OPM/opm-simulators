@@ -32,6 +32,7 @@
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
@@ -1060,6 +1061,22 @@ std::size_t packSize(const Well::WellProductionProperties& data,
            packSize(data.controlMode, comm) +
            packSize(data.whistctl_cmode, comm) +
            packSize(data.getNumProductionControls(), comm);
+}
+
+std::size_t packSize(const SpiralICD& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.strength(), comm) +
+           packSize(data.length(), comm) +
+           packSize(data.densityCalibration(), comm) +
+           packSize(data.viscosityCalibration(), comm) +
+           packSize(data.criticalValue(), comm) +
+           packSize(data.widthTransitionRegion(), comm) +
+           packSize(data.maxViscosityRatio(), comm) +
+           packSize(data.methodFlowScaling(), comm) +
+           packSize(data.maxAbsoluteRate(), comm) +
+           packSize(data.status(), comm) +
+           packSize(data.scalingFactor(), comm);
 }
 
 ////// pack routines
@@ -2135,6 +2152,23 @@ void pack(const Well::WellProductionProperties& data,
     pack(data.controlMode, buffer, position, comm);
     pack(data.whistctl_cmode, buffer, position, comm);
     pack(data.getNumProductionControls(), buffer, position, comm);
+}
+
+void pack(const SpiralICD& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.strength(), buffer, position, comm);
+    pack(data.length(), buffer, position, comm);
+    pack(data.densityCalibration(), buffer, position, comm);
+    pack(data.viscosityCalibration(), buffer, position, comm);
+    pack(data.criticalValue(), buffer, position, comm);
+    pack(data.widthTransitionRegion(), buffer, position, comm);
+    pack(data.maxViscosityRatio(), buffer, position, comm);
+    pack(data.methodFlowScaling(), buffer, position, comm);
+    pack(data.maxAbsoluteRate(), buffer, position, comm);
+    pack(data.status(), buffer, position, comm);
+    pack(data.scalingFactor(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -3617,6 +3651,37 @@ void unpack(Well::WellProductionProperties& data,
                                           THPLimit, BHPH, THPH, VFPTableNumber,
                                           ALQValue, predictionMode, controlMode,
                                           whistctl_cmode, prodCtrls);
+}
+
+void unpack(SpiralICD& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    double strength, length, densityCalibration,
+           viscosityCalibration, criticalValue,
+           widthTransitionRegion, maxViscosityRatio;
+    int methodFlowScaling;
+    double maxAbsoluteRate;
+    SpiralICD::Status status;
+    double scalingFactor;
+
+    unpack(strength, buffer, position, comm);
+    unpack(length, buffer, position, comm);
+    unpack(densityCalibration, buffer, position, comm);
+    unpack(viscosityCalibration, buffer, position, comm);
+    unpack(criticalValue, buffer, position, comm);
+    unpack(widthTransitionRegion, buffer, position, comm);
+    unpack(maxViscosityRatio, buffer, position, comm);
+    unpack(methodFlowScaling, buffer, position, comm);
+    unpack(maxAbsoluteRate, buffer, position, comm);
+    unpack(status, buffer, position, comm);
+    unpack(scalingFactor, buffer, position, comm);
+
+    data = SpiralICD(strength, length, densityCalibration,
+                     viscosityCalibration, criticalValue,
+                     widthTransitionRegion, maxViscosityRatio,
+                     methodFlowScaling, maxAbsoluteRate,
+                     status, scalingFactor);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

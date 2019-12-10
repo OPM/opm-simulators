@@ -38,6 +38,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
@@ -1461,6 +1462,18 @@ BOOST_AUTO_TEST_CASE(WellProductionProperties)
                                              true,
                                              Opm::Well::ProducerCMode::CRAT,
                                              Opm::Well::ProducerCMode::BHP, 11);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(SpiralICD)
+{
+#ifdef HAVE_MPI
+    Opm::SpiralICD val1(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8, 9.0,
+                        Opm::SpiralICD::Status::OPEN, 10.0);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
