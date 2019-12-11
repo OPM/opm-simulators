@@ -1126,6 +1126,14 @@ std::size_t packSize(const std::shared_ptr<T>& data,
 template std::size_t packSize(const std::shared_ptr<SpiralICD>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
+std::size_t packSize(const Dimension& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getName(), comm) +
+           packSize(data.getSIScalingRaw(), comm) +
+           packSize(data.getSIOffset(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -2263,6 +2271,15 @@ void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& positi
 
 template void pack(const std::shared_ptr<SpiralICD>& data, std::vector<char>& buffer,
                    int& position, Dune::MPIHelper::MPICommunicator comm);
+
+void pack(const Dimension& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getName(), buffer, position, comm);
+    pack(data.getSIScalingRaw(), buffer, position, comm);
+    pack(data.getSIOffset(), buffer, position, comm);
+}
 
 /// unpack routines
 
@@ -3850,6 +3867,19 @@ void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
 template void unpack(std::shared_ptr<SpiralICD>& data,
                      std::vector<char>& buffer, int& position,
                      Dune::MPIHelper::MPICommunicator comm);
+
+void unpack(Dimension& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    double siScaling, siOffset;
+
+    unpack(name, buffer, position, comm);
+    unpack(siScaling, buffer, position, comm);
+    unpack(siOffset, buffer, position, comm);
+    data = Dimension(name, siScaling, siOffset);
+}
 
 #define INSTANTIATE_PACK_VECTOR(T) \
 template std::size_t packSize(const std::vector<T>& data, \

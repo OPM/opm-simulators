@@ -62,6 +62,7 @@ class ColumnSchema;
 class Connection;
 class DENSITYRecord;
 class DensityTable;
+class Dimension;
 class EclHysterConfig;
 class Eqldims;
 class EDITNNC;
@@ -539,6 +540,7 @@ ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(DENSITYRecord)
 ADD_PACK_PROTOTYPES(DensityTable)
+ADD_PACK_PROTOTYPES(Dimension)
 ADD_PACK_PROTOTYPES(EDITNNC)
 ADD_PACK_PROTOTYPES(EndpointScaling)
 ADD_PACK_PROTOTYPES(Equil)
