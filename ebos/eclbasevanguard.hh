@@ -67,7 +67,7 @@ NEW_TYPE_TAG(EclBaseVanguard);
 
 // declare the properties required by the for the ecl simulator vanguard
 NEW_PROP_TAG(Grid);
-NEW_PROP_TAG(EquilGrid);
+NEW_PROP_TAG(GlobalIOGrid);
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(EclDeckFileName);
 NEW_PROP_TAG(OutputDir);
@@ -471,10 +471,10 @@ public:
     { return asImp_().cartesianIndexMapper().cartesianSize(); }
 
     /*!
-     * \brief Returns the overall number of cells of the logically EquilCartesian grid
+     * \brief Returns the overall number of cells of the logically global I/O and EQUIL Cartesian grid
      */
-    int equilCartesianSize() const
-    { return asImp_().equilCartesianIndexMapper().cartesianSize(); }
+    int globalIOCartesianSize() const
+    { return asImp_().globalIOCartesianIndexMapper().cartesianSize(); }
 
     /*!
      * \brief Returns the Cartesian cell id for identifaction with ECL data
@@ -507,19 +507,19 @@ public:
     { return asImp_().cartesianIndexMapper().cartesianCoordinate(cellIdx, ijk); }
 
     /*!
-     * \brief Returns the Cartesian cell id given an element index for the grid used for equilibration
+     * \brief Returns the Cartesian cell id given an element index for the grid used for I/O and equilibration
      */
-    unsigned equilCartesianIndex(unsigned compressedEquilCellIdx) const
-    { return asImp_().equilCartesianIndexMapper().cartesianIndex(compressedEquilCellIdx); }
+    unsigned globalIOCartesianIndex(unsigned compressedGlobalCellIdx) const
+    { return asImp_().globalIOCartesianIndexMapper().cartesianIndex(compressedGlobalCellIdx); }
 
     /*!
-     * \brief Extract Cartesian index triplet (i,j,k) of an active cell of the grid used for EQUIL.
+     * \brief Extract Cartesian index triplet (i,j,k) of an active cell of the grid used for I/O and EQUIL.
      *
      * \param [in] cellIdx Active cell index.
      * \param [out] ijk Cartesian index triplet
      */
-    void equilCartesianCoordinate(unsigned cellIdx, std::array<int,3>& ijk) const
-    { return asImp_().equilCartesianIndexMapper().cartesianCoordinate(cellIdx, ijk); }
+    void globalIOCartesianCoordinate(unsigned cellIdx, std::array<int,3>& ijk) const
+    { return asImp_().globalIOCartesianIndexMapper().cartesianCoordinate(cellIdx, ijk); }
 
     /*!
      * \brief Return the names of the wells which do not penetrate any cells on the local

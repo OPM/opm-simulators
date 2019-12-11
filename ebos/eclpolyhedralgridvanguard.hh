@@ -27,7 +27,10 @@
 #ifndef EWOMS_ECL_POLYHEDRAL_GRID_VANGUARD_HH
 #define EWOMS_ECL_POLYHEDRAL_GRID_VANGUARD_HH
 
+#include <memory>
+
 #include "eclbasevanguard.hh"
+#include "ecltransmissibility.hh"
 
 #include <opm/grid/polyhedralgrid.hh>
 
@@ -43,7 +46,7 @@ NEW_TYPE_TAG(EclPolyhedralGridVanguard, INHERITS_FROM(EclBaseVanguard));
 // declare the properties
 SET_TYPE_PROP(EclPolyhedralGridVanguard, Vanguard, Opm::EclPolyhedralGridVanguard<TypeTag>);
 SET_TYPE_PROP(EclPolyhedralGridVanguard, Grid, Dune::PolyhedralGrid<3, 3>);
-SET_TYPE_PROP(EclPolyhedralGridVanguard, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
+SET_TYPE_PROP(EclPolyhedralGridVanguard, GlobalIOGrid, typename GET_PROP_TYPE(TypeTag, Grid));
 
 END_PROPERTIES
 
@@ -67,26 +70,22 @@ class EclPolyhedralGridVanguard : public EclBaseVanguard<TypeTag>
 
 public:
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, EquilGrid) EquilGrid;
+    typedef typename GET_PROP_TYPE(TypeTag, GlobalIOGrid) GlobalIOGrid;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
+    typedef EclTransmissibility<TypeTag>  EclTransmissibilityType;
+
 private:
-    typedef Grid* GridPointer;
-    typedef EquilGrid* EquilGridPointer;
+    typedef std::unique_ptr< Grid > GridPointer;
+    typedef std::unique_ptr< GlobalIOGrid > GlobalIOGridPointer;
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
-    typedef CartesianIndexMapper* CartesianIndexMapperPointer;
+    typedef std::unique_ptr< CartesianIndexMapper > CartesianIndexMapperPointer;
 
 public:
     EclPolyhedralGridVanguard(Simulator& simulator)
         : EclBaseVanguard<TypeTag>(simulator)
     {
         this->callImplementationInit();
-    }
-
-    ~EclPolyhedralGridVanguard()
-    {
-        delete cartesianIndexMapper_;
-        delete grid_;
     }
 
     /*!
@@ -102,7 +101,7 @@ public:
     { return *grid_; }
 
     /*!
-     * \brief Returns a refefence to the grid which should be used by the EQUIL
+     * \brief Returns a reference to the grid which should be used by the EQUIL
      *        initialization code.
      *
      * The EQUIL keyword is used to specify the initial condition of the reservoir in
@@ -110,7 +109,7 @@ public:
      * DUNE grids (the code is part of the opm-core module), this is not necessarily the
      * same as the grid which is used for the actual simulation.
      */
-    const EquilGrid& equilGrid() const
+    const GlobalIOGrid& globalIOGrid() const
     { return *grid_; }
 
     /*!
@@ -120,8 +119,8 @@ public:
      * Depending on the implementation, subsequent accesses to the EQUIL grid lead to
      * crashes.
      */
-    void releaseEquilGrid()
-    { /* do nothing: The EQUIL grid is the simulation grid! */ }
+    void releaseGlobalIOGrid()
+    { /* do nothing: The GlobalIOGrid grid is the simulation grid! */ }
 
     /*!
      * \brief Distribute the simulation grid over multiple processes
@@ -130,6 +129,16 @@ public:
      */
     void loadBalance()
     { /* do nothing: PolyhedralGrid is not parallel! */ }
+
+    /*!
+     * \brief Free the memory occupied by the global transmissibility object.
+     *
+     * After writing the initial solution, this array should not be necessary anymore.
+     */
+    void releaseGlobalTransmissibilities()
+    {
+        globalTrans_.reset();
+    }
 
     /*!
      * \brief Returns the object which maps a global element index of the simulation grid
@@ -144,8 +153,17 @@ public:
      * Since PolyhedralGrid is not parallel, that's always the same as
      * cartesianIndexMapper().
      */
-    const CartesianIndexMapper& equilCartesianIndexMapper() const
+    const CartesianIndexMapper& globalIOCartesianIndexMapper() const
     { return *cartesianIndexMapper_; }
+
+    std::unordered_set<std::string> defunctWellNames() const
+    { return defunctWellNames_; }
+
+    const EclTransmissibilityType& globalTransmissibility() const
+    {
+        assert( globalTrans_ != nullptr );
+        return *globalTrans_;
+    }
 
 protected:
     void createGrids_()
@@ -153,8 +171,8 @@ protected:
         const auto& gridProps = this->eclState().get3DProperties();
         const std::vector<double>& porv = gridProps.getDoubleGridProperty("PORV").getData();
 
-        grid_ = new Grid(this->deck(), porv);
-        cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
+        grid_.reset( new Grid(this->deck(), porv) );
+        cartesianIndexMapper_.reset( new CartesianIndexMapper(*grid_) );
     }
 
     void filterConnections_()
@@ -164,6 +182,9 @@ protected:
 
     GridPointer grid_;
     CartesianIndexMapperPointer cartesianIndexMapper_;
+
+    std::unique_ptr<EclTransmissibilityType> globalTrans_;
+    std::unordered_set<std::string> defunctWellNames_;
 };
 
 } // namespace Opm

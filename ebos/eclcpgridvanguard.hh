@@ -50,7 +50,7 @@ NEW_TYPE_TAG(EclCpGridVanguard, INHERITS_FROM(EclBaseVanguard));
 // declare the properties
 SET_TYPE_PROP(EclCpGridVanguard, Vanguard, Opm::EclCpGridVanguard<TypeTag>);
 SET_TYPE_PROP(EclCpGridVanguard, Grid, Dune::CpGrid);
-SET_TYPE_PROP(EclCpGridVanguard, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
+SET_TYPE_PROP(EclCpGridVanguard, GlobalIOGrid, typename GET_PROP_TYPE(TypeTag, Grid));
 
 END_PROPERTIES
 
@@ -75,7 +75,7 @@ class EclCpGridVanguard : public EclBaseVanguard<TypeTag>
 
 public:
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, EquilGrid) EquilGrid;
+    typedef typename GET_PROP_TYPE(TypeTag, GlobalIOGrid) GlobalIOGrid;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
 private:
@@ -83,10 +83,10 @@ private:
 
 public:
     EclCpGridVanguard(Simulator& simulator)
-        : EclBaseVanguard<TypeTag>(simulator), mpiRank()
+        : ParentType(simulator), mpiRank_( 0 )
     {
 #if HAVE_MPI
-        MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank_);
 #endif
         this->callImplementationInit();
     }
@@ -104,18 +104,19 @@ public:
     { return *grid_; }
 
     /*!
-     * \brief Returns a refefence to the grid which should be used by the EQUIL
-     *        initialization code.
+     * \brief Returns a reference to the global grid which should be used by the EQUIL
+     *        initialization code or output routines.
      *
      * The EQUIL keyword is used to specify the initial condition of the reservoir in
      * hydrostatic equilibrium. Since the code which does this is not accepting arbitrary
      * DUNE grids (the code is part of the opm-core module), this is not necessarily the
      * same as the grid which is used for the actual simulation.
      */
-    const EquilGrid& equilGrid() const
+    const GlobalIOGrid& globalIOGrid() const
     {
-        assert(mpiRank == 0);
-        return *equilGrid_;
+        assert( mpiRank_ == 0 );
+        assert( globalIOGrid_ );
+        return *globalIOGrid_;
     }
 
     /*!
@@ -125,10 +126,10 @@ public:
      * Depending on the implementation, subsequent accesses to the EQUIL grid lead to
      * crashes.
      */
-    void releaseEquilGrid()
+    void releaseGlobalIOGrid()
     {
-        equilGrid_.reset();
-        equilCartesianIndexMapper_.reset();
+        globalIOGrid_.reset();
+        globalIOCartesianIndexMapper_.reset();
     }
 
     /*!
@@ -197,7 +198,7 @@ public:
 
             cartesianIndexMapper_.reset();
 
-            if ( ! equilGrid_ )
+            if ( ! globalIOGrid_ )
             {
                 // for processes that do not hold the global grid we filter here using the local grid.
                 // If we would filter in filterConnection_ our partition would be empty and the connections of all
@@ -234,11 +235,11 @@ public:
     /*!
      * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid
      */
-    const CartesianIndexMapper& equilCartesianIndexMapper() const
+    const CartesianIndexMapper& globalIOCartesianIndexMapper() const
     {
-        assert(mpiRank == 0);
-        assert(equilCartesianIndexMapper_);
-        return *equilCartesianIndexMapper_;
+        assert(mpiRank_ == 0);
+        assert(globalIOCartesianIndexMapper_);
+        return *globalIOCartesianIndexMapper_;
     }
 
     std::unordered_set<std::string> defunctWellNames() const
@@ -274,11 +275,11 @@ protected:
         // is allergic to distributed grids and the simulation grid is distributed before
         // the initial condition is calculated.
         // After loadbalance grid_ will contain a global and distribute view.
-        // equilGrid_being a shallow copy only the global view.
-        if (mpiRank == 0)
+        // globalIOGrid_being a shallow copy only the global view.
+        if (mpiRank_ == 0)
         {
-            equilGrid_.reset(new Dune::CpGrid(*grid_));
-            equilCartesianIndexMapper_.reset(new CartesianIndexMapper(*equilGrid_));
+            globalIOGrid_.reset(new Dune::CpGrid(*grid_));
+            globalIOCartesianIndexMapper_.reset(new CartesianIndexMapper(*globalIOGrid_));
         }
     }
 
@@ -289,23 +290,24 @@ protected:
         // is done after load balancing as in the future the other processes
         // will hold an empty partition for the global grid and hence filtering
         // here would remove all well connections.
-        if (equilGrid_)
+        if (globalIOGrid_)
         {
-            ActiveGridCells activeCells(equilGrid().logicalCartesianSize(),
-                                        equilGrid().globalCell().data(),
-                                        equilGrid().size(0));
+            ActiveGridCells activeCells(globalIOGrid().logicalCartesianSize(),
+                                        globalIOGrid().globalCell().data(),
+                                        globalIOGrid().size(0));
             this->schedule().filterConnections(activeCells);
         }
     }
 
     std::unique_ptr<Grid> grid_;
-    std::unique_ptr<EquilGrid> equilGrid_;
+    std::unique_ptr<GlobalIOGrid> globalIOGrid_;
+
     std::unique_ptr<CartesianIndexMapper> cartesianIndexMapper_;
-    std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
+    std::unique_ptr<CartesianIndexMapper> globalIOCartesianIndexMapper_;
 
     std::unique_ptr<EclTransmissibility<TypeTag> > globalTrans_;
     std::unordered_set<std::string> defunctWellNames_;
-    int mpiRank;
+    int mpiRank_;
 };
 
 } // namespace Opm

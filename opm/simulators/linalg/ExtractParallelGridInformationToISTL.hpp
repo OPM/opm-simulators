@@ -39,6 +39,12 @@ namespace Opm
 
 void extractParallelGridInformationToISTL(const Dune::CpGrid& grid, boost::any& anyComm);
 
+// Grid is not CpGrid --> do nothing.
+template <class Grid>
+void extractParallelGridInformationToISTL(const Grid&, boost::any&)
+{}
+
+
 } // end namespace Opm
 #endif //defined(HAVE_OPM_GRID)
 #endif // OPM_EXTRACTPARALLELGRIDINFORMATIONTOISTL_HEADER_INCLUDED

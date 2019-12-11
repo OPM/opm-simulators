@@ -288,7 +288,7 @@ public:
     enum { ioRank = 0 };
 
     static const bool needsReordering =
-        !std::is_same<typename Vanguard::Grid, typename Vanguard::EquilGrid>::value;
+        !std::is_same<typename Vanguard::Grid, typename Vanguard::GlobalIOGrid>::value;
 
     CollectDataToIORank(const Vanguard& vanguard)
         : toIORankComm_()
@@ -301,7 +301,7 @@ public:
 
         {
             std::set<int> send, recv;
-            typedef typename Vanguard::EquilGrid::LeafGridView EquilGridView;
+            typedef typename Vanguard::GlobalIOGrid::LeafGridView GlobalIOGridView;
 
             typedef typename Vanguard::GridView LocalGridView;
             const LocalGridView localGridView = vanguard.gridView();
@@ -319,31 +319,31 @@ public:
             // the I/O rank receives from all other ranks
             if (isIORank()) {
                 // We need a mapping from local to global grid, here we
-                // use equilGrid which represents a view on the global grid
+                // use globalIOGrid which represents a view on the global grid
                 // reserve memory
-                const size_t globalSize = vanguard.equilGrid().leafGridView().size(0);
+                const size_t globalSize = vanguard.globalIOGrid().leafGridView().size(0);
                 globalCartesianIndex_.resize(globalSize, -1);
-                const EquilGridView equilGridView = vanguard.equilGrid().leafGridView();
+                const GlobalIOGridView globalIOGridView = vanguard.globalIOGrid().leafGridView();
 
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
-                typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView> EquilElementMapper;
-                EquilElementMapper equilElemMapper(equilGridView, Dune::mcmgElementLayout());
+                typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalIOGridView> EquilElementMapper;
+                EquilElementMapper globalElemMapper(globalIOGridView, Dune::mcmgElementLayout());
 #else
-                typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView, Dune::MCMGElementLayout> EquilElementMapper;
-                EquilElementMapper equilElemMapper(equilGridView);
+                typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalIOGridView, Dune::MCMGElementLayout> EquilElementMapper;
+                EquilElementMapper globalElemMapper(globalIOGridView);
 #endif
 
                 // Scatter the global index to local index for lookup during restart
-                ElementIndexScatterHandle<EquilElementMapper,ElementMapper> handle(equilElemMapper, elemMapper, localIdxToGlobalIdx_);
+                ElementIndexScatterHandle<EquilElementMapper,ElementMapper> handle(globalElemMapper, elemMapper, localIdxToGlobalIdx_);
                 vanguard.grid().scatterData(handle);
 
+                const auto& globalCartMapper = vanguard.globalIOCartesianIndexMapper();
                 // loop over all elements (global grid) and store Cartesian index
-                auto elemIt = vanguard.equilGrid().leafGridView().template begin<0>();
-                const auto& elemEndIt = vanguard.equilGrid().leafGridView().template end<0>();
+                auto elemIt = vanguard.globalIOGrid().leafGridView().template begin<0>();
+                const auto& elemEndIt = vanguard.globalIOGrid().leafGridView().template end<0>();
                 for (; elemIt != elemEndIt; ++elemIt) {
-                    int elemIdx = equilElemMapper.index(*elemIt);
-                    int cartElemIdx = vanguard.equilCartesianIndexMapper().cartesianIndex(elemIdx);
-                    globalCartesianIndex_[elemIdx] = cartElemIdx;
+                    int elemIdx = globalElemMapper.index(*elemIt);
+                    globalCartesianIndex_[elemIdx] = globalCartMapper.cartesianIndex(elemIdx);
                 }
 
                 for (int i = 0; i < comm.size(); ++i) {
@@ -360,7 +360,7 @@ public:
                 // This is a bit hacky since the type differs from the iorank.
                 // But should work since we only receive, i.e. use the second parameter.
                 ElementIndexScatterHandle<ElementMapper, ElementMapper> handle(elemMapper, elemMapper,
-                                                                                   localIdxToGlobalIdx_);
+                                                                               localIdxToGlobalIdx_);
                 vanguard.grid().scatterData(handle);
             }
 

@@ -30,7 +30,7 @@ namespace detail
 {
     /// \brief Find cell IDs for wells contained in local grid.
     ///
-    /// Cell IDs of wells stored in a graph, so it can be used to create 
+    /// Cell IDs of wells stored in a graph, so it can be used to create
     /// an adjacency pattern. Only relevant when the UseWellContribusion option is set to true
     /// \tparam The type of the DUNE grid.
     /// \tparam Well vector type
@@ -41,17 +41,19 @@ namespace detail
     template<class Grid, class W>
     void setWellConnections(const Grid& grid, const W& wells, bool useWellConn, std::vector<std::set<int>>& wellGraph)
     {
-        if ( grid.comm().size() > 1) 
+        if ( grid.comm().size() > 1)
         {
-            wellGraph.resize(grid.numCells());
+            Dune::CartesianIndexMapper< Grid > cartMapper( grid );
+            const size_t numCells = cartMapper.compressedSize(); // grid.numCells()
+            wellGraph.resize(numCells);
 
             if (useWellConn) {
-                const auto& cpgdim = grid.logicalCartesianSize();
+                const auto& cpgdim = cartMapper.cartesianDimensions();
 
                 std::vector<int> cart(cpgdim[0]*cpgdim[1]*cpgdim[2], -1);
 
-                for( int i=0; i < grid.numCells(); ++i )
-                    cart[grid.globalCell()[i]] = i;
+                for( size_t i=0; i < numCells; ++i )
+                    cart[ cartMapper.cartesianIndex( i ) ] = i;
 
                 Dune::cpgrid::WellConnections well_indices;
                 well_indices.init(wells, cpgdim, cart);
@@ -66,7 +68,7 @@ namespace detail
                             wellGraph[*perf].insert(*perf2);
                             wellGraph[*perf2].insert(*perf);
                         }
-                    } 
+                    }
                 }
             }
         }
@@ -81,27 +83,27 @@ namespace detail
     /// \param overlapRows List where overlap rows are stored.
     /// \param interiorRows List where overlap rows are stored.
     template<class Grid>
-    void findOverlapAndInterior(const Grid& grid, std::vector<int>& overlapRows, 
+    void findOverlapAndInterior(const Grid& grid, std::vector<int>& overlapRows,
                                 std::vector<int>& interiorRows)
     {
         //only relevant in parallel case.
-        if ( grid.comm().size() > 1) 
+        if ( grid.comm().size() > 1)
         {
             //Numbering of cells
-            auto lid = grid.localIdSet();
+            const auto& lid = grid.localIdSet();
 
             const auto& gridView = grid.leafGridView();
             auto elemIt = gridView.template begin<0>();
             const auto& elemEndIt = gridView.template end<0>();
 
             //loop over cells in mesh
-            for (; elemIt != elemEndIt; ++elemIt) 
-            {                
+            for (; elemIt != elemEndIt; ++elemIt)
+            {
                 const auto& elem = *elemIt;
                 int lcell = lid.id(elem);
-                
+
                 if (elem.partitionType() != Dune::InteriorEntity)
-                {  
+                {
                     //add row to list
                     overlapRows.push_back(lcell);
                 } else {

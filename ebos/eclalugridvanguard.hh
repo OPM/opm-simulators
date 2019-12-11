@@ -47,7 +47,7 @@ NEW_TYPE_TAG(EclAluGridVanguard, INHERITS_FROM(EclBaseVanguard));
 // declare the properties
 SET_TYPE_PROP(EclAluGridVanguard, Vanguard, Opm::EclAluGridVanguard<TypeTag>);
 SET_TYPE_PROP(EclAluGridVanguard, Grid,  Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>);
-SET_TYPE_PROP(EclAluGridVanguard, EquilGrid, Dune::CpGrid);
+SET_TYPE_PROP(EclAluGridVanguard, GlobalIOGrid, Dune::CpGrid);
 
 END_PROPERTIES
 
@@ -71,28 +71,20 @@ class EclAluGridVanguard : public EclBaseVanguard<TypeTag>
 
 public:
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, EquilGrid) EquilGrid;
+    typedef typename GET_PROP_TYPE(TypeTag, GlobalIOGrid) GlobalIOGrid;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
 private:
-    typedef Opm::AluCartesianIndexMapper<Grid> CartesianIndexMapper;
-    typedef Dune::CartesianIndexMapper<EquilGrid> EquilCartesianIndexMapper;
+    typedef Opm::AluCartesianIndexMapper<Grid>        CartesianIndexMapper;
+    typedef Dune::CartesianIndexMapper<GlobalIOGrid>  GlobalIOCartesianIndexMapper;
 
     static const int dimension = Grid::dimension;
 
 public:
     EclAluGridVanguard(Simulator& simulator)
-        : EclBaseVanguard<TypeTag>(simulator)
+        : ParentType(simulator)
     {
         this->callImplementationInit();
-    }
-
-    ~EclAluGridVanguard()
-    {
-        delete cartesianIndexMapper_;
-        delete equilCartesianIndexMapper_;
-        delete grid_;
-        delete equilGrid_;
     }
 
     /*!
@@ -116,8 +108,8 @@ public:
      * DUNE grids (the code is part of the opm-core module), this is not necessarily the
      * same as the grid which is used for the actual simulation.
      */
-    const EquilGrid& equilGrid() const
-    { return *equilGrid_; }
+    const GlobalIOGrid& globalIOGrid() const
+    { return *globalIOGrid_; }
 
     /*!
      * \brief Indicates that the initial condition has been computed and the memory used
@@ -126,13 +118,10 @@ public:
      * Depending on the implementation, subsequent accesses to the EQUIL grid lead to
      * crashes.
      */
-    void releaseEquilGrid()
+    void releaseGlobalIOGrid()
     {
-        delete equilCartesianIndexMapper_;
-        equilCartesianIndexMapper_ = 0;
-
-        delete equilGrid_;
-        equilGrid_ = 0;
+        globalIOCartesianIndexMapper_.reset();
+        globalIOGrid_.reset();
     }
 
     /*!
@@ -162,8 +151,8 @@ public:
     /*!
      * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid
      */
-    const EquilCartesianIndexMapper& equilCartesianIndexMapper() const
-    { return *equilCartesianIndexMapper_; }
+    const GlobalIOCartesianIndexMapper& globalIOCartesianIndexMapper() const
+    { return *globalIOCartesianIndexMapper_; }
 
 protected:
     void createGrids_()
@@ -179,28 +168,27 @@ protected:
         /////
         // create the EQUIL grid
         /////
-        equilGrid_ = new EquilGrid();
-        equilGrid_->processEclipseFormat(this->eclState().getInputGrid(),
+        globalIOGrid_.reset( new GlobalIOGrid() );
+        globalIOGrid_->processEclipseFormat(this->eclState().getInputGrid(),
                                          /*isPeriodic=*/false,
                                          /*flipNormals=*/false,
                                          /*clipZ=*/false,
                                          porv);
 
-        cartesianCellId_ = equilGrid_->globalCell();
+        cartesianCellId_ = globalIOGrid_->globalCell();
 
         for (unsigned i = 0; i < dimension; ++i)
-            cartesianDimension_[i] = equilGrid_->logicalCartesianSize()[i];
+            cartesianDimension_[i] = globalIOGrid_->logicalCartesianSize()[i];
 
-        equilCartesianIndexMapper_ = new EquilCartesianIndexMapper(*equilGrid_);
+        globalIOCartesianIndexMapper_.reset( new GlobalIOCartesianIndexMapper(*globalIOGrid_) );
 
         /////
         // create the simulation grid
         /////
         Dune::FromToGridFactory<Grid> factory;
-        grid_ = factory.convert(*equilGrid_, cartesianCellId_);
+        grid_ = factory.convert(*globalIOGrid_, cartesianCellId_);
 
-        cartesianIndexMapper_ =
-            new CartesianIndexMapper(*grid_, cartesianDimension_, cartesianCellId_);
+        cartesianIndexMapper_.reset( new CartesianIndexMapper(*grid_, cartesianDimension_, cartesianCellId_) );
     }
 
     void filterConnections_()
@@ -208,12 +196,12 @@ protected:
         // not handling the removal of completions for this type of grid yet.
     }
 
-    Grid* grid_;
-    EquilGrid* equilGrid_;
+    std::unique_ptr< Grid > grid_;
+    std::unique_ptr< GlobalIOGrid > globalIOGrid_;
     std::vector<int> cartesianCellId_;
     std::array<int,dimension> cartesianDimension_;
-    CartesianIndexMapper* cartesianIndexMapper_;
-    EquilCartesianIndexMapper* equilCartesianIndexMapper_;
+    std::unique_ptr< CartesianIndexMapper > cartesianIndexMapper_;
+    std::unique_ptr< EquilCartesianIndexMapper > equilCartesianIndexMapper_;
 };
 
 } // namespace Opm
