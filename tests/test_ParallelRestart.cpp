@@ -1581,6 +1581,24 @@ BOOST_AUTO_TEST_CASE(Well)
 }
 
 
+BOOST_AUTO_TEST_CASE(GroupInjectionProperties)
+{
+#ifdef HAVE_MPI
+    Opm::Group::GroupInjectionProperties val1{Opm::Phase::WATER,
+                                              Opm::Group::InjectionCMode::REIN,
+                                              Opm::UDAValue(1.0),
+                                              Opm::UDAValue(2.0),
+                                              Opm::UDAValue(3.0),
+                                              Opm::UDAValue(4.0),
+                                              "test1", "test2", 5};
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;
