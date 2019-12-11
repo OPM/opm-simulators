@@ -293,7 +293,7 @@ namespace Opm {
 
         // Compute reservoir volumes for RESV controls.
         rateConverter_.reset(new RateConverterType (phase_usage_,
-                                                    std::vector<int>(number_of_cells_, 0)));        
+                                                    std::vector<int>(number_of_cells_, 0)));
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
         // update VFP properties
@@ -555,7 +555,7 @@ namespace Opm {
 
         // for ecl compatible restart the current controls are not written
         const auto& ioCfg = eclState().getIOConfig();
-        const auto ecl_compatible_rst = ioCfg.getEclCompatibleRST();        
+        const auto ecl_compatible_rst = ioCfg.getEclCompatibleRST();
         if (true || ecl_compatible_rst) { // always set the control from the schedule
             for (int w = 0; w <nw; ++w) {
                 const auto& well = wells_ecl_[w];
@@ -1499,8 +1499,7 @@ namespace Opm {
 
         depth_.resize(numCells);
         for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            depth_[cellIdx] =
-                grid.cellCenterDepth(cellIdx);
+            depth_[cellIdx] = Opm::UgGridHelpers::cellCenterDepth( grid, cellIdx );
         }
     }
 
@@ -1888,7 +1887,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger) {
 
-        auto& well_state = well_state_;       
+        auto& well_state = well_state_;
         const Group::ProductionCMode& oldControl = well_state.currentProductionGroupControl(group.name());
 
         std::ostringstream ss;
