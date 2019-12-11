@@ -1158,6 +1158,42 @@ std::size_t packSize(const WellSegments& data,
 
 }
 
+std::size_t packSize(const Well& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size = packSize(data.name(), comm) +
+                       packSize(data.groupName(), comm) +
+                       packSize(data.firstTimeStep(), comm) +
+                       packSize(data.seqIndex(), comm) +
+                       packSize(data.getHeadI(), comm) +
+                       packSize(data.getHeadJ(), comm) +
+                       packSize(data.getRefDepth(), comm) +
+                       packSize(data.getPreferredPhase(), comm) +
+                       packSize(data.getWellConnectionOrdering(), comm) +
+                       packSize(data.units(), comm) +
+                       packSize(data.udqUndefined(), comm) +
+                       packSize(data.getStatus(), comm) +
+                       packSize(data.getDrainageRadius(), comm) +
+                       packSize(data.getAllowCrossFlow(), comm) +
+                       packSize(data.getAutomaticShutIn(), comm) +
+                       packSize(data.isProducer(), comm) +
+                       packSize(data.wellGuideRate(), comm) +
+                       packSize(data.getEfficiencyFactor(), comm) +
+                       packSize(data.getSolventFraction(), comm) +
+                       packSize(data.predictionMode(), comm) +
+                       packSize(data.getEconLimits(), comm) +
+                       packSize(data.getFoamProperties(), comm) +
+                       packSize(data.getPolymerProperties(), comm) +
+                       packSize(data.getTracerProperties(), comm) +
+                       packSize(data.getProductionProperties(), comm) +
+                       packSize(data.getInjectionProperties(), comm) +
+                       packSize(data.hasSegments(), comm);
+    if (data.hasSegments())
+        size += packSize(data.getSegments(), comm);
+
+    return size;
+}
+
 ////// pack routines
 
 template<class T>
@@ -2328,6 +2364,41 @@ void pack(const WellSegments& data,
     pack(data.multiPhaseModel(), buffer, position, comm);
     pack(data.segments(), buffer, position, comm);
     pack(data.segmentNumberIndex(), buffer, position, comm);
+}
+
+void pack(const Well& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name(), buffer, position, comm);
+    pack(data.groupName(), buffer, position, comm);
+    pack(data.firstTimeStep(), buffer, position, comm);
+    pack(data.seqIndex(), buffer, position, comm);
+    pack(data.getHeadI(), buffer, position, comm);
+    pack(data.getHeadJ(), buffer, position, comm);
+    pack(data.getRefDepth(), buffer, position, comm);
+    pack(data.getPreferredPhase(), buffer, position, comm);
+    pack(data.getWellConnectionOrdering(), buffer, position, comm);
+    pack(data.units(), buffer, position, comm);
+    pack(data.udqUndefined(), buffer, position, comm);
+    pack(data.getStatus(), buffer, position, comm);
+    pack(data.getDrainageRadius(), buffer, position, comm);
+    pack(data.getAllowCrossFlow(), buffer, position, comm);
+    pack(data.getAutomaticShutIn(), buffer, position, comm);
+    pack(data.isProducer(), buffer, position, comm);
+    pack(data.wellGuideRate(), buffer, position, comm);
+    pack(data.getEfficiencyFactor(), buffer, position, comm);
+    pack(data.getSolventFraction(), buffer, position, comm);
+    pack(data.predictionMode(), buffer, position, comm);
+    pack(data.getEconLimits(), buffer, position, comm);
+    pack(data.getFoamProperties(), buffer, position, comm);
+    pack(data.getPolymerProperties(), buffer, position, comm);
+    pack(data.getTracerProperties(), buffer, position, comm);
+    pack(data.getProductionProperties(), buffer, position, comm);
+    pack(data.getInjectionProperties(), buffer, position, comm);
+    pack(data.hasSegments(), buffer, position, comm);
+    if (data.hasSegments())
+        pack(data.getSegments(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -3970,6 +4041,74 @@ void unpack(WellSegments& data,
     data = WellSegments(wellName, depthTopSegment, lengthTopSegment,
                         volumeTopSegment, lengthDepthType, compPressureDrop,
                         multiPhaseModel, segments, segmentNumberIndex);
+}
+
+void unpack(Well& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name, groupName;
+    std::size_t firstTimeStep, seqIndex;
+    int headI, headJ;
+    double ref_depth;
+    Phase phase;
+    Connection::Order ordering;
+    UnitSystem units;
+    double udq_undefined;
+    Well::Status status;
+    double drainageRadius;
+    bool allowCrossFlow, automaticShutIn, isProducer;
+    Well::WellGuideRate guideRate;
+    double efficiencyFactor;
+    double solventFraction;
+    bool prediction_mode;
+    auto econLimits = std::make_shared<WellEconProductionLimits>();
+    auto foamProperties = std::make_shared<WellFoamProperties>();
+    auto polymerProperties = std::make_shared<WellPolymerProperties>();
+    auto tracerProperties = std::make_shared<WellTracerProperties>();
+    auto connection = std::make_shared<WellConnections>();
+    auto production = std::make_shared<Well::WellProductionProperties>();
+    auto injection = std::make_shared<Well::WellInjectionProperties>();
+    std::shared_ptr<WellSegments> segments;
+
+    unpack(name, buffer, position, comm);
+    unpack(groupName, buffer, position, comm);
+    unpack(firstTimeStep, buffer, position, comm);
+    unpack(seqIndex, buffer, position, comm);
+    unpack(headI, buffer, position, comm);
+    unpack(headJ, buffer, position, comm);
+    unpack(ref_depth, buffer, position, comm);
+    unpack(phase, buffer, position, comm);
+    unpack(ordering, buffer, position, comm);
+    unpack(units, buffer, position, comm);
+    unpack(udq_undefined, buffer, position, comm);
+    unpack(status, buffer, position, comm);
+    unpack(drainageRadius, buffer, position, comm);
+    unpack(allowCrossFlow, buffer, position, comm);
+    unpack(automaticShutIn, buffer, position, comm);
+    unpack(isProducer, buffer, position, comm);
+    unpack(guideRate, buffer, position, comm);
+    unpack(efficiencyFactor, buffer, position, comm);
+    unpack(solventFraction, buffer, position, comm);
+    unpack(prediction_mode, buffer, position, comm);
+    unpack(*econLimits, buffer, position, comm);
+    unpack(*foamProperties, buffer, position, comm);
+    unpack(*polymerProperties, buffer, position, comm);
+    unpack(*tracerProperties, buffer, position, comm);
+    unpack(*production, buffer, position, comm);
+    unpack(*injection, buffer, position, comm);
+    bool hasSegments;
+    unpack(hasSegments, buffer, position, comm);
+    if (hasSegments) {
+        segments = std::make_shared<WellSegments>();
+        unpack(*segments, buffer, position, comm);
+    }
+    data = Well(name, groupName, firstTimeStep, seqIndex, headI, headJ,
+                ref_depth, phase, ordering, units, udq_undefined, status,
+                drainageRadius, allowCrossFlow, automaticShutIn, isProducer,
+                guideRate, efficiencyFactor, solventFraction, prediction_mode,
+                econLimits, foamProperties, polymerProperties, tracerProperties,
+                connection, production, injection, segments);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

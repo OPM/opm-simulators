@@ -238,6 +238,26 @@ Opm::TableContainer getTableContainer()
 }
 
 
+Opm::Well getFullWell()
+{
+    Opm::UnitSystem unitSystem;
+    return Opm::Well("test1", "test2", 1, 2, 3, 4, 5.0,
+                     Opm::Phase::WATER, Opm::Connection::Order::DEPTH,
+                     unitSystem, 6.0, Opm::Well::Status::SHUT,
+                     7.0, true, true, false,
+                     Opm::Well::WellGuideRate{true, 1.0, Opm::Well::GuideRateTarget::COMB, 2.0},
+                     8.0, 9.0, false,
+                     std::make_shared<Opm::WellEconProductionLimits>(),
+                     std::make_shared<Opm::WellFoamProperties>(),
+                     std::make_shared<Opm::WellPolymerProperties>(),
+                     std::make_shared<Opm::WellTracerProperties>(),
+                     std::make_shared<Opm::WellConnections>(),
+                     std::make_shared<Opm::Well::WellProductionProperties>(),
+                     std::make_shared<Opm::Well::WellInjectionProperties>(),
+                     std::make_shared<Opm::WellSegments>());
+}
+
+
 Opm::VFPInjTable getVFPInjTable()
 {
     Opm::VFPInjTable::array_type table;
@@ -342,7 +362,7 @@ BOOST_AUTO_TEST_CASE(dataSegment)
 }
 
 
-BOOST_AUTO_TEST_CASE(Well)
+BOOST_AUTO_TEST_CASE(dataWell)
 {
 #if HAVE_MPI
     Opm::data::Well well1 = getWell();
@@ -1543,6 +1563,17 @@ BOOST_AUTO_TEST_CASE(WellSegments)
                            Opm::WellSegments::MultiPhaseModel::DF,
                            {seg, seg}, {{1,2},{3,4}});
 
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Well)
+{
+#ifdef HAVE_MPI
+    Opm::Well val1 = getFullWell();
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
