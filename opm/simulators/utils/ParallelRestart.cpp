@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
@@ -1283,6 +1284,13 @@ std::size_t packSize(const UDQFunction& data,
 {
     return packSize(data.name(), comm) +
            packSize(data.type(), comm);
+}
+
+std::size_t packSize(const UDQFunctionTable& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getParams(), comm) +
+           packSize(data.functionMap(), comm);
 }
 
 ////// pack routines
@@ -2584,6 +2592,14 @@ void pack(const UDQFunction& data,
 {
     pack(data.name(), buffer, position, comm);
     pack(data.type(), buffer, position, comm);
+}
+
+void pack(const UDQFunctionTable& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getParams(), buffer, position, comm);
+    pack(data.functionMap(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -4419,6 +4435,17 @@ void unpack(UDQFunction& data,
     unpack(name, buffer, position, comm);
     unpack(type, buffer, position, comm);
     data = UDQFunction(name, type);
+}
+
+void unpack(UDQFunctionTable& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    UDQParams params;
+    UDQFunctionTable::FunctionMap map;
+    unpack(params, buffer, position, comm);
+    unpack(map, buffer, position, comm);
+    data = UDQFunctionTable(params, map);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

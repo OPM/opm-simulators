@@ -113,6 +113,7 @@ class TableSchema;
 class ThresholdPressure;
 class UDAValue;
 class UDQFunction;
+class UDQFunctionTable;
 class UDQParams;
 class UnitSystem;
 class Valve;
@@ -629,6 +630,7 @@ ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeMap::StepData)
 ADD_PACK_PROTOTYPES(UDAValue)
 ADD_PACK_PROTOTYPES(UDQFunction)
+ADD_PACK_PROTOTYPES(UDQFunctionTable)
 ADD_PACK_PROTOTYPES(UDQParams)
 ADD_PACK_PROTOTYPES(UnitSystem)
 ADD_PACK_PROTOTYPES(Valve)
