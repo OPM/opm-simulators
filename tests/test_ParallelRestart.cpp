@@ -43,6 +43,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
@@ -1657,6 +1658,17 @@ BOOST_AUTO_TEST_CASE(WListManager)
     Opm::WList wl({"test1", "test2", "test3"});
     std::map<std::string,Opm::WList> data{{"test", wl}, {"test2", wl}};
     Opm::WListManager val1(data);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQFunction)
+{
+#ifdef HAVE_MPI
+    Opm::UDQFunction val1("test", Opm::UDQTokenType::binary_op_add);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
