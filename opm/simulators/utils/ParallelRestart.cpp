@@ -64,6 +64,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
+#include <opm/parser/eclipse/EclipseState/Util/IOrderSet.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
 #define HANDLE_AS_POD(T) \
@@ -1204,6 +1205,14 @@ std::size_t packSize(const Well& data,
         size += packSize(data.getSegments(), comm);
 
     return size;
+}
+
+template<class T>
+std::size_t packSize(const IOrderSet<T>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.index(), comm) +
+           packSize(data.data(), comm);
 }
 
 ////// pack routines
@@ -2424,6 +2433,14 @@ void pack(const Well& data,
     pack(data.hasSegments(), buffer, position, comm);
     if (data.hasSegments())
         pack(data.getSegments(), buffer, position, comm);
+}
+
+template<class T>
+void pack(const IOrderSet<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.index(), buffer, position, comm);
+    pack(data.data(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -4150,6 +4167,17 @@ void unpack(Well& data,
                 guideRate, efficiencyFactor, solventFraction, prediction_mode,
                 econLimits, foamProperties, polymerProperties, tracerProperties,
                 connection, production, injection, segments);
+}
+
+template<class T>
+void unpack(IOrderSet<T>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    typename IOrderSet<T>::index_type index;
+    typename IOrderSet<T>::storage_type storage;
+    unpack(index, buffer, position, comm);
+    unpack(storage, buffer, position, comm);
+    data = IOrderSet<T>(index, storage);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

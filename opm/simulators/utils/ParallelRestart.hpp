@@ -74,6 +74,7 @@ class FoamConfig;
 class FoamData;
 class InitConfig;
 class IOConfig;
+template<class T> class IOrderSet;
 class JFunc;
 class MessageLimits;
 class MLimits;
@@ -246,6 +247,9 @@ std::size_t packSize(const ConstantCompressibilityWaterPvt<Scalar>& data,
 template<class Scalar>
 std::size_t packSize(const WaterPvtThermal<Scalar>& data, Dune::MPIHelper::MPICommunicator comm);
 
+template<class T>
+std::size_t packSize(const IOrderSet<T>& data, Dune::MPIHelper::MPICommunicator comm);
+
 ////// pack routines
 
 template<class T>
@@ -389,6 +393,10 @@ template<class Scalar>
 void pack(const WaterPvtThermal<Scalar>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm);
 
+template<class T>
+void pack(const IOrderSet<T>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm);
+
 void pack(const char* str, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
@@ -529,6 +537,10 @@ void unpack(WaterPvtThermal<Scalar>& data, std::vector<char>& buffer,
 
 template<class Scalar>
 void unpack(ConstantCompressibilityWaterPvt<Scalar>& data, std::vector<char>& buffer,
+            int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
+void unpack(IOrderSet<T>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm);
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
