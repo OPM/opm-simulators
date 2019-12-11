@@ -48,6 +48,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
@@ -1522,6 +1523,26 @@ BOOST_AUTO_TEST_CASE(UnitSystem)
 {
 #ifdef HAVE_MPI
     Opm::UnitSystem val1(Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellSegments)
+{
+#ifdef HAVE_MPI
+    Opm::Segment seg(1, 2, 3, {1, 2}, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, false,
+                     Opm::Segment::SegmentType::SICD,
+                     std::make_shared<Opm::SpiralICD>(),
+                     std::make_shared<Opm::Valve>());
+    Opm::WellSegments val1("test", 1.0, 2.0, 3.0,
+                           Opm::WellSegments::LengthDepth::ABS,
+                           Opm::WellSegments::CompPressureDrop::HF_,
+                           Opm::WellSegments::MultiPhaseModel::DF,
+                           {seg, seg}, {{1,2},{3,4}});
+
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
