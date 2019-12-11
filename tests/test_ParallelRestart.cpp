@@ -1599,6 +1599,25 @@ BOOST_AUTO_TEST_CASE(GroupInjectionProperties)
 }
 
 
+BOOST_AUTO_TEST_CASE(GroupProductionProperties)
+{
+#ifdef HAVE_MPI
+    Opm::Group::GroupProductionProperties val1{Opm::Group::ProductionCMode::PRBL,
+                                               Opm::Group::ExceedAction::WELL,
+                                               Opm::UDAValue(1.0),
+                                               Opm::UDAValue(2.0),
+                                               Opm::UDAValue(3.0),
+                                               Opm::UDAValue(4.0),
+                                               5.0, Opm::Group::GuideRateTarget::COMB,
+                                               6.0, 7};
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;
