@@ -36,6 +36,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
@@ -1291,6 +1292,18 @@ std::size_t packSize(const UDQFunctionTable& data,
 {
     return packSize(data.getParams(), comm) +
            packSize(data.functionMap(), comm);
+}
+
+std::size_t packSize(const UDQASTNode& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.var_type, comm) +
+           packSize(data.getType(), comm) +
+           packSize(data.stringValue(), comm) +
+           packSize(data.scalarValue(), comm) +
+           packSize(data.getSelectors(), comm) +
+           packSize(data.getLeft(), comm) +
+           packSize(data.getRight(), comm);
 }
 
 ////// pack routines
@@ -2600,6 +2613,19 @@ void pack(const UDQFunctionTable& data,
 {
     pack(data.getParams(), buffer, position, comm);
     pack(data.functionMap(), buffer, position, comm);
+}
+
+void pack(const UDQASTNode& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.var_type, buffer, position, comm);
+    pack(data.getType(), buffer, position, comm);
+    pack(data.stringValue(), buffer, position, comm);
+    pack(data.scalarValue(), buffer, position, comm);
+    pack(data.getSelectors(), buffer, position, comm);
+    pack(data.getLeft(), buffer, position, comm);
+    pack(data.getRight(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -4446,6 +4472,28 @@ void unpack(UDQFunctionTable& data,
     unpack(params, buffer, position, comm);
     unpack(map, buffer, position, comm);
     data = UDQFunctionTable(params, map);
+}
+
+void unpack(UDQASTNode& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    UDQVarType var_type;
+    UDQTokenType type;
+    std::string stringValue;
+    double scalarValue;
+    std::vector<std::string> selectors;
+    std::shared_ptr<UDQASTNode> left;
+    std::shared_ptr<UDQASTNode> right;
+
+    unpack(var_type, buffer, position, comm);
+    unpack(type, buffer, position, comm);
+    unpack(stringValue, buffer, position, comm);
+    unpack(scalarValue, buffer, position, comm);
+    unpack(selectors, buffer, position, comm);
+    unpack(left, buffer, position, comm);
+    unpack(right, buffer, position, comm);
+    data = UDQASTNode(var_type, type, stringValue, scalarValue, selectors, left, right);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
