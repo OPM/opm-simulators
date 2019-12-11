@@ -51,6 +51,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
@@ -1643,6 +1644,19 @@ BOOST_AUTO_TEST_CASE(WList)
 {
 #ifdef HAVE_MPI
     Opm::WList val1({"test1", "test2", "test3"});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WListManager)
+{
+#ifdef HAVE_MPI
+    Opm::WList wl({"test1", "test2", "test3"});
+    std::map<std::string,Opm::WList> data{{"test", wl}, {"test2", wl}};
+    Opm::WListManager val1(data);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
