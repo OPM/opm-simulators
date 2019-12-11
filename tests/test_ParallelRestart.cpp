@@ -43,6 +43,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQDefine.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
@@ -1718,6 +1719,19 @@ BOOST_AUTO_TEST_CASE(UDQDefine)
                        "test", 1.0, {"test1", "test2"}, n0, n0);
     Opm::UDQDefine val1("test", std::make_shared<Opm::UDQASTNode>(n1),
                         Opm::UDQVarType::NONE, "test2");
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQAssign)
+{
+#ifdef HAVE_MPI
+    Opm::UDQAssign val1("test", Opm::UDQVarType::NONE,
+                        {Opm::UDQAssign::AssignRecord{{"test1"}, 1.0},
+                         Opm::UDQAssign::AssignRecord{{"test2"}, 2.0}});
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
