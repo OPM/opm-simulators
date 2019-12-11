@@ -129,6 +129,7 @@ class WellPolymerProperties;
 class WellSegmentDims;
 class WellSegments;
 class WellTracerProperties;
+class WList;
 
 namespace Mpi
 {
@@ -648,6 +649,7 @@ ADD_PACK_PROTOTYPES(WellSegments)
 ADD_PACK_PROTOTYPES(WellTestConfig)
 ADD_PACK_PROTOTYPES(WellTestConfig::WTESTWell)
 ADD_PACK_PROTOTYPES(WellTracerProperties)
+ADD_PACK_PROTOTYPES(WList)
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,

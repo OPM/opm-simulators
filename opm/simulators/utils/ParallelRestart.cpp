@@ -43,6 +43,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
@@ -1261,6 +1262,12 @@ std::size_t packSize(const Group& data,
            packSize(data.igroups(), comm) +
            packSize(data.injectionProperties(), comm) +
            packSize(data.productionProperties(), comm);
+}
+
+std::size_t packSize(const WList& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.wellList(), comm);
 }
 
 ////// pack routines
@@ -2540,6 +2547,13 @@ void pack(const Group& data,
     pack(data.igroups(), buffer, position, comm);
     pack(data.injectionProperties(), buffer, position, comm);
     pack(data.productionProperties(), buffer, position, comm);
+}
+
+void pack(const WList& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.wellList(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -4346,6 +4360,15 @@ void unpack(Group& data,
                  transferGroupEfficiencyFactor,
                  groupNetVFPTable, parent, wells, groups,
                  injection, production);
+}
+
+void unpack(WList& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    WList::storage ddata;
+    unpack(ddata, buffer, position, comm);
+    data = WList(ddata);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
