@@ -111,6 +111,7 @@ class TableSchema;
 class ThresholdPressure;
 class UDAValue;
 class UDQParams;
+class UnitSystem;
 class Valve;
 class VFPInjTable;
 class VFPProdTable;
@@ -594,6 +595,7 @@ ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeMap::StepData)
 ADD_PACK_PROTOTYPES(UDAValue)
 ADD_PACK_PROTOTYPES(UDQParams)
+ADD_PACK_PROTOTYPES(UnitSystem)
 ADD_PACK_PROTOTYPES(Valve)
 ADD_PACK_PROTOTYPES(VFPInjTable)
 ADD_PACK_PROTOTYPES(VFPProdTable)

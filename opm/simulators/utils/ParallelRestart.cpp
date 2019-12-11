@@ -1134,6 +1134,15 @@ std::size_t packSize(const Dimension& data,
            packSize(data.getSIOffset(), comm);
 }
 
+std::size_t packSize(const UnitSystem& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getName(), comm) +
+           packSize(data.getType(), comm) +
+           packSize(data.getDimensions(), comm) +
+           packSize(data.use_count(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -2279,6 +2288,16 @@ void pack(const Dimension& data,
     pack(data.getName(), buffer, position, comm);
     pack(data.getSIScalingRaw(), buffer, position, comm);
     pack(data.getSIOffset(), buffer, position, comm);
+}
+
+void pack(const UnitSystem& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getName(), buffer, position, comm);
+    pack(data.getType(), buffer, position, comm);
+    pack(data.getDimensions(), buffer, position, comm);
+    pack(data.use_count(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -3879,6 +3898,22 @@ void unpack(Dimension& data,
     unpack(siScaling, buffer, position, comm);
     unpack(siOffset, buffer, position, comm);
     data = Dimension(name, siScaling, siOffset);
+}
+
+void unpack(UnitSystem& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    UnitSystem::UnitType type;
+    std::map<std::string, Dimension> dimensions;
+    size_t use_count;
+    unpack(name, buffer, position, comm);
+    unpack(type, buffer, position, comm);
+    unpack(dimensions, buffer, position, comm);
+    unpack(use_count, buffer, position, comm);
+
+    data = UnitSystem(name, type, dimensions, use_count);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
