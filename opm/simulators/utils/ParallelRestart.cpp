@@ -39,6 +39,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQDefine.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQInput.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
@@ -1329,6 +1330,15 @@ std::size_t packSize(const UDQAssign& data,
     return packSize(data.keyword(), comm) +
            packSize(data.var_type(), comm) +
            packSize(data.getRecords(), comm);
+}
+
+std::size_t packSize(const UDQIndex& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.insert_index, comm) +
+           packSize(data.typed_insert_index, comm) +
+           packSize(data.action, comm) +
+           packSize(data.var_type, comm);
 }
 
 ////// pack routines
@@ -2678,6 +2688,16 @@ void pack(const UDQAssign& data,
     pack(data.keyword(), buffer, position, comm);
     pack(data.var_type(), buffer, position, comm);
     pack(data.getRecords(), buffer, position, comm);
+}
+
+void pack(const UDQIndex& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.insert_index, buffer, position, comm);
+    pack(data.typed_insert_index, buffer, position, comm);
+    pack(data.action, buffer, position, comm);
+    pack(data.var_type, buffer, position, comm);
 }
 
 /// unpack routines
@@ -4585,7 +4605,15 @@ void unpack(UDQAssign& data,
     data = UDQAssign(keyword, varType, records);
 }
 
-
+void unpack(UDQIndex& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.insert_index, buffer, position, comm);
+    unpack(data.typed_insert_index, buffer, position, comm);
+    unpack(data.action, buffer, position, comm);
+    unpack(data.var_type, buffer, position, comm);
+}
 
 #define INSTANTIATE_PACK_VECTOR(T) \
 template std::size_t packSize(const std::vector<T>& data, \
