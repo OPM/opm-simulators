@@ -1244,6 +1244,25 @@ std::size_t packSize(const Group::GroupProductionProperties& data,
            packSize(data.production_controls, comm);
 }
 
+std::size_t packSize(const Group& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.name(), comm) +
+           packSize(data.insert_index(), comm) +
+           packSize(data.initStep(), comm) +
+           packSize(data.udqUndefined(), comm) +
+           packSize(data.units(), comm) +
+           packSize(data.type(), comm) +
+           packSize(data.getGroupEfficiencyFactor(), comm) +
+           packSize(data.getTransferGroupEfficiencyFactor(), comm) +
+           packSize(data.getGroupNetVFPTable(), comm) +
+           packSize(data.parent(), comm) +
+           packSize(data.iwells(), comm) +
+           packSize(data.igroups(), comm) +
+           packSize(data.injectionProperties(), comm) +
+           packSize(data.productionProperties(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -2501,6 +2520,26 @@ void pack(const Group::GroupProductionProperties& data,
     pack(data.guide_rate_def, buffer, position, comm);
     pack(data.resv_target, buffer, position, comm);
     pack(data.production_controls, buffer, position, comm);
+}
+
+void pack(const Group& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name(), buffer, position, comm);
+    pack(data.insert_index(), buffer, position, comm);
+    pack(data.initStep(), buffer, position, comm);
+    pack(data.udqUndefined(), buffer, position, comm);
+    pack(data.units(), buffer, position, comm);
+    pack(data.type(), buffer, position, comm);
+    pack(data.getGroupEfficiencyFactor(), buffer, position, comm);
+    pack(data.getTransferGroupEfficiencyFactor(), buffer, position, comm);
+    pack(data.getGroupNetVFPTable(), buffer, position, comm);
+    pack(data.parent(), buffer, position, comm);
+    pack(data.iwells(), buffer, position, comm);
+    pack(data.igroups(), buffer, position, comm);
+    pack(data.injectionProperties(), buffer, position, comm);
+    pack(data.productionProperties(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -4269,6 +4308,44 @@ void unpack(Group::GroupProductionProperties& data,
     unpack(data.guide_rate_def, buffer, position, comm);
     unpack(data.resv_target, buffer, position, comm);
     unpack(data.production_controls, buffer, position, comm);
+}
+
+void unpack(Group& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    std::size_t insert_index, initStep;
+    double udqUndefined;
+    UnitSystem units;
+    Group::GroupType type;
+    double groupEfficiencyFactor;
+    bool transferGroupEfficiencyFactor;
+    int groupNetVFPTable;
+    std::string parent;
+    IOrderSet<std::string> wells, groups;
+    Group::GroupInjectionProperties injection;
+    Group::GroupProductionProperties production;
+
+    unpack(name, buffer, position, comm);
+    unpack(insert_index, buffer, position, comm);
+    unpack(initStep, buffer, position, comm);
+    unpack(udqUndefined, buffer, position, comm);
+    unpack(units, buffer, position, comm);
+    unpack(type, buffer, position, comm);
+    unpack(groupEfficiencyFactor, buffer, position, comm);
+    unpack(transferGroupEfficiencyFactor, buffer, position, comm);
+    unpack(groupNetVFPTable, buffer, position, comm);
+    unpack(parent, buffer, position, comm);
+    unpack(wells, buffer, position, comm);
+    unpack(groups, buffer, position, comm);
+    unpack(injection, buffer, position, comm);
+    unpack(production, buffer, position, comm);
+    data = Group(name, insert_index, initStep, udqUndefined,
+                 units, type, groupEfficiencyFactor,
+                 transferGroupEfficiencyFactor,
+                 groupNetVFPTable, parent, wells, groups,
+                 injection, production);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

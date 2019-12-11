@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
@@ -1610,6 +1611,25 @@ BOOST_AUTO_TEST_CASE(GroupProductionProperties)
                                                Opm::UDAValue(4.0),
                                                5.0, Opm::Group::GuideRateTarget::COMB,
                                                6.0, 7};
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Group)
+{
+#ifdef HAVE_MPI
+    Opm::UnitSystem unitSystem;
+    Opm::Group val1("test1", 1, 2, 3.0, unitSystem,
+                    Opm::Group::GroupType::PRODUCTION,
+                    4.0, true, 5, "test2",
+                    Opm::IOrderSet<std::string>({"test3", "test4"}, {"test3","test4"}),
+                    Opm::IOrderSet<std::string>({"test5", "test6"}, {"test5","test6"}),
+                    Opm::Group::GroupInjectionProperties(),
+                    Opm::Group::GroupProductionProperties());
 
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
