@@ -481,6 +481,10 @@ namespace Opm
 
         EvalWell pressureDropSpiralICD(const int seg) const;
 
+        // assemble the pressure equation for sub-critical valve (WSEGVALV)
+        void assembleValvePressureEq(const int seg) const;
+
+        EvalWell pressureDropValve(const int seg) const;
     };
 
 }
