@@ -295,14 +295,14 @@ namespace Opm {
             wellState.setCurrentProductionGroupReductionRates(group.name(), groupTargetReduction);
     }
 
-
-    inline void updateGuideRateForGroups(const Group& group, const Schedule& schedule, const PhaseUsage& pu, const int reportStepIdx, const double& simTime, const bool isInjector, WellStateFullyImplicitBlackoil& wellState, GuideRate* guideRate, std::vector<double>& pot)
+    template <class Comm>
+    inline void updateGuideRateForGroups(const Group& group, const Schedule& schedule, const PhaseUsage& pu, const int reportStepIdx, const double& simTime, const bool isInjector, WellStateFullyImplicitBlackoil& wellState, const Comm& comm, GuideRate* guideRate, std::vector<double>& pot)
     {
         const int np = pu.num_phases;
         for (const std::string& groupName : group.groups()) {
             std::vector<double> thisPot(np, 0.0);
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            updateGuideRateForGroups(groupTmp, schedule, pu, reportStepIdx, simTime, isInjector, wellState, guideRate, thisPot);
+            updateGuideRateForGroups(groupTmp, schedule, pu, reportStepIdx, simTime, isInjector, wellState, comm, guideRate, thisPot);
 
             // accumulate group contribution from sub group if FLD
             if (isInjector) {
@@ -354,8 +354,8 @@ namespace Opm {
 
         double oilPot = 0.0;
         if (pu.phase_used[BlackoilPhases::Liquid])
-
             oilPot = pot [ pu.phase_pos[BlackoilPhases::Liquid]];
+
         double gasPot = 0.0;
         if (pu.phase_used[BlackoilPhases::Vapour])
             gasPot = pot [ pu.phase_pos[BlackoilPhases::Vapour]];
@@ -364,11 +364,47 @@ namespace Opm {
         if (pu.phase_used[BlackoilPhases::Aqua])
             waterPot = pot [pu.phase_pos[BlackoilPhases::Aqua]];
 
+        oilPot = comm.sum(oilPot);
+        gasPot = comm.sum(gasPot);
+        waterPot = comm.sum(waterPot);
+
         if (isInjector) {
             wellState.setCurrentGroupInjectionPotentials(group.name(), pot);
         } else {
             guideRate->compute(group.name(), reportStepIdx, simTime, oilPot, gasPot, waterPot);
         }
+    }
+
+    template <class Comm>
+    inline void updateGuideRatesForWells(const Schedule& schedule, const PhaseUsage& pu, const int reportStepIdx, const double& simTime, const WellStateFullyImplicitBlackoil& wellState, const Comm& comm, GuideRate* guideRate) {
+
+        const auto& end = wellState.wellMap().end();
+        for (const auto& well : schedule.getWells(reportStepIdx)) {
+            double oilpot = 0.0;
+            double gaspot = 0.0;
+            double waterpot = 0.0;
+
+            const auto& it = wellState.wellMap().find( well.name());
+            if (it != end) {  // the well is found
+
+                int well_index = it->second[0];
+
+                const auto wpot = wellState.wellPotentials().data() + well_index*wellState.numPhases();
+                if (pu.phase_used[BlackoilPhases::Liquid] > 0)
+                    oilpot = wpot[pu.phase_pos[BlackoilPhases::Liquid]];
+
+                if (pu.phase_used[BlackoilPhases::Vapour] > 0)
+                    gaspot = wpot[pu.phase_pos[BlackoilPhases::Vapour]];
+
+                if (pu.phase_used[BlackoilPhases::Aqua] > 0)
+                    waterpot = wpot[pu.phase_pos[BlackoilPhases::Aqua]];
+            }
+            oilpot = comm.sum(oilpot);
+            gaspot = comm.sum(gaspot);
+            waterpot = comm.sum(waterpot);
+            guideRate->compute(well.name(), reportStepIdx, simTime, oilpot, gaspot, waterpot);
+        }
+
     }
 
 
@@ -416,8 +452,11 @@ namespace Opm {
     inline double wellFractionFromGuideRates(const Well& well, const Schedule& schedule, const WellStateFullyImplicitBlackoil& wellState, const int reportStepIdx, const GuideRate* guideRate, const Well::GuideRateTarget& wellTarget, const bool isInjector) {
         double groupTotalGuideRate = 0.0;
         const Group& groupTmp = schedule.getGroup(well.groupName(), reportStepIdx);
+        int global_well_index = -1;
         for (const std::string& wellName : groupTmp.wells()) {
             const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
+
+            global_well_index++;
 
             if (wellTmp.isProducer() && isInjector)
                  continue;
@@ -428,19 +467,12 @@ namespace Opm {
             if (wellTmp.getStatus() == Well::Status::SHUT)
                 continue;
 
-            const auto& end = wellState.wellMap().end();
-            const auto& it = wellState.wellMap().find( wellName );
-            if (it == end)  // the well is not found
-                continue;
-
-            int well_index = it->second[0];
-
             // only count wells under group control
             if (isInjector) {
-                if (wellState.currentInjectionControls()[well_index] != Well::InjectorCMode::GRUP)
+                if (wellState.globalIsInjectionGrup()[global_well_index] == 0)
                     continue;
             } else {
-                if (wellState.currentProductionControls()[well_index] !=  Well::ProducerCMode::GRUP)
+                if (wellState.globalIsProductionGrup()[global_well_index] == 0)
                     continue;
             }
 
