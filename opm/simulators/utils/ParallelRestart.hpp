@@ -42,6 +42,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicVector.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
@@ -75,7 +76,6 @@ class EquilRecord;
 class Events;
 class FoamConfig;
 class FoamData;
-class GuideRateModel;
 class InitConfig;
 class IOConfig;
 template<class T> class IOrderSet;
@@ -601,6 +601,9 @@ ADD_PACK_PROTOTYPES(EquilRecord)
 ADD_PACK_PROTOTYPES(Events)
 ADD_PACK_PROTOTYPES(FoamConfig)
 ADD_PACK_PROTOTYPES(FoamData)
+ADD_PACK_PROTOTYPES(GuideRateConfig)
+ADD_PACK_PROTOTYPES(GuideRateConfig::GroupTarget)
+ADD_PACK_PROTOTYPES(GuideRateConfig::WellTarget)
 ADD_PACK_PROTOTYPES(GuideRateModel)
 ADD_PACK_PROTOTYPES(Group)
 ADD_PACK_PROTOTYPES(Group::GroupInjectionProperties)

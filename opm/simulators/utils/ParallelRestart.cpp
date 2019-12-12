@@ -288,6 +288,8 @@ HANDLE_AS_POD(EclHysterConfig)
 HANDLE_AS_POD(Eqldims)
 HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
+HANDLE_AS_POD(GuideRateConfig::GroupTarget);
+HANDLE_AS_POD(GuideRateConfig::WellTarget);
 HANDLE_AS_POD(JFunc)
 HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PVTWRecord)
@@ -1402,6 +1404,14 @@ std::size_t packSize(const GuideRateModel& data,
            packSize(data.free_gas(), comm) +
            packSize(data.defaultModel(), comm) +
            packSize(data.udaCoefs(), comm);
+}
+
+std::size_t packSize(const GuideRateConfig& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getModel(), comm) +
+           packSize(data.getWells(), comm) +
+           packSize(data.getGroups(), comm);
 }
 
 ////// pack routines
@@ -2829,6 +2839,15 @@ void pack(const GuideRateModel& data,
     pack(data.free_gas(), buffer, position, comm);
     pack(data.defaultModel(), buffer, position, comm);
     pack(data.udaCoefs(), buffer, position, comm);
+}
+
+void pack(const GuideRateConfig& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getModel(), buffer, position, comm);
+    pack(data.getWells(), buffer, position, comm);
+    pack(data.getGroups(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -4836,6 +4855,20 @@ void unpack(GuideRateModel& data,
     unpack(udaCoefs, buffer, position, comm);
     data = GuideRateModel(timeInterval, target, coefs, allow_increase,
                           damping_factor, free_gas, defaultModel, udaCoefs);
+}
+
+void unpack(GuideRateConfig& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::shared_ptr<GuideRateModel> model;
+    std::unordered_map<std::string, GuideRateConfig::WellTarget> wells;
+    std::unordered_map<std::string, GuideRateConfig::GroupTarget> groups;
+
+    unpack(model, buffer, position, comm);
+    unpack(wells, buffer, position, comm);
+    unpack(groups, buffer, position, comm);
+    data = GuideRateConfig(model, wells, groups);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

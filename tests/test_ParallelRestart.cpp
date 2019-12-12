@@ -350,6 +350,18 @@ Opm::GuideRateModel getGuideRateModel()
 #endif
 
 
+Opm::GuideRateConfig::GroupTarget getGuideRateConfigGroup()
+{
+    return Opm::GuideRateConfig::GroupTarget{1.0, Opm::Group::GuideRateTarget::COMB};
+}
+
+
+Opm::GuideRateConfig::WellTarget getGuideRateConfigWell()
+{
+    return Opm::GuideRateConfig::WellTarget{1.0, Opm::Well::GuideRateTarget::COMB, 2.0};
+}
+
+
 }
 
 
@@ -1847,6 +1859,42 @@ BOOST_AUTO_TEST_CASE(GuideRateModel)
 {
 #ifdef HAVE_MPI
     Opm::GuideRateModel val1 = getGuideRateModel();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GuideRateConfigGroup)
+{
+#ifdef HAVE_MPI
+    Opm::GuideRateConfig::GroupTarget val1 = getGuideRateConfigGroup();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GuideRateConfigWell)
+{
+#ifdef HAVE_MPI
+    Opm::GuideRateConfig::WellTarget val1 = getGuideRateConfigWell();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GuideRateConfig)
+{
+#ifdef HAVE_MPI
+    auto model = std::make_shared<Opm::GuideRateModel>(getGuideRateModel());
+    Opm::GuideRateConfig val1(model,
+                              {{"test1", getGuideRateConfigWell()}},
+                              {{"test2", getGuideRateConfigGroup()}});
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
