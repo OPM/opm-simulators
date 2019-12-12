@@ -1414,6 +1414,23 @@ std::size_t packSize(const GuideRateConfig& data,
            packSize(data.getGroups(), comm);
 }
 
+std::size_t packSize(const GConSale::GCONSALEGroup& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.sales_target, comm) +
+           packSize(data.max_sales_rate, comm) +
+           packSize(data.min_sales_rate, comm) +
+           packSize(data.max_proc, comm) +
+           packSize(data.udq_undefined, comm) +
+           packSize(data.unit_system, comm);
+}
+
+std::size_t packSize(const GConSale& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getGroups(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -2847,6 +2864,25 @@ void pack(const GuideRateConfig& data,
 {
     pack(data.getModel(), buffer, position, comm);
     pack(data.getWells(), buffer, position, comm);
+    pack(data.getGroups(), buffer, position, comm);
+}
+
+void pack(const GConSale::GCONSALEGroup& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.sales_target, buffer, position, comm);
+    pack(data.max_sales_rate, buffer, position, comm);
+    pack(data.min_sales_rate, buffer, position, comm);
+    pack(data.max_proc, buffer, position, comm);
+    pack(data.udq_undefined, buffer, position, comm);
+    pack(data.unit_system, buffer, position, comm);
+}
+
+void pack(const GConSale& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
     pack(data.getGroups(), buffer, position, comm);
 }
 
@@ -4869,6 +4905,27 @@ void unpack(GuideRateConfig& data,
     unpack(wells, buffer, position, comm);
     unpack(groups, buffer, position, comm);
     data = GuideRateConfig(model, wells, groups);
+}
+
+void unpack(GConSale::GCONSALEGroup& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.sales_target, buffer, position, comm);
+    unpack(data.max_sales_rate, buffer, position, comm);
+    unpack(data.min_sales_rate, buffer, position, comm);
+    unpack(data.max_proc, buffer, position, comm);
+    unpack(data.udq_undefined, buffer, position, comm);
+    unpack(data.unit_system, buffer, position, comm);
+}
+
+void unpack(GConSale& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::map<std::string,GConSale::GCONSALEGroup> groups;
+    unpack(groups, buffer, position, comm);
+    data = GConSale(groups);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

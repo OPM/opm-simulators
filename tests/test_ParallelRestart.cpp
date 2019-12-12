@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateModel.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
@@ -1895,6 +1896,37 @@ BOOST_AUTO_TEST_CASE(GuideRateConfig)
     Opm::GuideRateConfig val1(model,
                               {{"test1", getGuideRateConfigWell()}},
                               {{"test2", getGuideRateConfigGroup()}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GConSaleGroup)
+{
+#ifdef HAVE_MPI
+    Opm::GConSale::GCONSALEGroup val1{Opm::UDAValue(1.0),
+                                      Opm::UDAValue(2.0),
+                                      Opm::UDAValue(3.0),
+                                      Opm::GConSale::MaxProcedure::PLUG,
+                                      4.0, Opm::UnitSystem()};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GConSale)
+{
+#ifdef HAVE_MPI
+    Opm::GConSale::GCONSALEGroup group{Opm::UDAValue(1.0),
+                                       Opm::UDAValue(2.0),
+                                       Opm::UDAValue(3.0),
+                                       Opm::GConSale::MaxProcedure::PLUG,
+                                       4.0, Opm::UnitSystem()};
+    Opm::GConSale val1({{"test1", group}, {"test2", group}});
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
