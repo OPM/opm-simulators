@@ -36,6 +36,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
@@ -1445,6 +1446,17 @@ std::size_t packSize(const GConSump& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getGroups(), comm);
+}
+
+std::size_t packSize(const RFTConfig& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.timeMap(), comm) +
+           packSize(data.wellOpenRftTime(), comm) +
+           packSize(data.wellOpenRftName(), comm) +
+           packSize(data.wellOpen(), comm) +
+           packSize(data.rftConfig(), comm) +
+           packSize(data.pltConfig(), comm);
 }
 
 ////// pack routines
@@ -2918,6 +2930,18 @@ void pack(const GConSump& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getGroups(), buffer, position, comm);
+}
+
+void pack(const RFTConfig& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.timeMap(), buffer, position, comm);
+    pack(data.wellOpenRftTime(), buffer, position, comm);
+    pack(data.wellOpenRftName(), buffer, position, comm);
+    pack(data.wellOpen(), buffer, position, comm);
+    pack(data.rftConfig(), buffer, position, comm);
+    pack(data.pltConfig(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -4980,6 +5004,27 @@ void unpack(GConSump& data,
     std::map<std::string,GConSump::GCONSUMPGroup> groups;
     unpack(groups, buffer, position, comm);
     data = GConSump(groups);
+}
+
+void unpack(RFTConfig& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TimeMap timeMap;
+    std::pair<bool, std::size_t> wellOpenRftTime;
+    std::unordered_set<std::string> wellOpenRftName;
+    std::unordered_map<std::string, std::size_t> wellOpen;
+    RFTConfig::RFTMap rftConfig;
+    RFTConfig::PLTMap pltConfig;
+
+    unpack(timeMap, buffer, position, comm);
+    unpack(wellOpenRftTime, buffer, position, comm);
+    unpack(wellOpenRftName, buffer, position, comm);
+    unpack(wellOpen, buffer, position, comm);
+    unpack(rftConfig, buffer, position, comm);
+    unpack(pltConfig, buffer, position, comm);
+    data = RFTConfig(timeMap, wellOpenRftTime, wellOpenRftName,
+                     wellOpen, rftConfig, pltConfig);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

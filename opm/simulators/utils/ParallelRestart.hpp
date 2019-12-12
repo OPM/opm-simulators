@@ -99,6 +99,7 @@ class PvtwTable;
 class Regdims;
 class RestartConfig;
 class RestartSchedule;
+class RFTConfig;
 class ROCKRecord;
 class RockTable;
 class Rock2dTable;
@@ -636,6 +637,7 @@ ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)
+ADD_PACK_PROTOTYPES(RFTConfig)
 ADD_PACK_PROTOTYPES(ROCKRecord)
 ADD_PACK_PROTOTYPES(RockTable)
 ADD_PACK_PROTOTYPES(Rock2dTable)
