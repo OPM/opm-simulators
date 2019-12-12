@@ -44,6 +44,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
@@ -634,6 +635,9 @@ ADD_PACK_PROTOTYPES(ThresholdPressure)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeMap::StepData)
 ADD_PACK_PROTOTYPES(UDAValue)
+ADD_PACK_PROTOTYPES(UDQActive)
+ADD_PACK_PROTOTYPES(UDQActive::InputRecord)
+ADD_PACK_PROTOTYPES(UDQActive::Record)
 ADD_PACK_PROTOTYPES(UDQAssign)
 ADD_PACK_PROTOTYPES(UDQAssign::AssignRecord)
 ADD_PACK_PROTOTYPES(UDQASTNode)

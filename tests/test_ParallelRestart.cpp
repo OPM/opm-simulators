@@ -43,6 +43,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
@@ -1784,6 +1785,45 @@ BOOST_AUTO_TEST_CASE(UDQConfig)
 {
 #ifdef HAVE_MPI
     Opm::UDQConfig val1 = getUDQConfig();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQActiveInputRecord)
+{
+#ifdef HAVE_MPI
+    Opm::UDQActive::InputRecord val1(1, "test1", "test2",
+                                     Opm::UDAControl::WCONPROD_ORAT);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQActiveRecord)
+{
+#ifdef HAVE_MPI
+    Opm::UDQActive::Record val1("test1", 1, 2, "test2",
+                                Opm::UDAControl::WCONPROD_ORAT);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQActive)
+{
+#ifdef HAVE_MPI
+    Opm::UDQActive val1({Opm::UDQActive::InputRecord(1, "test1", "test2",
+                                                     Opm::UDAControl::WCONPROD_ORAT)},
+                        {Opm::UDQActive::Record("test1", 1, 2, "test2",
+                                                  Opm::UDAControl::WCONPROD_ORAT)},
+                        {{"test1", 1}}, {{"test2", 2}});
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
