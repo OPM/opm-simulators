@@ -1459,6 +1459,21 @@ std::size_t packSize(const RFTConfig& data,
            packSize(data.pltConfig(), comm);
 }
 
+std::size_t packSize(const DeckItem& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.dVal(), comm) +
+           packSize(data.iVal(), comm) +
+           packSize(data.sVal(), comm) +
+           packSize(data.uVal(), comm) +
+           packSize(data.getType(), comm) +
+           packSize(data.name(), comm) +
+           packSize(data.valueStatus(), comm) +
+           packSize(data.rawData(), comm) +
+           packSize(data.activeDimensions(), comm) +
+           packSize(data.defaultDimensions(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -2942,6 +2957,22 @@ void pack(const RFTConfig& data,
     pack(data.wellOpen(), buffer, position, comm);
     pack(data.rftConfig(), buffer, position, comm);
     pack(data.pltConfig(), buffer, position, comm);
+}
+
+void pack(const DeckItem& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.dVal(), buffer, position, comm);
+    pack(data.iVal(), buffer, position, comm);
+    pack(data.sVal(), buffer, position, comm);
+    pack(data.uVal(), buffer, position, comm);
+    pack(data.getType(), buffer, position, comm);
+    pack(data.name(), buffer, position, comm);
+    pack(data.valueStatus(), buffer, position, comm);
+    pack(data.rawData(), buffer, position, comm);
+    pack(data.activeDimensions(), buffer, position, comm);
+    pack(data.defaultDimensions(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -5025,6 +5056,35 @@ void unpack(RFTConfig& data,
     unpack(pltConfig, buffer, position, comm);
     data = RFTConfig(timeMap, wellOpenRftTime, wellOpenRftName,
                      wellOpen, rftConfig, pltConfig);
+}
+
+
+void unpack(DeckItem& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<double> dVal;
+    std::vector<int> iVal;
+    std::vector<std::string> sVal;
+    std::vector<UDAValue> uVal;
+    type_tag type;
+    std::string name;
+    std::vector<value::status> valueStatus;
+    bool rawData;
+    std::vector<Dimension> activeDimensions, defaultDimensions;
+
+    unpack(dVal, buffer, position, comm);
+    unpack(iVal, buffer, position, comm);
+    unpack(sVal, buffer, position, comm);
+    unpack(uVal, buffer, position, comm);
+    unpack(type, buffer, position, comm);
+    unpack(name, buffer, position, comm);
+    unpack(valueStatus, buffer, position, comm);
+    unpack(rawData, buffer, position, comm);
+    unpack(activeDimensions, buffer, position, comm);
+    unpack(defaultDimensions, buffer, position, comm);
+    data = DeckItem(dVal, iVal, sVal, uVal, type, name,
+                    valueStatus, rawData, activeDimensions, defaultDimensions);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

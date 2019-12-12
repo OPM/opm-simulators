@@ -28,6 +28,7 @@
 #include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
+#include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
@@ -1973,6 +1974,23 @@ BOOST_AUTO_TEST_CASE(RFTConfig)
                         {{"test3", 2}},
                         {{"test1", {{{Opm::RFTConfig::RFT::TIMESTEP, 3}}, 4}}},
                         {{"test2", {{{Opm::RFTConfig::PLT::REPT, 5}}, 6}}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(DeckItem)
+{
+#ifdef HAVE_MPI
+    Opm::DeckItem val1({1.0}, {2}, {"test3"}, {Opm::UDAValue(4)},
+                       Opm::type_tag::string, "test5",
+                       {Opm::value::status::deck_value},
+                       true,
+                       {Opm::Dimension("DimensionLess", 7.0, 8.0)},
+                       {Opm::Dimension("Metric", 10.0, 11.0)});
+
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
