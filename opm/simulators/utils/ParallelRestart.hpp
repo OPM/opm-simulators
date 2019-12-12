@@ -67,6 +67,7 @@ class Aqudims;
 class ColumnSchema;
 class Connection;
 class DeckItem;
+class DeckRecord;
 class DENSITYRecord;
 class DensityTable;
 class Dimension;
@@ -594,6 +595,7 @@ ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(DeckItem)
+ADD_PACK_PROTOTYPES(DeckRecord)
 ADD_PACK_PROTOTYPES(DENSITYRecord)
 ADD_PACK_PROTOTYPES(DensityTable)
 ADD_PACK_PROTOTYPES(Dimension)

@@ -365,6 +365,26 @@ Opm::GuideRateConfig::WellTarget getGuideRateConfigWell()
 }
 
 
+Opm::DeckRecord getDeckRecord()
+{
+    Opm::DeckItem item1({1.0}, {2}, {"test3"}, {Opm::UDAValue(4)},
+                       Opm::type_tag::string, "test5",
+                       {Opm::value::status::deck_value},
+                       true,
+                       {Opm::Dimension("DimensionLess", 7.0, 8.0)},
+                       {Opm::Dimension("Metric", 10.0, 11.0)});
+
+    Opm::DeckItem item2({1.0}, {2}, {"test3"}, {Opm::UDAValue(4)},
+                       Opm::type_tag::string, "test6",
+                       {Opm::value::status::deck_value},
+                       true,
+                       {Opm::Dimension("DimensionLess", 7.0, 8.0)},
+                       {Opm::Dimension("Metric", 10.0, 11.0)});
+
+    return Opm::DeckRecord({item1, item2});
+}
+
+
 }
 
 
@@ -1991,6 +2011,17 @@ BOOST_AUTO_TEST_CASE(DeckItem)
                        {Opm::Dimension("DimensionLess", 7.0, 8.0)},
                        {Opm::Dimension("Metric", 10.0, 11.0)});
 
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(DeckRecord)
+{
+#ifdef HAVE_MPI
+    Opm::DeckRecord val1 = getDeckRecord();
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

@@ -1474,6 +1474,12 @@ std::size_t packSize(const DeckItem& data,
            packSize(data.defaultDimensions(), comm);
 }
 
+std::size_t packSize(const DeckRecord& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getItems(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -2973,6 +2979,13 @@ void pack(const DeckItem& data,
     pack(data.rawData(), buffer, position, comm);
     pack(data.activeDimensions(), buffer, position, comm);
     pack(data.defaultDimensions(), buffer, position, comm);
+}
+
+void pack(const DeckRecord& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getItems(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -5085,6 +5098,15 @@ void unpack(DeckItem& data,
     unpack(defaultDimensions, buffer, position, comm);
     data = DeckItem(dVal, iVal, sVal, uVal, type, name,
                     valueStatus, rawData, activeDimensions, defaultDimensions);
+}
+
+void unpack(DeckRecord& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<DeckItem> items;
+    unpack(items, buffer, position, comm);
+    data = DeckRecord(std::move(items));
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
