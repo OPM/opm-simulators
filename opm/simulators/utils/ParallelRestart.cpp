@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQDefine.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQInput.hpp>
@@ -1339,6 +1340,18 @@ std::size_t packSize(const UDQIndex& data,
            packSize(data.typed_insert_index, comm) +
            packSize(data.action, comm) +
            packSize(data.var_type, comm);
+}
+
+std::size_t packSize(const UDQConfig& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.params(), comm) +
+           packSize(data.function_table(), comm) +
+           packSize(data.definitionMap(), comm) +
+           packSize(data.assignmentMap(), comm) +
+           packSize(data.unitsMap(), comm) +
+           packSize(data.inputIndex(), comm) +
+           packSize(data.typeCount(), comm);
 }
 
 ////// pack routines
@@ -2698,6 +2711,19 @@ void pack(const UDQIndex& data,
     pack(data.typed_insert_index, buffer, position, comm);
     pack(data.action, buffer, position, comm);
     pack(data.var_type, buffer, position, comm);
+}
+
+void pack(const UDQConfig& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.params(), buffer, position, comm);
+    pack(data.function_table(), buffer, position, comm);
+    pack(data.definitionMap(), buffer, position, comm);
+    pack(data.assignmentMap(), buffer, position, comm);
+    pack(data.unitsMap(), buffer, position, comm);
+    pack(data.inputIndex(), buffer, position, comm);
+    pack(data.typeCount(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -4613,6 +4639,29 @@ void unpack(UDQIndex& data,
     unpack(data.typed_insert_index, buffer, position, comm);
     unpack(data.action, buffer, position, comm);
     unpack(data.var_type, buffer, position, comm);
+}
+
+void unpack(UDQConfig& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    UDQParams params;
+    UDQFunctionTable function_table;
+    std::unordered_map<std::string,UDQDefine> definitionsMap;
+    std::unordered_map<std::string,UDQAssign> assignmentsMap;
+    std::unordered_map<std::string,std::string> units;
+    OrderedMap<std::string,UDQIndex> inputIndex;
+    std::map<UDQVarType,std::size_t> typeCount;
+
+    unpack(params, buffer, position, comm);
+    unpack(function_table, buffer, position, comm);
+    unpack(definitionsMap, buffer, position, comm);
+    unpack(assignmentsMap, buffer, position, comm);
+    unpack(units, buffer, position, comm);
+    unpack(inputIndex, buffer, position, comm);
+    unpack(typeCount, buffer, position, comm);
+    data = UDQConfig(params, function_table, definitionsMap,
+                     assignmentsMap, units, inputIndex, typeCount);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

@@ -114,6 +114,7 @@ class TableSchema;
 class ThresholdPressure;
 class UDAValue;
 class UDQASTNode;
+class UDQConfig;
 class UDQDefine;
 class UDQFunction;
 class UDQFunctionTable;
@@ -636,6 +637,7 @@ ADD_PACK_PROTOTYPES(UDAValue)
 ADD_PACK_PROTOTYPES(UDQAssign)
 ADD_PACK_PROTOTYPES(UDQAssign::AssignRecord)
 ADD_PACK_PROTOTYPES(UDQASTNode)
+ADD_PACK_PROTOTYPES(UDQConfig)
 ADD_PACK_PROTOTYPES(UDQDefine)
 ADD_PACK_PROTOTYPES(UDQFunction)
 ADD_PACK_PROTOTYPES(UDQFunctionTable)
