@@ -1934,6 +1934,35 @@ BOOST_AUTO_TEST_CASE(GConSale)
 }
 
 
+BOOST_AUTO_TEST_CASE(GConSumpGroup)
+{
+#ifdef HAVE_MPI
+    Opm::GConSump::GCONSUMPGroup val1{Opm::UDAValue(1.0),
+                                      Opm::UDAValue(2.0),
+                                      "test",
+                                      3.0, Opm::UnitSystem()};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GConSump)
+{
+#ifdef HAVE_MPI
+    Opm::GConSump::GCONSUMPGroup group{Opm::UDAValue(1.0),
+                                       Opm::UDAValue(2.0),
+                                       "test",
+                                       3.0, Opm::UnitSystem()};
+    Opm::GConSump val1({{"test1", group}, {"test2", group}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;
