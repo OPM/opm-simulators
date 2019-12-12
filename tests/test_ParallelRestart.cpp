@@ -38,6 +38,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateModel.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
@@ -334,6 +335,17 @@ Opm::UDQConfig getUDQConfig()
                           {{"test5", "test6"}, {"test7", "test8"}},
                           omap,
                           {{Opm::UDQVarType::SCALAR, 5}, {Opm::UDQVarType::WELL_VAR, 6}});
+}
+
+
+Opm::GuideRateModel getGuideRateModel()
+{
+    return Opm::GuideRateModel(1.0, Opm::GuideRateModel::Target::WAT,
+                               {2.0, 3.0, 4.0, 5.0, 6.0, 7.0},
+                               true, 8.0, false, false,
+                               {Opm::UDAValue(9.0),
+                               Opm::UDAValue(10.0),
+                               Opm::UDAValue(11.0)});
 }
 #endif
 
@@ -1824,6 +1836,17 @@ BOOST_AUTO_TEST_CASE(UDQActive)
                         {Opm::UDQActive::Record("test1", 1, 2, "test2",
                                                   Opm::UDAControl::WCONPROD_ORAT)},
                         {{"test1", 1}}, {{"test2", 2}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GuideRateModel)
+{
+#ifdef HAVE_MPI
+    Opm::GuideRateModel val1 = getGuideRateModel();
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

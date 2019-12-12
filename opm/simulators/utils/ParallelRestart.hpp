@@ -75,6 +75,7 @@ class EquilRecord;
 class Events;
 class FoamConfig;
 class FoamData;
+class GuideRateModel;
 class InitConfig;
 class IOConfig;
 template<class T> class IOrderSet;
@@ -600,6 +601,7 @@ ADD_PACK_PROTOTYPES(EquilRecord)
 ADD_PACK_PROTOTYPES(Events)
 ADD_PACK_PROTOTYPES(FoamConfig)
 ADD_PACK_PROTOTYPES(FoamData)
+ADD_PACK_PROTOTYPES(GuideRateModel)
 ADD_PACK_PROTOTYPES(Group)
 ADD_PACK_PROTOTYPES(Group::GroupInjectionProperties)
 ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
