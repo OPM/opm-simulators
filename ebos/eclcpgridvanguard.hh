@@ -300,8 +300,6 @@ protected:
 
         auto & field_props = this->eclState().fieldProps();
         const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);
-        auto meminfo = field_props.meminfo();
-        printf("%ld/%ld  int: %ld  double: %ld  size:%ld bytes (%ld MB)\n", meminfo.global_size, meminfo.active_size, meminfo.int_fields, meminfo.double_fields, meminfo.total, meminfo.total / (1024*1024));
 #endif
 
     }
