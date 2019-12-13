@@ -1158,6 +1158,17 @@ std::size_t packSize(const std::shared_ptr<T>& data,
 template std::size_t packSize(const std::shared_ptr<SpiralICD>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
+template<class T>
+std::size_t packSize(const std::unique_ptr<T>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size = packSize(bool(), comm);
+    if (data)
+         size += packSize(*data, comm);
+
+    return size;
+}
+
 std::size_t packSize(const Dimension& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -2647,6 +2658,15 @@ void pack(const Segment& data,
 
 template<class T>
 void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data != nullptr, buffer, position, comm);
+    if (data)
+        pack(*data, buffer, position, comm);
+}
+
+template<class T>
+void pack(const std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data != nullptr, buffer, position, comm);
@@ -4628,6 +4648,18 @@ void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
     unpack(hasVal, buffer, position, comm);
     if (hasVal) {
         data = std::make_shared<T>();
+        unpack(*data, buffer, position, comm);
+    }
+}
+
+template<class T>
+void unpack(std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    bool hasVal;
+    unpack(hasVal, buffer, position, comm);
+    if (hasVal) {
+        data.reset(new T);
         unpack(*data, buffer, position, comm);
     }
 }
