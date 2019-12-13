@@ -1509,6 +1509,18 @@ std::size_t packSize(const DeckKeyword& data,
            packSize(data.isSlashTerminated(), comm);
 }
 
+
+std::size_t packSize(const Deck& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.keywords(), comm) +
+           packSize(data.getDefaultUnitSystem(), comm) +
+           packSize(data.activeUnitSystem(), comm) +
+           packSize(data.getDataFile(), comm) +
+           packSize(data.getInputPath(), comm) +
+           packSize(data.unitSystemAccessCount(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -3043,6 +3055,18 @@ void pack(const DeckKeyword& data,
     pack(data.records(), buffer, position, comm);
     pack(data.isDataKeyword(), buffer, position, comm);
     pack(data.isSlashTerminated(), buffer, position, comm);
+}
+
+void pack(const Deck& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.keywords(), buffer, position, comm);
+    pack(data.getDefaultUnitSystem(), buffer, position, comm);
+    pack(data.activeUnitSystem(), buffer, position, comm);
+    pack(data.getDataFile(), buffer, position, comm);
+    pack(data.getInputPath(), buffer, position, comm);
+    pack(data.unitSystemAccessCount(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -5203,6 +5227,25 @@ void unpack(DeckKeyword& data,
     unpack(isSlashTerminated, buffer, position, comm);
     data = DeckKeyword(name, location, records,
                        isDataKeyword, isSlashTerminated);
+}
+
+void unpack(Deck& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<DeckKeyword> keywords;
+    UnitSystem defaultUnitSystem;
+    std::unique_ptr<UnitSystem> activeUnitSystem;
+    std::string dataFile, inputPath;
+    size_t accessCount;
+
+    unpack(keywords, buffer, position, comm);
+    unpack(defaultUnitSystem, buffer, position, comm);
+    unpack(activeUnitSystem, buffer, position, comm);
+    unpack(dataFile, buffer, position, comm);
+    unpack(inputPath, buffer, position, comm);
+    unpack(accessCount, buffer, position, comm);
+    data = Deck(keywords, defaultUnitSystem,
+                activeUnitSystem.get(), dataFile, inputPath, accessCount);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

@@ -28,6 +28,7 @@
 #include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
@@ -2046,6 +2047,21 @@ BOOST_AUTO_TEST_CASE(DeckKeyword)
 #ifdef HAVE_MPI
     Opm::DeckKeyword val1("test", {"test",1},
                           {getDeckRecord(), getDeckRecord()}, true, false);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Deck)
+{
+#ifdef HAVE_MPI
+    std::unique_ptr<Opm::UnitSystem> unitSys(new Opm::UnitSystem);
+    Opm::Deck val1({Opm::DeckKeyword("test", {"test",1},
+                                     {getDeckRecord(), getDeckRecord()}, true, false)},
+                   Opm::UnitSystem(), unitSys.get(),
+                   "test2", "test3", 2);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
