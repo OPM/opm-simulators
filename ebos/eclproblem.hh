@@ -2889,19 +2889,13 @@ private:
         const auto& eclState = vanguard.eclState();
         size_t numDof = this->model().numGridDof();
 
-#ifdef ENABLE_3DPROPS_TESTING
-        const auto& fp = eclState.fieldProps();
-        if (enableSolvent)
-            solventSaturation_ = fp.get_double("SSOL");
 
-        if (enablePolymer)
-            polymerConcentration_ = fp.get_double("SPOLY");
-
-        if (enablePolymerMolarWeight)
-            polymerMoleWeight_ = fp.get_double("SPOLYMW");
-#else
         if (enableSolvent) {
+#ifdef ENABLE_3DPROPS_TESTING
+            const std::vector<double>& solventSaturationData = eclState.fieldProps().get_global_double("SSOL");
+#else
             const std::vector<double>& solventSaturationData = eclState.get3DProperties().getDoubleGridProperty("SSOL").getData();
+#endif
             solventSaturation_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
@@ -2912,7 +2906,11 @@ private:
         }
 
         if (enablePolymer) {
+#ifdef ENABLE_3DPROPS_TESTING
+            const std::vector<double>& polyConcentrationData = eclState.fieldProps().get_global_double("SPOLY");
+#else
             const std::vector<double>& polyConcentrationData = eclState.get3DProperties().getDoubleGridProperty("SPOLY").getData();
+#endif
             polymerConcentration_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
@@ -2923,7 +2921,11 @@ private:
         }
 
         if (enablePolymerMolarWeight) {
+#ifdef ENABLE_3DPROPS_TESTING
+            const std::vector<double>& polyMoleWeightData = eclState.fieldProps().get_global_double("SPOLYMW");
+#else
             const std::vector<double>& polyMoleWeightData = eclState.get3DProperties().getDoubleGridProperty("SPOLYMW").getData();
+#endif
             polymerMoleWeight_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 const size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
@@ -2932,7 +2934,6 @@ private:
                 polymerMoleWeight_[dofIdx] = polyMoleWeightData[cartesianDofIdx];
             }
         }
-#endif
     }
 
     // update the hysteresis parameters of the material laws for the whole grid
