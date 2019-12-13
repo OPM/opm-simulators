@@ -2041,6 +2041,18 @@ BOOST_AUTO_TEST_CASE(Location)
 }
 
 
+BOOST_AUTO_TEST_CASE(DeckKeyword)
+{
+#ifdef HAVE_MPI
+    Opm::DeckKeyword val1("test", {"test",1},
+                          {getDeckRecord(), getDeckRecord()}, true, false);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;

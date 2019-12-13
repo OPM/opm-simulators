@@ -1488,6 +1488,16 @@ std::size_t packSize(const Location& data,
            packSize(data.lineno, comm);
 }
 
+std::size_t packSize(const DeckKeyword& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.name(), comm) +
+           packSize(data.location(), comm) +
+           packSize(data.records(), comm) +
+           packSize(data.isDataKeyword(), comm) +
+           packSize(data.isSlashTerminated(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -3002,6 +3012,17 @@ void pack(const Location& data,
 {
     pack(data.filename, buffer, position, comm);
     pack(data.lineno, buffer, position, comm);
+}
+
+void pack(const DeckKeyword& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name(), buffer, position, comm);
+    pack(data.location(), buffer, position, comm);
+    pack(data.records(), buffer, position, comm);
+    pack(data.isDataKeyword(), buffer, position, comm);
+    pack(data.isSlashTerminated(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -5132,6 +5153,24 @@ void unpack(Location& data,
     data.filename.clear();
     unpack(data.filename, buffer, position, comm);
     unpack(data.lineno, buffer, position, comm);
+}
+
+void unpack(DeckKeyword& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    Location location;
+    std::vector<DeckRecord> records;
+    bool isDataKeyword, isSlashTerminated;
+
+    unpack(name, buffer, position, comm);
+    unpack(location, buffer, position, comm);
+    unpack(records, buffer, position, comm);
+    unpack(isDataKeyword, buffer, position, comm);
+    unpack(isSlashTerminated, buffer, position, comm);
+    data = DeckKeyword(name, location, records,
+                       isDataKeyword, isSlashTerminated);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
