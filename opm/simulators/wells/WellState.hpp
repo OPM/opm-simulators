@@ -63,7 +63,7 @@ namespace Opm
                 const int nw = wells_ecl.size();
                 // const int np = wells->number_of_phases;
                 const int np = pu.num_phases;
-                open_for_output_.resize(nw, true);
+                open_for_output_.assign(nw, true);
                 bhp_.resize(nw, 0.0);
                 thp_.resize(nw, 0.0);
                 temperature_.resize(nw, 273.15 + 20); // standard temperature for now
