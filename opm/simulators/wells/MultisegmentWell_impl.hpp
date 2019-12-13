@@ -2593,6 +2593,20 @@ namespace Opm
                          const WellState& /* well_state */,
                          Opm::DeferredLogger& deferred_logger)
     {
+        const bool checkOperability = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheck);
+        if (!checkOperability) {
+            return;
+        }
+
+        // focusing on PRODUCER for now
+        if (this->isInjector()) {
+            return;
+        }
+
+        if (!this->underPredictionMode() ) {
+            return;
+        }
+
         const std::string msg = "Support of well operability checking for multisegment wells is not implemented "
                                 "yet, checkWellOperability() for " + name() + " will do nothing";
         deferred_logger.warning("NO_OPERATABILITY_CHECKING_MS_WELLS", msg);
