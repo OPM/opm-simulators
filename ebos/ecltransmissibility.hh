@@ -725,21 +725,22 @@ private:
 #ifdef ENABLE_3DPROPS_TESTING
         const auto& fp = vanguard_.eclState().fieldProps();
         if (fp.has_double("PERMX")) {
-            const std::vector<double>& permxData = fp.get_double("PERMX");
+            const std::vector<double>& permxData = fp.get_global_double("PERMX");
 
             std::vector<double> permyData(permxData);
             if (fp.has_double("PERMY"))
-                permyData = fp.get_double("PERMY");
+                permyData = fp.get_global_double("PERMY");
 
             std::vector<double> permzData(permxData);
             if (fp.has_double("PERMZ"))
-                permzData = fp.get_double("PERMZ");
+                permzData = fp.get_global_double("PERMZ");
 
             for (size_t dofIdx = 0; dofIdx < numElem; ++ dofIdx) {
+                unsigned cartesianElemIdx = vanguard_.cartesianIndex(dofIdx);
                 permeability_[dofIdx] = 0.0;
-                permeability_[dofIdx][0][0] = permxData[dofIdx];
-                permeability_[dofIdx][1][1] = permyData[dofIdx];
-                permeability_[dofIdx][2][2] = permzData[dofIdx];
+                permeability_[dofIdx][0][0] = permxData[cartesianElemIdx];
+                permeability_[dofIdx][1][1] = permyData[cartesianElemIdx];
+                permeability_[dofIdx][2][2] = permzData[cartesianElemIdx];
             }
 
             // for now we don't care about non-diagonal entries

@@ -637,9 +637,10 @@ public:
             }
 
 
-            if (ppcw_.size() > 0)
+            if (ppcw_.size() > 0) {
                 ppcw_[globalDofIdx] = matLawManager->oilWaterScaledEpsInfoDrainage(globalDofIdx).maxPcow;
-
+                //printf("ppcw_[%d] = %lg\n", globalDofIdx, ppcw_[globalDofIdx]);
+            }
             // hack to make the intial output of rs and rv Ecl compatible.
             // For cells with swat == 1 Ecl outputs; rs = rsSat and rv=rvSat, in all but the initial step
             // where it outputs rs and rv values calculated by the initialization. To be compatible we overwrite
