@@ -22,6 +22,7 @@
 #endif
 
 #include "ParallelRestart.hpp"
+#include <opm/common/OpmLog/Location.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
@@ -1478,6 +1479,13 @@ std::size_t packSize(const DeckRecord& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getItems(), comm);
+}
+
+std::size_t packSize(const Location& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.filename, comm) +
+           packSize(data.lineno, comm);
 }
 
 ////// pack routines
@@ -2986,6 +2994,14 @@ void pack(const DeckRecord& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getItems(), buffer, position, comm);
+}
+
+void pack(const Location& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.filename, buffer, position, comm);
+    pack(data.lineno, buffer, position, comm);
 }
 
 /// unpack routines
@@ -5107,6 +5123,15 @@ void unpack(DeckRecord& data,
     std::vector<DeckItem> items;
     unpack(items, buffer, position, comm);
     data = DeckRecord(std::move(items));
+}
+
+void unpack(Location& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    data.filename.clear();
+    unpack(data.filename, buffer, position, comm);
+    unpack(data.lineno, buffer, position, comm);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

@@ -84,6 +84,7 @@ class InitConfig;
 class IOConfig;
 template<class T> class IOrderSet;
 class JFunc;
+class Location;
 class MessageLimits;
 class MLimits;
 class NNC;
@@ -622,6 +623,7 @@ ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
 ADD_PACK_PROTOTYPES(InitConfig)
 ADD_PACK_PROTOTYPES(IOConfig)
 ADD_PACK_PROTOTYPES(JFunc)
+ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(NNC)

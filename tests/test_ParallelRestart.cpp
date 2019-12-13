@@ -24,7 +24,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/common/OpmLog/Location.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
@@ -86,6 +86,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
+#include <opm/simulators/utils/ParallelRestart.hpp>
 
 
 namespace {
@@ -2022,6 +2023,17 @@ BOOST_AUTO_TEST_CASE(DeckRecord)
 {
 #ifdef HAVE_MPI
     Opm::DeckRecord val1 = getDeckRecord();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Location)
+{
+#ifdef HAVE_MPI
+    Opm::Location val1{"test", 1};
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
