@@ -908,13 +908,22 @@ equilnum(const Opm::EclipseState& eclipseState,
     std::vector<int> eqlnum(grid.size(0), 0);
 
 #ifdef ENABLE_3DPROPS_TESTING
-    if (eclipseState.fieldProps().has<double>("EQLNUM")) {
-        const auto& e = eclipseState.fieldProps().get<double>("EQLNUM");
-        for (std::size_t i = 0; i < e.size(); i++)
-            eqlnum[i] = e[i] - 1;
+    if (eclipseState.fieldProps().has<int>("EQLNUM")) {
+        const int nc = grid.size(/*codim=*/0);
+        eqlnum.resize(nc);
+
+        const auto& e = eclipseState.fieldProps().get_global<int>("EQLNUM");
+        const int* gc = Opm::UgGridHelpers::globalCell(grid);
+        for (int cell = 0; cell < nc; ++cell) {
+            const int deckPos = (gc == NULL) ? cell : gc[cell];
+            eqlnum[cell] = e[deckPos] - 1;
+        }
     }
 #else
     if (eclipseState.get3DProperties().hasDeckIntGridProperty("EQLNUM")) {
+        const int nc = grid.size(/*codim=*/0);
+        eqlnum.resize(nc);
+
         const std::vector<int>& e = eclipseState.get3DProperties().getIntGridProperty("EQLNUM").getData();
         const int* gc = Opm::UgGridHelpers::globalCell(grid);
         for (int cell = 0; cell < nc; ++cell) {
