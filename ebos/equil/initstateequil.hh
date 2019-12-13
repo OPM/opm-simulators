@@ -737,17 +737,14 @@ phaseSaturations(const Grid& grid,
             if (isConstPc<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager,FluidSystem::waterPhaseIdx, cell)){
                 const double cellDepth = Opm::UgGridHelpers::cellCenterDepth(grid,
                                                                              cell);
-                printf("SawtFromDepth\n");
                 sw = satFromDepth<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager,cellDepth,reg.zwoc(),waterpos,cell,false);
                 phaseSaturations[waterpos][localIndex] = sw;
             }
             else {
                 const double pcov = phasePressures[oilpos][localIndex] - phasePressures[waterpos][localIndex];
-                printf("Else swatinit.size(): %ld\n", swatInit.size());
                 if (swatInit.empty()) { // Invert Pc to find sw
                     sw = satFromPc<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager, waterpos, cell, pcov);
                     phaseSaturations[waterpos][localIndex] = sw;
-                    printf("satFromPc\n");
                 }
                 else { // Scale Pc to reflect imposed sw
                     sw = swatInit[cell];
@@ -755,7 +752,6 @@ phaseSaturations(const Grid& grid,
                     phaseSaturations[waterpos][localIndex] = sw;
                 }
             }
-            printf("Setting sw[%d] = %lg\n", cell, sw);
         }
         double sg = 0.0;
         if (gas) {
