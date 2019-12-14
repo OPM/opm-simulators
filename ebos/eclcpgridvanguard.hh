@@ -293,13 +293,11 @@ protected:
             actnum_size = actnum.size();
         }
 
-#ifdef HAVE_MPI
-        MPI_Bcast(&actnum_size, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+        grid_->comm().broadcast(&actnum_size, 1, 0);
         if (mpiRank != 0)
             actnum.resize( actnum_size );
 
-        MPI_Bcast(actnum.data(), actnum_size, MPI_INT, 0, MPI_COMM_WORLD);
-#endif
+        grid_->comm().broadcast(actnum.data(), actnum_size, 0);
 
         auto & field_props = this->eclState().fieldProps();
         const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);
