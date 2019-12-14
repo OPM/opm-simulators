@@ -60,18 +60,6 @@ namespace Opm {
  */
 
 namespace {
-
-#ifdef ENABLE_3DPROPS_TESTING
-
-std::unique_ptr<std::vector<double>> try_get(const FieldPropsManager& fp, const std::string& keyword) {
-    if (fp.has<double>(keyword))
-        return std::make_unique<std::vector<double>>( fp.get<double>(keyword) );
-
-    return {};
-}
-
-#else
-
 template <typename T>
 std::unique_ptr<std::vector<T>> compressed_copy(const std::vector<T>& global_vector, const std::vector<int>& compressedToCartesianElemIdx) {
     std::unique_ptr<std::vector<T>> compressed = std::make_unique<std::vector<T>>(compressedToCartesianElemIdx.size());
@@ -83,6 +71,18 @@ std::unique_ptr<std::vector<T>> compressed_copy(const std::vector<T>& global_vec
 
     return compressed;
 }
+
+
+#ifdef ENABLE_3DPROPS_TESTING
+
+std::unique_ptr<std::vector<double>> try_get(const FieldPropsManager& fp, const std::string& keyword, const std::vector<int>& compressedToCartesianElemIdx) {
+    if (fp.has<double>(keyword))
+        return compressed_copy(fp.get_global<double>(keyword), compressedToCartesianElemIdx);
+
+    return {};
+}
+
+#else
 
 
 std::unique_ptr<std::vector<double>> try_get(const Eclipse3DProperties& props, const std::string& keyword, const std::vector<int>& compressedToCartesianElemIdx) {
@@ -103,15 +103,9 @@ class EclEpsGridProperties
 public:
 #if HAVE_ECL_INPUT
 
-#ifdef ENABLE_3DPROPS_TESTING
-    EclEpsGridProperties(const Opm::EclipseState& eclState,
-                         bool useImbibition,
-                         const std::vector<int>& )
-#else
     EclEpsGridProperties(const Opm::EclipseState& eclState,
                          bool useImbibition,
                          const std::vector<int>& compressedToCartesianElemIdx)
-#endif
     {
         std::string kwPrefix = useImbibition?"I":"";
 
@@ -119,40 +113,40 @@ public:
         const auto& fp = eclState.fieldProps();
 
         if (useImbibition)
-            compressed_satnum = std::make_unique<std::vector<int>>(fp.get<int>("IMBNUM"));
+            compressed_satnum = compressed_copy(fp.get_global<int>("IMBNUM"), compressedToCartesianElemIdx);
         else
-            compressed_satnum = std::make_unique<std::vector<int>>(fp.get<int>("SATNUM"));
+            compressed_satnum = compressed_copy(fp.get_global<int>("SATNUM"), compressedToCartesianElemIdx);
 
-        this->compressed_swl = try_get( fp, kwPrefix+"SWL");
-        this->compressed_sgl = try_get( fp, kwPrefix+"SGL");
-        this->compressed_swcr = try_get( fp, kwPrefix+"SWCR");
-        this->compressed_sgcr = try_get( fp, kwPrefix+"SGCR");
-        this->compressed_sowcr = try_get( fp, kwPrefix+"SOWCR");
-        this->compressed_sogcr = try_get( fp, kwPrefix+"SOGCR");
-        this->compressed_swu = try_get( fp, kwPrefix+"SWU");
-        this->compressed_sgu = try_get( fp, kwPrefix+"SGU");
-        this->compressed_pcw = try_get( fp, kwPrefix+"PCW");
-        this->compressed_pcg = try_get( fp, kwPrefix+"PCG");
-        this->compressed_krw = try_get( fp, kwPrefix+"KRW");
-        this->compressed_kro = try_get( fp, kwPrefix+"KRO");
-        this->compressed_krg = try_get( fp, kwPrefix+"KRG");
+        this->compressed_swl = try_get( fp, kwPrefix+"SWL", compressedToCartesianElemIdx);
+        this->compressed_sgl = try_get( fp, kwPrefix+"SGL", compressedToCartesianElemIdx);
+        this->compressed_swcr = try_get( fp, kwPrefix+"SWCR", compressedToCartesianElemIdx);
+        this->compressed_sgcr = try_get( fp, kwPrefix+"SGCR", compressedToCartesianElemIdx);
+        this->compressed_sowcr = try_get( fp, kwPrefix+"SOWCR", compressedToCartesianElemIdx);
+        this->compressed_sogcr = try_get( fp, kwPrefix+"SOGCR", compressedToCartesianElemIdx);
+        this->compressed_swu = try_get( fp, kwPrefix+"SWU", compressedToCartesianElemIdx);
+        this->compressed_sgu = try_get( fp, kwPrefix+"SGU", compressedToCartesianElemIdx);
+        this->compressed_pcw = try_get( fp, kwPrefix+"PCW", compressedToCartesianElemIdx);
+        this->compressed_pcg = try_get( fp, kwPrefix+"PCG", compressedToCartesianElemIdx);
+        this->compressed_krw = try_get( fp, kwPrefix+"KRW", compressedToCartesianElemIdx);
+        this->compressed_kro = try_get( fp, kwPrefix+"KRO", compressedToCartesianElemIdx);
+        this->compressed_krg = try_get( fp, kwPrefix+"KRG", compressedToCartesianElemIdx);
 
         // _may_ be needed to calculate the Leverett capillary pressure scaling factor
         if (fp.has<double>("PORO"))
-            this->compressed_poro = std::make_unique<std::vector<double>>(fp.get<double>("PORO"));
+            this->compressed_poro = compressed_copy(fp.get_global<double>("PORO"), compressedToCartesianElemIdx);
 
         if (fp.has<double>("PERMX"))
-            this->compressed_permx = std::make_unique<std::vector<double>>(fp.get<double>("PERMX"));
+            this->compressed_permx = compressed_copy(fp.get_global<double>("PERMX"), compressedToCartesianElemIdx);
         else
             this->compressed_permx = std::make_unique<std::vector<double>>(this->compressed_satnum->size());
 
         if (fp.has<double>("PERMY"))
-            this->compressed_permy= std::make_unique<std::vector<double>>(fp.get<double>("PERMY"));
+            this->compressed_permy= compressed_copy(fp.get_global<double>("PERMY"), compressedToCartesianElemIdx);
         else
             this->compressed_permy= std::make_unique<std::vector<double>>(*this->compressed_permx);
 
         if (fp.has<double>("PERMZ"))
-            this->compressed_permz= std::make_unique<std::vector<double>>(fp.get<double>("PERMZ"));
+            this->compressed_permz= compressed_copy(fp.get_global<double>("PERMZ"), compressedToCartesianElemIdx);
         else
             this->compressed_permz= std::make_unique<std::vector<double>>(*this->compressed_permx);
 #else

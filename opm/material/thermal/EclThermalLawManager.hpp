@@ -196,10 +196,15 @@ private:
         // initialize the element index -> SATNUM index mapping
 #ifdef ENABLE_3DPROPS_TESTING
         const auto& fp = eclState.fieldProps();
-        const auto& satnum = fp.get<int>("SATNUM");
-        elemToSatnumIdx_.resize(satnum.size());
-        for (std::size_t i = 0; i < satnum.size(); i++)
-            elemToSatnumIdx_[i] = satnum[i] - 1;
+        const std::vector<int>& satnumData = fp.get_global<int>("SATNUM");
+        elemToSatnumIdx_.resize(compressedToCartesianElemIdx.size());
+        for (unsigned elemIdx = 0; elemIdx < compressedToCartesianElemIdx.size(); ++ elemIdx) {
+            unsigned cartesianElemIdx = compressedToCartesianElemIdx[elemIdx];
+
+            // satnumData contains Fortran-style indices, i.e., they start with 1 instead
+            // of 0!
+            elemToSatnumIdx_[elemIdx] = satnumData[cartesianElemIdx] - 1;
+        }
 #else
         const auto& props = eclState.get3DProperties();
         const std::vector<int>& satnumData = props.getIntGridProperty("SATNUM").getData();
