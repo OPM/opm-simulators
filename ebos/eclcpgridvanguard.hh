@@ -258,9 +258,12 @@ public:
 protected:
     void createGrids_()
     {
+#ifdef ENABLE_3DPROPS_TESTING
+        const auto& porv = this->eclState().fieldProps().porv(true);
+#else
         const auto& gridProps = this->eclState().get3DProperties();
         const std::vector<double>& porv = gridProps.getDoubleGridProperty("PORV").getData();
-
+#endif
         grid_.reset(new Dune::CpGrid());
         grid_->processEclipseFormat(this->eclState().getInputGrid(),
                                     /*isPeriodic=*/false,
@@ -280,6 +283,27 @@ protected:
             equilGrid_.reset(new Dune::CpGrid(*grid_));
             equilCartesianIndexMapper_.reset(new CartesianIndexMapper(*equilGrid_));
         }
+
+
+#ifdef ENABLE_3DPROPS_TESTING
+        std::vector<int> actnum;
+        unsigned long actnum_size;
+        if (mpiRank == 0) {
+            actnum = Opm::UgGridHelpers::createACTNUM(*grid_);
+            actnum_size = actnum.size();
+        }
+
+#ifdef HAVE_MPI
+        MPI_Bcast(&actnum_size, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+        if (mpiRank != 0)
+            actnum.resize( actnum_size );
+
+        MPI_Bcast(actnum.data(), actnum_size, MPI_INT, 0, MPI_COMM_WORLD);
+#endif
+
+        auto & field_props = this->eclState().fieldProps();
+        const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);
+#endif
     }
 
     // removing some connection located in inactive grid cells
