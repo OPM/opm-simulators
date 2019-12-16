@@ -225,7 +225,7 @@ protected:
         static const int numEq = Indices::numEq;
 
 #if HAVE_CUDA
-        BdaBridge *bdaBridge;
+        std::unique_ptr<BdaBridge> bdaBridge;
 #endif
 
     public:
@@ -252,25 +252,17 @@ protected:
             const bool matrix_add_well_contributions = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
             const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
             if(use_gpu && !matrix_add_well_contributions){
-                std::cerr << "Error cannot use GPU solver if command line parameter --matrix-add-well-contributions is false, because the GPU solver performs a standard bicgstab" << std::endl;
-                exit(1);
+                OPM_THROW(std::logic_error,"Error cannot use GPU solver if command line parameter --matrix-add-well-contributions is false, because the GPU solver performs a standard bicgstab");
             }
-            bdaBridge = new BdaBridge(use_gpu, linear_solver_verbosity, maxit, tolerance);
+            bdaBridge.reset(new BdaBridge(use_gpu, linear_solver_verbosity, maxit, tolerance));
 #else
             const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
             if(use_gpu){
-                std::cerr << "Error cannot use GPU solver since CUDA was not found during compilation" << std::endl;
-                exit(1);
+                OPM_THROW(std::logic_error,"Error cannot use GPU solver since CUDA was not found during compilation");
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
             detail::findOverlapRowsAndColumns(simulator_.vanguard().grid(),overlapRowAndColumns_);
-        }
-
-        ~ISTLSolverEbos(){
-#if HAVE_CUDA
-            delete bdaBridge;
-#endif
         }
 
         // nothing to clean here

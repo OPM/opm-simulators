@@ -36,19 +36,12 @@ namespace Opm
 
 BdaBridge::BdaBridge(bool use_gpu_, int linear_solver_verbosity OPM_UNUSED, int maxit OPM_UNUSED, double tolerance OPM_UNUSED) : use_gpu(use_gpu_) {
 #if HAVE_CUDA
-    if(use_gpu){
-    	backend = new cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance);
-    }
-#endif
-}
-
-BdaBridge::~BdaBridge(){
-#if HAVE_CUDA
 	if(use_gpu){
-		delete backend;
+		backend.reset(new cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance));
 	}
 #endif
 }
+
 
 #if HAVE_CUDA
 template <class BridgeMatrix>
