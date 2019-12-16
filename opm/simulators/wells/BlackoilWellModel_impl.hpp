@@ -1689,12 +1689,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) {
 
-        // call recursively
         const int reportStepIdx = ebosSimulator_.episodeIndex();
-        for (const std::string& groupName : group.groups()) {
-            checkGroupConstraints( schedule().getGroup(groupName, reportStepIdx), deferred_logger);
-        }
-
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         auto& well_state = well_state_;
 
@@ -1884,6 +1879,10 @@ namespace Opm {
             //neither production or injecting group FIELD?
         }
 
+        // call recursively down the group hiearchy
+        for (const std::string& groupName : group.groups()) {
+            checkGroupConstraints( schedule().getGroup(groupName, reportStepIdx), deferred_logger);
+        }
 
 
     }
