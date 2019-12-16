@@ -25,6 +25,13 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
 
@@ -104,6 +111,23 @@ Opm::data::Well getWell()
     return well1;
 }
 #endif
+
+
+Opm::ThresholdPressure getThresholdPressure()
+{
+    return Opm::ThresholdPressure(false, true, {{true, 1.0}, {false, 2.0}},
+                                  {{{1,2},{false,3.0}},{{2,3},{true,4.0}}});
+}
+
+
+Opm::TableSchema getTableSchema()
+{
+    Opm::OrderedMap<std::string, Opm::ColumnSchema> data;
+    data.insert({"test1", Opm::ColumnSchema("test1", Opm::Table::INCREASING,
+                                                     Opm::Table::DEFAULT_LINEAR)});
+    data.insert({"test2", Opm::ColumnSchema("test2", Opm::Table::INCREASING, 1.0)});
+    return Opm::TableSchema(data);
+}
 
 
 }
@@ -223,6 +247,88 @@ BOOST_AUTO_TEST_CASE(RestartValue)
     Opm::data::WellRates wells1;
     wells1.insert({"test_well", getWell()});
     Opm::RestartValue val1(getSolution(), wells1);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(ThresholdPressure)
+{
+#if HAVE_MPI
+    Opm::ThresholdPressure val1 = getThresholdPressure();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(EDITNNC)
+{
+#if HAVE_MPI
+    Opm::EDITNNC val1({{1,2,1.0},{2,3,2.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(NNC)
+{
+#if HAVE_MPI
+    Opm::NNC val1({{1,2,1.0},{2,3,2.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Rock2dTable)
+{
+#if HAVE_MPI
+    Opm::Rock2dTable val1({{1.0,2.0},{3.0,4.0}}, {1.0, 2.0, 3.0});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Rock2dtrTable)
+{
+#if HAVE_MPI
+    Opm::Rock2dtrTable val1({{1.0,2.0},{3.0,4.0}}, {1.0, 2.0, 3.0});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(ColumnSchema)
+{
+#if HAVE_MPI
+    Opm::ColumnSchema val1("test1", Opm::Table::INCREASING,
+                           Opm::Table::DEFAULT_LINEAR);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+    Opm::ColumnSchema val3("test2", Opm::Table::DECREASING, 1.0);
+    val2 = PackUnpack(val3);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val3 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(TableSchema)
+{
+#if HAVE_MPI
+    Opm::TableSchema val1 = getTableSchema();
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

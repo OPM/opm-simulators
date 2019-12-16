@@ -26,6 +26,7 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>
+#include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -35,6 +36,16 @@
 
 namespace Opm
 {
+
+class ColumnSchema;
+class EDITNNC;
+class NNC;
+struct NNCdata;
+class Rock2dTable;
+class Rock2dtrTable;
+class TableSchema;
+class ThresholdPressure;
+
 namespace Mpi
 {
 template<class T>
@@ -74,6 +85,9 @@ std::size_t packSize(const std::map<T1,T2,C,A>& data, Dune::MPIHelper::MPICommun
 
 template<class T1, class T2, class H, class P, class A>
 std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Key, class Value>
+std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPICommunicator comm);
 
 ////// pack routines
 
@@ -117,6 +131,10 @@ void pack(const std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& posit
 template<class T1, class T2, class H, class P, class A>
 void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
+
+template<class Key, class Value>
+void pack(const OrderedMap<Key,Value>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm);
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
@@ -164,6 +182,10 @@ template<class T1, class T2, class H, class P, class A>
 void unpack(std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
 
+template<class Key, class Value>
+void unpack(OrderedMap<Key,Value>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm);
+
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
 
@@ -176,6 +198,7 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
   void unpack(T& data, std::vector<char>& buffer, int& position, \
               Dune::MPIHelper::MPICommunicator comm);
 
+ADD_PACK_PROTOTYPES(ColumnSchema)
 ADD_PACK_PROTOTYPES(data::CellData)
 ADD_PACK_PROTOTYPES(data::Connection)
 ADD_PACK_PROTOTYPES(data::Rates)
@@ -183,9 +206,16 @@ ADD_PACK_PROTOTYPES(data::Segment)
 ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
+ADD_PACK_PROTOTYPES(EDITNNC)
+ADD_PACK_PROTOTYPES(NNC)
+ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
+ADD_PACK_PROTOTYPES(Rock2dTable)
+ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(std::string)
+ADD_PACK_PROTOTYPES(TableSchema)
+ADD_PACK_PROTOTYPES(ThresholdPressure)
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,

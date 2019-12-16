@@ -22,6 +22,13 @@
 #endif
 
 #include "ParallelRestart.hpp"
+#include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+#include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
 namespace Opm
@@ -103,6 +110,12 @@ std::size_t packSize(const std::vector<T,A>& data, Dune::MPIHelper::MPICommunica
         size+=packSize(entry, comm);
 
     return size;
+}
+
+template<class Key, class Value>
+std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPICommunicator comm)
+{
+  return packSize(data.getIndex(), comm) + packSize(data.getStorage(), comm);
 }
 
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm)
@@ -205,6 +218,53 @@ std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator 
     return packSize(data.solution, comm) + packSize(data.wells, comm) + packSize(data.extra, comm);
 }
 
+std::size_t packSize(const ThresholdPressure& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.active(), comm) +
+          packSize(data.restart(), comm) +
+          packSize(data.thresholdPressureTable(), comm) +
+          packSize(data.pressureTable(), comm);
+}
+
+std::size_t packSize(const NNC& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.data(), comm);
+}
+
+std::size_t packSize(const EDITNNC& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.data(), comm);
+}
+
+std::size_t packSize(const Rock2dTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.pvmultValues(), comm) +
+          packSize(data.pressureValues(), comm);
+}
+
+std::size_t packSize(const Rock2dtrTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.transMultValues(), comm) +
+          packSize(data.pressureValues(), comm);
+}
+
+std::size_t packSize(const ColumnSchema& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t res = packSize(data.name(), comm) +
+                      packSize(data.order(), comm) +
+                      packSize(data.getDefaultMode(), comm);
+    if (data.getDefaultMode() == Table::DEFAULT_CONST) {
+        res += packSize(data.getDefaultValue(), comm);
+    }
+
+    return res;
+}
+
+std::size_t packSize(const TableSchema& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.getColumns(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -292,6 +352,14 @@ void pack(const std::vector<T, A>& data, std::vector<char>& buffer, int& positio
 
     for (const auto& entry: data)
         pack(entry, buffer, position, comm);
+}
+
+template<class Key, class Value>
+void pack(const OrderedMap<Key, Value>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getIndex(), buffer, position, comm);
+    pack(data.getStorage(), buffer, position, comm);
 }
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
@@ -416,6 +484,57 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.extra, buffer, position, comm);
 }
 
+void pack(const ThresholdPressure& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.active(), buffer, position, comm);
+    pack(data.restart(), buffer, position, comm);
+    pack(data.thresholdPressureTable(), buffer, position, comm);
+    pack(data.pressureTable(), buffer, position, comm);
+}
+
+void pack(const NNC& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.data(), buffer, position, comm);
+}
+
+void pack(const EDITNNC& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.data(), buffer, position, comm);
+}
+
+void pack(const Rock2dTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.pvmultValues(), buffer, position, comm);
+    pack(data.pressureValues(), buffer, position, comm);
+}
+
+void pack(const Rock2dtrTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.transMultValues(), buffer, position, comm);
+    pack(data.pressureValues(), buffer, position, comm);
+}
+
+void pack(const ColumnSchema& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name(), buffer, position, comm);
+    pack(data.order(), buffer, position, comm);
+    pack(data.getDefaultMode(), buffer, position, comm);
+    if (data.getDefaultMode() == Table::DEFAULT_CONST)
+        pack(data.getDefaultValue(), buffer, position, comm);
+}
+
+void pack(const TableSchema& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getColumns(), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -502,6 +621,17 @@ void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
 
     for (auto& entry: data)
         unpack(entry, buffer, position, comm);
+}
+
+template<class Key, class Value>
+void unpack(OrderedMap<Key,Value>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+  typename OrderedMap<Key,Value>::index_type index;
+  typename OrderedMap<Key,Value>::storage_type storage;
+  unpack(index, buffer, position, comm);
+  unpack(storage, buffer, position, comm);
+  data = OrderedMap<Key,Value>(index, storage);
 }
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
@@ -632,6 +762,81 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.solution, buffer, position, comm);
     unpack(data.wells, buffer, position, comm);
     unpack(data.extra, buffer, position, comm);
+}
+
+void unpack(ThresholdPressure& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    ThresholdPressure::ThresholdPressureTable thpTable;
+    ThresholdPressure::PressureTable pTable;
+    bool active, restart;
+    unpack(active, buffer, position, comm);
+    unpack(restart, buffer, position, comm);
+    unpack(thpTable, buffer, position, comm);
+    unpack(pTable, buffer, position, comm);
+
+    data = ThresholdPressure(active, restart, thpTable, pTable);
+}
+
+void unpack(NNC& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<NNCdata> res;
+    unpack(res, buffer, position, comm);
+    data = NNC(res);
+}
+
+void unpack(EDITNNC& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<NNCdata> res;
+    unpack(res, buffer, position, comm);
+    data = EDITNNC(res);
+}
+
+void unpack(Rock2dTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<std::vector<double>> pvmultValues;
+    std::vector<double> pressureValues;
+    unpack(pvmultValues, buffer, position, comm);
+    unpack(pressureValues, buffer, position, comm);
+    data = Rock2dTable(pvmultValues, pressureValues);
+}
+
+void unpack(Rock2dtrTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<std::vector<double>> transMultValues;
+    std::vector<double> pressureValues;
+    unpack(transMultValues, buffer, position, comm);
+    unpack(pressureValues, buffer, position, comm);
+    data = Rock2dtrTable(transMultValues, pressureValues);
+}
+
+void unpack(ColumnSchema& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    Table::ColumnOrderEnum order;
+    Table::DefaultAction action;
+    unpack(name, buffer, position, comm);
+    unpack(order, buffer, position, comm);
+    unpack(action, buffer, position, comm);
+    if (action == Table::DEFAULT_CONST) {
+        double value;
+        unpack(value, buffer, position, comm);
+        data = ColumnSchema(name, order, value);
+    } else
+        data = ColumnSchema(name, order, action);
+}
+
+void unpack(TableSchema& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    OrderedMap<std::string, ColumnSchema> columns;
+    unpack(columns, buffer, position, comm);
+    data = TableSchema(columns);
 }
 
 } // end namespace Mpi
