@@ -1919,7 +1919,7 @@ namespace Opm {
         case Group::ExceedAction::RATE: {
             if (oldControl != newControl) {
                 well_state.setCurrentProductionGroupControl(group.name(), newControl);
-                ss << "Switching control mode for group to " << Group::ProductionCMode2String(newControl);
+                ss << "Switching control mode for group "<< group.name() << " to " << Group::ProductionCMode2String(newControl);
             }
             wellGroupHelpers::setGroupControl(group, schedule(), reportStepIdx, false, well_state, ss);
             break;
@@ -1951,7 +1951,7 @@ namespace Opm {
             const std::string from = Group::InjectionCMode2String(oldControl);
             ss << "Group " << group.name() << " exceeding "
                << from << " limit \n";
-            ss << "Switching control mode for group to " << Group::InjectionCMode2String(newControl);
+            ss << "Switching control mode for group "<< group.name() << " to " << Group::InjectionCMode2String(newControl);
             auto cc = Dune::MPIHelper::getCollectiveCommunication();
             if (cc.size() > 1) {
                 ss << " on rank " << cc.rank();
