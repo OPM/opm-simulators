@@ -50,20 +50,20 @@
 #define CHECK(value, expected)             \
     {                                      \
         if ((value) != (expected))         \
-            std::abort();                  \
+            throw std::runtime_error("Test failed: " + std::to_string(value) + " != " + std::to_string(expected)); \
     }
 
 #define CHECK_CLOSE(value, expected, reltol)                            \
     {                                                                   \
         if (std::fabs((expected) - (value)) > 1e-14 &&                  \
             std::fabs(((expected) - (value))/((expected) + (value))) > reltol) \
-            std::abort();                                               \
+            throw std::runtime_error("Test failed: " + std::to_string(value) + " != " + std::to_string(expected)); \
     }
 
 #define REQUIRE(cond)                      \
     {                                      \
         if (!(cond))                       \
-            std::abort();                  \
+            throw std::runtime_error("Test condition failed");    \
     }
 
 BEGIN_PROPERTIES
