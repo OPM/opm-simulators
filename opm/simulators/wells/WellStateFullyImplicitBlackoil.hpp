@@ -392,6 +392,19 @@ namespace Opm
             return it->second;
         }
 
+        void setCurrentGroupInjectionPotentials(const std::string& groupName, const std::vector<double>& pot ) {
+            injection_group_potentials[groupName] = pot;
+        }
+        const std::vector<double>& currentGroupInjectionPotentials(const std::string& groupName) const {
+            auto it = injection_group_potentials.find(groupName);
+
+            if (it == injection_group_potentials.end())
+                OPM_THROW(std::logic_error, "Could not find any potentials for group " << groupName);
+
+            return it->second;
+        }
+
+
 
         data::Wells report(const PhaseUsage &pu, const int* globalCellIdxMap) const override
         {
@@ -826,6 +839,7 @@ namespace Opm
 
         std::map<std::string, std::vector<double>> production_group_reduction_rates;
         std::map<std::string, std::vector<double>> injection_group_reduction_rates;
+        std::map<std::string, std::vector<double>> injection_group_potentials;
         std::map<std::string, double> injection_group_vrep_rates;
         std::map<std::string, std::vector<double>> injection_group_rein_rates;
 
