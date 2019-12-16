@@ -262,8 +262,14 @@ private:
 
 #ifdef  ENABLE_3DPROPS_TESTING
         const auto& fp = eclState.fieldProps();
-        const std::vector<double>& thconrData  = fp.get_global<double>("THCONR");
-        const std::vector<double>& thconsfData = fp.get_global<double>("THCONSF");
+        auto global_size = eclState.getInputGrid().getCartesianSize();
+        std::vector<double> thconrData(global_size, 0);
+        std::vector<double> thconsfData(global_size, 0);
+        if (fp.has<double>("THCONR"))
+            thconrData  = fp.get_global<double>("THCONR");
+
+        if (fp.has<double>("THCONSF"))
+            thconsfData = fp.get_global<double>("THCONSF");
 #else
         const auto& props = eclState.get3DProperties();
         const std::vector<double>& thconrData = props.getDoubleGridProperty("THCONR").getData();
@@ -296,10 +302,24 @@ private:
 
 #ifdef ENABLE_3DPROPS_TESTING
         const auto& fp = eclState.fieldProps();
-        const std::vector<double>& thcrockData = fp.get_global<double>("THCROCK");
-        const std::vector<double>& thcoilData = fp.get_global<double>("THCOIL");
-        const std::vector<double>& thcgasData = fp.get_global<double>("THCGAS");
-        const std::vector<double>& thcwaterData = fp.get_global<double>("THCWATER");
+        auto global_size = eclState.getInputGrid().getCartesianSize();
+        std::vector<double> thcrockData(global_size,0);
+        std::vector<double> thcoilData(global_size,0);
+        std::vector<double> thcgasData(global_size,0);
+        std::vector<double> thcwaterData = fp.get_global<double>("THCWATER");
+
+        if (fp.has<double>("THCROCK"))
+            thcrockData = fp.get_global<double>("THCROCK");
+
+        if (fp.has<double>("THCOIL"))
+            thcoilData = fp.get_global<double>("THCOIL");
+
+        if (fp.has<double>("THCGAS"))
+            thcgasData = fp.get_global<double>("THCGAS");
+
+        if (fp.has<double>("THCWATER"))
+            thcwaterData = fp.get_global<double>("THCWATER");
+
         const std::vector<double>& poroData = fp.get_global<double>("PORO");
 #else
         const auto& props = eclState.get3DProperties();
@@ -322,7 +342,7 @@ private:
             thcElemParams.setThcoil(thcoilData[cartElemIdx]);
             thcElemParams.setThcgas(thcgasData[cartElemIdx]);
             thcElemParams.setThcwater(thcwaterData[cartElemIdx]);
-            
+
             thcElemParams.finalize();
             elemParams.finalize();
         }
