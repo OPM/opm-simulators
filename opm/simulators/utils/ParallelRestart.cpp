@@ -23,13 +23,36 @@
 
 #include "ParallelRestart.hpp"
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <dune/common/parallel/mpitraits.hh>
+
+#define HANDLE_AS_POD(T) \
+  std::size_t packSize(const T& data, Dune::MPIHelper::MPICommunicator comm) \
+  { \
+      return packSize(data, comm, std::integral_constant<bool,true>()); \
+  } \
+  void pack(const T& data, std::vector<char>& buffer, int& position, \
+            Dune::MPIHelper::MPICommunicator comm) \
+  { \
+      pack(data, buffer, position, comm, std::integral_constant<bool,true>()); \
+  } \
+  void unpack(T& data, std::vector<char>& buffer, int& position, \
+              Dune::MPIHelper::MPICommunicator comm) \
+  { \
+      unpack(data, buffer, position, comm, std::integral_constant<bool,true>()); \
+  }
 
 namespace Opm
 {
@@ -112,11 +135,19 @@ std::size_t packSize(const std::vector<T,A>& data, Dune::MPIHelper::MPICommunica
     return size;
 }
 
+template<class A>
+std::size_t packSize(const std::vector<bool,A>& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    bool entry;
+    return packSize(data.size(), comm) + data.size()*packSize(entry,comm);
+}
+
 template<class Key, class Value>
 std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPICommunicator comm)
 {
   return packSize(data.getIndex(), comm) + packSize(data.getStorage(), comm);
 }
+
 
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -160,23 +191,11 @@ std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelpe
     return totalSize;
 }
 
-std::size_t packSize(const data::Rates& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    return packSize(data, comm, std::integral_constant<bool,true>());
-}
-
-std::size_t packSize(const data::Connection& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    return packSize(data, comm, std::integral_constant<bool,true>());
-}
-
-std::size_t packSize(const data::Segment& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    return packSize(data, comm, std::integral_constant<bool,true>());
-}
+HANDLE_AS_POD(data::Connection)
+HANDLE_AS_POD(data::Rates)
+HANDLE_AS_POD(data::Segment)
+HANDLE_AS_POD(EquilRecord)
+HANDLE_AS_POD(FoamData)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -263,6 +282,63 @@ std::size_t packSize(const ColumnSchema& data, Dune::MPIHelper::MPICommunicator 
 std::size_t packSize(const TableSchema& data, Dune::MPIHelper::MPICommunicator comm)
 {
    return packSize(data.getColumns(), comm);
+}
+
+std::size_t packSize(const TableColumn& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.schema(), comm) +
+          packSize(data.name(), comm) +
+          packSize(data.values(), comm) +
+          packSize(data.defaults(), comm) +
+          packSize(data.defaultCount(), comm);
+}
+
+std::size_t packSize(const SimpleTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.schema(), comm) +
+          packSize(data.columns(), comm) +
+          packSize(data.jfunc(), comm);
+}
+
+std::size_t packSize(const TableContainer& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    size_t res = 2*packSize(data.max(), comm);
+    for (const auto& it : data.tables()) {
+        if (it.second) {
+            res += packSize(it.first, comm) + packSize(*it.second, comm);
+        }
+    }
+
+    return res;
+}
+
+std::size_t packSize(const Equil& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.records(), comm);
+}
+
+std::size_t packSize(const FoamConfig& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.records(), comm);
+}
+
+std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getEquil(), comm) +
+           packSize(data.getFoamConfig(), comm) +
+           packSize(data.filleps(), comm) +
+           packSize(data.restartRequested(), comm) +
+           packSize(data.getRestartStep(), comm) +
+           packSize(data.getRestartRootName(), comm);
+}
+
+std::size_t packSize(const SimulationConfig& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getThresholdPressure(), comm) +
+           packSize(data.useCPR(), comm) +
+           packSize(data.hasDISGAS(), comm) +
+           packSize(data.hasVAPOIL(), comm) +
+           packSize(data.isThermal(), comm);
 }
 
 ////// pack routines
@@ -354,6 +430,17 @@ void pack(const std::vector<T, A>& data, std::vector<char>& buffer, int& positio
         pack(entry, buffer, position, comm);
 }
 
+template<class A>
+void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.size(), buffer, position, comm);
+    for (const auto& entry : data) {
+        bool b = entry;
+        pack(b, buffer, position, comm);
+    }
+}
+
 template<class Key, class Value>
 void pack(const OrderedMap<Key, Value>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -407,27 +494,6 @@ void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer
     {
         pack(entry, buffer, position, comm);
     }
-}
-
-void pack(const data::Rates& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    pack(data, buffer, position, comm, std::integral_constant<bool,true>());
-}
-
-void pack(const data::Connection& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    pack(data, buffer, position, comm, std::integral_constant<bool,true>());
-}
-
-void pack(const data::Segment& data,std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    pack(data, buffer, position, comm, std::integral_constant<bool,true>());
 }
 
 void pack(const data::Well& data, std::vector<char>& buffer, int& position,
@@ -535,6 +601,76 @@ void pack(const TableSchema& data, std::vector<char>& buffer, int& position,
     pack(data.getColumns(), buffer, position, comm);
 }
 
+void pack(const TableColumn& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.schema(), buffer, position, comm);
+    pack(data.name(), buffer, position, comm);
+    pack(data.values(), buffer, position, comm);
+    pack(data.defaults(), buffer, position, comm);
+    pack(data.defaultCount(), buffer, position, comm);
+}
+
+void pack(const SimpleTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.schema(), buffer, position, comm);
+    pack(data.columns(), buffer, position, comm);
+    pack(data.jfunc(), buffer, position, comm);
+}
+
+void pack(const TableContainer& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.max(), buffer, position, comm);
+    size_t entries = 0;
+    for (const auto& it : data.tables()) {
+        if (it.second) {
+          ++entries;
+        }
+    }
+    pack(entries, buffer, position, comm);
+    for (const auto& it : data.tables()) {
+        if (it.second) {
+          pack(it.first, buffer, position, comm);
+          pack(*it.second, buffer, position, comm);
+        }
+    }
+}
+
+void pack(const Equil& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.records(), buffer, position, comm);
+}
+
+void pack(const FoamConfig& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.records(), buffer, position, comm);
+}
+
+void pack(const InitConfig& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getEquil(), buffer, position, comm);
+    pack(data.getFoamConfig(), buffer, position, comm);
+    pack(data.filleps(), buffer, position, comm);
+    pack(data.restartRequested(), buffer, position, comm);
+    pack(data.getRestartStep(), buffer, position, comm);
+    pack(data.getRestartRootName(), buffer, position, comm);
+}
+
+void pack(const SimulationConfig& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getThresholdPressure(), buffer, position, comm);
+    pack(data.useCPR(), buffer, position, comm);
+    pack(data.hasDISGAS(), buffer, position, comm);
+    pack(data.hasVAPOIL(), buffer, position, comm);
+    pack(data.isThermal(), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -623,6 +759,21 @@ void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
         unpack(entry, buffer, position, comm);
 }
 
+template<class A>
+void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    size_t size;
+    unpack(size, buffer, position, comm);
+    data.clear();
+    data.reserve(size);
+    for (size_t i = 0; i < size; ++i) {
+        bool entry;
+        unpack(entry, buffer, position, comm);
+        data.push_back(entry);
+    }
+}
+
 template<class Key, class Value>
 void unpack(OrderedMap<Key,Value>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -687,27 +838,6 @@ void unpack(std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, in
         unpack(entry, buffer, position, comm);
         data.insert(entry);
     }
-}
-
-void unpack(data::Rates& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    unpack(data, buffer, position, comm, std::integral_constant<bool,true>());
-}
-
-void unpack(data::Connection& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    unpack(data, buffer, position, comm, std::integral_constant<bool,true>());
-}
-
-void unpack(data::Segment& data,std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    // plain struct no pointers -> treat as pod
-    unpack(data, buffer, position, comm, std::integral_constant<bool,true>());
 }
 
 void unpack(data::Well& data, std::vector<char>& buffer, int& position,
@@ -837,6 +967,98 @@ void unpack(TableSchema& data, std::vector<char>& buffer, int& position,
     OrderedMap<std::string, ColumnSchema> columns;
     unpack(columns, buffer, position, comm);
     data = TableSchema(columns);
+}
+
+void unpack(TableColumn& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    ColumnSchema schema;
+    std::string name;
+    std::vector<double> values;
+    std::vector<bool> defaults;
+    size_t defaultCount;
+    unpack(schema, buffer, position, comm);
+    unpack(name, buffer, position, comm);
+    unpack(values, buffer, position, comm);
+    unpack(defaults, buffer, position, comm);
+    unpack(defaultCount, buffer, position, comm);
+    data = TableColumn(schema, name, values, defaults, defaultCount);
+}
+
+void unpack(SimpleTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TableSchema schema;
+    OrderedMap<std::string, TableColumn> columns;
+    bool jf;
+    unpack(schema, buffer, position, comm);
+    unpack(columns, buffer, position, comm);
+    unpack(jf, buffer, position, comm);
+    data = SimpleTable(schema, columns, jf);
+}
+
+void unpack(TableContainer& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    size_t max;
+    unpack(max, buffer, position, comm);
+    data = TableContainer(max);
+    size_t entries;
+    unpack(entries, buffer, position, comm);
+    for (size_t i = 0; i < entries; ++i) {
+        size_t id;
+        unpack(id, buffer, position, comm);
+        SimpleTable table;
+        unpack(table, buffer, position, comm);
+        data.addTable(id, std::make_shared<const SimpleTable>(table));
+    }
+}
+
+void unpack(Equil& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<EquilRecord> records;
+    unpack(records, buffer, position, comm);
+    data = Equil(records);
+}
+
+void unpack(FoamConfig& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<FoamData> records;
+    unpack(records, buffer, position, comm);
+    data = FoamConfig(records);
+}
+
+void unpack(InitConfig& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    Equil equil;
+    FoamConfig foam;
+    bool filleps, restartRequested;
+    int restartStep;
+    std::string restartRootName;
+    unpack(equil, buffer, position, comm);
+    unpack(foam, buffer, position, comm);
+    unpack(filleps, buffer, position, comm);
+    unpack(restartRequested, buffer, position, comm);
+    unpack(restartStep, buffer, position, comm);
+    unpack(restartRootName, buffer, position, comm);
+    data = InitConfig(equil, foam, filleps, restartRequested,
+                      restartStep, restartRootName);
+}
+
+void unpack(SimulationConfig& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    ThresholdPressure thresholdPressure;
+    bool useCPR, DISGAS, VAPOIL, isThermal;
+    unpack(thresholdPressure, buffer, position, comm);
+    unpack(useCPR, buffer, position, comm);
+    unpack(DISGAS, buffer, position, comm);
+    unpack(VAPOIL, buffer, position, comm);
+    unpack(isThermal, buffer, position, comm);
+    data = SimulationConfig(thresholdPressure, useCPR, DISGAS, VAPOIL, isThermal);
 }
 
 } // end namespace Mpi

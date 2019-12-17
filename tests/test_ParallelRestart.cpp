@@ -27,10 +27,17 @@
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
@@ -110,7 +117,6 @@ Opm::data::Well getWell()
     well1.segments.insert({0, getSegment()});
     return well1;
 }
-#endif
 
 
 Opm::ThresholdPressure getThresholdPressure()
@@ -128,6 +134,36 @@ Opm::TableSchema getTableSchema()
     data.insert({"test2", Opm::ColumnSchema("test2", Opm::Table::INCREASING, 1.0)});
     return Opm::TableSchema(data);
 }
+
+
+Opm::TableColumn getTableColumn()
+{
+    return Opm::TableColumn(Opm::ColumnSchema("test1", Opm::Table::INCREASING,
+                                              Opm::Table::DEFAULT_LINEAR),
+                            "test2", {1.0, 2.0}, {false, true}, 2);
+}
+
+
+Opm::SimpleTable getSimpleTable()
+{
+    Opm::OrderedMap<std::string, Opm::TableColumn> data;
+    data.insert({"test3", getTableColumn()});
+    return Opm::SimpleTable(getTableSchema(), data, true);
+}
+
+
+Opm::EquilRecord getEquilRecord()
+{
+    return Opm::EquilRecord(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, true, false, 1);
+}
+
+
+Opm::FoamData getFoamData()
+{
+    return Opm::FoamData(1.0, 2.0, 3.0, true, 4.0);
+}
+
+#endif
 
 
 }
@@ -329,6 +365,112 @@ BOOST_AUTO_TEST_CASE(TableSchema)
 {
 #if HAVE_MPI
     Opm::TableSchema val1 = getTableSchema();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(TableColumn)
+{
+#if HAVE_MPI
+    Opm::TableColumn val1 = getTableColumn();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(SimpleTable)
+{
+#if HAVE_MPI
+    Opm::SimpleTable val1 = getSimpleTable();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(TableContainer)
+{
+#if HAVE_MPI
+    Opm::OrderedMap<std::string, Opm::TableColumn> data;
+    data.insert({"test3", getTableColumn()});
+    Opm::SimpleTable tab1(getTableSchema(), data, true);
+    Opm::TableContainer val1(2);
+    val1.addTable(0, std::make_shared<const Opm::SimpleTable>(tab1));
+    val1.addTable(1, std::make_shared<const Opm::SimpleTable>(tab1));
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(EquilRecord)
+{
+#if HAVE_MPI
+    Opm::EquilRecord val1 = getEquilRecord();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Equil)
+{
+#if HAVE_MPI
+    Opm::Equil val1({getEquilRecord(), getEquilRecord()});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(FoamData)
+{
+#if HAVE_MPI
+    Opm::FoamData val1 = getFoamData();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(FoamConfig)
+{
+#if HAVE_MPI
+    Opm::FoamConfig val1({getFoamData(), getFoamData()});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(InitConfig)
+{
+#if HAVE_MPI
+    Opm::InitConfig val1(Opm::Equil({getEquilRecord(), getEquilRecord()}),
+                         Opm::FoamConfig({getFoamData(), getFoamData()}),
+                         true, true, 20, "test1");
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(SimulationConfig)
+{
+#if HAVE_MPI
+    Opm::SimulationConfig val1(getThresholdPressure(), false, true, false, true);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

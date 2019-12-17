@@ -39,10 +39,19 @@ namespace Opm
 
 class ColumnSchema;
 class EDITNNC;
+class Equil;
+class EquilRecord;
+class FoamConfig;
+class FoamData;
+class InitConfig;
 class NNC;
 struct NNCdata;
 class Rock2dTable;
 class Rock2dtrTable;
+class SimulationConfig;
+class SimpleTable;
+class TableColumn;
+class TableContainer;
 class TableSchema;
 class ThresholdPressure;
 
@@ -75,6 +84,9 @@ std::size_t packSize(const std::pair<T1,T2>& data, Dune::MPIHelper::MPICommunica
 
 template<class T, class A>
 std::size_t packSize(const std::vector<T,A>& data, Dune::MPIHelper::MPICommunicator comm);
+
+template<class A>
+std::size_t packSize(const std::vector<bool,A>& data, Dune::MPIHelper::MPICommunicator comm);
 
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm);
 
@@ -122,6 +134,10 @@ void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position
 
 template<class T, class A>
 void pack(const std::vector<T,A>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
+
+template<class A>
+void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
 template<class T1, class T2, class C, class A>
@@ -174,6 +190,10 @@ template<class T, class A>
 void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
 
+template<class A>
+void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
+
 template<class T1, class T2, class C, class A>
 void unpack(std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
@@ -207,6 +227,11 @@ ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(EDITNNC)
+ADD_PACK_PROTOTYPES(Equil)
+ADD_PACK_PROTOTYPES(EquilRecord)
+ADD_PACK_PROTOTYPES(FoamConfig)
+ADD_PACK_PROTOTYPES(FoamData)
+ADD_PACK_PROTOTYPES(InitConfig)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(RestartKey)
@@ -214,6 +239,10 @@ ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(std::string)
+ADD_PACK_PROTOTYPES(SimulationConfig)
+ADD_PACK_PROTOTYPES(SimpleTable)
+ADD_PACK_PROTOTYPES(TableColumn)
+ADD_PACK_PROTOTYPES(TableContainer)
 ADD_PACK_PROTOTYPES(TableSchema)
 ADD_PACK_PROTOTYPES(ThresholdPressure)
 
