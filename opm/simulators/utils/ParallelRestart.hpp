@@ -67,6 +67,7 @@ class Actdims;
 namespace Action {
     class AST;
     class ASTNode;
+    class Condition;
     class Quantity;
 }
 
@@ -607,6 +608,7 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
 ADD_PACK_PROTOTYPES(Actdims)
 ADD_PACK_PROTOTYPES(Action::AST)
 ADD_PACK_PROTOTYPES(Action::ASTNode)
+ADD_PACK_PROTOTYPES(Action::Condition)
 ADD_PACK_PROTOTYPES(Action::Quantity)
 ADD_PACK_PROTOTYPES(Aqudims)
 ADD_PACK_PROTOTYPES(ColumnSchema)

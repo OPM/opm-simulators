@@ -1591,6 +1591,16 @@ std::size_t packSize(const Action::Quantity& data,
            packSize(data.args, comm);
 }
 
+std::size_t packSize(const Action::Condition& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.lhs, comm) +
+           packSize(data.rhs, comm) +
+           packSize(data.logic, comm) +
+           packSize(data.cmp, comm) +
+           packSize(data.cmp_string, comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -3207,6 +3217,17 @@ void pack(const Action::Quantity& data,
 {
     pack(data.quantity, buffer, position, comm);
     pack(data.args, buffer, position, comm);
+}
+
+void pack(const Action::Condition& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.lhs, buffer, position, comm);
+    pack(data.rhs, buffer, position, comm);
+    pack(data.logic, buffer, position, comm);
+    pack(data.cmp, buffer, position, comm);
+    pack(data.cmp_string, buffer, position, comm);
 }
 
 /// unpack routines
@@ -5507,6 +5528,16 @@ void unpack(Action::Quantity& data, std::vector<char>& buffer, int& position,
 {
     unpack(data.quantity, buffer, position, comm);
     unpack(data.args, buffer, position, comm);
+}
+
+void unpack(Action::Condition& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.lhs, buffer, position, comm);
+    unpack(data.rhs, buffer, position, comm);
+    unpack(data.logic, buffer, position, comm);
+    unpack(data.cmp, buffer, position, comm);
+    unpack(data.cmp_string, buffer, position, comm);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

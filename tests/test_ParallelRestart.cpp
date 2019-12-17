@@ -430,6 +430,20 @@ Opm::Tuning getTuning()
                        Opm::DynamicState<int>(std::vector<int>{10}, 1),      //XXDPR_has_value
                        std::map<std::string,bool>{{"test", false}}); // resetValue
 }
+
+
+Opm::Action::Condition getCondition()
+{
+    Opm::Action::Quantity q;
+    q.quantity = "test1";
+    q.args = {"test2", "test3"};
+    Opm::Action::Condition val1;
+    val1.lhs = val1.rhs = q;
+    val1.logic = Opm::Action::Condition::Logical::OR;
+    val1.cmp = Opm::Action::Condition::Comparator::LESS;
+    val1.cmp_string = "test";
+    return val1;
+}
 #endif
 
 
@@ -2164,6 +2178,16 @@ BOOST_AUTO_TEST_CASE(Quantity)
 #endif
 }
 
+
+BOOST_AUTO_TEST_CASE(Condition)
+{
+#ifdef HAVE_MPI
+    Opm::Action::Condition val1 = getCondition();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
 
 
 bool init_unit_test_func()
