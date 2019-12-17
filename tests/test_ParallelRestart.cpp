@@ -40,6 +40,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
@@ -2144,6 +2145,19 @@ BOOST_AUTO_TEST_CASE(AST)
     node.reset(new Opm::Action::ASTNode(number, FuncType::field,
                                         "test1", {"test2"}, 1.0, {}));
     Opm::Action::AST val1(node);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Quantity)
+{
+#ifdef HAVE_MPI
+    Opm::Action::Quantity val1;
+    val1.quantity = "test1";
+    val1.args = {"test2", "test3"};
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

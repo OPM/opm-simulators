@@ -33,6 +33,7 @@
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
@@ -1581,6 +1582,13 @@ std::size_t packSize(const Action::AST& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getCondition(), comm);
+}
+
+std::size_t packSize(const Action::Quantity& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.quantity, comm) +
+           packSize(data.args, comm);
 }
 
 ////// pack routines
@@ -3191,6 +3199,14 @@ void pack(const Action::AST& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getCondition(), buffer, position, comm);
+}
+
+void pack(const Action::Quantity& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.quantity, buffer, position, comm);
+    pack(data.args, buffer, position, comm);
 }
 
 /// unpack routines
@@ -5484,6 +5500,13 @@ void unpack(Action::AST& data, std::vector<char>& buffer, int& position,
     std::shared_ptr<Action::ASTNode> condition;
     unpack(condition, buffer, position, comm);
     data = Action::AST(condition);
+}
+
+void unpack(Action::Quantity& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.quantity, buffer, position, comm);
+    unpack(data.args, buffer, position, comm);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
