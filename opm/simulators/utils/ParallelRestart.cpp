@@ -31,6 +31,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
@@ -1562,6 +1563,17 @@ std::size_t packSize(const Tuning& data,
            packSize(data.getXXXDPR(), comm) +
            packSize(data.getXXXDPR_has_value(), comm) +
            packSize(data.getResetValues(), comm);
+}
+
+std::size_t packSize(const Action::ASTNode& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.type, comm) +
+           packSize(data.func_type, comm) +
+           packSize(data.func, comm) +
+           packSize(data.argList(), comm) +
+           packSize(data.getNumber(), comm) +
+           packSize(data.childrens(), comm);
 }
 
 ////// pack routines
@@ -3153,6 +3165,18 @@ void pack(const Tuning& data,
     pack(data.getXXXDPR(), buffer, position, comm);
     pack(data.getXXXDPR_has_value(), buffer, position, comm);
     pack(data.getResetValues(), buffer, position, comm);
+}
+
+void pack(const Action::ASTNode& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.type, buffer, position, comm);
+    pack(data.func_type, buffer, position, comm);
+    pack(data.func, buffer, position, comm);
+    pack(data.argList(), buffer, position, comm);
+    pack(data.getNumber(), buffer, position, comm);
+    pack(data.childrens(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -5419,6 +5443,25 @@ void unpack(Tuning& data, std::vector<char>& buffer, int& position,
                   XXXWFL, TRGFIP, TRGSFT, TRGSFT_has_value, THIONX, TRWGHT,
                   NEWTMX, NEWTMN, LITMAX, LITMIN, MXWSIT, MXWPIT, DDPLIM,
                   DDSLIM, TRGDPR, XXXDPR, XXXDPR_has_value, ResetValue);
+}
+
+void unpack(Action::ASTNode& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TokenType token;
+    FuncType func_type;
+    std::string func;
+    std::vector<std::string> argList;
+    double number;
+    std::vector<Action::ASTNode> children;
+
+    unpack(token, buffer, position, comm);
+    unpack(func_type, buffer, position, comm);
+    unpack(func, buffer, position, comm);
+    unpack(argList, buffer, position, comm);
+    unpack(number, buffer, position, comm);
+    unpack(children, buffer, position, comm);
+    data = Action::ASTNode(token, func_type, func, argList, number, children);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

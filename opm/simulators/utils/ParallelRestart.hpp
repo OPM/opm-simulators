@@ -63,6 +63,11 @@ namespace Opm
 {
 
 class Actdims;
+
+namespace Action {
+    class ASTNode;
+}
+
 class Aqudims;
 class ColumnSchema;
 class Connection;
@@ -598,6 +603,7 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
               Dune::MPIHelper::MPICommunicator comm);
 
 ADD_PACK_PROTOTYPES(Actdims)
+ADD_PACK_PROTOTYPES(Action::ASTNode)
 ADD_PACK_PROTOTYPES(Aqudims)
 ADD_PACK_PROTOTYPES(ColumnSchema)
 ADD_PACK_PROTOTYPES(Connection)

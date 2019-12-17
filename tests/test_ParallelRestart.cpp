@@ -38,6 +38,7 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
@@ -2116,6 +2117,18 @@ BOOST_AUTO_TEST_CASE(Tuning)
 {
 #ifdef HAVE_MPI
     Opm::Tuning val1 = getTuning();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(ASTNode)
+{
+#ifdef HAVE_MPI
+    Opm::Action::ASTNode child(number, FuncType::field, "test3", {"test2"}, 2.0, {});
+    Opm::Action::ASTNode val1(number, FuncType::field, "test1", {"test2"}, 1.0, {child});
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
