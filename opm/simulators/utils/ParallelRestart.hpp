@@ -120,6 +120,7 @@ class TableContainer;
 class TableManager;
 class TableSchema;
 class ThresholdPressure;
+class Tuning;
 class UDAValue;
 class UDQASTNode;
 class UDQConfig;
@@ -678,6 +679,7 @@ ADD_PACK_PROTOTYPES(TableSchema)
 ADD_PACK_PROTOTYPES(ThresholdPressure)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeMap::StepData)
+ADD_PACK_PROTOTYPES(Tuning)
 ADD_PACK_PROTOTYPES(UDAValue)
 ADD_PACK_PROTOTYPES(UDQActive)
 ADD_PACK_PROTOTYPES(UDQActive::InputRecord)
