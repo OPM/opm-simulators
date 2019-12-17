@@ -391,14 +391,6 @@ namespace Opm {
                 : 0.0;
             guideRate_->compute(well->name(), reportStepIdx, simulationTime, oilpot, gaspot, waterpot);
         }
-        const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-        std::vector<double> pot(numPhases(), 0.0);
-        wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ false, well_state_, guideRate_.get(), pot);
-        std::vector<double> potInj(numPhases(), 0.0);
-        wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ true, well_state_, guideRate_.get(), potInj);
-
-        // compute wsolvent fraction for REIN wells
-        updateWsolvent(fieldGroup, schedule(), reportStepIdx,  well_state_);
     }
 
 
@@ -853,20 +845,6 @@ namespace Opm {
             }
             updateWellControls(local_deferredLogger, /*allow for switching to group controls*/true);
 
-            // only update REIN and VREP rates if iterationIdx is smaller than nupcol
-            const int reportStepIdx = ebosSimulator_.episodeIndex();
-            const int nupcol = schedule().getNupcol(reportStepIdx);
-            if (iterationIdx < nupcol) {
-                if( localWellsActive() ) {
-                    const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-                    std::vector<double> rein(numPhases(), 0.0);
-                    const auto& summaryState = ebosSimulator_.vanguard().summaryState();
-                    wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_, rein);
-                    double resv = 0.0;
-                    wellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_, resv);
-                }
-            }
-
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
 
@@ -1199,13 +1177,19 @@ namespace Opm {
             well->updateWellControl(ebosSimulator_, well_state_, deferred_logger);
         }
 
+        const int nupcol = schedule().getNupcol(reportStepIdx);
+        const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
+        if (iterationIdx < nupcol) {
+            well_state_nupcol_ = well_state_;
+        }
+
         // the group target reduction rates needs to be update since wells may have swicthed to/from GRUP control
         // Currently the group targer reduction does not honor NUPCOL
         if( localWellsActive() ) {
             std::vector<double> groupTargetReduction(numPhases(), 0.0);
-            wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, well_state_, groupTargetReduction);
+            wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, well_state_nupcol_, well_state_, groupTargetReduction);
             std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
-            wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, well_state_, groupTargetReductionInj);
+            wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, well_state_nupcol_, well_state_, groupTargetReductionInj);
         }
 
         const double simulationTime = ebosSimulator_.time();
@@ -1213,6 +1197,18 @@ namespace Opm {
         wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ false, well_state_, guideRate_.get(), pot);
         std::vector<double> potInj(numPhases(), 0.0);
         wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ true, well_state_, guideRate_.get(), potInj);
+
+        if( localWellsActive() ) {
+            std::vector<double> rein(numPhases(), 0.0);
+            const auto& summaryState = ebosSimulator_.vanguard().summaryState();
+            wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol_, well_state_, rein);
+            double resv = 0.0;
+            wellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_, resv);
+        }
+
+        // compute wsolvent fraction for REIN wells
+        updateWsolvent(fieldGroup, schedule(), reportStepIdx,  well_state_nupcol_);
+
     }
 
 
