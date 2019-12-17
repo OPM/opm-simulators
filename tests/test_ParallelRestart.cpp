@@ -38,6 +38,7 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
@@ -2134,6 +2135,21 @@ BOOST_AUTO_TEST_CASE(ASTNode)
     BOOST_CHECK(val1 == std::get<0>(val2));
 #endif
 }
+
+
+BOOST_AUTO_TEST_CASE(AST)
+{
+#ifdef HAVE_MPI
+    std::shared_ptr<Opm::Action::ASTNode> node;
+    node.reset(new Opm::Action::ASTNode(number, FuncType::field,
+                                        "test1", {"test2"}, 1.0, {}));
+    Opm::Action::AST val1(node);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
 
 
 bool init_unit_test_func()

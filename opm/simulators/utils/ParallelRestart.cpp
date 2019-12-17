@@ -31,6 +31,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
@@ -1574,6 +1575,12 @@ std::size_t packSize(const Action::ASTNode& data,
            packSize(data.argList(), comm) +
            packSize(data.getNumber(), comm) +
            packSize(data.childrens(), comm);
+}
+
+std::size_t packSize(const Action::AST& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getCondition(), comm);
 }
 
 ////// pack routines
@@ -3177,6 +3184,13 @@ void pack(const Action::ASTNode& data,
     pack(data.argList(), buffer, position, comm);
     pack(data.getNumber(), buffer, position, comm);
     pack(data.childrens(), buffer, position, comm);
+}
+
+void pack(const Action::AST& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getCondition(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -5462,6 +5476,14 @@ void unpack(Action::ASTNode& data, std::vector<char>& buffer, int& position,
     unpack(number, buffer, position, comm);
     unpack(children, buffer, position, comm);
     data = Action::ASTNode(token, func_type, func, argList, number, children);
+}
+
+void unpack(Action::AST& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::shared_ptr<Action::ASTNode> condition;
+    unpack(condition, buffer, position, comm);
+    data = Action::AST(condition);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
