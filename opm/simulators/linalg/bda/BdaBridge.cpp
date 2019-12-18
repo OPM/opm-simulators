@@ -37,7 +37,7 @@ namespace Opm
 
 BdaBridge::BdaBridge(bool use_gpu_, int linear_solver_verbosity OPM_UNUSED, int maxit OPM_UNUSED, double tolerance OPM_UNUSED) : use_gpu(use_gpu_) {
 #if HAVE_CUDA
-    if(use_gpu){
+    if (use_gpu) {
         backend.reset(new cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance));
     }
 #endif
@@ -52,16 +52,16 @@ int checkZeroDiagonal(BridgeMatrix& mat) {
     int numZeros = 0;
     const int dim = 3;
     const double zero_replace = 1e-15;
-    if(diag_indices.size() == 0){
+    if (diag_indices.size() == 0) {
         int N = mat.N();
         diag_indices.reserve(N);
         int roff = 0;
-        for(typename BridgeMatrix::iterator r = mat.begin(); r != mat.end(); ++r){
+        for (typename BridgeMatrix::iterator r = mat.begin(); r != mat.end(); ++r) {
             auto diag = r->find(r.index());  // diag is an iterator
             assert(diag.index() == r.index());
-            for(int rr = 0; rr < dim; ++rr){
+            for (int rr = 0; rr < dim; ++rr) {
                 auto& val = (*diag)[rr][rr]; // reference to easily change the value
-                if (val == 0.0){             // could be replaced by '< 1e-30' or similar
+                if (val == 0.0) {             // could be replaced by '< 1e-30' or similar
                     val = zero_replace;
                     ++numZeros;
                 }
@@ -69,12 +69,12 @@ int checkZeroDiagonal(BridgeMatrix& mat) {
             diag_indices.emplace_back(diag.offset());
         }
     }else{
-        for(typename BridgeMatrix::iterator r = mat.begin(); r != mat.end(); ++r){
+        for (typename BridgeMatrix::iterator r = mat.begin(); r != mat.end(); ++r) {
             typename BridgeMatrix::size_type offset = diag_indices[r.index()];
             auto& diag_block = r->getptr()[offset]; // diag_block is a reference to MatrixBlock, located on column r of row r
-            for(int rr = 0; rr < dim; ++rr){
+            for (int rr = 0; rr < dim; ++rr) {
                 auto& val = diag_block[rr][rr];
-                if(val == 0.0){                     // could be replaced by '< 1e-30' or similar
+                if (val == 0.0) {                     // could be replaced by '< 1e-30' or similar
                     val = zero_replace;
                     ++numZeros;
                 }
@@ -94,18 +94,18 @@ void getSparsityPattern(BridgeMatrix& mat, std::vector<int> &h_rows, std::vector
     int sum_nnzs = 0;
 
     // convert colIndices and rowPointers
-    if(h_rows.size() == 0){
+    if (h_rows.size() == 0) {
         h_rows.emplace_back(0);
-            for(typename BridgeMatrix::const_iterator r = mat.begin(); r != mat.end(); ++r){
+            for (typename BridgeMatrix::const_iterator r = mat.begin(); r != mat.end(); ++r) {
                 int size_row = 0;
-                for(auto c = r->begin(); c != r->end(); ++c){
+                for (auto c = r->begin(); c != r->end(); ++c) {
                     h_cols.emplace_back(c.index());
                     size_row++;
                 }
                 sum_nnzs += size_row;
                 h_rows.emplace_back(sum_nnzs);
             }
-        if(h_rows[mat.N()] != mat.nonzeroes()){
+        if (h_rows[mat.N()] != mat.nonzeroes()) {
             OPM_THROW(std::logic_error, "Error size of rows do not sum to number of nonzeroes in BdaBridge::getSparsityPattern()");
         }
     }
@@ -118,7 +118,7 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
 {
 
 #if HAVE_CUDA
-    if(use_gpu){
+    if (use_gpu) {
         BdaResult result;
         result.converged = false;
         static std::vector<int> h_rows;
@@ -127,12 +127,12 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
         int N = mat->N()*dim;
         int nnz = (h_rows.empty()) ? mat->nonzeroes()*dim*dim : h_rows.back()*dim*dim;
 
-        if(dim != 3){
+        if (dim != 3) {
             OpmLog::warning("cusparseSolver only accepts blocksize = 3 at this time, will use Dune for the remainder of the program");
             use_gpu = false;
         }
 
-        if(h_rows.capacity() == 0){
+        if (h_rows.capacity() == 0) {
             h_rows.reserve(N+1);
             h_cols.reserve(nnz);
 #if PRINT_TIMERS_BRIDGE
@@ -163,7 +163,7 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
         typedef cusparseSolverBackend::cusparseSolverStatus cusparseSolverStatus;
         // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, cusparseSolver is expected to perform undefined behaviour
         cusparseSolverStatus status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), result);
-        switch(status){
+        switch(status) {
         case cusparseSolverStatus::CUSPARSE_SOLVER_SUCCESS:
             //OpmLog::info("cusparseSolver converged");
             break;
@@ -190,9 +190,9 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
 
 
 template <class BridgeVector>
-void BdaBridge::get_result(BridgeVector &x OPM_UNUSED){
+void BdaBridge::get_result(BridgeVector &x OPM_UNUSED) {
 #if HAVE_CUDA
-    if(use_gpu){
+    if (use_gpu) {
         backend->post_process(static_cast<double*>(&(x[0][0])));
     }
 #endif

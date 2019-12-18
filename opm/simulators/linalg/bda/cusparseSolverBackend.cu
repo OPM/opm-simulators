@@ -45,20 +45,20 @@ namespace Opm
     const cusparseOperation_t operation  = CUSPARSE_OPERATION_NON_TRANSPOSE;
     const cusparseDirection_t order = CUSPARSE_DIRECTION_ROW;
 
-    double second(void){
+    double second(void) {
         struct timeval tv;
         gettimeofday(&tv, nullptr);
         return (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0;
     }
 
-    cusparseSolverBackend::cusparseSolverBackend(int verbosity_, int maxit_, double tolerance_) : verbosity(verbosity_), maxit(maxit_), tolerance(tolerance_), minit(0){
+    cusparseSolverBackend::cusparseSolverBackend(int verbosity_, int maxit_, double tolerance_) : verbosity(verbosity_), maxit(maxit_), tolerance(tolerance_), minit(0) {
     }
 
-    cusparseSolverBackend::~cusparseSolverBackend(){
+    cusparseSolverBackend::~cusparseSolverBackend() {
         finalize();
     }
 
-    void cusparseSolverBackend::gpu_pbicgstab(BdaResult& res){
+    void cusparseSolverBackend::gpu_pbicgstab(BdaResult& res) {
         double t_total1, t_total2;
         int n = N;
         double rho = 1.0, rhop;
@@ -80,17 +80,17 @@ namespace Opm
         cublasDcopy(cublasHandle, n, d_r, 1, d_p, 1); 
         cublasDnrm2(cublasHandle, n, d_r, 1, &norm_0);
 
-        if(verbosity > 1){
+        if (verbosity > 1) {
             std::ostringstream out;
             out << std::scientific << "cusparseSolver initial norm: " << norm_0;
             OpmLog::info(out.str());
         }
 
-        for(it = 0.5; it < maxit; it+=0.5){
+        for (it = 0.5; it < maxit; it+=0.5) {
             rhop = rho;
             cublasDdot(cublasHandle, n, d_rw, 1, d_r, 1, &rho);
 
-            if(it > 1){
+            if (it > 1) {
                 beta = (rho/rhop) * (alpha/omega);
                 nomega = -omega;
                 cublasDaxpy(cublasHandle, n, &nomega, d_v, 1, d_p, 1);
@@ -118,7 +118,7 @@ namespace Opm
             cublasDaxpy(cublasHandle, n, &alpha, d_pw, 1, d_x, 1);
             cublasDnrm2(cublasHandle, n, d_r, 1, &norm);
 
-            if(norm < tolerance * norm_0 && it > minit){
+            if (norm < tolerance * norm_0 && it > minit) {
                 break;
             }
 
@@ -147,11 +147,11 @@ namespace Opm
             cublasDnrm2(cublasHandle, n, d_r, 1, &norm);
 
 
-            if(norm < tolerance * norm_0 && it > minit){
+            if (norm < tolerance * norm_0 && it > minit) {
                 break;
             }
 
-            if(verbosity > 1){
+            if (verbosity > 1) {
                 std::ostringstream out;
                 out << "it: " << it << std::scientific << ", norm: " << norm;
                 OpmLog::info(out.str());
@@ -166,7 +166,7 @@ namespace Opm
         res.elapsed = t_total2 - t_total1;
         res.converged = (it != (maxit + 0.5));
 
-        if(verbosity > 0){
+        if (verbosity > 0) {
             std::ostringstream out;
             out << "=== converged: " << res.converged << ", conv_rate: " << res.conv_rate << ", time: " << res.elapsed << \
                    ", time per iteration: " << res.elapsed/it << ", iterations: " << it;
@@ -175,7 +175,7 @@ namespace Opm
     }
 
 
-    void cusparseSolverBackend::initialize(int N, int nnz, int dim){
+    void cusparseSolverBackend::initialize(int N, int nnz, int dim) {
         this->N = N;
         this->nnz = nnz;
         this->BLOCK_SIZE = dim;
@@ -235,7 +235,7 @@ namespace Opm
         initialized = true;
     } // end initialize()
 
-    void cusparseSolverBackend::finalize(){
+    void cusparseSolverBackend::finalize() {
         cudaFree(d_x);
         cudaFree(d_b);
         cudaFree(d_r);
@@ -267,10 +267,10 @@ namespace Opm
     } // end finalize()
 
 
-    void cusparseSolverBackend::copy_system_to_gpu(double *vals, int *rows, int *cols, double *b){
+    void cusparseSolverBackend::copy_system_to_gpu(double *vals, int *rows, int *cols, double *b) {
 
         double t1, t2;
-        if(verbosity > 2){
+        if (verbosity > 2) {
             t1 = second();
         }
 
@@ -290,7 +290,7 @@ namespace Opm
         this->cols = cols;
         this->rows = rows;
 
-        if(verbosity > 2){
+        if (verbosity > 2) {
             cudaStreamSynchronize(stream);
             t2 = second();
             std::ostringstream out;
@@ -301,10 +301,10 @@ namespace Opm
 
 
     // don't copy rowpointers and colindices, they stay the same
-    void cusparseSolverBackend::update_system_on_gpu(double *vals, double *b){
+    void cusparseSolverBackend::update_system_on_gpu(double *vals, double *b) {
 
         double t1, t2;
-        if(verbosity > 2){
+        if (verbosity > 2) {
             t1 = second();
         }
 
@@ -312,7 +312,7 @@ namespace Opm
         cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
         cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
 
-        if(verbosity > 2){
+        if (verbosity > 2) {
             cudaStreamSynchronize(stream);
             t2 = second();
             std::ostringstream out;
@@ -322,17 +322,17 @@ namespace Opm
     } // end update_system_on_gpu()
 
 
-    void cusparseSolverBackend::reset_prec_on_gpu(){
+    void cusparseSolverBackend::reset_prec_on_gpu() {
         cudaMemcpyAsync(d_mVals, d_bVals, nnz  * sizeof(double), cudaMemcpyDeviceToDevice, stream);
     }
 
 
-    bool cusparseSolverBackend::analyse_matrix(){
+    bool cusparseSolverBackend::analyse_matrix() {
 
         int d_bufferSize_M, d_bufferSize_L, d_bufferSize_U, d_bufferSize;
         double t1, t2;
 
-        if(verbosity > 2){
+        if (verbosity > 2) {
             t1 = second();
         }
 
@@ -381,7 +381,7 @@ namespace Opm
 
         int structural_zero;
         cusparseStatus_t status = cusparseXbsrilu02_zeroPivot(cusparseHandle, info_M, &structural_zero);
-        if(CUSPARSE_STATUS_ZERO_PIVOT == status){
+        if (CUSPARSE_STATUS_ZERO_PIVOT == status) {
             return false;
         }
 
@@ -395,7 +395,7 @@ namespace Opm
             BLOCK_SIZE, info_U, policy, d_buffer);
         cudaCheckLastError("Could not analyse level information");
 
-        if(verbosity > 2){
+        if (verbosity > 2) {
             cudaStreamSynchronize(stream);
             t2 = second();
             std::ostringstream out;
@@ -406,10 +406,10 @@ namespace Opm
         return true;
     } // end analyse_matrix()
 
-    bool cusparseSolverBackend::create_preconditioner(){
+    bool cusparseSolverBackend::create_preconditioner() {
 
         double t1, t2;
-        if(verbosity > 2){
+        if (verbosity > 2) {
             t1 = second();
         }
 
@@ -422,11 +422,11 @@ namespace Opm
         int structural_zero;
         // cusparseXbsrilu02_zeroPivot() calls cudaDeviceSynchronize()
         cusparseStatus_t status = cusparseXbsrilu02_zeroPivot(cusparseHandle, info_M, &structural_zero);
-        if(CUSPARSE_STATUS_ZERO_PIVOT == status){
+        if (CUSPARSE_STATUS_ZERO_PIVOT == status) {
             return false;
         }
 
-        if(verbosity > 2){
+        if (verbosity > 2) {
             cudaStreamSynchronize(stream);
             t2 = second();
             std::ostringstream out;
@@ -437,7 +437,7 @@ namespace Opm
     } // end create_preconditioner()
 
 
-    void cusparseSolverBackend::solve_system(BdaResult &res){
+    void cusparseSolverBackend::solve_system(BdaResult &res) {
         // actually solve
         gpu_pbicgstab(res);
         cudaStreamSynchronize(stream);
@@ -447,21 +447,21 @@ namespace Opm
 
     // copy result to host memory
     // caller must be sure that x is a valid array
-    void cusparseSolverBackend::post_process(double *x){
+    void cusparseSolverBackend::post_process(double *x) {
 
-        if(!initialized){
+        if (!initialized) {
             cudaHostRegister(x, N * sizeof(double), cudaHostRegisterDefault);
         }
 
         double t1, t2;
-        if(verbosity > 2){
+        if (verbosity > 2) {
             t1 = second();
         }
 
         cudaMemcpyAsync(x, d_x, N * sizeof(double), cudaMemcpyDeviceToHost, stream);
         cudaStreamSynchronize(stream);
 
-        if(verbosity > 2){
+        if (verbosity > 2) {
             t2 = second();
             std::ostringstream out;
             out << "cusparseSolver::post_process(): " << t2-t1 << " s";
@@ -472,20 +472,20 @@ namespace Opm
 
     typedef cusparseSolverBackend::cusparseSolverStatus cusparseSolverStatus;
 
-    cusparseSolverStatus cusparseSolverBackend::solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, BdaResult &res){       
-        if(initialized == false){
+    cusparseSolverStatus cusparseSolverBackend::solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, BdaResult &res) {       
+        if (initialized == false) {
             initialize(N, nnz, dim);
             copy_system_to_gpu(vals, rows, cols, b);
         }else{
             update_system_on_gpu(vals, b);
         }
-        if(analysis_done == false){
-            if(!analyse_matrix()){
+        if (analysis_done == false) {
+            if (!analyse_matrix()) {
                 return cusparseSolverStatus::CUSPARSE_SOLVER_ANALYSIS_FAILED;
             }
         }
         reset_prec_on_gpu();
-        if(create_preconditioner()){
+        if (create_preconditioner()) {
             solve_system(res);
         }else{
             return cusparseSolverStatus::CUSPARSE_SOLVER_CREATE_PRECONDITIONER_FAILED;
