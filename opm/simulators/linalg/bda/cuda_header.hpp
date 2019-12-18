@@ -22,6 +22,11 @@
 
 #include <iostream>
 
+/// Runtime error checking of CUDA functions
+/// Usage:
+/// cudaMalloc(...);
+/// cudaCheckLastError("Error could not allocate memory");
+///
 #define cudaCheckLastError(msg)    __cudaCheckError( __FILE__, __LINE__, #msg )
 
 inline void __cudaCheckError(const char *file, const int line, const char *msg){

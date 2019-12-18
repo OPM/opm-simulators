@@ -35,7 +35,8 @@ namespace Opm
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
 
-
+/// BdaBridge acts as interface between opm-simulators with the cusparseSolver
+/// if CUDA was not found during CMake, function bodies of this class are empty
 class BdaBridge
 {
 private:
@@ -45,11 +46,23 @@ private:
     bool use_gpu;
 
 public:
+    /// Construct a BdaBridge
+    /// \param[in] use_gpu                    true iff the cusparseSolver is used, is passed via command-line: '--use-gpu=[true|false]'
+    /// \param[in] linear_solver_verbosity    verbosity of cusparseSolver
+    /// \param[in] maxit                      maximum number of iterations for cusparseSolver
+    /// \param[in] tolerance                  required relative tolerance for cusparseSolver
     BdaBridge(bool use_gpu, int linear_solver_verbosity, int maxit, double tolerance);
 
+
+    /// Solve linear system, A*x = b
+    /// \param[in] mat     matrix A, should be of type Dune::BCRSMatrix
+    /// \param[in] b       vector b, should be of type Dune::BlockVector
+    /// \param[in] result  summary of solver result
     template <class BridgeMatrix, class BridgeVector>
     void solve_system(BridgeMatrix *mat, BridgeVector &b, InverseOperatorResult &result);
 
+    /// Get the resulting x vector
+    /// \param[inout] x    vector x, should be of type Dune::BlockVector
     template <class BridgeVector>
     void get_result(BridgeVector &x);
 

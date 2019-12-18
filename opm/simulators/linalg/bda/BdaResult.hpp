@@ -23,7 +23,8 @@
 namespace Opm
 {
 
-// based on InverseOperatorResult struct from dune/istl/solver.hh
+/// This class is based on InverseOperatorResult struct from dune/istl/solver.hh
+/// It is needed to prevent a compile error in basearray.hh, the nvcc compiler might not support all features in there
 class BdaResult
 {
 

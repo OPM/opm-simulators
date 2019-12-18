@@ -29,6 +29,7 @@
 namespace Opm
 {
 
+/// This class implements a cusparse-based ilu0-bicgstab solver on GPU
 class cusparseSolverBackend{
 
 private:
@@ -68,24 +69,42 @@ private:
 
     int verbosity = 0;
 
-
+    /// Solve linear system using ilu0-bicgstab
+    /// \param[inout] res     summary of solver result
     void gpu_pbicgstab(BdaResult& res);
 
+    /// Initialize GPU and allocate memory
+    /// \param[in] N         number of nonzeroes, divide by dim*dim to get number of blocks
+    /// \param[in] nnz         number of nonzeroes, divide by dim*dim to get number of blocks
+    /// \param[in] dim         size of block
     void initialize(int N, int nnz, int dim);
 
+    /// Clean memory
     void finalize();
 
+    /// Copy linear system to GPU
+    /// \param[in] vals        array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
+    /// \param[in] rows        array of rowPointers, contains N/dim+1 values
+    /// \param[in] cols        array of columnIndices, contains nnz values
+    /// \param[in] b           input vector, contains N values
     void copy_system_to_gpu(double *vals, int *rows, int *cols, double *b);
 
-    // don't copy rowpointers and colindices, they stay the same
+    // Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
+    /// \param[in] vals        array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
+    /// \param[in] b           input vector, contains N values
     void update_system_on_gpu(double *vals, double *b);
 
+    /// Reset preconditioner on GPU, ilu0-decomposition is done inplace by cusparse
     void reset_prec_on_gpu();
 
+    /// Analyse sparsity pattern to extract parallelism
     bool analyse_matrix();
 
+    /// Perform ilu0-decomposition
     bool create_preconditioner();
 
+    /// Solve linear system
+    /// \param[inout] res     summary of solver result
     void solve_system(BdaResult &res);
 
 public:
@@ -97,12 +116,28 @@ public:
         CUSPARSE_SOLVER_UNKNOWN_ERROR
     };
 
+    /// Construct a cusparseSolver
+    /// \param[in] linear_solver_verbosity    verbosity of cusparseSolver
+    /// \param[in] maxit                      maximum number of iterations for cusparseSolver
+    /// \param[in] tolerance                  required relative tolerance for cusparseSolver
     cusparseSolverBackend(int linear_solver_verbosity, int maxit, double tolerance);
 
+    /// Destroy a cusparseSolver, and free memory
     ~cusparseSolverBackend();
 
+    /// Solve linear system, A*x = b, matrix A must be in blocked-CSR format
+    /// \param[in] N           number of rows, divide by dim to get number of blockrows
+    /// \param[in] nnz         number of nonzeroes, divide by dim*dim to get number of blocks
+    /// \param[in] dim         size of block
+    /// \param[in] vals        array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
+    /// \param[in] rows        array of rowPointers, contains N/dim+1 values
+    /// \param[in] cols        array of columnIndices, contains nnz values
+    /// \param[in] b           input vector, contains N values
+    /// \param[inout] res      summary of solver result
     cusparseSolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, BdaResult &res);
 
+    /// Post processing after linear solve, now only copies resulting x vector back
+    /// \param[inout] x        resulting x vector, caller must guarantee that x points to a valid array
     void post_process(double *x);
 
 }; // end class cusparseSolverBackend
