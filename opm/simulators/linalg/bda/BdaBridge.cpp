@@ -50,12 +50,11 @@ template <class BridgeMatrix>
 int checkZeroDiagonal(BridgeMatrix& mat) {
     static std::vector<typename BridgeMatrix::size_type> diag_indices;   // contains offsets of the diagonal nnzs
     int numZeros = 0;
-    const int dim = 3;
+    const int dim = 3;                    // might be replaced with mat[0][0].N() or BridgeMatrix::block_type::size()
     const double zero_replace = 1e-15;
     if (diag_indices.size() == 0) {
         int N = mat.N();
         diag_indices.reserve(N);
-        int roff = 0;
         for (typename BridgeMatrix::iterator r = mat.begin(); r != mat.end(); ++r) {
             auto diag = r->find(r.index());  // diag is an iterator
             assert(diag.index() == r.index());
@@ -105,7 +104,9 @@ void getSparsityPattern(BridgeMatrix& mat, std::vector<int> &h_rows, std::vector
                 sum_nnzs += size_row;
                 h_rows.emplace_back(sum_nnzs);
             }
-        if (h_rows[mat.N()] != mat.nonzeroes()) {
+
+        // h_rows and h_cols could be changed to 'unsigned int', but cusparse expects 'int'
+        if (static_cast<unsigned int>(h_rows[mat.N()]) != mat.nonzeroes()) {
             OPM_THROW(std::logic_error, "Error size of rows do not sum to number of nonzeroes in BdaBridge::getSparsityPattern()");
         }
     }
@@ -123,9 +124,9 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
         result.converged = false;
         static std::vector<int> h_rows;
         static std::vector<int> h_cols;
-        int dim = (*mat)[0][0].N();
-        int N = mat->N()*dim;
-        int nnz = (h_rows.empty()) ? mat->nonzeroes()*dim*dim : h_rows.back()*dim*dim;
+        const int dim = (*mat)[0][0].N();
+        const int N = mat->N()*dim;
+        const int nnz = (h_rows.empty()) ? mat->nonzeroes()*dim*dim : h_rows.back()*dim*dim;
 
         if (dim != 3) {
             OpmLog::warning("cusparseSolver only accepts blocksize = 3 at this time, will use Dune for the remainder of the program");
