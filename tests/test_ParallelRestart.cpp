@@ -25,17 +25,22 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Tabdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
@@ -164,6 +169,14 @@ Opm::FoamData getFoamData()
 }
 
 #endif
+
+
+Opm::TimeMap getTimeMap()
+{
+    return Opm::TimeMap({123},
+                        {{1, Opm::TimeStampUTC(123)}},
+                        {{2, Opm::TimeStampUTC(456)}});
+}
 
 
 }
@@ -471,6 +484,86 @@ BOOST_AUTO_TEST_CASE(SimulationConfig)
 {
 #if HAVE_MPI
     Opm::SimulationConfig val1(getThresholdPressure(), false, true, false, true);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(RestartSchedule)
+{
+#if HAVE_MPI
+    Opm::RestartSchedule val1(1, 2, 3);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(StepData)
+{
+#if HAVE_MPI
+    Opm::TimeMap::StepData val1{1, Opm::TimeStampUTC(123456)};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(TimeMap)
+{
+#if HAVE_MPI
+    Opm::TimeMap val1 = getTimeMap();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(RestartConfig)
+{
+#if HAVE_MPI
+    Opm::DynamicState<Opm::RestartSchedule> rsched({Opm::RestartSchedule(1, 2, 3)}, 2);
+    Opm::DynamicState<std::map<std::string,int>> rkw({{{"test",3}}}, 3);
+    Opm::RestartConfig val1(getTimeMap(), 1, true, rsched, rkw, {false, true});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(IOConfig)
+{
+#if HAVE_MPI
+    Opm::IOConfig val1(true, false, true, false, false, true, 1, "test1", true,
+                       "test2", true, "test3", false);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Phases)
+{
+#if HAVE_MPI
+    Opm::Phases val1(true, true, true, false, true, false, true, false);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Tabdims)
+{
+#if HAVE_MPI
+    Opm::Tabdims val1(1,2,3,4,5,6);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

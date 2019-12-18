@@ -22,11 +22,15 @@
 #endif
 
 #include "ParallelRestart.hpp"
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
@@ -148,6 +152,11 @@ std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPIComm
   return packSize(data.getIndex(), comm) + packSize(data.getStorage(), comm);
 }
 
+template<class T>
+std::size_t packSize(const DynamicState<T>& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.data(), comm) + packSize(data.initialRange(), comm);
+}
 
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -196,6 +205,9 @@ HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
+HANDLE_AS_POD(RestartSchedule)
+HANDLE_AS_POD(Tabdims)
+HANDLE_AS_POD(TimeMap::StepData)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -341,6 +353,45 @@ std::size_t packSize(const SimulationConfig& data, Dune::MPIHelper::MPICommunica
            packSize(data.isThermal(), comm);
 }
 
+std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.timeList(), comm) +
+           packSize(data.firstTimeStepMonths(), comm) +
+           packSize(data.firstTimeStepYears(), comm);
+}
+
+std::size_t packSize(const RestartConfig& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.timeMap(), comm) +
+           packSize(data.getFirstRestartStep(), comm) +
+           packSize(data.writeInitialRst(), comm) +
+           packSize(data.restartSchedule(), comm) +
+           packSize(data.restartKeywords(), comm) +
+           packSize(data.saveKeywords(), comm);
+}
+
+std::size_t packSize(const IOConfig& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getWriteINITFile(), comm) +
+           packSize(data.getWriteEGRIDFile(), comm) +
+           packSize(data.getUNIFIN(), comm) +
+           packSize(data.getUNIFOUT(), comm) +
+           packSize(data.getFMTIN(), comm) +
+           packSize(data.getFMTOUT(), comm) +
+           packSize(data.getFirstRestartStep(), comm) +
+           packSize(data.getDeckFileName(), comm) +
+           packSize(data.getOutputEnabled(), comm) +
+           packSize(data.getOutputDir(), comm) +
+           packSize(data.getNoSim(), comm) +
+           packSize(data.getBaseName(), comm) +
+           packSize(data.getEclCompatibleRST(), comm);
+}
+
+std::size_t packSize(const Phases& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getBits(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -447,6 +498,14 @@ void pack(const OrderedMap<Key, Value>& data, std::vector<char>& buffer, int& po
 {
     pack(data.getIndex(), buffer, position, comm);
     pack(data.getStorage(), buffer, position, comm);
+}
+
+template<class T>
+void pack(const DynamicState<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.data(), buffer, position, comm);
+    pack(data.initialRange(), buffer, position, comm);
 }
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
@@ -671,6 +730,49 @@ void pack(const SimulationConfig& data, std::vector<char>& buffer, int& position
     pack(data.isThermal(), buffer, position, comm);
 }
 
+void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.timeList(), buffer, position, comm);
+    pack(data.firstTimeStepMonths(), buffer, position, comm);
+    pack(data.firstTimeStepYears(), buffer, position, comm);
+}
+
+void pack(const RestartConfig& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.timeMap(), buffer, position, comm);
+    pack(data.getFirstRestartStep(), buffer, position, comm);
+    pack(data.writeInitialRst(), buffer, position, comm);
+    pack(data.restartSchedule(), buffer, position, comm);
+    pack(data.restartKeywords(), buffer, position, comm);
+    pack(data.saveKeywords(), buffer, position, comm);
+}
+
+void pack(const IOConfig& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getWriteINITFile(), buffer, position, comm);
+    pack(data.getWriteEGRIDFile(), buffer, position, comm);
+    pack(data.getUNIFIN(), buffer, position, comm);
+    pack(data.getUNIFOUT(), buffer, position, comm);
+    pack(data.getFMTIN(), buffer, position, comm);
+    pack(data.getFMTOUT(), buffer, position, comm);
+    pack(data.getFirstRestartStep(), buffer, position, comm);
+    pack(data.getDeckFileName(), buffer, position, comm);
+    pack(data.getOutputEnabled(), buffer, position, comm);
+    pack(data.getOutputDir(), buffer, position, comm);
+    pack(data.getNoSim(), buffer, position, comm);
+    pack(data.getBaseName(), buffer, position, comm);
+    pack(data.getEclCompatibleRST(), buffer, position, comm);
+}
+
+void pack(const Phases& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getBits(), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -783,6 +885,17 @@ void unpack(OrderedMap<Key,Value>& data, std::vector<char>& buffer, int& positio
   unpack(index, buffer, position, comm);
   unpack(storage, buffer, position, comm);
   data = OrderedMap<Key,Value>(index, storage);
+}
+
+template<class T>
+void unpack(DynamicState<T>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<T> ddata;
+    size_t initial_range;
+    unpack(ddata, buffer, position, comm);
+    unpack(initial_range, buffer, position, comm);
+    data = DynamicState<T>(ddata, initial_range);
 }
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
@@ -1059,6 +1172,72 @@ void unpack(SimulationConfig& data, std::vector<char>& buffer, int& position,
     unpack(VAPOIL, buffer, position, comm);
     unpack(isThermal, buffer, position, comm);
     data = SimulationConfig(thresholdPressure, useCPR, DISGAS, VAPOIL, isThermal);
+}
+
+void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<std::time_t> timeList;
+    std::vector<TimeMap::StepData> firstStepMonths;
+    std::vector<TimeMap::StepData> firstStepYears;
+    unpack(timeList, buffer, position, comm);
+    unpack(firstStepMonths, buffer, position, comm);
+    unpack(firstStepYears, buffer, position, comm);
+
+    data = TimeMap(timeList, firstStepMonths, firstStepYears);
+}
+
+void unpack(RestartConfig& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TimeMap timemap;
+    int firstRstStep;
+    bool writeInitialRst;
+    DynamicState<RestartSchedule> restart_sched;
+    DynamicState<std::map<std::string,int>> restart_keyw;
+    std::vector<bool> save_keyw;
+    unpack(timemap, buffer, position, comm);
+    unpack(firstRstStep, buffer, position, comm);
+    unpack(writeInitialRst, buffer, position, comm);
+    unpack(restart_sched, buffer, position, comm);
+    unpack(restart_keyw, buffer, position, comm);
+    unpack(save_keyw, buffer, position, comm);
+    data = RestartConfig(timemap, firstRstStep, writeInitialRst, restart_sched,
+                         restart_keyw, save_keyw);
+}
+
+void unpack(IOConfig& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    bool write_init, write_egrid, unifin, unifout, fmtin, fmtout;
+    int firstRestartStep;
+    std::string deck_name, output_dir, base_name;
+    bool output_enabled, no_sim, ecl_compatible_rst;
+
+    unpack(write_init, buffer, position, comm);
+    unpack(write_egrid, buffer, position, comm);
+    unpack(unifin, buffer, position, comm);
+    unpack(unifout, buffer, position, comm);
+    unpack(fmtin, buffer, position, comm);
+    unpack(fmtout, buffer, position, comm);
+    unpack(firstRestartStep, buffer, position, comm);
+    unpack(deck_name, buffer, position, comm);
+    unpack(output_enabled, buffer, position, comm);
+    unpack(output_dir, buffer, position, comm);
+    unpack(no_sim, buffer, position, comm);
+    unpack(base_name, buffer, position, comm);
+    unpack(ecl_compatible_rst, buffer, position, comm);
+    data = IOConfig(write_init, write_egrid, unifin, unifout, fmtin, fmtout,
+                    firstRestartStep, deck_name, output_enabled, output_dir,
+                    no_sim, base_name, ecl_compatible_rst);
+}
+
+void unpack(Phases& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unsigned long bits;
+    unpack(bits, buffer, position, comm);
+    data = Phases(std::bitset<NUM_PHASES_IN_ENUM>(bits));
 }
 
 } // end namespace Mpi

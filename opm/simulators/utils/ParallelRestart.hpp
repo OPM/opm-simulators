@@ -26,6 +26,8 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/DynamicState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
@@ -44,12 +46,17 @@ class EquilRecord;
 class FoamConfig;
 class FoamData;
 class InitConfig;
+class IOConfig;
 class NNC;
 struct NNCdata;
+class Phases;
+class RestartConfig;
+class RestartSchedule;
 class Rock2dTable;
 class Rock2dtrTable;
 class SimulationConfig;
 class SimpleTable;
+class Tabdims;
 class TableColumn;
 class TableContainer;
 class TableSchema;
@@ -101,6 +108,9 @@ std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelpe
 template<class Key, class Value>
 std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPICommunicator comm);
 
+template<class T>
+std::size_t packSize(const DynamicState<T>& data, Dune::MPIHelper::MPICommunicator comm);
+
 ////// pack routines
 
 template<class T>
@@ -150,6 +160,10 @@ void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer
 
 template<class Key, class Value>
 void pack(const OrderedMap<Key,Value>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
+void pack(const DynamicState<T>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm);
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
@@ -206,6 +220,10 @@ template<class Key, class Value>
 void unpack(OrderedMap<Key,Value>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
 
+template<class T>
+void unpack(DynamicState<T>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm);
+
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
 
@@ -232,19 +250,26 @@ ADD_PACK_PROTOTYPES(EquilRecord)
 ADD_PACK_PROTOTYPES(FoamConfig)
 ADD_PACK_PROTOTYPES(FoamData)
 ADD_PACK_PROTOTYPES(InitConfig)
+ADD_PACK_PROTOTYPES(IOConfig)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
+ADD_PACK_PROTOTYPES(Phases)
+ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
+ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
+ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)
 ADD_PACK_PROTOTYPES(TableSchema)
 ADD_PACK_PROTOTYPES(ThresholdPressure)
+ADD_PACK_PROTOTYPES(TimeMap)
+ADD_PACK_PROTOTYPES(TimeMap::StepData)
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
