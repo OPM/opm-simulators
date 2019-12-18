@@ -98,9 +98,11 @@ private:
     void reset_prec_on_gpu();
 
     /// Analyse sparsity pattern to extract parallelism
+    /// \return true iff analysis was successful
     bool analyse_matrix();
 
     /// Perform ilu0-decomposition
+    /// \return true iff decomposition was successful
     bool create_preconditioner();
 
     /// Solve linear system
@@ -134,6 +136,7 @@ public:
     /// \param[in] cols        array of columnIndices, contains nnz values
     /// \param[in] b           input vector, contains N values
     /// \param[inout] res      summary of solver result
+    /// \return                status code
     cusparseSolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, BdaResult &res);
 
     /// Post processing after linear solve, now only copies resulting x vector back
