@@ -28,6 +28,7 @@
 #define EWOMS_ECL_POLYHEDRAL_GRID_VANGUARD_HH
 
 #include "eclbasevanguard.hh"
+#include "ecltransmissibility.hh"
 
 #include <opm/grid/polyhedralgrid.hh>
 
@@ -78,7 +79,8 @@ private:
 
 public:
     EclPolyhedralGridVanguard(Simulator& simulator)
-        : EclBaseVanguard<TypeTag>(simulator)
+        : EclBaseVanguard<TypeTag>(simulator),
+          simulator_( simulator )
     {
         this->callImplementationInit();
     }
@@ -147,6 +149,24 @@ public:
     const CartesianIndexMapper& equilCartesianIndexMapper() const
     { return *cartesianIndexMapper_; }
 
+
+    /*!
+     * \brief Free the memory occupied by the global transmissibility object.
+     *
+     * After writing the initial solution, this array should not be necessary anymore.
+     */
+    void releaseGlobalTransmissibilities()
+    {
+    }
+
+    std::unordered_set<std::string> defunctWellNames() const
+    { return defunctWellNames_; }
+
+    const EclTransmissibility<TypeTag>& globalTransmissibility() const
+    {
+        return simulator_.problem().eclTransmissibilities();
+    }
+
 protected:
     void createGrids_()
     {
@@ -162,8 +182,12 @@ protected:
         // not handling the removal of completions for this type of grid yet.
     }
 
+    Simulator& simulator_;
+
     GridPointer grid_;
     CartesianIndexMapperPointer cartesianIndexMapper_;
+
+    std::unordered_set<std::string> defunctWellNames_;
 };
 
 } // namespace Opm
