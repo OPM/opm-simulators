@@ -43,6 +43,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
@@ -1621,6 +1622,34 @@ std::size_t packSize(const Action::Actions& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getActions(), comm);
+}
+
+std::size_t packSize(const Schedule& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getTimeMap(), comm) +
+           packSize(data.getStaticWells(), comm) +
+           packSize(data.getGroups(), comm) +
+           packSize(data.getOilVapProps(), comm) +
+           packSize(data.getEvents(), comm) +
+           packSize(data.getModifierDeck(), comm) +
+           packSize(data.getTuning(), comm) +
+           packSize(data.getMessageLimits(), comm) +
+           packSize(data.getRunspec(), comm) +
+           packSize(data.getVFPProdTables(), comm) +
+           packSize(data.getVFPInjTables(), comm) +
+           packSize(data.getWellTestConfig(), comm) +
+           packSize(data.getWListManager(), comm) +
+           packSize(data.getUDQConfig(), comm) +
+           packSize(data.getUDQActive(), comm) +
+           packSize(data.getGuideRateConfig(), comm) +
+           packSize(data.getGConSale(), comm) +
+           packSize(data.getGConSump(), comm) +
+           packSize(data.getGlobalWhistCtlMode(), comm) +
+           packSize(data.getActions(), comm) +
+           packSize(data.rftConfig(), comm) +
+           packSize(data.getNupCol(), comm) +
+           packSize(data.getWellGroupEvents(), comm);
 }
 
 ////// pack routines
@@ -3272,6 +3301,35 @@ void pack(const Action::Actions& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getActions(), buffer, position, comm);
+}
+
+void pack(const Schedule& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getTimeMap(), buffer, position, comm);
+    pack(data.getStaticWells(), buffer, position, comm);
+    pack(data.getGroups(), buffer, position, comm);
+    pack(data.getOilVapProps(), buffer, position, comm);
+    pack(data.getEvents(), buffer, position, comm);
+    pack(data.getModifierDeck(), buffer, position, comm);
+    pack(data.getTuning(), buffer, position, comm);
+    pack(data.getMessageLimits(), buffer, position, comm);
+    pack(data.getRunspec(), buffer, position, comm);
+    pack(data.getVFPProdTables(), buffer, position, comm);
+    pack(data.getVFPInjTables(), buffer, position, comm);
+    pack(data.getWellTestConfig(), buffer, position, comm);
+    pack(data.getWListManager(), buffer, position, comm);
+    pack(data.getUDQConfig(), buffer, position, comm);
+    pack(data.getUDQActive(), buffer, position, comm);
+    pack(data.getGuideRateConfig(), buffer, position, comm);
+    pack(data.getGConSale(), buffer, position, comm);
+    pack(data.getGConSump(), buffer, position, comm);
+    pack(data.getGlobalWhistCtlMode(), buffer, position, comm);
+    pack(data.getActions(), buffer, position, comm);
+    pack(data.rftConfig(), buffer, position, comm);
+    pack(data.getNupCol(), buffer, position, comm);
+    pack(data.getWellGroupEvents(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -5616,6 +5674,64 @@ void unpack(Action::Actions& data, std::vector<char>& buffer, int& position,
     std::vector<Action::ActionX> actions;
     unpack(actions, buffer, position, comm);
     data = Action::Actions(actions);
+}
+
+void unpack(Schedule& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TimeMap timeMap;
+    Schedule::WellMap staticWells;
+    Schedule::GroupMap groups;
+    DynamicState<OilVaporizationProperties> oilVapProps;
+    Events events;
+    DynamicVector<Deck> modifierDeck;
+    Tuning tuning;
+    MessageLimits messageLimits;
+    Runspec runspec;
+    Schedule::VFPProdMap vfpProdTables;
+    Schedule::VFPInjMap vfpInjTables;
+    DynamicState<std::shared_ptr<WellTestConfig>> wellTestConfig;
+    DynamicState<std::shared_ptr<WListManager>> wListManager;
+    DynamicState<std::shared_ptr<UDQConfig>> udqConfig;
+    DynamicState<std::shared_ptr<UDQActive>> udqActive;
+    DynamicState<std::shared_ptr<GuideRateConfig>> guideRateConfig;
+    DynamicState<std::shared_ptr<GConSale>> gconSale;
+    DynamicState<std::shared_ptr<GConSump>> gconSump;
+    DynamicState<Well::ProducerCMode> globalWhistCtlMode;
+    DynamicState<std::shared_ptr<Action::Actions>> actions;
+    RFTConfig rftConfig;
+    DynamicState<int> nupCol;
+    std::map<std::string,Events> wellGroupEvents;
+
+    unpack(timeMap, buffer, position, comm);
+    unpack(staticWells, buffer, position, comm);
+    unpack(groups, buffer, position, comm);
+    unpack(oilVapProps, buffer, position, comm);
+    unpack(events, buffer, position, comm);
+    unpack(modifierDeck, buffer, position, comm);
+    unpack(tuning, buffer, position, comm);
+    unpack(messageLimits, buffer, position, comm);
+    unpack(runspec, buffer, position, comm);
+    unpack(vfpProdTables, buffer, position, comm);
+    unpack(vfpInjTables, buffer, position, comm);
+    unpack(wellTestConfig, buffer, position, comm);
+    unpack(wListManager, buffer, position, comm);
+    unpack(udqConfig, buffer, position, comm);
+    unpack(udqActive, buffer, position, comm);
+    unpack(guideRateConfig, buffer, position, comm);
+    unpack(gconSale, buffer, position, comm);
+    unpack(gconSump, buffer, position, comm);
+    unpack(globalWhistCtlMode, buffer, position, comm);
+    unpack(actions, buffer, position, comm);
+    unpack(rftConfig, buffer, position, comm);
+    unpack(nupCol, buffer, position, comm);
+    unpack(wellGroupEvents, buffer, position, comm);
+    data = Schedule(timeMap, staticWells, groups, oilVapProps, events,
+                    modifierDeck, tuning, messageLimits, runspec,
+                    vfpProdTables, vfpInjTables, wellTestConfig,
+                    wListManager, udqConfig, udqActive, guideRateConfig,
+                    gconSale, gconSump, globalWhistCtlMode, actions,
+                    rftConfig, nupCol, wellGroupEvents);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

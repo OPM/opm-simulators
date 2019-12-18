@@ -52,6 +52,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
@@ -460,8 +461,6 @@ Opm::Action::ActionX getActionX()
                                                   true, false)},
                                 ast, {getCondition()}, 4, 5);
 }
-
-
 #endif
 
 
@@ -2223,6 +2222,115 @@ BOOST_AUTO_TEST_CASE(Actions)
 {
 #ifdef HAVE_MPI
     Opm::Action::Actions val1({getActionX()});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Schedule)
+{
+#ifdef HAVE_MPI
+    Opm::UnitSystem unitSystem;
+    Opm::Schedule::WellMap wells;
+    wells.insert({"test", {{std::make_shared<Opm::Well>(getFullWell())},1}});
+    Opm::Schedule::GroupMap groups;
+    groups.insert({"test", {{std::make_shared<Opm::Group>("test1", 1, 2, 3.0, unitSystem,
+                                                          Opm::Group::GroupType::PRODUCTION,
+                                                          4.0, true, 5, "test2",
+                                                          Opm::IOrderSet<std::string>({"test3", "test4"}, {"test3","test4"}),
+                                                          Opm::IOrderSet<std::string>({"test5", "test6"}, {"test5","test6"}),
+                                                          Opm::Group::GroupInjectionProperties(),
+                                                          Opm::Group::GroupProductionProperties())},1}});
+    using VapType = Opm::OilVaporizationProperties::OilVaporization;
+    Opm::DynamicState<Opm::OilVaporizationProperties> oilvap{{Opm::OilVaporizationProperties(VapType::VAPPARS,
+                                                                                   {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0},
+                                                                                   {false, true}, {7.0, 8.0})},1};
+    Opm::Events events(Opm::DynamicVector<uint64_t>({1,2,3,4,5}));
+    std::unique_ptr<Opm::UnitSystem> unitSys(new Opm::UnitSystem);
+    Opm::Deck sdeck({Opm::DeckKeyword("test", {"test",1},
+                                     {getDeckRecord(), getDeckRecord()}, true, false)},
+                   Opm::UnitSystem(), unitSys.get(),
+                   "test2", "test3", 2);
+    Opm::DynamicVector<Opm::Deck> modifierDeck({sdeck});
+    std::vector<Opm::MLimits> limits{Opm::MLimits{1,2,3,4,5,6,7,8,9,10,11,12}};
+    Opm::MessageLimits messageLimits(Opm::DynamicState<Opm::MLimits>(limits,2));
+    Opm::Runspec runspec(Opm::Phases(true, true, true, false, true, false, true, false),
+                         Opm::Tabdims(1,2,3,4,5,6),
+                         Opm::EndpointScaling(std::bitset<4>(13)),
+                         Opm::Welldims(1,2,3,4),
+                         Opm::WellSegmentDims(1,2,3),
+                         Opm::UDQParams(true, 1, 2.0, 3.0, 4.0),
+                         Opm::EclHysterConfig(true, 1, 2),
+                         Opm::Actdims(1,2,3,4));
+    Opm::Schedule::VFPProdMap vfpProd {{1, {{std::make_shared<Opm::VFPProdTable>(getVFPProdTable())},1}}};
+    Opm::Schedule::VFPInjMap vfpIn{{1, {{std::make_shared<Opm::VFPInjTable>(getVFPInjTable())},1}}};
+    Opm::WellTestConfig::WTESTWell tw{"test", Opm::WellTestConfig::ECONOMIC,
+                                         1.0, 2, 3.0, 4};
+    Opm::WellTestConfig wtc({tw, tw, tw});
+
+    Opm::WList wl({"test1", "test2", "test3"});
+    std::map<std::string,Opm::WList> data{{"test", wl}, {"test2", wl}};
+    Opm::WListManager wlm(data);
+
+    Opm::UDQActive udqa({Opm::UDQActive::InputRecord(1, "test1", "test2",
+                                                     Opm::UDAControl::WCONPROD_ORAT)},
+                        {Opm::UDQActive::Record("test1", 1, 2, "test2",
+                                                  Opm::UDAControl::WCONPROD_ORAT)},
+                        {{"test1", 1}}, {{"test2", 2}});
+
+    auto model = std::make_shared<Opm::GuideRateModel>(getGuideRateModel());
+    Opm::GuideRateConfig grc(model,
+                             {{"test1", getGuideRateConfigWell()}},
+                             {{"test2", getGuideRateConfigGroup()}});
+
+    Opm::GConSale::GCONSALEGroup group{Opm::UDAValue(1.0),
+                                       Opm::UDAValue(2.0),
+                                       Opm::UDAValue(3.0),
+                                       Opm::GConSale::MaxProcedure::PLUG,
+                                       4.0, Opm::UnitSystem()};
+    Opm::GConSale gcs({{"test1", group}, {"test2", group}});
+
+    Opm::GConSump::GCONSUMPGroup grp{Opm::UDAValue(1.0),
+                                     Opm::UDAValue(2.0),
+                                     "test",
+                                     3.0, Opm::UnitSystem()};
+    Opm::GConSump gcm({{"test1", grp}, {"test2", grp}});
+
+    Opm::Action::Actions acnts({getActionX()});
+
+    Opm::RFTConfig rftc(getTimeMap(),
+                        {true, 1},
+                        {"test1", "test2"},
+                        {{"test3", 2}},
+                        {{"test1", {{{Opm::RFTConfig::RFT::TIMESTEP, 3}}, 4}}},
+                        {{"test2", {{{Opm::RFTConfig::PLT::REPT, 5}}, 6}}});
+
+    Opm::Schedule val1(getTimeMap(),
+                       wells,
+                       groups,
+                       oilvap,
+                       events,
+                       modifierDeck,
+                       getTuning(),
+                       messageLimits,
+                       runspec,
+                       vfpProd,
+                       vfpIn,
+                       {{std::make_shared<Opm::WellTestConfig>(wtc)}, 1},
+                       {{std::make_shared<Opm::WListManager>(wlm)}, 1},
+                       {{std::make_shared<Opm::UDQConfig>(getUDQConfig())}, 1},
+                       {{std::make_shared<Opm::UDQActive>(udqa)}, 1},
+                       {{std::make_shared<Opm::GuideRateConfig>(grc)}, 1},
+                       {{std::make_shared<Opm::GConSale>(gcs)}, 1},
+                       {{std::make_shared<Opm::GConSump>(gcm)}, 1},
+                       {{Opm::Well::ProducerCMode::CRAT}, 1},
+                       {{std::make_shared<Opm::Action::Actions>(acnts)}, 1},
+                       rftc,
+                       {std::vector<int>{1}, 1},
+                       {{"test", events}});
+
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

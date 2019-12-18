@@ -118,6 +118,7 @@ class RockTable;
 class Rock2dTable;
 class Rock2dtrTable;
 class Runspec;
+class Schedule;
 class Segment;
 class SimulationConfig;
 class SimpleTable;
@@ -680,13 +681,14 @@ ADD_PACK_PROTOTYPES(RockTable)
 ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(Runspec)
-ADD_PACK_PROTOTYPES(std::string)
+ADD_PACK_PROTOTYPES(Schedule)
 ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(SkprpolyTable)
 ADD_PACK_PROTOTYPES(SkprwatTable)
 ADD_PACK_PROTOTYPES(SpiralICD)
+ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)
