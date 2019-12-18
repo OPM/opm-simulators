@@ -35,6 +35,7 @@
 #include <dune/istl/scalarproducts.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/version.hh>
 namespace Dune
 {
 namespace Amg
@@ -227,9 +228,14 @@ struct ScalarType<Dune::SeqScalarProduct<X> >
 ComposeScalarTypeForSeqPrecond(Dune::SeqJac);
 ComposeScalarTypeForSeqPrecond(Dune::SeqSOR);
 ComposeScalarTypeForSeqPrecond(Dune::SeqSSOR);
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+ComposeScalarTypeForSeqPrecond(Dune::SeqILU);
+#else
+// Dune::SeqGS and Dune::SeqSOR are the same in DUNE 2.7
 ComposeScalarTypeForSeqPrecond(Dune::SeqGS);
 ComposeScalarTypeForSeqPrecond(Dune::SeqILU0);
 ComposeScalarTypeForSeqPrecond(Dune::SeqILUn);
+#endif
 
 #undef ComposeScalarTypeForSeqPrecond
 
