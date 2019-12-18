@@ -33,6 +33,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
@@ -1077,6 +1078,19 @@ std::size_t packSize(const SpiralICD& data,
            packSize(data.maxAbsoluteRate(), comm) +
            packSize(data.status(), comm) +
            packSize(data.scalingFactor(), comm);
+}
+
+std::size_t packSize(const Valve& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.conFlowCoefficient(), comm) +
+           packSize(data.conCrossArea(), comm) +
+           packSize(data.conMaxCrossArea(), comm) +
+           packSize(data.pipeAdditionalLength(), comm) +
+           packSize(data.pipeDiameter(), comm) +
+           packSize(data.pipeRoughness(), comm) +
+           packSize(data.pipeCrossArea(), comm) +
+           packSize(data.status(), comm);
 }
 
 ////// pack routines
@@ -2169,6 +2183,20 @@ void pack(const SpiralICD& data,
     pack(data.maxAbsoluteRate(), buffer, position, comm);
     pack(data.status(), buffer, position, comm);
     pack(data.scalingFactor(), buffer, position, comm);
+}
+
+void pack(const Valve& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.conFlowCoefficient(), buffer, position, comm);
+    pack(data.conCrossArea(), buffer, position, comm);
+    pack(data.conMaxCrossArea(), buffer, position, comm);
+    pack(data.pipeAdditionalLength(), buffer, position, comm);
+    pack(data.pipeDiameter(), buffer, position, comm);
+    pack(data.pipeRoughness(), buffer, position, comm);
+    pack(data.pipeCrossArea(), buffer, position, comm);
+    pack(data.status(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -3682,6 +3710,32 @@ void unpack(SpiralICD& data,
                      widthTransitionRegion, maxViscosityRatio,
                      methodFlowScaling, maxAbsoluteRate,
                      status, scalingFactor);
+}
+
+void unpack(Valve& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    double conFlowCoefficient;
+    double conCrossArea;
+    double conMaxCrossArea;
+    double pipeAdditionalLength;
+    double pipeDiameter;
+    double pipeRoughness;
+    double pipeCrossArea;
+    Valve::Status status;
+
+    unpack(conFlowCoefficient, buffer, position, comm);
+    unpack(conCrossArea, buffer, position, comm);
+    unpack(conMaxCrossArea, buffer, position, comm);
+    unpack(pipeAdditionalLength, buffer, position, comm);
+    unpack(pipeDiameter, buffer, position, comm);
+    unpack(pipeRoughness, buffer, position, comm);
+    unpack(pipeCrossArea, buffer, position, comm);
+    unpack(status, buffer, position, comm);
+    data = Valve(conFlowCoefficient, conCrossArea, conMaxCrossArea,
+                 pipeAdditionalLength, pipeDiameter, pipeRoughness,
+                 pipeCrossArea, status);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
