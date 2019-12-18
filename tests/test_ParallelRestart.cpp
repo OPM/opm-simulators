@@ -39,6 +39,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
@@ -444,6 +445,22 @@ Opm::Action::Condition getCondition()
     val1.cmp_string = "test";
     return val1;
 }
+
+
+Opm::Action::ActionX getActionX()
+{
+    std::shared_ptr<Opm::Action::ASTNode> node;
+    node.reset(new Opm::Action::ASTNode(number, FuncType::field,
+                                        "test1", {"test2"}, 1.0, {}));
+    Opm::Action::AST ast(node);
+    return Opm::Action::ActionX("test", 1, 2.0, 3,
+                                {Opm::DeckKeyword("test", {"test",1},
+                                                  {getDeckRecord(), getDeckRecord()},
+                                                  true, false)},
+                                ast, {getCondition()}, 4, 5);
+}
+
+
 #endif
 
 
@@ -2183,6 +2200,17 @@ BOOST_AUTO_TEST_CASE(Condition)
 {
 #ifdef HAVE_MPI
     Opm::Action::Condition val1 = getCondition();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(ActionX)
+{
+#ifdef HAVE_MPI
+    Opm::Action::ActionX val1 = getActionX();
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

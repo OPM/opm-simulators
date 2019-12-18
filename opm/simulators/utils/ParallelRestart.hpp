@@ -65,6 +65,7 @@ namespace Opm
 class Actdims;
 
 namespace Action {
+    class ActionX;
     class AST;
     class ASTNode;
     class Condition;
@@ -606,6 +607,7 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
               Dune::MPIHelper::MPICommunicator comm);
 
 ADD_PACK_PROTOTYPES(Actdims)
+ADD_PACK_PROTOTYPES(Action::ActionX)
 ADD_PACK_PROTOTYPES(Action::AST)
 ADD_PACK_PROTOTYPES(Action::ASTNode)
 ADD_PACK_PROTOTYPES(Action::Condition)
