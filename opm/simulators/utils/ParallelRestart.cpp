@@ -34,6 +34,8 @@
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
@@ -200,14 +202,18 @@ std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelpe
     return totalSize;
 }
 
+HANDLE_AS_POD(Actdims)
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
+HANDLE_AS_POD(EclHysterConfig)
 HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
 HANDLE_AS_POD(RestartSchedule)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeMap::StepData)
+HANDLE_AS_POD(Welldims)
+HANDLE_AS_POD(WellSegmentDims)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -390,6 +396,52 @@ std::size_t packSize(const IOConfig& data, Dune::MPIHelper::MPICommunicator comm
 std::size_t packSize(const Phases& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getBits(), comm);
+}
+
+std::size_t packSize(const EndpointScaling& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getBits(), comm);
+}
+
+std::size_t packSize(const UDQParams& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.reseed(), comm) +
+           packSize(data.rand_seed(), comm) +
+           packSize(data.range(), comm) +
+           packSize(data.undefinedValue(), comm) +
+           packSize(data.cmpEpsilon(), comm);
+}
+
+std::size_t packSize(const Runspec& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.phases(), comm) +
+           packSize(data.tabdims(), comm) +
+           packSize(data.endpointScaling(), comm) +
+           packSize(data.wellDimensions(), comm) +
+           packSize(data.wellSegmentDimensions(), comm) +
+           packSize(data.udqParams(), comm) +
+           packSize(data.hysterPar(), comm) +
+           packSize(data.actdims(), comm);
+}
+
+std::size_t packSize(const PvtxTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getOuterColumnSchema(), comm) +
+           packSize(data.getOuterColumn(), comm) +
+           packSize(data.getUnderSaturatedSchema(), comm) +
+           packSize(data.getSaturatedSchema(), comm) +
+           packSize(data.getUnderSaturatedTables(), comm) +
+           packSize(data.getSaturatedTable(), comm);
+}
+
+std::size_t packSize(const PvtgTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const PvtxTable&>(data), comm);
+}
+
+std::size_t packSize(const PvtoTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const PvtxTable&>(data), comm);
 }
 
 ////// pack routines
@@ -771,6 +823,58 @@ void pack(const Phases& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getBits(), buffer, position, comm);
+}
+
+void pack(const EndpointScaling& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getBits(), buffer, position, comm);
+}
+
+void pack(const UDQParams& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.reseed(), buffer, position, comm);
+    pack(data.rand_seed(), buffer, position, comm);
+    pack(data.range(), buffer, position, comm);
+    pack(data.undefinedValue(), buffer, position, comm);
+    pack(data.cmpEpsilon(), buffer, position, comm);
+}
+
+void pack(const Runspec& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.phases(), buffer, position, comm);
+    pack(data.tabdims(), buffer, position, comm);
+    pack(data.endpointScaling(), buffer, position, comm);
+    pack(data.wellDimensions(), buffer, position, comm);
+    pack(data.wellSegmentDimensions(), buffer, position, comm);
+    pack(data.udqParams(), buffer, position, comm);
+    pack(data.hysterPar(), buffer, position, comm);
+    pack(data.actdims(), buffer, position, comm);
+}
+
+void pack(const PvtxTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getOuterColumnSchema(), buffer, position, comm);
+    pack(data.getOuterColumn(), buffer, position, comm);
+    pack(data.getUnderSaturatedSchema(), buffer, position, comm);
+    pack(data.getSaturatedSchema(), buffer, position, comm);
+    pack(data.getUnderSaturatedTables(), buffer, position, comm);
+    pack(data.getSaturatedTable(), buffer, position, comm);
+}
+
+void pack(const PvtgTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const PvtxTable&>(data), buffer, position, comm);
+}
+
+void pack(const PvtoTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const PvtxTable&>(data), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1239,6 +1343,84 @@ void unpack(Phases& data, std::vector<char>& buffer, int& position,
     unpack(bits, buffer, position, comm);
     data = Phases(std::bitset<NUM_PHASES_IN_ENUM>(bits));
 }
+
+void unpack(EndpointScaling& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unsigned long bits;
+    unpack(bits, buffer, position, comm);
+    data = EndpointScaling(std::bitset<4>(bits));
+}
+
+void unpack(UDQParams& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    bool reseed;
+    int rand_seed;
+    double range, undefVal, cmp_eps;
+
+    unpack(reseed, buffer, position, comm);
+    unpack(rand_seed, buffer, position, comm);
+    unpack(range, buffer, position, comm);
+    unpack(undefVal, buffer, position, comm);
+    unpack(cmp_eps, buffer, position, comm);
+    data = UDQParams(reseed, rand_seed, range, undefVal, cmp_eps);
+}
+
+void unpack(Runspec& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    Phases phases;
+    Tabdims tabdims;
+    EndpointScaling endScale;
+    Welldims wellDims;
+    WellSegmentDims wsegDims;
+    UDQParams udqparams;
+    EclHysterConfig hystPar;
+    Actdims actdims;
+    unpack(phases, buffer, position, comm);
+    unpack(tabdims, buffer, position, comm);
+    unpack(endScale, buffer, position, comm);
+    unpack(wellDims, buffer, position, comm);
+    unpack(wsegDims, buffer, position, comm);
+    unpack(udqparams, buffer, position, comm);
+    unpack(hystPar, buffer, position, comm);
+    unpack(actdims, buffer, position, comm);
+    data = Runspec(phases, tabdims, endScale, wellDims, wsegDims,
+                   udqparams, hystPar, actdims);
+}
+
+template<class PVTType>
+void unpack_pvt(PVTType& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    ColumnSchema outer_schema;
+    TableColumn outer_column;
+    TableSchema undersat_schema, sat_schema;
+    std::vector<SimpleTable> undersat_tables;
+    SimpleTable sat_table;
+    unpack(outer_schema, buffer, position, comm);
+    unpack(outer_column, buffer, position, comm);
+    unpack(undersat_schema, buffer, position, comm);
+    unpack(sat_schema, buffer, position, comm);
+    unpack(undersat_tables, buffer, position, comm);
+    unpack(sat_table, buffer, position, comm);
+    data = PVTType(outer_schema, outer_column, undersat_schema, sat_schema,
+                   undersat_tables, sat_table);
+}
+
+void unpack(PvtgTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack_pvt(data, buffer, position, comm);
+}
+
+void unpack(PvtoTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack_pvt(data, buffer, position, comm);
+}
+
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,

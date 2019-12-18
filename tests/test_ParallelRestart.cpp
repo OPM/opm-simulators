@@ -37,6 +37,8 @@
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
@@ -168,15 +170,38 @@ Opm::FoamData getFoamData()
     return Opm::FoamData(1.0, 2.0, 3.0, true, 4.0);
 }
 
-#endif
-
-
 Opm::TimeMap getTimeMap()
 {
     return Opm::TimeMap({123},
                         {{1, Opm::TimeStampUTC(123)}},
                         {{2, Opm::TimeStampUTC(456)}});
 }
+
+Opm::PvtgTable getPvtgTable()
+{
+    return Opm::PvtgTable(Opm::ColumnSchema("test1", Opm::Table::INCREASING,
+                                            Opm::Table::DEFAULT_LINEAR),
+                          getTableColumn(),
+                          getTableSchema(),
+                          getTableSchema(),
+                          {getSimpleTable()},
+                          getSimpleTable());
+}
+
+
+Opm::PvtoTable getPvtoTable()
+{
+    return Opm::PvtoTable(Opm::ColumnSchema("test1", Opm::Table::INCREASING,
+                                            Opm::Table::DEFAULT_LINEAR),
+                          getTableColumn(),
+                          getTableSchema(),
+                          getTableSchema(),
+                          {getSimpleTable()},
+                          getSimpleTable());
+}
+
+
+#endif
 
 
 }
@@ -564,6 +589,113 @@ BOOST_AUTO_TEST_CASE(Tabdims)
 {
 #if HAVE_MPI
     Opm::Tabdims val1(1,2,3,4,5,6);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(EndpointScaling)
+{
+#if HAVE_MPI
+    Opm::EndpointScaling val1(std::bitset<4>(13));
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Welldims)
+{
+#if HAVE_MPI
+    Opm::Welldims val1(1,2,3,4);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellSegmentDims)
+{
+#if HAVE_MPI
+    Opm::WellSegmentDims val1(1,2,3);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQParams)
+{
+#if HAVE_MPI
+    Opm::UDQParams val1(true, 1, 2.0, 3.0, 4.0);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(EclHysterConfig)
+{
+#if HAVE_MPI
+    Opm::EclHysterConfig val1(true, 1, 2);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Actdims)
+{
+#if HAVE_MPI
+    Opm::Actdims val1(1,2,3,4);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Runspec)
+{
+#if HAVE_MPI
+    Opm::Runspec val1(Opm::Phases(true, true, true, false, true, false, true, false),
+                      Opm::Tabdims(1,2,3,4,5,6),
+                      Opm::EndpointScaling(std::bitset<4>(13)),
+                      Opm::Welldims(1,2,3,4),
+                      Opm::WellSegmentDims(1,2,3),
+                      Opm::UDQParams(true, 1, 2.0, 3.0, 4.0),
+                      Opm::EclHysterConfig(true, 1, 2),
+                      Opm::Actdims(1,2,3,4));
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(PvtgTable)
+{
+#if HAVE_MPI
+    Opm::PvtgTable val1 = getPvtgTable();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(PvtoTable)
+{
+#if HAVE_MPI
+    Opm::PvtoTable val1 = getPvtoTable();
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
