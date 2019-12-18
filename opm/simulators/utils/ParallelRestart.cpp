@@ -34,6 +34,8 @@
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
@@ -206,12 +208,18 @@ HANDLE_AS_POD(Actdims)
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
+HANDLE_AS_POD(DENSITYRecord)
 HANDLE_AS_POD(EclHysterConfig)
 HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
+HANDLE_AS_POD(JFunc)
 HANDLE_AS_POD(RestartSchedule)
+HANDLE_AS_POD(PVTWRecord)
+HANDLE_AS_POD(PVCDORecord)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeMap::StepData)
+HANDLE_AS_POD(VISCREFRecord)
+HANDLE_AS_POD(WATDENTRecord)
 HANDLE_AS_POD(Welldims)
 HANDLE_AS_POD(WellSegmentDims)
 
@@ -442,6 +450,31 @@ std::size_t packSize(const PvtgTable& data, Dune::MPIHelper::MPICommunicator com
 std::size_t packSize(const PvtoTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const PvtxTable&>(data), comm);
+}
+
+std::size_t packSize(const PvtwTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<PVTWRecord>&>(data), comm);
+}
+
+std::size_t packSize(const PvcdoTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<PVCDORecord>&>(data), comm);
+}
+
+std::size_t packSize(const DensityTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<DENSITYRecord>&>(data), comm);
+}
+
+std::size_t packSize(const ViscrefTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<VISCREFRecord>&>(data), comm);
+}
+
+std::size_t packSize(const WatdentTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<WATDENTRecord>&>(data), comm);
 }
 
 ////// pack routines
@@ -875,6 +908,36 @@ void pack(const PvtoTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const PvtxTable&>(data), buffer, position, comm);
+}
+
+void pack(const PvtwTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<PVTWRecord>&>(data), buffer, position, comm);
+}
+
+void pack(const PvcdoTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<PVCDORecord>&>(data), buffer, position, comm);
+}
+
+void pack(const DensityTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<DENSITYRecord>&>(data), buffer, position, comm);
+}
+
+void pack(const ViscrefTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<VISCREFRecord>&>(data), buffer, position, comm);
+}
+
+void pack(const WatdentTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<WATDENTRecord>&>(data), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1421,6 +1484,45 @@ void unpack(PvtoTable& data, std::vector<char>& buffer, int& position,
     unpack_pvt(data, buffer, position, comm);
 }
 
+void unpack(PvtwTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<PVTWRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = PvtwTable(pdata);
+}
+
+void unpack(PvcdoTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<PVCDORecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = PvcdoTable(pdata);
+}
+
+void unpack(DensityTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<DENSITYRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = DensityTable(pdata);
+}
+
+void unpack(ViscrefTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<VISCREFRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = ViscrefTable(pdata);
+}
+
+void unpack(WatdentTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<WATDENTRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = WatdentTable(pdata);
+}
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,

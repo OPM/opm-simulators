@@ -41,6 +41,8 @@ namespace Opm
 
 class Actdims;
 class ColumnSchema;
+class DENSITYRecord;
+class DensityTable;
 class EclHysterConfig;
 class EDITNNC;
 class EndpointScaling;
@@ -50,11 +52,16 @@ class FoamConfig;
 class FoamData;
 class InitConfig;
 class IOConfig;
+class JFunc;
 class NNC;
 struct NNCdata;
 class Phases;
+class PVCDORecord;
+class PvcdoTable;
 class PvtgTable;
 class PvtoTable;
+class PVTWRecord;
+class PvtwTable;
 class RestartConfig;
 class RestartSchedule;
 class Rock2dTable;
@@ -68,6 +75,10 @@ class TableContainer;
 class TableSchema;
 class ThresholdPressure;
 class UDQParams;
+class VISCREFRecord;
+class ViscrefTable;
+class WATDENTRecord;
+class WatdentTable;
 class Welldims;
 class WellSegmentDims;
 
@@ -254,6 +265,8 @@ ADD_PACK_PROTOTYPES(data::Segment)
 ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
+ADD_PACK_PROTOTYPES(DENSITYRecord)
+ADD_PACK_PROTOTYPES(DensityTable)
 ADD_PACK_PROTOTYPES(EDITNNC)
 ADD_PACK_PROTOTYPES(EndpointScaling)
 ADD_PACK_PROTOTYPES(Equil)
@@ -263,11 +276,16 @@ ADD_PACK_PROTOTYPES(FoamData)
 ADD_PACK_PROTOTYPES(EclHysterConfig)
 ADD_PACK_PROTOTYPES(InitConfig)
 ADD_PACK_PROTOTYPES(IOConfig)
+ADD_PACK_PROTOTYPES(JFunc)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(Phases)
+ADD_PACK_PROTOTYPES(PVCDORecord)
+ADD_PACK_PROTOTYPES(PvcdoTable)
 ADD_PACK_PROTOTYPES(PvtgTable)
 ADD_PACK_PROTOTYPES(PvtoTable)
+ADD_PACK_PROTOTYPES(PVTWRecord)
+ADD_PACK_PROTOTYPES(PvtwTable)
 ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartSchedule)
@@ -286,6 +304,10 @@ ADD_PACK_PROTOTYPES(ThresholdPressure)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeMap::StepData)
 ADD_PACK_PROTOTYPES(UDQParams)
+ADD_PACK_PROTOTYPES(VISCREFRecord)
+ADD_PACK_PROTOTYPES(ViscrefTable)
+ADD_PACK_PROTOTYPES(WATDENTRecord)
+ADD_PACK_PROTOTYPES(WatdentTable)
 ADD_PACK_PROTOTYPES(Welldims)
 ADD_PACK_PROTOTYPES(WellSegmentDims)
 

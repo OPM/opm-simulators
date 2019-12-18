@@ -37,6 +37,8 @@
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
@@ -696,6 +698,128 @@ BOOST_AUTO_TEST_CASE(PvtoTable)
 {
 #if HAVE_MPI
     Opm::PvtoTable val1 = getPvtoTable();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(JFunc)
+{
+#if HAVE_MPI
+    Opm::JFunc val1(Opm::JFunc::Flag::BOTH, 1.0, 2.0,
+                    3.0, 4.0, Opm::JFunc::Direction::XY);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(PVTWRecord)
+{
+#if HAVE_MPI
+    Opm::PVTWRecord val1{1.0, 2.0, 3.0, 4.0, 5.0};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(PvtwTable)
+{
+#if HAVE_MPI
+    Opm::PvtwTable val1({Opm::PVTWRecord{1.0, 2.0, 3.0, 4.0, 5.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(PVCDORecord)
+{
+#if HAVE_MPI
+    Opm::PVTWRecord val1{1.0, 2.0, 3.0, 4.0, 5.0};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(PvcdoTable)
+{
+#if HAVE_MPI
+    Opm::PvcdoTable val1({Opm::PVCDORecord{1.0, 2.0, 3.0, 4.0, 5.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(DENSITYRecord)
+{
+#if HAVE_MPI
+    Opm::DENSITYRecord val1{1.0, 2.0, 3.0};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(DensityTable)
+{
+#if HAVE_MPI
+    Opm::DensityTable val1({Opm::DENSITYRecord{1.0, 2.0, 3.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(VISCREFRecord)
+{
+#if HAVE_MPI
+    Opm::VISCREFRecord val1{1.0, 2.0};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(ViscrefTable)
+{
+#if HAVE_MPI
+    Opm::ViscrefTable val1({Opm::VISCREFRecord{1.0, 2.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WATDENTRecord)
+{
+#if HAVE_MPI
+    Opm::WATDENTRecord val1{1.0, 2.0, 3.0};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WatdentTable)
+{
+#if HAVE_MPI
+    Opm::WatdentTable val1({Opm::WATDENTRecord{1.0, 2.0, 3.0}});
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
