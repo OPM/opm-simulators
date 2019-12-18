@@ -392,7 +392,10 @@ namespace Opm {
             guideRate_->compute(well->name(), reportStepIdx, simulationTime, oilpot, gaspot, waterpot);
         }
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-        wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, guideRate_.get(), well_state_);
+        std::vector<double> pot(numPhases(), 0.0);
+        wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ false, well_state_, guideRate_.get(), pot);
+        std::vector<double> potInj(numPhases(), 0.0);
+        wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ true, well_state_, guideRate_.get(), potInj);
 
         // compute wsolvent fraction for REIN wells
         updateWsolvent(fieldGroup, schedule(), reportStepIdx,  well_state_);
@@ -1204,6 +1207,12 @@ namespace Opm {
             std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
             wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, well_state_, groupTargetReductionInj);
         }
+
+        const double simulationTime = ebosSimulator_.time();
+        std::vector<double> pot(numPhases(), 0.0);
+        wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ false, well_state_, guideRate_.get(), pot);
+        std::vector<double> potInj(numPhases(), 0.0);
+        wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ true, well_state_, guideRate_.get(), potInj);
     }
 
 
