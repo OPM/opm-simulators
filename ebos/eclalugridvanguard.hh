@@ -180,7 +180,7 @@ protected:
         // create the EQUIL grid
         /////
         equilGrid_ = new EquilGrid();
-        equilGrid_->processEclipseFormat(this->eclState().getInputGrid(),
+        equilGrid_->processEclipseFormat(&(this->eclState().getInputGrid()),
                                          /*isPeriodic=*/false,
                                          /*flipNormals=*/false,
                                          /*clipZ=*/false,
