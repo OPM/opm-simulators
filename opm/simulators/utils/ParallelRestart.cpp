@@ -32,6 +32,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
@@ -1614,6 +1615,12 @@ std::size_t packSize(const Action::ActionX& data,
            packSize(data.conditions(), comm) +
            packSize(data.getRunCount(), comm) +
            packSize(data.getLastRun(), comm);
+}
+
+std::size_t packSize(const Action::Actions& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getActions(), comm);
 }
 
 ////// pack routines
@@ -3258,6 +3265,13 @@ void pack(const Action::ActionX& data,
     pack(data.conditions(), buffer, position, comm);
     pack(data.getRunCount(), buffer, position, comm);
     pack(data.getLastRun(), buffer, position, comm);
+}
+
+void pack(const Action::Actions& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getActions(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -5594,6 +5608,14 @@ void unpack(Action::ActionX& data, std::vector<char>& buffer, int& position,
     unpack(last_run, buffer, position, comm);
     data = Action::ActionX(name, max_run, min_wait, start_time, keywords,
                            condition, conditions, run_count, last_run);
+}
+
+void unpack(Action::Actions& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Action::ActionX> actions;
+    unpack(actions, buffer, position, comm);
+    data = Action::Actions(actions);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
