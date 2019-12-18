@@ -17,12 +17,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef CUDA_HEADER_H
-#define CUDA_HEADER_H
+#ifndef CUDA_HEADER_HEADER_INCLUDED
+#define CUDA_HEADER_HEADER_INCLUDED
 
 #include <iostream>
-
-typedef double Block[9];
 
 #define cudaCheckLastError(msg)    __cudaCheckError( __FILE__, __LINE__, #msg )
 

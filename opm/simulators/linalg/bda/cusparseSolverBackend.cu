@@ -32,7 +32,7 @@
 
 #include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
-#include <opm/simulators/linalg/bda/cuda_header.h>
+#include <opm/simulators/linalg/bda/cuda_header.hpp>
 
 #include "cublas_v2.h"
 #include "cusparse_v2.h"

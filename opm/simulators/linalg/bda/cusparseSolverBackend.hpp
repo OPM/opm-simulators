@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_cuSPARSESOLVER_BACKEND_HEADER_INCLUDED
-#define OPM_cuSPARSESOLVER_BACKEND_HEADER_INCLUDED
+#ifndef OPM_CUSPARSESOLVER_BACKEND_HEADER_INCLUDED
+#define OPM_CUSPARSESOLVER_BACKEND_HEADER_INCLUDED
 
 
 #include "cublas_v2.h"
