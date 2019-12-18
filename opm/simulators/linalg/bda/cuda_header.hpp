@@ -25,12 +25,12 @@
 #define cudaCheckLastError(msg)    __cudaCheckError( __FILE__, __LINE__, #msg )
 
 inline void __cudaCheckError(const char *file, const int line, const char *msg){
-	cudaError err = cudaGetLastError();
-	if (cudaSuccess != err){
-		std::cerr << "cudaCheckError() failed at " << file << ":" << line << ": " << cudaGetErrorString(err) << std::endl;
-		std::cerr << "BDA error message: " << msg << std::endl;
-		exit(1);
-	}
+    cudaError err = cudaGetLastError();
+    if (cudaSuccess != err){
+        std::cerr << "cudaCheckError() failed at " << file << ":" << line << ": " << cudaGetErrorString(err) << std::endl;
+        std::cerr << "BDA error message: " << msg << std::endl;
+        exit(1);
+    }
 }
 
 #endif

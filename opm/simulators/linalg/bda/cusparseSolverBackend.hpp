@@ -91,10 +91,10 @@ private:
 public:
 
     enum class cusparseSolverStatus {
-      CUSPARSE_SOLVER_SUCCESS,
-      CUSPARSE_SOLVER_ANALYSIS_FAILED,
-      CUSPARSE_SOLVER_CREATE_PRECONDITIONER_FAILED,
-      CUSPARSE_SOLVER_UNKNOWN_ERROR
+        CUSPARSE_SOLVER_SUCCESS,
+        CUSPARSE_SOLVER_ANALYSIS_FAILED,
+        CUSPARSE_SOLVER_CREATE_PRECONDITIONER_FAILED,
+        CUSPARSE_SOLVER_UNKNOWN_ERROR
     };
 
     cusparseSolverBackend(int linear_solver_verbosity, int maxit, double tolerance);

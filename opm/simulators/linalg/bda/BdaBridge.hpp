@@ -40,20 +40,18 @@ class BdaBridge
 {
 private:
 #if HAVE_CUDA
-	std::unique_ptr<cusparseSolverBackend> backend;
+    std::unique_ptr<cusparseSolverBackend> backend;
 #endif
-	bool use_gpu;
+    bool use_gpu;
 
 public:
-	BdaBridge(bool use_gpu, int linear_solver_verbosity, int maxit, double tolerance);
+    BdaBridge(bool use_gpu, int linear_solver_verbosity, int maxit, double tolerance);
 
-	~BdaBridge();
+    template <class BridgeMatrix, class BridgeVector>
+    void solve_system(BridgeMatrix *mat, BridgeVector &b, InverseOperatorResult &result);
 
-	template <class BridgeMatrix, class BridgeVector>
-	void solve_system(BridgeMatrix *mat, BridgeVector &b, InverseOperatorResult &result);
-
-	template <class BridgeVector>
-	void get_result(BridgeVector &x);
+    template <class BridgeVector>
+    void get_result(BridgeVector &x);
 
 }; // end class BdaBridge
 
