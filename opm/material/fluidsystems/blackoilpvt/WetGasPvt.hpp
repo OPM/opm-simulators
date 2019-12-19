@@ -47,15 +47,40 @@ namespace Opm {
 template <class Scalar>
 class WetGasPvt
 {
-    typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
+    typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
+    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+
     WetGasPvt()
     {
         vapPar1_ = 0.0;
     }
+
+    WetGasPvt(const std::vector<Scalar>& gasReferenceDensity,
+              const std::vector<Scalar>& oilReferenceDensity,
+              const std::vector<TabulatedTwoDFunction>& inverseGasB,
+              const std::vector<TabulatedOneDFunction>& inverseSaturatedGasB,
+              const std::vector<TabulatedTwoDFunction>& gasMu,
+              const std::vector<TabulatedTwoDFunction>& inverseGasBMu,
+              const std::vector<TabulatedOneDFunction>& inverseSaturatedGasBMu,
+              const std::vector<TabulatedOneDFunction>& saturatedOilVaporizationFactorTable,
+              const std::vector<TabulatedOneDFunction>& saturationPressure,
+              Scalar vapPar1)
+        : gasReferenceDensity_(gasReferenceDensity)
+        , oilReferenceDensity_(oilReferenceDensity)
+        , inverseGasB_(inverseGasB)
+        , inverseSaturatedGasB_(inverseSaturatedGasB)
+        , gasMu_(gasMu)
+        , inverseGasBMu_(inverseGasBMu)
+        , inverseSaturatedGasBMu_(inverseSaturatedGasBMu)
+        , saturatedOilVaporizationFactorTable_(saturatedOilVaporizationFactorTable)
+        , saturationPressure_(saturationPressure)
+        , vapPar1_(vapPar1)
+    {
+    }
+
 
 #if HAVE_ECL_INPUT
     /*!
@@ -601,6 +626,60 @@ public:
         OpmLog::debug("Wet gas saturation pressure", errlog.str());
 #endif
         throw NumericalIssue(errlog.str());
+    }
+
+    const std::vector<Scalar>& gasReferenceDensity() const {
+        return gasReferenceDensity_;
+    }
+
+    const std::vector<Scalar>& oilReferenceDensity() const {
+        return oilReferenceDensity_;
+    }
+
+    const std::vector<TabulatedTwoDFunction>& inverseGasB() const {
+        return inverseGasB_;
+    }
+
+    const std::vector<TabulatedOneDFunction>& inverseSaturatedGasB() const {
+        return inverseSaturatedGasB_;
+    }
+
+    const std::vector<TabulatedTwoDFunction>& gasMu() const {
+        return gasMu_;
+    }
+
+    const std::vector<TabulatedTwoDFunction>& inverseGasBMu() const {
+        return inverseGasBMu_;
+    }
+
+    const std::vector<TabulatedOneDFunction>& inverseSaturatedGasBMu() const {
+        return inverseSaturatedGasBMu_;
+    }
+
+    const std::vector<TabulatedOneDFunction>& saturatedOilVaporizationFactorTable() const {
+        return saturatedOilVaporizationFactorTable_;
+    }
+
+    const std::vector<TabulatedOneDFunction>& saturationPressure() const {
+        return saturationPressure_;
+    }
+
+    Scalar vapPar1() const {
+        return vapPar1_;
+    }
+
+    bool operator==(const WetGasPvt<Scalar>& data) const
+    {
+        return this->gasReferenceDensity() == data.gasReferenceDensity() &&
+               this->oilReferenceDensity() == data.oilReferenceDensity() &&
+               this->inverseGasB() == data.inverseGasB() &&
+               this->inverseSaturatedGasB() == data.inverseSaturatedGasB() &&
+               this->gasMu() == data.gasMu() &&
+               this->inverseGasBMu() == data.inverseGasBMu() &&
+               this->inverseSaturatedGasBMu() == data.inverseSaturatedGasBMu() &&
+               this->saturatedOilVaporizationFactorTable() == data.saturatedOilVaporizationFactorTable() &&
+               this->saturationPressure() == data.saturationPressure() &&
+               this->vapPar1() == data.vapPar1();
     }
 
 private:

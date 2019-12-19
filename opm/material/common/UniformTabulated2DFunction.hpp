@@ -238,6 +238,18 @@ public:
         samples_[j*m_ + i] = value;
     }
 
+    bool operator==(const UniformTabulated2DFunction<Scalar>& data) const
+    {
+        return samples_ == data.samples_ &&
+               m_ == data.m_ &&
+               n_ == data.n_ &&
+               xMin_ == data.xMin_ &&
+               xMax_ == data.xMax_ &&
+               yMin_ == data.yMin_ &&
+               yMax_ == data.yMax_;
+    }
+
+
 private:
     // the vector which contains the values of the sample points
     // f(x_i, y_j). don't use this directly, use getSamplePoint(i,j)

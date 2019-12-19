@@ -225,6 +225,12 @@ public:
     Scalar xAt(size_t i) const
     { return xValues_[i]; }
 
+    const std::vector<Scalar>& xValues() const
+    { return xValues_; }
+
+    const std::vector<Scalar>& yValues() const
+    { return yValues_; }
+
     /*!
      * \brief Return the value of the a sample point with a given index.
      */
@@ -435,6 +441,11 @@ public:
 
             os << x << " " << y << " " << dy_dx << "\n";
         }
+    }
+
+    bool operator==(const Tabulated1DFunction<Scalar>& data) const {
+        return xValues_ == data.xValues_ &&
+               yValues_ == data.yValues_;
     }
 
 private:

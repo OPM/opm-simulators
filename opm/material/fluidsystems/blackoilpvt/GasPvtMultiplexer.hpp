@@ -87,6 +87,17 @@ public:
     GasPvtMultiplexer()
     {
         gasPvtApproach_ = NoGasPvt;
+        realGasPvt_ = nullptr;
+    }
+
+    GasPvtMultiplexer(GasPvtApproach approach, void* realGasPvt)
+        : gasPvtApproach_(approach)
+        , realGasPvt_(realGasPvt)
+    { }
+
+    GasPvtMultiplexer(const GasPvtMultiplexer<Scalar,enableThermal>& data)
+    {
+        *this = data;
     }
 
     ~GasPvtMultiplexer()
@@ -294,6 +305,48 @@ public:
     {
         assert(gasPvtApproach() == approachV);
         return *static_cast<const Opm::GasPvtThermal<Scalar>* >(realGasPvt_);
+    }
+
+    const void* realGasPvt() const { return realGasPvt_; }
+
+    bool operator==(const GasPvtMultiplexer<Scalar,enableThermal>& data) const
+    {
+        if (this->gasPvtApproach() != data.gasPvtApproach())
+            return false;
+
+        switch (gasPvtApproach_) {
+        case DryGasPvt:
+            return *static_cast<const Opm::DryGasPvt<Scalar>*>(realGasPvt_) ==
+                   *static_cast<const Opm::DryGasPvt<Scalar>*>(data.realGasPvt_);
+        case WetGasPvt:
+            return *static_cast<const Opm::WetGasPvt<Scalar>*>(realGasPvt_) ==
+                   *static_cast<const Opm::WetGasPvt<Scalar>*>(data.realGasPvt_);
+        case ThermalGasPvt:
+            return *static_cast<const Opm::GasPvtThermal<Scalar>*>(realGasPvt_) ==
+                   *static_cast<const Opm::GasPvtThermal<Scalar>*>(data.realGasPvt_);
+        default:
+            return true;
+        }
+    }
+
+    GasPvtMultiplexer<Scalar,enableThermal>& operator=(const GasPvtMultiplexer<Scalar,enableThermal>& data)
+    {
+        gasPvtApproach_ = data.gasPvtApproach_;
+        switch (gasPvtApproach_) {
+        case DryGasPvt:
+            realGasPvt_ = new Opm::DryGasPvt<Scalar>(*static_cast<const Opm::DryGasPvt<Scalar>*>(data.realGasPvt_));
+            break;
+        case WetGasPvt:
+            realGasPvt_ = new Opm::WetGasPvt<Scalar>(*static_cast<const Opm::WetGasPvt<Scalar>*>(data.realGasPvt_));
+            break;
+        case ThermalGasPvt:
+            realGasPvt_ = new Opm::GasPvtThermal<Scalar>(*static_cast<const Opm::GasPvtThermal<Scalar>*>(data.realGasPvt_));
+            break;
+        default:
+            break;
+        }
+
+        return *this;
     }
 
 private:

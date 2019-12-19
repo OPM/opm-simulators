@@ -129,6 +129,29 @@ public:
     Scalar yMax() const
     { return yPos_.back(); }
 
+    const std::vector<Scalar>& xPos() const
+    { return xPos_; }
+
+    const std::vector<Scalar>& yPos() const
+    { return yPos_; }
+
+    const std::vector<std::vector<Scalar>>& samples() const
+    { return samples_; }
+
+    bool xExtrapolate() const
+    { return xExtrapolate_; }
+
+    bool yExtrapolate() const
+    { return yExtrapolate_; }
+
+    bool operator==(const IntervalTabulated2DFunction<Scalar>& data) const {
+        return this->xPos() == data.xPos() &&
+               this->yPos() == data.yPos() &&
+               this->samples() == data.samples() &&
+               this->xExtrapolate() == data.xExtrapolate() &&
+               this->yExtrapolate() == data.yExtrapolate();
+    }
+
     /*!
      * \brief Returns the value of a sampling point.
      */

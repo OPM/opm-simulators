@@ -50,10 +50,23 @@ namespace Opm {
 template <class Scalar>
 class SolventPvt
 {
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
+    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+
+    explicit SolventPvt() = default;
+    SolventPvt(const std::vector<Scalar>& solventReferenceDensity,
+               const std::vector<TabulatedOneDFunction>& inverseSolventB,
+               const std::vector<TabulatedOneDFunction>& solventMu,
+               const std::vector<TabulatedOneDFunction>& inverseSolventBMu)
+        : solventReferenceDensity_(solventReferenceDensity)
+        , inverseSolventB_(inverseSolventB)
+        , solventMu_(solventMu)
+        , inverseSolventBMu_(inverseSolventBMu)
+    {
+    }
+
 #if HAVE_ECL_INPUT
     /*!
      * \brief Initialize the parameters for "solvent gas" using an ECL deck.
@@ -192,6 +205,26 @@ public:
                                             const Evaluation& temperature OPM_UNUSED,
                                             const Evaluation& pressure) const
     { return inverseSolventB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+
+    const std::vector<Scalar>& solventReferenceDensity() const
+    { return solventReferenceDensity_; }
+
+    const std::vector<TabulatedOneDFunction>& inverseSolventB() const
+    { return inverseSolventB_; }
+
+    const std::vector<TabulatedOneDFunction>& solventMu() const
+    { return solventMu_; }
+
+    const std::vector<TabulatedOneDFunction>& inverseSolventBMu() const
+    { return inverseSolventBMu_; }
+
+    bool operator==(const SolventPvt<Scalar>& data) const
+    {
+        return solventReferenceDensity_ == data.solventReferenceDensity_ &&
+               inverseSolventB_ == data.inverseSolventB_ &&
+               solventMu_ == data.solventMu_ &&
+               inverseSolventBMu_ == data.inverseSolventBMu_;
+    }
 
 private:
     std::vector<Scalar> solventReferenceDensity_;

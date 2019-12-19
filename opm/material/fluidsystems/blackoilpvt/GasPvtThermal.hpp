@@ -54,16 +54,40 @@ class GasPvtMultiplexer;
 template <class Scalar>
 class GasPvtThermal
 {
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
-    typedef GasPvtMultiplexer<Scalar, /*enableThermal=*/false> IsothermalPvt;
-
 public:
+    typedef GasPvtMultiplexer<Scalar, /*enableThermal=*/false> IsothermalPvt;
+    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+
     GasPvtThermal()
     {
         enableThermalDensity_ = false;
         enableThermalViscosity_ = false;
         enableInternalEnergy_ = false;
+        isothermalPvt_ = nullptr;
     }
+
+    GasPvtThermal(IsothermalPvt* isothermalPvt,
+                  const std::vector<TabulatedOneDFunction>& gasvisctCurves,
+                  const std::vector<Scalar>& gasdentRefTemp,
+                  const std::vector<Scalar>& gasdentCT1,
+                  const std::vector<Scalar>& gasdentCT2,
+                  const std::vector<TabulatedOneDFunction>& internalEnergyCurves,
+                  bool enableThermalDensity,
+                  bool enableThermalViscosity,
+                  bool enableInternalEnergy)
+        : isothermalPvt_(isothermalPvt)
+        , gasvisctCurves_(gasvisctCurves)
+        , gasdentRefTemp_(gasdentRefTemp)
+        , gasdentCT1_(gasdentCT1)
+        , gasdentCT2_(gasdentCT2)
+        , internalEnergyCurves_(internalEnergyCurves)
+        , enableThermalDensity_(enableThermalDensity)
+        , enableThermalViscosity_(enableThermalViscosity)
+        , enableInternalEnergy_(enableInternalEnergy)
+    { }
+
+    GasPvtThermal(const GasPvtThermal& data)
+    { *this = data; }
 
     ~GasPvtThermal()
     { delete isothermalPvt_; }
@@ -343,6 +367,64 @@ public:
                                   const Evaluation& temperature,
                                   const Evaluation& pressure) const
     { return isothermalPvt_->saturationPressure(regionIdx, temperature, pressure); }
+
+    const IsothermalPvt* isoThermalPvt() const
+    { return isothermalPvt_; }
+
+    const std::vector<TabulatedOneDFunction>& gasvisctCurves() const
+    { return gasvisctCurves_; }
+
+    const std::vector<Scalar>& gasdentRefTemp() const
+    { return gasdentRefTemp_; }
+
+    const std::vector<Scalar>& gasdentCT1() const
+    { return gasdentCT1_; }
+
+    const std::vector<Scalar>& gasdentCT2() const
+    { return gasdentCT2_; }
+
+    const std::vector<TabulatedOneDFunction>& internalEnergyCurves() const
+    { return internalEnergyCurves_; }
+
+    bool enableInternalEnergy() const
+    { return enableInternalEnergy_; }
+
+    bool operator==(const GasPvtThermal<Scalar>& data) const
+    {
+        if (isothermalPvt_ && !data.isothermalPvt_)
+            return false;
+        if (!isothermalPvt_ && data.isothermalPvt_)
+            return false;
+
+        return (!this->isoThermalPvt() ||
+                (*this->isoThermalPvt() == *data.isoThermalPvt())) &&
+                this->gasvisctCurves() == data.gasvisctCurves() &&
+                this->gasdentRefTemp() == data.gasdentRefTemp() &&
+                this->gasdentCT1() == data.gasdentCT1() &&
+                this->gasdentCT2() == data.gasdentCT2() &&
+                this->internalEnergyCurves() == data.internalEnergyCurves() &&
+                this->enableThermalDensity() == data.enableThermalDensity() &&
+                this->enableThermalViscosity() == data.enableThermalViscosity() &&
+                this->enableInternalEnergy() == data.enableInternalEnergy();
+    }
+
+    GasPvtThermal<Scalar>& operator=(const GasPvtThermal<Scalar>& data)
+    {
+        if (data.isothermalPvt_)
+            isothermalPvt_ = new IsothermalPvt(*data.isothermalPvt_);
+        else
+            isothermalPvt_ = nullptr;
+        gasvisctCurves_ = data.gasvisctCurves_;
+        gasdentRefTemp_ = data.gasdentRefTemp_;
+        gasdentCT1_ = data.gasdentCT1_;
+        gasdentCT2_ = data.gasdentCT2_;
+        internalEnergyCurves_ = data.internalEnergyCurves_;
+        enableThermalDensity_ = data.enableThermalDensity_;
+        enableThermalViscosity_ = data.enableThermalViscosity_;
+        enableInternalEnergy_ = data.enableInternalEnergy_;
+
+        return *this;
+    }
 
 private:
     IsothermalPvt* isothermalPvt_;
