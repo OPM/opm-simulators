@@ -82,6 +82,7 @@ namespace Opm
 
             globalIsInjectionGrup_.assign(globalNumberOfWells,0);
             globalIsProductionGrup_.assign(globalNumberOfWells,0);
+            wellNameToGlobalIdx_.clear();
 
             const int nw = wells_ecl.size();
 
@@ -863,29 +864,42 @@ namespace Opm
             const auto& end = wellMap().end();
             for (const auto& well : schedule.getWells(reportStepIdx)) {
                 global_well_index ++;
+                wellNameToGlobalIdx_[well.name()] = global_well_index;
 
                 const auto& it = wellMap().find( well.name());
                 if (it == end)  // the well is not found
                     continue;
 
                 int well_index = it->second[0];
-                globalIsInjectionGrup_[global_well_index] = currentInjectionControls()[well_index] == Well::InjectorCMode::GRUP;
-                globalIsProductionGrup_[global_well_index] = currentProductionControls()[well_index] == Well::ProducerCMode::GRUP;
+
+                if (well.isInjector())
+                    globalIsInjectionGrup_[global_well_index] = (currentInjectionControls()[well_index] == Well::InjectorCMode::GRUP);
+                else
+                    globalIsProductionGrup_[global_well_index] = (currentProductionControls()[well_index] == Well::ProducerCMode::GRUP);
             }
             comm.sum(globalIsInjectionGrup_.data(), globalIsInjectionGrup_.size());
             comm.sum(globalIsProductionGrup_.data(), globalIsProductionGrup_.size());
         }
 
-        const std::vector<int>& globalIsInjectionGrup() const {
-            return globalIsInjectionGrup_;
+        bool isInjectionGrup(const std::string& name) const {
+
+            auto it = wellNameToGlobalIdx_.find(name);
+
+            if (it == wellNameToGlobalIdx_.end())
+                OPM_THROW(std::logic_error, "Could not find global injection group for well" << name);
+
+            return globalIsInjectionGrup_[it->second];
         }
 
-        const std::vector<int>& globalIsProductionGrup() const {
-            return globalIsProductionGrup_;
+        bool isProductionGrup(const std::string& name) const {
+
+            auto it = wellNameToGlobalIdx_.find(name);
+
+            if (it == wellNameToGlobalIdx_.end())
+                OPM_THROW(std::logic_error, "Could not find global injection group for well" << name);
+
+            return globalIsProductionGrup_[it->second];
         }
-
-
-
 
     private:
         std::vector<double> perfphaserates_;
@@ -895,6 +909,7 @@ namespace Opm
         // size of global number of wells
         std::vector<int> globalIsInjectionGrup_;
         std::vector<int> globalIsProductionGrup_;
+        std::map<std::string, int> wellNameToGlobalIdx_;
 
         std::map<std::string, Group::ProductionCMode> current_production_group_controls_;
         std::map<std::string, Group::InjectionCMode> current_injection_group_controls_;
