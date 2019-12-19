@@ -61,12 +61,12 @@ namespace Opm {
 
 namespace {
 template <typename T>
-std::unique_ptr<std::vector<T>> compressed_copy(const std::vector<T>& global_vector, const std::vector<int>& compressedToCartesianElemIdx) {
-    std::unique_ptr<std::vector<T>> compressed = std::make_unique<std::vector<T>>(compressedToCartesianElemIdx.size());
+std::vector<T> compressed_copy(const std::vector<T>& global_vector, const std::vector<int>& compressedToCartesianElemIdx) {
+    std::vector<T> compressed = std::vector<T>(compressedToCartesianElemIdx.size());
 
     for (std::size_t active_index = 0; active_index < compressedToCartesianElemIdx.size(); active_index++) {
         auto global_index = compressedToCartesianElemIdx[active_index];
-        compressed->operator[](active_index) = global_vector[global_index];
+        compressed[active_index] = global_vector[global_index];
     }
 
     return compressed;
@@ -75,7 +75,7 @@ std::unique_ptr<std::vector<T>> compressed_copy(const std::vector<T>& global_vec
 
 #ifdef ENABLE_3DPROPS_TESTING
 
-std::unique_ptr<std::vector<double>> try_get(const FieldPropsManager& fp, const std::string& keyword, const std::vector<int>& compressedToCartesianElemIdx) {
+std::vector<double> try_get(const FieldPropsManager& fp, const std::string& keyword, const std::vector<int>& compressedToCartesianElemIdx) {
     if (fp.has<double>(keyword))
         return compressed_copy(fp.get_global<double>(keyword), compressedToCartesianElemIdx);
 
@@ -85,7 +85,7 @@ std::unique_ptr<std::vector<double>> try_get(const FieldPropsManager& fp, const 
 #else
 
 
-std::unique_ptr<std::vector<double>> try_get(const Eclipse3DProperties& props, const std::string& keyword, const std::vector<int>& compressedToCartesianElemIdx) {
+std::vector<double> try_get(const Eclipse3DProperties& props, const std::string& keyword, const std::vector<int>& compressedToCartesianElemIdx) {
     if (props.hasDeckDoubleGridProperty(keyword))
         return compressed_copy(props.getDoubleGridProperty(keyword).getData(), compressedToCartesianElemIdx);
 
@@ -138,17 +138,17 @@ public:
         if (fp.has<double>("PERMX"))
             this->compressed_permx = compressed_copy(fp.get_global<double>("PERMX"), compressedToCartesianElemIdx);
         else
-            this->compressed_permx = std::make_unique<std::vector<double>>(this->compressed_satnum->size());
+            this->compressed_permx = std::vector<double>(this->compressed_satnum.size());
 
         if (fp.has<double>("PERMY"))
             this->compressed_permy= compressed_copy(fp.get_global<double>("PERMY"), compressedToCartesianElemIdx);
         else
-            this->compressed_permy= std::make_unique<std::vector<double>>(*this->compressed_permx);
+            this->compressed_permy= this->compressed_permx;
 
         if (fp.has<double>("PERMZ"))
             this->compressed_permz= compressed_copy(fp.get_global<double>("PERMZ"), compressedToCartesianElemIdx);
         else
-            this->compressed_permz= std::make_unique<std::vector<double>>(*this->compressed_permx);
+            this->compressed_permz= this->compressed_permx;
 #else
         const auto& ecl3dProps = eclState.get3DProperties();
 
@@ -194,23 +194,23 @@ public:
 
 
     unsigned satRegion(std::size_t active_index) const {
-        return this->compressed_satnum->operator[](active_index) - 1;
+        return this->compressed_satnum[active_index] - 1;
     }
 
     double permx(std::size_t active_index) const {
-        return this->compressed_permx->operator[](active_index);
+        return this->compressed_permx[active_index];
     }
 
     double permy(std::size_t active_index) const {
-        return this->compressed_permy->operator[](active_index);
+        return this->compressed_permy[active_index];
     }
 
     double permz(std::size_t active_index) const {
-        return this->compressed_permz->operator[](active_index);
+        return this->compressed_permz[active_index];
     }
 
     double poro(std::size_t active_index) const {
-        return this->compressed_poro->operator[](active_index);
+        return this->compressed_poro[active_index];
     }
 
     const double * swl(std::size_t active_index) const {
@@ -268,32 +268,32 @@ public:
 
 private:
 
-    const double * satfunc(const std::unique_ptr<std::vector<double>>& data, std::size_t active_index) const {
-        if (data)
-            return &(data->operator[](active_index));
-        return nullptr;
+    const double * satfunc(const std::vector<double>& data, std::size_t active_index) const {
+        if (data.empty())
+            return nullptr;
+        return &(data[active_index]);
     }
 
 
-    std::unique_ptr<std::vector<int>> compressed_satnum;
-    std::unique_ptr<std::vector<double>> compressed_swl;
-    std::unique_ptr<std::vector<double>> compressed_sgl;
-    std::unique_ptr<std::vector<double>> compressed_swcr;
-    std::unique_ptr<std::vector<double>> compressed_sgcr;
-    std::unique_ptr<std::vector<double>> compressed_sowcr;
-    std::unique_ptr<std::vector<double>> compressed_sogcr;
-    std::unique_ptr<std::vector<double>> compressed_swu;
-    std::unique_ptr<std::vector<double>> compressed_sgu;
-    std::unique_ptr<std::vector<double>> compressed_pcw;
-    std::unique_ptr<std::vector<double>> compressed_pcg;
-    std::unique_ptr<std::vector<double>> compressed_krw;
-    std::unique_ptr<std::vector<double>> compressed_kro;
-    std::unique_ptr<std::vector<double>> compressed_krg;
+    std::vector<int> compressed_satnum;
+    std::vector<double> compressed_swl;
+    std::vector<double> compressed_sgl;
+    std::vector<double> compressed_swcr;
+    std::vector<double> compressed_sgcr;
+    std::vector<double> compressed_sowcr;
+    std::vector<double> compressed_sogcr;
+    std::vector<double> compressed_swu;
+    std::vector<double> compressed_sgu;
+    std::vector<double> compressed_pcw;
+    std::vector<double> compressed_pcg;
+    std::vector<double> compressed_krw;
+    std::vector<double> compressed_kro;
+    std::vector<double> compressed_krg;
 
-    std::unique_ptr<std::vector<double>> compressed_permx;
-    std::unique_ptr<std::vector<double>> compressed_permy;
-    std::unique_ptr<std::vector<double>> compressed_permz;
-    std::unique_ptr<std::vector<double>> compressed_poro;
+    std::vector<double> compressed_permx;
+    std::vector<double> compressed_permy;
+    std::vector<double> compressed_permz;
+    std::vector<double> compressed_poro;
 };
 }
 #endif
