@@ -36,17 +36,24 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PlymwinjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SkprwatTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Tabdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
@@ -203,6 +210,16 @@ Opm::PvtoTable getPvtoTable()
 }
 
 
+Opm::TableContainer getTableContainer()
+{
+    Opm::OrderedMap<std::string, Opm::TableColumn> data;
+    data.insert({"test3", getTableColumn()});
+    Opm::SimpleTable tab1(getTableSchema(), data, true);
+    Opm::TableContainer result(2);
+    result.addTable(0, std::make_shared<const Opm::SimpleTable>(tab1));
+    result.addTable(1, std::make_shared<const Opm::SimpleTable>(tab1));
+    return result;
+}
 #endif
 
 
@@ -820,6 +837,130 @@ BOOST_AUTO_TEST_CASE(WatdentTable)
 {
 #if HAVE_MPI
     Opm::WatdentTable val1({Opm::WATDENTRecord{1.0, 2.0, 3.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(PlymwinjTable)
+{
+#if HAVE_MPI
+    Opm::PlymwinjTable val1({1.0}, {2.0}, 1, {{1.0}, {2.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(SkprpolyTable)
+{
+#if HAVE_MPI
+    Opm::SkprpolyTable val1({1.0}, {2.0}, 1, {{1.0}, {2.0}}, 3.0);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(SkprwatTable)
+{
+#if HAVE_MPI
+    Opm::SkprwatTable val1({1.0}, {2.0}, 1, {{1.0}, {2.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Regdims)
+{
+#if HAVE_MPI
+    Opm::Regdims val1(1,2,3,4,5);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Eqldims)
+{
+#if HAVE_MPI
+    Opm::Eqldims val1(1,2,3,4,5);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Aqudims)
+{
+#if HAVE_MPI
+    Opm::Aqudims val1(1,2,3,4,5,6,7,8);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(ROCKRecord)
+{
+#if HAVE_MPI
+    Opm::ROCKRecord val1{1.0,2.0};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(RockTable)
+{
+#if HAVE_MPI
+    Opm::RockTable val1({Opm::ROCKRecord{1.0,2.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(TableManager)
+{
+#if HAVE_MPI
+    auto jfunc = std::make_shared<Opm::JFunc>(Opm::JFunc::Flag::BOTH,
+                                              1.0, 2.0, 3.0, 4.0,
+                                              Opm::JFunc::Direction::XY);
+    Opm::TableManager val1({{"test", getTableContainer()}},
+                           {getPvtgTable()},
+                           {getPvtoTable()},
+                           {Opm::Rock2dTable({{1.0,2.0},{3.0,4.0}}, {1.0, 2.0, 3.0})},
+                           {Opm::Rock2dtrTable({{1.0,2.0},{3.0,4.0}}, {1.0, 2.0, 3.0})},
+                           Opm::PvtwTable({Opm::PVTWRecord{1.0, 2.0, 3.0, 4.0, 5.0}}),
+                           Opm::PvcdoTable({Opm::PVCDORecord{1.0, 2.0, 3.0, 4.0, 5.0}}),
+                           Opm::DensityTable({Opm::DENSITYRecord{1.0, 2.0, 3.0}}),
+                           Opm::RockTable({Opm::ROCKRecord{1.0,2.0}}),
+                           Opm::ViscrefTable({Opm::VISCREFRecord{1.0, 2.0}}),
+                           Opm::WatdentTable({Opm::WATDENTRecord{1.0, 2.0, 3.0}}),
+                           {{1, Opm::PlymwinjTable({1.0}, {2.0}, 1, {{1.0}, {2.0}})}},
+                           {{2, Opm::SkprwatTable({1.0}, {2.0}, 1, {{1.0}, {2.0}})}},
+                           {{3, Opm::SkprpolyTable({1.0}, {2.0}, 1, {{1.0}, {2.0}}, 3.0)}},
+                           Opm::Tabdims(1,2,3,4,5,6),
+                           Opm::Regdims(1,2,3,4,5),
+                           Opm::Eqldims(1,2,3,4,5),
+                           Opm::Aqudims(1,2,3,4,5,6,7,8),
+                           true,
+                           true,
+                           true,
+                           jfunc,
+                           1.0);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

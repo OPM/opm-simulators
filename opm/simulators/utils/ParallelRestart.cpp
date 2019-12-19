@@ -33,16 +33,24 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PlymwinjTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PolyInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SkprwatTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
@@ -205,17 +213,21 @@ std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelpe
 }
 
 HANDLE_AS_POD(Actdims)
+HANDLE_AS_POD(Aqudims)
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(DENSITYRecord)
 HANDLE_AS_POD(EclHysterConfig)
+HANDLE_AS_POD(Eqldims)
 HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
 HANDLE_AS_POD(JFunc)
-HANDLE_AS_POD(RestartSchedule)
 HANDLE_AS_POD(PVTWRecord)
 HANDLE_AS_POD(PVCDORecord)
+HANDLE_AS_POD(Regdims)
+HANDLE_AS_POD(RestartSchedule)
+HANDLE_AS_POD(ROCKRecord)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeMap::StepData)
 HANDLE_AS_POD(VISCREFRecord)
@@ -475,6 +487,63 @@ std::size_t packSize(const ViscrefTable& data, Dune::MPIHelper::MPICommunicator 
 std::size_t packSize(const WatdentTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const std::vector<WATDENTRecord>&>(data), comm);
+}
+
+std::size_t packSize(const PolyInjTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getThroughputs(), comm) +
+           packSize(data.getVelocities(), comm) +
+           packSize(data.getTableNumber(), comm) +
+           packSize(data.getTableData(), comm);
+}
+
+std::size_t packSize(const PlymwinjTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const PolyInjTable&>(data), comm);
+}
+
+std::size_t packSize(const SkprpolyTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const PolyInjTable&>(data), comm) +
+           packSize(data.referenceConcentration(), comm);
+}
+
+std::size_t packSize(const SkprwatTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const PolyInjTable&>(data), comm);
+}
+
+std::size_t packSize(const RockTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<ROCKRecord>&>(data), comm);
+}
+
+std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getSimpleTables(), comm) +
+           packSize(data.getPvtgTables(), comm) +
+           packSize(data.getPvtoTables(), comm) +
+           packSize(data.getRock2dTables(), comm) +
+           packSize(data.getRock2dtrTables(), comm) +
+           packSize(data.getPvtwTable(), comm) +
+           packSize(data.getPvcdoTable(), comm) +
+           packSize(data.getDensityTable(), comm) +
+           packSize(data.getRockTable(), comm) +
+           packSize(data.getViscrefTable(), comm) +
+           packSize(data.getWatdentTable(), comm) +
+           packSize(data.getPlymwinjTables(), comm) +
+           packSize(data.getSkprwatTables(), comm) +
+           packSize(data.getSkprpolyTables(), comm) +
+           packSize(data.getTabdims(), comm) +
+           packSize(data.getRegdims(), comm) +
+           packSize(data.getEqldims(), comm) +
+           packSize(data.getAqudims(), comm) +
+           packSize(data.useImptvd(), comm) +
+           packSize(data.useEnptvd(), comm) +
+           packSize(data.useEqlnum(), comm) +
+           packSize(data.useJFunc(), comm) +
+           (data.useJFunc() ? packSize(data.getJFunc(), comm) : 0) +
+           packSize(data.rtemp(), comm);
 }
 
 ////// pack routines
@@ -938,6 +1007,70 @@ void pack(const WatdentTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const std::vector<WATDENTRecord>&>(data), buffer, position, comm);
+}
+
+void pack(const PolyInjTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getThroughputs(), buffer, position, comm);
+    pack(data.getVelocities(), buffer, position, comm);
+    pack(data.getTableNumber(), buffer, position, comm);
+    pack(data.getTableData(), buffer, position, comm);
+}
+
+void pack(const PlymwinjTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
+}
+
+void pack(const SkprpolyTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
+    pack(data.referenceConcentration(), buffer, position, comm);
+}
+
+void pack(const SkprwatTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
+}
+
+void pack(const RockTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<ROCKRecord>&>(data), buffer, position, comm);
+}
+
+void pack(const TableManager& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getSimpleTables(), buffer, position, comm);
+    pack(data.getPvtgTables(), buffer, position, comm);
+    pack(data.getPvtoTables(), buffer, position, comm);
+    pack(data.getRock2dTables(), buffer, position, comm);
+    pack(data.getRock2dtrTables(), buffer, position, comm);
+    pack(data.getPvtwTable(), buffer, position, comm);
+    pack(data.getPvcdoTable(), buffer, position, comm);
+    pack(data.getDensityTable(), buffer, position, comm);
+    pack(data.getRockTable(), buffer, position, comm);
+    pack(data.getViscrefTable(), buffer, position, comm);
+    pack(data.getWatdentTable(), buffer, position, comm);
+    pack(data.getPlymwinjTables(), buffer, position, comm);
+    pack(data.getSkprwatTables(), buffer, position, comm);
+    pack(data.getSkprpolyTables(), buffer, position, comm);
+    pack(data.getTabdims(), buffer, position, comm);
+    pack(data.getRegdims(), buffer, position, comm);
+    pack(data.getEqldims(), buffer, position, comm);
+    pack(data.getAqudims(), buffer, position, comm);
+    pack(data.useImptvd(), buffer, position, comm);
+    pack(data.useEnptvd(), buffer, position, comm);
+    pack(data.useEqlnum(), buffer, position, comm);
+    pack(data.useJFunc(), buffer, position, comm);
+    if (data.useJFunc())
+        pack(data.getJFunc(), buffer, position, comm);
+    pack(data.rtemp(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1522,6 +1655,109 @@ void unpack(WatdentTable& data, std::vector<char>& buffer, int& position,
     std::vector<WATDENTRecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = WatdentTable(pdata);
+}
+
+void unpack(PolyInjTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<double> throughputs, velocities;
+    int tableNumber;
+    std::vector<std::vector<double>> tableData;
+    unpack(throughputs, buffer, position, comm);
+    unpack(velocities, buffer, position, comm);
+    unpack(tableNumber, buffer, position, comm);
+    unpack(tableData, buffer, position, comm);
+    data = PolyInjTable(throughputs, velocities, tableNumber, tableData);
+}
+
+void unpack(PlymwinjTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(static_cast<PolyInjTable&>(data), buffer, position, comm);
+}
+
+void unpack(SkprpolyTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(static_cast<PolyInjTable&>(data), buffer, position, comm);
+    double refConcentration;
+    unpack(refConcentration, buffer, position, comm);
+    data.setReferenceConcentration(refConcentration);
+}
+
+void unpack(SkprwatTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(static_cast<PolyInjTable&>(data), buffer, position, comm);
+}
+
+void unpack(RockTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<ROCKRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = RockTable(pdata);
+}
+
+void unpack(TableManager& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    std::map<std::string, TableContainer> simpleTables;
+    std::vector<PvtgTable> pvtgTables;
+    std::vector<PvtoTable> pvtoTables;
+    std::vector<Rock2dTable> rock2dTables;
+    std::vector<Rock2dtrTable> rock2dtrTables;
+    PvtwTable pvtwTable;
+    PvcdoTable pvcdoTable;
+    DensityTable densityTable;
+    RockTable rockTable;
+    ViscrefTable viscrefTable;
+    WatdentTable watdentTable;
+    std::map<int, PlymwinjTable> plymwinjTables;
+    std::map<int, SkprwatTable> skprwatTables;
+    std::map<int, SkprpolyTable> skprpolyTables;
+    Tabdims tabdims;
+    Regdims regdims;
+    Eqldims eqldims;
+    Aqudims aqudims;
+    bool hasImptvd;
+    bool hasEntpvd;
+    bool hasEqlnum;
+    std::shared_ptr<JFunc> jfunc;
+    double rtemp;
+    unpack(simpleTables, buffer, position, comm);
+    unpack(pvtgTables, buffer, position, comm);
+    unpack(pvtoTables, buffer, position, comm);
+    unpack(rock2dTables, buffer, position, comm);
+    unpack(rock2dtrTables, buffer, position, comm);
+    unpack(pvtwTable, buffer, position, comm);
+    unpack(pvcdoTable, buffer, position, comm);
+    unpack(densityTable, buffer, position, comm);
+    unpack(rockTable, buffer, position, comm);
+    unpack(viscrefTable, buffer, position, comm);
+    unpack(watdentTable, buffer, position, comm);
+    unpack(plymwinjTables, buffer, position, comm);
+    unpack(skprwatTables, buffer, position, comm);
+    unpack(skprpolyTables, buffer, position, comm);
+    unpack(tabdims, buffer, position, comm);
+    unpack(regdims, buffer, position, comm);
+    unpack(eqldims, buffer, position, comm);
+    unpack(aqudims, buffer, position, comm);
+    unpack(hasImptvd, buffer, position, comm);
+    unpack(hasEntpvd, buffer, position, comm);
+    unpack(hasEqlnum, buffer, position, comm);
+    bool hasJf;
+    unpack(hasJf, buffer, position, comm);
+    if (hasJf) {
+        jfunc = std::make_shared<JFunc>();
+        unpack(*jfunc, buffer, position, comm);
+    }
+    unpack(rtemp, buffer, position, comm);
+    data = TableManager(simpleTables, pvtgTables, pvtoTables, rock2dTables,
+                        rock2dtrTables, pvtwTable, pvcdoTable, densityTable,
+                        rockTable, viscrefTable, watdentTable, plymwinjTables,
+                        skprwatTables, skprpolyTables, tabdims, regdims, eqldims,
+                        aqudims, hasImptvd, hasEntpvd, hasEqlnum, jfunc, rtemp);
 }
 
 } // end namespace Mpi

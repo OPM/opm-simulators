@@ -40,10 +40,12 @@ namespace Opm
 {
 
 class Actdims;
+class Aqudims;
 class ColumnSchema;
 class DENSITYRecord;
 class DensityTable;
 class EclHysterConfig;
+class Eqldims;
 class EDITNNC;
 class EndpointScaling;
 class Equil;
@@ -56,22 +58,30 @@ class JFunc;
 class NNC;
 struct NNCdata;
 class Phases;
+class PlymwinjTable;
+class PolyInjTable;
 class PVCDORecord;
 class PvcdoTable;
 class PvtgTable;
 class PvtoTable;
 class PVTWRecord;
 class PvtwTable;
+class Regdims;
 class RestartConfig;
 class RestartSchedule;
+class ROCKRecord;
+class RockTable;
 class Rock2dTable;
 class Rock2dtrTable;
 class Runspec;
 class SimulationConfig;
 class SimpleTable;
+class SkprpolyTable;
+class SkprwatTable;
 class Tabdims;
 class TableColumn;
 class TableContainer;
+class TableManager;
 class TableSchema;
 class ThresholdPressure;
 class UDQParams;
@@ -257,6 +267,7 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
               Dune::MPIHelper::MPICommunicator comm);
 
 ADD_PACK_PROTOTYPES(Actdims)
+ADD_PACK_PROTOTYPES(Aqudims)
 ADD_PACK_PROTOTYPES(ColumnSchema)
 ADD_PACK_PROTOTYPES(data::CellData)
 ADD_PACK_PROTOTYPES(data::Connection)
@@ -274,31 +285,40 @@ ADD_PACK_PROTOTYPES(EquilRecord)
 ADD_PACK_PROTOTYPES(FoamConfig)
 ADD_PACK_PROTOTYPES(FoamData)
 ADD_PACK_PROTOTYPES(EclHysterConfig)
+ADD_PACK_PROTOTYPES(Eqldims)
 ADD_PACK_PROTOTYPES(InitConfig)
 ADD_PACK_PROTOTYPES(IOConfig)
 ADD_PACK_PROTOTYPES(JFunc)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(Phases)
+ADD_PACK_PROTOTYPES(PlymwinjTable)
+ADD_PACK_PROTOTYPES(PolyInjTable)
 ADD_PACK_PROTOTYPES(PVCDORecord)
 ADD_PACK_PROTOTYPES(PvcdoTable)
 ADD_PACK_PROTOTYPES(PvtgTable)
 ADD_PACK_PROTOTYPES(PvtoTable)
 ADD_PACK_PROTOTYPES(PVTWRecord)
 ADD_PACK_PROTOTYPES(PvtwTable)
+ADD_PACK_PROTOTYPES(Regdims)
 ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)
+ADD_PACK_PROTOTYPES(ROCKRecord)
+ADD_PACK_PROTOTYPES(RockTable)
 ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(Runspec)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
+ADD_PACK_PROTOTYPES(SkprpolyTable)
+ADD_PACK_PROTOTYPES(SkprwatTable)
 ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)
+ADD_PACK_PROTOTYPES(TableManager)
 ADD_PACK_PROTOTYPES(TableSchema)
 ADD_PACK_PROTOTYPES(ThresholdPressure)
 ADD_PACK_PROTOTYPES(TimeMap)
