@@ -469,10 +469,10 @@ namespace Opm {
 
             // only count wells under group control
             if (isInjector) {
-                if (wellState.globalIsInjectionGrup()[global_well_index] == 0)
+                if (!wellState.isInjectionGrup(wellName))
                     continue;
             } else {
-                if (wellState.globalIsProductionGrup()[global_well_index] == 0)
+                if (!wellState.isProductionGrup(wellName))
                     continue;
             }
 
