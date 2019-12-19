@@ -51,6 +51,20 @@ class ConstantCompressibilityWaterPvt
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
+    ConstantCompressibilityWaterPvt() = default;
+    ConstantCompressibilityWaterPvt(const std::vector<Scalar>& waterReferenceDensity,
+                                    const std::vector<Scalar>& waterReferencePressure,
+                                    const std::vector<Scalar>& waterReferenceFormationVolumeFactor,
+                                    const std::vector<Scalar>& waterCompressibility,
+                                    const std::vector<Scalar>& waterViscosity,
+                                    const std::vector<Scalar>& waterViscosibility)
+        : waterReferenceDensity_(waterReferenceDensity)
+        , waterReferencePressure_(waterReferencePressure)
+        , waterReferenceFormationVolumeFactor_(waterReferenceFormationVolumeFactor)
+        , waterCompressibility_(waterCompressibility)
+        , waterViscosity_(waterViscosity)
+        , waterViscosibility_(waterViscosibility)
+    { }
 #if HAVE_ECL_INPUT
     /*!
      * \brief Sets the pressure-dependent water viscosity and density
@@ -204,6 +218,34 @@ public:
 
         // TODO (?): consider the salt concentration of the brine
         return (1.0 + X*(1.0 + X/2.0))/BwRef;
+    }
+
+    const std::vector<Scalar>& waterReferenceDensity() const
+    { return waterReferenceDensity_; }
+
+    const std::vector<Scalar>& waterReferencePressure() const
+    { return waterReferencePressure_; }
+
+    const std::vector<Scalar>& waterReferenceFormationVolumeFactor() const
+    { return waterReferenceFormationVolumeFactor_; }
+
+    const std::vector<Scalar>& waterCompressibility() const
+    { return waterCompressibility_; }
+
+    const std::vector<Scalar>& waterViscosity() const
+    { return waterViscosity_; }
+
+    const std::vector<Scalar>& waterViscosibility() const
+    { return waterViscosibility_; }
+
+    bool operator==(const ConstantCompressibilityWaterPvt<Scalar>& data) const
+    {
+        return this->waterReferenceDensity() == data.waterReferenceDensity() &&
+               this->waterReferencePressure() == data.waterReferencePressure() &&
+               this->waterReferenceFormationVolumeFactor() == data.waterReferenceFormationVolumeFactor() &&
+               this->waterCompressibility() == data.waterCompressibility() &&
+               this->waterViscosity() == data.waterViscosity() &&
+               this->waterViscosibility() == data.waterViscosibility();
     }
 
 private:

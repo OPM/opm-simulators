@@ -52,15 +52,40 @@ namespace Opm {
 template <class Scalar>
 class LiveOilPvt
 {
-    typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
+    typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
+    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+
     LiveOilPvt()
     {
         vapPar2_ = 0.0;
     }
+
+    LiveOilPvt(const std::vector<Scalar>& gasReferenceDensity,
+               const std::vector<Scalar>& oilReferenceDensity,
+               const std::vector<TabulatedTwoDFunction>& inverseOilBTable,
+               const std::vector<TabulatedTwoDFunction>& oilMuTable,
+               const std::vector<TabulatedTwoDFunction>& inverseOilBMuTable,
+               const std::vector<TabulatedOneDFunction>& saturatedOilMuTable,
+               const std::vector<TabulatedOneDFunction>& inverseSaturatedOilBTable,
+               const std::vector<TabulatedOneDFunction>& inverseSaturatedOilBMuTable,
+               const std::vector<TabulatedOneDFunction>& saturatedGasDissolutionFactorTable,
+               const std::vector<TabulatedOneDFunction>& saturationPressure,
+               Scalar vapPar2)
+        : gasReferenceDensity_(gasReferenceDensity)
+        , oilReferenceDensity_(oilReferenceDensity)
+        , inverseOilBTable_(inverseOilBTable)
+        , oilMuTable_(oilMuTable)
+        , inverseOilBMuTable_(inverseOilBMuTable)
+        , saturatedOilMuTable_(saturatedOilMuTable)
+        , inverseSaturatedOilBTable_(inverseSaturatedOilBTable)
+        , inverseSaturatedOilBMuTable_(inverseSaturatedOilBMuTable)
+        , saturatedGasDissolutionFactorTable_(saturatedGasDissolutionFactorTable)
+        , saturationPressure_(saturationPressure)
+        , vapPar2_(vapPar2)
+    { }
 
 #if HAVE_ECL_INPUT
     /*!
@@ -576,6 +601,53 @@ public:
         OpmLog::debug("Live oil saturation pressure", errlog.str());
 #endif
         throw NumericalIssue(errlog.str());
+    }
+
+    const std::vector<Scalar>& gasReferenceDensity() const
+    { return gasReferenceDensity_; }
+
+    const std::vector<Scalar>& oilReferenceDensity() const
+    { return oilReferenceDensity_; }
+
+    const std::vector<TabulatedTwoDFunction>& inverseOilBTable() const
+    { return inverseOilBTable_; }
+
+    const std::vector<TabulatedTwoDFunction>& oilMuTable() const
+    { return oilMuTable_; }
+
+    const std::vector<TabulatedTwoDFunction>& inverseOilBMuTable() const
+    { return inverseOilBMuTable_; }
+
+    const std::vector<TabulatedOneDFunction>& saturatedOilMuTable() const
+    { return saturatedOilMuTable_; }
+
+    const std::vector<TabulatedOneDFunction>& inverseSaturatedOilBTable() const
+    { return inverseSaturatedOilBTable_; }
+
+    const std::vector<TabulatedOneDFunction>& inverseSaturatedOilBMuTable() const
+    { return inverseSaturatedOilBMuTable_; }
+
+    const std::vector<TabulatedOneDFunction>& saturatedGasDissolutionFactorTable() const
+    { return saturatedGasDissolutionFactorTable_; }
+
+    const std::vector<TabulatedOneDFunction>& saturationPressure() const
+    { return saturationPressure_; }
+
+    Scalar vapPar2() const
+    { return vapPar2_; }
+
+    bool operator==(const LiveOilPvt<Scalar>& data) const
+    {
+        return this->gasReferenceDensity() == data.gasReferenceDensity() &&
+               this->oilReferenceDensity() == data.oilReferenceDensity() &&
+               this->inverseOilBTable() == data.inverseOilBTable() &&
+               this->oilMuTable() == data.oilMuTable() &&
+               this->inverseOilBMuTable() == data.inverseOilBMuTable() &&
+               this->saturatedOilMuTable() == data.saturatedOilMuTable() &&
+               this->inverseSaturatedOilBTable() == data.inverseSaturatedOilBTable() &&
+               this->inverseSaturatedOilBMuTable() == data.inverseSaturatedOilBMuTable() &&
+               this->saturatedGasDissolutionFactorTable() == data.saturatedGasDissolutionFactorTable() &&
+               this->vapPar2() == data.vapPar2();
     }
 
 private:

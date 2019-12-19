@@ -88,6 +88,17 @@ public:
     OilPvtMultiplexer()
     {
         approach_ = NoOilPvt;
+        realOilPvt_ = nullptr;
+    }
+
+    OilPvtMultiplexer(OilPvtApproach approach, void* realOilPvt)
+        : approach_(approach)
+        , realOilPvt_(realOilPvt)
+    { }
+
+    OilPvtMultiplexer(const OilPvtMultiplexer<Scalar,enableThermal>& data)
+    {
+        *this = data;
     }
 
     ~OilPvtMultiplexer()
@@ -320,6 +331,54 @@ public:
     {
         assert(approach() == approachV);
         return *static_cast<const Opm::OilPvtThermal<Scalar>* >(realOilPvt_);
+    }
+
+    const void* realOilPvt() const { return realOilPvt_; }
+
+    bool operator==(const OilPvtMultiplexer<Scalar,enableThermal>& data) const
+    {
+        if (this->approach() != data.approach())
+            return false;
+
+        switch (approach_) {
+        case ConstantCompressibilityOilPvt:
+            return *static_cast<const Opm::ConstantCompressibilityOilPvt<Scalar>*>(realOilPvt_) ==
+                   *static_cast<const Opm::ConstantCompressibilityOilPvt<Scalar>*>(data.realOilPvt_);
+        case DeadOilPvt:
+            return *static_cast<const Opm::DeadOilPvt<Scalar>*>(realOilPvt_) ==
+                   *static_cast<const Opm::DeadOilPvt<Scalar>*>(data.realOilPvt_);
+        case LiveOilPvt:
+            return *static_cast<const Opm::LiveOilPvt<Scalar>*>(realOilPvt_) ==
+                   *static_cast<const Opm::LiveOilPvt<Scalar>*>(data.realOilPvt_);
+        case ThermalOilPvt:
+            return *static_cast<const Opm::OilPvtThermal<Scalar>*>(realOilPvt_) ==
+                   *static_cast<const Opm::OilPvtThermal<Scalar>*>(data.realOilPvt_);
+        default:
+            return true;
+        }
+    }
+
+    OilPvtMultiplexer<Scalar,enableThermal>& operator=(const OilPvtMultiplexer<Scalar,enableThermal>& data)
+    {
+        approach_ = data.approach_;
+        switch (approach_) {
+        case ConstantCompressibilityOilPvt:
+            realOilPvt_ = new Opm::ConstantCompressibilityOilPvt<Scalar>(*static_cast<const Opm::ConstantCompressibilityOilPvt<Scalar>*>(data.realOilPvt_));
+            break;
+        case DeadOilPvt:
+            realOilPvt_ = new Opm::DeadOilPvt<Scalar>(*static_cast<const Opm::DeadOilPvt<Scalar>*>(data.realOilPvt_));
+            break;
+        case LiveOilPvt:
+            realOilPvt_ = new Opm::LiveOilPvt<Scalar>(*static_cast<const Opm::LiveOilPvt<Scalar>*>(data.realOilPvt_));
+            break;
+        case ThermalOilPvt:
+            realOilPvt_ = new Opm::OilPvtThermal<Scalar>(*static_cast<const Opm::OilPvtThermal<Scalar>*>(data.realOilPvt_));
+            break;
+        default:
+            break;
+        }
+
+        return *this;
     }
 
 private:

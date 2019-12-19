@@ -52,7 +52,23 @@ class ConstantCompressibilityOilPvt
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
+    ConstantCompressibilityOilPvt() = default;
+    ConstantCompressibilityOilPvt(const std::vector<Scalar>& oilReferenceDensity,
+                                  const std::vector<Scalar>& oilReferencePressure,
+                                  const std::vector<Scalar>& oilReferenceFormationVolumeFactor,
+                                  const std::vector<Scalar>& oilCompressibility,
+                                  const std::vector<Scalar>& oilViscosity,
+                                  const std::vector<Scalar>& oilViscosibility)
+        : oilReferenceDensity_(oilReferenceDensity)
+        , oilReferencePressure_(oilReferencePressure)
+        , oilReferenceFormationVolumeFactor_(oilReferenceFormationVolumeFactor)
+        , oilCompressibility_(oilCompressibility)
+        , oilViscosity_(oilViscosity)
+        , oilViscosibility_(oilViscosibility)
+    { }
+
 #if HAVE_ECL_INPUT
+
     /*!
      * \brief Sets the pressure-dependent oil viscosity and density
      *        using the Eclipse PVCDO keyword.
@@ -264,6 +280,34 @@ public:
                                   const Evaluation& /*temperature*/,
                                   const Evaluation& /*Rs*/) const
     { return 0.0; /* this is dead oil, so there isn't any meaningful saturation pressure! */ }
+
+    const std::vector<Scalar>& oilReferenceDensity() const
+    { return oilReferenceDensity_; }
+
+    const std::vector<Scalar>& oilReferencePressure() const
+    { return oilReferencePressure_; }
+
+    const std::vector<Scalar>& oilReferenceFormationVolumeFactor() const
+    { return oilReferenceFormationVolumeFactor_; }
+
+    const std::vector<Scalar>& oilCompressibility() const
+    { return oilCompressibility_; }
+
+    const std::vector<Scalar>& oilViscosity() const
+    { return oilViscosity_; }
+
+    const std::vector<Scalar>& oilViscosibility() const
+    { return oilViscosibility_; }
+
+    bool operator==(const ConstantCompressibilityOilPvt<Scalar>& data) const
+    {
+        return this->oilReferenceDensity() == data.oilReferenceDensity() &&
+               this->oilReferencePressure() == data.oilReferencePressure() &&
+               this->oilReferenceFormationVolumeFactor() == data.oilReferenceFormationVolumeFactor() &&
+               this->oilCompressibility() == data.oilCompressibility() &&
+               this->oilViscosity() == data.oilViscosity() &&
+               this->oilViscosibility() == data.oilViscosibility();
+    }
 
 private:
     std::vector<Scalar> oilReferenceDensity_;
