@@ -136,7 +136,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp
   opm/simulators/linalg/bda/BdaBridge.hpp
   opm/simulators/linalg/bda/BdaResult.hpp
-  opm/simulators/linalg/bda/cuda_header.h
+  opm/simulators/linalg/bda/cuda_header.hpp
   opm/simulators/linalg/bda/cusparseSolverBackend.hpp
   opm/simulators/linalg/BlackoilAmg.hpp
   opm/simulators/linalg/BlackoilAmgCpr.hpp
