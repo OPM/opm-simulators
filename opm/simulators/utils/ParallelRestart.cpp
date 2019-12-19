@@ -158,6 +158,26 @@ std::size_t packSize(const std::vector<bool,A>& data, Dune::MPIHelper::MPICommun
     return packSize(data.size(), comm) + data.size()*packSize(entry,comm);
 }
 
+template<std::size_t I = 0, typename Tuple>
+typename std::enable_if<I == std::tuple_size<Tuple>::value, std::size_t>::type
+pack_size_tuple_entry(const Tuple&, Dune::MPIHelper::MPICommunicator)
+{
+    return 0;
+}
+
+template<std::size_t I = 0, typename Tuple>
+typename std::enable_if<I != std::tuple_size<Tuple>::value, std::size_t>::type
+pack_size_tuple_entry(const Tuple& tuple, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(std::get<I>(tuple), comm) + pack_size_tuple_entry<I+1>(tuple, comm);
+}
+
+template<class... Ts>
+std::size_t packSize(const std::tuple<Ts...>& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return pack_size_tuple_entry(data, comm);
+}
+
 template<class Key, class Value>
 std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -546,6 +566,137 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.rtemp(), comm);
 }
 
+template<class Scalar>
+std::size_t packSize(const Tabulated1DFunction<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.xValues(), comm) +
+           packSize(data.yValues(), comm);
+}
+
+template std::size_t packSize(const Tabulated1DFunction<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+std::size_t packSize(const SolventPvt<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.solventReferenceDensity(), comm) +
+           packSize(data.inverseSolventB(), comm) +
+           packSize(data.solventMu(), comm) +
+           packSize(data.inverseSolventBMu(), comm);
+}
+
+template std::size_t packSize(const SolventPvt<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+std::size_t packSize(const IntervalTabulated2DFunction<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.xPos(), comm) +
+           packSize(data.yPos(), comm) +
+           packSize(data.samples(), comm) +
+           packSize(data.xExtrapolate(), comm) +
+           packSize(data.yExtrapolate(), comm);
+}
+
+template std::size_t packSize(const IntervalTabulated2DFunction<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+std::size_t packSize(const UniformXTabulated2DFunction<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.xPos(), comm) +
+           packSize(data.yPos(), comm) +
+           packSize(data.samples(), comm) +
+           packSize(data.interpolationGuide(), comm);
+}
+
+template std::size_t packSize(const UniformXTabulated2DFunction<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+std::size_t packSize(const DryGasPvt<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.gasReferenceDensity(), comm) +
+           packSize(data.inverseGasB(), comm) +
+           packSize(data.gasMu(), comm) +
+           packSize(data.inverseGasBMu(), comm);
+}
+
+template std::size_t packSize(const DryGasPvt<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+std::size_t packSize(const GasPvtThermal<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size = packSize(data.gasvisctCurves(), comm) +
+                       packSize(data.gasdentRefTemp(), comm) +
+                       packSize(data.gasdentCT1(), comm) +
+                       packSize(data.gasdentCT2(), comm) +
+                       packSize(data.internalEnergyCurves(), comm) +
+                       packSize(data.enableThermalDensity(), comm) +
+                       packSize(data.enableThermalViscosity(), comm) +
+                       packSize(data.enableInternalEnergy(), comm);
+    size += packSize(bool(), comm);
+    if (data.isoThermalPvt())
+        size += packSize(*data.isoThermalPvt(), comm);
+
+    return size;
+}
+
+template std::size_t packSize(const GasPvtThermal<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar, bool enableThermal>
+std::size_t packSize(const GasPvtMultiplexer<Scalar,enableThermal>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size = packSize(data.gasPvtApproach(), comm);
+    const void* realGasPvt = data.realGasPvt();
+    using PvtApproach = GasPvtMultiplexer<Scalar,enableThermal>;
+    if (data.gasPvtApproach() == PvtApproach::DryGasPvt) {
+        const auto& pvt = *static_cast<const DryGasPvt<Scalar>*>(realGasPvt);
+        size += packSize(pvt, comm);
+    } else if (data.gasPvtApproach() == PvtApproach::WetGasPvt) {
+        const auto& pvt = *static_cast<const WetGasPvt<Scalar>*>(realGasPvt);
+        size += packSize(pvt, comm);
+    } else if (data.gasPvtApproach() == PvtApproach::ThermalGasPvt) {
+        const auto& pvt = *static_cast<const GasPvtThermal<Scalar>*>(realGasPvt);
+        size += packSize(pvt, comm);
+    }
+
+    return size;
+}
+
+template std::size_t packSize(const GasPvtMultiplexer<double,true>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+template std::size_t packSize(const GasPvtMultiplexer<double,false>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+std::size_t packSize(const WetGasPvt<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.gasReferenceDensity(), comm) +
+           packSize(data.oilReferenceDensity(), comm) +
+           packSize(data.inverseGasB(), comm) +
+           packSize(data.inverseSaturatedGasB(), comm) +
+           packSize(data.gasMu(), comm) +
+           packSize(data.inverseGasBMu(), comm) +
+           packSize(data.inverseSaturatedGasBMu(), comm) +
+           packSize(data.saturatedOilVaporizationFactorTable(), comm) +
+           packSize(data.saturationPressure(), comm) +
+           packSize(data.vapPar1(), comm);
+}
+
+template std::size_t packSize(const WetGasPvt<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
 ////// pack routines
 
 template<class T>
@@ -644,6 +795,29 @@ void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& posit
         bool b = entry;
         pack(b, buffer, position, comm);
     }
+}
+
+template<std::size_t I = 0, typename Tuple>
+typename std::enable_if<I == std::tuple_size<Tuple>::value, void>::type
+pack_tuple_entry(const Tuple&, std::vector<char>&, int&,
+                      Dune::MPIHelper::MPICommunicator)
+{
+}
+
+template<std::size_t I = 0, typename Tuple>
+typename std::enable_if<I != std::tuple_size<Tuple>::value, void>::type
+pack_tuple_entry(const Tuple& tuple, std::vector<char>& buffer,
+                 int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(std::get<I>(tuple), buffer, position, comm);
+    pack_tuple_entry<I+1>(tuple, buffer, position, comm);
+}
+
+template<class... Ts>
+void pack(const std::tuple<Ts...>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    pack_tuple_entry(data, buffer, position, comm);
 }
 
 template<class Key, class Value>
@@ -1073,6 +1247,153 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
     pack(data.rtemp(), buffer, position, comm);
 }
 
+template<class Scalar>
+void pack(const Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.xValues(), buffer, position, comm);
+    pack(data.yValues(), buffer, position, comm);
+}
+
+template void pack(const Tabulated1DFunction<double>& data, std::vector<char>& buffer,
+                   int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const IntervalTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.xPos(), buffer, position, comm);
+    pack(data.yPos(), buffer, position, comm);
+    pack(data.samples(), buffer, position, comm);
+    pack(data.xExtrapolate(), buffer, position, comm);
+    pack(data.yExtrapolate(), buffer, position, comm);
+}
+
+template void pack(const IntervalTabulated2DFunction<double>& data,
+                   std::vector<char>& buffer,
+                   int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template
+void pack(const std::vector<IntervalTabulated2DFunction<double>>& data,
+          std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template
+void pack(const std::map<int,IntervalTabulated2DFunction<double>>& data,
+          std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const UniformXTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.xPos(), buffer, position, comm);
+    pack(data.yPos(), buffer, position, comm);
+    pack(data.samples(), buffer, position, comm);
+    pack(data.interpolationGuide(), buffer, position, comm);
+}
+
+template void pack(const UniformXTabulated2DFunction<double>& data,
+                   std::vector<char>& buffer,
+                   int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const SolventPvt<Scalar>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.solventReferenceDensity(), buffer, position, comm);
+    pack(data.inverseSolventB(), buffer, position, comm);
+    pack(data.solventMu(), buffer, position, comm);
+    pack(data.inverseSolventBMu(), buffer, position, comm);
+}
+
+template void pack(const SolventPvt<double>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar, bool enableThermal>
+void pack(const GasPvtMultiplexer<Scalar,enableThermal>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.gasPvtApproach(), buffer, position, comm);
+    const void* realGasPvt = data.realGasPvt();
+    using PvtApproach = GasPvtMultiplexer<Scalar,enableThermal>;
+    if (data.gasPvtApproach() == PvtApproach::DryGasPvt) {
+        const auto& pvt = *static_cast<const DryGasPvt<Scalar>*>(realGasPvt);
+        pack(pvt, buffer, position, comm);
+    } else if (data.gasPvtApproach() == PvtApproach::WetGasPvt) {
+        const auto& pvt = *static_cast<const WetGasPvt<Scalar>*>(realGasPvt);
+        pack(pvt, buffer, position, comm);
+    } else if (data.gasPvtApproach() == PvtApproach::ThermalGasPvt) {
+        const auto& pvt = *static_cast<const GasPvtThermal<Scalar>*>(realGasPvt);
+        pack(pvt, buffer, position, comm);
+    }
+}
+
+template void pack(const GasPvtMultiplexer<double,true>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+template void pack(const GasPvtMultiplexer<double,false>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const DryGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.gasReferenceDensity(), buffer, position, comm);
+    pack(data.inverseGasB(), buffer, position, comm);
+    pack(data.gasMu(), buffer, position, comm);
+    pack(data.inverseGasBMu(), buffer, position, comm);
+}
+
+template void pack(const DryGasPvt<double>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const GasPvtThermal<Scalar>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.gasvisctCurves(), buffer, position, comm);
+    pack(data.gasdentRefTemp(), buffer, position, comm);
+    pack(data.gasdentCT1(), buffer, position, comm);
+    pack(data.gasdentCT2(), buffer, position, comm);
+    pack(data.internalEnergyCurves(), buffer, position, comm);
+    pack(data.enableThermalDensity(), buffer, position, comm);
+    pack(data.enableThermalViscosity(), buffer, position, comm);
+    pack(data.enableInternalEnergy(), buffer, position, comm);
+    pack(data.isoThermalPvt() != nullptr, buffer, position, comm);
+    if (data.isoThermalPvt())
+        pack(*data.isoThermalPvt(), buffer, position, comm);
+}
+
+template void pack(const GasPvtThermal<double>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const WetGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.gasReferenceDensity(), buffer, position, comm);
+    pack(data.oilReferenceDensity(), buffer, position, comm);
+    pack(data.inverseGasB(), buffer, position, comm);
+    pack(data.inverseSaturatedGasB(), buffer, position, comm);
+    pack(data.gasMu(), buffer, position, comm);
+    pack(data.inverseGasBMu(), buffer, position, comm);
+    pack(data.inverseSaturatedGasBMu(), buffer, position, comm);
+    pack(data.saturatedOilVaporizationFactorTable(), buffer, position, comm);
+    pack(data.saturationPressure(), buffer, position, comm);
+    pack(data.vapPar1(), buffer, position, comm);
+}
+
+template void pack(const WetGasPvt<double>& data,
+                   std::vector<char>& buffer, int& position,
+                   Dune::MPIHelper::MPICommunicator comm);
+
 /// unpack routines
 
 template<class T>
@@ -1174,6 +1495,29 @@ void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
         unpack(entry, buffer, position, comm);
         data.push_back(entry);
     }
+}
+
+template<std::size_t I = 0, typename Tuple>
+typename std::enable_if<I == std::tuple_size<Tuple>::value, void>::type
+unpack_tuple_entry(Tuple&, std::vector<char>&, int&,
+                   Dune::MPIHelper::MPICommunicator)
+{
+}
+
+template<std::size_t I = 0, typename Tuple>
+typename std::enable_if<I != std::tuple_size<Tuple>::value, void>::type
+unpack_tuple_entry(Tuple& tuple, std::vector<char>& buffer,
+                   int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(std::get<I>(tuple), buffer, position, comm);
+    unpack_tuple_entry<I+1>(tuple, buffer, position, comm);
+}
+
+template<class... Ts>
+void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
+            int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack_tuple_entry(data, buffer, position, comm);
 }
 
 template<class Key, class Value>
@@ -1759,6 +2103,199 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
                         skprwatTables, skprpolyTables, tabdims, regdims, eqldims,
                         aqudims, hasImptvd, hasEntpvd, hasEqlnum, jfunc, rtemp);
 }
+
+template<class Scalar>
+void unpack(Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
+            int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Scalar> xValues, yValues;
+    unpack(xValues, buffer, position, comm);
+    unpack(yValues, buffer, position, comm);
+    data = Tabulated1DFunction<Scalar>(xValues, yValues, false);
+}
+
+template void unpack(Tabulated1DFunction<double>& data, std::vector<char>& buffer,
+                     int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(IntervalTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
+            int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Scalar> xPos, yPos;
+    std::vector<std::vector<Scalar>> samples;
+    bool xExtrapolate, yExtrapolate;
+    unpack(xPos, buffer, position, comm);
+    unpack(yPos, buffer, position, comm);
+    unpack(samples, buffer, position, comm);
+    unpack(xExtrapolate, buffer, position, comm);
+    unpack(yExtrapolate, buffer, position, comm);
+    data = IntervalTabulated2DFunction<Scalar>(xPos, yPos, samples,
+                                               xExtrapolate, yExtrapolate);
+}
+
+template void unpack(IntervalTabulated2DFunction<double>& data,
+                     std::vector<char>& buffer,
+                     int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(UniformXTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
+            int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Scalar> xPos, yPos;
+    std::vector<std::vector<typename UniformXTabulated2DFunction<Scalar>::SamplePoint>> samples;
+    typename UniformXTabulated2DFunction<Scalar>::InterpolationPolicy interpolationGuide;
+    unpack(xPos, buffer, position, comm);
+    unpack(yPos, buffer, position, comm);
+    unpack(samples, buffer, position, comm);
+    unpack(interpolationGuide, buffer, position, comm);
+    data = UniformXTabulated2DFunction<Scalar>(xPos, yPos, samples,
+                                               interpolationGuide);
+}
+
+template void unpack(UniformXTabulated2DFunction<double>& data,
+                     std::vector<char>& buffer,
+                     int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(SolventPvt<Scalar>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Scalar> solventReferenceDensity;
+    std::vector<typename SolventPvt<Scalar>::TabulatedOneDFunction> inverseSolventB;
+    std::vector<typename SolventPvt<Scalar>::TabulatedOneDFunction> solventMu;
+    std::vector<typename SolventPvt<Scalar>::TabulatedOneDFunction> inverseSolventBMu;
+    unpack(solventReferenceDensity, buffer, position, comm);
+    unpack(inverseSolventB, buffer, position, comm);
+    unpack(solventMu, buffer, position, comm);
+    unpack(inverseSolventBMu, buffer, position, comm);
+    data = SolventPvt<Scalar>(solventReferenceDensity, inverseSolventB,
+                              solventMu, inverseSolventBMu);
+}
+
+template void unpack(SolventPvt<double>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar, bool enableThermal>
+void unpack(GasPvtMultiplexer<Scalar,enableThermal>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    typename GasPvtMultiplexer<Scalar,enableThermal>::GasPvtApproach approach;
+    unpack(approach, buffer, position, comm);
+    using PvtApproach = GasPvtMultiplexer<Scalar,enableThermal>;
+    void* pvt = nullptr;
+    if (approach == PvtApproach::DryGasPvt) {
+        DryGasPvt<Scalar>* realPvt = new DryGasPvt<Scalar>;
+        unpack(*realPvt, buffer, position, comm);
+        pvt = realPvt;
+    } else if (data.gasPvtApproach() == PvtApproach::WetGasPvt) {
+        WetGasPvt<Scalar>* realPvt = new WetGasPvt<Scalar>;
+        unpack(*realPvt, buffer, position, comm);
+        pvt = realPvt;
+    } else if (data.gasPvtApproach() == PvtApproach::ThermalGasPvt) {
+        GasPvtThermal<Scalar>* realPvt = new GasPvtThermal<Scalar>;
+        unpack(*realPvt, buffer, position, comm);
+        pvt = realPvt;
+    }
+    data = GasPvtMultiplexer<Scalar,enableThermal>(approach, pvt);
+}
+
+template void unpack(GasPvtMultiplexer<double,true>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+template void unpack(GasPvtMultiplexer<double,false>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(DryGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Scalar> gasReferenceDensity;
+    std::vector<typename DryGasPvt<Scalar>::TabulatedOneDFunction> inverseGasB;
+    std::vector<typename DryGasPvt<Scalar>::TabulatedOneDFunction> gasMu;
+    std::vector<typename DryGasPvt<Scalar>::TabulatedOneDFunction> inverseGasBMu;
+    unpack(gasReferenceDensity, buffer, position, comm);
+    unpack(inverseGasB, buffer, position, comm);
+    unpack(gasMu, buffer, position, comm);
+    unpack(inverseGasBMu, buffer, position, comm);
+    data = DryGasPvt<Scalar>(gasReferenceDensity, inverseGasB,
+                                gasMu, inverseGasBMu);
+}
+
+template void unpack(DryGasPvt<double>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(GasPvtThermal<Scalar>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<typename GasPvtThermal<Scalar>::TabulatedOneDFunction> gasvisctCurves;
+    std::vector<Scalar> gasdentRefTemp, gasdentCT1, gasdentCT2;
+    std::vector<typename GasPvtThermal<Scalar>::TabulatedOneDFunction> internalEnergyCurves;
+    bool enableThermalDensity, enableThermalViscosity, enableInternalEnergy;
+    unpack(gasvisctCurves, buffer, position, comm);
+    unpack(gasdentRefTemp, buffer, position, comm);
+    unpack(gasdentCT1, buffer, position, comm);
+    unpack(gasdentCT2, buffer, position, comm);
+    unpack(internalEnergyCurves, buffer, position, comm);
+    unpack(enableThermalDensity, buffer, position, comm);
+    unpack(enableThermalViscosity, buffer, position, comm);
+    unpack(enableInternalEnergy, buffer, position, comm);
+    bool isothermal;
+    unpack(isothermal, buffer, position, comm);
+    typename GasPvtThermal<Scalar>::IsothermalPvt* pvt = nullptr;
+    if (isothermal) {
+        pvt = new typename GasPvtThermal<Scalar>::IsothermalPvt;
+        unpack(*pvt, buffer, position, comm);
+    }
+    data = GasPvtThermal<Scalar>(pvt, gasvisctCurves, gasdentRefTemp,
+                                 gasdentCT1, gasdentCT2,
+                                 internalEnergyCurves,
+                                 enableThermalDensity,
+                                 enableThermalViscosity,
+                                 enableInternalEnergy);
+}
+
+template void unpack(GasPvtThermal<double>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(WetGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Scalar> gasReferenceDensity, oilReferenceDensity;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedTwoDFunction> inverseGasB;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedOneDFunction> inverseSaturatedGasB;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedTwoDFunction> gasMu;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedTwoDFunction> inverseGasBMu;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedOneDFunction> inverseSaturatedGasBMu;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedOneDFunction> satOilVapFacTable;
+    std::vector<typename WetGasPvt<Scalar>::TabulatedOneDFunction> saturationPressure;
+    Scalar vapPar1;
+    unpack(gasReferenceDensity, buffer, position, comm);
+    unpack(oilReferenceDensity, buffer, position, comm);
+    unpack(inverseGasB, buffer, position, comm);
+    unpack(inverseSaturatedGasB, buffer, position, comm);
+    unpack(gasMu, buffer, position, comm);
+    unpack(inverseGasBMu, buffer, position, comm);
+    unpack(inverseSaturatedGasBMu, buffer, position, comm);
+    unpack(satOilVapFacTable, buffer, position, comm);
+    unpack(saturationPressure, buffer, position, comm);
+    unpack(vapPar1, buffer, position, comm);
+    data = WetGasPvt<Scalar>(gasReferenceDensity, oilReferenceDensity, inverseGasB,
+                             inverseSaturatedGasB, gasMu, inverseGasBMu,
+                             inverseSaturatedGasBMu, satOilVapFacTable,
+                             saturationPressure, vapPar1);
+}
+
+template void unpack(WetGasPvt<double>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
 
 } // end namespace Mpi
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,

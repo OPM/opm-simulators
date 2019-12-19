@@ -25,6 +25,9 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
@@ -961,6 +964,109 @@ BOOST_AUTO_TEST_CASE(TableManager)
                            true,
                            jfunc,
                            1.0);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(TabulatedOneDFunction)
+{
+#ifdef HAVE_MPI
+    Opm::Tabulated1DFunction<double> val1(2, std::vector<double>{1.0, 2.0},
+                                             std::vector<double>{3.0, 4.0});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(IntervalTabulatedTwoDFunction)
+{
+#ifdef HAVE_MPI
+    std::vector<double> xPos{1.0, 2.0};
+    std::vector<double> yPos{3.0, 4.0};
+    std::vector<std::vector<double>> samples{{1.0, 2.0}, {3.0, 4.0}};
+    Opm::IntervalTabulated2DFunction<double> val1(xPos, yPos, samples, true, true);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UniformXTabulatedTwoDFunction)
+{
+#ifdef HAVE_MPI
+    std::vector<double> xPos{1.0, 2.0};
+    std::vector<double> yPos{3.0, 4.0};
+    std::vector<std::vector<std::tuple<double,double,double>>> samples{{{1.0, 2.0, 3.0}}, {{4.0, 5.0, 6.0}}};
+    using FFuncType = Opm::UniformXTabulated2DFunction<double>;
+    FFuncType val1(xPos, yPos, samples, FFuncType::Vertical);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(SolventPvt)
+{
+#ifdef HAVE_MPI
+    Opm::Tabulated1DFunction<double> func(2, std::vector<double>{1.0, 2.0},
+                                             std::vector<double>{3.0, 4.0});
+    Opm::SolventPvt<double> val1({1.0, 2.0}, {func}, {func}, {func});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(DryGasPvt)
+{
+#ifdef HAVE_MPI
+    Opm::Tabulated1DFunction<double> func(2, std::vector<double>{1.0, 2.0},
+                                             std::vector<double>{3.0, 4.0});
+    Opm::DryGasPvt<double> val1({1.0, 2.0}, {func}, {func}, {func});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GasPvtThermal)
+{
+#ifdef HAVE_MPI
+    Opm::Tabulated1DFunction<double> func(2, std::vector<double>{1.0, 2.0},
+                                             std::vector<double>{3.0, 4.0});
+    Opm::GasPvtThermal<double>::IsothermalPvt* pvt = new Opm::GasPvtThermal<double>::IsothermalPvt;
+    Opm::GasPvtThermal<double> val1(pvt, {func}, {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0},
+                                    {func}, true, true, false);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WetGasPvt)
+{
+#ifdef HAVE_MPI
+    Opm::Tabulated1DFunction<double> func(2, std::vector<double>{1.0, 2.0},
+                                             std::vector<double>{3.0, 4.0});
+    std::vector<double> xPos{1.0, 2.0};
+    std::vector<double> yPos{3.0, 4.0};
+    using FFuncType = Opm::UniformXTabulated2DFunction<double>;
+    using Samples = std::vector<std::vector<FFuncType::SamplePoint>>;
+    Samples samples({{{1.0, 2.0, 3.0}, {3.0, 4.0, 5.0}}});
+    FFuncType func2(xPos, yPos, samples, FFuncType::Vertical);
+    Opm::WetGasPvt<double> val1({1.0, 2.0}, {3.0, 4.0},
+                                {func2}, {func}, {func2},
+                                {func2}, {func}, {func}, {func}, 5.0);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
