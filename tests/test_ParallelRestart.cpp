@@ -36,7 +36,12 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
@@ -182,6 +187,7 @@ Opm::FoamData getFoamData()
     return Opm::FoamData(1.0, 2.0, 3.0, true, 4.0);
 }
 
+
 Opm::TimeMap getTimeMap()
 {
     return Opm::TimeMap({123},
@@ -222,6 +228,46 @@ Opm::TableContainer getTableContainer()
     result.addTable(0, std::make_shared<const Opm::SimpleTable>(tab1));
     result.addTable(1, std::make_shared<const Opm::SimpleTable>(tab1));
     return result;
+}
+
+
+Opm::VFPInjTable getVFPInjTable()
+{
+    Opm::VFPInjTable::array_type table;
+    Opm::VFPInjTable::extents shape;
+    shape[0] = 3;
+    shape[1] = 2;
+    table.resize(shape);
+    double foo = 1.0;
+    for (size_t i = 0; i < table.num_elements(); ++i)
+        *(table.data() + i) = foo++;
+    return Opm::VFPInjTable(1, 2.0, Opm::VFPInjTable::FLO_WAT, {1.0, 2.0},
+                            {3.0, 4.0, 5.0}, table);
+}
+
+
+Opm::VFPProdTable getVFPProdTable()
+{
+    Opm::VFPProdTable::array_type table;
+    Opm::VFPProdTable::extents shape;
+    shape[0] = 1;
+    shape[1] = 2;
+    shape[2] = 3;
+    shape[3] = 4;
+    shape[4] = 5;
+    table.resize(shape);
+    double foo = 1.0;
+    for (size_t i = 0; i < table.num_elements(); ++i)
+        *(table.data() + i) = foo++;
+    return Opm::VFPProdTable(1, 2.0, Opm::VFPProdTable::FLO_OIL,
+                             Opm::VFPProdTable::WFR_WOR,
+                             Opm::VFPProdTable::GFR_GLR,
+                             Opm::VFPProdTable::ALQ_TGLR,
+                             {1.0, 2.0, 3.0, 4.0, 5.0},
+                             {1.0},
+                             {1.0, 2.0},
+                             {1.0, 2.0, 3.0},
+                             {1.0, 2.0, 3.0, 4.0}, table);
 }
 #endif
 
@@ -1158,6 +1204,107 @@ BOOST_AUTO_TEST_CASE(WaterPvtThermal)
                                       {7.0, 8.0}, {9.0, 10.0}, {11.0, 12.0},
                                       {13.0, 14.0}, {15.0, 16.0}, {17.0, 18.0},
                                       {func}, {func}, true, true, false);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(OilVaporizationProperties)
+{
+#ifdef HAVE_MPI
+    using VapType = Opm::OilVaporizationProperties::OilVaporization;
+    Opm::OilVaporizationProperties val1(VapType::VAPPARS,
+                                        {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0},
+                                        {false, true}, {7.0, 8.0});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+    val1 = Opm::OilVaporizationProperties(VapType::DRDT,
+                                          {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0},
+                                          {false, true}, {7.0, 8.0});
+    val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Events)
+{
+#ifdef HAVE_MPI
+    Opm::Events val1(Opm::DynamicVector<uint64_t>({1,2,3,4,5}));
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(MLimits)
+{
+#ifdef HAVE_MPI
+    Opm::MLimits val1{1,2,3,4,5,6,7,8,9,10,11,12};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(MessageLimits)
+{
+#ifdef HAVE_MPI
+    std::vector<Opm::MLimits> limits{Opm::MLimits{1,2,3,4,5,6,7,8,9,10,11,12}};
+    Opm::MessageLimits val1(Opm::DynamicState<Opm::MLimits>(limits,2));
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(VFPInjTable)
+{
+#ifdef HAVE_MPI
+    Opm::VFPInjTable val1 = getVFPInjTable();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(VFPProdTable)
+{
+#ifdef HAVE_MPI
+    Opm::VFPProdTable val1 = getVFPProdTable();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WTESTWell)
+{
+#ifdef HAVE_MPI
+    Opm::WellTestConfig::WTESTWell val1{"test", Opm::WellTestConfig::ECONOMIC,
+                                         1.0, 2, 3.0, 4};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellTestConfig)
+{
+#ifdef HAVE_MPI
+    Opm::WellTestConfig::WTESTWell tw{"test", Opm::WellTestConfig::ECONOMIC,
+                                         1.0, 2, 3.0, 4};
+    Opm::WellTestConfig val1({tw, tw, tw});
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
