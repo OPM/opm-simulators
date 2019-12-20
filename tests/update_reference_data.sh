@@ -95,6 +95,8 @@ changed_tests=""
 # Read failed tests
 FAILED_TESTS=`cat $WORKSPACE/$configuration/build-opm-simulators/Testing/Temporary/LastTestsFailed*.log`
 
+test -z "$FAILED_TESTS" && exit 5
+
 for failed_test in $FAILED_TESTS
 do
   failed=`echo $failed_test | sed -e 's/.*:compareECLFiles_//g'`
