@@ -1822,7 +1822,7 @@ namespace Opm {
 
         if (group.isProductionGroup()) {
             const auto controls = group.productionControls(summaryState);
-
+            double eps = 1.001;
             if (group.has_control(Group::ProductionCMode::NONE))
             {
 
@@ -1835,7 +1835,7 @@ namespace Opm {
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
 
-                if (controls.oil_target < current_rate  ) {
+                if (controls.oil_target*eps < current_rate  ) {
                     actionOnBrokenConstraints(group, controls.exceed_action, Group::ProductionCMode::ORAT, reportStepIdx, deferred_logger);
                 }
             }
@@ -1848,7 +1848,7 @@ namespace Opm {
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
 
-                if (controls.water_target < current_rate  ) {
+                if (controls.water_target*eps < current_rate  ) {
                     actionOnBrokenConstraints(group, controls.exceed_action, Group::ProductionCMode::WRAT, reportStepIdx, deferred_logger);
                 }
             }
@@ -1859,7 +1859,7 @@ namespace Opm {
 
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
-                if (controls.gas_target < current_rate  ) {
+                if (controls.gas_target*eps < current_rate  ) {
                     actionOnBrokenConstraints(group, controls.exceed_action, Group::ProductionCMode::GRAT, reportStepIdx, deferred_logger);
                 }
             }
@@ -1872,7 +1872,7 @@ namespace Opm {
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
 
-                if (controls.liquid_target < current_rate  ) {
+                if (controls.liquid_target*eps < current_rate  ) {
                     actionOnBrokenConstraints(group, controls.exceed_action, Group::ProductionCMode::LRAT, reportStepIdx, deferred_logger);
                 }
             }
@@ -1892,7 +1892,7 @@ namespace Opm {
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
 
-                if (controls.resv_target < current_rate  ) {
+                if (controls.resv_target*eps < current_rate  ) {
                     actionOnBrokenConstraints(group, controls.exceed_action, Group::ProductionCMode::RESV, reportStepIdx, deferred_logger);
                 }
 
