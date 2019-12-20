@@ -53,6 +53,7 @@
 #include <string>
 #include <vector>
 #include <string.h>
+
 #define CHECK(value, expected)             \
     {                                      \
          if ((value) != (expected)) {      \

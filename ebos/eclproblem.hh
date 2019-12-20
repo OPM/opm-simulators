@@ -2907,7 +2907,9 @@ private:
 
         if (enablePolymer) {
 #ifdef ENABLE_3DPROPS_TESTING
-            const std::vector<double>& polyConcentrationData = eclState.fieldProps().get_global_double("SPOLY");
+            std::vector<double> polyConcentrationData(eclState.getInputGrid().getCartesianSize(), 0.0);
+            if (eclState.fieldProps().has_double("SPOLY"))
+                polyConcentrationData = eclState.fieldProps().get_global_double("SPOLY");
 #else
             const std::vector<double>& polyConcentrationData = eclState.get3DProperties().getDoubleGridProperty("SPOLY").getData();
 #endif
