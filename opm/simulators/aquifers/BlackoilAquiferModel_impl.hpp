@@ -14,13 +14,13 @@ void
 BlackoilAquiferModel<TypeTag>::initialSolutionApplied()
 {
     if (aquiferCarterTracyActive()) {
-        for (auto aquifer = aquifers_CarterTracy.begin(); aquifer != aquifers_CarterTracy.end(); ++aquifer) {
-            aquifer->initialSolutionApplied();
+        for (auto& aquifer : aquifers_CarterTracy) {
+            aquifer.initialSolutionApplied();
         }
     }
     if (aquiferFetkovichActive()) {
-        for (auto aquifer = aquifers_Fetkovich.begin(); aquifer != aquifers_Fetkovich.end(); ++aquifer) {
-            aquifer->initialSolutionApplied();
+        for (auto& aquifer : aquifers_Fetkovich) {
+            aquifer.initialSolutionApplied();
         }
     }
 }
@@ -58,13 +58,13 @@ void
 BlackoilAquiferModel<TypeTag>::beginTimeStep()
 {
     if (aquiferCarterTracyActive()) {
-        for (auto aquifer = aquifers_CarterTracy.begin(); aquifer != aquifers_CarterTracy.end(); ++aquifer) {
-            aquifer->beginTimeStep();
+        for (auto& aquifer : aquifers_CarterTracy) {
+            aquifer.beginTimeStep();
         }
     }
     if (aquiferFetkovichActive()) {
-        for (auto aquifer = aquifers_Fetkovich.begin(); aquifer != aquifers_Fetkovich.end(); ++aquifer) {
-            aquifer->beginTimeStep();
+        for (auto& aquifer : aquifers_Fetkovich) {
+            aquifer.beginTimeStep();
         }
     }
 }
@@ -100,13 +100,13 @@ void
 BlackoilAquiferModel<TypeTag>::endTimeStep()
 {
     if (aquiferCarterTracyActive()) {
-        for (auto aquifer = aquifers_CarterTracy.begin(); aquifer != aquifers_CarterTracy.end(); ++aquifer) {
-            aquifer->endTimeStep();
+        for (auto& aquifer : aquifers_CarterTracy) {
+            aquifer.endTimeStep();
         }
     }
     if (aquiferFetkovichActive()) {
-        for (auto aquifer = aquifers_Fetkovich.begin(); aquifer != aquifers_Fetkovich.end(); ++aquifer) {
-            aquifer->endTimeStep();
+        for (auto& aquifer : aquifers_Fetkovich) {
+            aquifer.endTimeStep();
         }
     }
 }
