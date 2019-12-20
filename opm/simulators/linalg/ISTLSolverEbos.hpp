@@ -45,6 +45,8 @@
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
+#include <opm/simulators/linalg/bda/BdaBridge.hpp>
+
 BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(FlowIstlSolver, INHERITS_FROM(FlowIstlSolverParams));
@@ -222,6 +224,10 @@ protected:
         enum { pressureVarIndex = Indices::pressureSwitchIdx };
         static const int numEq = Indices::numEq;
 
+#if HAVE_CUDA
+        std::unique_ptr<BdaBridge> bdaBridge;
+#endif
+
     public:
         typedef Dune::AssembledLinearOperator< Matrix, Vector, Vector > AssembledLinearOperatorType;
 
@@ -239,6 +245,22 @@ protected:
               converged_(false)
         {
             parameters_.template init<TypeTag>();
+#if HAVE_CUDA
+            const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
+            const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
+            const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
+            const bool matrix_add_well_contributions = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+            const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
+            if (use_gpu && !matrix_add_well_contributions) {
+                OPM_THROW(std::logic_error,"Error cannot use GPU solver if command line parameter --matrix-add-well-contributions is false, because the GPU solver performs a standard bicgstab");
+            }
+            bdaBridge.reset(new BdaBridge(use_gpu, linear_solver_verbosity, maxit, tolerance));
+#else
+            const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
+            if (use_gpu) {
+                OPM_THROW(std::logic_error,"Error cannot use GPU solver since CUDA was not found during compilation");
+            }
+#endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
             const auto& gridForConn = simulator_.vanguard().grid();
             const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
@@ -436,11 +458,30 @@ protected:
             else
 #endif
             {
+                // tries to solve linear system
+                // solve_system() does nothing if Dune is selected
+#if HAVE_CUDA
+                bdaBridge->solve_system(matrix_.get(), istlb, result);
+
+                if (result.converged) {
+                    // get result vector x from non-Dune backend, iff solve was successful
+                    bdaBridge->get_result(x);
+                } else {
+                    // CPU fallback, or default case for Dune
+                    const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
+                    if (use_gpu) {
+                        OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
+                    }
+                    auto precond = constructPrecond(linearOperator, parallelInformation_arg);
+                    solve(linearOperator, x, istlb, *sp, *precond, result);
+                } // end Dune call
+#else
                 // Construct preconditioner.
                 auto precond = constructPrecond(linearOperator, parallelInformation_arg);
 
                 // Solve.
                 solve(linearOperator, x, istlb, *sp, *precond, result);
+#endif
             }
         }
 

@@ -29,6 +29,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/MissingFeatures.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
+  opm/simulators/linalg/bda/BdaBridge.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
@@ -40,6 +41,10 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/VFPInjProperties.cpp
   )
+
+if(CUDA_FOUND)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cusparseSolverBackend.cu)
+endif()
 
 # originally generated with the command:
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
@@ -129,6 +134,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/AquiferFetkovich.hpp
   opm/simulators/aquifers/BlackoilAquiferModel.hpp
   opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp
+  opm/simulators/linalg/bda/BdaBridge.hpp
+  opm/simulators/linalg/bda/BdaResult.hpp
+  opm/simulators/linalg/bda/cuda_header.hpp
+  opm/simulators/linalg/bda/cusparseSolverBackend.hpp
   opm/simulators/linalg/BlackoilAmg.hpp
   opm/simulators/linalg/BlackoilAmgCpr.hpp
   opm/simulators/linalg/amgcpr.hh

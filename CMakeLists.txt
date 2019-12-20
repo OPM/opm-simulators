@@ -12,9 +12,19 @@
 ###########################################################################
 
 # Mandatory call to project
+
 project(opm-simulators C CXX)
 
 cmake_minimum_required (VERSION 2.8)
+
+
+find_package(CUDA)
+
+if(CUDA_FOUND)
+  include_directories(${CUDA_INCLUDE_DIRS})
+  enable_language(CUDA)
+  set(HAVE_CUDA 1)
+endif()
 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
@@ -286,3 +296,10 @@ endif()
 if (OPM_ENABLE_PYTHON)
   add_subdirectory(python)
 endif()
+
+# must link libraries after target 'flow' has been defined
+if(CUDA_FOUND)
+  target_link_libraries( opmsimulators ${CUDA_cublas_LIBRARY} )
+  target_link_libraries( opmsimulators ${CUDA_cusparse_LIBRARY} )
+endif()
+
