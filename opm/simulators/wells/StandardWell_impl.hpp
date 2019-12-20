@@ -769,7 +769,7 @@ namespace Opm
             switch(current) {
             case Well::InjectorCMode::RATE:
             {
-                control_eq = getWQTotal() * efficiencyFactor - controls.surface_rate;
+                control_eq = getWQTotal() - controls.surface_rate;
                 break;
             }
 
@@ -803,7 +803,7 @@ namespace Opm
 
                 }
 
-                control_eq = coeff*getWQTotal()*efficiencyFactor - controls.reservoir_rate;
+                control_eq = coeff*getWQTotal() - controls.reservoir_rate;
                 break;
             }
 
@@ -854,21 +854,21 @@ namespace Opm
             {
                 assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
                 EvalWell rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
-                control_eq = rate * efficiencyFactor  - controls.oil_rate;
+                control_eq = rate - controls.oil_rate;
                 break;
             }
             case Well::ProducerCMode::WRAT:
             {
                 assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
                 EvalWell rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
-                control_eq = rate * efficiencyFactor - controls.water_rate;
+                control_eq = rate - controls.water_rate;
                 break;
             }
             case Well::ProducerCMode::GRAT:
             {
                 assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
                 EvalWell rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
-                control_eq = rate * efficiencyFactor - controls.gas_rate;
+                control_eq = rate - controls.gas_rate;
                 break;
 
             }
@@ -878,7 +878,7 @@ namespace Opm
                 assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
                 EvalWell rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx))
                         - getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
-                control_eq =  rate * efficiencyFactor - controls.liquid_rate;
+                control_eq =  rate - controls.liquid_rate;
                 break;
             }
             case Well::ProducerCMode::CRAT:
@@ -911,7 +911,7 @@ namespace Opm
                     std::vector<double> hrates_resv(number_of_phases_,0.);
                     Base::rateConverter_.calcReservoirVoidageRates(/*fipreg*/ 0, Base::pvtRegionIdx_, hrates, hrates_resv);
                     double target = std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
-                    control_eq = total_rate * efficiencyFactor - target;
+                    control_eq = total_rate - target;
                 }
                 break;
             }
