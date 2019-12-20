@@ -42,6 +42,10 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellFoamProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
@@ -313,7 +317,7 @@ BOOST_AUTO_TEST_CASE(Rates)
 }
 
 
-BOOST_AUTO_TEST_CASE(Connection)
+BOOST_AUTO_TEST_CASE(dataConnection)
 {
 #if HAVE_MPI
     Opm::data::Connection con1 = getConnection();
@@ -1305,6 +1309,158 @@ BOOST_AUTO_TEST_CASE(WellTestConfig)
     Opm::WellTestConfig::WTESTWell tw{"test", Opm::WellTestConfig::ECONOMIC,
                                          1.0, 2, 3.0, 4};
     Opm::WellTestConfig val1({tw, tw, tw});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellPolymerProperties)
+{
+#ifdef HAVE_MPI
+    Opm::WellPolymerProperties val1{1.0, 2.0, 3, 4, 5};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellFoamProperties)
+{
+#ifdef HAVE_MPI
+    Opm::WellFoamProperties val1{1.0};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellTracerProperties)
+{
+#ifdef HAVE_MPI
+    Opm::WellTracerProperties val1({{"test", 1.0}, {"test2", 2.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDAValue)
+{
+#ifdef HAVE_MPI
+    Opm::UDAValue val1("test");
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+    val1 = Opm::UDAValue(1.0);
+    auto val22 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val22) == std::get<2>(val22));
+    BOOST_CHECK(val1 == std::get<0>(val22));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Connection)
+{
+#ifdef HAVE_MPI
+    Opm::Connection val1(Opm::Connection::Direction::Y,
+                         1.0, Opm::Connection::State::SHUT,
+                         2, 3, 4.0, 5.0, 6.0, 7.0, 8.0,
+                         {9, 10, 11}, 12, 13.0, 14.0, true,
+                         15, 16, 17.0);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellInjectionProperties)
+{
+#ifdef HAVE_MPI
+    Opm::Well::WellInjectionProperties val1("test",
+                                            Opm::UDAValue(1.0),
+                                            Opm::UDAValue("test"),
+                                            Opm::UDAValue(2.0),
+                                            Opm::UDAValue(3.0),
+                                            4.0, 5.0, 6.0,
+                                            7,
+                                            true,
+                                            8,
+                                            Opm::Well::InjectorType::OIL,
+                                            Opm::Well::InjectorCMode::BHP);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellEconProductionLimits)
+{
+#ifdef HAVE_MPI
+    Opm::WellEconProductionLimits val1(1.0, 2.0, 3.0, 4.0, 5.0,
+                                       Opm::WellEconProductionLimits::EconWorkover::CONP,
+                                       true, "test",
+                                       Opm::WellEconProductionLimits::QuantityLimit::POTN,
+                                       6.0,
+                                       Opm::WellEconProductionLimits::EconWorkover::WELL,
+                                       7.0, 8.0, 9.0, 10.0);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellGuideRate)
+{
+#ifdef HAVE_MPI
+    Opm::Well::WellGuideRate val1{true, 1.0, Opm::Well::GuideRateTarget::COMB, 2.0};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellConnections)
+{
+#ifdef HAVE_MPI
+    Opm::Connection conn(Opm::Connection::Direction::Y,
+                         1.0, Opm::Connection::State::SHUT,
+                         2, 3, 4.0, 5.0, 6.0, 7.0, 8.0,
+                         {9, 10, 11}, 12, 13.0, 14.0, true,
+                         15, 16, 17.0);
+    Opm::WellConnections val1(1, 2, 3, {conn, conn});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellProductionProperties)
+{
+#ifdef HAVE_MPI
+    Opm::Well::WellProductionProperties val1("test",
+                                             Opm::UDAValue(1.0),
+                                             Opm::UDAValue("test"),
+                                             Opm::UDAValue(2.0),
+                                             Opm::UDAValue(3.0),
+                                             Opm::UDAValue(4.0),
+                                             Opm::UDAValue(5.0),
+                                             Opm::UDAValue(6.0),
+                                             7.0, 8.0,
+                                             9,
+                                             10.0,
+                                             true,
+                                             Opm::Well::ProducerCMode::CRAT,
+                                             Opm::Well::ProducerCMode::BHP, 11);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

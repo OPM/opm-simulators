@@ -36,6 +36,11 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellFoamProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
@@ -264,7 +269,10 @@ HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeMap::StepData)
 HANDLE_AS_POD(VISCREFRecord)
 HANDLE_AS_POD(WATDENTRecord)
+HANDLE_AS_POD(Well::WellGuideRate)
 HANDLE_AS_POD(Welldims)
+HANDLE_AS_POD(WellFoamProperties)
+HANDLE_AS_POD(WellPolymerProperties)
 HANDLE_AS_POD(WellSegmentDims)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
@@ -945,6 +953,113 @@ std::size_t packSize(const WellTestConfig& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getWells(), comm);
+}
+
+std::size_t packSize(const WellTracerProperties& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getConcentrations(), comm);
+}
+
+std::size_t packSize(const UDAValue& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.is<double>(), comm) +
+           (data.is<double>() ? packSize(data.get<double>(), comm) :
+                                packSize(data.get<std::string>(), comm));
+}
+
+std::size_t packSize(const Connection& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.dir(), comm) +
+           packSize(data.depth(), comm) +
+           packSize(data.state(), comm) +
+           packSize(data.satTableId(), comm) +
+           packSize(data.complnum(), comm) +
+           packSize(data.CF(), comm) +
+           packSize(data.Kh(), comm) +
+           packSize(data.rw(), comm) +
+           packSize(data.r0(), comm) +
+           packSize(data.skinFactor(), comm) +
+           packSize(data.getI(), comm) +
+           packSize(data.getJ(), comm) +
+           packSize(data.getK(), comm) +
+           packSize(data.getSeqIndex(), comm) +
+           packSize(data.getSegDistStart(), comm) +
+           packSize(data.getSegDistEnd(), comm) +
+           packSize(data.getDefaultSatTabId(), comm) +
+           packSize(data.getCompSegSeqIndex(), comm) +
+           packSize(data.segment(), comm) +
+           packSize(data.wellPi(), comm);
+}
+
+std::size_t packSize(const Well::WellInjectionProperties& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.name, comm) +
+           packSize(data.surfaceInjectionRate, comm) +
+           packSize(data.reservoirInjectionRate, comm) +
+           packSize(data.BHPLimit, comm) +
+           packSize(data.THPLimit, comm) +
+           packSize(data.temperature, comm) +
+           packSize(data.BHPH, comm) +
+           packSize(data.THPH, comm) +
+           packSize(data.VFPTableNumber, comm) +
+           packSize(data.predictionMode, comm) +
+           packSize(data.injectionControls, comm) +
+           packSize(data.injectorType, comm) +
+           packSize(data.controlMode, comm);
+}
+
+std::size_t packSize(const WellEconProductionLimits& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.minOilRate(), comm) +
+           packSize(data.minGasRate(), comm) +
+           packSize(data.maxWaterCut(), comm) +
+           packSize(data.maxGasOilRatio(), comm) +
+           packSize(data.maxWaterGasRatio(), comm) +
+           packSize(data.workover(), comm) +
+           packSize(data.endRun(), comm) +
+           packSize(data.followonWell(), comm) +
+           packSize(data.quantityLimit(), comm) +
+           packSize(data.maxSecondaryMaxWaterCut(), comm) +
+           packSize(data.workoverSecondary(), comm) +
+           packSize(data.maxGasLiquidRatio(), comm) +
+           packSize(data.minLiquidRate(), comm) +
+           packSize(data.maxTemperature(), comm) +
+           packSize(data.minReservoirFluidRate(), comm);
+}
+
+std::size_t packSize(const WellConnections& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getHeadI(), comm) +
+           packSize(data.getHeadJ(), comm) +
+           packSize(data.getNumRemoved(), comm) +
+           packSize(data.getConnections(), comm);
+}
+
+std::size_t packSize(const Well::WellProductionProperties& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.name, comm) +
+           packSize(data.OilRate, comm) +
+           packSize(data.WaterRate, comm) +
+           packSize(data.GasRate, comm) +
+           packSize(data.LiquidRate, comm) +
+           packSize(data.ResVRate, comm) +
+           packSize(data.BHPLimit, comm) +
+           packSize(data.THPLimit, comm) +
+           packSize(data.BHPH, comm) +
+           packSize(data.THPH, comm) +
+           packSize(data.VFPTableNumber, comm) +
+           packSize(data.ALQValue, comm) +
+           packSize(data.predictionMode, comm) +
+           packSize(data.controlMode, comm) +
+           packSize(data.whistctl_cmode, comm) +
+           packSize(data.getNumProductionControls(), comm);
 }
 
 ////// pack routines
@@ -1904,6 +2019,122 @@ void pack(const WellTestConfig& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getWells(), buffer, position, comm);
+}
+
+void pack(const WellTracerProperties& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getConcentrations(), buffer, position, comm);
+}
+
+void pack(const UDAValue& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.is<double>(), buffer, position, comm);
+    if (data.is<double>())
+        pack(data.get<double>(), buffer, position, comm);
+    else
+        pack(data.get<std::string>(), buffer, position, comm);
+}
+
+void pack(const Connection& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.dir(), buffer, position, comm);
+    pack(data.depth(), buffer, position, comm);
+    pack(data.state(), buffer, position, comm);
+    pack(data.satTableId(), buffer, position, comm);
+    pack(data.complnum(), buffer, position, comm);
+    pack(data.CF(), buffer, position, comm);
+    pack(data.Kh(), buffer, position, comm);
+    pack(data.rw(), buffer, position, comm);
+    pack(data.r0(), buffer, position, comm);
+    pack(data.skinFactor(), buffer, position, comm);
+    pack(data.getI(), buffer, position, comm);
+    pack(data.getJ(), buffer, position, comm);
+    pack(data.getK(), buffer, position, comm);
+    pack(data.getSeqIndex(), buffer, position, comm);
+    pack(data.getSegDistStart(), buffer, position, comm);
+    pack(data.getSegDistEnd(), buffer, position, comm);
+    pack(data.getDefaultSatTabId(), buffer, position, comm);
+    pack(data.getCompSegSeqIndex(), buffer, position, comm);
+    pack(data.segment(), buffer, position, comm);
+    pack(data.wellPi(), buffer, position, comm);
+}
+
+void pack(const Well::WellInjectionProperties& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name, buffer, position, comm);
+    pack(data.surfaceInjectionRate, buffer, position, comm);
+    pack(data.reservoirInjectionRate, buffer, position, comm);
+    pack(data.BHPLimit, buffer, position, comm);
+    pack(data.THPLimit, buffer, position, comm);
+    pack(data.temperature, buffer, position, comm);
+    pack(data.BHPH, buffer, position, comm);
+    pack(data.THPH, buffer, position, comm);
+    pack(data.VFPTableNumber, buffer, position, comm);
+    pack(data.predictionMode, buffer, position, comm);
+    pack(data.injectionControls, buffer, position, comm);
+    pack(data.injectorType, buffer, position, comm);
+    pack(data.controlMode, buffer, position, comm);
+}
+
+void pack(const WellEconProductionLimits& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.minOilRate(), buffer, position, comm);
+    pack(data.minGasRate(), buffer, position, comm);
+    pack(data.maxWaterCut(), buffer, position, comm);
+    pack(data.maxGasOilRatio(), buffer, position, comm);
+    pack(data.maxWaterGasRatio(), buffer, position, comm);
+    pack(data.workover(), buffer, position, comm);
+    pack(data.endRun(), buffer, position, comm);
+    pack(data.followonWell(), buffer, position, comm);
+    pack(data.quantityLimit(), buffer, position, comm);
+    pack(data.maxSecondaryMaxWaterCut(), buffer, position, comm);
+    pack(data.workoverSecondary(), buffer, position, comm);
+    pack(data.maxGasLiquidRatio(), buffer, position, comm);
+    pack(data.minLiquidRate(), buffer, position, comm);
+    pack(data.maxTemperature(), buffer, position, comm);
+    pack(data.minReservoirFluidRate(), buffer, position, comm);
+}
+
+void pack(const WellConnections& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getHeadI(), buffer, position, comm);
+    pack(data.getHeadJ(), buffer, position, comm);
+    pack(data.getNumRemoved(), buffer, position, comm);
+    pack(data.getConnections(), buffer, position, comm);
+}
+
+void pack(const Well::WellProductionProperties& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name, buffer, position, comm);
+    pack(data.OilRate, buffer, position, comm);
+    pack(data.WaterRate, buffer, position, comm);
+    pack(data.GasRate, buffer, position, comm);
+    pack(data.LiquidRate, buffer, position, comm);
+    pack(data.ResVRate, buffer, position, comm);
+    pack(data.BHPLimit, buffer, position, comm);
+    pack(data.THPLimit, buffer, position, comm);
+    pack(data.BHPH, buffer, position, comm);
+    pack(data.THPH, buffer, position, comm);
+    pack(data.VFPTableNumber, buffer, position, comm);
+    pack(data.ALQValue, buffer, position, comm);
+    pack(data.predictionMode, buffer, position, comm);
+    pack(data.controlMode, buffer, position, comm);
+    pack(data.whistctl_cmode, buffer, position, comm);
+    pack(data.getNumProductionControls(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -3210,6 +3441,216 @@ void unpack(WellTestConfig& data,
     data = WellTestConfig(ddata);
 }
 
+void unpack(WellTracerProperties& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    WellTracerProperties::ConcentrationMap ddata;
+    unpack(ddata, buffer, position, comm);
+    data = WellTracerProperties(ddata);
+}
+
+void unpack(UDAValue& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    bool isDouble;
+    unpack(isDouble, buffer, position, comm);
+    if (isDouble) {
+        double val;
+        unpack(val, buffer, position, comm);
+        data = UDAValue(val);
+    } else {
+        std::string val;
+        unpack(val, buffer, position, comm);
+        data = UDAValue(val);
+    }
+}
+
+void unpack(Connection& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    Connection::Direction dir;
+    double depth;
+    Connection::State state;
+    int satTableId, complnum;
+    double CF, Kh, rw, r0, skinFactor;
+    int I, J, K;
+    size_t seqIndex;
+    double segDistStart, segDistEnd;
+    bool defaultSatTabId;
+    size_t compSegSeqIndex;
+    int segment;
+    double wellPi;
+    unpack(dir, buffer, position, comm);
+    unpack(depth, buffer, position, comm);
+    unpack(state, buffer, position, comm);
+    unpack(satTableId, buffer, position, comm);
+    unpack(complnum, buffer, position, comm);
+    unpack(CF, buffer, position, comm);
+    unpack(Kh, buffer, position, comm);
+    unpack(rw, buffer, position, comm);
+    unpack(r0, buffer, position, comm);
+    unpack(skinFactor, buffer, position, comm);
+    unpack(I, buffer, position, comm);
+    unpack(J, buffer, position, comm);
+    unpack(K, buffer, position, comm);
+    unpack(seqIndex, buffer, position, comm);
+    unpack(segDistStart, buffer, position, comm);
+    unpack(segDistEnd, buffer, position, comm);
+    unpack(defaultSatTabId, buffer, position, comm);
+    unpack(compSegSeqIndex, buffer, position, comm);
+    unpack(segment, buffer, position, comm);
+    unpack(wellPi, buffer, position, comm);
+
+    data = Connection(dir, depth, state, satTableId,
+                      complnum, CF, Kh, rw, r0,
+                      skinFactor, {I,J,K}, seqIndex,
+                      segDistStart, segDistEnd,
+                      defaultSatTabId, compSegSeqIndex,
+                      segment, wellPi);
+}
+
+void unpack(Well::WellInjectionProperties& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.name, buffer, position, comm);
+    unpack(data.surfaceInjectionRate, buffer, position, comm);
+    unpack(data.reservoirInjectionRate, buffer, position, comm);
+    unpack(data.BHPLimit, buffer, position, comm);
+    unpack(data.THPLimit, buffer, position, comm);
+    unpack(data.temperature, buffer, position, comm);
+    unpack(data.BHPH, buffer, position, comm);
+    unpack(data.THPH, buffer, position, comm);
+    unpack(data.VFPTableNumber, buffer, position, comm);
+    unpack(data.predictionMode, buffer, position, comm);
+    unpack(data.injectionControls, buffer, position, comm);
+    unpack(data.injectorType, buffer, position, comm);
+    unpack(data.controlMode, buffer, position, comm);
+}
+
+void unpack(WellEconProductionLimits& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    double minOilRate, minGasRate, maxWaterCut, maxGasOilRatio, maxWaterGasRatio;
+    WellEconProductionLimits::EconWorkover workover, workoverSecondary;
+    bool endRun;
+    std::string followonWell;
+    WellEconProductionLimits::QuantityLimit quantityLimit;
+    double secondaryMaxWaterCut, maxGasLiquidRatio, minLiquidRate,
+           maxTemperature, minReservoirFluidRate;
+    unpack(minOilRate, buffer, position, comm);
+    unpack(minGasRate, buffer, position, comm);
+    unpack(maxWaterCut, buffer, position, comm);
+    unpack(maxGasOilRatio, buffer, position, comm);
+    unpack(maxWaterGasRatio, buffer, position, comm);
+    unpack(workover, buffer, position, comm);
+    unpack(endRun, buffer, position, comm);
+    unpack(followonWell, buffer, position, comm);
+    unpack(quantityLimit, buffer, position, comm);
+    unpack(secondaryMaxWaterCut, buffer, position, comm);
+    unpack(workoverSecondary, buffer, position, comm);
+    unpack(maxGasLiquidRatio, buffer, position, comm);
+    unpack(minLiquidRate, buffer, position, comm);
+    unpack(maxTemperature, buffer, position, comm);
+    unpack(minReservoirFluidRate, buffer, position, comm);
+    data = WellEconProductionLimits(minOilRate, minGasRate, maxWaterCut,
+                                    maxGasOilRatio, maxWaterGasRatio,
+                                    workover, endRun, followonWell,
+                                    quantityLimit, secondaryMaxWaterCut,
+                                    workoverSecondary, maxGasLiquidRatio,
+                                    minLiquidRate, maxTemperature,
+                                    minReservoirFluidRate);
+}
+
+void unpack(WellConnections& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    int headI, headJ;
+    size_t numRemoved;
+    std::vector<Connection> connections;
+
+    unpack(headI, buffer, position, comm),
+    unpack(headJ, buffer, position, comm),
+    unpack(numRemoved, buffer, position, comm),
+    unpack(connections, buffer, position, comm),
+
+    data = WellConnections(headI, headJ, numRemoved, connections);
+}
+
+void unpack(Well::WellProductionProperties& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    UDAValue OilRate, WaterRate, GasRate, LiquidRate, ResVRate;
+    UDAValue BHPLimit, THPLimit;
+    double BHPH, THPH;
+    int VFPTableNumber;
+    double ALQValue;
+    bool predictionMode;
+    Well::ProducerCMode controlMode, whistctl_cmode;
+    int prodCtrls;
+
+    unpack(name, buffer, position, comm);
+    unpack(OilRate, buffer, position, comm);
+    unpack(WaterRate, buffer, position, comm);
+    unpack(GasRate, buffer, position, comm);
+    unpack(LiquidRate, buffer, position, comm);
+    unpack(ResVRate, buffer, position, comm);
+    unpack(BHPLimit, buffer, position, comm);
+    unpack(THPLimit, buffer, position, comm);
+    unpack(BHPH, buffer, position, comm);
+    unpack(THPH, buffer, position, comm);
+    unpack(VFPTableNumber, buffer, position, comm);
+    unpack(ALQValue, buffer, position, comm);
+    unpack(predictionMode, buffer, position, comm);
+    unpack(controlMode, buffer, position, comm);
+    unpack(whistctl_cmode, buffer, position, comm);
+    unpack(prodCtrls, buffer, position, comm);
+    data = Well::WellProductionProperties(name, OilRate, WaterRate, GasRate,
+                                          LiquidRate, ResVRate, BHPLimit,
+                                          THPLimit, BHPH, THPH, VFPTableNumber,
+                                          ALQValue, predictionMode, controlMode,
+                                          whistctl_cmode, prodCtrls);
+}
+
+#define INSTANTIATE_PACK_VECTOR(T) \
+template std::size_t packSize(const std::vector<T>& data, \
+                              Dune::MPIHelper::MPICommunicator comm); \
+template void pack(const std::vector<T>& data, \
+                   std::vector<char>& buffer, int& position, \
+                   Dune::MPIHelper::MPICommunicator comm); \
+template void unpack(std::vector<T>& data, \
+                     std::vector<char>& buffer, int& position, \
+                     Dune::MPIHelper::MPICommunicator comm);
+
+INSTANTIATE_PACK_VECTOR(double);
+INSTANTIATE_PACK_VECTOR(std::vector<double>);
+INSTANTIATE_PACK_VECTOR(bool);
+INSTANTIATE_PACK_VECTOR(char);
+#undef INSTANTIATE_PACK_VECTOR
+
+#define INSTANTIATE_PACK(T) \
+template std::size_t packSize(const T& data, \
+                              Dune::MPIHelper::MPICommunicator comm); \
+template void pack(const T& data,                                                     \
+                   std::vector<char>& buffer, int& position, \
+                   Dune::MPIHelper::MPICommunicator comm); \
+template void unpack(T& data, \
+                     std::vector<char>& buffer, int& position, \
+                     Dune::MPIHelper::MPICommunicator comm);
+
+INSTANTIATE_PACK(double);
+INSTANTIATE_PACK(std::size_t);
+INSTANTIATE_PACK(bool);
+INSTANTIATE_PACK(int);
+#undef INSTANTIATE_PACK
+
 } // end namespace Mpi
 
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
@@ -3248,4 +3689,5 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summarySt
     return eclIO->loadRestart(summaryState, solutionKeys, extraKeys);
 #endif
 }
+
 } // end namespace Opm
