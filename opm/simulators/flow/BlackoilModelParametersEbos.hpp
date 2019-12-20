@@ -40,6 +40,7 @@ NEW_PROP_TAG(ToleranceCnv);
 NEW_PROP_TAG(ToleranceCnvRelaxed);
 NEW_PROP_TAG(ToleranceWells);
 NEW_PROP_TAG(ToleranceWellControl);
+NEW_PROP_TAG(MaxWelleqIter);
 NEW_PROP_TAG(UseMultisegmentWell);
 NEW_PROP_TAG(MaxSinglePrecisionDays);
 NEW_PROP_TAG(MaxStrictIter);
@@ -63,6 +64,7 @@ SET_SCALAR_PROP(FlowModelParameters, ToleranceCnv,1e-2);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceCnvRelaxed, 1e9);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceWells, 1e-4);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceWellControl, 1e-7);
+SET_INT_PROP(FlowModelParameters, MaxWelleqIter, 30);
 SET_BOOL_PROP(FlowModelParameters, UseMultisegmentWell, true);
 SET_SCALAR_PROP(FlowModelParameters, MaxSinglePrecisionDays, 20.0);
 SET_INT_PROP(FlowModelParameters, MaxStrictIter, 8);
@@ -121,6 +123,9 @@ namespace Opm
         /// Maximum inner iteration number for ms wells
         int max_inner_iter_wells_;
 
+        /// Maximum iteration number of the well equation solution
+        int max_welleq_iter_;
+
         /// Tolerance for time step in seconds where single precision can be used
         /// for solving for the Jacobian
         double maxSinglePrecisionTimeStep_;
@@ -161,6 +166,7 @@ namespace Opm
             tolerance_cnv_relaxed_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceCnvRelaxed);
             tolerance_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceWells);
             tolerance_well_control_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceWellControl);
+            max_welleq_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxWelleqIter);
             use_multisegment_well_ = EWOMS_GET_PARAM(TypeTag, bool, UseMultisegmentWell);
             tolerance_pressure_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, TolerancePressureMsWells);
             max_pressure_change_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxPressureChangeMsWells);
@@ -186,6 +192,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceCnvRelaxed, "Relaxed local convergence tolerance that applies for iterations after the iterations with the strict tolerance");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceWells, "Well convergence tolerance");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceWellControl, "Tolerance for the well control equations");
+            EWOMS_REGISTER_PARAM(TypeTag, int, MaxWelleqIter, "Maximum number of iterations to determine solution the  well equations");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseMultisegmentWell, "Use the well model for multi-segment wells instead of the one for single-segment wells");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, TolerancePressureMsWells, "Tolerance for the pressure equations for multi-segment wells");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxPressureChangeMsWells, "Maximum relative pressure change for a single iteration of the multi-segment well model");

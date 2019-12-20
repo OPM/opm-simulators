@@ -132,6 +132,7 @@ public:
         EWOMS_HIDE_PARAM(TypeTag, ToleranceCnvRelaxed);
         EWOMS_HIDE_PARAM(TypeTag, ToleranceWells);
         EWOMS_HIDE_PARAM(TypeTag, ToleranceWellControl);
+        EWOMS_HIDE_PARAM(TypeTag, MaxWelleqIter);
         EWOMS_HIDE_PARAM(TypeTag, UseMultisegmentWell);
         EWOMS_HIDE_PARAM(TypeTag, TolerancePressureMsWells);
         EWOMS_HIDE_PARAM(TypeTag, MaxPressureChangeMsWells);
