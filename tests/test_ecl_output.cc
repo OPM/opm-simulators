@@ -55,8 +55,11 @@
 #include <string.h>
 #define CHECK(value, expected)             \
     {                                      \
-        if ((value) != (expected))         \
-            std::abort();                  \
+         if ((value) != (expected)) {      \
+             std::cerr << "Test failure: ";     \
+             std::cerr << "expected value " << expected << " != " << value << std::endl; \
+             throw std::runtime_error("Test failed"); \
+         }                                 \
     }
 
 #define CHECK_CLOSE(value, expected, reltol)                            \
@@ -64,17 +67,12 @@
         if (std::fabs((expected) - (value)) > 1e-14 &&                  \
             std::fabs(((expected) - (value))/((expected) + (value))) > reltol) \
             { \
-            std::cout << "Test failure: "; \
-            std::cout << "expected value " << expected << " is not close to value " << value << std::endl; \
-            std::abort();                                               \
-            } \
-    } \
-
-#define REQUIRE(cond)                      \
-    {                                      \
-        if (!(cond))                       \
-            std::abort();                  \
+            std::cerr << "Test failure: "; \
+            std::cerr << "expected value " << expected << " is not close to value " << value << std::endl; \
+            throw std::runtime_error("Test failed");                    \
+        } \
     }
+
 
 BEGIN_PROPERTIES
 
