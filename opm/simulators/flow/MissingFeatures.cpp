@@ -724,6 +724,7 @@ namespace MissingFeatures {
             "TVDP",
             "TZONE",
             "VAPPARS",
+            "UDT",
             "UDTDIMS",
             "UNCODHMD",
             "UNIFOUTS",
