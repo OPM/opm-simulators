@@ -26,9 +26,9 @@
 
 #include <ebos/eclbaseaquifermodel.hh>
 
+#include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
 #include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
 
 #include <opm/output/data/Aquifer.hpp>
 
@@ -39,62 +39,59 @@
 
 #include <vector>
 
-namespace Opm {
+namespace Opm
+{
 
-        /// Class for handling the blackoil well model.
-        template<typename TypeTag>
-        class BlackoilAquiferModel
-        {
-            typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-            typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
+/// Class for handling the blackoil well model.
+template <typename TypeTag>
+class BlackoilAquiferModel
+{
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
 
-        public:
-            explicit BlackoilAquiferModel(Simulator& simulator);
+public:
+    explicit BlackoilAquiferModel(Simulator& simulator);
 
-            void initialSolutionApplied();
-            void initFromRestart(const std::vector<data::AquiferData>& aquiferSoln);
+    void initialSolutionApplied();
+    void initFromRestart(const std::vector<data::AquiferData>& aquiferSoln);
 
-            void beginEpisode();
-            void beginTimeStep();
-            void beginIteration();
-            // add the water rate due to aquifers to the source term.
-            template <class Context>
-            void addToSource(RateVector& rates,
-                             const Context& context,
-                             unsigned spaceIdx,
-                             unsigned timeIdx) const;
-            void endIteration();
-            void endTimeStep();
-            void endEpisode();
+    void beginEpisode();
+    void beginTimeStep();
+    void beginIteration();
+    // add the water rate due to aquifers to the source term.
+    template <class Context>
+    void addToSource(RateVector& rates, const Context& context, unsigned spaceIdx, unsigned timeIdx) const;
+    void endIteration();
+    void endTimeStep();
+    void endEpisode();
 
-            template <class Restarter>
-            void serialize(Restarter& res);
+    template <class Restarter>
+    void serialize(Restarter& res);
 
-            template <class Restarter>
-            void deserialize(Restarter& res);
+    template <class Restarter>
+    void deserialize(Restarter& res);
 
-        protected:
-            // ---------      Types      ---------
-            typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
-            typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
+protected:
+    // ---------      Types      ---------
+    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
-            typedef AquiferCarterTracy<TypeTag> AquiferCarterTracy_object;
-            typedef AquiferFetkovich<TypeTag> AquiferFetkovich_object;
+    typedef AquiferCarterTracy<TypeTag> AquiferCarterTracy_object;
+    typedef AquiferFetkovich<TypeTag> AquiferFetkovich_object;
 
-            Simulator& simulator_;
+    Simulator& simulator_;
 
-            std::unordered_map<int, int> cartesian_to_compressed_;
-            mutable  std::vector<AquiferCarterTracy_object> aquifers_CarterTracy;
-            mutable  std::vector<AquiferFetkovich_object> aquifers_Fetkovich;
+    std::unordered_map<int, int> cartesian_to_compressed_;
+    mutable std::vector<AquiferCarterTracy_object> aquifers_CarterTracy;
+    mutable std::vector<AquiferFetkovich_object> aquifers_Fetkovich;
 
-            // This initialization function is used to connect the parser objects with the ones needed by AquiferCarterTracy
-            void init();
+    // This initialization function is used to connect the parser objects with the ones needed by AquiferCarterTracy
+    void init();
 
-            bool aquiferActive() const;
-            bool aquiferCarterTracyActive() const;
-            bool aquiferFetkovichActive() const;
-
-        };
+    bool aquiferActive() const;
+    bool aquiferCarterTracyActive() const;
+    bool aquiferFetkovichActive() const;
+};
 
 
 } // namespace Opm
