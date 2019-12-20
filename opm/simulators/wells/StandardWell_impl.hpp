@@ -2810,6 +2810,14 @@ namespace Opm
         // to replace the original one
         WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
 
+        //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
+        if (well_ecl_.isInjector()) {
+            well_state_copy.currentInjectionControls()[index_of_well_] = Well::InjectorCMode::BHP;
+        } else {
+            well_state_copy.currentProductionControls()[index_of_well_] = Well::ProducerCMode::BHP;
+        }
+        well_state_copy.bhp()[index_of_well_] = bhp;
+
         bool converged = this->solveWellEqUntilConverged(ebosSimulator, B_avg, well_state_copy, deferred_logger);
 
         if (!converged) {
