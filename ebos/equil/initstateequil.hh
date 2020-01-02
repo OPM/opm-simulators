@@ -903,7 +903,6 @@ equilnum(const Opm::EclipseState& eclipseState,
 {
     std::vector<int> eqlnum(grid.size(0), 0);
 
-#ifdef ENABLE_3DPROPS_TESTING
     if (eclipseState.fieldProps().has<int>("EQLNUM")) {
         const int nc = grid.size(/*codim=*/0);
         eqlnum.resize(nc);
@@ -915,19 +914,6 @@ equilnum(const Opm::EclipseState& eclipseState,
             eqlnum[cell] = e[deckPos] - 1;
         }
     }
-#else
-    if (eclipseState.get3DProperties().hasDeckIntGridProperty("EQLNUM")) {
-        const int nc = grid.size(/*codim=*/0);
-        eqlnum.resize(nc);
-
-        const std::vector<int>& e = eclipseState.get3DProperties().getIntGridProperty("EQLNUM").getData();
-        const int* gc = Opm::UgGridHelpers::globalCell(grid);
-        for (int cell = 0; cell < nc; ++cell) {
-            const int deckPos = (gc == NULL) ? cell : gc[cell];
-            eqlnum[cell] = e[deckPos] - 1;
-        }
-    }
-#endif
     return eqlnum;
 }
 
@@ -957,13 +943,8 @@ public:
         if (applySwatInit) {
             const int nc = grid.size(/*codim=*/0);
 
-#ifdef ENABLE_3DPROPS_TESTING
             if (eclipseState.fieldProps().has<double>("SWATINIT")) {
                 const std::vector<double>& swatInitEcl = eclipseState.fieldProps().get_global<double>("SWATINIT");
-#else
-            if (eclipseState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT")) {
-                const std::vector<double>& swatInitEcl = eclipseState.get3DProperties().getDoubleGridProperty("SWATINIT").getData();
-#endif
                 const int* gc = Opm::UgGridHelpers::globalCell(grid);
                 swatInit_.resize(nc);
                 for (int c = 0; c < nc; ++c) {
@@ -1102,12 +1083,8 @@ private:
     void updateInitialTemperature_(const Opm::EclipseState& eclState)
     {
         // Get the initial temperature data
-#ifdef ENABLE_3DPROPS_TESTING
-        //std::vector<double> tempiData = eclState.fieldProps().get_global<double>("TEMPI");
-#else
-        const std::vector<double>& tempiData = eclState.get3DProperties().getDoubleGridProperty("TEMPI").getData();
+        std::vector<double> tempiData = eclState.fieldProps().get_global<double>("TEMPI");
         temperature_ = tempiData;
-#endif
     }
 
     typedef EquilReg EqReg;
@@ -1129,11 +1106,7 @@ private:
         std::vector<int> cellPvtRegionIdx(numCompressed);
 
         //Get the PVTNUM data
-#ifdef ENABLE_3DPROPS_TESTING
         const auto pvtnumData = eclState.fieldProps().get_global<int>("PVTNUM");
-#else
-        const std::vector<int>& pvtnumData = eclState.get3DProperties().getIntGridProperty("PVTNUM").getData();
-#endif
         // Convert PVTNUM data into an array of indices for compressed cells. Remember
         // that Eclipse uses Fortran-style indices which start at 1 instead of 0, so we
         // need to subtract 1.

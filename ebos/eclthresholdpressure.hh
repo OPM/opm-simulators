@@ -123,12 +123,8 @@ public:
         }
 
         // internalize the data specified using the EQLNUM keyword
-#ifdef ENABLE_3DPROPS_TESTING
         const auto& fp = eclState.fieldProps();
         const auto& equilRegionData = fp.get_global_int("EQLNUM");
-#else
-        const std::vector<int>& equilRegionData = eclState.get3DProperties().getIntGridProperty("EQLNUM").getData();
-#endif
         elemEquilRegion_.resize(numElements, 0);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
             int cartElemIdx = vanguard.cartesianIndex(elemIdx);

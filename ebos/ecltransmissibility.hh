@@ -498,7 +498,6 @@ private:
         ElementMapper elemMapper(gridView);
 #endif
 
-#ifdef ENABLE_3DPROPS_TESTING
         const auto& fp = vanguard_.eclState().fieldProps();
         const auto& inputTranxData = fp.get_global_double("TRANX");
         const auto& inputTranyData = fp.get_global_double("TRANY");
@@ -506,18 +505,6 @@ private:
         bool tranx_deckAssigned = false;                     // Ohh my ....
         bool trany_deckAssigned = false;
         bool tranz_deckAssigned = false;
-#else
-        const auto& properties = vanguard_.eclState().get3DProperties();
-        const auto& inputTranx = properties.getDoubleGridProperty("TRANX");
-        const auto& inputTrany = properties.getDoubleGridProperty("TRANY");
-        const auto& inputTranz = properties.getDoubleGridProperty("TRANZ");
-        const auto& inputTranxData = properties.getDoubleGridProperty("TRANX").getData();
-        const auto& inputTranyData = properties.getDoubleGridProperty("TRANY").getData();
-        const auto& inputTranzData = properties.getDoubleGridProperty("TRANZ").getData();
-        bool tranx_deckAssigned = inputTranx.deckAssigned();
-        bool trany_deckAssigned = inputTrany.deckAssigned();
-        bool tranz_deckAssigned = inputTranz.deckAssigned();
-#endif
         // compute the transmissibilities for all intersections
         auto elemIt = gridView.template begin</*codim=*/ 0>();
         const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
@@ -722,7 +709,6 @@ private:
         // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
         // simulation grid might remove a few elements. (e.g. because it is distributed
         // over several processes.)
-#ifdef ENABLE_3DPROPS_TESTING
         const auto& fp = vanguard_.eclState().fieldProps();
         if (fp.has_double("PERMX")) {
             const std::vector<double>& permxData = fp.get_global_double("PERMX");
@@ -749,33 +735,6 @@ private:
         else
             throw std::logic_error("Can't read the intrinsic permeability from the ecl state. "
                                    "(The PERM{X,Y,Z} keywords are missing)");
-#else
-        const auto& props = vanguard_.eclState().get3DProperties();
-        if (props.hasDeckDoubleGridProperty("PERMX")) {
-            const std::vector<double>& permxData = props.getDoubleGridProperty("PERMX").getData();
-
-            std::vector<double> permyData(permxData);
-            if (props.hasDeckDoubleGridProperty("PERMY"))
-                permyData = props.getDoubleGridProperty("PERMY").getData();
-
-            std::vector<double> permzData(permxData);
-            if (props.hasDeckDoubleGridProperty("PERMZ"))
-                permzData = props.getDoubleGridProperty("PERMZ").getData();
-
-            for (size_t dofIdx = 0; dofIdx < numElem; ++ dofIdx) {
-                unsigned cartesianElemIdx = vanguard_.cartesianIndex(dofIdx);
-                permeability_[dofIdx] = 0.0;
-                permeability_[dofIdx][0][0] = permxData[cartesianElemIdx];
-                permeability_[dofIdx][1][1] = permyData[cartesianElemIdx];
-                permeability_[dofIdx][2][2] = permzData[cartesianElemIdx];
-            }
-
-            // for now we don't care about non-diagonal entries
-        }
-        else
-            throw std::logic_error("Can't read the intrinsic permeability from the ecl state. "
-                                   "(The PERM{X,Y,Z} keywords are missing)");
-#endif
     }
 
     std::uint64_t isId_(std::uint32_t elemIdx1, std::uint32_t elemIdx2) const
@@ -903,11 +862,7 @@ private:
         bool opmfil = eclGrid.getMinpvMode() == Opm::MinpvMode::OpmFIL;
         std::vector<double> ntg;
 
-#ifdef ENABLE_3DPROPS_TESTING
         ntg = eclState.fieldProps().get_global_double("NTG");
-#else
-        ntg = eclState.get3DProperties().getDoubleGridProperty("NTG").getData();
-#endif
         // just return the unmodified ntg if opmfil is not used
         averageNtg = ntg;
         if (!opmfil)
@@ -915,13 +870,8 @@ private:
 
         const auto& cartMapper = vanguard_.cartesianIndexMapper();
         const auto& cartDims = cartMapper.cartesianDimensions();
-#ifdef ENABLE_3DPROPS_TESTING
         const auto& actnum = eclState.fieldProps().actnum();
         const auto& porv = eclState.fieldProps().porv(true);
-#else
-        const auto& porv = eclState.get3DProperties().getDoubleGridProperty("PORV").getData();
-        const auto& actnum = eclState.get3DProperties().getIntGridProperty("ACTNUM").getData();
-#endif
         assert(dimWorld > 1);
         const size_t nxny = cartDims[0] * cartDims[1];
         for (size_t cartesianCellIdx = 0; cartesianCellIdx < ntg.size(); ++cartesianCellIdx) {

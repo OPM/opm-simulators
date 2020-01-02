@@ -2226,7 +2226,6 @@ private:
 
         // If ROCKCOMP is used and ROCKNUM is specified ROCK2D ROCK2DTR ROCKTAB etc. uses ROCKNUM
         // to give the correct table index.
-#ifdef ENABLE_3DPROPS_TESTING
         if (deck.hasKeyword("ROCKCOMP") && eclState.fieldProps().has_int("ROCKNUM"))
             propName = "ROCKNUM";
 
@@ -2241,25 +2240,7 @@ private:
                 rockTableIdx_[elemIdx] = tmp[cartElemIdx] - 1;
             }
         }
-#else
-        if (deck.hasKeyword("ROCKCOMP") && eclState.get3DProperties().hasDeckIntGridProperty("ROCKNUM"))
-            propName = "ROCKNUM";
 
-        // the deck does not specify the selected keyword, so everything uses the first
-        // record of ROCK.
-        if (eclState.get3DProperties().hasDeckIntGridProperty(propName)) {
-            const std::vector<int>& tablenumData =
-                    eclState.get3DProperties().getIntGridProperty(propName).getData();
-            unsigned numElem = vanguard.gridView().size(0);
-            rockTableIdx_.resize(numElem);
-            for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
-                unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
-
-                // reminder: Eclipse uses FORTRAN-style indices
-                rockTableIdx_[elemIdx] = tablenumData[cartElemIdx] - 1;
-            }
-        }
-#endif
         // Store overburden pressure pr element
         const auto& overburdTables = eclState.getTableManager().getOverburdTables();
         if (!overburdTables.empty()) {
@@ -2446,15 +2427,9 @@ private:
 
         referencePorosity_[/*timeIdx=*/0].resize(numDof);
 
-#ifdef ENABLE_3DPROPS_TESTING
         const auto& fp = eclState.fieldProps();
         const std::vector<double> porvData = fp.porv(true);
         const std::vector<int> actnumData = fp.actnum();
-#else
-        const auto& props = eclState.get3DProperties();
-        const std::vector<double>& porvData = props.getDoubleGridProperty("PORV").getData();
-        const std::vector<int>& actnumData = props.getIntGridProperty("ACTNUM").getData();
-#endif
         int nx = eclGrid.getNX();
         int ny = eclGrid.getNY();
         for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
@@ -2702,21 +2677,12 @@ private:
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
-#ifdef ENABLE_3DPROPS_TESTING
         const auto& fp = eclState.fieldProps();
         bool has_swat     = fp.has_double("SWAT");
         bool has_sgas     = fp.has_double("SGAS");
         bool has_rs       = fp.has_double("RS");
         bool has_rv       = fp.has_double("RV");
         bool has_pressure = fp.has_double("PRESSURE");
-#else
-        const auto& eclProps = eclState.get3DProperties();
-        bool has_swat = eclProps.hasDeckDoubleGridProperty("SWAT");
-        bool has_sgas = eclProps.hasDeckDoubleGridProperty("SGAS");
-        bool has_rs   = eclProps.hasDeckDoubleGridProperty("RS");
-        bool has_rv   = eclProps.hasDeckDoubleGridProperty("RV");
-        bool has_pressure = eclProps.hasDeckDoubleGridProperty("PRESSURE");
-#endif
 
         // make sure all required quantities are enables
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && !has_swat)
@@ -2750,7 +2716,6 @@ private:
         std::vector<double> rvData;
         std::vector<double> tempiData;
 
-#ifdef ENABLE_3DPROPS_TESTING
         if (FluidSystem::phaseIsActive(waterPhaseIdx))
             waterSaturationData = fp.get_global_double("SWAT");
         else
@@ -2770,27 +2735,6 @@ private:
 
         // initial reservoir temperature
         tempiData = fp.get_global_double("TEMPI");
-#else
-        if (FluidSystem::phaseIsActive(waterPhaseIdx))
-            waterSaturationData = eclProps.getDoubleGridProperty("SWAT").getData();
-        else
-            waterSaturationData.resize(numCartesianCells);
-
-        if (FluidSystem::phaseIsActive(gasPhaseIdx))
-            gasSaturationData = eclProps.getDoubleGridProperty("SGAS").getData();
-        else
-            gasSaturationData.resize(numCartesianCells);
-
-        pressureData = eclProps.getDoubleGridProperty("PRESSURE").getData();
-        if (FluidSystem::enableDissolvedGas())
-            rsData = eclProps.getDoubleGridProperty("RS").getData();
-
-        if (FluidSystem::enableVaporizedOil())
-            rvData = eclProps.getDoubleGridProperty("RV").getData();
-
-        // initial reservoir temperature
-        tempiData = eclState.get3DProperties().getDoubleGridProperty("TEMPI").getData();
-#endif
 
 
         // make sure that the size of the data arrays is correct
@@ -2891,11 +2835,7 @@ private:
 
 
         if (enableSolvent) {
-#ifdef ENABLE_3DPROPS_TESTING
             const std::vector<double>& solventSaturationData = eclState.fieldProps().get_global_double("SSOL");
-#else
-            const std::vector<double>& solventSaturationData = eclState.get3DProperties().getDoubleGridProperty("SSOL").getData();
-#endif
             solventSaturation_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
@@ -2906,13 +2846,10 @@ private:
         }
 
         if (enablePolymer) {
-#ifdef ENABLE_3DPROPS_TESTING
             std::vector<double> polyConcentrationData(eclState.getInputGrid().getCartesianSize(), 0.0);
             if (eclState.fieldProps().has_double("SPOLY"))
                 polyConcentrationData = eclState.fieldProps().get_global_double("SPOLY");
-#else
-            const std::vector<double>& polyConcentrationData = eclState.get3DProperties().getDoubleGridProperty("SPOLY").getData();
-#endif
+
             polymerConcentration_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
@@ -2923,11 +2860,7 @@ private:
         }
 
         if (enablePolymerMolarWeight) {
-#ifdef ENABLE_3DPROPS_TESTING
             const std::vector<double>& polyMoleWeightData = eclState.fieldProps().get_global_double("SPOLYMW");
-#else
-            const std::vector<double>& polyMoleWeightData = eclState.get3DProperties().getDoubleGridProperty("SPOLYMW").getData();
-#endif
             polymerMoleWeight_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 const size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
@@ -2987,19 +2920,11 @@ private:
 
 
     static bool has_int_prop(const EclipseState& eclState, const std::string& prop) {
-#ifdef ENABLE_3DPROPS_TESTING
         return eclState.fieldProps().has_int(prop);
-#else
-        return eclState.hasDeckIntGridProperty(prop);
-#endif
     }
 
     static std::vector<int> get_int_prop(const EclipseState& eclState, const std::string& prop) {
-#ifdef ENABLE_3DPROPS_TESTING
         return eclState.fieldProps().get_global_int(prop);
-#else
-        return eclState.getDeckIntGridProperty(prop);
-#endif
     }
 
     void updatePvtnum_()
