@@ -3602,7 +3602,7 @@ namespace Opm
         const int well_index = index_of_well_;
         if (wellIsStopped_) {
             ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = 1.e-6; // use smaller tolerance for zero control?
+            control_tolerance = 1.e-5; // use smaller tolerance for zero control?
         }
         else if (this->isInjector() )
         {
@@ -3619,11 +3619,11 @@ namespace Opm
             case Well::InjectorCMode::RATE:
             case Well::InjectorCMode::RESV:
                 ctrltype = CR::WellFailure::Type::ControlRate;
-                control_tolerance = 1.e-4; //
+                control_tolerance = 1.e-5; //
                 break;
             case Well::InjectorCMode::GRUP:
                 ctrltype = CR::WellFailure::Type::ControlRate;
-                control_tolerance = 1.e-6; //
+                control_tolerance = 1.e-5; //
                 break;
             default:
                 OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
@@ -3648,11 +3648,11 @@ namespace Opm
             case Well::ProducerCMode::RESV:
             case Well::ProducerCMode::CRAT:
                 ctrltype = CR::WellFailure::Type::ControlRate;
-                control_tolerance = 1.e-4; // smaller tolerance for rate control
+                control_tolerance = 1.e-5; // smaller tolerance for rate control
                 break;
             case Well::ProducerCMode::GRUP:
                 ctrltype = CR::WellFailure::Type::ControlRate;
-                control_tolerance = 1.e-6; // smaller tolerance for rate control
+                control_tolerance = 1.e-5; // smaller tolerance for rate control
                 break;
             default:
                 OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
