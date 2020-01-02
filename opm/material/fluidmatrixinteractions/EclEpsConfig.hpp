@@ -201,7 +201,6 @@ public:
         }
 
 
-#ifdef ENABLE_3DPROPS_TESTING
         const auto& fp = eclState.fieldProps();
         // check if we are supposed to scale the Y axis of the capillary pressure
         if (twoPhaseSystemType == EclOilWaterSystem) {
@@ -214,20 +213,7 @@ public:
             enableKrwScaling_ = fp.has<double>("KRO");
             enablePcScaling_  = fp.has<double>("PCG");
         }
-#else
-        auto& props = eclState.get3DProperties();
-        // check if we are supposed to scale the Y axis of the capillary pressure
-        if (twoPhaseSystemType == EclOilWaterSystem) {
-            enableKrnScaling_ = props.hasDeckDoubleGridProperty("KRO");
-            enableKrwScaling_ = props.hasDeckDoubleGridProperty("KRW");
-            enablePcScaling_  = props.hasDeckDoubleGridProperty("PCW") || props.hasDeckDoubleGridProperty("SWATINIT");
-        } else {
-            assert(twoPhaseSystemType == EclGasOilSystem);
-            enableKrnScaling_ = props.hasDeckDoubleGridProperty("KRG");
-            enableKrwScaling_ = props.hasDeckDoubleGridProperty("KRO");
-            enablePcScaling_  = props.hasDeckDoubleGridProperty("PCG");
-        }
-#endif
+
         if (enablePcScaling_ && enableLeverettScaling_)
             throw std::runtime_error("Capillary pressure scaling and the Leverett scaling function are "
                                      "mutually exclusive: The deck contains the PCW/PCG property and the "
