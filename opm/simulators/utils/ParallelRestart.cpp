@@ -36,6 +36,12 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQDefine.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQInput.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
@@ -43,6 +49,8 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
@@ -1261,6 +1269,119 @@ std::size_t packSize(const Group& data,
            packSize(data.igroups(), comm) +
            packSize(data.injectionProperties(), comm) +
            packSize(data.productionProperties(), comm);
+}
+
+std::size_t packSize(const WList& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.wellList(), comm);
+}
+
+std::size_t packSize(const WListManager& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.lists(), comm);
+}
+
+std::size_t packSize(const UDQFunction& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.name(), comm) +
+           packSize(data.type(), comm);
+}
+
+std::size_t packSize(const UDQFunctionTable& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getParams(), comm) +
+           packSize(data.functionMap(), comm);
+}
+
+std::size_t packSize(const UDQASTNode& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.var_type, comm) +
+           packSize(data.getType(), comm) +
+           packSize(data.stringValue(), comm) +
+           packSize(data.scalarValue(), comm) +
+           packSize(data.getSelectors(), comm) +
+           packSize(data.getLeft(), comm) +
+           packSize(data.getRight(), comm);
+}
+
+std::size_t packSize(const UDQDefine& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.keyword(), comm) +
+           packSize(data.getAst(), comm) +
+           packSize(data.var_type(), comm) +
+           packSize(data.input_string(), comm);
+}
+
+std::size_t packSize(const UDQAssign::AssignRecord& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.selector, comm) +
+           packSize(data.value, comm);
+}
+
+std::size_t packSize(const UDQAssign& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.keyword(), comm) +
+           packSize(data.var_type(), comm) +
+           packSize(data.getRecords(), comm);
+}
+
+std::size_t packSize(const UDQIndex& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.insert_index, comm) +
+           packSize(data.typed_insert_index, comm) +
+           packSize(data.action, comm) +
+           packSize(data.var_type, comm);
+}
+
+std::size_t packSize(const UDQConfig& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.params(), comm) +
+           packSize(data.function_table(), comm) +
+           packSize(data.definitionMap(), comm) +
+           packSize(data.assignmentMap(), comm) +
+           packSize(data.unitsMap(), comm) +
+           packSize(data.inputIndex(), comm) +
+           packSize(data.typeCount(), comm);
+}
+
+std::size_t packSize(const UDQActive::InputRecord& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.input_index, comm) +
+           packSize(data.udq, comm) +
+           packSize(data.wgname, comm) +
+           packSize(data.control, comm);
+}
+
+std::size_t packSize(const UDQActive::Record& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.udq, comm) +
+           packSize(data.input_index, comm) +
+           packSize(data.use_index, comm) +
+           packSize(data.wgname, comm) +
+           packSize(data.control, comm) +
+           packSize(data.uad_code, comm) +
+           packSize(data.use_count, comm);
+}
+
+std::size_t packSize(const UDQActive& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getInputRecords(), comm) +
+           packSize(data.getOutputRecords(), comm) +
+           packSize(data.getUdqKeys(), comm) +
+           packSize(data.getWgKeys(), comm);
 }
 
 ////// pack routines
@@ -2540,6 +2661,132 @@ void pack(const Group& data,
     pack(data.igroups(), buffer, position, comm);
     pack(data.injectionProperties(), buffer, position, comm);
     pack(data.productionProperties(), buffer, position, comm);
+}
+
+void pack(const WList& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.wellList(), buffer, position, comm);
+}
+
+void pack(const WListManager& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.lists(), buffer, position, comm);
+}
+
+void pack(const UDQFunction& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name(), buffer, position, comm);
+    pack(data.type(), buffer, position, comm);
+}
+
+void pack(const UDQFunctionTable& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getParams(), buffer, position, comm);
+    pack(data.functionMap(), buffer, position, comm);
+}
+
+void pack(const UDQASTNode& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.var_type, buffer, position, comm);
+    pack(data.getType(), buffer, position, comm);
+    pack(data.stringValue(), buffer, position, comm);
+    pack(data.scalarValue(), buffer, position, comm);
+    pack(data.getSelectors(), buffer, position, comm);
+    pack(data.getLeft(), buffer, position, comm);
+    pack(data.getRight(), buffer, position, comm);
+}
+
+void pack(const UDQDefine& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.keyword(), buffer, position, comm);
+    pack(data.getAst(), buffer, position, comm);
+    pack(data.var_type(), buffer, position, comm);
+    pack(data.input_string(), buffer, position, comm);
+}
+
+void pack(const UDQAssign::AssignRecord& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.selector, buffer, position, comm);
+    pack(data.value, buffer, position, comm);
+}
+
+void pack(const UDQAssign& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.keyword(), buffer, position, comm);
+    pack(data.var_type(), buffer, position, comm);
+    pack(data.getRecords(), buffer, position, comm);
+}
+
+void pack(const UDQIndex& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.insert_index, buffer, position, comm);
+    pack(data.typed_insert_index, buffer, position, comm);
+    pack(data.action, buffer, position, comm);
+    pack(data.var_type, buffer, position, comm);
+}
+
+void pack(const UDQConfig& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.params(), buffer, position, comm);
+    pack(data.function_table(), buffer, position, comm);
+    pack(data.definitionMap(), buffer, position, comm);
+    pack(data.assignmentMap(), buffer, position, comm);
+    pack(data.unitsMap(), buffer, position, comm);
+    pack(data.inputIndex(), buffer, position, comm);
+    pack(data.typeCount(), buffer, position, comm);
+}
+
+void pack(const UDQActive::InputRecord& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.input_index, buffer, position, comm);
+    pack(data.udq, buffer, position, comm);
+    pack(data.wgname, buffer, position, comm);
+    pack(data.control, buffer, position, comm);
+}
+
+void pack(const UDQActive::Record& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.udq, buffer, position, comm);
+    pack(data.input_index, buffer, position, comm);
+    pack(data.use_index, buffer, position, comm);
+    pack(data.wgname, buffer, position, comm);
+    pack(data.control, buffer, position, comm);
+    pack(data.uad_code, buffer, position, comm);
+    pack(data.use_count, buffer, position, comm);
+}
+
+void pack(const UDQActive& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getInputRecords(), buffer, position, comm);
+    pack(data.getOutputRecords(), buffer, position, comm);
+    pack(data.getUdqKeys(), buffer, position, comm);
+    pack(data.getWgKeys(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -4346,6 +4593,176 @@ void unpack(Group& data,
                  transferGroupEfficiencyFactor,
                  groupNetVFPTable, parent, wells, groups,
                  injection, production);
+}
+
+void unpack(WList& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    WList::storage ddata;
+    unpack(ddata, buffer, position, comm);
+    data = WList(ddata);
+}
+
+void unpack(WListManager& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::map<std::string,WList> lists;
+    unpack(lists, buffer, position, comm);
+    data = WListManager(lists);
+}
+
+void unpack(UDQFunction& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    UDQTokenType type;
+    unpack(name, buffer, position, comm);
+    unpack(type, buffer, position, comm);
+    data = UDQFunction(name, type);
+}
+
+void unpack(UDQFunctionTable& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    UDQParams params;
+    UDQFunctionTable::FunctionMap map;
+    unpack(params, buffer, position, comm);
+    unpack(map, buffer, position, comm);
+    data = UDQFunctionTable(params, map);
+}
+
+void unpack(UDQASTNode& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    UDQVarType var_type;
+    UDQTokenType type;
+    std::string stringValue;
+    double scalarValue;
+    std::vector<std::string> selectors;
+    std::shared_ptr<UDQASTNode> left;
+    std::shared_ptr<UDQASTNode> right;
+
+    unpack(var_type, buffer, position, comm);
+    unpack(type, buffer, position, comm);
+    unpack(stringValue, buffer, position, comm);
+    unpack(scalarValue, buffer, position, comm);
+    unpack(selectors, buffer, position, comm);
+    unpack(left, buffer, position, comm);
+    unpack(right, buffer, position, comm);
+    data = UDQASTNode(var_type, type, stringValue, scalarValue, selectors, left, right);
+}
+
+void unpack(UDQDefine& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string keyword;
+    std::shared_ptr<UDQASTNode> ast;
+    UDQVarType varType;
+    std::string string_data;
+
+    unpack(keyword, buffer, position, comm);
+    unpack(ast, buffer, position, comm);
+    unpack(varType, buffer, position, comm);
+    unpack(string_data, buffer, position, comm);
+    data = UDQDefine(keyword, ast, varType, string_data);
+}
+
+void unpack(UDQAssign::AssignRecord& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.selector, buffer, position, comm);
+    unpack(data.value, buffer, position, comm);
+}
+
+void unpack(UDQAssign& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string keyword;
+    UDQVarType varType;
+    std::vector<UDQAssign::AssignRecord> records;
+    unpack(keyword, buffer, position, comm);
+    unpack(varType, buffer, position, comm);
+    unpack(records, buffer, position, comm);
+    data = UDQAssign(keyword, varType, records);
+}
+
+void unpack(UDQIndex& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.insert_index, buffer, position, comm);
+    unpack(data.typed_insert_index, buffer, position, comm);
+    unpack(data.action, buffer, position, comm);
+    unpack(data.var_type, buffer, position, comm);
+}
+
+void unpack(UDQConfig& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    UDQParams params;
+    UDQFunctionTable function_table;
+    std::unordered_map<std::string,UDQDefine> definitionsMap;
+    std::unordered_map<std::string,UDQAssign> assignmentsMap;
+    std::unordered_map<std::string,std::string> units;
+    OrderedMap<std::string,UDQIndex> inputIndex;
+    std::map<UDQVarType,std::size_t> typeCount;
+
+    unpack(params, buffer, position, comm);
+    unpack(function_table, buffer, position, comm);
+    unpack(definitionsMap, buffer, position, comm);
+    unpack(assignmentsMap, buffer, position, comm);
+    unpack(units, buffer, position, comm);
+    unpack(inputIndex, buffer, position, comm);
+    unpack(typeCount, buffer, position, comm);
+    data = UDQConfig(params, function_table, definitionsMap,
+                     assignmentsMap, units, inputIndex, typeCount);
+}
+
+void unpack(UDQActive::InputRecord& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.input_index, buffer, position, comm);
+    unpack(data.udq, buffer, position, comm);
+    unpack(data.wgname, buffer, position, comm);
+    unpack(data.control, buffer, position, comm);
+}
+
+void unpack(UDQActive::Record& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.udq, buffer, position, comm);
+    unpack(data.input_index, buffer, position, comm);
+    unpack(data.use_index, buffer, position, comm);
+    unpack(data.wgname, buffer, position, comm);
+    unpack(data.control, buffer, position, comm);
+    unpack(data.uad_code, buffer, position, comm);
+    unpack(data.use_count, buffer, position, comm);
+}
+
+void unpack(UDQActive& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<UDQActive::InputRecord> inputRecords;
+    std::vector<UDQActive::Record> outputRecords;
+    std::unordered_map<std::string,std::size_t> udqKeys, wgKeys;
+
+    unpack(inputRecords, buffer, position, comm);
+    unpack(outputRecords, buffer, position, comm);
+    unpack(udqKeys, buffer, position, comm);
+    unpack(wgKeys, buffer, position, comm);
+    data = UDQActive(inputRecords, outputRecords, udqKeys, wgKeys);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

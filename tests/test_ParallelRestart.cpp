@@ -43,6 +43,14 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQDefine.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQInput.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
@@ -50,6 +58,8 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
@@ -296,6 +306,34 @@ Opm::VFPProdTable getVFPProdTable()
                              {1.0, 2.0},
                              {1.0, 2.0, 3.0},
                              {1.0, 2.0, 3.0, 4.0}, table);
+}
+
+
+Opm::UDQConfig getUDQConfig()
+{
+    Opm::UDQParams params(true, 1, 2.0, 3.0, 4.0);
+    Opm::UDQFunctionTable::FunctionMap map{{"test", std::make_shared<Opm::UDQFunction>()}};
+    std::shared_ptr<Opm::UDQASTNode> n0;
+    Opm::UDQASTNode n1(Opm::UDQVarType::NONE,
+                       Opm::UDQTokenType::error,
+                       "test", 1.0, {"test1", "test2"}, n0, n0);
+    Opm::UDQDefine def("test", std::make_shared<Opm::UDQASTNode>(n1),
+                       Opm::UDQVarType::NONE, "test2");
+    Opm::UDQAssign ass("test", Opm::UDQVarType::NONE,
+                       {Opm::UDQAssign::AssignRecord{{"test1"}, 1.0},
+                        Opm::UDQAssign::AssignRecord{{"test2"}, 2.0}});
+    Opm::OrderedMap<std::string, Opm::UDQIndex> omap;
+    omap.insert({"test8", Opm::UDQIndex(1, 2, Opm::UDQAction::ASSIGN,
+                                        Opm::UDQVarType::WELL_VAR)});
+    omap.insert({"test9", Opm::UDQIndex(3, 4, Opm::UDQAction::ASSIGN,
+                                        Opm::UDQVarType::WELL_VAR)});
+    return Opm::UDQConfig(params,
+                          Opm::UDQFunctionTable(params, map),
+                          {{"test1", def}, {"test2", def}},
+                          {{"test3", ass}, {"test4", ass}},
+                          {{"test5", "test6"}, {"test7", "test8"}},
+                          omap,
+                          {{Opm::UDQVarType::SCALAR, 5}, {Opm::UDQVarType::WELL_VAR, 6}});
 }
 #endif
 
@@ -1631,6 +1669,161 @@ BOOST_AUTO_TEST_CASE(Group)
                     Opm::Group::GroupInjectionProperties(),
                     Opm::Group::GroupProductionProperties());
 
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WList)
+{
+#ifdef HAVE_MPI
+    Opm::WList val1({"test1", "test2", "test3"});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WListManager)
+{
+#ifdef HAVE_MPI
+    Opm::WList wl({"test1", "test2", "test3"});
+    std::map<std::string,Opm::WList> data{{"test", wl}, {"test2", wl}};
+    Opm::WListManager val1(data);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQFunction)
+{
+#ifdef HAVE_MPI
+    Opm::UDQFunction val1("test", Opm::UDQTokenType::binary_op_add);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQFunctionTable)
+{
+#ifdef HAVE_MPI
+    Opm::UDQFunctionTable::FunctionMap map{{"test",
+                                            std::make_shared<Opm::UDQFunction>()}};
+    Opm::UDQFunctionTable val1(Opm::UDQParams(true, 1, 2.0, 3.0, 4.0), map);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQASTNode)
+{
+#ifdef HAVE_MPI
+  std::shared_ptr<Opm::UDQASTNode> n0;
+  std::shared_ptr<Opm::UDQASTNode> n1(new Opm::UDQASTNode(Opm::UDQVarType::NONE,
+                                                          Opm::UDQTokenType::error,
+                                                          "test1", 1.0, {"test2"},
+                                                          n0, n0));
+    Opm::UDQASTNode val1(Opm::UDQVarType::NONE,
+                         Opm::UDQTokenType::error,
+                         "test", 1.0, {"test3"}, n1, n1);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+BOOST_AUTO_TEST_CASE(UDQDefine)
+{
+#ifdef HAVE_MPI
+    std::shared_ptr<Opm::UDQASTNode> n0;
+    Opm::UDQASTNode n1(Opm::UDQVarType::NONE,
+                       Opm::UDQTokenType::error,
+                       "test", 1.0, {"test1", "test2"}, n0, n0);
+    Opm::UDQDefine val1("test", std::make_shared<Opm::UDQASTNode>(n1),
+                        Opm::UDQVarType::NONE, "test2");
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQAssign)
+{
+#ifdef HAVE_MPI
+    Opm::UDQAssign val1("test", Opm::UDQVarType::NONE,
+                        {Opm::UDQAssign::AssignRecord{{"test1"}, 1.0},
+                         Opm::UDQAssign::AssignRecord{{"test2"}, 2.0}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQIndex)
+{
+#ifdef HAVE_MPI
+    Opm::UDQIndex val1(1, 2, Opm::UDQAction::ASSIGN, Opm::UDQVarType::WELL_VAR);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQConfig)
+{
+#ifdef HAVE_MPI
+    Opm::UDQConfig val1 = getUDQConfig();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQActiveInputRecord)
+{
+#ifdef HAVE_MPI
+    Opm::UDQActive::InputRecord val1(1, "test1", "test2",
+                                     Opm::UDAControl::WCONPROD_ORAT);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQActiveRecord)
+{
+#ifdef HAVE_MPI
+    Opm::UDQActive::Record val1("test1", 1, 2, "test2",
+                                Opm::UDAControl::WCONPROD_ORAT);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UDQActive)
+{
+#ifdef HAVE_MPI
+    Opm::UDQActive val1({Opm::UDQActive::InputRecord(1, "test1", "test2",
+                                                     Opm::UDAControl::WCONPROD_ORAT)},
+                        {Opm::UDQActive::Record("test1", 1, 2, "test2",
+                                                  Opm::UDAControl::WCONPROD_ORAT)},
+                        {{"test1", 1}}, {{"test2", 2}});
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
