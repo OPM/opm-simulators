@@ -469,6 +469,12 @@ if(MPI_FOUND)
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel})
 
+  add_test_compare_parallel_simulation(CASENAME spe9group
+                                       FILENAME SPE9_CP_GROUP
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${coarse_rel_tol_parallel})
+
   add_test_compare_parallel_simulation(CASENAME spe3
                                        FILENAME SPE3CASE1
                                        SIMULATOR flow

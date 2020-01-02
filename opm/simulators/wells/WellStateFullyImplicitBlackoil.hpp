@@ -74,10 +74,15 @@ namespace Opm
                   const WellStateFullyImplicitBlackoil* prevState,
                   const PhaseUsage& pu,
                   const std::vector<std::vector<PerforationData>>& well_perf_data,
-                  const SummaryState& summary_state)
+                  const SummaryState& summary_state,
+                  const int globalNumberOfWells)
         {
             // call init on base class
             BaseType :: init(cellPressures, wells_ecl, pu, well_perf_data, summary_state);
+
+            globalIsInjectionGrup_.assign(globalNumberOfWells,0);
+            globalIsProductionGrup_.assign(globalNumberOfWells,0);
+            wellNameToGlobalIdx_.clear();
 
             const int nw = wells_ecl.size();
 
@@ -286,10 +291,11 @@ namespace Opm
                     const size_t numCells,
                     const PhaseUsage& pu,
                     const std::vector<std::vector<PerforationData>>& well_perf_data,
-                    const SummaryState& summary_state)
+                    const SummaryState& summary_state,
+                    const int globalNumWells)
         {
             const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-            init(tmp, schedule, wells_ecl, 0, nullptr, pu, well_perf_data, summary_state);
+            init(tmp, schedule, wells_ecl, 0, nullptr, pu, well_perf_data, summary_state, globalNumWells);
 
             if (handle_ms_well) {
                 initWellStateMSWell(wells_ecl, pu, nullptr);
@@ -829,11 +835,82 @@ namespace Opm
                 this->well_reservoir_rates_[np * well_index + p] = 0;
         }
 
+        template<class Comm>
+        void communicateGroupReductionRates(const Comm& comm) {
+            // sum over all nodes
+            for (auto& x : production_group_reduction_rates) {
+                comm.sum(x.second.data(), x.second.size());
+            }
+            for (auto& x : injection_group_reduction_rates) {
+                comm.sum(x.second.data(), x.second.size());
+            }
+        }
+
+        template<class Comm>
+        void communicateReinVrep(const Comm& comm) {
+            // sum over all nodes
+            for (auto& x : injection_group_rein_rates) {
+                comm.sum(x.second.data(), x.second.size());
+            }
+            for (auto& x : injection_group_vrep_rates) {
+                x.second = comm.sum(x.second);
+            }
+        }
+
+        template<class Comm>
+        void updateGlobalIsGrup(const Schedule& schedule, const int reportStepIdx, const Comm& comm) {
+
+            int global_well_index = -1;
+            const auto& end = wellMap().end();
+            for (const auto& well : schedule.getWells(reportStepIdx)) {
+                global_well_index ++;
+                wellNameToGlobalIdx_[well.name()] = global_well_index;
+
+                const auto& it = wellMap().find( well.name());
+                if (it == end)  // the well is not found
+                    continue;
+
+                int well_index = it->second[0];
+
+                if (well.isInjector())
+                    globalIsInjectionGrup_[global_well_index] = (currentInjectionControls()[well_index] == Well::InjectorCMode::GRUP);
+                else
+                    globalIsProductionGrup_[global_well_index] = (currentProductionControls()[well_index] == Well::ProducerCMode::GRUP);
+            }
+            comm.sum(globalIsInjectionGrup_.data(), globalIsInjectionGrup_.size());
+            comm.sum(globalIsProductionGrup_.data(), globalIsProductionGrup_.size());
+        }
+
+        bool isInjectionGrup(const std::string& name) const {
+
+            auto it = wellNameToGlobalIdx_.find(name);
+
+            if (it == wellNameToGlobalIdx_.end())
+                OPM_THROW(std::logic_error, "Could not find global injection group for well" << name);
+
+            return globalIsInjectionGrup_[it->second];
+        }
+
+        bool isProductionGrup(const std::string& name) const {
+
+            auto it = wellNameToGlobalIdx_.find(name);
+
+            if (it == wellNameToGlobalIdx_.end())
+                OPM_THROW(std::logic_error, "Could not find global injection group for well" << name);
+
+            return globalIsProductionGrup_[it->second];
+        }
 
     private:
         std::vector<double> perfphaserates_;
         std::vector<Opm::Well::InjectorCMode> current_injection_controls_;
         std::vector<Well::ProducerCMode> current_production_controls_;
+
+        // size of global number of wells
+        std::vector<int> globalIsInjectionGrup_;
+        std::vector<int> globalIsProductionGrup_;
+        std::map<std::string, int> wellNameToGlobalIdx_;
+
         std::map<std::string, Group::ProductionCMode> current_production_group_controls_;
         std::map<std::string, Group::InjectionCMode> current_injection_group_controls_;
 
