@@ -37,7 +37,10 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
@@ -46,6 +49,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
@@ -235,6 +239,26 @@ Opm::TableContainer getTableContainer()
 }
 
 
+Opm::Well getFullWell()
+{
+    Opm::UnitSystem unitSystem;
+    return Opm::Well("test1", "test2", 1, 2, 3, 4, 5.0,
+                     Opm::Phase::WATER, Opm::Connection::Order::DEPTH,
+                     unitSystem, 6.0, Opm::Well::Status::SHUT,
+                     7.0, true, true, false,
+                     Opm::Well::WellGuideRate{true, 1.0, Opm::Well::GuideRateTarget::COMB, 2.0},
+                     8.0, 9.0, false,
+                     std::make_shared<Opm::WellEconProductionLimits>(),
+                     std::make_shared<Opm::WellFoamProperties>(),
+                     std::make_shared<Opm::WellPolymerProperties>(),
+                     std::make_shared<Opm::WellTracerProperties>(),
+                     std::make_shared<Opm::WellConnections>(),
+                     std::make_shared<Opm::Well::WellProductionProperties>(),
+                     std::make_shared<Opm::Well::WellInjectionProperties>(),
+                     std::make_shared<Opm::WellSegments>());
+}
+
+
 Opm::VFPInjTable getVFPInjTable()
 {
     Opm::VFPInjTable::array_type table;
@@ -328,7 +352,7 @@ BOOST_AUTO_TEST_CASE(dataConnection)
 }
 
 
-BOOST_AUTO_TEST_CASE(Segment)
+BOOST_AUTO_TEST_CASE(dataSegment)
 {
 #if HAVE_MPI
     Opm::data::Segment seg1 = getSegment();
@@ -339,7 +363,7 @@ BOOST_AUTO_TEST_CASE(Segment)
 }
 
 
-BOOST_AUTO_TEST_CASE(Well)
+BOOST_AUTO_TEST_CASE(dataWell)
 {
 #if HAVE_MPI
     Opm::data::Well well1 = getWell();
@@ -1461,6 +1485,152 @@ BOOST_AUTO_TEST_CASE(WellProductionProperties)
                                              true,
                                              Opm::Well::ProducerCMode::CRAT,
                                              Opm::Well::ProducerCMode::BHP, 11);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(SpiralICD)
+{
+#ifdef HAVE_MPI
+    Opm::SpiralICD val1(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8, 9.0,
+                        Opm::SpiralICD::Status::OPEN, 10.0);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Valve)
+{
+#ifdef HAVE_MPI
+    Opm::Valve val1(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, Opm::Valve::Status::OPEN);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Segment)
+{
+#ifdef HAVE_MPI
+    Opm::Segment val1(1, 2, 3, {1, 2}, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, false,
+                      Opm::Segment::SegmentType::SICD,
+                      std::make_shared<Opm::SpiralICD>(),
+                      std::make_shared<Opm::Valve>());
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Dimension)
+{
+#ifdef HAVE_MPI
+    Opm::Dimension val1("test", 1.0, 2.0);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(UnitSystem)
+{
+#ifdef HAVE_MPI
+    Opm::UnitSystem val1(Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellSegments)
+{
+#ifdef HAVE_MPI
+    Opm::Segment seg(1, 2, 3, {1, 2}, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, false,
+                     Opm::Segment::SegmentType::SICD,
+                     std::make_shared<Opm::SpiralICD>(),
+                     std::make_shared<Opm::Valve>());
+    Opm::WellSegments val1("test", 1.0, 2.0, 3.0,
+                           Opm::WellSegments::LengthDepth::ABS,
+                           Opm::WellSegments::CompPressureDrop::HF_,
+                           Opm::WellSegments::MultiPhaseModel::DF,
+                           {seg, seg}, {{1,2},{3,4}});
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Well)
+{
+#ifdef HAVE_MPI
+    Opm::Well val1 = getFullWell();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GroupInjectionProperties)
+{
+#ifdef HAVE_MPI
+    Opm::Group::GroupInjectionProperties val1{Opm::Phase::WATER,
+                                              Opm::Group::InjectionCMode::REIN,
+                                              Opm::UDAValue(1.0),
+                                              Opm::UDAValue(2.0),
+                                              Opm::UDAValue(3.0),
+                                              Opm::UDAValue(4.0),
+                                              "test1", "test2", 5};
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GroupProductionProperties)
+{
+#ifdef HAVE_MPI
+    Opm::Group::GroupProductionProperties val1{Opm::Group::ProductionCMode::PRBL,
+                                               Opm::Group::ExceedAction::WELL,
+                                               Opm::UDAValue(1.0),
+                                               Opm::UDAValue(2.0),
+                                               Opm::UDAValue(3.0),
+                                               Opm::UDAValue(4.0),
+                                               5.0, Opm::Group::GuideRateTarget::COMB,
+                                               6.0, 7};
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Group)
+{
+#ifdef HAVE_MPI
+    Opm::UnitSystem unitSystem;
+    Opm::Group val1("test1", 1, 2, 3.0, unitSystem,
+                    Opm::Group::GroupType::PRODUCTION,
+                    4.0, true, 5, "test2",
+                    Opm::IOrderSet<std::string>({"test3", "test4"}, {"test3","test4"}),
+                    Opm::IOrderSet<std::string>({"test5", "test6"}, {"test5","test6"}),
+                    Opm::Group::GroupInjectionProperties(),
+                    Opm::Group::GroupProductionProperties());
+
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));

@@ -32,6 +32,8 @@
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
@@ -62,6 +64,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
+#include <opm/parser/eclipse/EclipseState/Util/IOrderSet.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
 #define HANDLE_AS_POD(T) \
@@ -186,6 +189,18 @@ template<class... Ts>
 std::size_t packSize(const std::tuple<Ts...>& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return pack_size_tuple_entry(data, comm);
+}
+
+template<class T, class H, class KE, class A>
+std::size_t packSize(const std::unordered_set<T,H,KE,A>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t totalSize = packSize(data.size(), comm);
+    for (const auto& entry : data)
+    {
+        totalSize += packSize(entry, comm);
+    }
+    return totalSize;
 }
 
 template<class Key, class Value>
@@ -1062,6 +1077,192 @@ std::size_t packSize(const Well::WellProductionProperties& data,
            packSize(data.getNumProductionControls(), comm);
 }
 
+std::size_t packSize(const SpiralICD& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.strength(), comm) +
+           packSize(data.length(), comm) +
+           packSize(data.densityCalibration(), comm) +
+           packSize(data.viscosityCalibration(), comm) +
+           packSize(data.criticalValue(), comm) +
+           packSize(data.widthTransitionRegion(), comm) +
+           packSize(data.maxViscosityRatio(), comm) +
+           packSize(data.methodFlowScaling(), comm) +
+           packSize(data.maxAbsoluteRate(), comm) +
+           packSize(data.status(), comm) +
+           packSize(data.scalingFactor(), comm);
+}
+
+std::size_t packSize(const Valve& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.conFlowCoefficient(), comm) +
+           packSize(data.conCrossArea(), comm) +
+           packSize(data.conMaxCrossArea(), comm) +
+           packSize(data.pipeAdditionalLength(), comm) +
+           packSize(data.pipeDiameter(), comm) +
+           packSize(data.pipeRoughness(), comm) +
+           packSize(data.pipeCrossArea(), comm) +
+           packSize(data.status(), comm);
+}
+
+std::size_t packSize(const Segment& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.segmentNumber(), comm) +
+           packSize(data.branchNumber(), comm) +
+           packSize(data.outletSegment(), comm) +
+           packSize(data.inletSegments(), comm) +
+           packSize(data.totalLength(), comm) +
+           packSize(data.depth(), comm) +
+           packSize(data.internalDiameter(), comm) +
+           packSize(data.roughness(), comm) +
+           packSize(data.crossArea(), comm) +
+           packSize(data.volume(), comm) +
+           packSize(data.dataReady(), comm) +
+           packSize(data.segmentType(), comm) +
+           packSize(data.spiralICD(), comm) +
+           packSize(data.getValve(), comm);
+}
+
+template<class T>
+std::size_t packSize(const std::shared_ptr<T>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size = packSize(bool(), comm);
+    if (data)
+         size += packSize(*data, comm);
+
+    return size;
+}
+
+template std::size_t packSize(const std::shared_ptr<SpiralICD>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
+std::size_t packSize(const Dimension& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getName(), comm) +
+           packSize(data.getSIScalingRaw(), comm) +
+           packSize(data.getSIOffset(), comm);
+}
+
+std::size_t packSize(const UnitSystem& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getName(), comm) +
+           packSize(data.getType(), comm) +
+           packSize(data.getDimensions(), comm) +
+           packSize(data.use_count(), comm);
+}
+
+std::size_t packSize(const WellSegments& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.wellName(), comm) +
+           packSize(data.depthTopSegment(), comm) +
+           packSize(data.lengthTopSegment(), comm) +
+           packSize(data.volumeTopSegment(), comm) +
+           packSize(data.lengthDepthType(), comm) +
+           packSize(data.compPressureDrop(), comm) +
+           packSize(data.multiPhaseModel(), comm) +
+           packSize(data.segments(), comm) +
+           packSize(data.segmentNumberIndex(), comm);
+
+}
+
+std::size_t packSize(const Well& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size = packSize(data.name(), comm) +
+                       packSize(data.groupName(), comm) +
+                       packSize(data.firstTimeStep(), comm) +
+                       packSize(data.seqIndex(), comm) +
+                       packSize(data.getHeadI(), comm) +
+                       packSize(data.getHeadJ(), comm) +
+                       packSize(data.getRefDepth(), comm) +
+                       packSize(data.getPreferredPhase(), comm) +
+                       packSize(data.getWellConnectionOrdering(), comm) +
+                       packSize(data.units(), comm) +
+                       packSize(data.udqUndefined(), comm) +
+                       packSize(data.getStatus(), comm) +
+                       packSize(data.getDrainageRadius(), comm) +
+                       packSize(data.getAllowCrossFlow(), comm) +
+                       packSize(data.getAutomaticShutIn(), comm) +
+                       packSize(data.isProducer(), comm) +
+                       packSize(data.wellGuideRate(), comm) +
+                       packSize(data.getEfficiencyFactor(), comm) +
+                       packSize(data.getSolventFraction(), comm) +
+                       packSize(data.predictionMode(), comm) +
+                       packSize(data.getEconLimits(), comm) +
+                       packSize(data.getFoamProperties(), comm) +
+                       packSize(data.getPolymerProperties(), comm) +
+                       packSize(data.getTracerProperties(), comm) +
+                       packSize(data.getProductionProperties(), comm) +
+                       packSize(data.getInjectionProperties(), comm) +
+                       packSize(data.hasSegments(), comm);
+    if (data.hasSegments())
+        size += packSize(data.getSegments(), comm);
+
+    return size;
+}
+
+template<class T>
+std::size_t packSize(const IOrderSet<T>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.index(), comm) +
+           packSize(data.data(), comm);
+}
+
+std::size_t packSize(const Group::GroupInjectionProperties& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.phase, comm) +
+           packSize(data.cmode, comm) +
+           packSize(data.surface_max_rate, comm) +
+           packSize(data.resv_max_rate, comm) +
+           packSize(data.target_reinj_fraction, comm) +
+           packSize(data.target_void_fraction, comm) +
+           packSize(data.reinj_group, comm) +
+           packSize(data.voidage_group, comm) +
+           packSize(data.injection_controls, comm);
+}
+
+std::size_t packSize(const Group::GroupProductionProperties& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.cmode, comm) +
+           packSize(data.exceed_action, comm) +
+           packSize(data.oil_target, comm) +
+           packSize(data.water_target, comm) +
+           packSize(data.gas_target, comm) +
+           packSize(data.liquid_target, comm) +
+           packSize(data.guide_rate, comm) +
+           packSize(data.guide_rate_def, comm) +
+           packSize(data.resv_target, comm) +
+           packSize(data.production_controls, comm);
+}
+
+std::size_t packSize(const Group& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.name(), comm) +
+           packSize(data.insert_index(), comm) +
+           packSize(data.initStep(), comm) +
+           packSize(data.udqUndefined(), comm) +
+           packSize(data.units(), comm) +
+           packSize(data.type(), comm) +
+           packSize(data.getGroupEfficiencyFactor(), comm) +
+           packSize(data.getTransferGroupEfficiencyFactor(), comm) +
+           packSize(data.getGroupNetVFPTable(), comm) +
+           packSize(data.parent(), comm) +
+           packSize(data.iwells(), comm) +
+           packSize(data.igroups(), comm) +
+           packSize(data.injectionProperties(), comm) +
+           packSize(data.productionProperties(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -1149,6 +1350,19 @@ void pack(const std::vector<T, A>& data, std::vector<char>& buffer, int& positio
 
     for (const auto& entry: data)
         pack(entry, buffer, position, comm);
+}
+
+template<class T, class H, class KE, class A>
+void pack(const std::unordered_set<T,H,KE,A>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.size(), buffer, position, comm);
+
+    for (const auto& entry : data)
+    {
+        pack(entry, buffer, position, comm);
+    }
 }
 
 template<class A>
@@ -2137,6 +2351,197 @@ void pack(const Well::WellProductionProperties& data,
     pack(data.getNumProductionControls(), buffer, position, comm);
 }
 
+void pack(const SpiralICD& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.strength(), buffer, position, comm);
+    pack(data.length(), buffer, position, comm);
+    pack(data.densityCalibration(), buffer, position, comm);
+    pack(data.viscosityCalibration(), buffer, position, comm);
+    pack(data.criticalValue(), buffer, position, comm);
+    pack(data.widthTransitionRegion(), buffer, position, comm);
+    pack(data.maxViscosityRatio(), buffer, position, comm);
+    pack(data.methodFlowScaling(), buffer, position, comm);
+    pack(data.maxAbsoluteRate(), buffer, position, comm);
+    pack(data.status(), buffer, position, comm);
+    pack(data.scalingFactor(), buffer, position, comm);
+}
+
+void pack(const Valve& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.conFlowCoefficient(), buffer, position, comm);
+    pack(data.conCrossArea(), buffer, position, comm);
+    pack(data.conMaxCrossArea(), buffer, position, comm);
+    pack(data.pipeAdditionalLength(), buffer, position, comm);
+    pack(data.pipeDiameter(), buffer, position, comm);
+    pack(data.pipeRoughness(), buffer, position, comm);
+    pack(data.pipeCrossArea(), buffer, position, comm);
+    pack(data.status(), buffer, position, comm);
+}
+
+void pack(const Segment& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.segmentNumber(), buffer, position, comm);
+    pack(data.branchNumber(), buffer, position, comm);
+    pack(data.outletSegment(), buffer, position, comm);
+    pack(data.inletSegments(), buffer, position, comm);
+    pack(data.totalLength(), buffer, position, comm);
+    pack(data.depth(), buffer, position, comm);
+    pack(data.internalDiameter(), buffer, position, comm);
+    pack(data.roughness(), buffer, position, comm);
+    pack(data.crossArea(), buffer, position, comm);
+    pack(data.volume(), buffer, position, comm);
+    pack(data.dataReady(), buffer, position, comm);
+    pack(data.segmentType(), buffer, position, comm);
+    pack(data.spiralICD(), buffer, position, comm);
+    pack(data.getValve(), buffer, position, comm);
+}
+
+template<class T>
+void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data != nullptr, buffer, position, comm);
+    if (data)
+        pack(*data, buffer, position, comm);
+}
+
+template void pack(const std::shared_ptr<SpiralICD>& data, std::vector<char>& buffer,
+                   int& position, Dune::MPIHelper::MPICommunicator comm);
+
+void pack(const Dimension& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getName(), buffer, position, comm);
+    pack(data.getSIScalingRaw(), buffer, position, comm);
+    pack(data.getSIOffset(), buffer, position, comm);
+}
+
+void pack(const UnitSystem& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getName(), buffer, position, comm);
+    pack(data.getType(), buffer, position, comm);
+    pack(data.getDimensions(), buffer, position, comm);
+    pack(data.use_count(), buffer, position, comm);
+}
+
+void pack(const WellSegments& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.wellName(), buffer, position, comm);
+    pack(data.depthTopSegment(), buffer, position, comm);
+    pack(data.lengthTopSegment(), buffer, position, comm);
+    pack(data.volumeTopSegment(), buffer, position, comm);
+    pack(data.lengthDepthType(), buffer, position, comm);
+    pack(data.compPressureDrop(), buffer, position, comm);
+    pack(data.multiPhaseModel(), buffer, position, comm);
+    pack(data.segments(), buffer, position, comm);
+    pack(data.segmentNumberIndex(), buffer, position, comm);
+}
+
+void pack(const Well& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name(), buffer, position, comm);
+    pack(data.groupName(), buffer, position, comm);
+    pack(data.firstTimeStep(), buffer, position, comm);
+    pack(data.seqIndex(), buffer, position, comm);
+    pack(data.getHeadI(), buffer, position, comm);
+    pack(data.getHeadJ(), buffer, position, comm);
+    pack(data.getRefDepth(), buffer, position, comm);
+    pack(data.getPreferredPhase(), buffer, position, comm);
+    pack(data.getWellConnectionOrdering(), buffer, position, comm);
+    pack(data.units(), buffer, position, comm);
+    pack(data.udqUndefined(), buffer, position, comm);
+    pack(data.getStatus(), buffer, position, comm);
+    pack(data.getDrainageRadius(), buffer, position, comm);
+    pack(data.getAllowCrossFlow(), buffer, position, comm);
+    pack(data.getAutomaticShutIn(), buffer, position, comm);
+    pack(data.isProducer(), buffer, position, comm);
+    pack(data.wellGuideRate(), buffer, position, comm);
+    pack(data.getEfficiencyFactor(), buffer, position, comm);
+    pack(data.getSolventFraction(), buffer, position, comm);
+    pack(data.predictionMode(), buffer, position, comm);
+    pack(data.getEconLimits(), buffer, position, comm);
+    pack(data.getFoamProperties(), buffer, position, comm);
+    pack(data.getPolymerProperties(), buffer, position, comm);
+    pack(data.getTracerProperties(), buffer, position, comm);
+    pack(data.getProductionProperties(), buffer, position, comm);
+    pack(data.getInjectionProperties(), buffer, position, comm);
+    pack(data.hasSegments(), buffer, position, comm);
+    if (data.hasSegments())
+        pack(data.getSegments(), buffer, position, comm);
+}
+
+template<class T>
+void pack(const IOrderSet<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.index(), buffer, position, comm);
+    pack(data.data(), buffer, position, comm);
+}
+
+void pack(const Group::GroupInjectionProperties& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.phase, buffer, position, comm);
+    pack(data.cmode, buffer, position, comm);
+    pack(data.surface_max_rate, buffer, position, comm);
+    pack(data.resv_max_rate, buffer, position, comm);
+    pack(data.target_reinj_fraction, buffer, position, comm);
+    pack(data.target_void_fraction, buffer, position, comm);
+    pack(data.reinj_group, buffer, position, comm);
+    pack(data.voidage_group, buffer, position, comm);
+    pack(data.injection_controls, buffer, position, comm);
+}
+
+void pack(const Group::GroupProductionProperties& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.cmode, buffer, position, comm);
+    pack(data.exceed_action, buffer, position, comm);
+    pack(data.oil_target, buffer, position, comm);
+    pack(data.water_target, buffer, position, comm);
+    pack(data.gas_target, buffer, position, comm);
+    pack(data.liquid_target, buffer, position, comm);
+    pack(data.guide_rate, buffer, position, comm);
+    pack(data.guide_rate_def, buffer, position, comm);
+    pack(data.resv_target, buffer, position, comm);
+    pack(data.production_controls, buffer, position, comm);
+}
+
+void pack(const Group& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name(), buffer, position, comm);
+    pack(data.insert_index(), buffer, position, comm);
+    pack(data.initStep(), buffer, position, comm);
+    pack(data.udqUndefined(), buffer, position, comm);
+    pack(data.units(), buffer, position, comm);
+    pack(data.type(), buffer, position, comm);
+    pack(data.getGroupEfficiencyFactor(), buffer, position, comm);
+    pack(data.getTransferGroupEfficiencyFactor(), buffer, position, comm);
+    pack(data.getGroupNetVFPTable(), buffer, position, comm);
+    pack(data.parent(), buffer, position, comm);
+    pack(data.iwells(), buffer, position, comm);
+    pack(data.igroups(), buffer, position, comm);
+    pack(data.injectionProperties(), buffer, position, comm);
+    pack(data.productionProperties(), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -2261,6 +2666,22 @@ void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm)
 {
     unpack_tuple_entry(data, buffer, position, comm);
+}
+
+template<class T, class H, class KE, class A>
+void unpack(std::unordered_set<T,H,KE,A>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size=0;
+    unpack(size, buffer, position, comm);
+
+    for (;size>0; size--)
+    {
+        T entry;
+        unpack(entry, buffer, position, comm);
+        data.insert(entry);
+    }
 }
 
 template<class Key, class Value>
@@ -3617,6 +4038,314 @@ void unpack(Well::WellProductionProperties& data,
                                           THPLimit, BHPH, THPH, VFPTableNumber,
                                           ALQValue, predictionMode, controlMode,
                                           whistctl_cmode, prodCtrls);
+}
+
+void unpack(SpiralICD& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    double strength, length, densityCalibration,
+           viscosityCalibration, criticalValue,
+           widthTransitionRegion, maxViscosityRatio;
+    int methodFlowScaling;
+    double maxAbsoluteRate;
+    SpiralICD::Status status;
+    double scalingFactor;
+
+    unpack(strength, buffer, position, comm);
+    unpack(length, buffer, position, comm);
+    unpack(densityCalibration, buffer, position, comm);
+    unpack(viscosityCalibration, buffer, position, comm);
+    unpack(criticalValue, buffer, position, comm);
+    unpack(widthTransitionRegion, buffer, position, comm);
+    unpack(maxViscosityRatio, buffer, position, comm);
+    unpack(methodFlowScaling, buffer, position, comm);
+    unpack(maxAbsoluteRate, buffer, position, comm);
+    unpack(status, buffer, position, comm);
+    unpack(scalingFactor, buffer, position, comm);
+
+    data = SpiralICD(strength, length, densityCalibration,
+                     viscosityCalibration, criticalValue,
+                     widthTransitionRegion, maxViscosityRatio,
+                     methodFlowScaling, maxAbsoluteRate,
+                     status, scalingFactor);
+}
+
+void unpack(Valve& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    double conFlowCoefficient;
+    double conCrossArea;
+    double conMaxCrossArea;
+    double pipeAdditionalLength;
+    double pipeDiameter;
+    double pipeRoughness;
+    double pipeCrossArea;
+    Valve::Status status;
+
+    unpack(conFlowCoefficient, buffer, position, comm);
+    unpack(conCrossArea, buffer, position, comm);
+    unpack(conMaxCrossArea, buffer, position, comm);
+    unpack(pipeAdditionalLength, buffer, position, comm);
+    unpack(pipeDiameter, buffer, position, comm);
+    unpack(pipeRoughness, buffer, position, comm);
+    unpack(pipeCrossArea, buffer, position, comm);
+    unpack(status, buffer, position, comm);
+    data = Valve(conFlowCoefficient, conCrossArea, conMaxCrossArea,
+                 pipeAdditionalLength, pipeDiameter, pipeRoughness,
+                 pipeCrossArea, status);
+}
+
+void unpack(Segment& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    int segmentNumber, branchNumber, outletSegment;
+    std::vector<int> inletSegments;
+    double totalLength, depth, internalDiameter, roughness, crossArea, volume;
+    bool dataReady;
+    Segment::SegmentType segmentType;
+    std::shared_ptr<SpiralICD> spiralICD;
+    std::shared_ptr<Valve> valve;
+
+    unpack(segmentNumber, buffer, position, comm);
+    unpack(branchNumber, buffer, position, comm);
+    unpack(outletSegment, buffer, position, comm);
+    unpack(inletSegments, buffer, position, comm);
+    unpack(totalLength, buffer, position, comm);
+    unpack(depth, buffer, position, comm);
+    unpack(internalDiameter, buffer, position, comm);
+    unpack(roughness, buffer, position, comm);
+    unpack(crossArea, buffer, position, comm);
+    unpack(volume, buffer, position, comm);
+    unpack(dataReady, buffer, position, comm);
+    unpack(segmentType, buffer, position, comm);
+    unpack(spiralICD, buffer, position, comm);
+    unpack(valve, buffer, position, comm);
+    data = Segment(segmentNumber, branchNumber, outletSegment,
+                   inletSegments, totalLength, depth,
+                   internalDiameter, roughness, crossArea,
+                   volume, dataReady, segmentType, spiralICD, valve);
+}
+
+template<class T>
+void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    bool hasVal;
+    unpack(hasVal, buffer, position, comm);
+    if (hasVal) {
+        data = std::make_shared<T>();
+        unpack(*data, buffer, position, comm);
+    }
+}
+
+template void unpack(std::shared_ptr<SpiralICD>& data,
+                     std::vector<char>& buffer, int& position,
+                     Dune::MPIHelper::MPICommunicator comm);
+
+void unpack(Dimension& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    double siScaling, siOffset;
+
+    unpack(name, buffer, position, comm);
+    unpack(siScaling, buffer, position, comm);
+    unpack(siOffset, buffer, position, comm);
+    data = Dimension(name, siScaling, siOffset);
+}
+
+void unpack(UnitSystem& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    UnitSystem::UnitType type;
+    std::map<std::string, Dimension> dimensions;
+    size_t use_count;
+    unpack(name, buffer, position, comm);
+    unpack(type, buffer, position, comm);
+    unpack(dimensions, buffer, position, comm);
+    unpack(use_count, buffer, position, comm);
+
+    data = UnitSystem(name, type, dimensions, use_count);
+}
+
+void unpack(WellSegments& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string wellName;
+    double depthTopSegment, lengthTopSegment, volumeTopSegment;
+    WellSegments::CompPressureDrop compPressureDrop;
+    WellSegments::LengthDepth lengthDepthType;
+    WellSegments::MultiPhaseModel multiPhaseModel;
+    std::vector<Segment> segments;
+    std::map<int,int> segmentNumberIndex;
+
+    unpack(wellName, buffer, position, comm);
+    unpack(depthTopSegment, buffer, position, comm);
+    unpack(lengthTopSegment, buffer, position, comm);
+    unpack(volumeTopSegment, buffer, position, comm);
+    unpack(lengthDepthType, buffer, position, comm);
+    unpack(compPressureDrop, buffer, position, comm);
+    unpack(multiPhaseModel, buffer, position, comm);
+    unpack(segments, buffer, position, comm);
+    unpack(segmentNumberIndex, buffer, position, comm);
+    data = WellSegments(wellName, depthTopSegment, lengthTopSegment,
+                        volumeTopSegment, lengthDepthType, compPressureDrop,
+                        multiPhaseModel, segments, segmentNumberIndex);
+}
+
+void unpack(Well& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name, groupName;
+    std::size_t firstTimeStep, seqIndex;
+    int headI, headJ;
+    double ref_depth;
+    Phase phase;
+    Connection::Order ordering;
+    UnitSystem units;
+    double udq_undefined;
+    Well::Status status;
+    double drainageRadius;
+    bool allowCrossFlow, automaticShutIn, isProducer;
+    Well::WellGuideRate guideRate;
+    double efficiencyFactor;
+    double solventFraction;
+    bool prediction_mode;
+    auto econLimits = std::make_shared<WellEconProductionLimits>();
+    auto foamProperties = std::make_shared<WellFoamProperties>();
+    auto polymerProperties = std::make_shared<WellPolymerProperties>();
+    auto tracerProperties = std::make_shared<WellTracerProperties>();
+    auto connection = std::make_shared<WellConnections>();
+    auto production = std::make_shared<Well::WellProductionProperties>();
+    auto injection = std::make_shared<Well::WellInjectionProperties>();
+    std::shared_ptr<WellSegments> segments;
+
+    unpack(name, buffer, position, comm);
+    unpack(groupName, buffer, position, comm);
+    unpack(firstTimeStep, buffer, position, comm);
+    unpack(seqIndex, buffer, position, comm);
+    unpack(headI, buffer, position, comm);
+    unpack(headJ, buffer, position, comm);
+    unpack(ref_depth, buffer, position, comm);
+    unpack(phase, buffer, position, comm);
+    unpack(ordering, buffer, position, comm);
+    unpack(units, buffer, position, comm);
+    unpack(udq_undefined, buffer, position, comm);
+    unpack(status, buffer, position, comm);
+    unpack(drainageRadius, buffer, position, comm);
+    unpack(allowCrossFlow, buffer, position, comm);
+    unpack(automaticShutIn, buffer, position, comm);
+    unpack(isProducer, buffer, position, comm);
+    unpack(guideRate, buffer, position, comm);
+    unpack(efficiencyFactor, buffer, position, comm);
+    unpack(solventFraction, buffer, position, comm);
+    unpack(prediction_mode, buffer, position, comm);
+    unpack(*econLimits, buffer, position, comm);
+    unpack(*foamProperties, buffer, position, comm);
+    unpack(*polymerProperties, buffer, position, comm);
+    unpack(*tracerProperties, buffer, position, comm);
+    unpack(*production, buffer, position, comm);
+    unpack(*injection, buffer, position, comm);
+    bool hasSegments;
+    unpack(hasSegments, buffer, position, comm);
+    if (hasSegments) {
+        segments = std::make_shared<WellSegments>();
+        unpack(*segments, buffer, position, comm);
+    }
+    data = Well(name, groupName, firstTimeStep, seqIndex, headI, headJ,
+                ref_depth, phase, ordering, units, udq_undefined, status,
+                drainageRadius, allowCrossFlow, automaticShutIn, isProducer,
+                guideRate, efficiencyFactor, solventFraction, prediction_mode,
+                econLimits, foamProperties, polymerProperties, tracerProperties,
+                connection, production, injection, segments);
+}
+
+template<class T>
+void unpack(IOrderSet<T>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    typename IOrderSet<T>::index_type index;
+    typename IOrderSet<T>::storage_type storage;
+    unpack(index, buffer, position, comm);
+    unpack(storage, buffer, position, comm);
+    data = IOrderSet<T>(index, storage);
+}
+
+void unpack(Group::GroupInjectionProperties& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.phase, buffer, position, comm);
+    unpack(data.cmode, buffer, position, comm);
+    unpack(data.surface_max_rate, buffer, position, comm);
+    unpack(data.resv_max_rate, buffer, position, comm);
+    unpack(data.target_reinj_fraction, buffer, position, comm);
+    unpack(data.target_void_fraction, buffer, position, comm);
+    unpack(data.reinj_group, buffer, position, comm);
+    unpack(data.voidage_group, buffer, position, comm);
+    unpack(data.injection_controls, buffer, position, comm);
+}
+
+void unpack(Group::GroupProductionProperties& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.cmode, buffer, position, comm);
+    unpack(data.exceed_action, buffer, position, comm);
+    unpack(data.oil_target, buffer, position, comm);
+    unpack(data.water_target, buffer, position, comm);
+    unpack(data.gas_target, buffer, position, comm);
+    unpack(data.liquid_target, buffer, position, comm);
+    unpack(data.guide_rate, buffer, position, comm);
+    unpack(data.guide_rate_def, buffer, position, comm);
+    unpack(data.resv_target, buffer, position, comm);
+    unpack(data.production_controls, buffer, position, comm);
+}
+
+void unpack(Group& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    std::size_t insert_index, initStep;
+    double udqUndefined;
+    UnitSystem units;
+    Group::GroupType type;
+    double groupEfficiencyFactor;
+    bool transferGroupEfficiencyFactor;
+    int groupNetVFPTable;
+    std::string parent;
+    IOrderSet<std::string> wells, groups;
+    Group::GroupInjectionProperties injection;
+    Group::GroupProductionProperties production;
+
+    unpack(name, buffer, position, comm);
+    unpack(insert_index, buffer, position, comm);
+    unpack(initStep, buffer, position, comm);
+    unpack(udqUndefined, buffer, position, comm);
+    unpack(units, buffer, position, comm);
+    unpack(type, buffer, position, comm);
+    unpack(groupEfficiencyFactor, buffer, position, comm);
+    unpack(transferGroupEfficiencyFactor, buffer, position, comm);
+    unpack(groupNetVFPTable, buffer, position, comm);
+    unpack(parent, buffer, position, comm);
+    unpack(wells, buffer, position, comm);
+    unpack(groups, buffer, position, comm);
+    unpack(injection, buffer, position, comm);
+    unpack(production, buffer, position, comm);
+    data = Group(name, insert_index, initStep, udqUndefined,
+                 units, type, groupEfficiencyFactor,
+                 transferGroupEfficiencyFactor,
+                 groupNetVFPTable, parent, wells, groups,
+                 injection, production);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
