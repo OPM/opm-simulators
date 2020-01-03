@@ -73,6 +73,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_relpermdiagnostics.cpp
   tests/test_norne_pvt.cpp
   tests/test_wellstatefullyimplicitblackoil.cpp
+  tests/test_wellandgroupstates.cpp
   )
 
 if(MPI_FOUND)
@@ -206,4 +207,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/MSWellHelpers.hpp
   opm/simulators/wells/BlackoilWellModel.hpp
   opm/simulators/wells/BlackoilWellModel_impl.hpp
+  opm/simulators/wells/SingleGroupState.hpp
+  opm/simulators/wells/SingleWellState.hpp
+  opm/simulators/wells/WellAndGroupStates.hpp
   )
