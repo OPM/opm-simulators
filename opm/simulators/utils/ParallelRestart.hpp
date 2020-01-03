@@ -41,7 +41,10 @@
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicVector.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSump.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
@@ -63,6 +66,8 @@ class Actdims;
 class Aqudims;
 class ColumnSchema;
 class Connection;
+class DeckItem;
+class DeckRecord;
 class DENSITYRecord;
 class DensityTable;
 class Dimension;
@@ -96,6 +101,7 @@ class PvtwTable;
 class Regdims;
 class RestartConfig;
 class RestartSchedule;
+class RFTConfig;
 class ROCKRecord;
 class RockTable;
 class Rock2dTable;
@@ -183,6 +189,9 @@ std::size_t packSize(const std::tuple<Ts...>& data, Dune::MPIHelper::MPICommunic
 template<class T>
 std::size_t packSize(const std::shared_ptr<T>& data,
                      Dune::MPIHelper::MPICommunicator comm);
+
+template<class T, std::size_t N>
+std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicator comm);
 
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm);
 
@@ -311,6 +320,10 @@ void pack(const std::unordered_set<T,H,KE,A>& data,
 
 template<class T>
 void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
+
+template<class T, size_t N>
+void pack(const std::array<T,N>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
 template<class T1, class T2, class C, class A>
@@ -463,6 +476,10 @@ template<class T>
 void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
+template<class T, size_t N>
+void unpack(std::array<T,N>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
+
 template<class T1, class T2, class C, class A>
 void unpack(std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
@@ -577,6 +594,8 @@ ADD_PACK_PROTOTYPES(data::Segment)
 ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
+ADD_PACK_PROTOTYPES(DeckItem)
+ADD_PACK_PROTOTYPES(DeckRecord)
 ADD_PACK_PROTOTYPES(DENSITYRecord)
 ADD_PACK_PROTOTYPES(DensityTable)
 ADD_PACK_PROTOTYPES(Dimension)
@@ -589,6 +608,14 @@ ADD_PACK_PROTOTYPES(EquilRecord)
 ADD_PACK_PROTOTYPES(Events)
 ADD_PACK_PROTOTYPES(FoamConfig)
 ADD_PACK_PROTOTYPES(FoamData)
+ADD_PACK_PROTOTYPES(GConSale)
+ADD_PACK_PROTOTYPES(GConSale::GCONSALEGroup)
+ADD_PACK_PROTOTYPES(GConSump)
+ADD_PACK_PROTOTYPES(GConSump::GCONSUMPGroup)
+ADD_PACK_PROTOTYPES(GuideRateConfig)
+ADD_PACK_PROTOTYPES(GuideRateConfig::GroupTarget)
+ADD_PACK_PROTOTYPES(GuideRateConfig::WellTarget)
+ADD_PACK_PROTOTYPES(GuideRateModel)
 ADD_PACK_PROTOTYPES(Group)
 ADD_PACK_PROTOTYPES(Group::GroupInjectionProperties)
 ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
@@ -614,6 +641,7 @@ ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)
+ADD_PACK_PROTOTYPES(RFTConfig)
 ADD_PACK_PROTOTYPES(ROCKRecord)
 ADD_PACK_PROTOTYPES(RockTable)
 ADD_PACK_PROTOTYPES(Rock2dTable)

@@ -31,10 +31,12 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
@@ -271,6 +273,12 @@ std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelpe
     return totalSize;
 }
 
+template<class T, std::size_t N>
+std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return N*packSize(data[0], comm);
+}
+
 HANDLE_AS_POD(Actdims)
 HANDLE_AS_POD(Aqudims)
 HANDLE_AS_POD(data::Connection)
@@ -281,6 +289,8 @@ HANDLE_AS_POD(EclHysterConfig)
 HANDLE_AS_POD(Eqldims)
 HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
+HANDLE_AS_POD(GuideRateConfig::GroupTarget);
+HANDLE_AS_POD(GuideRateConfig::WellTarget);
 HANDLE_AS_POD(JFunc)
 HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PVTWRecord)
@@ -1384,6 +1394,92 @@ std::size_t packSize(const UDQActive& data,
            packSize(data.getWgKeys(), comm);
 }
 
+std::size_t packSize(const GuideRateModel& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.timeInterval(), comm) +
+           packSize(data.target(), comm) +
+           packSize(data.coefs(), comm) +
+           packSize(data.allow_increase(), comm) +
+           packSize(data.damping_factor(), comm) +
+           packSize(data.free_gas(), comm) +
+           packSize(data.defaultModel(), comm) +
+           packSize(data.udaCoefs(), comm);
+}
+
+std::size_t packSize(const GuideRateConfig& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getModel(), comm) +
+           packSize(data.getWells(), comm) +
+           packSize(data.getGroups(), comm);
+}
+
+std::size_t packSize(const GConSale::GCONSALEGroup& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.sales_target, comm) +
+           packSize(data.max_sales_rate, comm) +
+           packSize(data.min_sales_rate, comm) +
+           packSize(data.max_proc, comm) +
+           packSize(data.udq_undefined, comm) +
+           packSize(data.unit_system, comm);
+}
+
+std::size_t packSize(const GConSale& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getGroups(), comm);
+}
+
+std::size_t packSize(const GConSump::GCONSUMPGroup& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.consumption_rate, comm) +
+           packSize(data.import_rate, comm) +
+           packSize(data.network_node, comm) +
+           packSize(data.udq_undefined, comm) +
+           packSize(data.unit_system, comm);
+}
+
+std::size_t packSize(const GConSump& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getGroups(), comm);
+}
+
+std::size_t packSize(const RFTConfig& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.timeMap(), comm) +
+           packSize(data.wellOpenRftTime(), comm) +
+           packSize(data.wellOpenRftName(), comm) +
+           packSize(data.wellOpen(), comm) +
+           packSize(data.rftConfig(), comm) +
+           packSize(data.pltConfig(), comm);
+}
+
+std::size_t packSize(const DeckItem& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.dVal(), comm) +
+           packSize(data.iVal(), comm) +
+           packSize(data.sVal(), comm) +
+           packSize(data.uVal(), comm) +
+           packSize(data.getType(), comm) +
+           packSize(data.name(), comm) +
+           packSize(data.valueStatus(), comm) +
+           packSize(data.rawData(), comm) +
+           packSize(data.activeDimensions(), comm) +
+           packSize(data.defaultDimensions(), comm);
+}
+
+std::size_t packSize(const DeckRecord& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getItems(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -1484,6 +1580,14 @@ void pack(const std::unordered_set<T,H,KE,A>& data,
     {
         pack(entry, buffer, position, comm);
     }
+}
+
+template<class T, size_t N>
+void pack(const std::array<T,N>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    for (const T& entry : data)
+        pack(entry, buffer, position, comm);
 }
 
 template<class A>
@@ -2789,6 +2893,101 @@ void pack(const UDQActive& data,
     pack(data.getWgKeys(), buffer, position, comm);
 }
 
+void pack(const GuideRateModel& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.timeInterval(), buffer, position, comm);
+    pack(data.target(), buffer, position, comm);
+    pack(data.coefs(), buffer, position, comm);
+    pack(data.allow_increase(), buffer, position, comm);
+    pack(data.damping_factor(), buffer, position, comm);
+    pack(data.free_gas(), buffer, position, comm);
+    pack(data.defaultModel(), buffer, position, comm);
+    pack(data.udaCoefs(), buffer, position, comm);
+}
+
+void pack(const GuideRateConfig& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getModel(), buffer, position, comm);
+    pack(data.getWells(), buffer, position, comm);
+    pack(data.getGroups(), buffer, position, comm);
+}
+
+void pack(const GConSale::GCONSALEGroup& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.sales_target, buffer, position, comm);
+    pack(data.max_sales_rate, buffer, position, comm);
+    pack(data.min_sales_rate, buffer, position, comm);
+    pack(data.max_proc, buffer, position, comm);
+    pack(data.udq_undefined, buffer, position, comm);
+    pack(data.unit_system, buffer, position, comm);
+}
+
+void pack(const GConSale& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getGroups(), buffer, position, comm);
+}
+
+void pack(const GConSump::GCONSUMPGroup& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.consumption_rate, buffer, position, comm);
+    pack(data.import_rate, buffer, position, comm);
+    pack(data.network_node, buffer, position, comm);
+    pack(data.udq_undefined, buffer, position, comm);
+    pack(data.unit_system, buffer, position, comm);
+}
+
+void pack(const GConSump& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getGroups(), buffer, position, comm);
+}
+
+void pack(const RFTConfig& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.timeMap(), buffer, position, comm);
+    pack(data.wellOpenRftTime(), buffer, position, comm);
+    pack(data.wellOpenRftName(), buffer, position, comm);
+    pack(data.wellOpen(), buffer, position, comm);
+    pack(data.rftConfig(), buffer, position, comm);
+    pack(data.pltConfig(), buffer, position, comm);
+}
+
+void pack(const DeckItem& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.dVal(), buffer, position, comm);
+    pack(data.iVal(), buffer, position, comm);
+    pack(data.sVal(), buffer, position, comm);
+    pack(data.uVal(), buffer, position, comm);
+    pack(data.getType(), buffer, position, comm);
+    pack(data.name(), buffer, position, comm);
+    pack(data.valueStatus(), buffer, position, comm);
+    pack(data.rawData(), buffer, position, comm);
+    pack(data.activeDimensions(), buffer, position, comm);
+    pack(data.defaultDimensions(), buffer, position, comm);
+}
+
+void pack(const DeckRecord& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getItems(), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -2929,6 +3128,14 @@ void unpack(std::unordered_set<T,H,KE,A>& data,
         unpack(entry, buffer, position, comm);
         data.insert(entry);
     }
+}
+
+template<class T, size_t N>
+void unpack(std::array<T,N>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    for (T& entry : data)
+        unpack(entry, buffer, position, comm);
 }
 
 template<class Key, class Value>
@@ -4763,6 +4970,143 @@ void unpack(UDQActive& data,
     unpack(udqKeys, buffer, position, comm);
     unpack(wgKeys, buffer, position, comm);
     data = UDQActive(inputRecords, outputRecords, udqKeys, wgKeys);
+}
+
+void unpack(GuideRateModel& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    double timeInterval;
+    GuideRateModel::Target target;
+    std::array<double,6> coefs;
+    bool allow_increase, free_gas, defaultModel;
+    double damping_factor;
+    std::array<UDAValue,3> udaCoefs;
+
+    unpack(timeInterval, buffer, position, comm);
+    unpack(target, buffer, position, comm);
+    unpack(coefs, buffer, position, comm);
+    unpack(allow_increase, buffer, position, comm);
+    unpack(damping_factor, buffer, position, comm);
+    unpack(free_gas, buffer, position, comm);
+    unpack(defaultModel, buffer, position, comm);
+    unpack(udaCoefs, buffer, position, comm);
+    data = GuideRateModel(timeInterval, target, coefs, allow_increase,
+                          damping_factor, free_gas, defaultModel, udaCoefs);
+}
+
+void unpack(GuideRateConfig& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::shared_ptr<GuideRateModel> model;
+    std::unordered_map<std::string, GuideRateConfig::WellTarget> wells;
+    std::unordered_map<std::string, GuideRateConfig::GroupTarget> groups;
+
+    unpack(model, buffer, position, comm);
+    unpack(wells, buffer, position, comm);
+    unpack(groups, buffer, position, comm);
+    data = GuideRateConfig(model, wells, groups);
+}
+
+void unpack(GConSale::GCONSALEGroup& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.sales_target, buffer, position, comm);
+    unpack(data.max_sales_rate, buffer, position, comm);
+    unpack(data.min_sales_rate, buffer, position, comm);
+    unpack(data.max_proc, buffer, position, comm);
+    unpack(data.udq_undefined, buffer, position, comm);
+    unpack(data.unit_system, buffer, position, comm);
+}
+
+void unpack(GConSale& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::map<std::string,GConSale::GCONSALEGroup> groups;
+    unpack(groups, buffer, position, comm);
+    data = GConSale(groups);
+}
+
+void unpack(GConSump::GCONSUMPGroup& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.consumption_rate, buffer, position, comm);
+    unpack(data.import_rate, buffer, position, comm);
+    unpack(data.network_node, buffer, position, comm);
+    unpack(data.udq_undefined, buffer, position, comm);
+    unpack(data.unit_system, buffer, position, comm);
+}
+
+void unpack(GConSump& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::map<std::string,GConSump::GCONSUMPGroup> groups;
+    unpack(groups, buffer, position, comm);
+    data = GConSump(groups);
+}
+
+void unpack(RFTConfig& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TimeMap timeMap;
+    std::pair<bool, std::size_t> wellOpenRftTime;
+    std::unordered_set<std::string> wellOpenRftName;
+    std::unordered_map<std::string, std::size_t> wellOpen;
+    RFTConfig::RFTMap rftConfig;
+    RFTConfig::PLTMap pltConfig;
+
+    unpack(timeMap, buffer, position, comm);
+    unpack(wellOpenRftTime, buffer, position, comm);
+    unpack(wellOpenRftName, buffer, position, comm);
+    unpack(wellOpen, buffer, position, comm);
+    unpack(rftConfig, buffer, position, comm);
+    unpack(pltConfig, buffer, position, comm);
+    data = RFTConfig(timeMap, wellOpenRftTime, wellOpenRftName,
+                     wellOpen, rftConfig, pltConfig);
+}
+
+
+void unpack(DeckItem& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<double> dVal;
+    std::vector<int> iVal;
+    std::vector<std::string> sVal;
+    std::vector<UDAValue> uVal;
+    type_tag type;
+    std::string name;
+    std::vector<value::status> valueStatus;
+    bool rawData;
+    std::vector<Dimension> activeDimensions, defaultDimensions;
+
+    unpack(dVal, buffer, position, comm);
+    unpack(iVal, buffer, position, comm);
+    unpack(sVal, buffer, position, comm);
+    unpack(uVal, buffer, position, comm);
+    unpack(type, buffer, position, comm);
+    unpack(name, buffer, position, comm);
+    unpack(valueStatus, buffer, position, comm);
+    unpack(rawData, buffer, position, comm);
+    unpack(activeDimensions, buffer, position, comm);
+    unpack(defaultDimensions, buffer, position, comm);
+    data = DeckItem(dVal, iVal, sVal, uVal, type, name,
+                    valueStatus, rawData, activeDimensions, defaultDimensions);
+}
+
+void unpack(DeckRecord& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<DeckItem> items;
+    unpack(items, buffer, position, comm);
+    data = DeckRecord(std::move(items));
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

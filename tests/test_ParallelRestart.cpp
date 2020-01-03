@@ -28,6 +28,7 @@
 #include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
+#include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
@@ -37,11 +38,14 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateModel.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
@@ -335,7 +339,50 @@ Opm::UDQConfig getUDQConfig()
                           omap,
                           {{Opm::UDQVarType::SCALAR, 5}, {Opm::UDQVarType::WELL_VAR, 6}});
 }
+
+
+Opm::GuideRateModel getGuideRateModel()
+{
+    return Opm::GuideRateModel(1.0, Opm::GuideRateModel::Target::WAT,
+                               {2.0, 3.0, 4.0, 5.0, 6.0, 7.0},
+                               true, 8.0, false, false,
+                               {Opm::UDAValue(9.0),
+                               Opm::UDAValue(10.0),
+                               Opm::UDAValue(11.0)});
+}
 #endif
+
+
+Opm::GuideRateConfig::GroupTarget getGuideRateConfigGroup()
+{
+    return Opm::GuideRateConfig::GroupTarget{1.0, Opm::Group::GuideRateTarget::COMB};
+}
+
+
+Opm::GuideRateConfig::WellTarget getGuideRateConfigWell()
+{
+    return Opm::GuideRateConfig::WellTarget{1.0, Opm::Well::GuideRateTarget::COMB, 2.0};
+}
+
+
+Opm::DeckRecord getDeckRecord()
+{
+    Opm::DeckItem item1({1.0}, {2}, {"test3"}, {Opm::UDAValue(4)},
+                       Opm::type_tag::string, "test5",
+                       {Opm::value::status::deck_value},
+                       true,
+                       {Opm::Dimension("DimensionLess", 7.0, 8.0)},
+                       {Opm::Dimension("Metric", 10.0, 11.0)});
+
+    Opm::DeckItem item2({1.0}, {2}, {"test3"}, {Opm::UDAValue(4)},
+                       Opm::type_tag::string, "test6",
+                       {Opm::value::status::deck_value},
+                       true,
+                       {Opm::Dimension("DimensionLess", 7.0, 8.0)},
+                       {Opm::Dimension("Metric", 10.0, 11.0)});
+
+    return Opm::DeckRecord({item1, item2});
+}
 
 
 }
@@ -1824,6 +1871,157 @@ BOOST_AUTO_TEST_CASE(UDQActive)
                         {Opm::UDQActive::Record("test1", 1, 2, "test2",
                                                   Opm::UDAControl::WCONPROD_ORAT)},
                         {{"test1", 1}}, {{"test2", 2}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GuideRateModel)
+{
+#ifdef HAVE_MPI
+    Opm::GuideRateModel val1 = getGuideRateModel();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GuideRateConfigGroup)
+{
+#ifdef HAVE_MPI
+    Opm::GuideRateConfig::GroupTarget val1 = getGuideRateConfigGroup();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GuideRateConfigWell)
+{
+#ifdef HAVE_MPI
+    Opm::GuideRateConfig::WellTarget val1 = getGuideRateConfigWell();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GuideRateConfig)
+{
+#ifdef HAVE_MPI
+    auto model = std::make_shared<Opm::GuideRateModel>(getGuideRateModel());
+    Opm::GuideRateConfig val1(model,
+                              {{"test1", getGuideRateConfigWell()}},
+                              {{"test2", getGuideRateConfigGroup()}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GConSaleGroup)
+{
+#ifdef HAVE_MPI
+    Opm::GConSale::GCONSALEGroup val1{Opm::UDAValue(1.0),
+                                      Opm::UDAValue(2.0),
+                                      Opm::UDAValue(3.0),
+                                      Opm::GConSale::MaxProcedure::PLUG,
+                                      4.0, Opm::UnitSystem()};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GConSale)
+{
+#ifdef HAVE_MPI
+    Opm::GConSale::GCONSALEGroup group{Opm::UDAValue(1.0),
+                                       Opm::UDAValue(2.0),
+                                       Opm::UDAValue(3.0),
+                                       Opm::GConSale::MaxProcedure::PLUG,
+                                       4.0, Opm::UnitSystem()};
+    Opm::GConSale val1({{"test1", group}, {"test2", group}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GConSumpGroup)
+{
+#ifdef HAVE_MPI
+    Opm::GConSump::GCONSUMPGroup val1{Opm::UDAValue(1.0),
+                                      Opm::UDAValue(2.0),
+                                      "test",
+                                      3.0, Opm::UnitSystem()};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(GConSump)
+{
+#ifdef HAVE_MPI
+    Opm::GConSump::GCONSUMPGroup group{Opm::UDAValue(1.0),
+                                       Opm::UDAValue(2.0),
+                                       "test",
+                                       3.0, Opm::UnitSystem()};
+    Opm::GConSump val1({{"test1", group}, {"test2", group}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(RFTConfig)
+{
+#ifdef HAVE_MPI
+    Opm::RFTConfig val1(getTimeMap(),
+                        {true, 1},
+                        {"test1", "test2"},
+                        {{"test3", 2}},
+                        {{"test1", {{{Opm::RFTConfig::RFT::TIMESTEP, 3}}, 4}}},
+                        {{"test2", {{{Opm::RFTConfig::PLT::REPT, 5}}, 6}}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(DeckItem)
+{
+#ifdef HAVE_MPI
+    Opm::DeckItem val1({1.0}, {2}, {"test3"}, {Opm::UDAValue(4)},
+                       Opm::type_tag::string, "test5",
+                       {Opm::value::status::deck_value},
+                       true,
+                       {Opm::Dimension("DimensionLess", 7.0, 8.0)},
+                       {Opm::Dimension("Metric", 10.0, 11.0)});
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(DeckRecord)
+{
+#ifdef HAVE_MPI
+    Opm::DeckRecord val1 = getDeckRecord();
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
