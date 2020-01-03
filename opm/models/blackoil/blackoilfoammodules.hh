@@ -443,6 +443,81 @@ public:
         return foamCoefficients_[satnumRegionIdx];
     }
 
+    template<class Serializer>
+    static std::size_t packSize(Serializer& serializer)
+    {
+        std::size_t size = serializer.packSize(foamRockDensity_) +
+                           serializer.packSize(foamAllowDesorption_) +
+                           serializer.packSize(adsorbedFoamTable_) +
+                           serializer.packSize(gasMobilityMultiplierTable_);
+        size += serializer.packSize(foamCoefficients_.size());
+        for (const auto& it : foamCoefficients_) {
+            size += serializer.packSize(it.fm_min);
+            size += serializer.packSize(it.fm_mob);
+            size += serializer.packSize(it.fm_surf);
+            size += serializer.packSize(it.ep_surf);
+            size += serializer.packSize(it.fm_oil);
+            size += serializer.packSize(it.fl_oil);
+            size += serializer.packSize(it.ep_oil);
+            size += serializer.packSize(it.fm_cap);
+            size += serializer.packSize(it.ep_cap);
+            size += serializer.packSize(it.fm_dry);
+            size += serializer.packSize(it.ep_dry);
+        }
+
+        return size;
+    }
+
+    template<class Serializer>
+    static void pack(std::vector<char>& buffer, int& position,
+                     Serializer& serializer)
+    {
+        serializer.pack(foamRockDensity_, buffer, position);
+        serializer.pack(foamAllowDesorption_, buffer, position);
+        serializer.pack(adsorbedFoamTable_, buffer, position);
+        serializer.pack(gasMobilityMultiplierTable_, buffer, position);
+        serializer.pack(foamCoefficients_.size(), buffer, position);
+        for (const auto& it : foamCoefficients_) {
+            serializer.pack(it.fm_min, buffer, position);
+            serializer.pack(it.fm_mob, buffer, position);
+            serializer.pack(it.fm_surf, buffer, position);
+            serializer.pack(it.ep_surf, buffer, position);
+            serializer.pack(it.fm_oil, buffer, position);
+            serializer.pack(it.fl_oil, buffer, position);
+            serializer.pack(it.ep_oil, buffer, position);
+            serializer.pack(it.fm_cap, buffer, position);
+            serializer.pack(it.ep_cap, buffer, position);
+            serializer.pack(it.fm_dry, buffer, position);
+            serializer.pack(it.ep_dry, buffer, position);
+        }
+    }
+
+    template<class Serializer>
+    static void unpack(std::vector<char>& buffer, int& position,
+                       Serializer& serializer)
+    {
+        serializer.unpack(foamRockDensity_, buffer, position);
+        serializer.unpack(foamAllowDesorption_, buffer, position);
+        serializer.unpack(adsorbedFoamTable_, buffer, position);
+        serializer.unpack(gasMobilityMultiplierTable_, buffer, position);
+        size_t size;
+        serializer.unpack(size, buffer, position);
+        foamCoefficients_.resize(size);
+        for (auto& it : foamCoefficients_) {
+            serializer.unpack(it.fm_min, buffer, position);
+            serializer.unpack(it.fm_mob, buffer, position);
+            serializer.unpack(it.fm_surf, buffer, position);
+            serializer.unpack(it.ep_surf, buffer, position);
+            serializer.unpack(it.fm_oil, buffer, position);
+            serializer.unpack(it.fl_oil, buffer, position);
+            serializer.unpack(it.ep_oil, buffer, position);
+            serializer.unpack(it.fm_cap, buffer, position);
+            serializer.unpack(it.ep_cap, buffer, position);
+            serializer.unpack(it.fm_dry, buffer, position);
+            serializer.unpack(it.ep_dry, buffer, position);
+        }
+    }
+
 private:
     static std::vector<Scalar> foamRockDensity_;
     static std::vector<bool> foamAllowDesorption_;
