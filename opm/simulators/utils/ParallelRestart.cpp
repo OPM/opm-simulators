@@ -1688,6 +1688,14 @@ std::size_t packSize(const SummaryNode& data,
            packSize(data.isUserDefined(), comm);
 }
 
+std::size_t packSize(const SummaryConfig& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getKwds(), comm) +
+           packSize(data.getShortKwds(), comm) +
+           packSize(data.getSmryKwds(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -3396,6 +3404,15 @@ void pack(const SummaryNode& data,
     pack(data.namedEntity(), buffer, position, comm);
     pack(data.number(), buffer, position, comm);
     pack(data.isUserDefined(), buffer, position, comm);
+}
+
+void pack(const SummaryConfig& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getKwds(), buffer, position, comm);
+    pack(data.getShortKwds(), buffer, position, comm);
+    pack(data.getSmryKwds(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -5854,6 +5871,19 @@ void unpack(SummaryNode& data,
            .namedEntity(namedEntity)
            .number(number)
            .isUserDefined(isUserDefined);
+}
+
+void unpack(SummaryConfig& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    SummaryConfig::keyword_list kwds;
+    std::set<std::string> shortKwds, smryKwds;
+
+    unpack(kwds, buffer, position, comm);
+    unpack(shortKwds, buffer, position, comm);
+    unpack(smryKwds, buffer, position, comm);
+    data = SummaryConfig(kwds, shortKwds, smryKwds);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

@@ -126,6 +126,7 @@ class SimpleTable;
 class SkprpolyTable;
 class SkprwatTable;
 class SpiralICD;
+class SummaryConfig;
 class SummaryNode;
 class Tabdims;
 class TableColumn;
@@ -705,6 +706,7 @@ ADD_PACK_PROTOTYPES(SkprpolyTable)
 ADD_PACK_PROTOTYPES(SkprwatTable)
 ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
+ADD_PACK_PROTOTYPES(SummaryConfig)
 ADD_PACK_PROTOTYPES(SummaryNode)
 ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableColumn)
