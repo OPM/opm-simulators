@@ -22,6 +22,7 @@
 #endif
 
 #include "ParallelRestart.hpp"
+#include <opm/common/OpmLog/Location.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
@@ -30,6 +31,11 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
@@ -37,7 +43,9 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQDefine.hpp>
@@ -1157,6 +1165,17 @@ std::size_t packSize(const std::shared_ptr<T>& data,
 template std::size_t packSize(const std::shared_ptr<SpiralICD>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
+template<class T>
+std::size_t packSize(const std::unique_ptr<T>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size = packSize(bool(), comm);
+    if (data)
+         size += packSize(*data, comm);
+
+    return size;
+}
+
 std::size_t packSize(const Dimension& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1478,6 +1497,159 @@ std::size_t packSize(const DeckRecord& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getItems(), comm);
+}
+
+std::size_t packSize(const Location& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.filename, comm) +
+           packSize(data.lineno, comm);
+}
+
+std::size_t packSize(const DeckKeyword& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.name(), comm) +
+           packSize(data.location(), comm) +
+           packSize(data.records(), comm) +
+           packSize(data.isDataKeyword(), comm) +
+           packSize(data.isSlashTerminated(), comm);
+}
+
+
+std::size_t packSize(const Deck& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.keywords(), comm) +
+           packSize(data.getDefaultUnitSystem(), comm) +
+           packSize(data.activeUnitSystem(), comm) +
+           packSize(data.getDataFile(), comm) +
+           packSize(data.getInputPath(), comm) +
+           packSize(data.unitSystemAccessCount(), comm);
+}
+
+std::size_t packSize(const Tuning& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getTSINIT(), comm) +
+           packSize(data.getTSMAXZ(), comm) +
+           packSize(data.getTSMINZ(), comm) +
+           packSize(data.getTSMCHP(), comm) +
+           packSize(data.getTSFMAX(), comm) +
+           packSize(data.getTSFMIN(), comm) +
+           packSize(data.getTSFCNV(), comm) +
+           packSize(data.getTFDIFF(), comm) +
+           packSize(data.getTHRUPT(), comm) +
+           packSize(data.getTMAXWC(), comm) +
+           packSize(data.getTMAXWC_has_value(), comm) +
+           packSize(data.getTRGTTE(), comm) +
+           packSize(data.getTRGCNV(), comm) +
+           packSize(data.getTRGMBE(), comm) +
+           packSize(data.getTRGLCV(), comm) +
+           packSize(data.getXXXTTE(), comm) +
+           packSize(data.getXXXCNV(), comm) +
+           packSize(data.getXXXMBE(), comm) +
+           packSize(data.getXXXLCV(), comm) +
+           packSize(data.getXXXWFL(), comm) +
+           packSize(data.getTRGFIP(), comm) +
+           packSize(data.getTRGSFT(), comm) +
+           packSize(data.getTRGSFT_has_value(), comm) +
+           packSize(data.getTHIONX(), comm) +
+           packSize(data.getTRWGHT(), comm) +
+           packSize(data.getNEWTMX(), comm) +
+           packSize(data.getNEWTMN(), comm) +
+           packSize(data.getLITMAX(), comm) +
+           packSize(data.getLITMIN(), comm) +
+           packSize(data.getMXWSIT(), comm) +
+           packSize(data.getMXWPIT(), comm) +
+           packSize(data.getDDPLIM(), comm) +
+           packSize(data.getDDSLIM(), comm) +
+           packSize(data.getTRGDPR(), comm) +
+           packSize(data.getXXXDPR(), comm) +
+           packSize(data.getXXXDPR_has_value(), comm) +
+           packSize(data.getResetValues(), comm);
+}
+
+std::size_t packSize(const Action::ASTNode& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.type, comm) +
+           packSize(data.func_type, comm) +
+           packSize(data.func, comm) +
+           packSize(data.argList(), comm) +
+           packSize(data.getNumber(), comm) +
+           packSize(data.childrens(), comm);
+}
+
+std::size_t packSize(const Action::AST& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getCondition(), comm);
+}
+
+std::size_t packSize(const Action::Quantity& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.quantity, comm) +
+           packSize(data.args, comm);
+}
+
+std::size_t packSize(const Action::Condition& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.lhs, comm) +
+           packSize(data.rhs, comm) +
+           packSize(data.logic, comm) +
+           packSize(data.cmp, comm) +
+           packSize(data.cmp_string, comm);
+}
+
+std::size_t packSize(const Action::ActionX& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.name(), comm) +
+           packSize(data.max_run(), comm) +
+           packSize(data.min_wait(), comm) +
+           packSize(data.start_time(), comm) +
+           packSize(data.getKeywords(), comm) +
+           packSize(data.getCondition(), comm) +
+           packSize(data.conditions(), comm) +
+           packSize(data.getRunCount(), comm) +
+           packSize(data.getLastRun(), comm);
+}
+
+std::size_t packSize(const Action::Actions& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getActions(), comm);
+}
+
+std::size_t packSize(const Schedule& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getTimeMap(), comm) +
+           packSize(data.getStaticWells(), comm) +
+           packSize(data.getGroups(), comm) +
+           packSize(data.getOilVapProps(), comm) +
+           packSize(data.getEvents(), comm) +
+           packSize(data.getModifierDeck(), comm) +
+           packSize(data.getTuning(), comm) +
+           packSize(data.getMessageLimits(), comm) +
+           packSize(data.getRunspec(), comm) +
+           packSize(data.getVFPProdTables(), comm) +
+           packSize(data.getVFPInjTables(), comm) +
+           packSize(data.getWellTestConfig(), comm) +
+           packSize(data.getWListManager(), comm) +
+           packSize(data.getUDQConfig(), comm) +
+           packSize(data.getUDQActive(), comm) +
+           packSize(data.getGuideRateConfig(), comm) +
+           packSize(data.getGConSale(), comm) +
+           packSize(data.getGConSump(), comm) +
+           packSize(data.getGlobalWhistCtlMode(), comm) +
+           packSize(data.getActions(), comm) +
+           packSize(data.rftConfig(), comm) +
+           packSize(data.getNupCol(), comm) +
+           packSize(data.getWellGroupEvents(), comm);
 }
 
 ////// pack routines
@@ -2636,6 +2808,15 @@ void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& positi
         pack(*data, buffer, position, comm);
 }
 
+template<class T>
+void pack(const std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data != nullptr, buffer, position, comm);
+    if (data)
+        pack(*data, buffer, position, comm);
+}
+
 template void pack(const std::shared_ptr<SpiralICD>& data, std::vector<char>& buffer,
                    int& position, Dune::MPIHelper::MPICommunicator comm);
 
@@ -2986,6 +3167,169 @@ void pack(const DeckRecord& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getItems(), buffer, position, comm);
+}
+
+void pack(const Location& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.filename, buffer, position, comm);
+    pack(data.lineno, buffer, position, comm);
+}
+
+void pack(const DeckKeyword& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name(), buffer, position, comm);
+    pack(data.location(), buffer, position, comm);
+    pack(data.records(), buffer, position, comm);
+    pack(data.isDataKeyword(), buffer, position, comm);
+    pack(data.isSlashTerminated(), buffer, position, comm);
+}
+
+void pack(const Deck& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.keywords(), buffer, position, comm);
+    pack(data.getDefaultUnitSystem(), buffer, position, comm);
+    pack(data.activeUnitSystem(), buffer, position, comm);
+    pack(data.getDataFile(), buffer, position, comm);
+    pack(data.getInputPath(), buffer, position, comm);
+    pack(data.unitSystemAccessCount(), buffer, position, comm);
+}
+
+void pack(const Tuning& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getTSINIT(), buffer, position, comm);
+    pack(data.getTSMAXZ(), buffer, position, comm);
+    pack(data.getTSMINZ(), buffer, position, comm);
+    pack(data.getTSMCHP(), buffer, position, comm);
+    pack(data.getTSFMAX(), buffer, position, comm);
+    pack(data.getTSFMIN(), buffer, position, comm);
+    pack(data.getTSFCNV(), buffer, position, comm);
+    pack(data.getTFDIFF(), buffer, position, comm);
+    pack(data.getTHRUPT(), buffer, position, comm);
+    pack(data.getTMAXWC(), buffer, position, comm);
+    pack(data.getTMAXWC_has_value(), buffer, position, comm);
+    pack(data.getTRGTTE(), buffer, position, comm);
+    pack(data.getTRGCNV(), buffer, position, comm);
+    pack(data.getTRGMBE(), buffer, position, comm);
+    pack(data.getTRGLCV(), buffer, position, comm);
+    pack(data.getXXXTTE(), buffer, position, comm);
+    pack(data.getXXXCNV(), buffer, position, comm);
+    pack(data.getXXXMBE(), buffer, position, comm);
+    pack(data.getXXXLCV(), buffer, position, comm);
+    pack(data.getXXXWFL(), buffer, position, comm);
+    pack(data.getTRGFIP(), buffer, position, comm);
+    pack(data.getTRGSFT(), buffer, position, comm);
+    pack(data.getTRGSFT_has_value(), buffer, position, comm);
+    pack(data.getTHIONX(), buffer, position, comm);
+    pack(data.getTRWGHT(), buffer, position, comm);
+    pack(data.getNEWTMX(), buffer, position, comm);
+    pack(data.getNEWTMN(), buffer, position, comm);
+    pack(data.getLITMAX(), buffer, position, comm);
+    pack(data.getLITMIN(), buffer, position, comm);
+    pack(data.getMXWSIT(), buffer, position, comm);
+    pack(data.getMXWPIT(), buffer, position, comm);
+    pack(data.getDDPLIM(), buffer, position, comm);
+    pack(data.getDDSLIM(), buffer, position, comm);
+    pack(data.getTRGDPR(), buffer, position, comm);
+    pack(data.getXXXDPR(), buffer, position, comm);
+    pack(data.getXXXDPR_has_value(), buffer, position, comm);
+    pack(data.getResetValues(), buffer, position, comm);
+}
+
+void pack(const Action::ASTNode& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.type, buffer, position, comm);
+    pack(data.func_type, buffer, position, comm);
+    pack(data.func, buffer, position, comm);
+    pack(data.argList(), buffer, position, comm);
+    pack(data.getNumber(), buffer, position, comm);
+    pack(data.childrens(), buffer, position, comm);
+}
+
+void pack(const Action::AST& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getCondition(), buffer, position, comm);
+}
+
+void pack(const Action::Quantity& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.quantity, buffer, position, comm);
+    pack(data.args, buffer, position, comm);
+}
+
+void pack(const Action::Condition& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.lhs, buffer, position, comm);
+    pack(data.rhs, buffer, position, comm);
+    pack(data.logic, buffer, position, comm);
+    pack(data.cmp, buffer, position, comm);
+    pack(data.cmp_string, buffer, position, comm);
+}
+
+void pack(const Action::ActionX& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.name(), buffer, position, comm);
+    pack(data.max_run(), buffer, position, comm);
+    pack(data.min_wait(), buffer, position, comm);
+    pack(data.start_time(), buffer, position, comm);
+    pack(data.getKeywords(), buffer, position, comm);
+    pack(data.getCondition(), buffer, position, comm);
+    pack(data.conditions(), buffer, position, comm);
+    pack(data.getRunCount(), buffer, position, comm);
+    pack(data.getLastRun(), buffer, position, comm);
+}
+
+void pack(const Action::Actions& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getActions(), buffer, position, comm);
+}
+
+void pack(const Schedule& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getTimeMap(), buffer, position, comm);
+    pack(data.getStaticWells(), buffer, position, comm);
+    pack(data.getGroups(), buffer, position, comm);
+    pack(data.getOilVapProps(), buffer, position, comm);
+    pack(data.getEvents(), buffer, position, comm);
+    pack(data.getModifierDeck(), buffer, position, comm);
+    pack(data.getTuning(), buffer, position, comm);
+    pack(data.getMessageLimits(), buffer, position, comm);
+    pack(data.getRunspec(), buffer, position, comm);
+    pack(data.getVFPProdTables(), buffer, position, comm);
+    pack(data.getVFPInjTables(), buffer, position, comm);
+    pack(data.getWellTestConfig(), buffer, position, comm);
+    pack(data.getWListManager(), buffer, position, comm);
+    pack(data.getUDQConfig(), buffer, position, comm);
+    pack(data.getUDQActive(), buffer, position, comm);
+    pack(data.getGuideRateConfig(), buffer, position, comm);
+    pack(data.getGConSale(), buffer, position, comm);
+    pack(data.getGConSump(), buffer, position, comm);
+    pack(data.getGlobalWhistCtlMode(), buffer, position, comm);
+    pack(data.getActions(), buffer, position, comm);
+    pack(data.rftConfig(), buffer, position, comm);
+    pack(data.getNupCol(), buffer, position, comm);
+    pack(data.getWellGroupEvents(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -4595,6 +4939,18 @@ void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
     }
 }
 
+template<class T>
+void unpack(std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    bool hasVal;
+    unpack(hasVal, buffer, position, comm);
+    if (hasVal) {
+        data.reset(new T);
+        unpack(*data, buffer, position, comm);
+    }
+}
+
 template void unpack(std::shared_ptr<SpiralICD>& data,
                      std::vector<char>& buffer, int& position,
                      Dune::MPIHelper::MPICommunicator comm);
@@ -5107,6 +5463,275 @@ void unpack(DeckRecord& data,
     std::vector<DeckItem> items;
     unpack(items, buffer, position, comm);
     data = DeckRecord(std::move(items));
+}
+
+void unpack(Location& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    data.filename.clear();
+    unpack(data.filename, buffer, position, comm);
+    unpack(data.lineno, buffer, position, comm);
+}
+
+void unpack(DeckKeyword& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    Location location;
+    std::vector<DeckRecord> records;
+    bool isDataKeyword, isSlashTerminated;
+
+    unpack(name, buffer, position, comm);
+    unpack(location, buffer, position, comm);
+    unpack(records, buffer, position, comm);
+    unpack(isDataKeyword, buffer, position, comm);
+    unpack(isSlashTerminated, buffer, position, comm);
+    data = DeckKeyword(name, location, records,
+                       isDataKeyword, isSlashTerminated);
+}
+
+void unpack(Deck& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<DeckKeyword> keywords;
+    UnitSystem defaultUnitSystem;
+    std::unique_ptr<UnitSystem> activeUnitSystem;
+    std::string dataFile, inputPath;
+    size_t accessCount;
+
+    unpack(keywords, buffer, position, comm);
+    unpack(defaultUnitSystem, buffer, position, comm);
+    unpack(activeUnitSystem, buffer, position, comm);
+    unpack(dataFile, buffer, position, comm);
+    unpack(inputPath, buffer, position, comm);
+    unpack(accessCount, buffer, position, comm);
+    data = Deck(keywords, defaultUnitSystem,
+                activeUnitSystem.get(), dataFile, inputPath, accessCount);
+}
+
+void unpack(Tuning& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    DynamicState<double> TSINIT;
+    DynamicState<double> TSMAXZ;
+    DynamicState<double> TSMINZ;
+    DynamicState<double> TSMCHP;
+    DynamicState<double> TSFMAX;
+    DynamicState<double> TSFMIN;
+    DynamicState<double> TSFCNV;
+    DynamicState<double> TFDIFF;
+    DynamicState<double> THRUPT;
+    DynamicState<double> TMAXWC;
+    DynamicState<int>    TMAXWC_has_value;
+    DynamicState<double> TRGTTE;
+    DynamicState<double> TRGCNV;
+    DynamicState<double> TRGMBE;
+    DynamicState<double> TRGLCV;
+    DynamicState<double> XXXTTE;
+    DynamicState<double> XXXCNV;
+    DynamicState<double> XXXMBE;
+    DynamicState<double> XXXLCV;
+    DynamicState<double> XXXWFL;
+    DynamicState<double> TRGFIP;
+    DynamicState<double> TRGSFT;
+    DynamicState<int>    TRGSFT_has_value;
+    DynamicState<double> THIONX;
+    DynamicState<int>    TRWGHT;
+    DynamicState<int>    NEWTMX;
+    DynamicState<int>    NEWTMN;
+    DynamicState<int>    LITMAX;
+    DynamicState<int>    LITMIN;
+    DynamicState<int>    MXWSIT;
+    DynamicState<int>    MXWPIT;
+    DynamicState<double> DDPLIM;
+    DynamicState<double> DDSLIM;
+    DynamicState<double> TRGDPR;
+    DynamicState<double> XXXDPR;
+    DynamicState<int>    XXXDPR_has_value;
+    std::map<std::string, bool> ResetValue;
+
+    unpack(TSINIT, buffer, position, comm);
+    unpack(TSMAXZ, buffer, position, comm);
+    unpack(TSMINZ, buffer, position, comm);
+    unpack(TSMCHP, buffer, position, comm);
+    unpack(TSFMAX, buffer, position, comm);
+    unpack(TSFMIN, buffer, position, comm);
+    unpack(TSFCNV, buffer, position, comm);
+    unpack(TFDIFF, buffer, position, comm);
+    unpack(THRUPT, buffer, position, comm);
+    unpack(TMAXWC, buffer, position, comm);
+    unpack(TMAXWC_has_value, buffer, position, comm);
+    unpack(TRGTTE, buffer, position, comm);
+    unpack(TRGCNV, buffer, position, comm);
+    unpack(TRGMBE, buffer, position, comm);
+    unpack(TRGLCV, buffer, position, comm);
+    unpack(XXXTTE, buffer, position, comm);
+    unpack(XXXCNV, buffer, position, comm);
+    unpack(XXXMBE, buffer, position, comm);
+    unpack(XXXLCV, buffer, position, comm);
+    unpack(XXXWFL, buffer, position, comm);
+    unpack(TRGFIP, buffer, position, comm);
+    unpack(TRGSFT, buffer, position, comm);
+    unpack(TRGSFT_has_value, buffer, position, comm);
+    unpack(THIONX, buffer, position, comm);
+    unpack(TRWGHT, buffer, position, comm);
+    unpack(NEWTMX, buffer, position, comm);
+    unpack(NEWTMN, buffer, position, comm);
+    unpack(LITMAX, buffer, position, comm);
+    unpack(LITMIN, buffer, position, comm);
+    unpack(MXWSIT, buffer, position, comm);
+    unpack(MXWPIT, buffer, position, comm);
+    unpack(DDPLIM, buffer, position, comm);
+    unpack(DDSLIM, buffer, position, comm);
+    unpack(TRGDPR, buffer, position, comm);
+    unpack(XXXDPR, buffer, position, comm);
+    unpack(XXXDPR_has_value, buffer, position, comm);
+    unpack(ResetValue, buffer, position, comm);
+
+    data = Tuning(TSINIT, TSMAXZ, TSMINZ, TSMCHP, TSFMAX, TSFMIN, TSFCNV,
+                  TFDIFF, THRUPT, TMAXWC, TMAXWC_has_value, TRGTTE,
+                  TRGCNV, TRGMBE, TRGLCV, XXXTTE, XXXCNV, XXXMBE, XXXLCV,
+                  XXXWFL, TRGFIP, TRGSFT, TRGSFT_has_value, THIONX, TRWGHT,
+                  NEWTMX, NEWTMN, LITMAX, LITMIN, MXWSIT, MXWPIT, DDPLIM,
+                  DDSLIM, TRGDPR, XXXDPR, XXXDPR_has_value, ResetValue);
+}
+
+void unpack(Action::ASTNode& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TokenType token;
+    FuncType func_type;
+    std::string func;
+    std::vector<std::string> argList;
+    double number;
+    std::vector<Action::ASTNode> children;
+
+    unpack(token, buffer, position, comm);
+    unpack(func_type, buffer, position, comm);
+    unpack(func, buffer, position, comm);
+    unpack(argList, buffer, position, comm);
+    unpack(number, buffer, position, comm);
+    unpack(children, buffer, position, comm);
+    data = Action::ASTNode(token, func_type, func, argList, number, children);
+}
+
+void unpack(Action::AST& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::shared_ptr<Action::ASTNode> condition;
+    unpack(condition, buffer, position, comm);
+    data = Action::AST(condition);
+}
+
+void unpack(Action::Quantity& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.quantity, buffer, position, comm);
+    unpack(data.args, buffer, position, comm);
+}
+
+void unpack(Action::Condition& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.lhs, buffer, position, comm);
+    unpack(data.rhs, buffer, position, comm);
+    unpack(data.logic, buffer, position, comm);
+    unpack(data.cmp, buffer, position, comm);
+    unpack(data.cmp_string, buffer, position, comm);
+}
+
+void unpack(Action::ActionX& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string name;
+    size_t max_run;
+    double min_wait;
+    std::time_t start_time;
+    std::vector<DeckKeyword> keywords;
+    Action::AST condition;
+    std::vector<Action::Condition> conditions;
+    size_t run_count;
+    std::time_t last_run;
+
+    unpack(name, buffer, position, comm);
+    unpack(max_run, buffer, position, comm);
+    unpack(min_wait, buffer, position, comm);
+    unpack(start_time, buffer, position, comm);
+    unpack(keywords, buffer, position, comm);
+    unpack(condition, buffer, position, comm);
+    unpack(conditions, buffer, position, comm);
+    unpack(run_count, buffer, position, comm);
+    unpack(last_run, buffer, position, comm);
+    data = Action::ActionX(name, max_run, min_wait, start_time, keywords,
+                           condition, conditions, run_count, last_run);
+}
+
+void unpack(Action::Actions& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Action::ActionX> actions;
+    unpack(actions, buffer, position, comm);
+    data = Action::Actions(actions);
+}
+
+void unpack(Schedule& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TimeMap timeMap;
+    Schedule::WellMap staticWells;
+    Schedule::GroupMap groups;
+    DynamicState<OilVaporizationProperties> oilVapProps;
+    Events events;
+    DynamicVector<Deck> modifierDeck;
+    Tuning tuning;
+    MessageLimits messageLimits;
+    Runspec runspec;
+    Schedule::VFPProdMap vfpProdTables;
+    Schedule::VFPInjMap vfpInjTables;
+    DynamicState<std::shared_ptr<WellTestConfig>> wellTestConfig;
+    DynamicState<std::shared_ptr<WListManager>> wListManager;
+    DynamicState<std::shared_ptr<UDQConfig>> udqConfig;
+    DynamicState<std::shared_ptr<UDQActive>> udqActive;
+    DynamicState<std::shared_ptr<GuideRateConfig>> guideRateConfig;
+    DynamicState<std::shared_ptr<GConSale>> gconSale;
+    DynamicState<std::shared_ptr<GConSump>> gconSump;
+    DynamicState<Well::ProducerCMode> globalWhistCtlMode;
+    DynamicState<std::shared_ptr<Action::Actions>> actions;
+    RFTConfig rftConfig;
+    DynamicState<int> nupCol;
+    std::map<std::string,Events> wellGroupEvents;
+
+    unpack(timeMap, buffer, position, comm);
+    unpack(staticWells, buffer, position, comm);
+    unpack(groups, buffer, position, comm);
+    unpack(oilVapProps, buffer, position, comm);
+    unpack(events, buffer, position, comm);
+    unpack(modifierDeck, buffer, position, comm);
+    unpack(tuning, buffer, position, comm);
+    unpack(messageLimits, buffer, position, comm);
+    unpack(runspec, buffer, position, comm);
+    unpack(vfpProdTables, buffer, position, comm);
+    unpack(vfpInjTables, buffer, position, comm);
+    unpack(wellTestConfig, buffer, position, comm);
+    unpack(wListManager, buffer, position, comm);
+    unpack(udqConfig, buffer, position, comm);
+    unpack(udqActive, buffer, position, comm);
+    unpack(guideRateConfig, buffer, position, comm);
+    unpack(gconSale, buffer, position, comm);
+    unpack(gconSump, buffer, position, comm);
+    unpack(globalWhistCtlMode, buffer, position, comm);
+    unpack(actions, buffer, position, comm);
+    unpack(rftConfig, buffer, position, comm);
+    unpack(nupCol, buffer, position, comm);
+    unpack(wellGroupEvents, buffer, position, comm);
+    data = Schedule(timeMap, staticWells, groups, oilVapProps, events,
+                    modifierDeck, tuning, messageLimits, runspec,
+                    vfpProdTables, vfpInjTables, wellTestConfig,
+                    wListManager, udqConfig, udqActive, guideRateConfig,
+                    gconSale, gconSump, globalWhistCtlMode, actions,
+                    rftConfig, nupCol, wellGroupEvents);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \

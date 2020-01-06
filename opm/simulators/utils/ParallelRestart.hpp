@@ -63,6 +63,16 @@ namespace Opm
 {
 
 class Actdims;
+
+namespace Action {
+    class Actions;
+    class ActionX;
+    class AST;
+    class ASTNode;
+    class Condition;
+    class Quantity;
+}
+
 class Aqudims;
 class ColumnSchema;
 class Connection;
@@ -84,6 +94,7 @@ class InitConfig;
 class IOConfig;
 template<class T> class IOrderSet;
 class JFunc;
+class Location;
 class MessageLimits;
 class MLimits;
 class NNC;
@@ -107,6 +118,7 @@ class RockTable;
 class Rock2dTable;
 class Rock2dtrTable;
 class Runspec;
+class Schedule;
 class Segment;
 class SimulationConfig;
 class SimpleTable;
@@ -119,6 +131,7 @@ class TableContainer;
 class TableManager;
 class TableSchema;
 class ThresholdPressure;
+class Tuning;
 class UDAValue;
 class UDQASTNode;
 class UDQConfig;
@@ -192,6 +205,10 @@ std::size_t packSize(const std::shared_ptr<T>& data,
 
 template<class T, std::size_t N>
 std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
+std::size_t packSize(const std::unique_ptr<T>& data,
+                     Dune::MPIHelper::MPICommunicator comm);
 
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm);
 
@@ -324,6 +341,10 @@ void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& positi
 
 template<class T, size_t N>
 void pack(const std::array<T,N>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
+void pack(const std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
 template<class T1, class T2, class C, class A>
@@ -480,6 +501,10 @@ template<class T, size_t N>
 void unpack(std::array<T,N>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
+template<class T>
+void unpack(std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
+
 template<class T1, class T2, class C, class A>
 void unpack(std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
@@ -584,6 +609,12 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
               Dune::MPIHelper::MPICommunicator comm);
 
 ADD_PACK_PROTOTYPES(Actdims)
+ADD_PACK_PROTOTYPES(Action::Actions)
+ADD_PACK_PROTOTYPES(Action::ActionX)
+ADD_PACK_PROTOTYPES(Action::AST)
+ADD_PACK_PROTOTYPES(Action::ASTNode)
+ADD_PACK_PROTOTYPES(Action::Condition)
+ADD_PACK_PROTOTYPES(Action::Quantity)
 ADD_PACK_PROTOTYPES(Aqudims)
 ADD_PACK_PROTOTYPES(ColumnSchema)
 ADD_PACK_PROTOTYPES(Connection)
@@ -594,7 +625,9 @@ ADD_PACK_PROTOTYPES(data::Segment)
 ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
+ADD_PACK_PROTOTYPES(Deck)
 ADD_PACK_PROTOTYPES(DeckItem)
+ADD_PACK_PROTOTYPES(DeckKeyword)
 ADD_PACK_PROTOTYPES(DeckRecord)
 ADD_PACK_PROTOTYPES(DENSITYRecord)
 ADD_PACK_PROTOTYPES(DensityTable)
@@ -622,6 +655,7 @@ ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
 ADD_PACK_PROTOTYPES(InitConfig)
 ADD_PACK_PROTOTYPES(IOConfig)
 ADD_PACK_PROTOTYPES(JFunc)
+ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(NNC)
@@ -647,13 +681,14 @@ ADD_PACK_PROTOTYPES(RockTable)
 ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(Runspec)
-ADD_PACK_PROTOTYPES(std::string)
+ADD_PACK_PROTOTYPES(Schedule)
 ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(SkprpolyTable)
 ADD_PACK_PROTOTYPES(SkprwatTable)
 ADD_PACK_PROTOTYPES(SpiralICD)
+ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)
@@ -662,6 +697,7 @@ ADD_PACK_PROTOTYPES(TableSchema)
 ADD_PACK_PROTOTYPES(ThresholdPressure)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeMap::StepData)
+ADD_PACK_PROTOTYPES(Tuning)
 ADD_PACK_PROTOTYPES(UDAValue)
 ADD_PACK_PROTOTYPES(UDQActive)
 ADD_PACK_PROTOTYPES(UDQActive::InputRecord)

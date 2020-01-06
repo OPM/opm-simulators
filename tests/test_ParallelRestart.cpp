@@ -24,10 +24,11 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/common/OpmLog/Location.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
@@ -37,6 +38,11 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
@@ -46,7 +52,9 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
@@ -86,6 +94,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
+#include <opm/simulators/utils/ParallelRestart.hpp>
 
 
 namespace {
@@ -350,7 +359,6 @@ Opm::GuideRateModel getGuideRateModel()
                                Opm::UDAValue(10.0),
                                Opm::UDAValue(11.0)});
 }
-#endif
 
 
 Opm::GuideRateConfig::GroupTarget getGuideRateConfigGroup()
@@ -383,6 +391,77 @@ Opm::DeckRecord getDeckRecord()
 
     return Opm::DeckRecord({item1, item2});
 }
+
+
+Opm::Tuning getTuning()
+{
+    return Opm::Tuning(Opm::DynamicState<double>(std::vector<double>{1.0}, 1),  //TSINIT
+                       Opm::DynamicState<double>(std::vector<double>{2.0}, 1),  //TSMAXZ
+                       Opm::DynamicState<double>(std::vector<double>{3.0}, 1),  //TSMINZ
+                       Opm::DynamicState<double>(std::vector<double>{4.0}, 1),  //TSMCHP
+                       Opm::DynamicState<double>(std::vector<double>{5.0}, 1),  //TSFMAX
+                       Opm::DynamicState<double>(std::vector<double>{6.0}, 1),  //TSFMIN
+                       Opm::DynamicState<double>(std::vector<double>{7.0}, 1),  //TSFCNV
+                       Opm::DynamicState<double>(std::vector<double>{8.0}, 1),  //TFDIFF
+                       Opm::DynamicState<double>(std::vector<double>{9.0}, 1),  //THRUPT
+                       Opm::DynamicState<double>(std::vector<double>{10.0}, 1), //TMAXWC
+                       Opm::DynamicState<int>(std::vector<int>{1}, 1),       //TMAXWC_has_value
+                       Opm::DynamicState<double>(std::vector<double>{11.0}, 1), //TRGTTE
+                       Opm::DynamicState<double>(std::vector<double>{12.0}, 1), //TRGCNV
+                       Opm::DynamicState<double>(std::vector<double>{13.0}, 1), //TRGMBE
+                       Opm::DynamicState<double>(std::vector<double>{14.0}, 1), //TRGLCV
+                       Opm::DynamicState<double>(std::vector<double>{15.0}, 1), //XXXTTE
+                       Opm::DynamicState<double>(std::vector<double>{16.0}, 1), //XXXCNV
+                       Opm::DynamicState<double>(std::vector<double>{17.0}, 1), //XXXMBE
+                       Opm::DynamicState<double>(std::vector<double>{18.0}, 1), //XXXLCV
+                       Opm::DynamicState<double>(std::vector<double>{19.0}, 1), //XXXWFL
+                       Opm::DynamicState<double>(std::vector<double>{20.0}, 1), ///TRGFIP
+                       Opm::DynamicState<double>(std::vector<double>{21.0}, 1), //TRGSFT
+                       Opm::DynamicState<int>(std::vector<int>{2}, 1),       //TRGSFT_has_value
+                       Opm::DynamicState<double>(std::vector<double>{22.0}, 1), // THIONX
+                       Opm::DynamicState<int>(std::vector<int>{3}, 1),       //TRWGHT
+                       Opm::DynamicState<int>(std::vector<int>{4}, 1),       //NEWTMX
+                       Opm::DynamicState<int>(std::vector<int>{5}, 1),       //NEWTMN
+                       Opm::DynamicState<int>(std::vector<int>{6}, 1),       //LITMAX
+                       Opm::DynamicState<int>(std::vector<int>{7}, 1),       //LITMIN
+                       Opm::DynamicState<int>(std::vector<int>{8}, 1),       //MXWSIT
+                       Opm::DynamicState<int>(std::vector<int>{9}, 1),       //MXWPIT
+                       Opm::DynamicState<double>(std::vector<double>{23.0}, 1), //DDPLIM
+                       Opm::DynamicState<double>(std::vector<double>{24.0}, 1), //DDSLIM
+                       Opm::DynamicState<double>(std::vector<double>{25.0}, 1), //TGRDPR
+                       Opm::DynamicState<double>(std::vector<double>{26.0}, 1), //XXXDPR
+                       Opm::DynamicState<int>(std::vector<int>{10}, 1),      //XXDPR_has_value
+                       std::map<std::string,bool>{{"test", false}}); // resetValue
+}
+
+
+Opm::Action::Condition getCondition()
+{
+    Opm::Action::Quantity q;
+    q.quantity = "test1";
+    q.args = {"test2", "test3"};
+    Opm::Action::Condition val1;
+    val1.lhs = val1.rhs = q;
+    val1.logic = Opm::Action::Condition::Logical::OR;
+    val1.cmp = Opm::Action::Condition::Comparator::LESS;
+    val1.cmp_string = "test";
+    return val1;
+}
+
+
+Opm::Action::ActionX getActionX()
+{
+    std::shared_ptr<Opm::Action::ASTNode> node;
+    node.reset(new Opm::Action::ASTNode(number, FuncType::field,
+                                        "test1", {"test2"}, 1.0, {}));
+    Opm::Action::AST ast(node);
+    return Opm::Action::ActionX("test", 1, 2.0, 3,
+                                {Opm::DeckKeyword("test", {"test",1},
+                                                  {getDeckRecord(), getDeckRecord()},
+                                                  true, false)},
+                                ast, {getCondition()}, 4, 5);
+}
+#endif
 
 
 }
@@ -2022,6 +2101,236 @@ BOOST_AUTO_TEST_CASE(DeckRecord)
 {
 #ifdef HAVE_MPI
     Opm::DeckRecord val1 = getDeckRecord();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Location)
+{
+#ifdef HAVE_MPI
+    Opm::Location val1{"test", 1};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(DeckKeyword)
+{
+#ifdef HAVE_MPI
+    Opm::DeckKeyword val1("test", {"test",1},
+                          {getDeckRecord(), getDeckRecord()}, true, false);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Deck)
+{
+#ifdef HAVE_MPI
+    std::unique_ptr<Opm::UnitSystem> unitSys(new Opm::UnitSystem);
+    Opm::Deck val1({Opm::DeckKeyword("test", {"test",1},
+                                     {getDeckRecord(), getDeckRecord()}, true, false)},
+                   Opm::UnitSystem(), unitSys.get(),
+                   "test2", "test3", 2);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Tuning)
+{
+#ifdef HAVE_MPI
+    Opm::Tuning val1 = getTuning();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(ASTNode)
+{
+#ifdef HAVE_MPI
+    Opm::Action::ASTNode child(number, FuncType::field, "test3", {"test2"}, 2.0, {});
+    Opm::Action::ASTNode val1(number, FuncType::field, "test1", {"test2"}, 1.0, {child});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(AST)
+{
+#ifdef HAVE_MPI
+    std::shared_ptr<Opm::Action::ASTNode> node;
+    node.reset(new Opm::Action::ASTNode(number, FuncType::field,
+                                        "test1", {"test2"}, 1.0, {}));
+    Opm::Action::AST val1(node);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Quantity)
+{
+#ifdef HAVE_MPI
+    Opm::Action::Quantity val1;
+    val1.quantity = "test1";
+    val1.args = {"test2", "test3"};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Condition)
+{
+#ifdef HAVE_MPI
+    Opm::Action::Condition val1 = getCondition();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(ActionX)
+{
+#ifdef HAVE_MPI
+    Opm::Action::ActionX val1 = getActionX();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Actions)
+{
+#ifdef HAVE_MPI
+    Opm::Action::Actions val1({getActionX()});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Schedule)
+{
+#ifdef HAVE_MPI
+    Opm::UnitSystem unitSystem;
+    Opm::Schedule::WellMap wells;
+    wells.insert({"test", {{std::make_shared<Opm::Well>(getFullWell())},1}});
+    Opm::Schedule::GroupMap groups;
+    groups.insert({"test", {{std::make_shared<Opm::Group>("test1", 1, 2, 3.0, unitSystem,
+                                                          Opm::Group::GroupType::PRODUCTION,
+                                                          4.0, true, 5, "test2",
+                                                          Opm::IOrderSet<std::string>({"test3", "test4"}, {"test3","test4"}),
+                                                          Opm::IOrderSet<std::string>({"test5", "test6"}, {"test5","test6"}),
+                                                          Opm::Group::GroupInjectionProperties(),
+                                                          Opm::Group::GroupProductionProperties())},1}});
+    using VapType = Opm::OilVaporizationProperties::OilVaporization;
+    Opm::DynamicState<Opm::OilVaporizationProperties> oilvap{{Opm::OilVaporizationProperties(VapType::VAPPARS,
+                                                                                   {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0},
+                                                                                   {false, true}, {7.0, 8.0})},1};
+    Opm::Events events(Opm::DynamicVector<uint64_t>({1,2,3,4,5}));
+    std::unique_ptr<Opm::UnitSystem> unitSys(new Opm::UnitSystem);
+    Opm::Deck sdeck({Opm::DeckKeyword("test", {"test",1},
+                                     {getDeckRecord(), getDeckRecord()}, true, false)},
+                   Opm::UnitSystem(), unitSys.get(),
+                   "test2", "test3", 2);
+    Opm::DynamicVector<Opm::Deck> modifierDeck({sdeck});
+    std::vector<Opm::MLimits> limits{Opm::MLimits{1,2,3,4,5,6,7,8,9,10,11,12}};
+    Opm::MessageLimits messageLimits(Opm::DynamicState<Opm::MLimits>(limits,2));
+    Opm::Runspec runspec(Opm::Phases(true, true, true, false, true, false, true, false),
+                         Opm::Tabdims(1,2,3,4,5,6),
+                         Opm::EndpointScaling(std::bitset<4>(13)),
+                         Opm::Welldims(1,2,3,4),
+                         Opm::WellSegmentDims(1,2,3),
+                         Opm::UDQParams(true, 1, 2.0, 3.0, 4.0),
+                         Opm::EclHysterConfig(true, 1, 2),
+                         Opm::Actdims(1,2,3,4));
+    Opm::Schedule::VFPProdMap vfpProd {{1, {{std::make_shared<Opm::VFPProdTable>(getVFPProdTable())},1}}};
+    Opm::Schedule::VFPInjMap vfpIn{{1, {{std::make_shared<Opm::VFPInjTable>(getVFPInjTable())},1}}};
+    Opm::WellTestConfig::WTESTWell tw{"test", Opm::WellTestConfig::ECONOMIC,
+                                         1.0, 2, 3.0, 4};
+    Opm::WellTestConfig wtc({tw, tw, tw});
+
+    Opm::WList wl({"test1", "test2", "test3"});
+    std::map<std::string,Opm::WList> data{{"test", wl}, {"test2", wl}};
+    Opm::WListManager wlm(data);
+
+    Opm::UDQActive udqa({Opm::UDQActive::InputRecord(1, "test1", "test2",
+                                                     Opm::UDAControl::WCONPROD_ORAT)},
+                        {Opm::UDQActive::Record("test1", 1, 2, "test2",
+                                                  Opm::UDAControl::WCONPROD_ORAT)},
+                        {{"test1", 1}}, {{"test2", 2}});
+
+    auto model = std::make_shared<Opm::GuideRateModel>(getGuideRateModel());
+    Opm::GuideRateConfig grc(model,
+                             {{"test1", getGuideRateConfigWell()}},
+                             {{"test2", getGuideRateConfigGroup()}});
+
+    Opm::GConSale::GCONSALEGroup group{Opm::UDAValue(1.0),
+                                       Opm::UDAValue(2.0),
+                                       Opm::UDAValue(3.0),
+                                       Opm::GConSale::MaxProcedure::PLUG,
+                                       4.0, Opm::UnitSystem()};
+    Opm::GConSale gcs({{"test1", group}, {"test2", group}});
+
+    Opm::GConSump::GCONSUMPGroup grp{Opm::UDAValue(1.0),
+                                     Opm::UDAValue(2.0),
+                                     "test",
+                                     3.0, Opm::UnitSystem()};
+    Opm::GConSump gcm({{"test1", grp}, {"test2", grp}});
+
+    Opm::Action::Actions acnts({getActionX()});
+
+    Opm::RFTConfig rftc(getTimeMap(),
+                        {true, 1},
+                        {"test1", "test2"},
+                        {{"test3", 2}},
+                        {{"test1", {{{Opm::RFTConfig::RFT::TIMESTEP, 3}}, 4}}},
+                        {{"test2", {{{Opm::RFTConfig::PLT::REPT, 5}}, 6}}});
+
+    Opm::Schedule val1(getTimeMap(),
+                       wells,
+                       groups,
+                       oilvap,
+                       events,
+                       modifierDeck,
+                       getTuning(),
+                       messageLimits,
+                       runspec,
+                       vfpProd,
+                       vfpIn,
+                       {{std::make_shared<Opm::WellTestConfig>(wtc)}, 1},
+                       {{std::make_shared<Opm::WListManager>(wlm)}, 1},
+                       {{std::make_shared<Opm::UDQConfig>(getUDQConfig())}, 1},
+                       {{std::make_shared<Opm::UDQActive>(udqa)}, 1},
+                       {{std::make_shared<Opm::GuideRateConfig>(grc)}, 1},
+                       {{std::make_shared<Opm::GConSale>(gcs)}, 1},
+                       {{std::make_shared<Opm::GConSump>(gcm)}, 1},
+                       {{Opm::Well::ProducerCMode::CRAT}, 1},
+                       {{std::make_shared<Opm::Action::Actions>(acnts)}, 1},
+                       rftc,
+                       {std::vector<int>{1}, 1},
+                       {{"test", events}});
+
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
