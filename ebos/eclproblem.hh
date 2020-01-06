@@ -2569,10 +2569,22 @@ private:
             eclWriter_->eclOutputModule().initHysteresisParams(simulator, elemIdx);
             eclWriter_->eclOutputModule().assignToFluidState(elemFluidState, elemIdx);
 
-            if (enableSolvent)
-                 solventSaturation_[elemIdx] = eclWriter_->eclOutputModule().getSolventSaturation(elemIdx);
+            // Note: Function processRestartSaturations_() mutates the
+            // 'ssol' argument--the value from the restart file--if solvent
+            // is enabled.  Then, store the updated solvent saturation into
+            // 'solventSaturation_'.  Otherwise, just pass a dummy value to
+            // the function and discard the unchanged result.  Do not index
+            // into 'solventSaturation_' unless solvent is enabled.
+            {
+                auto ssol = enableSolvent
+                    ? eclWriter_->eclOutputModule().getSolventSaturation(elemIdx)
+                    : Scalar(0);
 
-            processRestartSaturations_(elemFluidState, solventSaturation_[elemIdx]);
+                processRestartSaturations_(elemFluidState, ssol);
+
+                if (enableSolvent)
+                    solventSaturation_[elemIdx] = ssol;
+            }
 
             lastRs_[elemIdx] = elemFluidState.Rs();
             lastRv_[elemIdx] = elemFluidState.Rv();
