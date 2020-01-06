@@ -54,6 +54,7 @@
 
 #include <dune/common/parallel/mpihelper.hh>
 
+#include <set>
 #include <tuple>
 #include <vector>
 #include <map>
@@ -189,6 +190,10 @@ std::size_t packSize(const std::pair<T1,T2>& data, Dune::MPIHelper::MPICommunica
 
 template<class T, class A>
 std::size_t packSize(const std::vector<T,A>& data, Dune::MPIHelper::MPICommunicator comm);
+
+template<class K, class C, class A>
+std::size_t packSize(const std::set<K,C,A>& data,
+                     Dune::MPIHelper::MPICommunicator comm);
 
 template<class T, class H, class KE, class A>
 std::size_t packSize(const std::unordered_set<T,H,KE,A>& data,
@@ -330,6 +335,11 @@ void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& posit
 template<class... Ts>
 void pack(const std::tuple<Ts...>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class K, class C, class A>
+void pack(const std::set<K,C,A>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
 
 template<class T, class H, class KE, class A>
 void pack(const std::unordered_set<T,H,KE,A>& data,
@@ -488,6 +498,11 @@ void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
 template<class... Ts>
 void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class K, class C, class A>
+void unpack(std::set<K,C,A>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm);
 
 template<class T, class H, class KE, class A>
 void unpack(std::unordered_set<T,H,KE,A>& data,

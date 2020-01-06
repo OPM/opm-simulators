@@ -222,6 +222,18 @@ std::size_t packSize(const std::unordered_set<T,H,KE,A>& data,
     return totalSize;
 }
 
+template<class K, class C, class A>
+std::size_t packSize(const std::set<K,C,A>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t totalSize = packSize(data.size(), comm);
+    for (const auto& entry : data)
+    {
+        totalSize += packSize(entry, comm);
+    }
+    return totalSize;
+}
+
 template<class Key, class Value>
 std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1763,6 +1775,19 @@ void pack(const std::vector<T, A>& data, std::vector<char>& buffer, int& positio
 
     for (const auto& entry: data)
         pack(entry, buffer, position, comm);
+}
+
+template<class K, class C, class A>
+void pack(const std::set<K,C,A>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.size(), buffer, position, comm);
+
+    for (const auto& entry : data)
+    {
+        pack(entry, buffer, position, comm);
+    }
 }
 
 template<class T, class H, class KE, class A>
@@ -3497,6 +3522,22 @@ void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm)
 {
     unpack_tuple_entry(data, buffer, position, comm);
+}
+
+template<class K, class C, class A>
+void unpack(std::set<K,C,A>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size = 0;
+    unpack(size, buffer, position, comm);
+
+    for (;size>0; size--)
+    {
+        K entry;
+        unpack(entry, buffer, position, comm);
+        data.insert(entry);
+    }
 }
 
 template<class T, class H, class KE, class A>
