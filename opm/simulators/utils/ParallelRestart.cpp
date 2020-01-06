@@ -665,6 +665,13 @@ std::size_t packSize(const IntervalTabulated2DFunction<Scalar>& data,
 template std::size_t packSize(const IntervalTabulated2DFunction<double>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
+template
+std::size_t packSize(const std::vector<IntervalTabulated2DFunction<double>>& data,
+                     Dune::MPIHelper::MPICommunicator comm);
+template
+std::size_t packSize(const std::map<int,IntervalTabulated2DFunction<double>>& data,
+                     Dune::MPIHelper::MPICommunicator comm);
+
 template<class Scalar>
 std::size_t packSize(const UniformXTabulated2DFunction<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -4105,6 +4112,14 @@ void unpack(IntervalTabulated2DFunction<Scalar>& data, std::vector<char>& buffer
 }
 
 template void unpack(IntervalTabulated2DFunction<double>& data,
+                     std::vector<char>& buffer,
+                     int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template void unpack(std::vector<IntervalTabulated2DFunction<double>>& data,
+                     std::vector<char>& buffer,
+                     int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template void unpack(std::map<int,IntervalTabulated2DFunction<double>>& data,
                      std::vector<char>& buffer,
                      int& position, Dune::MPIHelper::MPICommunicator comm);
 
