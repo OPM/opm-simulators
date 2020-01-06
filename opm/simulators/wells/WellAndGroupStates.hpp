@@ -58,23 +58,23 @@ public:
         const int nw = wells.size();
         well_states_.resize(nw);
         for (int w = 0; w < nw; ++w) {
-            initSingleWell(cell_pressures, schedule, w, wells[w], report_step, phase_usage, well_perf_data[w], summary_state);
+            initSingleWell(cell_pressures, schedule, wells[w], report_step, phase_usage, well_perf_data[w], summary_state, well_states_[w]);
         }
         static_cast<void>(prev_state);
+        // TODO: deal with previous state.
     }
 
-    void initSingleWell(const std::vector<double>& cell_pressures,
-                        const Schedule& schedule,
-                        const int w,
-                        const Well& well,
-                        const int report_step,
-                        const PhaseUsage& phase_usage,
-                        const std::vector<PerforationData>& perf_data,
-                        const SummaryState& summary_state)
+    static void initSingleWell(const std::vector<double>& cell_pressures,
+                               const Schedule& schedule,
+                               const Well& well,
+                               const int report_step,
+                               const PhaseUsage& phase_usage,
+                               const std::vector<PerforationData>& perf_data,
+                               const SummaryState& summary_state,
+                               SingleWellState<NumActivePhases>& wstate)
     {
         assert(well.isInjector() || well.isProducer());
 
-        auto& wstate = well_states_[w];
         wstate.status = well.getStatus();
         wstate.is_producer = well.isProducer();
         // At the moment, the following events are considered to be effective events
@@ -216,7 +216,7 @@ public:
 
 
 
-    void initMultiSegment(const Well& well, SingleWellState<NumActivePhases>& wstate)
+    static void initMultiSegment(const Well& well, SingleWellState<NumActivePhases>& wstate)
     {
         const WellSegments& segment_set = well.getSegments();
         const int well_nseg = segment_set.size();
