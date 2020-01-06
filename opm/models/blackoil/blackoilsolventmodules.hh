@@ -787,6 +787,64 @@ public:
         return isMiscible_;
     }
 
+    template<class Serializer>
+    static std::size_t packSize(Serializer& serializer)
+    {
+        return serializer.packSize(solventPvt_) +
+               serializer.packSize(ssfnKrg_) +
+               serializer.packSize(ssfnKrs_) +
+               serializer.packSize(sof2Krn_) +
+               serializer.packSize(misc_) +
+               serializer.packSize(pmisc_) +
+               serializer.packSize(msfnKrsg_) +
+               serializer.packSize(msfnKro_) +
+               serializer.packSize(sorwmis_) +
+               serializer.packSize(sgcwmis_) +
+               serializer.packSize(tlMixParamViscosity_) +
+               serializer.packSize(tlMixParamDensity_) +
+               serializer.packSize(tlPMixTable_) +
+               serializer.packSize(isMiscible_);
+    }
+
+    template<class Serializer>
+    static void pack(std::vector<char>& buffer, int& position,
+                     Serializer& serializer)
+    {
+        serializer.pack(solventPvt_, buffer, position);
+        serializer.pack(ssfnKrg_, buffer, position);
+        serializer.pack(ssfnKrs_, buffer, position);
+        serializer.pack(sof2Krn_, buffer, position);
+        serializer.pack(misc_, buffer, position);
+        serializer.pack(pmisc_, buffer, position);
+        serializer.pack(msfnKrsg_, buffer, position);
+        serializer.pack(msfnKro_, buffer, position);
+        serializer.pack(sorwmis_, buffer, position);
+        serializer.pack(sgcwmis_, buffer, position);
+        serializer.pack(tlMixParamViscosity_, buffer, position);
+        serializer.pack(tlMixParamDensity_, buffer, position);
+        serializer.pack(tlPMixTable_, buffer, position);
+        serializer.pack(isMiscible_, buffer, position);
+    }
+
+    template<class Serializer>
+    static void unpack(std::vector<char>& buffer, int& position,
+                       Serializer& serializer)
+    {
+        serializer.unpack(solventPvt_, buffer, position);
+        serializer.unpack(ssfnKrg_, buffer, position);
+        serializer.unpack(ssfnKrs_, buffer, position);
+        serializer.unpack(sof2Krn_, buffer, position);
+        serializer.unpack(misc_, buffer, position);
+        serializer.unpack(pmisc_, buffer, position);
+        serializer.unpack(msfnKrsg_, buffer, position);
+        serializer.unpack(msfnKro_, buffer, position);
+        serializer.unpack(sorwmis_, buffer, position);
+        serializer.unpack(sgcwmis_, buffer, position);
+        serializer.unpack(tlMixParamViscosity_, buffer, position);
+        serializer.unpack(tlMixParamDensity_, buffer, position);
+        serializer.unpack(tlPMixTable_, buffer, position);
+        serializer.unpack(isMiscible_, buffer, position);
+    }
 
 private:
     static SolventPvt solventPvt_;
