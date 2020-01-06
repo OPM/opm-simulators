@@ -1685,10 +1685,11 @@ namespace Opm {
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         auto& well_state = well_state_;
 
-        if (group.isInjectionGroup())
+        if (group.isInjectionGroup())        
         {
             const auto controls = group.injectionControls(summaryState);
             int phasePos;
+            double eps = 1.001;
             switch (controls.phase) {
             case Phase::WATER:
             {
@@ -1722,7 +1723,7 @@ namespace Opm {
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
 
-                if (controls.surface_max_rate < current_rate) {
+                if (controls.surface_max_rate*eps < current_rate) {
                     actionOnBrokenConstraints(group, Group::InjectionCMode::RATE, reportStepIdx, deferred_logger);
                 }
             }
@@ -1733,7 +1734,7 @@ namespace Opm {
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
 
-                if (controls.resv_max_rate < current_rate) {
+                if (controls.resv_max_rate*eps < current_rate) {
                     actionOnBrokenConstraints(group, Group::InjectionCMode::RESV, reportStepIdx, deferred_logger);
                 }                    }
             if (group.has_control(Group::InjectionCMode::REIN))
@@ -1751,7 +1752,7 @@ namespace Opm {
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
 
-                if (controls.target_reinj_fraction*production_Rate < current_rate) {
+                if (controls.target_reinj_fraction*production_Rate*eps < current_rate) {
                     actionOnBrokenConstraints(group, Group::InjectionCMode::REIN, reportStepIdx, deferred_logger);
                 }                    }
             if (group.has_control(Group::InjectionCMode::VREP))
@@ -1773,7 +1774,7 @@ namespace Opm {
                 // sum over all nodes
                 total_rate = comm.sum(total_rate);
 
-                if (controls.target_void_fraction*voidage_rate < total_rate) {
+                if (controls.target_void_fraction*voidage_rate*eps < total_rate) {
                     actionOnBrokenConstraints(group, Group::InjectionCMode::VREP, reportStepIdx, deferred_logger);
                 }
             }
@@ -1873,6 +1874,7 @@ namespace Opm {
                 current_rate = comm.sum(current_rate);
 
                 if (controls.liquid_target*eps < current_rate  ) {
+                    std::cout << "LRAT "  << current_rate << " " <<controls.liquid_target << std::endl;
                     actionOnBrokenConstraints(group, controls.exceed_action, Group::ProductionCMode::LRAT, reportStepIdx, deferred_logger);
                 }
             }
