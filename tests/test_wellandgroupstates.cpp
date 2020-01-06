@@ -249,12 +249,7 @@ BOOST_AUTO_TEST_CASE(Pressure)
     {
         const auto& xw = rpt.at("INJE01");
 
-        BOOST_CHECK_EQUAL(xw.segments.size(), 1); // Top Segment
-
-        const auto& xseg = xw.segments.at(1);
-
-        BOOST_CHECK_EQUAL(xseg.segNumber, 1);
-        BOOST_CHECK_CLOSE(xseg.pressure, prod01_first ? 100.0 : 0.0, 1.0e-10);
+        BOOST_CHECK(xw.segments.empty()); // Not a multisegment well.
     }
 
     {
@@ -303,19 +298,7 @@ BOOST_AUTO_TEST_CASE(Rates)
 
         const auto& xw = rpt.at("INJE01");
 
-        BOOST_CHECK_EQUAL(xw.segments.size(), 1); // Top Segment
-
-        const auto& xseg = xw.segments.at(1);
-
-        BOOST_CHECK_EQUAL(xseg.segNumber, 1);
-        BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::wat),
-                          rateTop, 1.0e-10);
-
-        BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::oil),
-                          rateTop, 1.0e-10);
-
-        BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::gas),
-                          rateTop, 1.0e-10);
+        BOOST_CHECK(xw.segments.empty()); // Not a multisegment well.
     }
 
     {

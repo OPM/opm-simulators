@@ -57,7 +57,9 @@ public:
     {
         const int nw = wells.size();
         well_states_.resize(nw);
+        well_names_.resize(nw);
         for (int w = 0; w < nw; ++w) {
+            well_names_[w] = wells[w].name();
             initSingleWell(cell_pressures, schedule, wells[w], report_step, phase_usage, well_perf_data[w], summary_state, well_states_[w]);
         }
         static_cast<void>(prev_state);
@@ -68,10 +70,16 @@ public:
 
     data::Wells report(const PhaseUsage& phase_usage, const int* globalCellIdxMap) const
     {
-        data::Wells dw;
-        static_cast<void>(phase_usage);
-        static_cast<void>(globalCellIdxMap);
-        return dw;
+        data::Wells dwells;
+        const int nw = well_states_.size();
+        for (int w = 0; w < nw; ++w) {
+            if (well_states_[w].status == Well::Status::SHUT) {
+                continue;
+            }
+            auto& dwell = dwells[well_names_[w]];
+            reportSingleWell(phase_usage, globalCellIdxMap, well_states_[w], dwell);
+        }
+        return dwells;
     }
 
     using WellState = SingleWellState<NumActivePhases>;
@@ -101,6 +109,7 @@ private:
     // -----------  Data members  -----------
 
     std::vector<WellState> well_states_;
+    std::vector<std::string> well_names_;
     std::map<std::string, GroupState> group_states_;
 
 
@@ -316,6 +325,44 @@ private:
         // ...
         // TODO
         // ...
+    }
+
+
+
+    static void reportSingleWell(const PhaseUsage& pu,
+                                 const int* globalCellIdxMap,
+                                 const SingleWellState<NumActivePhases>& wstate,
+                                 data::Well& dwell)
+    {
+        using rt = data::Rates::opt;
+
+        dwell.bhp = wstate.bhp;
+        dwell.thp = wstate.thp;
+        dwell.temperature = wstate.temperature;
+
+        if( pu.phase_used[BlackoilPhases::Aqua] ) {
+            dwell.rates.set( rt::wat, wstate.surface_rates[ pu.phase_pos[BlackoilPhases::Aqua] ] );
+        }
+
+        if( pu.phase_used[BlackoilPhases::Liquid] ) {
+            dwell.rates.set( rt::oil, wstate.surface_rates[ pu.phase_pos[BlackoilPhases::Liquid] ] );
+        }
+
+        if( pu.phase_used[BlackoilPhases::Vapour] ) {
+            dwell.rates.set( rt::gas, wstate.surface_rates[ pu.phase_pos[BlackoilPhases::Vapour] ] );
+        }
+
+        const int num_perf_well = wstate.connections.size();
+        dwell.connections.resize(num_perf_well);
+        for( int i = 0; i < num_perf_well; ++i ) {
+            auto& connection = dwell.connections[ i ];
+            // TODO
+            // const auto active_index = this->well_perf_data_[well_index][i].cell_index;
+            // connection.index = globalCellIdxMap[active_index];
+            connection.pressure = wstate.connections[i].pressure;
+            // TODO
+            // connection.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
+        }
     }
 };
 
