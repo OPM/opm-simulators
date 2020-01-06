@@ -33,12 +33,11 @@ namespace Opm
 /// for persistence purposes, i.e. from one timestep to the next or
 /// for restarting, and for accumulating rates to get correct group
 /// rate limits.
-template <int NumActiveComponents, int NumActivePhases>
+template <int NumActivePhases>
 struct SingleGroupState
 {
     // ------ Types ------
 
-    using ComponentRates = std::array<double, NumActiveComponents>;
     using PhaseRates = std::array<double, NumActivePhases>;
 
     // ------ Data members ------
@@ -48,11 +47,11 @@ struct SingleGroupState
     Group::ProductionCMode current_production_control = Group::ProductionCMode::NONE;
 
     // Quantities.
-    ComponentRates production_reduction_rates;
-    ComponentRates injection_reduction_rates;
-    ComponentRates injection_potentials;
+    PhaseRates production_reduction_surface_rates;
+    PhaseRates injection_reduction_surface_rates;
+    PhaseRates injection_potentials;
     PhaseRates injection_vrep_rates;
-    ComponentRates injection_rein_rates;
+    PhaseRates injection_rein_rates;
 };
 
 

@@ -22,6 +22,10 @@
 
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/SingleGroupState.hpp>
+#include <opm/output/data/Wells.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
 
 #include <map>
 #include <string>
@@ -37,13 +41,209 @@ namespace Opm
 /// In a parallel context, the well states will be those for local
 /// wells only, while the group information will be global (and
 /// communicated as needed).
-template <int NumActiveComponents, int NumActivePhases>
+template <int NumActivePhases>
 class WellAndGroupStates
 {
 public:
+
+    void init(const std::vector<double>& cell_pressures,
+              const Schedule& schedule,
+              const std::vector<Well>& wells,
+              const int report_step,
+              const WellAndGroupStates* prev_state,
+              const PhaseUsage& phase_usage,
+              const std::vector<std::vector<PerforationData>>& well_perf_data,
+              const SummaryState& summary_state)
+    {
+        const int nw = wells.size();
+        well_states_.resize(nw);
+        for (int w = 0; w < nw; ++w) {
+            initSingleWell(cell_pressures, schedule, w, wells[w], report_step, phase_usage, well_perf_data[w], summary_state);
+        }
+        static_cast<void>(prev_state);
+    }
+
+    void initSingleWell(const std::vector<double>& cell_pressures,
+                        const Schedule& schedule,
+                        const int w,
+                        const Well& well,
+                        const int report_step,
+                        const PhaseUsage& phase_usage,
+                        const std::vector<PerforationData>& perf_data,
+                        const SummaryState& summary_state)
+    {
+        assert(well.isInjector() || well.isProducer());
+
+        auto& wstate = well_states_[w];
+        wstate.status = well.getStatus();
+        wstate.is_producer = well.isProducer();
+        // At the moment, the following events are considered to be effective events
+        // more events might join as effective events:
+        // PRODUCTION_UPDATE, INJECTION_UPDATE, WELL_STATUS_CHANGE
+        const uint64_t effective_events_mask =
+            ScheduleEvents::WELL_STATUS_CHANGE
+            + ScheduleEvents::PRODUCTION_UPDATE
+            + ScheduleEvents::INJECTION_UPDATE;
+        wstate.effective_events_occurred = schedule.hasWellGroupEvent(well.name(), effective_events_mask, report_step);
+
+        const auto inj_controls = well.isInjector() ? well.injectionControls(summary_state) : Well::InjectionControls(0);
+        const auto prod_controls = well.isProducer() ? well.productionControls(summary_state) : Well::ProductionControls(0);
+
+        if (well.isInjector()) {
+            wstate.current_injection_control = inj_controls.cmode;
+        } else {
+            wstate.current_production_control = prod_controls.cmode;
+        }
+
+        const int num_perf_this_well = perf_data.size();
+        wstate.connections.resize(num_perf_this_well);
+
+        if ( num_perf_this_well == 0 ) {
+            // No perforations of the well. Initialize pressures to zero.
+            wstate.bhp = 0.0;
+            wstate.thp = 0.0;
+            return;
+        }
+
+        const bool is_bhp = well.isInjector() ? (inj_controls.cmode == Well::InjectorCMode::BHP)
+            : (prod_controls.cmode == Well::ProducerCMode::BHP);
+        const double bhp_limit = well.isInjector() ? inj_controls.bhp_limit : prod_controls.bhp_limit;
+        const bool is_grup = well.isInjector() ? (inj_controls.cmode == Well::InjectorCMode::GRUP)
+            : (prod_controls.cmode == Well::ProducerCMode::GRUP);
+
+        const double inj_surf_rate = well.isInjector() ? inj_controls.surface_rate : 0.0; // To avoid a "maybe-uninitialized" warning.
+
+        if (well.getStatus() == Well::Status::STOP) {
+            // Stopped well:
+            // 1. Rates: zero well rates.
+            // 2. Bhp: assign bhp equal to bhp control, if
+            //    applicable, otherwise assign equal to
+            //    first perforation cell pressure.
+            if (is_bhp) {
+                wstate.bhp = bhp_limit;
+            } else {
+                const int first_cell = perf_data[0].cell_index;
+                wstate.bhp = cell_pressures[first_cell];
+            }
+        } else if (is_grup) {
+            // Well under group control.
+            // 1. Rates: zero well rates.
+            // 2. Bhp: initialize bhp to be a
+            //    little above or below (depending on if
+            //    the well is an injector or producer)
+            //    pressure in first perforation cell.
+            const int first_cell = perf_data[0].cell_index;
+            const double safety_factor = well.isInjector() ? 1.01 : 0.99;
+            wstate.bhp = safety_factor*cell_pressures[first_cell];
+        } else {
+            // Open well, under own control:
+            // 1. Rates: initialize well rates to match
+            //    controls if type is ORAT/GRAT/WRAT
+            //    (producer) or RATE (injector).
+            //    Otherwise, we cannot set the correct
+            //    value here and initialize to zero rate.
+            if (well.isInjector()) {
+                if (inj_controls.cmode == Well::InjectorCMode::RATE) {
+                    switch (inj_controls.injector_type) {
+                    case Well::InjectorType::WATER:
+                        assert(phase_usage.phase_used[BlackoilPhases::Aqua]);
+                        wstate.surface_rates[phase_usage.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
+                        break;
+                    case Well::InjectorType::GAS:
+                        assert(phase_usage.phase_used[BlackoilPhases::Vapour]);
+                        wstate.surface_rates[phase_usage.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
+                        break;
+                    case Well::InjectorType::OIL:
+                        assert(phase_usage.phase_used[BlackoilPhases::Liquid]);
+                        wstate.surface_rates[phase_usage.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
+                        break;
+                    case Well::InjectorType::MULTI:
+                        // Not currently handled, keep zero init.
+                        break;
+                    }
+                } else {
+                    // Keep zero init.
+                }
+            } else {
+                assert(well.isProducer());
+                // Note negative rates for producing wells.
+                switch (prod_controls.cmode) {
+                case Well::ProducerCMode::ORAT:
+                    assert(phase_usage.phase_used[BlackoilPhases::Liquid]);
+                    wstate.surface_rates[phase_usage.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
+                    break;
+                case Well::ProducerCMode::WRAT:
+                    assert(phase_usage.phase_used[BlackoilPhases::Aqua]);
+                    wstate.surface_rates[phase_usage.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
+                    break;
+                case Well::ProducerCMode::GRAT:
+                    assert(phase_usage.phase_used[BlackoilPhases::Vapour]);
+                    wstate.surface_rates[phase_usage.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
+                    break;
+                default:
+                    // Keep zero init.
+                    break;
+                }
+            }
+            // 2. Bhp: initialize bhp to be target pressure if
+            //    bhp-controlled well, otherwise set to a
+            //    little above or below (depending on if
+            //    the well is an injector or producer)
+            //    pressure in first perforation cell.
+            if (is_bhp) {
+                wstate.bhp = bhp_limit;
+            } else {
+                const int first_cell = perf_data[0].cell_index;
+                const double safety_factor = well.isInjector() ? 1.01 : 0.99;
+                wstate.bhp = safety_factor*cell_pressures[first_cell];
+            }
+        }
+
+        // 3. Thp: assign thp equal to thp target/limit, if such a limit exists,
+        //    otherwise keep it zero.
+        const bool has_thp = well.isInjector() ? inj_controls.hasControl(Well::InjectorCMode::THP)
+            : prod_controls.hasControl(Well::ProducerCMode::THP);
+        const double thp_limit = well.isInjector() ? inj_controls.thp_limit : prod_controls.thp_limit;
+        if (has_thp) {
+            wstate.thp = thp_limit;
+        }
+
+        if (well.isMultiSegment()) {
+            
+        }
+    }
+
+    data::Wells report(const PhaseUsage& phase_usage, const int* globalCellIdxMap) const
+    {
+        static_cast<void>(phase_usage);
+        static_cast<void>(globalCellIdxMap);
+        return data::Wells{};
+    }
+
+
+
+    using WellState = SingleWellState<NumActivePhases>;
+    using GroupState = SingleGroupState<NumActivePhases>;
+
+    std::vector<WellState>& wellStates()
+    {
+        return well_states_;
+    }
+    const std::vector<WellState>& wellStates() const
+    {
+        return well_states_;
+    }
+
+    std::map<std::string, GroupState>& groupStates()
+    {
+        return group_states_;
+    }
+    const std::map<std::string, GroupState>& groupStates() const
+    {
+        return group_states_;
+    }
+
 private:
-    using WellState = SingleWellState<NumActiveComponents, NumActivePhases>;
-    using GroupState = SingleGroupState<NumActiveComponents, NumActivePhases>;
     std::vector<WellState> well_states_;
     std::map<std::string, GroupState> group_states_;
 };

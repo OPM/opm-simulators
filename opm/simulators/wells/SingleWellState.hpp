@@ -32,18 +32,18 @@ namespace Opm
 
 /// Encapsulate all data needed to represent the state of a well for persistence purposes,
 /// i.e. from one timestep to the next or for restarting.
-template <int NumActiveComponents, int NumActivePhases>
+template <int NumActivePhases>
 struct SingleWellState
 {
     // ------ Types ------
 
-    using ComponentRates = std::array<double, NumActiveComponents>;
     using PhaseRates = std::array<double, NumActivePhases>;
 
     struct Connection {
         double pressure = -1e100;
-        ComponentRates surface_rates = {0.0};
+        PhaseRates surface_rates = {0.0};
         PhaseRates reservoir_rates = {0.0};
+        double solvent_rate = 0.0;
         double water_throughput = 0.0;
         double skin_pressure = 0.0;
         double water_velocity = 0.0;
@@ -52,7 +52,7 @@ struct SingleWellState
     struct Segment {
         int segment_number = -1;
         double pressure = -1e100;
-        ComponentRates surface_rates = {0.0};
+        PhaseRates surface_rates = {0.0};
     };
 
     // ------ Data members ------
@@ -60,19 +60,19 @@ struct SingleWellState
     // Flags and statuses.
     Well::Status status = Well::Status::SHUT;
     bool is_producer = true;
+    bool effective_events_occurred = true;
     Well::InjectorCMode current_injection_control = Well::InjectorCMode::CMODE_UNDEFINED;
     Well::ProducerCMode current_production_control = Well::ProducerCMode::CMODE_UNDEFINED;
-    bool effective_events_occurred = false;
 
     // Quantities.
     double bhp = -1e100;
     double thp = -1e100;
     double temperature = 273.15 + 20; // 20 degrees Celcius by default.
-    ComponentRates surface_rates = {0.0};
+    PhaseRates surface_rates = {0.0};
     PhaseRates reservoir_rates = {0.0};
     double dissolved_gas_rate = 0.0;
     double vaporized_oil_rate = 0.0;
-    ComponentRates potentials = {0.0};
+    PhaseRates potentials = {0.0};
 
     // Connection and segment data.
     std::vector<Connection> connections;
