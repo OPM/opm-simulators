@@ -53,6 +53,7 @@
 #endif
 #include "eclwellmanager.hh"
 #include "eclequilinitializer.hh"
+#include "eclmpiserializer.hh"
 #include "eclwriter.hh"
 #include "ecloutputblackoilmodule.hh"
 #include "ecltransmissibility.hh"
@@ -605,9 +606,29 @@ public:
         this->model().addOutputModule(new VtkEclTracerModule<TypeTag>(simulator));
         // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
-        SolventModule::initFromDeck(vanguard.deck(), vanguard.eclState());
         PolymerModule::initFromDeck(vanguard.deck(), vanguard.eclState());
         FoamModule::initFromDeck(vanguard.deck(), vanguard.eclState());
+        const auto& comm = this->gridView().comm();
+        if (comm.rank() == 0) {
+            SolventModule::initFromDeck(vanguard.deck(), vanguard.eclState());
+            if (comm.size() > 1) {
+                EclMpiSerializer ser(comm);
+                size_t size = SolventModule::packSize(ser);
+                std::vector<char> buffer(size);
+                int position = 0;
+                SolventModule::pack(buffer, position, ser);
+                comm.broadcast(&position, 1, 0);
+                comm.broadcast(buffer.data(), position, 0);
+            }
+        } else {
+            int size;
+            comm.broadcast(&size, 1, 0);
+            std::vector<char> buffer(size);
+            comm.broadcast(buffer.data(), size, 0);
+            int position = 0;
+            EclMpiSerializer ser(comm);
+            SolventModule::unpack(buffer, position, ser);
+        }
 
         // create the ECL writer
         eclWriter_.reset(new EclWriterType(simulator));
