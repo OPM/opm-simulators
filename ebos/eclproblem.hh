@@ -606,19 +606,21 @@ public:
         this->model().addOutputModule(new VtkEclTracerModule<TypeTag>(simulator));
         // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
-        FoamModule::initFromDeck(vanguard.deck(), vanguard.eclState());
         const auto& comm = this->gridView().comm();
         if (comm.rank() == 0) {
             SolventModule::initFromDeck(vanguard.deck(), vanguard.eclState());
             PolymerModule::initFromDeck(vanguard.deck(), vanguard.eclState());
+            FoamModule::initFromDeck(vanguard.deck(), vanguard.eclState());
             if (comm.size() > 1) {
                 EclMpiSerializer ser(comm);
                 size_t size = SolventModule::packSize(ser) +
-                              PolymerModule::packSize(ser);
+                              PolymerModule::packSize(ser) +
+                              FoamModule::packSize(ser);
                 std::vector<char> buffer(size);
                 int position = 0;
                 SolventModule::pack(buffer, position, ser);
                 PolymerModule::pack(buffer, position, ser);
+                FoamModule::pack(buffer, position, ser);
                 comm.broadcast(&position, 1, 0);
                 comm.broadcast(buffer.data(), position, 0);
             }
@@ -631,6 +633,7 @@ public:
             EclMpiSerializer ser(comm);
             SolventModule::unpack(buffer, position, ser);
             PolymerModule::unpack(buffer, position, ser);
+            FoamModule::unpack(buffer, position, ser);
         }
 
         // create the ECL writer
