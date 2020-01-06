@@ -62,7 +62,50 @@ public:
         }
         static_cast<void>(prev_state);
         // TODO: deal with previous state.
+
+        // TODO: initialize group state
     }
+
+    data::Wells report(const PhaseUsage& phase_usage, const int* globalCellIdxMap) const
+    {
+        data::Wells dw;
+        static_cast<void>(phase_usage);
+        static_cast<void>(globalCellIdxMap);
+        return dw;
+    }
+
+    using WellState = SingleWellState<NumActivePhases>;
+    using GroupState = SingleGroupState<NumActivePhases>;
+
+    std::vector<WellState>& wellStates()
+    {
+        return well_states_;
+    }
+    const std::vector<WellState>& wellStates() const
+    {
+        return well_states_;
+    }
+
+    std::map<std::string, GroupState>& groupStates()
+    {
+        return group_states_;
+    }
+    const std::map<std::string, GroupState>& groupStates() const
+    {
+        return group_states_;
+    }
+
+
+private:
+
+    // -----------  Data members  -----------
+
+    std::vector<WellState> well_states_;
+    std::map<std::string, GroupState> group_states_;
+
+
+
+    // -----------  Private functions  -----------
 
     static void initSingleWell(const std::vector<double>& cell_pressures,
                                const Schedule& schedule,
@@ -216,6 +259,7 @@ public:
 
 
 
+
     static void initMultiSegment(const Well& well, SingleWellState<NumActivePhases>& wstate)
     {
         const WellSegments& segment_set = well.getSegments();
@@ -273,42 +317,6 @@ public:
         // TODO
         // ...
     }
-
-
-
-    data::Wells report(const PhaseUsage& phase_usage, const int* globalCellIdxMap) const
-    {
-        static_cast<void>(phase_usage);
-        static_cast<void>(globalCellIdxMap);
-        return data::Wells{};
-    }
-
-
-
-    using WellState = SingleWellState<NumActivePhases>;
-    using GroupState = SingleGroupState<NumActivePhases>;
-
-    std::vector<WellState>& wellStates()
-    {
-        return well_states_;
-    }
-    const std::vector<WellState>& wellStates() const
-    {
-        return well_states_;
-    }
-
-    std::map<std::string, GroupState>& groupStates()
-    {
-        return group_states_;
-    }
-    const std::map<std::string, GroupState>& groupStates() const
-    {
-        return group_states_;
-    }
-
-private:
-    std::vector<WellState> well_states_;
-    std::map<std::string, GroupState> group_states_;
 };
 
 }
