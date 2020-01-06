@@ -208,10 +208,73 @@ public:
             wstate.thp = thp_limit;
         }
 
+        // Initialize multi-segment well parts.
         if (well.isMultiSegment()) {
-            
+            initMultiSegment(well, wstate);
         }
+    } // initSingleWell()
+
+
+
+    void initMultiSegment(const Well& well, SingleWellState<NumActivePhases>& wstate)
+    {
+        const WellSegments& segment_set = well.getSegments();
+        const int well_nseg = segment_set.size();
+        wstate.segments.resize(well_nseg);
+
+        // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
+        // that is why I think we should use a well model to initialize the WellState here
+        std::vector<std::vector<int>> segment_perforations(well_nseg);
+        std::vector<std::vector<int>> segment_inlets(well_nseg);
+        {
+            int n_activeperf = 0;
+            const WellConnections& completion_set = well.getConnections();
+            for (size_t perf = 0; perf < completion_set.size(); ++perf) {
+                const Connection& connection = completion_set.get(perf);
+                if (connection.state() == Connection::State::OPEN) {
+                    const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
+                    segment_perforations[segment_index].push_back(n_activeperf);
+                    n_activeperf++;
+                }
+            }
+
+            for (int seg = 0; seg < well_nseg; ++seg) {
+                const Segment& segment = segment_set[seg];
+                const int segment_number = segment.segmentNumber();
+                const int outlet_segment_number = segment.outletSegment();
+                if (outlet_segment_number > 0) {
+                    const int segment_index = segment_set.segmentNumberToIndex(segment_number);
+                    const int outlet_segment_index = segment_set.segmentNumberToIndex(outlet_segment_number);
+                    segment_inlets[outlet_segment_index].push_back(segment_index);
+                }
+            }
+        }
+
+        // Set segment numbers.
+        for (int seg = 0; seg < well_nseg; ++seg) {
+            wstate.segments[seg].segment_number = segment_set[seg].segmentNumber();
+        }
+
+        // Set segment pressures.
+        wstate.segments[0].pressure = wstate.bhp;
+        for (int seg = 1; seg < well_nseg; ++seg) {
+            if (!segment_perforations[seg].empty()) {
+                const int first_perf = segment_perforations[seg][0];
+                wstate.segments[seg].pressure = wstate.connections[first_perf].pressure;
+            } else {
+                // using the outlet segment pressure // it needs the ordering is correct
+                const int outlet_seg = segment_set[seg].outletSegment();
+                wstate.segments[seg].pressure = wstate.segments[segment_set.segmentNumberToIndex(outlet_seg)].pressure;
+            }
+        }
+
+        // Set segment surface_rates.
+        // ...
+        // TODO
+        // ...
     }
+
+
 
     data::Wells report(const PhaseUsage& phase_usage, const int* globalCellIdxMap) const
     {
