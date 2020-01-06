@@ -63,6 +63,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
@@ -1661,6 +1662,18 @@ std::size_t packSize(const Schedule& data,
            packSize(data.rftConfig(), comm) +
            packSize(data.getNupCol(), comm) +
            packSize(data.getWellGroupEvents(), comm);
+}
+
+std::size_t packSize(const SummaryNode& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.keyword(), comm) +
+           packSize(data.category(), comm) +
+           packSize(data.location(), comm)  +
+           packSize(data.type(), comm) +
+           packSize(data.namedEntity(), comm) +
+           packSize(data.number(), comm) +
+           packSize(data.isUserDefined(), comm);
 }
 
 ////// pack routines
@@ -3345,6 +3358,19 @@ void pack(const Schedule& data,
     pack(data.rftConfig(), buffer, position, comm);
     pack(data.getNupCol(), buffer, position, comm);
     pack(data.getWellGroupEvents(), buffer, position, comm);
+}
+
+void pack(const SummaryNode& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.keyword(), buffer, position, comm);
+    pack(data.category(), buffer, position, comm);
+    pack(data.location(), buffer, position, comm) ;
+    pack(data.type(), buffer, position, comm);
+    pack(data.namedEntity(), buffer, position, comm);
+    pack(data.number(), buffer, position, comm);
+    pack(data.isUserDefined(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -5761,6 +5787,32 @@ void unpack(Schedule& data, std::vector<char>& buffer, int& position,
                     wListManager, udqConfig, udqActive, guideRateConfig,
                     gconSale, gconSump, globalWhistCtlMode, actions,
                     rftConfig, nupCol, wellGroupEvents);
+}
+
+void unpack(SummaryNode& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string keyword;
+    SummaryNode::Category category;
+    Location location;
+    SummaryNode::Type type;
+    std::string namedEntity;
+    int number;
+    bool isUserDefined;
+
+    unpack(keyword, buffer, position, comm);
+    unpack(category, buffer, position, comm);
+    unpack(location, buffer, position, comm) ;
+    unpack(type, buffer, position, comm);
+    unpack(namedEntity, buffer, position, comm);
+    unpack(number, buffer, position, comm);
+    unpack(isUserDefined, buffer, position, comm);
+    data = SummaryNode{keyword, category, location}
+           .parameterType(type)
+           .namedEntity(namedEntity)
+           .number(number)
+           .isUserDefined(isUserDefined);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
