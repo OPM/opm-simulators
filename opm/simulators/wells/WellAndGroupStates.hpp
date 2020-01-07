@@ -147,10 +147,10 @@ private:
             wstate.current_production_control = prod_controls.cmode;
         }
 
-        const int num_perf_this_well = perf_data.size();
-        wstate.connections.resize(num_perf_this_well);
+        const int num_conn = perf_data.size();
+        wstate.connections.resize(num_conn);
 
-        if ( num_perf_this_well == 0 ) {
+        if ( num_conn == 0 ) {
             // No perforations of the well. Initialize pressures to zero.
             wstate.bhp = 0.0;
             wstate.thp = 0.0;
@@ -260,6 +260,16 @@ private:
             wstate.thp = thp_limit;
         }
 
+        // Initialize connection pressures and rates.
+        for (int conn = 0; conn < num_conn; ++conn) {
+            auto& connection = wstate.connections[conn];
+            connection.pressure = cell_pressures[perf_data[conn].cell_index];
+            connection.surface_rates = wstate.surface_rates;
+            for (double& q : connection.surface_rates) {
+                q /= num_conn;
+            }
+        }
+
         // Initialize multi-segment well parts.
         if (well.isMultiSegment()) {
             initMultiSegment(well, wstate);
@@ -353,9 +363,9 @@ private:
         }
 
         // Make the connections vector.
-        const int num_perf_well = wstate.connections.size();
-        dwell.connections.resize(num_perf_well);
-        for( int i = 0; i < num_perf_well; ++i ) {
+        const int num_conn = wstate.connections.size();
+        dwell.connections.resize(num_conn);
+        for( int i = 0; i < num_conn; ++i ) {
             auto& connection = dwell.connections[ i ];
             // TODO
             // const auto active_index = this->well_perf_data_[well_index][i].cell_index;
