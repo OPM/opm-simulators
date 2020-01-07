@@ -1048,8 +1048,10 @@ std::size_t packSize(const Well::WellInjectionProperties& data,
     return packSize(data.name, comm) +
            packSize(data.surfaceInjectionRate, comm) +
            packSize(data.reservoirInjectionRate, comm) +
-           packSize(data.BHPLimit, comm) +
-           packSize(data.THPLimit, comm) +
+           packSize(data.BHPTarget, comm) +
+           packSize(data.THPTarget, comm) +
+           packSize(data.bhp_hist_limit, comm) +
+           packSize(data.thp_hist_limit, comm) +
            packSize(data.temperature, comm) +
            packSize(data.BHPH, comm) +
            packSize(data.THPH, comm) +
@@ -1098,8 +1100,10 @@ std::size_t packSize(const Well::WellProductionProperties& data,
            packSize(data.GasRate, comm) +
            packSize(data.LiquidRate, comm) +
            packSize(data.ResVRate, comm) +
-           packSize(data.BHPLimit, comm) +
-           packSize(data.THPLimit, comm) +
+           packSize(data.BHPTarget, comm) +
+           packSize(data.THPTarget, comm) +
+           packSize(data.bhp_hist_limit, comm) +
+           packSize(data.thp_hist_limit, comm) +
            packSize(data.BHPH, comm) +
            packSize(data.THPH, comm) +
            packSize(data.VFPTableNumber, comm) +
@@ -2690,8 +2694,10 @@ void pack(const Well::WellInjectionProperties& data,
     pack(data.name, buffer, position, comm);
     pack(data.surfaceInjectionRate, buffer, position, comm);
     pack(data.reservoirInjectionRate, buffer, position, comm);
-    pack(data.BHPLimit, buffer, position, comm);
-    pack(data.THPLimit, buffer, position, comm);
+    pack(data.BHPTarget, buffer, position, comm);
+    pack(data.THPTarget, buffer, position, comm);
+    pack(data.bhp_hist_limit, buffer, position, comm);
+    pack(data.thp_hist_limit, buffer, position, comm);
     pack(data.temperature, buffer, position, comm);
     pack(data.BHPH, buffer, position, comm);
     pack(data.THPH, buffer, position, comm);
@@ -2743,8 +2749,10 @@ void pack(const Well::WellProductionProperties& data,
     pack(data.GasRate, buffer, position, comm);
     pack(data.LiquidRate, buffer, position, comm);
     pack(data.ResVRate, buffer, position, comm);
-    pack(data.BHPLimit, buffer, position, comm);
-    pack(data.THPLimit, buffer, position, comm);
+    pack(data.BHPTarget, buffer, position, comm);
+    pack(data.THPTarget, buffer, position, comm);
+    pack(data.bhp_hist_limit, buffer, position, comm);
+    pack(data.thp_hist_limit, buffer, position, comm);
     pack(data.BHPH, buffer, position, comm);
     pack(data.THPH, buffer, position, comm);
     pack(data.VFPTableNumber, buffer, position, comm);
@@ -4753,8 +4761,10 @@ void unpack(Well::WellInjectionProperties& data,
     unpack(data.name, buffer, position, comm);
     unpack(data.surfaceInjectionRate, buffer, position, comm);
     unpack(data.reservoirInjectionRate, buffer, position, comm);
-    unpack(data.BHPLimit, buffer, position, comm);
-    unpack(data.THPLimit, buffer, position, comm);
+    unpack(data.BHPTarget, buffer, position, comm);
+    unpack(data.THPTarget, buffer, position, comm);
+    unpack(data.bhp_hist_limit, buffer, position, comm);
+    unpack(data.thp_hist_limit, buffer, position, comm);
     unpack(data.temperature, buffer, position, comm);
     unpack(data.BHPH, buffer, position, comm);
     unpack(data.THPH, buffer, position, comm);
@@ -4822,7 +4832,8 @@ void unpack(Well::WellProductionProperties& data,
 {
     std::string name;
     UDAValue OilRate, WaterRate, GasRate, LiquidRate, ResVRate;
-    UDAValue BHPLimit, THPLimit;
+    UDAValue BHPTarget, THPTarget;
+    double bhp_hist_limit, thp_hist_limit;
     double BHPH, THPH;
     int VFPTableNumber;
     double ALQValue;
@@ -4836,8 +4847,10 @@ void unpack(Well::WellProductionProperties& data,
     unpack(GasRate, buffer, position, comm);
     unpack(LiquidRate, buffer, position, comm);
     unpack(ResVRate, buffer, position, comm);
-    unpack(BHPLimit, buffer, position, comm);
-    unpack(THPLimit, buffer, position, comm);
+    unpack(BHPTarget, buffer, position, comm);
+    unpack(THPTarget, buffer, position, comm);
+    unpack(bhp_hist_limit, buffer, position, comm);
+    unpack(thp_hist_limit, buffer, position, comm);
     unpack(BHPH, buffer, position, comm);
     unpack(THPH, buffer, position, comm);
     unpack(VFPTableNumber, buffer, position, comm);
@@ -4847,8 +4860,9 @@ void unpack(Well::WellProductionProperties& data,
     unpack(whistctl_cmode, buffer, position, comm);
     unpack(prodCtrls, buffer, position, comm);
     data = Well::WellProductionProperties(name, OilRate, WaterRate, GasRate,
-                                          LiquidRate, ResVRate, BHPLimit,
-                                          THPLimit, BHPH, THPH, VFPTableNumber,
+                                          LiquidRate, ResVRate, BHPTarget,
+                                          THPTarget, bhp_hist_limit, thp_hist_limit,
+                                          BHPH, THPH, VFPTableNumber,
                                           ALQValue, predictionMode, controlMode,
                                           whistctl_cmode, prodCtrls);
 }
