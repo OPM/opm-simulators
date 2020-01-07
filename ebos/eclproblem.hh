@@ -2863,7 +2863,9 @@ private:
         }
 
         if (enablePolymerMolarWeight) {
-            const std::vector<double>& polyMoleWeightData = eclState.fieldProps().get_global_double("SPOLYMW");
+            std::vector<double> polyMoleWeightData(eclState.getInputGrid().getCartesianSize(), 0.0);
+            if (eclState.fieldProps().has_double("SPOLYMW"))
+                polyMoleWeightData = eclState.fieldProps().get_global_double("SPOLYMW");
             polymerMoleWeight_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 const size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
