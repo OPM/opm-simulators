@@ -2835,7 +2835,10 @@ private:
 
 
         if (enableSolvent) {
-            const std::vector<double>& solventSaturationData = eclState.fieldProps().get_global_double("SSOL");
+            std::vector<double> solventSaturationData(eclState.getInputGrid().getCartesianSize(), 0.0);
+            if (eclState.fieldProps().has_double("SSOL"))
+                solventSaturationData = eclState.fieldProps().get_global_double("SSOL");
+
             solventSaturation_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
