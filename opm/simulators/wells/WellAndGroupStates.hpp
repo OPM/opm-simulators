@@ -352,6 +352,7 @@ private:
             dwell.rates.set( rt::gas, wstate.surface_rates[ pu.phase_pos[BlackoilPhases::Vapour] ] );
         }
 
+        // Make the connections vector.
         const int num_perf_well = wstate.connections.size();
         dwell.connections.resize(num_perf_well);
         for( int i = 0; i < num_perf_well; ++i ) {
@@ -363,9 +364,41 @@ private:
             // TODO
             // connection.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
         }
+
+        // Make the segments map.
+        for (const auto& seg : wstate.segments) {
+            dwell.segments[seg.segment_number] = reportSegmentResults(pu, seg);
+        }
+    }
+
+
+
+    static data::Segment
+    reportSegmentResults(const PhaseUsage& pu, const typename SingleWellState<NumActivePhases>::Segment& seg)
+    {
+        auto seg_res = data::Segment{};
+
+        seg_res.pressure = seg.pressure;
+
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            seg_res.rates.set(data::Rates::opt::wat,
+                              seg.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]]);
+        }
+        if (pu.phase_used[BlackoilPhases::Liquid]) {
+            seg_res.rates.set(data::Rates::opt::oil,
+                              seg.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]]);
+        }
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            seg_res.rates.set(data::Rates::opt::gas,
+                              seg.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]]);
+        }
+
+        seg_res.segNumber = seg.segment_number;
+
+        return seg_res;
     }
 };
 
-}
+} // namespace Opm
 
 #endif // OPM_WELLANDGROUPSTATES_HEADER_INCLUDED
