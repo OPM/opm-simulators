@@ -147,10 +147,7 @@ private:
             wstate.current_production_control = prod_controls.cmode;
         }
 
-        const int num_conn = perf_data.size();
-        wstate.connections.resize(num_conn);
-
-        if ( num_conn == 0 ) {
+        if (perf_data.empty()) {
             // No perforations of the well. Initialize pressures to zero.
             wstate.bhp = 0.0;
             wstate.thp = 0.0;
@@ -261,6 +258,23 @@ private:
         }
 
         // Initialize connection pressures and rates.
+        initConnections(cell_pressures, perf_data, wstate);
+
+        // Initialize multi-segment well parts.
+        if (well.isMultiSegment()) {
+            initMultiSegment(well, wstate);
+        }
+    } // initSingleWell()
+
+
+
+
+    static void initConnections(const std::vector<double>& cell_pressures,
+                                const std::vector<PerforationData>& perf_data,
+                                SingleWellState<NumActivePhases>& wstate)
+    {
+        const int num_conn = perf_data.size();
+        wstate.connections.resize(num_conn);
         for (int conn = 0; conn < num_conn; ++conn) {
             auto& connection = wstate.connections[conn];
             connection.pressure = cell_pressures[perf_data[conn].cell_index];
@@ -269,12 +283,7 @@ private:
                 q /= num_conn;
             }
         }
-
-        // Initialize multi-segment well parts.
-        if (well.isMultiSegment()) {
-            initMultiSegment(well, wstate);
-        }
-    } // initSingleWell()
+    }
 
 
 
