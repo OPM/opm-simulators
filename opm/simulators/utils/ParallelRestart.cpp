@@ -626,6 +626,8 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.getRockTable(), comm) +
            packSize(data.getViscrefTable(), comm) +
            packSize(data.getWatdentTable(), comm) +
+           packSize(data.getPvtwSaltTables(), comm) +
+           packSize(data.getBrineDensityTables(), comm) +
            packSize(data.getPlymwinjTables(), comm) +
            packSize(data.getSkprwatTables(), comm) +
            packSize(data.getSkprpolyTables(), comm) +
@@ -1259,6 +1261,7 @@ std::size_t packSize(const Well& data,
                        packSize(data.getEconLimits(), comm) +
                        packSize(data.getFoamProperties(), comm) +
                        packSize(data.getPolymerProperties(), comm) +
+                       packSize(data.getBrineProperties(), comm) +
                        packSize(data.getTracerProperties(), comm) +
                        packSize(data.getProductionProperties(), comm) +
                        packSize(data.getInjectionProperties(), comm) +
@@ -2286,6 +2289,8 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
     pack(data.getRockTable(), buffer, position, comm);
     pack(data.getViscrefTable(), buffer, position, comm);
     pack(data.getWatdentTable(), buffer, position, comm);
+    pack(data.getPvtwSaltTables(), buffer, position, comm);
+    pack(data.getBrineDensityTables(), buffer, position, comm);
     pack(data.getPlymwinjTables(), buffer, position, comm);
     pack(data.getSkprwatTables(), buffer, position, comm);
     pack(data.getSkprpolyTables(), buffer, position, comm);
@@ -2957,6 +2962,7 @@ void pack(const Well& data,
     pack(data.getEconLimits(), buffer, position, comm);
     pack(data.getFoamProperties(), buffer, position, comm);
     pack(data.getPolymerProperties(), buffer, position, comm);
+    pack(data.getBrineProperties(), buffer, position, comm);
     pack(data.getTracerProperties(), buffer, position, comm);
     pack(data.getProductionProperties(), buffer, position, comm);
     pack(data.getInjectionProperties(), buffer, position, comm);
@@ -4127,6 +4133,8 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     RockTable rockTable;
     ViscrefTable viscrefTable;
     WatdentTable watdentTable;
+    std::vector<PvtwsaltTable> pvtwsaltTables;
+    std::vector<BrineDensityTable> bdensityTables;
     std::map<int, PlymwinjTable> plymwinjTables;
     std::map<int, SkprwatTable> skprwatTables;
     std::map<int, SkprpolyTable> skprpolyTables;
@@ -4150,6 +4158,8 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     unpack(rockTable, buffer, position, comm);
     unpack(viscrefTable, buffer, position, comm);
     unpack(watdentTable, buffer, position, comm);
+    unpack(pvtwsaltTables, buffer, position, comm);
+    unpack(bdensityTables, buffer, position, comm);
     unpack(plymwinjTables, buffer, position, comm);
     unpack(skprwatTables, buffer, position, comm);
     unpack(skprpolyTables, buffer, position, comm);
@@ -4169,7 +4179,8 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     unpack(rtemp, buffer, position, comm);
     data = TableManager(simpleTables, pvtgTables, pvtoTables, rock2dTables,
                         rock2dtrTables, pvtwTable, pvcdoTable, densityTable,
-                        rockTable, viscrefTable, watdentTable, plymwinjTables,
+                        rockTable, viscrefTable, watdentTable, pvtwsaltTables,
+                        bdensityTables, plymwinjTables,
                         skprwatTables, skprpolyTables, tabdims, regdims, eqldims,
                         aqudims, hasImptvd, hasEntpvd, hasEqlnum, jfunc, rtemp);
 }
@@ -5145,6 +5156,7 @@ void unpack(Well& data,
     auto econLimits = std::make_shared<WellEconProductionLimits>();
     auto foamProperties = std::make_shared<WellFoamProperties>();
     auto polymerProperties = std::make_shared<WellPolymerProperties>();
+    auto brineProperties = std::make_shared<WellBrineProperties>();
     auto tracerProperties = std::make_shared<WellTracerProperties>();
     auto connection = std::make_shared<WellConnections>();
     auto production = std::make_shared<Well::WellProductionProperties>();
@@ -5174,6 +5186,7 @@ void unpack(Well& data,
     unpack(*econLimits, buffer, position, comm);
     unpack(*foamProperties, buffer, position, comm);
     unpack(*polymerProperties, buffer, position, comm);
+    unpack(*brineProperties, buffer, position, comm);
     unpack(*tracerProperties, buffer, position, comm);
     unpack(*production, buffer, position, comm);
     unpack(*injection, buffer, position, comm);
@@ -5187,8 +5200,8 @@ void unpack(Well& data,
                 ref_depth, phase, ordering, units, udq_undefined, status,
                 drainageRadius, allowCrossFlow, automaticShutIn, isProducer,
                 guideRate, efficiencyFactor, solventFraction, prediction_mode,
-                econLimits, foamProperties, polymerProperties, tracerProperties,
-                connection, production, injection, segments);
+                econLimits, foamProperties, polymerProperties, brineProperties,
+                tracerProperties, connection, production, injection, segments);
 }
 
 template<class T>
