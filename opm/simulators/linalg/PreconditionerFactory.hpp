@@ -37,7 +37,7 @@
 #include <map>
 #include <memory>
 
-namespace Dune
+namespace Opm
 {
 
 /// This is an object factory for creating preconditioners.  The

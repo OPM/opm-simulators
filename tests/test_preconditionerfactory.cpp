@@ -90,7 +90,7 @@ testPrec(const boost::property_tree::ptree& prm, const std::string& matrix_filen
     }
     using Operator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
     Operator op(matrix);
-    using PrecFactory = Dune::PreconditionerFactory<Operator>;
+    using PrecFactory = Opm::PreconditionerFactory<Operator>;
     auto prec = PrecFactory::create(op, prm.get_child("preconditioner"));
     Dune::BiCGSTABSolver<Vector> solver(op, *prec, prm.get<double>("tol"), prm.get<int>("maxiter"), prm.get<int>("verbosity"));
     Vector x(rhs.size());
@@ -164,7 +164,7 @@ using V = Dune::BlockVector<Dune::FieldVector<double, bz>>;
 template <int bz>
 using O = Dune::MatrixAdapter<M<bz>, V<bz>, V<bz>>;
 template <int bz>
-using PF = Dune::PreconditionerFactory<O<bz>>;
+using PF = Opm::PreconditionerFactory<O<bz>>;
 
 
 BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)

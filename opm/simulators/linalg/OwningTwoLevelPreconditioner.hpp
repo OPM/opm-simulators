@@ -35,14 +35,18 @@
 #include <fstream>
 #include <type_traits>
 
-namespace Dune
-{
 
+namespace Opm
+{
 // Circular dependency between PreconditionerFactory [which can make an OwningTwoLevelPreconditioner]
 // and OwningTwoLevelPreconditioner [which uses PreconditionerFactory to choose the fine-level smoother]
 // must be broken, accomplished by forward-declaration here.
 template <class Operator, class Comm = Dune::Amg::SequentialInformation>
 class PreconditionerFactory;
+}
+
+namespace Dune
+{
 
 
 // Must forward-declare FlexibleSolver as we want to use it as solver for the pressure system.
@@ -63,7 +67,7 @@ class OwningTwoLevelPreconditioner : public Dune::PreconditionerWithUpdate<Vecto
 public:
     using pt = boost::property_tree::ptree;
     using MatrixType = typename OperatorType::matrix_type;
-    using PrecFactory = PreconditionerFactory<OperatorType, Communication>;
+    using PrecFactory = Opm::PreconditionerFactory<OperatorType, Communication>;
 
     OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm)
         : linear_operator_(linearoperator)
