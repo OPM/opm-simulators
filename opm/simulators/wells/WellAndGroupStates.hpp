@@ -125,6 +125,34 @@ private:
                                const SummaryState& summary_state,
                                SingleWellState<NumActivePhases>& wstate)
     {
+        const auto inj_controls = well.isInjector() ? well.injectionControls(summary_state) : Well::InjectionControls(0);
+        const auto prod_controls = well.isProducer() ? well.productionControls(summary_state) : Well::ProductionControls(0);
+
+        // Initialize flag, statuses and current controls.
+        initFlagsAndControls(schedule, well, report_step, inj_controls, prod_controls, wstate);
+
+        // Initialize bhp, thp and well rates.
+        initPressuresAndRates(cell_pressures, well, phase_usage, perf_data, inj_controls, prod_controls, wstate);
+
+        // Initialize connection pressures and rates.
+        initConnections(cell_pressures, perf_data, wstate);
+
+        // Initialize multi-segment well parts (the 'segments' member).
+        if (well.isMultiSegment()) {
+            initMultiSegment(well, wstate);
+        }
+    }
+
+
+
+
+    static void initFlagsAndControls(const Schedule& schedule,
+                                     const Well& well,
+                                     const int report_step,
+                                     const Well::InjectionControls& inj_controls,
+                                     const Well::ProductionControls& prod_controls,
+                                     SingleWellState<NumActivePhases>& wstate)
+    {
         assert(well.isInjector() || well.isProducer());
 
         wstate.status = well.getStatus();
@@ -138,15 +166,25 @@ private:
             + ScheduleEvents::INJECTION_UPDATE;
         wstate.effective_events_occurred = schedule.hasWellGroupEvent(well.name(), effective_events_mask, report_step);
 
-        const auto inj_controls = well.isInjector() ? well.injectionControls(summary_state) : Well::InjectionControls(0);
-        const auto prod_controls = well.isProducer() ? well.productionControls(summary_state) : Well::ProductionControls(0);
 
         if (well.isInjector()) {
             wstate.current_injection_control = inj_controls.cmode;
         } else {
             wstate.current_production_control = prod_controls.cmode;
         }
+    }
 
+
+
+
+    static void initPressuresAndRates(const std::vector<double>& cell_pressures,
+                                      const Well& well,
+                                      const PhaseUsage& phase_usage,
+                                      const std::vector<PerforationData>& perf_data,
+                                      const Well::InjectionControls& inj_controls,
+                                      const Well::ProductionControls& prod_controls,
+                                      SingleWellState<NumActivePhases>& wstate)
+    {
         if (perf_data.empty()) {
             // No perforations of the well. Initialize pressures to zero.
             wstate.bhp = 0.0;
@@ -256,15 +294,7 @@ private:
         if (has_thp) {
             wstate.thp = thp_limit;
         }
-
-        // Initialize connection pressures and rates.
-        initConnections(cell_pressures, perf_data, wstate);
-
-        // Initialize multi-segment well parts.
-        if (well.isMultiSegment()) {
-            initMultiSegment(well, wstate);
-        }
-    } // initSingleWell()
+    }
 
 
 
