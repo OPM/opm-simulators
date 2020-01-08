@@ -2342,6 +2342,15 @@ BOOST_AUTO_TEST_CASE(Schedule)
 #endif
 }
 
+BOOST_AUTO_TEST_CASE(BrineDensityTable)
+{
+#ifdef HAVE_MPI
+    Opm::BrineDensityTable val1({1.0, 2.0, 3.0});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
 
 BOOST_AUTO_TEST_CASE(SummaryNode)
 {
