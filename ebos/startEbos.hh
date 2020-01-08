@@ -34,11 +34,9 @@
 #include <mpi.h>
 #endif
 
-#if HAVE_ECL_INPUT
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/OpmLog/LogUtil.hpp>
-#endif
 
 BEGIN_PROPERTIES
 
