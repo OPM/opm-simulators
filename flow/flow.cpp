@@ -347,10 +347,19 @@ int main(int argc, char** argv)
 
             eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
             schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
-            summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
             if (mpiRank == 0) {
                 setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
+                summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
+#ifdef HAVE_MPI
+                Opm::Mpi::packAndSend(*summaryConfig, mpiHelper.getCollectiveCommunication());
+#endif
             }
+#ifdef HAVE_MPI
+            else {
+                summaryConfig.reset(new Opm::SummaryConfig);
+                Opm::Mpi::receiveAndUnpack(*summaryConfig, mpiHelper.getCollectiveCommunication());
+            }
+#endif
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
 

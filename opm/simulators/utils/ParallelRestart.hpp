@@ -54,6 +54,7 @@
 
 #include <dune/common/parallel/mpihelper.hh>
 
+#include <set>
 #include <tuple>
 #include <vector>
 #include <map>
@@ -125,6 +126,8 @@ class SimpleTable;
 class SkprpolyTable;
 class SkprwatTable;
 class SpiralICD;
+class SummaryConfig;
+class SummaryNode;
 class Tabdims;
 class TableColumn;
 class TableContainer;
@@ -188,6 +191,10 @@ std::size_t packSize(const std::pair<T1,T2>& data, Dune::MPIHelper::MPICommunica
 
 template<class T, class A>
 std::size_t packSize(const std::vector<T,A>& data, Dune::MPIHelper::MPICommunicator comm);
+
+template<class K, class C, class A>
+std::size_t packSize(const std::set<K,C,A>& data,
+                     Dune::MPIHelper::MPICommunicator comm);
 
 template<class T, class H, class KE, class A>
 std::size_t packSize(const std::unordered_set<T,H,KE,A>& data,
@@ -329,6 +336,11 @@ void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& posit
 template<class... Ts>
 void pack(const std::tuple<Ts...>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class K, class C, class A>
+void pack(const std::set<K,C,A>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
 
 template<class T, class H, class KE, class A>
 void pack(const std::unordered_set<T,H,KE,A>& data,
@@ -487,6 +499,11 @@ void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
 template<class... Ts>
 void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class K, class C, class A>
+void unpack(std::set<K,C,A>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm);
 
 template<class T, class H, class KE, class A>
 void unpack(std::unordered_set<T,H,KE,A>& data,
@@ -689,6 +706,8 @@ ADD_PACK_PROTOTYPES(SkprpolyTable)
 ADD_PACK_PROTOTYPES(SkprwatTable)
 ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
+ADD_PACK_PROTOTYPES(SummaryConfig)
+ADD_PACK_PROTOTYPES(SummaryNode)
 ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)
@@ -736,6 +755,31 @@ ADD_PACK_PROTOTYPES(WellTracerProperties)
 ADD_PACK_PROTOTYPES(WList)
 ADD_PACK_PROTOTYPES(WListManager)
 
+template<class T>
+const T& packAndSend(const T& in, const auto& comm)
+{
+    if (comm.size() == 0)
+        return in;
+
+    std::size_t size = packSize(in, comm);
+    std::vector<char> buffer(size);
+    int pos = 0;
+    Mpi::pack(in, buffer, pos, comm);
+    comm.broadcast(&pos, 1, 0);
+    comm.broadcast(buffer.data(), pos, 0);
+    return in;
+}
+
+template<class T>
+void receiveAndUnpack(T& result, const auto& comm)
+{
+    int size;
+    comm.broadcast(&size, 1, 0);
+    std::vector<char> buffer(size);
+    comm.broadcast(buffer.data(), size, 0);
+    int pos = 0;
+    unpack(result, buffer, pos, comm);
+}
 } // end namespace Mpi
 
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,

@@ -74,6 +74,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
@@ -2332,6 +2333,41 @@ BOOST_AUTO_TEST_CASE(Schedule)
                        rftc,
                        {std::vector<int>{1}, 1},
                        {{"test", events}});
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(SummaryNode)
+{
+#ifdef HAVE_MPI
+    auto val1 = Opm::SummaryNode{"test1", Opm::SummaryNode::Category::Region,
+                                 Opm::Location{"test2", 1}}
+                                 .parameterType(Opm::SummaryNode::Type::Pressure)
+                                 .namedEntity("test3")
+                                 .number(2)
+                                 .isUserDefined(true);
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(SummaryConfig)
+{
+#ifdef HAVE_MPI
+    auto node = Opm::SummaryNode{"test1", Opm::SummaryNode::Category::Region,
+                                 Opm::Location{"test2", 1}}
+                                 .parameterType(Opm::SummaryNode::Type::Pressure)
+                                 .namedEntity("test3")
+                                 .number(2)
+                                 .isUserDefined(true);
+    Opm::SummaryConfig val1({node}, {"test1", "test2"}, {"test3", "test4"});
 
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));

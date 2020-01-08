@@ -63,6 +63,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
@@ -211,6 +212,18 @@ std::size_t packSize(const std::tuple<Ts...>& data, Dune::MPIHelper::MPICommunic
 
 template<class T, class H, class KE, class A>
 std::size_t packSize(const std::unordered_set<T,H,KE,A>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t totalSize = packSize(data.size(), comm);
+    for (const auto& entry : data)
+    {
+        totalSize += packSize(entry, comm);
+    }
+    return totalSize;
+}
+
+template<class K, class C, class A>
+std::size_t packSize(const std::set<K,C,A>& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     std::size_t totalSize = packSize(data.size(), comm);
@@ -1663,6 +1676,26 @@ std::size_t packSize(const Schedule& data,
            packSize(data.getWellGroupEvents(), comm);
 }
 
+std::size_t packSize(const SummaryNode& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.keyword(), comm) +
+           packSize(data.category(), comm) +
+           packSize(data.location(), comm)  +
+           packSize(data.type(), comm) +
+           packSize(data.namedEntity(), comm) +
+           packSize(data.number(), comm) +
+           packSize(data.isUserDefined(), comm);
+}
+
+std::size_t packSize(const SummaryConfig& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getKwds(), comm) +
+           packSize(data.getShortKwds(), comm) +
+           packSize(data.getSmryKwds(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -1750,6 +1783,19 @@ void pack(const std::vector<T, A>& data, std::vector<char>& buffer, int& positio
 
     for (const auto& entry: data)
         pack(entry, buffer, position, comm);
+}
+
+template<class K, class C, class A>
+void pack(const std::set<K,C,A>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.size(), buffer, position, comm);
+
+    for (const auto& entry : data)
+    {
+        pack(entry, buffer, position, comm);
+    }
 }
 
 template<class T, class H, class KE, class A>
@@ -3347,6 +3393,28 @@ void pack(const Schedule& data,
     pack(data.getWellGroupEvents(), buffer, position, comm);
 }
 
+void pack(const SummaryNode& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.keyword(), buffer, position, comm);
+    pack(data.category(), buffer, position, comm);
+    pack(data.location(), buffer, position, comm) ;
+    pack(data.type(), buffer, position, comm);
+    pack(data.namedEntity(), buffer, position, comm);
+    pack(data.number(), buffer, position, comm);
+    pack(data.isUserDefined(), buffer, position, comm);
+}
+
+void pack(const SummaryConfig& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getKwds(), buffer, position, comm);
+    pack(data.getShortKwds(), buffer, position, comm);
+    pack(data.getSmryKwds(), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -3471,6 +3539,22 @@ void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm)
 {
     unpack_tuple_entry(data, buffer, position, comm);
+}
+
+template<class K, class C, class A>
+void unpack(std::set<K,C,A>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::size_t size = 0;
+    unpack(size, buffer, position, comm);
+
+    for (;size>0; size--)
+    {
+        K entry;
+        unpack(entry, buffer, position, comm);
+        data.insert(entry);
+    }
 }
 
 template<class T, class H, class KE, class A>
@@ -5761,6 +5845,45 @@ void unpack(Schedule& data, std::vector<char>& buffer, int& position,
                     wListManager, udqConfig, udqActive, guideRateConfig,
                     gconSale, gconSump, globalWhistCtlMode, actions,
                     rftConfig, nupCol, wellGroupEvents);
+}
+
+void unpack(SummaryNode& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::string keyword;
+    SummaryNode::Category category;
+    Location location;
+    SummaryNode::Type type;
+    std::string namedEntity;
+    int number;
+    bool isUserDefined;
+
+    unpack(keyword, buffer, position, comm);
+    unpack(category, buffer, position, comm);
+    unpack(location, buffer, position, comm) ;
+    unpack(type, buffer, position, comm);
+    unpack(namedEntity, buffer, position, comm);
+    unpack(number, buffer, position, comm);
+    unpack(isUserDefined, buffer, position, comm);
+    data = SummaryNode{keyword, category, location}
+           .parameterType(type)
+           .namedEntity(namedEntity)
+           .number(number)
+           .isUserDefined(isUserDefined);
+}
+
+void unpack(SummaryConfig& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    SummaryConfig::keyword_list kwds;
+    std::set<std::string> shortKwds, smryKwds;
+
+    unpack(kwds, buffer, position, comm);
+    unpack(shortKwds, buffer, position, comm);
+    unpack(smryKwds, buffer, position, comm);
+    data = SummaryConfig(kwds, shortKwds, smryKwds);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
