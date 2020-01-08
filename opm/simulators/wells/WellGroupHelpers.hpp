@@ -408,31 +408,27 @@ namespace Opm {
     }
 
 
-    inline void updateVREPForGroups(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellStateNupcol, WellStateFullyImplicitBlackoil& wellState, double& resv) {
+    inline void updateVREPForGroups(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellStateNupcol, WellStateFullyImplicitBlackoil& wellState) {
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            double thisResv = 0.0;
-            updateVREPForGroups(groupTmp, schedule, reportStepIdx, wellStateNupcol, wellState, thisResv);
-            resv += thisResv;
+            updateVREPForGroups(groupTmp, schedule, reportStepIdx, wellStateNupcol, wellState);
         }
         const int np = wellState.numPhases();
+        double resv = 0.0;
         for (int phase = 0; phase < np; ++phase) {
             resv += sumWellPhaseRates(wellStateNupcol.wellReservoirRates(), group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false);
         }
-
         wellState.setCurrentInjectionVREPRates(group.name(), resv);
     }
 
-    inline void updateREINForGroups(const Group& group, const Schedule& schedule, const int reportStepIdx, const PhaseUsage& pu, const SummaryState& st, const WellStateFullyImplicitBlackoil& wellStateNupcol, WellStateFullyImplicitBlackoil& wellState, std::vector<double>& rein) {
+    inline void updateREINForGroups(const Group& group, const Schedule& schedule, const int reportStepIdx, const PhaseUsage& pu, const SummaryState& st, const WellStateFullyImplicitBlackoil& wellStateNupcol, WellStateFullyImplicitBlackoil& wellState) {
         const int np = wellState.numPhases();
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            std::vector<double> thisRein(np, 0.0);
-            updateREINForGroups(groupTmp, schedule, reportStepIdx, pu, st, wellStateNupcol, wellState, thisRein);
-            for (int phase = 0; phase < np; ++phase) {
-                rein[phase] = thisRein[phase];
-            }
+            updateREINForGroups(groupTmp, schedule, reportStepIdx, pu, st, wellStateNupcol, wellState);
         }
+
+        std::vector<double> rein(np, 0.0);
         for (int phase = 0; phase < np; ++phase) {
             rein[phase] = sumWellPhaseRates(wellStateNupcol.wellRates(), group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false);
         }

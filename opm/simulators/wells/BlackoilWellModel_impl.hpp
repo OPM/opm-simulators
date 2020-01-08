@@ -1191,11 +1191,9 @@ namespace Opm {
         std::vector<double> potInj(numPhases(), 0.0);
         wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ true, well_state_, comm, guideRate_.get(), potInj);
 
-        std::vector<double> rein(numPhases(), 0.0);
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
-        wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol_, well_state_, rein);
-        double resv = 0.0;
-        wellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_, resv);
+        wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol_, well_state_);
+        wellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
         well_state_.communicateReinVrep(comm);
 
         // compute wsolvent fraction for REIN wells
