@@ -1682,6 +1682,14 @@ std::size_t packSize(const BrineDensityTable& data,
     return packSize(data.getBrineDensityColumn(), comm);
 }
 
+std::size_t packSize(const PvtwsaltTable& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.getReferencePressureValue(), comm) +
+          packSize(data.getReferenceSaltConcentrationValue(), comm) +
+          packSize(data.getTableValues(), comm);
+}
+
 std::size_t packSize(const SummaryNode& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -3404,28 +3412,6 @@ void pack(const BrineDensityTable& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getBrineDensityColumn(), buffer, position, comm);
-}
-
-void pack(const SummaryNode& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.keyword(), buffer, position, comm);
-    pack(data.category(), buffer, position, comm);
-    pack(data.location(), buffer, position, comm) ;
-    pack(data.type(), buffer, position, comm);
-    pack(data.namedEntity(), buffer, position, comm);
-    pack(data.number(), buffer, position, comm);
-    pack(data.isUserDefined(), buffer, position, comm);
-}
-
-void pack(const SummaryConfig& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getKwds(), buffer, position, comm);
-    pack(data.getShortKwds(), buffer, position, comm);
-    pack(data.getSmryKwds(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -5867,6 +5853,18 @@ void unpack(BrineDensityTable& data, std::vector<char>& buffer, int& position,
 
     unpack(tableValues, buffer, position, comm);
     data = BrineDensityTable(tableValues);
+}
+
+void unpack(PvtwsaltTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    double refPressValue, refSaltConValue;
+    std::vector<double> tableValues;
+
+    unpack(refPressValue, buffer, position, comm);
+    unpack(refSaltConValue, buffer, position, comm);
+    unpack(tableValues, buffer, position, comm);
+    data = PvtwsaltTable(refPressValue, refSaltConValue, tableValues);
 }
 
 void unpack(SummaryNode& data,
