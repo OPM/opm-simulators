@@ -274,7 +274,7 @@ public:
 
     const void* realWaterPvt() const { return realWaterPvt_; }
 
-    bool operator==(const WaterPvtMultiplexer<Scalar,enableThermal>& data) const
+    bool operator==(const WaterPvtMultiplexer<Scalar,enableThermal, enableBrine>& data) const
     {
         if (this->approach() != data.approach())
             return false;
@@ -283,6 +283,9 @@ public:
         case ConstantCompressibilityWaterPvt:
             return *static_cast<const Opm::ConstantCompressibilityWaterPvt<Scalar>*>(realWaterPvt_) ==
                    *static_cast<const Opm::ConstantCompressibilityWaterPvt<Scalar>*>(data.realWaterPvt_);
+        case ConstantCompressibilityBrinePvt:
+            return *static_cast<const Opm::ConstantCompressibilityBrinePvt<Scalar>*>(realWaterPvt_) ==
+                   *static_cast<const Opm::ConstantCompressibilityBrinePvt<Scalar>*>(data.realWaterPvt_);
         case ThermalWaterPvt:
             return *static_cast<const Opm::WaterPvtThermal<Scalar>*>(realWaterPvt_) ==
                    *static_cast<const Opm::WaterPvtThermal<Scalar>*>(data.realWaterPvt_);
@@ -291,12 +294,15 @@ public:
         }
     }
 
-    WaterPvtMultiplexer<Scalar,enableThermal>& operator=(const WaterPvtMultiplexer<Scalar,enableThermal>& data)
+    WaterPvtMultiplexer<Scalar,enableThermal, enableBrine>& operator=(const WaterPvtMultiplexer<Scalar,enableThermal>& data)
     {
         approach_ = data.approach_;
         switch (approach_) {
         case ConstantCompressibilityWaterPvt:
             realWaterPvt_ = new Opm::ConstantCompressibilityWaterPvt<Scalar>(*static_cast<const Opm::ConstantCompressibilityWaterPvt<Scalar>*>(data.realWaterPvt_));
+            break;
+        case ConstantCompressibilityBrinePvt:
+            realWaterPvt_ = new Opm::ConstantCompressibilityBrinePvt<Scalar>(*static_cast<const Opm::ConstantCompressibilityBrinePvt<Scalar>*>(data.realWaterPvt_));
             break;
         case ThermalWaterPvt:
             realWaterPvt_ = new Opm::WaterPvtThermal<Scalar>(*static_cast<const Opm::WaterPvtThermal<Scalar>*>(data.realWaterPvt_));
