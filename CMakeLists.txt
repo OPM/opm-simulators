@@ -288,7 +288,7 @@ opm_add_test(ebos_plain
   LIBRARIES opmsimulators)
 
 if (BUILD_EBOS_EXTENSIONS)
-  foreach(TGT ebos_solvent ebos_polymer ebos_foam ebos_brine ebos_saltwater ebos_gasoil ebos_oilwater ebos_oilwaterpolymer ebos_thermal mebos)
+  foreach(TGT ebos_solvent ebos_polymer ebos_foam ebos_brine ebos_gasoil ebos_oilwater ebos_oilwaterpolymer ebos_thermal mebos)
     install(TARGETS ${TGT} DESTINATION bin)
     opm_add_bash_completion(${TGT})
   endforeach()
