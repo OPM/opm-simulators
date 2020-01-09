@@ -297,3 +297,10 @@ endif()
 if (OPM_ENABLE_PYTHON)
   add_subdirectory(python)
 endif()
+
+# must link libraries after target 'flow' has been defined
+if(CUDA_FOUND)
+  target_link_libraries( opmsimulators ${CUDA_cublas_LIBRARY} )
+  target_link_libraries( opmsimulators ${CUDA_cusparse_LIBRARY} )
+endif()
+

@@ -3421,6 +3421,30 @@ void pack(const BrineDensityTable& data,
     pack(data.getBrineDensityColumn(), buffer, position, comm);
 }
 
+void pack(const SummaryNode& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.keyword(), buffer, position, comm);
+    pack(data.category(), buffer, position, comm);
+    pack(data.location(), buffer, position, comm) ;
+    pack(data.type(), buffer, position, comm);
+    pack(data.namedEntity(), buffer, position, comm);
+    pack(data.number(), buffer, position, comm);
+    pack(data.isUserDefined(), buffer, position, comm);
+}
+
+void pack(const SummaryConfig& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getKwds(), buffer, position, comm);
+    pack(data.getShortKwds(), buffer, position, comm);
+    pack(data.getSmryKwds(), buffer, position, comm);
+}
+ 
+
+
 /// unpack routines
 
 template<class T>
