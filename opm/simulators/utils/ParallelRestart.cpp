@@ -3421,6 +3421,15 @@ void pack(const BrineDensityTable& data,
     pack(data.getBrineDensityColumn(), buffer, position, comm);
 }
 
+void pack(const PvtwsaltTable& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getReferencePressureValue(), buffer, position, comm);
+    pack(data.getReferenceSaltConcentrationValue(), buffer, position, comm);
+    pack(data.getTableValues(), buffer, position, comm);
+}
+
 void pack(const SummaryNode& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
