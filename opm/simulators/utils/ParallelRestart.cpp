@@ -5271,7 +5271,7 @@ void unpack(Dimension& data,
     unpack(name, buffer, position, comm);
     unpack(siScaling, buffer, position, comm);
     unpack(siOffset, buffer, position, comm);
-    data = Dimension(name, siScaling, siOffset);
+    data = Dimension(name, siScaling, siOffset, false);
 }
 
 void unpack(UnitSystem& data,
