@@ -403,9 +403,9 @@ class BlackOilBrineIntensiveQuantities<TypeTag, false>
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
 public:
-    void updateSaltConcentration_(const ElementContext& elemCtx OPM_OPTIM_UNUSED,
-                                  unsigned dofIdx OPM_OPTIM_UNUSED,
-                                  unsigned timeIdx OPM_OPTIM_UNUSED)
+    void updateSaltConcentration_(const ElementContext& elemCtx OPM_UNUSED,
+                                  unsigned dofIdx OPM_UNUSED,
+                                  unsigned timeIdx OPM_UNUSED)
     { }
 
     const Evaluation& saltConcentration() const
