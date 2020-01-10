@@ -755,8 +755,8 @@ ADD_PACK_PROTOTYPES(WellTracerProperties)
 ADD_PACK_PROTOTYPES(WList)
 ADD_PACK_PROTOTYPES(WListManager)
 
-template<class T>
-const T& packAndSend(const T& in, const auto& comm)
+template<class T, class C>
+const T& packAndSend(const T& in, const C& comm)
 {
     if (comm.size() == 0)
         return in;
@@ -770,8 +770,8 @@ const T& packAndSend(const T& in, const auto& comm)
     return in;
 }
 
-template<class T>
-void receiveAndUnpack(T& result, const auto& comm)
+template<class T, class C>
+void receiveAndUnpack(T& result, const C& comm)
 {
     int size;
     comm.broadcast(&size, 1, 0);
