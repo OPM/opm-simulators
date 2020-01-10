@@ -940,7 +940,8 @@ std::size_t packSize(const WaterPvtThermal<Scalar>& data,
                        packSize(data.enableThermalViscosity(), comm) +
                        packSize(data.enableInternalEnergy(), comm);
     size += packSize(bool(), comm);
-    if (data.isoThermalPvt())
+    using PvtApproach = WaterPvtThermal<Scalar>;
+    if (data.isoThermalPvt()->approach() != PvtApproach::IsothermalPvt::NoWaterPvt)
         size += packSize(*data.isoThermalPvt(), comm);
 
     return size;
@@ -2624,7 +2625,9 @@ void pack(const WaterPvtThermal<Scalar>& data,
     pack(data.enableThermalViscosity(), buffer, position, comm);
     pack(data.enableInternalEnergy(), buffer, position, comm);
     pack(data.isoThermalPvt() != nullptr, buffer, position, comm);
-    if (data.isoThermalPvt())
+
+    using PvtApproach = WaterPvtThermal<Scalar>;
+    if (data.isoThermalPvt()->approach() != PvtApproach::IsothermalPvt::NoWaterPvt)
         pack(*data.isoThermalPvt(), buffer, position, comm);
 }
 
@@ -4671,7 +4674,9 @@ void unpack(WaterPvtThermal<Scalar>& data,
     typename WaterPvtThermal<Scalar>::IsothermalPvt* pvt = nullptr;
     if (isothermal) {
         pvt = new typename WaterPvtThermal<Scalar>::IsothermalPvt;
-        unpack(*pvt, buffer, position, comm);
+        using PvtApproach = WaterPvtThermal<Scalar>;
+        if (pvt->approach() != PvtApproach::IsothermalPvt::NoWaterPvt)
+            unpack(*pvt, buffer, position, comm);
     }
     data = WaterPvtThermal<Scalar>(pvt, viscrefPress, watdentRefTemp,
                                    watdentCT1, watdentCT2,
