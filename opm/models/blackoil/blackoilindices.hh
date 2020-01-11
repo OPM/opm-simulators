@@ -35,7 +35,7 @@ namespace Opm {
  *
  * \brief The primary variable and equation indices for the black-oil model.
  */
-template <unsigned numSolventsV, unsigned numPolymersV, unsigned numEnergyV, bool enableFoam, unsigned PVOffset>
+template <unsigned numSolventsV, unsigned numPolymersV, unsigned numEnergyV, bool enableFoam, bool enableBrine, unsigned PVOffset>
 struct BlackOilIndices
 {
     //! Number of phases active at all times
@@ -67,8 +67,11 @@ struct BlackOilIndices
     //! Number of foam equations to be considered
     static const int numFoam = enableFoam? 1 : 0;
 
+    //! Number of salt equations to be considered
+    static const int numBrine = enableBrine? 1 : 0;
+
     //! The number of equations
-    static const int numEq = numPhases + numSolvents + numPolymers + numEnergy + numFoam;
+    static const int numEq = numPhases + numSolvents + numPolymers + numEnergy + numFoam + numBrine;
 
     //! \brief returns the index of "active" component
     static constexpr unsigned canonicalToActiveComponentIndex(unsigned compIdx)
@@ -113,9 +116,13 @@ struct BlackOilIndices
     static const int foamConcentrationIdx =
         enableFoam ? PVOffset + numPhases + numSolvents + numPolymers : -1000;
 
+    //! Index of the primary variable for the brine
+    static const int saltConcentrationIdx =
+        enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
+
     //! Index of the primary variable for temperature
     static const int temperatureIdx  =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : - 1000;
+        enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam + numBrine : - 1000;
 
 
     ////////
@@ -142,10 +149,14 @@ struct BlackOilIndices
     static const int contiFoamEqIdx =
         enableFoam ? PVOffset + numPhases + numSolvents + numPolymers : -1000;
 
+    //! Index of the continuity equation for the salt water component
+    static const int contiBrineEqIdx =
+        enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
+
 
     //! Index of the continuity equation for energy
     static const int contiEnergyEqIdx =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
+        enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam + numBrine: -1000;
 };
 
 } // namespace Opm
