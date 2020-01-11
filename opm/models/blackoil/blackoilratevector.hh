@@ -59,6 +59,7 @@ class BlackOilRateVector
     typedef BlackOilSolventModule<TypeTag> SolventModule;
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
     typedef BlackOilFoamModule<TypeTag> FoamModule;
+    typedef BlackOilBrineModule<TypeTag> BrineModule;
 
     enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
     enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
@@ -69,6 +70,7 @@ class BlackOilRateVector
     enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
     enum { enablePolymerMolarWeight = GET_PROP_VALUE(TypeTag, EnablePolymerMW) };
     enum { enableFoam = GET_PROP_VALUE(TypeTag, EnableFoam) };
+    enum { enableBrine = GET_PROP_VALUE(TypeTag, EnableBrine) };
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Dune::FieldVector<Evaluation, numEq> ParentType;
@@ -137,6 +139,10 @@ public:
 
         if ( enableFoam ) {
             throw std::logic_error("setMolarRate() not implemented for foam");
+        }
+
+        if ( enableBrine ) {
+            throw std::logic_error("setMolarRate() not implemented for salt water");
         }
 
         // convert to "surface volume" if requested
