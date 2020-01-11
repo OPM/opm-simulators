@@ -32,37 +32,21 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(EbosOilWaterTypeTag, INHERITS_FROM(EbosTypeTag));
+NEW_TYPE_TAG(EbosBrineTypeTag, INHERITS_FROM(EbosTypeTag));
 
-//! The indices indices which only enable oil and water
-SET_PROP(EbosOilWaterTypeTag, Indices)
-{
-private:
-    // it is unfortunately not possible to simply use 'TypeTag' here because this leads
-    // to cyclic definitions of some properties. if this happens the compiler error
-    // messages unfortunately are *really* confusing and not really helpful.
-    typedef typename GET_PROP_TYPE(TTAG(EbosTypeTag), FluidSystem) FluidSystem;
-
-public:
-    typedef Opm::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
-                                         GET_PROP_VALUE(TypeTag, EnablePolymer),
-                                         GET_PROP_VALUE(TypeTag, EnableEnergy),
-                                         GET_PROP_VALUE(TypeTag, EnableFoam),
-                                         GET_PROP_VALUE(TypeTag, EnableBrine),
-                                         /*PVOffset=*/0,
-                                         /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
-};
+// enable the brine extension of the black oil model
+SET_BOOL_PROP(EbosBrineTypeTag, EnableBrine, true);
 
 END_PROPERTIES
 
 namespace Opm {
 
-void ebosOilWaterSetDeck(Opm::Deck* deck,
-                         Opm::ParseContext* parseContext,
-                         Opm::ErrorGuard* errorGuard,
-                         double externalSetupTime)
+void ebosBrineSetDeck(Opm::Deck* deck,
+                     Opm::ParseContext* parseContext,
+                     Opm::ErrorGuard* errorGuard,
+                     double externalSetupTime)
 {
-    typedef TTAG(EbosOilWaterTypeTag) ProblemTypeTag;
+    typedef TTAG(EbosBrineTypeTag) ProblemTypeTag;
     typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
@@ -71,9 +55,9 @@ void ebosOilWaterSetDeck(Opm::Deck* deck,
     Vanguard::setExternalDeck(deck);
 }
 
-int ebosOilWaterMain(int argc, char **argv)
+int ebosBrineMain(int argc, char **argv)
 {
-    typedef TTAG(EbosOilWaterTypeTag) ProblemTypeTag;
+    typedef TTAG(EbosBrineTypeTag) ProblemTypeTag;
     return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 

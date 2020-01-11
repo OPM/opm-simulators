@@ -123,6 +123,15 @@ namespace Opm
         else
             pu.phase_pos[BlackoilPhases::Foam] = -1;
 
+        // Add brine info
+        pu.has_brine = phases.active(Phase::BRINE);
+        if (pu.has_brine) {
+            pu.phase_pos[BlackoilPhases::Brine] = numActivePhases;
+            ++ numActivePhases;
+        }
+        else
+            pu.phase_pos[BlackoilPhases::Brine] = -1;
+
         return pu;
     }
 

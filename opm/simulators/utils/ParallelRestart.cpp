@@ -324,6 +324,7 @@ HANDLE_AS_POD(TimeMap::StepData)
 HANDLE_AS_POD(VISCREFRecord)
 HANDLE_AS_POD(WATDENTRecord)
 HANDLE_AS_POD(Well::WellGuideRate)
+HANDLE_AS_POD(WellBrineProperties)
 HANDLE_AS_POD(Welldims)
 HANDLE_AS_POD(WellFoamProperties)
 HANDLE_AS_POD(WellPolymerProperties)
@@ -625,6 +626,8 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.getRockTable(), comm) +
            packSize(data.getViscrefTable(), comm) +
            packSize(data.getWatdentTable(), comm) +
+           packSize(data.getPvtwSaltTables(), comm) +
+           packSize(data.getBrineDensityTables(), comm) +
            packSize(data.getPlymwinjTables(), comm) +
            packSize(data.getSkprwatTables(), comm) +
            packSize(data.getSkprpolyTables(), comm) +
@@ -937,7 +940,8 @@ std::size_t packSize(const WaterPvtThermal<Scalar>& data,
                        packSize(data.enableThermalViscosity(), comm) +
                        packSize(data.enableInternalEnergy(), comm);
     size += packSize(bool(), comm);
-    if (data.isoThermalPvt())
+    using PvtApproach = WaterPvtThermal<Scalar>;
+    if (data.isoThermalPvt()->approach() != PvtApproach::IsothermalPvt::NoWaterPvt)
         size += packSize(*data.isoThermalPvt(), comm);
 
     return size;
@@ -1258,6 +1262,7 @@ std::size_t packSize(const Well& data,
                        packSize(data.getEconLimits(), comm) +
                        packSize(data.getFoamProperties(), comm) +
                        packSize(data.getPolymerProperties(), comm) +
+                       packSize(data.getBrineProperties(), comm) +
                        packSize(data.getTracerProperties(), comm) +
                        packSize(data.getProductionProperties(), comm) +
                        packSize(data.getInjectionProperties(), comm) +
@@ -1674,6 +1679,20 @@ std::size_t packSize(const Schedule& data,
            packSize(data.rftConfig(), comm) +
            packSize(data.getNupCol(), comm) +
            packSize(data.getWellGroupEvents(), comm);
+}
+
+std::size_t packSize(const BrineDensityTable& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getBrineDensityColumn(), comm);
+}
+
+std::size_t packSize(const PvtwsaltTable& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+   return packSize(data.getReferencePressureValue(), comm) +
+          packSize(data.getReferenceSaltConcentrationValue(), comm) +
+          packSize(data.getTableValues(), comm);
 }
 
 std::size_t packSize(const SummaryNode& data,
@@ -2271,6 +2290,8 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
     pack(data.getRockTable(), buffer, position, comm);
     pack(data.getViscrefTable(), buffer, position, comm);
     pack(data.getWatdentTable(), buffer, position, comm);
+    pack(data.getPvtwSaltTables(), buffer, position, comm);
+    pack(data.getBrineDensityTables(), buffer, position, comm);
     pack(data.getPlymwinjTables(), buffer, position, comm);
     pack(data.getSkprwatTables(), buffer, position, comm);
     pack(data.getSkprpolyTables(), buffer, position, comm);
@@ -2604,7 +2625,9 @@ void pack(const WaterPvtThermal<Scalar>& data,
     pack(data.enableThermalViscosity(), buffer, position, comm);
     pack(data.enableInternalEnergy(), buffer, position, comm);
     pack(data.isoThermalPvt() != nullptr, buffer, position, comm);
-    if (data.isoThermalPvt())
+
+    using PvtApproach = WaterPvtThermal<Scalar>;
+    if (data.isoThermalPvt()->approach() != PvtApproach::IsothermalPvt::NoWaterPvt)
         pack(*data.isoThermalPvt(), buffer, position, comm);
 }
 
@@ -2942,6 +2965,7 @@ void pack(const Well& data,
     pack(data.getEconLimits(), buffer, position, comm);
     pack(data.getFoamProperties(), buffer, position, comm);
     pack(data.getPolymerProperties(), buffer, position, comm);
+    pack(data.getBrineProperties(), buffer, position, comm);
     pack(data.getTracerProperties(), buffer, position, comm);
     pack(data.getProductionProperties(), buffer, position, comm);
     pack(data.getInjectionProperties(), buffer, position, comm);
@@ -3393,6 +3417,22 @@ void pack(const Schedule& data,
     pack(data.getWellGroupEvents(), buffer, position, comm);
 }
 
+void pack(const BrineDensityTable& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getBrineDensityColumn(), buffer, position, comm);
+}
+
+void pack(const PvtwsaltTable& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getReferencePressureValue(), buffer, position, comm);
+    pack(data.getReferenceSaltConcentrationValue(), buffer, position, comm);
+    pack(data.getTableValues(), buffer, position, comm);
+}
+
 void pack(const SummaryNode& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -3414,6 +3454,8 @@ void pack(const SummaryConfig& data,
     pack(data.getShortKwds(), buffer, position, comm);
     pack(data.getSmryKwds(), buffer, position, comm);
 }
+ 
+
 
 /// unpack routines
 
@@ -4127,6 +4169,8 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     RockTable rockTable;
     ViscrefTable viscrefTable;
     WatdentTable watdentTable;
+    std::vector<PvtwsaltTable> pvtwsaltTables;
+    std::vector<BrineDensityTable> bdensityTables;
     std::map<int, PlymwinjTable> plymwinjTables;
     std::map<int, SkprwatTable> skprwatTables;
     std::map<int, SkprpolyTable> skprpolyTables;
@@ -4150,6 +4194,8 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     unpack(rockTable, buffer, position, comm);
     unpack(viscrefTable, buffer, position, comm);
     unpack(watdentTable, buffer, position, comm);
+    unpack(pvtwsaltTables, buffer, position, comm);
+    unpack(bdensityTables, buffer, position, comm);
     unpack(plymwinjTables, buffer, position, comm);
     unpack(skprwatTables, buffer, position, comm);
     unpack(skprpolyTables, buffer, position, comm);
@@ -4169,7 +4215,8 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     unpack(rtemp, buffer, position, comm);
     data = TableManager(simpleTables, pvtgTables, pvtoTables, rock2dTables,
                         rock2dtrTables, pvtwTable, pvcdoTable, densityTable,
-                        rockTable, viscrefTable, watdentTable, plymwinjTables,
+                        rockTable, viscrefTable, watdentTable, pvtwsaltTables,
+                        bdensityTables, plymwinjTables,
                         skprwatTables, skprpolyTables, tabdims, regdims, eqldims,
                         aqudims, hasImptvd, hasEntpvd, hasEqlnum, jfunc, rtemp);
 }
@@ -4627,7 +4674,9 @@ void unpack(WaterPvtThermal<Scalar>& data,
     typename WaterPvtThermal<Scalar>::IsothermalPvt* pvt = nullptr;
     if (isothermal) {
         pvt = new typename WaterPvtThermal<Scalar>::IsothermalPvt;
-        unpack(*pvt, buffer, position, comm);
+        using PvtApproach = WaterPvtThermal<Scalar>;
+        if (pvt->approach() != PvtApproach::IsothermalPvt::NoWaterPvt)
+            unpack(*pvt, buffer, position, comm);
     }
     data = WaterPvtThermal<Scalar>(pvt, viscrefPress, watdentRefTemp,
                                    watdentCT1, watdentCT2,
@@ -5145,6 +5194,7 @@ void unpack(Well& data,
     auto econLimits = std::make_shared<WellEconProductionLimits>();
     auto foamProperties = std::make_shared<WellFoamProperties>();
     auto polymerProperties = std::make_shared<WellPolymerProperties>();
+    auto brineProperties = std::make_shared<WellBrineProperties>();
     auto tracerProperties = std::make_shared<WellTracerProperties>();
     auto connection = std::make_shared<WellConnections>();
     auto production = std::make_shared<Well::WellProductionProperties>();
@@ -5174,6 +5224,7 @@ void unpack(Well& data,
     unpack(*econLimits, buffer, position, comm);
     unpack(*foamProperties, buffer, position, comm);
     unpack(*polymerProperties, buffer, position, comm);
+    unpack(*brineProperties, buffer, position, comm);
     unpack(*tracerProperties, buffer, position, comm);
     unpack(*production, buffer, position, comm);
     unpack(*injection, buffer, position, comm);
@@ -5187,8 +5238,8 @@ void unpack(Well& data,
                 ref_depth, phase, ordering, units, udq_undefined, status,
                 drainageRadius, allowCrossFlow, automaticShutIn, isProducer,
                 guideRate, efficiencyFactor, solventFraction, prediction_mode,
-                econLimits, foamProperties, polymerProperties, tracerProperties,
-                connection, production, injection, segments);
+                econLimits, foamProperties, polymerProperties, brineProperties,
+                tracerProperties, connection, production, injection, segments);
 }
 
 template<class T>
@@ -5845,6 +5896,27 @@ void unpack(Schedule& data, std::vector<char>& buffer, int& position,
                     wListManager, udqConfig, udqActive, guideRateConfig,
                     gconSale, gconSump, globalWhistCtlMode, actions,
                     rftConfig, nupCol, wellGroupEvents);
+}
+
+void unpack(BrineDensityTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<double> tableValues;
+
+    unpack(tableValues, buffer, position, comm);
+    data = BrineDensityTable(tableValues);
+}
+
+void unpack(PvtwsaltTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    double refPressValue, refSaltConValue;
+    std::vector<double> tableValues;
+
+    unpack(refPressValue, buffer, position, comm);
+    unpack(refSaltConValue, buffer, position, comm);
+    unpack(tableValues, buffer, position, comm);
+    data = PvtwsaltTable(refPressValue, refSaltConValue, tableValues);
 }
 
 void unpack(SummaryNode& data,

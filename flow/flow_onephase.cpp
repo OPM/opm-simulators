@@ -42,6 +42,7 @@ public:
                                          GET_PROP_VALUE(TypeTag, EnablePolymer),
                                          GET_PROP_VALUE(TypeTag, EnableEnergy),
                                          GET_PROP_VALUE(TypeTag, EnableFoam),
+                                         GET_PROP_VALUE(TypeTag, EnableBrine),
                                          /*PVOffset=*/0,
                                          /*enebledCompIdx=*/FluidSystem::waterCompIdx>
         type;
@@ -54,6 +55,7 @@ private:
     enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
     enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableBrine = GET_PROP_VALUE(TypeTag, EnableBrine) };
     enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
@@ -66,6 +68,7 @@ public:
                                     enableTemperature,
                                     enableEnergy,
                                     compositionSwitchEnabled,
+                                    enableBrine,
                                     Indices::numPhases>
         type;
 };

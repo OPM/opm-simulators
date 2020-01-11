@@ -75,6 +75,7 @@ namespace Action {
 }
 
 class Aqudims;
+class BrineDensityTable;
 class ColumnSchema;
 class Connection;
 class DeckItem;
@@ -109,6 +110,7 @@ class PvcdoTable;
 class PvtgTable;
 class PvtoTable;
 class PVTWRecord;
+class PvtwsaltTable;
 class PvtwTable;
 class Regdims;
 class RestartConfig;
@@ -633,6 +635,7 @@ ADD_PACK_PROTOTYPES(Action::ASTNode)
 ADD_PACK_PROTOTYPES(Action::Condition)
 ADD_PACK_PROTOTYPES(Action::Quantity)
 ADD_PACK_PROTOTYPES(Aqudims)
+ADD_PACK_PROTOTYPES(BrineDensityTable)
 ADD_PACK_PROTOTYPES(ColumnSchema)
 ADD_PACK_PROTOTYPES(Connection)
 ADD_PACK_PROTOTYPES(data::CellData)
@@ -686,6 +689,7 @@ ADD_PACK_PROTOTYPES(PvcdoTable)
 ADD_PACK_PROTOTYPES(PvtgTable)
 ADD_PACK_PROTOTYPES(PvtoTable)
 ADD_PACK_PROTOTYPES(PVTWRecord)
+ADD_PACK_PROTOTYPES(PvtwsaltTable)
 ADD_PACK_PROTOTYPES(PvtwTable)
 ADD_PACK_PROTOTYPES(Regdims)
 ADD_PACK_PROTOTYPES(RestartConfig)
@@ -742,6 +746,7 @@ ADD_PACK_PROTOTYPES(Well)
 ADD_PACK_PROTOTYPES(Well::WellGuideRate)
 ADD_PACK_PROTOTYPES(Well::WellInjectionProperties)
 ADD_PACK_PROTOTYPES(Well::WellProductionProperties)
+ADD_PACK_PROTOTYPES(WellBrineProperties)
 ADD_PACK_PROTOTYPES(WellConnections)
 ADD_PACK_PROTOTYPES(Welldims)
 ADD_PACK_PROTOTYPES(WellEconProductionLimits)

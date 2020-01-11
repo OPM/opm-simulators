@@ -275,6 +275,7 @@ Opm::Well getFullWell()
                      std::make_shared<Opm::WellEconProductionLimits>(),
                      std::make_shared<Opm::WellFoamProperties>(),
                      std::make_shared<Opm::WellPolymerProperties>(),
+                     std::make_shared<Opm::WellBrineProperties>(),
                      std::make_shared<Opm::WellTracerProperties>(),
                      std::make_shared<Opm::WellConnections>(),
                      std::make_shared<Opm::Well::WellProductionProperties>(),
@@ -1191,6 +1192,8 @@ BOOST_AUTO_TEST_CASE(TableManager)
                            Opm::RockTable({Opm::ROCKRecord{1.0,2.0}}),
                            Opm::ViscrefTable({Opm::VISCREFRecord{1.0, 2.0}}),
                            Opm::WatdentTable({Opm::WATDENTRecord{1.0, 2.0, 3.0}}),
+                           {{1.0, 2.0, {1.0, 2.0, 3.0}}},
+                           {{{1.0, 2.0, 3.0}}},
                            {{1, Opm::PlymwinjTable({1.0}, {2.0}, 1, {{1.0}, {2.0}})}},
                            {{2, Opm::SkprwatTable({1.0}, {2.0}, 1, {{1.0}, {2.0}})}},
                            {{3, Opm::SkprpolyTable({1.0}, {2.0}, 1, {{1.0}, {2.0}}, 3.0)}},
@@ -2342,6 +2345,15 @@ BOOST_AUTO_TEST_CASE(Schedule)
 #endif
 }
 
+BOOST_AUTO_TEST_CASE(BrineDensityTable)
+{
+#ifdef HAVE_MPI
+    Opm::BrineDensityTable val1({1.0, 2.0, 3.0});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
 
 BOOST_AUTO_TEST_CASE(SummaryNode)
 {
@@ -2371,6 +2383,28 @@ BOOST_AUTO_TEST_CASE(SummaryConfig)
                                  .isUserDefined(true);
     Opm::SummaryConfig val1({node}, {"test1", "test2"}, {"test3", "test4"});
 
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(PvtwsaltTable)
+{
+#ifdef HAVE_MPI
+    Opm::PvtwsaltTable val1(1.0, 2.0, {3.0, 4.0, 5.0});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(WellBrineProperties)
+{
+#ifdef HAVE_MPI
+    Opm::WellBrineProperties val1{1.0};
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
