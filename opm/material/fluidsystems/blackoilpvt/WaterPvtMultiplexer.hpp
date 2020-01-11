@@ -28,12 +28,18 @@
 #define OPM_WATER_PVT_MULTIPLEXER_HPP
 
 #include "ConstantCompressibilityWaterPvt.hpp"
+#include "ConstantCompressibilityBrinePvt.hpp"
 #include "WaterPvtThermal.hpp"
 
 #define OPM_WATER_PVT_MULTIPLEXER_CALL(codeToCall)                      \
     switch (approach_) {                                                \
     case ConstantCompressibilityWaterPvt: {                             \
         auto& pvtImpl = getRealPvt<ConstantCompressibilityWaterPvt>();  \
+        codeToCall;                                                     \
+        break;                                                          \
+    }                                                                   \
+    case ConstantCompressibilityBrinePvt: {                             \
+        auto& pvtImpl = getRealPvt<ConstantCompressibilityBrinePvt>();  \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
@@ -51,7 +57,7 @@ namespace Opm {
  * \brief This class represents the Pressure-Volume-Temperature relations of the water
  *        phase in the black-oil model.
  */
-template <class Scalar, bool enableThermal = true>
+template <class Scalar, bool enableThermal = true, bool enableBrine = true>
 class WaterPvtMultiplexer
 {
 public:
@@ -59,6 +65,7 @@ public:
 
     enum WaterPvtApproach {
         NoWaterPvt,
+        ConstantCompressibilityBrinePvt,
         ConstantCompressibilityWaterPvt,
         ThermalWaterPvt
     };
@@ -86,6 +93,10 @@ public:
             delete &getRealPvt<ConstantCompressibilityWaterPvt>();
             break;
         }
+        case ConstantCompressibilityBrinePvt: {
+            delete &getRealPvt<ConstantCompressibilityBrinePvt>();
+            break;
+        }
         case ThermalWaterPvt: {
             delete &getRealPvt<ThermalWaterPvt>();
             break;
@@ -111,6 +122,8 @@ public:
             setApproach(ThermalWaterPvt);
         else if (deck.hasKeyword("PVTW"))
             setApproach(ConstantCompressibilityWaterPvt);
+        else if (enableBrine && deck.hasKeyword("PVTWSALT"))
+            setApproach(ConstantCompressibilityBrinePvt);
 
         OPM_WATER_PVT_MULTIPLEXER_CALL(pvtImpl.initFromDeck(deck, eclState));
     }
@@ -141,7 +154,37 @@ public:
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,
                          const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.viscosity(regionIdx, temperature, pressure)); return 0; }
+    {
+       // assert(realWaterPvt_ != ConstantCompressibilityBrinePvt );
+        const Evaluation saltconcentration = 0.0;
+        OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.viscosity(regionIdx, temperature, pressure, saltconcentration));
+        return 0;
+    }
+
+    /*!
+     * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
+     */
+    template <class Evaluation>
+    Evaluation viscosity(unsigned regionIdx,
+                         const Evaluation& temperature,
+                         const Evaluation& pressure,
+                         const Evaluation& saltconcentration) const
+    {
+        OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.viscosity(regionIdx, temperature, pressure, saltconcentration));
+        return 0;
+    }
+
+    /*!
+     * \brief Returns the formation volume factor [-] of the fluid phase.
+     */
+    template <class Evaluation>
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& temperature,
+                                            const Evaluation& pressure,
+                                            const Evaluation& saltconcentration) const
+    {   OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.inverseFormationVolumeFactor(regionIdx, temperature, pressure, saltconcentration));
+        return 0;
+    }
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
@@ -150,13 +193,21 @@ public:
     Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
                                             const Evaluation& temperature,
                                             const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.inverseFormationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
+    {
+        const Evaluation saltconcentration = 0.0;
+        OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.inverseFormationVolumeFactor(regionIdx, temperature, pressure, saltconcentration));
+        return 0;
+    }
 
     void setApproach(WaterPvtApproach appr)
     {
         switch (appr) {
         case ConstantCompressibilityWaterPvt:
             realWaterPvt_ = new Opm::ConstantCompressibilityWaterPvt<Scalar>;
+            break;
+
+        case ConstantCompressibilityBrinePvt:
+            realWaterPvt_ = new Opm::ConstantCompressibilityBrinePvt<Scalar>;
             break;
 
         case ThermalWaterPvt:
@@ -194,6 +245,20 @@ public:
     }
 
     template <WaterPvtApproach approachV>
+    typename std::enable_if<approachV == ConstantCompressibilityBrinePvt, Opm::ConstantCompressibilityBrinePvt<Scalar> >::type& getRealPvt()
+    {
+    assert(approach() == approachV);
+    return *static_cast<Opm::ConstantCompressibilityBrinePvt<Scalar>* >(realWaterPvt_);
+    }
+
+    template <WaterPvtApproach approachV>
+    typename std::enable_if<approachV == ConstantCompressibilityBrinePvt, const Opm::ConstantCompressibilityBrinePvt<Scalar> >::type& getRealPvt() const
+    {
+    assert(approach() == approachV);
+    return *static_cast<Opm::ConstantCompressibilityBrinePvt<Scalar>* >(realWaterPvt_);
+    }
+
+    template <WaterPvtApproach approachV>
     typename std::enable_if<approachV == ThermalWaterPvt, Opm::WaterPvtThermal<Scalar> >::type& getRealPvt()
     {
         assert(approach() == approachV);
@@ -209,7 +274,7 @@ public:
 
     const void* realWaterPvt() const { return realWaterPvt_; }
 
-    bool operator==(const WaterPvtMultiplexer<Scalar,enableThermal>& data) const
+    bool operator==(const WaterPvtMultiplexer<Scalar,enableThermal, enableBrine>& data) const
     {
         if (this->approach() != data.approach())
             return false;
@@ -218,6 +283,9 @@ public:
         case ConstantCompressibilityWaterPvt:
             return *static_cast<const Opm::ConstantCompressibilityWaterPvt<Scalar>*>(realWaterPvt_) ==
                    *static_cast<const Opm::ConstantCompressibilityWaterPvt<Scalar>*>(data.realWaterPvt_);
+        case ConstantCompressibilityBrinePvt:
+            return *static_cast<const Opm::ConstantCompressibilityBrinePvt<Scalar>*>(realWaterPvt_) ==
+                   *static_cast<const Opm::ConstantCompressibilityBrinePvt<Scalar>*>(data.realWaterPvt_);
         case ThermalWaterPvt:
             return *static_cast<const Opm::WaterPvtThermal<Scalar>*>(realWaterPvt_) ==
                    *static_cast<const Opm::WaterPvtThermal<Scalar>*>(data.realWaterPvt_);
@@ -226,12 +294,15 @@ public:
         }
     }
 
-    WaterPvtMultiplexer<Scalar,enableThermal>& operator=(const WaterPvtMultiplexer<Scalar,enableThermal>& data)
+    WaterPvtMultiplexer<Scalar,enableThermal, enableBrine>& operator=(const WaterPvtMultiplexer<Scalar,enableThermal>& data)
     {
         approach_ = data.approach_;
         switch (approach_) {
         case ConstantCompressibilityWaterPvt:
             realWaterPvt_ = new Opm::ConstantCompressibilityWaterPvt<Scalar>(*static_cast<const Opm::ConstantCompressibilityWaterPvt<Scalar>*>(data.realWaterPvt_));
+            break;
+        case ConstantCompressibilityBrinePvt:
+            realWaterPvt_ = new Opm::ConstantCompressibilityBrinePvt<Scalar>(*static_cast<const Opm::ConstantCompressibilityBrinePvt<Scalar>*>(data.realWaterPvt_));
             break;
         case ThermalWaterPvt:
             realWaterPvt_ = new Opm::WaterPvtThermal<Scalar>(*static_cast<const Opm::WaterPvtThermal<Scalar>*>(data.realWaterPvt_));

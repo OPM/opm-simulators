@@ -42,7 +42,7 @@
 #endif
 
 namespace Opm {
-template <class Scalar, bool enableThermal>
+template <class Scalar, bool enableThermal, bool enableBrine>
 class WaterPvtMultiplexer;
 
 /*!
@@ -56,7 +56,7 @@ class WaterPvtThermal
 {
 public:
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
-    typedef WaterPvtMultiplexer<Scalar, /*enableThermal=*/false> IsothermalPvt;
+    typedef WaterPvtMultiplexer<Scalar, /*enableThermal=*/false, false> IsothermalPvt;
 
     WaterPvtThermal()
     {
@@ -269,9 +269,10 @@ public:
     template <class Evaluation>
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,
-                         const Evaluation& pressure) const
+                         const Evaluation& pressure,
+                         const Evaluation& saltconcentration) const
     {
-        const auto& isothermalMu = isothermalPvt_->viscosity(regionIdx, temperature, pressure);
+        const auto& isothermalMu = isothermalPvt_->viscosity(regionIdx, temperature, pressure, saltconcentration);
         if (!enableThermalViscosity())
             return isothermalMu;
 
@@ -289,10 +290,11 @@ public:
     template <class Evaluation>
     Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
                                             const Evaluation& temperature,
-                                            const Evaluation& pressure) const
+                                            const Evaluation& pressure,
+                                            const Evaluation& saltconcentration) const
     {
         if (!enableThermalDensity())
-            return isothermalPvt_->inverseFormationVolumeFactor(regionIdx, temperature, pressure);
+            return isothermalPvt_->inverseFormationVolumeFactor(regionIdx, temperature, pressure, saltconcentration);
 
         Scalar BwRef = pvtwRefB_[regionIdx];
         Scalar TRef = watdentRefTemp_[regionIdx];

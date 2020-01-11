@@ -247,7 +247,8 @@ inline void testAll()
     refTmp = 1.1e-3; // the deck value is given in cP, while the SI units use Pa s...
     tmp = constCompWaterPvt.viscosity(/*regionIdx=*/0,
                                       /*temperature=*/273.15 + 20.0,
-                                      /*pressure=*/1e5);
+                                      /*pressure=*/1e5,
+                                      /*saltconcentration=*/0.0);
     if (std::abs(tmp - refTmp)  > tolerance)
         throw std::logic_error("The reference water viscosity at region 0 is supposed to be "+std::to_string(refTmp)
                                +". (is "+std::to_string(tmp)+")");
@@ -255,7 +256,8 @@ inline void testAll()
     refTmp = 1.2e-3;
     tmp = constCompWaterPvt.viscosity(/*regionIdx=*/1,
                                       /*temperature=*/273.15 + 20.0,
-                                      /*pressure=*/2e5);
+                                      /*pressure=*/2e5,
+                                      /*saltconcentration=*/0.0);
     if (std::abs(tmp - refTmp)  > tolerance)
         throw std::logic_error("The reference water viscosity at region 1 is supposed to be "+std::to_string(refTmp)
                                +". (is "+std::to_string(tmp)+")");
