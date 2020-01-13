@@ -1169,7 +1169,8 @@ std::size_t packSize(const WellTracerProperties& data,
 std::size_t packSize(const UDAValue& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
-    return packSize(data.is<double>(), comm) +
+    return packSize(data.get_dim(), comm) +
+           packSize(data.is<double>(), comm) +
            (data.is<double>() ? packSize(data.get<double>(), comm) :
                                 packSize(data.get<std::string>(), comm));
 }
@@ -2866,6 +2867,7 @@ void pack(const UDAValue& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
+    pack(data.get_dim(), buffer, position, comm);
     pack(data.is<double>(), buffer, position, comm);
     if (data.is<double>())
         pack(data.get<double>(), buffer, position, comm);
@@ -4974,15 +4976,17 @@ void unpack(UDAValue& data,
             Dune::MPIHelper::MPICommunicator comm)
 {
     bool isDouble;
+    Dimension dim;
+    unpack(dim, buffer, position, comm);
     unpack(isDouble, buffer, position, comm);
     if (isDouble) {
         double val;
         unpack(val, buffer, position, comm);
-        data = UDAValue(val);
+        data = UDAValue(val, dim);
     } else {
         std::string val;
         unpack(val, buffer, position, comm);
-        data = UDAValue(val);
+        data = UDAValue(val, dim);
     }
 }
 
