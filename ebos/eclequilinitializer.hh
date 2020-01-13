@@ -85,6 +85,7 @@ class EclEquilInitializer
     enum { dimWorld = GridView::dimensionworld };
     enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
     enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableBrine = GET_PROP_VALUE(TypeTag, EnableBrine) };
 
 public:
     // NB: setting the enableEnergy argument to true enables storage of enthalpy and
@@ -94,6 +95,7 @@ public:
                                     enableTemperature,
                                     enableEnergy,
                                     Indices::gasEnabled,
+                                    enableBrine,
                                     Indices::numPhases
                                     > ScalarFluidState;
 
