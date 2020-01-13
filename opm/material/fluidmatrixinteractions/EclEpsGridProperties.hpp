@@ -73,7 +73,6 @@ std::vector<T> compressed_copy(const std::vector<T>& global_vector, const std::v
 }
 
 
-#ifdef ENABLE_3DPROPS_TESTING
 
 std::vector<double> try_get(const FieldPropsManager& fp, const std::string& keyword, const std::vector<int>& compressedToCartesianElemIdx) {
     if (fp.has<double>(keyword))
@@ -82,17 +81,6 @@ std::vector<double> try_get(const FieldPropsManager& fp, const std::string& keyw
     return {};
 }
 
-#else
-
-
-std::vector<double> try_get(const Eclipse3DProperties& props, const std::string& keyword, const std::vector<int>& compressedToCartesianElemIdx) {
-    if (props.hasDeckDoubleGridProperty(keyword))
-        return compressed_copy(props.getDoubleGridProperty(keyword).getData(), compressedToCartesianElemIdx);
-
-    return {};
-}
-
-#endif
 }
 
 
@@ -109,7 +97,6 @@ public:
     {
         std::string kwPrefix = useImbibition?"I":"";
 
-#ifdef ENABLE_3DPROPS_TESTING
         const auto& fp = eclState.fieldProps();
 
         if (useImbibition)
@@ -149,44 +136,6 @@ public:
             this->compressed_permz= compressed_copy(fp.get_global<double>("PERMZ"), compressedToCartesianElemIdx);
         else
             this->compressed_permz= this->compressed_permx;
-#else
-        const auto& ecl3dProps = eclState.get3DProperties();
-
-        if (useImbibition)
-            compressed_satnum = compressed_copy(ecl3dProps.getIntGridProperty("IMBNUM").getData(), compressedToCartesianElemIdx);
-        else
-            compressed_satnum = compressed_copy(ecl3dProps.getIntGridProperty("SATNUM").getData(), compressedToCartesianElemIdx);
-
-        this->compressed_swl = try_get( ecl3dProps, kwPrefix+"SWL", compressedToCartesianElemIdx);
-        this->compressed_sgl = try_get( ecl3dProps, kwPrefix+"SGL", compressedToCartesianElemIdx);
-        this->compressed_swcr = try_get( ecl3dProps, kwPrefix+"SWCR", compressedToCartesianElemIdx);
-        this->compressed_sgcr = try_get( ecl3dProps, kwPrefix+"SGCR", compressedToCartesianElemIdx);
-        this->compressed_sowcr = try_get( ecl3dProps, kwPrefix+"SOWCR", compressedToCartesianElemIdx);
-        this->compressed_sogcr = try_get( ecl3dProps, kwPrefix+"SOGCR", compressedToCartesianElemIdx);
-        this->compressed_swu = try_get( ecl3dProps, kwPrefix+"SWU", compressedToCartesianElemIdx);
-        this->compressed_sgu = try_get( ecl3dProps, kwPrefix+"SGU", compressedToCartesianElemIdx);
-        this->compressed_pcw = try_get( ecl3dProps, kwPrefix+"PCW", compressedToCartesianElemIdx);
-        this->compressed_pcg = try_get( ecl3dProps, kwPrefix+"PCG", compressedToCartesianElemIdx);
-        this->compressed_krw = try_get( ecl3dProps, kwPrefix+"KRW", compressedToCartesianElemIdx);
-        this->compressed_kro = try_get( ecl3dProps, kwPrefix+"KRO", compressedToCartesianElemIdx);
-        this->compressed_krg = try_get( ecl3dProps, kwPrefix+"KRG", compressedToCartesianElemIdx);
-
-        // _may_ be needed to calculate the Leverett capillary pressure scaling factor
-        if (ecl3dProps.hasDeckDoubleGridProperty("PORO"))
-            this->compressed_poro = compressed_copy(ecl3dProps.getDoubleGridProperty("PORO").getData(), compressedToCartesianElemIdx);
-
-        this->compressed_permx = compressed_copy(ecl3dProps.getDoubleGridProperty("PERMX").getData(), compressedToCartesianElemIdx);
-
-        if (ecl3dProps.hasDeckDoubleGridProperty("PERMY"))
-            this->compressed_permy = compressed_copy(ecl3dProps.getDoubleGridProperty("PERMY").getData(), compressedToCartesianElemIdx);
-        else
-            this->compressed_permy = compressed_copy(ecl3dProps.getDoubleGridProperty("PERMX").getData(), compressedToCartesianElemIdx);
-
-        if (ecl3dProps.hasDeckDoubleGridProperty("PERMZ"))
-            this->compressed_permz = compressed_copy(ecl3dProps.getDoubleGridProperty("PERMZ").getData(), compressedToCartesianElemIdx);
-        else
-            this->compressed_permz = compressed_copy(ecl3dProps.getDoubleGridProperty("PERMZ").getData(), compressedToCartesianElemIdx);
-#endif
     }
 
 #endif
