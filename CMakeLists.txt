@@ -122,6 +122,8 @@ if (HAVE_OPM_TESTS)
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
 endif()
 
+add_custom_target(opm-simulators_prepare)
+
 opm_set_test_driver(${CMAKE_CURRENT_SOURCE_DIR}/tests/run-parallel-unitTest.sh "")
 
 opm_add_test(test_gatherconvergencereport
