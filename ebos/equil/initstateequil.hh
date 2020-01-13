@@ -901,24 +901,19 @@ std::vector<int>
 equilnum(const Opm::EclipseState& eclipseState,
          const Grid& grid)
 {
-    std::vector<int> eqlnum;
-    if (eclipseState.get3DProperties().hasDeckIntGridProperty("EQLNUM")) {
+    std::vector<int> eqlnum(grid.size(0), 0);
+
+    if (eclipseState.fieldProps().has<int>("EQLNUM")) {
         const int nc = grid.size(/*codim=*/0);
         eqlnum.resize(nc);
-        const std::vector<int>& e =
-            eclipseState.get3DProperties().getIntGridProperty("EQLNUM").getData();
+
+        const auto& e = eclipseState.fieldProps().get_global<int>("EQLNUM");
         const int* gc = Opm::UgGridHelpers::globalCell(grid);
         for (int cell = 0; cell < nc; ++cell) {
             const int deckPos = (gc == NULL) ? cell : gc[cell];
             eqlnum[cell] = e[deckPos] - 1;
         }
     }
-    else {
-        // No explicit equilibration region.
-        // All cells in region zero.
-        eqlnum.assign(grid.size(/*codim=*/0), 0);
-    }
-
     return eqlnum;
 }
 
@@ -945,17 +940,21 @@ public:
           rv_(grid.size(/*codim=*/0))
     {
         //Check for presence of kw SWATINIT
-        if (eclipseState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT") && applySwatInit) {
-            const std::vector<double>& swatInitEcl = eclipseState.
-                get3DProperties().getDoubleGridProperty("SWATINIT").getData();
+        if (applySwatInit) {
             const int nc = grid.size(/*codim=*/0);
-            swatInit_.resize(nc);
-            const int* gc = Opm::UgGridHelpers::globalCell(grid);
-            for (int c = 0; c < nc; ++c) {
-                const int deckPos = (gc == NULL) ? c : gc[c];
-                swatInit_[c] = swatInitEcl[deckPos];
+
+            if (eclipseState.fieldProps().has<double>("SWATINIT")) {
+                const std::vector<double>& swatInitEcl = eclipseState.fieldProps().get_global<double>("SWATINIT");
+                const int* gc = Opm::UgGridHelpers::globalCell(grid);
+                swatInit_.resize(nc);
+                for (int c = 0; c < nc; ++c) {
+                    const int deckPos = (gc == NULL) ? c : gc[c];
+                    swatInit_[c] = swatInitEcl[deckPos];
+                }
             }
         }
+
+
         // Get the equilibration records.
         const std::vector<Opm::EquilRecord> rec = getEquil(eclipseState);
         const auto& tables = eclipseState.getTableManager();
@@ -1061,7 +1060,7 @@ public:
             }
         }
 
-        // extract the initial temperature
+        // EXTRACT the initial temperature
         updateInitialTemperature_(eclipseState);
 
         // Compute pressures, saturations, rs and rv factors.
@@ -1084,9 +1083,7 @@ private:
     void updateInitialTemperature_(const Opm::EclipseState& eclState)
     {
         // Get the initial temperature data
-        const std::vector<double>& tempiData =
-            eclState.get3DProperties().getDoubleGridProperty("TEMPI").getData();
-
+        std::vector<double> tempiData = eclState.fieldProps().get_global<double>("TEMPI");
         temperature_ = tempiData;
     }
 
@@ -1109,8 +1106,7 @@ private:
         std::vector<int> cellPvtRegionIdx(numCompressed);
 
         //Get the PVTNUM data
-        const std::vector<int>& pvtnumData = eclState.get3DProperties().getIntGridProperty("PVTNUM").getData();
-
+        const auto pvtnumData = eclState.fieldProps().get_global<int>("PVTNUM");
         // Convert PVTNUM data into an array of indices for compressed cells. Remember
         // that Eclipse uses Fortran-style indices which start at 1 instead of 0, so we
         // need to subtract 1.

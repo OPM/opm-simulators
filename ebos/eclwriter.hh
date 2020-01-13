@@ -406,7 +406,7 @@ public:
     void beginRestart()
     {
         bool enableHysteresis = simulator_.problem().materialLawManager()->enableHysteresis();
-        bool enableSwatinit = simulator_.vanguard().eclState().get3DProperties().hasDeckDoubleGridProperty("SWATINIT");
+        bool enableSwatinit = simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT");
         std::vector<Opm::RestartKey> solutionKeys{
             {"PRESSURE", Opm::UnitSystem::measure::pressure},
             {"SWAT", Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},

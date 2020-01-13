@@ -34,6 +34,7 @@
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
@@ -491,21 +492,19 @@ private:
         const auto& gridView = vanguard_.gridView();
         const auto& cartMapper = vanguard_.cartesianIndexMapper();
         const auto& cartDims = cartMapper.cartesianDimensions();
-        const auto& properties = vanguard_.eclState().get3DProperties();
-
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
 #else
         ElementMapper elemMapper(gridView);
 #endif
 
-        const auto& inputTranx = properties.getDoubleGridProperty("TRANX");
-        const auto& inputTrany = properties.getDoubleGridProperty("TRANY");
-        const auto& inputTranz = properties.getDoubleGridProperty("TRANZ");
-        const auto& inputTranxData = properties.getDoubleGridProperty("TRANX").getData();
-        const auto& inputTranyData = properties.getDoubleGridProperty("TRANY").getData();
-        const auto& inputTranzData = properties.getDoubleGridProperty("TRANZ").getData();
-
+        const auto& fp = vanguard_.eclState().fieldProps();
+        const auto& inputTranxData = fp.get_global_double("TRANX");
+        const auto& inputTranyData = fp.get_global_double("TRANY");
+        const auto& inputTranzData = fp.get_global_double("TRANZ");
+        bool tranx_deckAssigned = false;                     // Ohh my ....
+        bool trany_deckAssigned = false;
+        bool tranz_deckAssigned = false;
         // compute the transmissibilities for all intersections
         auto elemIt = gridView.template begin</*codim=*/ 0>();
         const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
@@ -532,7 +531,7 @@ private:
                 int gc2 = std::max(cartMapper.cartesianIndex(c1), cartMapper.cartesianIndex(c2));
 
                 if (gc2 - gc1 == 1) {
-                    if (inputTranx.deckAssigned())
+                    if (tranx_deckAssigned)
                         // set simulator internal transmissibilities to values from inputTranx
                         trans_[isId] = inputTranxData[gc1];
                     else
@@ -540,7 +539,7 @@ private:
                         trans_[isId] *= inputTranxData[gc1];
                 }
                 else if (gc2 - gc1 == cartDims[0]) {
-                    if (inputTrany.deckAssigned())
+                    if (trany_deckAssigned)
                         // set simulator internal transmissibilities to values from inputTrany
                         trans_[isId] = inputTranyData[gc1];
                     else
@@ -548,7 +547,7 @@ private:
                         trans_[isId] *= inputTranyData[gc1];
                 }
                 else if (gc2 - gc1 == cartDims[0]*cartDims[1]) {
-                    if (inputTranz.deckAssigned())
+                    if (tranz_deckAssigned)
                         // set simulator internal transmissibilities to values from inputTranz
                         trans_[isId] = inputTranzData[gc1];
                     else
@@ -703,8 +702,6 @@ private:
 
     void extractPermeability_()
     {
-        const auto& props = vanguard_.eclState().get3DProperties();
-
         unsigned numElem = vanguard_.gridView().size(/*codim=*/0);
         permeability_.resize(numElem);
 
@@ -712,15 +709,17 @@ private:
         // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
         // simulation grid might remove a few elements. (e.g. because it is distributed
         // over several processes.)
-        if (props.hasDeckDoubleGridProperty("PERMX")) {
-            const std::vector<double>& permxData =
-                props.getDoubleGridProperty("PERMX").getData();
+        const auto& fp = vanguard_.eclState().fieldProps();
+        if (fp.has_double("PERMX")) {
+            const std::vector<double>& permxData = fp.get_global_double("PERMX");
+
             std::vector<double> permyData(permxData);
-            if (props.hasDeckDoubleGridProperty("PERMY"))
-                permyData = props.getDoubleGridProperty("PERMY").getData();
+            if (fp.has_double("PERMY"))
+                permyData = fp.get_global_double("PERMY");
+
             std::vector<double> permzData(permxData);
-            if (props.hasDeckDoubleGridProperty("PERMZ"))
-                permzData = props.getDoubleGridProperty("PERMZ").getData();
+            if (fp.has_double("PERMZ"))
+                permzData = fp.get_global_double("PERMZ");
 
             for (size_t dofIdx = 0; dofIdx < numElem; ++ dofIdx) {
                 unsigned cartesianElemIdx = vanguard_.cartesianIndex(dofIdx);
@@ -731,6 +730,7 @@ private:
             }
 
             // for now we don't care about non-diagonal entries
+
         }
         else
             throw std::logic_error("Can't read the intrinsic permeability from the ecl state. "
@@ -859,22 +859,19 @@ private:
         // cells merged as an result of minpv.
         const auto& eclState = vanguard_.eclState();
         const auto& eclGrid = eclState.getInputGrid();
-
-        const std::vector<double>& ntg =
-            eclState.get3DProperties().getDoubleGridProperty("NTG").getData();
-
-        averageNtg = ntg;
-
         bool opmfil = eclGrid.getMinpvMode() == Opm::MinpvMode::OpmFIL;
+        std::vector<double> ntg;
 
+        ntg = eclState.fieldProps().get_global_double("NTG");
         // just return the unmodified ntg if opmfil is not used
+        averageNtg = ntg;
         if (!opmfil)
             return;
 
-        const auto& porv = eclState.get3DProperties().getDoubleGridProperty("PORV").getData();
-        const auto& actnum = eclState.get3DProperties().getIntGridProperty("ACTNUM").getData();
         const auto& cartMapper = vanguard_.cartesianIndexMapper();
         const auto& cartDims = cartMapper.cartesianDimensions();
+        const auto& actnum = eclState.fieldProps().actnum();
+        const auto& porv = eclState.fieldProps().porv(true);
         assert(dimWorld > 1);
         const size_t nxny = cartDims[0] * cartDims[1];
         for (size_t cartesianCellIdx = 0; cartesianCellIdx < ntg.size(); ++cartesianCellIdx) {

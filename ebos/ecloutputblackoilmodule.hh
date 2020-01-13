@@ -325,7 +325,7 @@ public:
             krnSwMdcGo_.resize(bufferSize, 0.0);
         }
 
-        if (simulator_.vanguard().eclState().get3DProperties().hasDeckDoubleGridProperty("SWATINIT"))
+        if (simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT"))
             ppcw_.resize(bufferSize, 0.0);
 
         if (FluidSystem::enableDissolvedGas() && rstKeywords["RSSAT"] > 0) {
@@ -633,9 +633,10 @@ public:
             }
 
 
-            if (ppcw_.size() > 0)
+            if (ppcw_.size() > 0) {
                 ppcw_[globalDofIdx] = matLawManager->oilWaterScaledEpsInfoDrainage(globalDofIdx).maxPcow;
-
+                //printf("ppcw_[%d] = %lg\n", globalDofIdx, ppcw_[globalDofIdx]);
+            }
             // hack to make the intial output of rs and rv Ecl compatible.
             // For cells with swat == 1 Ecl outputs; rs = rsSat and rv=rvSat, in all but the initial step
             // where it outputs rs and rv values calculated by the initialization. To be compatible we overwrite
@@ -1605,11 +1606,10 @@ public:
             }
         }
 
-        if (simulator_.vanguard().eclState().get3DProperties().hasDeckDoubleGridProperty("SWATINIT")) {
+        if (simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT")) {
             auto oilWaterScaledEpsInfoDrainage = simulator.problem().materialLawManager()->oilWaterScaledEpsInfoDrainagePointerReferenceHack(elemIdx);
             oilWaterScaledEpsInfoDrainage->maxPcow =  ppcw_[elemIdx];
         }
-
 
     }
 
@@ -1744,7 +1744,7 @@ private:
 
     void createLocalFipnum_()
     {
-        const std::vector<int>& fipnumGlobal = simulator_.vanguard().eclState().get3DProperties().getIntGridProperty("FIPNUM").getData();
+        const std::vector<int> fipnumGlobal = simulator_.vanguard().eclState().fieldProps().get_global_int("FIPNUM");
         // Get compressed cell fipnum.
         const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
