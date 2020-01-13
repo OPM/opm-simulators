@@ -327,7 +327,6 @@ Opm::VFPProdTable getVFPProdTable()
 Opm::UDQConfig getUDQConfig()
 {
     Opm::UDQParams params(true, 1, 2.0, 3.0, 4.0);
-    Opm::UDQFunctionTable::FunctionMap map{{"test", std::make_shared<Opm::UDQFunction>()}};
     std::shared_ptr<Opm::UDQASTNode> n0;
     Opm::UDQASTNode n1(Opm::UDQVarType::NONE,
                        Opm::UDQTokenType::error,
@@ -343,7 +342,7 @@ Opm::UDQConfig getUDQConfig()
     omap.insert({"test9", Opm::UDQIndex(3, 4, Opm::UDQAction::ASSIGN,
                                         Opm::UDQVarType::WELL_VAR)});
     return Opm::UDQConfig(params,
-                          Opm::UDQFunctionTable(params, map),
+                          Opm::UDQFunctionTable(params),
                           {{"test1", def}, {"test2", def}},
                           {{"test3", ass}, {"test4", ass}},
                           {{"test5", "test6"}, {"test7", "test8"}},

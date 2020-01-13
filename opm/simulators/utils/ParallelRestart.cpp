@@ -1547,7 +1547,6 @@ std::size_t packSize(const UDQConfig& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.params(), comm) +
-           packSize(data.function_table(), comm) +
            packSize(data.definitionMap(), comm) +
            packSize(data.assignmentMap(), comm) +
            packSize(data.unitsMap(), comm) +
@@ -3267,7 +3266,6 @@ void pack(const UDQConfig& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.params(), buffer, position, comm);
-    pack(data.function_table(), buffer, position, comm);
     pack(data.definitionMap(), buffer, position, comm);
     pack(data.assignmentMap(), buffer, position, comm);
     pack(data.unitsMap(), buffer, position, comm);
@@ -5600,7 +5598,7 @@ void unpack(UDQConfig& data,
     std::map<UDQVarType,std::size_t> typeCount;
 
     unpack(params, buffer, position, comm);
-    unpack(function_table, buffer, position, comm);
+    function_table = UDQFunctionTable(params);
     unpack(definitionsMap, buffer, position, comm);
     unpack(assignmentsMap, buffer, position, comm);
     unpack(units, buffer, position, comm);
