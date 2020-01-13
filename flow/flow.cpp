@@ -347,18 +347,21 @@ int main(int argc, char** argv)
                 Opm::checkDeck(*deck, parser, parseContext, errorGuard);
 
             eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
-            schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
             if (mpiRank == 0) {
+                schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
                 setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
                 summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
 #ifdef HAVE_MPI
                 Opm::Mpi::packAndSend(*summaryConfig, mpiHelper.getCollectiveCommunication());
+                Opm::Mpi::packAndSend(*schedule, mpiHelper.getCollectiveCommunication());
 #endif
             }
 #ifdef HAVE_MPI
             else {
                 summaryConfig.reset(new Opm::SummaryConfig);
+                schedule.reset(new Opm::Schedule);
                 Opm::Mpi::receiveAndUnpack(*summaryConfig, mpiHelper.getCollectiveCommunication());
+                Opm::Mpi::receiveAndUnpack(*schedule, mpiHelper.getCollectiveCommunication());
             }
 #endif
 
