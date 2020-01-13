@@ -1406,6 +1406,7 @@ std::size_t packSize(const Well& data,
                        packSize(data.getPolymerProperties(), comm) +
                        packSize(data.getBrineProperties(), comm) +
                        packSize(data.getTracerProperties(), comm) +
+                       packSize(data.getConnections(), comm) +
                        packSize(data.getProductionProperties(), comm) +
                        packSize(data.getInjectionProperties(), comm) +
                        packSize(data.hasSegments(), comm);
@@ -3114,6 +3115,7 @@ void pack(const Well& data,
     pack(data.getPolymerProperties(), buffer, position, comm);
     pack(data.getBrineProperties(), buffer, position, comm);
     pack(data.getTracerProperties(), buffer, position, comm);
+    pack(data.getConnections(), buffer, position, comm);
     pack(data.getProductionProperties(), buffer, position, comm);
     pack(data.getInjectionProperties(), buffer, position, comm);
     pack(data.hasSegments(), buffer, position, comm);
@@ -5379,6 +5381,7 @@ void unpack(Well& data,
     unpack(*polymerProperties, buffer, position, comm);
     unpack(*brineProperties, buffer, position, comm);
     unpack(*tracerProperties, buffer, position, comm);
+    unpack(*connection, buffer, position, comm);
     unpack(*production, buffer, position, comm);
     unpack(*injection, buffer, position, comm);
     bool hasSegments;
