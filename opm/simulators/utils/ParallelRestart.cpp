@@ -1990,6 +1990,13 @@ std::size_t packSize(const TransMult& data,
            packSize(data.getScanner(), comm);
 }
 
+std::size_t packSize(const FaultFace& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getIndices(), comm) +
+           packSize(data.getDir(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -3885,6 +3892,14 @@ void pack(const TransMult& data,
     pack(data.getTrans(), buffer, position, comm);
     pack(data.getNames(), buffer, position, comm);
     pack(data.getScanner(), buffer, position, comm);
+}
+
+void pack(const FaultFace& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getIndices(), buffer, position, comm);
+    pack(data.getDir(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -6599,6 +6614,18 @@ void unpack(TransMult& data,
     unpack(names, buffer, position, comm);
     unpack(scanner, buffer, position, comm);
     data = TransMult(size, trans, names, scanner);
+}
+
+void unpack(FaultFace& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<size_t> indices;
+    FaceDir::DirEnum dir;
+
+    unpack(indices, buffer, position, comm);
+    unpack(dir, buffer, position, comm);
+    data = FaultFace(indices, dir);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \

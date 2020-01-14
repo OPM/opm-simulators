@@ -91,6 +91,7 @@ class EndpointScaling;
 class Equil;
 class EquilRecord;
 class Events;
+class FaultFace;
 class FoamConfig;
 class FoamData;
 class InitConfig;
@@ -665,6 +666,7 @@ ADD_PACK_PROTOTYPES(Equil)
 ADD_PACK_PROTOTYPES(Eqldims)
 ADD_PACK_PROTOTYPES(EquilRecord)
 ADD_PACK_PROTOTYPES(Events)
+ADD_PACK_PROTOTYPES(FaultFace)
 ADD_PACK_PROTOTYPES(FoamConfig)
 ADD_PACK_PROTOTYPES(FoamData)
 ADD_PACK_PROTOTYPES(GConSale)
