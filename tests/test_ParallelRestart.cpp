@@ -2426,6 +2426,26 @@ BOOST_AUTO_TEST_CASE(MULTREGTRecord)
 }
 
 
+BOOST_AUTO_TEST_CASE(MULTREGTScanner)
+{
+#ifdef HAVE_MPI
+    std::vector<Opm::MULTREGTRecord> records{{1, 2, 3.0, 4, Opm::MULTREGT::ALL, "test1"}};
+    std::map<std::pair<int, int>, int> searchRecord{{{5,6},0}};
+    Opm::MULTREGTScanner::ExternalSearchMap searchMap;
+    searchMap.insert({"test2", searchRecord});
+    Opm::MULTREGTScanner val1({1, 2, 3},
+                              records,
+                              searchMap,
+                              {{"test3", {7,8}}},
+                              "test4");
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;

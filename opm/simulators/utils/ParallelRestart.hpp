@@ -100,6 +100,7 @@ class Location;
 class MessageLimits;
 class MLimits;
 class MULTREGTRecord;
+class MULTREGTScanner;
 class NNC;
 struct NNCdata;
 class OilVaporizationProperties;
@@ -681,6 +682,7 @@ ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(MULTREGTRecord)
+ADD_PACK_PROTOTYPES(MULTREGTScanner)
 ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)

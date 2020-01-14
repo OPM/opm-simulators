@@ -1963,6 +1963,16 @@ std::size_t packSize(const MULTREGTRecord& data,
            packSize(data.region_name, comm);
 }
 
+std::size_t packSize(const MULTREGTScanner& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getSize(), comm) +
+           packSize(data.getRecords(), comm) +
+           packSize(data.getSearchMap(), comm) +
+           packSize(data.getRegions(), comm) +
+           packSize(data.getDefaultRegion(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -3828,6 +3838,17 @@ void pack(const MULTREGTRecord& data,
     pack(data.directions, buffer, position, comm);
     pack(data.nnc_behaviour, buffer, position, comm);
     pack(data.region_name, buffer, position, comm);
+}
+
+void pack(const MULTREGTScanner& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getSize(), buffer, position, comm);
+    pack(data.getRecords(), buffer, position, comm);
+    pack(data.getSearchMap(), buffer, position, comm);
+    pack(data.getRegions(), buffer, position, comm);
+    pack(data.getDefaultRegion(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -6493,6 +6514,25 @@ void unpack(MULTREGTRecord& data,
     unpack(data.directions, buffer, position, comm);
     unpack(data.nnc_behaviour, buffer, position, comm);
     unpack(data.region_name, buffer, position, comm);
+}
+
+void unpack(MULTREGTScanner& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::array<size_t, 3> size;
+    std::vector<MULTREGTRecord> records;
+    MULTREGTScanner::ExternalSearchMap searchMap;
+    std::map<std::string, std::vector<int>> regions;
+    std::string defaultRegion;
+
+    unpack(size, buffer, position, comm);
+    unpack(records, buffer, position, comm);
+    unpack(searchMap, buffer, position, comm);
+    unpack(regions, buffer, position, comm);
+    unpack(defaultRegion, buffer, position, comm);
+
+    data = MULTREGTScanner(size, records, searchMap, regions, defaultRegion);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \
