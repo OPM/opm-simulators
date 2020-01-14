@@ -2501,6 +2501,17 @@ BOOST_AUTO_TEST_CASE(FaultFace)
 }
 
 
+BOOST_AUTO_TEST_CASE(Fault)
+{
+#ifdef HAVE_MPI
+    Opm::Fault val1("test", 1.0, {{{1,2,3,4,5,6}, Opm::FaceDir::YPlus}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;
