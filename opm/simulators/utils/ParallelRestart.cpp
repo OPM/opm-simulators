@@ -1500,6 +1500,7 @@ std::size_t packSize(const RFTConfig& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.timeMap(), comm) +
+           packSize(data.firstRFTOutput(), comm) +
            packSize(data.wellOpenRftTime(), comm) +
            packSize(data.wellOpenRftName(), comm) +
            packSize(data.wellOpen(), comm) +
@@ -3224,6 +3225,7 @@ void pack(const RFTConfig& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.timeMap(), buffer, position, comm);
+    pack(data.firstRFTOutput(), buffer, position, comm);
     pack(data.wellOpenRftTime(), buffer, position, comm);
     pack(data.wellOpenRftName(), buffer, position, comm);
     pack(data.wellOpen(), buffer, position, comm);
@@ -5575,19 +5577,21 @@ void unpack(RFTConfig& data,
             Dune::MPIHelper::MPICommunicator comm)
 {
     TimeMap timeMap;
+    std::size_t first_rft;
     std::pair<bool, std::size_t> wellOpenRftTime;
-    std::unordered_set<std::string> wellOpenRftName;
-    std::unordered_map<std::string, std::size_t> wellOpen;
+    RFTConfig::WellOpenTimeMap wellOpenRftName;
+    RFTConfig::WellOpenTimeMap wellOpen;
     RFTConfig::RFTMap rftConfig;
     RFTConfig::PLTMap pltConfig;
 
     unpack(timeMap, buffer, position, comm);
+    unpack(first_rft, buffer, position, comm);
     unpack(wellOpenRftTime, buffer, position, comm);
     unpack(wellOpenRftName, buffer, position, comm);
     unpack(wellOpen, buffer, position, comm);
     unpack(rftConfig, buffer, position, comm);
     unpack(pltConfig, buffer, position, comm);
-    data = RFTConfig(timeMap, wellOpenRftTime, wellOpenRftName,
+    data = RFTConfig(timeMap, first_rft, wellOpenRftTime, wellOpenRftName,
                      wellOpen, rftConfig, pltConfig);
 }
 

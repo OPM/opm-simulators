@@ -2076,8 +2076,9 @@ BOOST_AUTO_TEST_CASE(RFTConfig)
 {
 #ifdef HAVE_MPI
     Opm::RFTConfig val1(getTimeMap(),
+                        std::size_t{1729},
                         {true, 1},
-                        {"test1", "test2"},
+                        {{"test1", 2}, {"test2", 3}},
                         {{"test3", 2}},
                         {{"test1", {{{Opm::RFTConfig::RFT::TIMESTEP, 3}}, 4}}},
                         {{"test2", {{{Opm::RFTConfig::PLT::REPT, 5}}, 6}}});
@@ -2309,8 +2310,9 @@ BOOST_AUTO_TEST_CASE(Schedule)
     Opm::Action::Actions acnts({getActionX()});
 
     Opm::RFTConfig rftc(getTimeMap(),
+                        std::size_t{1729},
                         {true, 1},
-                        {"test1", "test2"},
+                        {{"test1", 2}, {"test2", 3}},
                         {{"test3", 2}},
                         {{"test1", {{{Opm::RFTConfig::RFT::TIMESTEP, 3}}, 4}}},
                         {{"test2", {{{Opm::RFTConfig::PLT::REPT, 5}}, 6}}});
