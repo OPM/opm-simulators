@@ -2005,6 +2005,12 @@ std::size_t packSize(const Fault& data,
            packSize(data.getFaceList(), comm);
 }
 
+std::size_t packSize(const FaultCollection& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getFaults(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -3917,6 +3923,13 @@ void pack(const Fault& data,
     pack(data.getName(), buffer, position, comm);
     pack(data.getTransMult(), buffer, position, comm);
     pack(data.getFaceList(), buffer, position, comm);
+}
+
+void pack(const FaultCollection& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getFaults(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -6657,6 +6670,16 @@ void unpack(Fault& data,
     unpack(transMult, buffer, position, comm);
     unpack(faceList, buffer, position, comm);
     data = Fault(name, transMult, faceList);
+}
+
+void unpack(FaultCollection& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    OrderedMap<std::string, Fault> faults;
+
+    unpack(faults, buffer, position, comm);
+    data = FaultCollection(faults);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \

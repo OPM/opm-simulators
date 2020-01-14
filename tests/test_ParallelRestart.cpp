@@ -2512,6 +2512,20 @@ BOOST_AUTO_TEST_CASE(Fault)
 }
 
 
+BOOST_AUTO_TEST_CASE(FaultCollection)
+{
+#ifdef HAVE_MPI
+    Opm::Fault fault("test", 1.0, {{{1,2,3,4,5,6}, Opm::FaceDir::YPlus}});
+    Opm::OrderedMap<std::string, Opm::Fault> faults;
+    faults.insert({"test2", fault});
+    Opm::FaultCollection val1(faults);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;
