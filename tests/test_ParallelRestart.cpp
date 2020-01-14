@@ -2446,6 +2446,26 @@ BOOST_AUTO_TEST_CASE(MULTREGTScanner)
 }
 
 
+BOOST_AUTO_TEST_CASE(EclipseConfig)
+{
+#ifdef HAVE_MPI
+    Opm::IOConfig io(true, false, true, false, false, true, 1, "test1", true,
+                     "test2", true, "test3", false);
+    Opm::InitConfig init(Opm::Equil({getEquilRecord(), getEquilRecord()}),
+                         Opm::FoamConfig({getFoamData(), getFoamData()}),
+                         true, true, 20, "test1");
+    Opm::DynamicState<Opm::RestartSchedule> rsched({Opm::RestartSchedule(1, 2, 3)}, 2);
+    Opm::DynamicState<std::map<std::string,int>> rkw({{{"test",3}}}, 3);
+    Opm::RestartConfig restart(getTimeMap(), 1, true, rsched, rkw, {false, true});
+    Opm::EclipseConfig val1{io, init, restart};
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;

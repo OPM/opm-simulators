@@ -1973,6 +1973,14 @@ std::size_t packSize(const MULTREGTScanner& data,
            packSize(data.getDefaultRegion(), comm);
 }
 
+std::size_t packSize(const EclipseConfig& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.init(), comm) +
+           packSize(data.io(), comm) +
+           packSize(data.restart(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -3849,6 +3857,15 @@ void pack(const MULTREGTScanner& data,
     pack(data.getSearchMap(), buffer, position, comm);
     pack(data.getRegions(), buffer, position, comm);
     pack(data.getDefaultRegion(), buffer, position, comm);
+}
+
+void pack(const EclipseConfig& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.init(), buffer, position, comm);
+    pack(data.io(), buffer, position, comm);
+    pack(data.restart(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -6533,6 +6550,20 @@ void unpack(MULTREGTScanner& data,
     unpack(defaultRegion, buffer, position, comm);
 
     data = MULTREGTScanner(size, records, searchMap, regions, defaultRegion);
+}
+
+void unpack(EclipseConfig& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    InitConfig init;
+    IOConfig io;
+    RestartConfig restart;
+
+    unpack(init, buffer, position, comm);
+    unpack(io, buffer, position, comm);
+    unpack(restart, buffer, position, comm);
+    data = EclipseConfig(io, init, restart);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \

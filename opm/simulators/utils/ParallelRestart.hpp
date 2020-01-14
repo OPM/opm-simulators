@@ -84,6 +84,7 @@ class DENSITYRecord;
 class DensityTable;
 class Dimension;
 class EclHysterConfig;
+class EclipseConfig;
 class Eqldims;
 class EDITNNC;
 class EndpointScaling;
@@ -656,6 +657,7 @@ ADD_PACK_PROTOTYPES(DENSITYRecord)
 ADD_PACK_PROTOTYPES(DensityTable)
 ADD_PACK_PROTOTYPES(Dimension)
 ADD_PACK_PROTOTYPES(EclHysterConfig)
+ADD_PACK_PROTOTYPES(EclipseConfig)
 ADD_PACK_PROTOTYPES(EDITNNC)
 ADD_PACK_PROTOTYPES(EndpointScaling)
 ADD_PACK_PROTOTYPES(Equil)
