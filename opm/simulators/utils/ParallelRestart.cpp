@@ -1981,6 +1981,15 @@ std::size_t packSize(const EclipseConfig& data,
            packSize(data.restart(), comm);
 }
 
+std::size_t packSize(const TransMult& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getSize(), comm) +
+           packSize(data.getTrans(), comm) +
+           packSize(data.getNames(), comm) +
+           packSize(data.getScanner(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -3866,6 +3875,16 @@ void pack(const EclipseConfig& data,
     pack(data.init(), buffer, position, comm);
     pack(data.io(), buffer, position, comm);
     pack(data.restart(), buffer, position, comm);
+}
+
+void pack(const TransMult& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getSize(), buffer, position, comm);
+    pack(data.getTrans(), buffer, position, comm);
+    pack(data.getNames(), buffer, position, comm);
+    pack(data.getScanner(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -6564,6 +6583,22 @@ void unpack(EclipseConfig& data,
     unpack(io, buffer, position, comm);
     unpack(restart, buffer, position, comm);
     data = EclipseConfig(io, init, restart);
+}
+
+void unpack(TransMult& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::array<size_t, 3> size;
+    std::map<FaceDir::DirEnum, std::vector<double>> trans;
+    std::map<FaceDir::DirEnum, std::string> names;
+    MULTREGTScanner scanner;
+
+    unpack(size, buffer, position, comm);
+    unpack(trans, buffer, position, comm);
+    unpack(names, buffer, position, comm);
+    unpack(scanner, buffer, position, comm);
+    data = TransMult(size, trans, names, scanner);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \
