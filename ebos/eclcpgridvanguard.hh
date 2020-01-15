@@ -151,7 +151,7 @@ public:
             if (grid_->size(0))
             {
                 globalTrans_.reset(new EclTransmissibility<TypeTag>(*this));
-                globalTrans_->update();
+                globalTrans_->update(false);
             }
 
             Dune::EdgeWeightMethod edgeWeightsMethod = this->edgeWeightsMethod();

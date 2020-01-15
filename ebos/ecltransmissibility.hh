@@ -118,15 +118,16 @@ public:
      * either but at least it seems to be much better.
      */
     void finishInit()
-    { update(); }
+    { update(true); }
 
 
     /*!
      * \brief Compute all transmissibilities
      *
+     * \param global If true, update is called on all processes
      * Also, this updates the "thermal half transmissibilities" if energy is enabled.
      */
-    void update()
+    void update(bool global)
     {
         const auto& gridView = vanguard_.gridView();
         const auto& cartMapper = vanguard_.cartesianIndexMapper();
@@ -154,17 +155,65 @@ public:
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
             axisCentroids[dimIdx].resize(numElements);
 
+        std::vector<double> centroids;
+#if HAVE_MPI
+        size_t cells = vanguard_.grid().numCells();
+        const auto& comm = vanguard_.gridView().comm();
+        if (global && comm.size() > 1) {
+            if (comm.rank() == 0) {
+                std::vector<size_t> sizes(comm.size());
+                comm.gather(&cells, sizes.data(), 1, 0);
+                for (int i = 1; i < comm.size(); ++i) {
+                    std::vector<int> cell_id(sizes[i]);
+                    MPI_Recv(cell_id.data(), sizes[i], MPI_INT,
+                             i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    centroids.resize(dimWorld * sizes[i]);
+
+                    auto cIt = centroids.begin();
+                    for (int idx : cell_id) {
+                        const auto& centroid = eclGrid.getCellCenter(idx);
+                        for (const auto& it : centroid)
+                            *cIt++ = it;
+                    }
+                    MPI_Send(centroids.data(), dimWorld * sizes[i],
+                             MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
+                }
+                centroids.clear();
+            } else {
+                comm.gather(&cells, &cells, 1, 0);
+                std::vector<int> cell_ids;
+                cell_ids.reserve(cells);
+                auto elemIt = gridView.template begin</*codim=*/ 0>();
+                const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
+                for (; elemIt != elemEndIt; ++elemIt) {
+                    const auto& elem = *elemIt;
+                    cell_ids.push_back(cartMapper.cartesianIndex(elemMapper.index(elem)));
+                }
+                MPI_Send(cell_ids.data(), cells, MPI_INT, 0, 0, MPI_COMM_WORLD);
+                centroids.resize(cells * dimWorld);
+                MPI_Recv(centroids.data(), dimWorld * cells, MPI_DOUBLE,
+                         0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            }
+        }
+#endif
+
         auto elemIt = gridView.template begin</*codim=*/ 0>();
         const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
+        size_t centroidIdx = 0;
+        for (; elemIt != elemEndIt; ++elemIt, ++centroidIdx) {
             const auto& elem = *elemIt;
             unsigned elemIdx = elemMapper.index(elem);
 
             // compute the axis specific "centroids" used for the transmissibilities. for
             // consistency with the flow simulator, we use the element centers as
             // computed by opm-parser's Opm::EclipseGrid class for all axes.
-            unsigned cartesianCellIdx = cartMapper.cartesianIndex(elemIdx);
-            const auto& centroid = eclGrid.getCellCenter(cartesianCellIdx);
+            const double* centroid;
+            if (vanguard_.gridView().comm().rank() == 0) {
+                unsigned cartesianCellIdx = cartMapper.cartesianIndex(elemIdx);
+                centroid = &eclGrid.getCellCenter(cartesianCellIdx)[0];
+            } else
+                centroid = &centroids[centroidIdx * dimWorld];
+
             for (unsigned axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
                 for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
                     axisCentroids[axisIdx][elemIdx][dimIdx] = centroid[dimIdx];

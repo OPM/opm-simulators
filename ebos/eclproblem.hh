@@ -834,7 +834,7 @@ public:
             eclState.applyModifierDeck(miniDeck);
 
             // re-compute all quantities which may possibly be affected.
-            transmissibilities_.update();
+            transmissibilities_.update(true);
             referencePorosity_[1] = referencePorosity_[0];
             updateReferencePorosity_();
             updatePffDofData_();
