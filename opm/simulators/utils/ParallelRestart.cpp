@@ -457,7 +457,7 @@ HANDLE_AS_POD(PVCDORecord)
 HANDLE_AS_POD(Regdims)
 HANDLE_AS_POD(ROCKRecord)
 HANDLE_AS_POD(Tabdims)
-HANDLE_AS_POD(TimeMap::StepData)
+HANDLE_AS_POD(TimeStampUTC::YMD)
 HANDLE_AS_POD(VISCREFRecord)
 HANDLE_AS_POD(WATDENTRecord)
 HANDLE_AS_POD(Well::WellGuideRate)
@@ -1889,6 +1889,23 @@ std::size_t packSize(const RestartSchedule& data,
            packSize(data.frequency, comm) +
            packSize(data.rptsched_restart_set, comm) +
            packSize(data.rptsched_restart, comm);
+}
+
+std::size_t packSize(const TimeStampUTC& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.ymd(), comm) +
+           packSize(data.hour(), comm) +
+           packSize(data.minutes(), comm) +
+           packSize(data.seconds(), comm) +
+           packSize(data.microseconds(), comm);
+}
+
+std::size_t packSize(const TimeMap::StepData& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.stepnumber, comm) +
+           packSize(data.timestamp, comm);
 }
 
 ////// pack routines
@@ -3669,6 +3686,25 @@ void pack(const RestartSchedule& data,
     pack(data.frequency, buffer, position, comm);
     pack(data.rptsched_restart_set, buffer, position, comm);
     pack(data.rptsched_restart, buffer, position, comm);
+}
+
+void pack(const TimeStampUTC& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.ymd(), buffer, position, comm);
+    pack(data.hour(), buffer, position, comm);
+    pack(data.minutes(), buffer, position, comm);
+    pack(data.seconds(), buffer, position, comm);
+    pack(data.microseconds(), buffer, position, comm);
+}
+
+void pack(const TimeMap::StepData& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.stepnumber, buffer, position, comm);
+    pack(data.timestamp, buffer, position, comm);
 }
 
 /// unpack routines
@@ -6233,6 +6269,29 @@ void unpack(RestartSchedule& data,
     unpack(data.frequency, buffer, position, comm);
     unpack(data.rptsched_restart_set, buffer, position, comm);
     unpack(data.rptsched_restart, buffer, position, comm);
+}
+
+void unpack(TimeStampUTC& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TimeStampUTC::YMD ymd;
+    int hour, minutes, seconds, usec;
+
+    unpack(ymd, buffer, position, comm);
+    unpack(hour, buffer, position, comm);
+    unpack(minutes, buffer, position, comm);
+    unpack(seconds, buffer, position, comm);
+    unpack(usec, buffer, position, comm);
+    data = TimeStampUTC(ymd, hour, minutes, seconds, usec);
+}
+
+void unpack(TimeMap::StepData& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.stepnumber, buffer, position, comm);
+    unpack(data.timestamp, buffer, position, comm);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
