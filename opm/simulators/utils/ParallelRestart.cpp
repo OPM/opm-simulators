@@ -455,7 +455,6 @@ HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PVTWRecord)
 HANDLE_AS_POD(PVCDORecord)
 HANDLE_AS_POD(Regdims)
-HANDLE_AS_POD(RestartSchedule)
 HANDLE_AS_POD(ROCKRecord)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeMap::StepData)
@@ -1880,6 +1879,16 @@ std::size_t packSize(const FoamData& data,
            packSize(data.minimumSurfactantConcentration(), comm) +
            packSize(data.allowDesorption(), comm) +
            packSize(data.rockDensity(), comm);
+}
+
+std::size_t packSize(const RestartSchedule& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.timestep, comm) +
+           packSize(data.basic, comm) +
+           packSize(data.frequency, comm) +
+           packSize(data.rptsched_restart_set, comm) +
+           packSize(data.rptsched_restart, comm);
 }
 
 ////// pack routines
@@ -3649,6 +3658,17 @@ void pack(const FoamData& data,
     pack(data.minimumSurfactantConcentration(), buffer, position, comm);
     pack(data.allowDesorption(), buffer, position, comm);
     pack(data.rockDensity(), buffer, position, comm);
+}
+
+void pack(const RestartSchedule& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.timestep, buffer, position, comm);
+    pack(data.basic, buffer, position, comm);
+    pack(data.frequency, buffer, position, comm);
+    pack(data.rptsched_restart_set, buffer, position, comm);
+    pack(data.rptsched_restart, buffer, position, comm);
 }
 
 /// unpack routines
@@ -6202,6 +6222,17 @@ void unpack(FoamData& data,
     unpack(rockDensity, buffer, position, comm);
     data = FoamData(referenceSurfactantConcentration, exponent,
                     minimumSurfactantConcentration, allowDesorption, rockDensity);
+}
+
+void unpack(RestartSchedule& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.timestep, buffer, position, comm);
+    unpack(data.basic, buffer, position, comm);
+    unpack(data.frequency, buffer, position, comm);
+    unpack(data.rptsched_restart_set, buffer, position, comm);
+    unpack(data.rptsched_restart, buffer, position, comm);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
