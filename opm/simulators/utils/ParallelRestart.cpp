@@ -449,7 +449,6 @@ HANDLE_AS_POD(DENSITYRecord)
 HANDLE_AS_POD(Eqldims)
 HANDLE_AS_POD(GuideRateConfig::GroupTarget);
 HANDLE_AS_POD(GuideRateConfig::WellTarget);
-HANDLE_AS_POD(JFunc)
 HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PVTWRecord)
 HANDLE_AS_POD(PVCDORecord)
@@ -1913,6 +1912,17 @@ std::size_t packSize(const EclHysterConfig& data,
     return packSize(data.active(), comm) +
            packSize(data.pcHysteresisModel(), comm) +
            packSize(data.krHysteresisModel(), comm);
+}
+
+std::size_t packSize(const JFunc& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.flag(), comm) +
+           packSize(data.owSurfaceTension(), comm) +
+           packSize(data.goSurfaceTension(), comm) +
+           packSize(data.alphaFactor(), comm) +
+           packSize(data.betaFactor(), comm) +
+           packSize(data.direction(), comm);
 }
 
 ////// pack routines
@@ -3721,6 +3731,18 @@ void pack(const EclHysterConfig& data,
     pack(data.active(), buffer, position, comm);
     pack(data.pcHysteresisModel(), buffer, position, comm);
     pack(data.krHysteresisModel(), buffer, position, comm);
+}
+
+void pack(const JFunc& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.flag(), buffer, position, comm);
+    pack(data.owSurfaceTension(), buffer, position, comm);
+    pack(data.goSurfaceTension(), buffer, position, comm);
+    pack(data.alphaFactor(), buffer, position, comm);
+    pack(data.betaFactor(), buffer, position, comm);
+    pack(data.direction(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -6321,6 +6343,25 @@ void unpack(EclHysterConfig& data,
     unpack(pcHysteresisModel, buffer, position, comm);
     unpack(krHysteresisModel, buffer, position, comm);
     data = EclHysterConfig(active, pcHysteresisModel, krHysteresisModel);
+}
+
+void unpack(JFunc& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    JFunc::Flag flag;
+    double owSurfaceTension, goSurfaceTension;
+    double alphaFactor, betaFactor;
+    JFunc::Direction dir;
+
+    unpack(flag, buffer, position, comm);
+    unpack(owSurfaceTension, buffer, position, comm);
+    unpack(goSurfaceTension, buffer, position, comm);
+    unpack(alphaFactor, buffer, position, comm);
+    unpack(betaFactor, buffer, position, comm);
+    unpack(dir, buffer, position, comm);
+    data = JFunc(flag, owSurfaceTension, goSurfaceTension,
+                  alphaFactor, betaFactor, dir);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
