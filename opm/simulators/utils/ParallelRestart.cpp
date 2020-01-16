@@ -448,7 +448,6 @@ HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(DENSITYRecord)
 HANDLE_AS_POD(EclHysterConfig)
 HANDLE_AS_POD(Eqldims)
-HANDLE_AS_POD(FoamData)
 HANDLE_AS_POD(GuideRateConfig::GroupTarget);
 HANDLE_AS_POD(GuideRateConfig::WellTarget);
 HANDLE_AS_POD(JFunc)
@@ -1871,6 +1870,16 @@ std::size_t packSize(const EquilRecord& data,
            packSize(data.liveOilInitConstantRs(), comm) +
            packSize(data.wetGasInitConstantRv(), comm) +
            packSize(data.initializationTargetAccuracy(), comm);
+}
+
+std::size_t packSize(const FoamData& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.referenceSurfactantConcentration(), comm) +
+           packSize(data.exponent(), comm) +
+           packSize(data.minimumSurfactantConcentration(), comm) +
+           packSize(data.allowDesorption(), comm) +
+           packSize(data.rockDensity(), comm);
 }
 
 ////// pack routines
@@ -3629,6 +3638,17 @@ void pack(const EquilRecord& data,
     pack(data.liveOilInitConstantRs(), buffer, position, comm);
     pack(data.wetGasInitConstantRv(), buffer, position, comm);
     pack(data.initializationTargetAccuracy(), buffer, position, comm);
+}
+
+void pack(const FoamData& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.referenceSurfactantConcentration(), buffer, position, comm);
+    pack(data.exponent(), buffer, position, comm);
+    pack(data.minimumSurfactantConcentration(), buffer, position, comm);
+    pack(data.allowDesorption(), buffer, position, comm);
+    pack(data.rockDensity(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -6164,6 +6184,24 @@ void unpack(EquilRecord& data,
                        waterOilContactCapillaryPressure, gasOilContactDepth,
                        gasOilContactCapillaryPressure, liveOilInitConstantRs,
                        wetGasInitConstantRv, initializationTargetAccuracy);
+}
+
+void unpack(FoamData& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    double referenceSurfactantConcentration, exponent;
+    double minimumSurfactantConcentration;
+    bool allowDesorption;
+    double rockDensity;
+
+    unpack(referenceSurfactantConcentration, buffer, position, comm);
+    unpack(exponent, buffer, position, comm);
+    unpack(minimumSurfactantConcentration, buffer, position, comm);
+    unpack(allowDesorption, buffer, position, comm);
+    unpack(rockDensity, buffer, position, comm);
+    data = FoamData(referenceSurfactantConcentration, exponent,
+                    minimumSurfactantConcentration, allowDesorption, rockDensity);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
