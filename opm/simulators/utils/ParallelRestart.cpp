@@ -462,7 +462,6 @@ HANDLE_AS_POD(Well::WellGuideRate)
 HANDLE_AS_POD(WellBrineProperties)
 HANDLE_AS_POD(Welldims)
 HANDLE_AS_POD(WellFoamProperties)
-HANDLE_AS_POD(WellPolymerProperties)
 HANDLE_AS_POD(WellSegmentDims)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1923,6 +1922,16 @@ std::size_t packSize(const JFunc& data,
            packSize(data.alphaFactor(), comm) +
            packSize(data.betaFactor(), comm) +
            packSize(data.direction(), comm);
+}
+
+std::size_t packSize(const WellPolymerProperties& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.m_polymerConcentration, comm) +
+           packSize(data.m_saltConcentration, comm) +
+           packSize(data.m_plymwinjtable, comm) +
+           packSize(data.m_skprwattable, comm) +
+           packSize(data.m_skprpolytable, comm);
 }
 
 ////// pack routines
@@ -3743,6 +3752,17 @@ void pack(const JFunc& data,
     pack(data.alphaFactor(), buffer, position, comm);
     pack(data.betaFactor(), buffer, position, comm);
     pack(data.direction(), buffer, position, comm);
+}
+
+void pack(const WellPolymerProperties& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.m_polymerConcentration, buffer, position, comm);
+    pack(data.m_saltConcentration, buffer, position, comm);
+    pack(data.m_plymwinjtable, buffer, position, comm);
+    pack(data.m_skprwattable, buffer, position, comm);
+    pack(data.m_skprpolytable, buffer, position, comm);
 }
 
 /// unpack routines
@@ -6362,6 +6382,17 @@ void unpack(JFunc& data,
     unpack(dir, buffer, position, comm);
     data = JFunc(flag, owSurfaceTension, goSurfaceTension,
                   alphaFactor, betaFactor, dir);
+}
+
+void unpack(WellPolymerProperties& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.m_polymerConcentration, buffer, position, comm);
+    unpack(data.m_saltConcentration, buffer, position, comm);
+    unpack(data.m_plymwinjtable, buffer, position, comm);
+    unpack(data.m_skprwattable, buffer, position, comm);
+    unpack(data.m_skprpolytable, buffer, position, comm);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
