@@ -446,7 +446,6 @@ HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(DENSITYRecord)
-HANDLE_AS_POD(EclHysterConfig)
 HANDLE_AS_POD(Eqldims)
 HANDLE_AS_POD(GuideRateConfig::GroupTarget);
 HANDLE_AS_POD(GuideRateConfig::WellTarget);
@@ -1906,6 +1905,14 @@ std::size_t packSize(const TimeMap::StepData& data,
 {
     return packSize(data.stepnumber, comm) +
            packSize(data.timestamp, comm);
+}
+
+std::size_t packSize(const EclHysterConfig& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.active(), comm) +
+           packSize(data.pcHysteresisModel(), comm) +
+           packSize(data.krHysteresisModel(), comm);
 }
 
 ////// pack routines
@@ -3705,6 +3712,15 @@ void pack(const TimeMap::StepData& data,
 {
     pack(data.stepnumber, buffer, position, comm);
     pack(data.timestamp, buffer, position, comm);
+}
+
+void pack(const EclHysterConfig& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.active(), buffer, position, comm);
+    pack(data.pcHysteresisModel(), buffer, position, comm);
+    pack(data.krHysteresisModel(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -6292,6 +6308,19 @@ void unpack(TimeMap::StepData& data,
 {
     unpack(data.stepnumber, buffer, position, comm);
     unpack(data.timestamp, buffer, position, comm);
+}
+
+void unpack(EclHysterConfig& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    bool active;
+    int pcHysteresisModel, krHysteresisModel;
+
+    unpack(active, buffer, position, comm);
+    unpack(pcHysteresisModel, buffer, position, comm);
+    unpack(krHysteresisModel, buffer, position, comm);
+    data = EclHysterConfig(active, pcHysteresisModel, krHysteresisModel);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
