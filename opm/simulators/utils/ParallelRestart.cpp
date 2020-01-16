@@ -447,7 +447,6 @@ HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(DENSITYRecord)
 HANDLE_AS_POD(Eqldims)
-HANDLE_AS_POD(GuideRateConfig::GroupTarget);
 HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PVTWRecord)
 HANDLE_AS_POD(PVCDORecord)
@@ -1947,6 +1946,13 @@ std::size_t packSize(const GuideRateConfig::WellTarget& data,
     return packSize(data.guide_rate, comm) +
            packSize(data.target, comm) +
            packSize(data.scaling_factor, comm);
+}
+
+std::size_t packSize(const GuideRateConfig::GroupTarget& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.guide_rate, comm) +
+           packSize(data.target, comm);
 }
 
 ////// pack routines
@@ -3797,6 +3803,14 @@ void pack(const GuideRateConfig::WellTarget& data,
     pack(data.guide_rate, buffer, position, comm);
     pack(data.target, buffer, position, comm);
     pack(data.scaling_factor, buffer, position, comm);
+}
+
+void pack(const GuideRateConfig::GroupTarget& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.guide_rate, buffer, position, comm);
+    pack(data.target, buffer, position, comm);
 }
 
 /// unpack routines
@@ -6446,6 +6460,14 @@ void unpack(GuideRateConfig::WellTarget& data,
     unpack(data.guide_rate, buffer, position, comm);
     unpack(data.target, buffer, position, comm);
     unpack(data.scaling_factor, buffer, position, comm);
+}
+
+void unpack(GuideRateConfig::GroupTarget& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.guide_rate, buffer, position, comm);
+    unpack(data.target, buffer, position, comm);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
