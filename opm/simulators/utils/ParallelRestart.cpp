@@ -448,7 +448,6 @@ HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(DENSITYRecord)
 HANDLE_AS_POD(EclHysterConfig)
 HANDLE_AS_POD(Eqldims)
-HANDLE_AS_POD(EquilRecord)
 HANDLE_AS_POD(FoamData)
 HANDLE_AS_POD(GuideRateConfig::GroupTarget);
 HANDLE_AS_POD(GuideRateConfig::WellTarget);
@@ -1858,6 +1857,20 @@ std::size_t packSize(const SummaryConfig& data,
     return packSize(data.getKwds(), comm) +
            packSize(data.getShortKwds(), comm) +
            packSize(data.getSmryKwds(), comm);
+}
+
+std::size_t packSize(const EquilRecord& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.datumDepth(), comm) +
+           packSize(data.datumDepthPressure(), comm) +
+           packSize(data.waterOilContactDepth(), comm) +
+           packSize(data.waterOilContactCapillaryPressure(), comm) +
+           packSize(data.gasOilContactDepth(), comm) +
+           packSize(data.gasOilContactCapillaryPressure(), comm) +
+           packSize(data.liveOilInitConstantRs(), comm) +
+           packSize(data.wetGasInitConstantRv(), comm) +
+           packSize(data.initializationTargetAccuracy(), comm);
 }
 
 ////// pack routines
@@ -3602,8 +3615,21 @@ void pack(const SummaryConfig& data,
     pack(data.getShortKwds(), buffer, position, comm);
     pack(data.getSmryKwds(), buffer, position, comm);
 }
- 
 
+void pack(const EquilRecord& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.datumDepth(), buffer, position, comm);
+    pack(data.datumDepthPressure(), buffer, position, comm);
+    pack(data.waterOilContactDepth(), buffer, position, comm);
+    pack(data.waterOilContactCapillaryPressure(), buffer, position, comm);
+    pack(data.gasOilContactDepth(), buffer, position, comm);
+    pack(data.gasOilContactCapillaryPressure(), buffer, position, comm);
+    pack(data.liveOilInitConstantRs(), buffer, position, comm);
+    pack(data.wetGasInitConstantRv(), buffer, position, comm);
+    pack(data.initializationTargetAccuracy(), buffer, position, comm);
+}
 
 /// unpack routines
 
@@ -6113,6 +6139,31 @@ void unpack(SummaryConfig& data,
     unpack(shortKwds, buffer, position, comm);
     unpack(smryKwds, buffer, position, comm);
     data = SummaryConfig(kwds, shortKwds, smryKwds);
+}
+
+void unpack(EquilRecord& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    double datumDepth, datumDepthPressure, waterOilContactDepth;
+    double waterOilContactCapillaryPressure, gasOilContactDepth;
+    double gasOilContactCapillaryPressure;
+    bool liveOilInitConstantRs, wetGasInitConstantRv;
+    int initializationTargetAccuracy;
+
+    unpack(datumDepth, buffer, position, comm);
+    unpack(datumDepthPressure, buffer, position, comm);
+    unpack(waterOilContactDepth, buffer, position, comm);
+    unpack(waterOilContactCapillaryPressure, buffer, position, comm);
+    unpack(gasOilContactDepth, buffer, position, comm);
+    unpack(gasOilContactCapillaryPressure, buffer, position, comm);
+    unpack(liveOilInitConstantRs, buffer, position, comm);
+    unpack(wetGasInitConstantRv, buffer, position, comm);
+    unpack(initializationTargetAccuracy, buffer, position, comm);
+    data = EquilRecord(datumDepth, datumDepthPressure, waterOilContactDepth,
+                       waterOilContactCapillaryPressure, gasOilContactDepth,
+                       gasOilContactCapillaryPressure, liveOilInitConstantRs,
+                       wetGasInitConstantRv, initializationTargetAccuracy);
 }
 
 #define INSTANTIATE_PACK_VECTOR(T) \
