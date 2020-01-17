@@ -99,7 +99,7 @@ public:
     EclTransmissibility(const Vanguard& vanguard)
         : vanguard_(vanguard)
     {
-        const Opm::UnitSystem& unitSystem = vanguard_.deck().getActiveUnitSystem();
+        const Opm::UnitSystem& unitSystem = vanguard_.eclState().getDeckUnitSystem();
         transmissibilityThreshold_  = unitSystem.parse("Transmissibility").getSIScaling() * 1e-6;
     }
 
