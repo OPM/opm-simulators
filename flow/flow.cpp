@@ -374,7 +374,7 @@ int main(int argc, char** argv)
                 throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
             }
         }
-        const auto& phases = Opm::Runspec(*deck).phases();
+        const auto& phases = eclipseState->runspec().phases();
         bool outputFiles = (outputMode != FileOutputMode::OUTPUT_NONE);
         // run the actual simulator
         //
