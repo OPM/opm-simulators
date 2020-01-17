@@ -2932,80 +2932,44 @@ private:
         return eclState.fieldProps().get_global_int(prop);
     }
 
-    void updatePvtnum_()
+    template<class T>
+    void updateNum(const std::string& name, std::vector<T>& numbers)
     {
         const auto& simulator = this->simulator();
         const auto& eclState = simulator.vanguard().eclState();
 
-        if (!has_int_prop(eclState, "PVTNUM"))
+        if (!has_int_prop(eclState, name))
             return;
 
-        const auto& pvtnumData = get_int_prop(eclState, "PVTNUM");
+        const auto& numData = get_int_prop(eclState, name);
         const auto& vanguard = simulator.vanguard();
 
         unsigned numElems = vanguard.gridView().size(/*codim=*/0);
-        pvtnum_.resize(numElems);
+        numbers.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
-            pvtnum_[elemIdx] = pvtnumData[cartElemIdx] - 1;
+            numbers[elemIdx] = static_cast<T>(std::max(numData[cartElemIdx], 1) - 1);
         }
+    }
+
+    void updatePvtnum_()
+    {
+        updateNum("PVTNUM", pvtnum_);
     }
 
     void updateSatnum_()
     {
-        const auto& simulator = this->simulator();
-        const auto& eclState = simulator.vanguard().eclState();
-
-        if (!has_int_prop(eclState, "SATNUM"))
-            return;
-
-        const auto& satnumData = get_int_prop(eclState, "SATNUM");
-        const auto& vanguard = simulator.vanguard();
-
-        unsigned numElems = vanguard.gridView().size(/*codim=*/0);
-        satnum_.resize(numElems);
-        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
-            satnum_[elemIdx] = satnumData[cartElemIdx] - 1;
-        }
+        updateNum("SATNUM", satnum_);
     }
 
     void updateMiscnum_()
     {
-        const auto& simulator = this->simulator();
-        const auto& eclState = simulator.vanguard().eclState();
-
-        if (!has_int_prop(eclState, "MISCNUM"))
-            return;
-
-        const auto& miscnumData = get_int_prop(eclState, "MISCNUM");
-        const auto& vanguard = simulator.vanguard();
-
-        unsigned numElems = vanguard.gridView().size(/*codim=*/0);
-        miscnum_.resize(numElems);
-        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
-            miscnum_[elemIdx] = miscnumData[cartElemIdx] - 1;
-        }
+        updateNum("MISCNUM", miscnum_);
     }
 
     void updatePlmixnum_()
     {
-        const auto& simulator = this->simulator();
-        const auto& eclState = simulator.vanguard().eclState();
-
-        if (!has_int_prop(eclState, "PLMIXNUM"))
-            return;
-
-        const auto& plmixnumData = get_int_prop(eclState, "PLMIXNUM");
-        const auto& vanguard = simulator.vanguard();
-
-        unsigned numElems = vanguard.gridView().size(/*codim=*/0);
-        plmixnum_.resize(numElems);
-        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
-            plmixnum_[elemIdx] = plmixnumData[cartElemIdx] - 1;
-        }
+        updateNum("PLMIXNUM", plmixnum_);
     }
 
     struct PffDofData_
