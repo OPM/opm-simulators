@@ -327,7 +327,6 @@ Opm::VFPProdTable getVFPProdTable()
 Opm::UDQConfig getUDQConfig()
 {
     Opm::UDQParams params(true, 1, 2.0, 3.0, 4.0);
-    Opm::UDQFunctionTable::FunctionMap map{{"test", std::make_shared<Opm::UDQFunction>()}};
     std::shared_ptr<Opm::UDQASTNode> n0;
     Opm::UDQASTNode n1(Opm::UDQVarType::NONE,
                        Opm::UDQTokenType::error,
@@ -343,7 +342,7 @@ Opm::UDQConfig getUDQConfig()
     omap.insert({"test9", Opm::UDQIndex(3, 4, Opm::UDQAction::ASSIGN,
                                         Opm::UDQVarType::WELL_VAR)});
     return Opm::UDQConfig(params,
-                          Opm::UDQFunctionTable(params, map),
+                          Opm::UDQFunctionTable(params),
                           {{"test1", def}, {"test2", def}},
                           {{"test3", ass}, {"test4", ass}},
                           {{"test5", "test6"}, {"test7", "test8"}},
@@ -1564,7 +1563,8 @@ BOOST_AUTO_TEST_CASE(Connection)
     Opm::Connection val1(Opm::Connection::Direction::Y,
                          1.0, Opm::Connection::State::SHUT,
                          2, 3, 4.0, 5.0, 6.0, 7.0, 8.0,
-                         {9, 10, 11}, 12, 13.0, 14.0, true,
+                         {9, 10, 11}, Opm::Connection::CTFKind::Defaulted,
+                         12, 13.0, 14.0, true,
                          15, 16, 17.0);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
@@ -1629,7 +1629,8 @@ BOOST_AUTO_TEST_CASE(WellConnections)
     Opm::Connection conn(Opm::Connection::Direction::Y,
                          1.0, Opm::Connection::State::SHUT,
                          2, 3, 4.0, 5.0, 6.0, 7.0, 8.0,
-                         {9, 10, 11}, 12, 13.0, 14.0, true,
+                         {9, 10, 11}, Opm::Connection::CTFKind::Defaulted,
+                         12, 13.0, 14.0, true,
                          15, 16, 17.0);
     Opm::WellConnections val1(1, 2, 3, {conn, conn});
     auto val2 = PackUnpack(val1);
