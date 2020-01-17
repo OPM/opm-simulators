@@ -763,7 +763,7 @@ ADD_PACK_PROTOTYPES(WListManager)
 template<class T, class C>
 const T& packAndSend(const T& in, const C& comm)
 {
-    if (comm.size() == 0)
+    if (comm.size() == 1)
         return in;
 
     std::size_t size = packSize(in, comm);
