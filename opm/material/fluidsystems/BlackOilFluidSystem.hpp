@@ -428,7 +428,7 @@ public:
 
 protected:
     static unsigned char numActivePhases_;
-    static bool phaseIsActive_[numPhases];
+    static std::array<bool,numPhases> phaseIsActive_;
 
 public:
     //! \brief Returns the number of active fluid phases (i.e., usually three)
@@ -1290,8 +1290,8 @@ private:
     static std::vector<std::array<Scalar, /*numPhases=*/3> > referenceDensity_;
     static std::vector<std::array<Scalar, /*numComponents=*/3> > molarMass_;
 
-    static short activeToCanonicalPhaseIdx_[numPhases];
-    static short canonicalToActivePhaseIdx_[numPhases];
+    static std::array<short, numPhases> activeToCanonicalPhaseIdx_;
+    static std::array<short, numPhases> canonicalToActivePhaseIdx_;
 
     static bool isInitialized_;
 };
@@ -1300,13 +1300,13 @@ template <class Scalar, class IndexTraits>
 unsigned char BlackOilFluidSystem<Scalar, IndexTraits>::numActivePhases_;
 
 template <class Scalar, class IndexTraits>
-bool BlackOilFluidSystem<Scalar, IndexTraits>::phaseIsActive_[numPhases];
+std::array<bool, BlackOilFluidSystem<Scalar, IndexTraits>::numPhases> BlackOilFluidSystem<Scalar, IndexTraits>::phaseIsActive_;
 
 template <class Scalar, class IndexTraits>
-short BlackOilFluidSystem<Scalar, IndexTraits>::activeToCanonicalPhaseIdx_[numPhases];
+std::array<short, BlackOilFluidSystem<Scalar, IndexTraits>::numPhases> BlackOilFluidSystem<Scalar, IndexTraits>::activeToCanonicalPhaseIdx_;
 
 template <class Scalar, class IndexTraits>
-short BlackOilFluidSystem<Scalar, IndexTraits>::canonicalToActivePhaseIdx_[numPhases];
+std::array<short, BlackOilFluidSystem<Scalar, IndexTraits>::numPhases> BlackOilFluidSystem<Scalar, IndexTraits>::canonicalToActivePhaseIdx_;
 
 template <class Scalar, class IndexTraits>
 Scalar
