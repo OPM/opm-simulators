@@ -6475,6 +6475,7 @@ INSTANTIATE_PACK_VECTOR(std::vector<double>)
 INSTANTIATE_PACK_VECTOR(bool)
 INSTANTIATE_PACK_VECTOR(char)
 INSTANTIATE_PACK_VECTOR(Opm::Tabulated1DFunction<double>)
+INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
 #undef INSTANTIATE_PACK_VECTOR
 
 #define INSTANTIATE_PACK_SHARED_PTR(...) \
@@ -6487,6 +6488,9 @@ template void unpack(std::shared_ptr<__VA_ARGS__>& data, \
                      std::vector<char>& buffer, int& position, \
                      Dune::MPIHelper::MPICommunicator comm);
 
+INSTANTIATE_PACK_SHARED_PTR(Opm::GasPvtMultiplexer<double, true>)
+INSTANTIATE_PACK_SHARED_PTR(Opm::OilPvtMultiplexer<double, true>)
+INSTANTIATE_PACK_SHARED_PTR(Opm::WaterPvtMultiplexer<double, true>)
 INSTANTIATE_PACK_SHARED_PTR(SpiralICD)
 #undef INSTANTIATE_PACK_SHARED_PTR
 
@@ -6504,6 +6508,9 @@ INSTANTIATE_PACK(double)
 INSTANTIATE_PACK(std::size_t)
 INSTANTIATE_PACK(bool)
 INSTANTIATE_PACK(int)
+INSTANTIATE_PACK(std::array<short,3>)
+INSTANTIATE_PACK(std::array<bool,3>)
+INSTANTIATE_PACK(unsigned char)
 #undef INSTANTIATE_PACK
 
 } // end namespace Mpi

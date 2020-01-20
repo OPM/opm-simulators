@@ -2475,8 +2475,32 @@ private:
         const auto& simulator = this->simulator();
         const auto& deck = simulator.vanguard().deck();
         const auto& eclState = simulator.vanguard().eclState();
+        const auto& comm = simulator.gridView().comm();
 
-        FluidSystem::initFromDeck(deck, eclState);
+        if (comm.rank() == 0)
+            FluidSystem::initFromDeck(deck, eclState);
+
+#if HAVE_MPI
+         if (comm.size() > 1) {
+             if (comm.rank() == 0) {
+                 EclMpiSerializer ser(comm);
+                 size_t size = FluidSystem::packSize(ser);
+                 std::vector<char> buffer(size);
+                 int position = 0;
+                 FluidSystem::pack(buffer, position, ser);
+                 comm.broadcast(&position, 1, 0);
+                 comm.broadcast(buffer.data(), position, 0);
+            } else {
+                int size;
+                comm.broadcast(&size, 1, 0);
+                std::vector<char> buffer(size);
+                comm.broadcast(buffer.data(), size, 0);
+                int position = 0;
+                EclMpiSerializer ser(comm);
+                FluidSystem::unpack(buffer, position, ser);
+            }
+         }
+#endif
    }
 
     void readInitialCondition_()
