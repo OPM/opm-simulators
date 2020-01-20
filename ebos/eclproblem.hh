@@ -2392,7 +2392,8 @@ private:
             compressedToCartesianElemIdx[elemIdx] = vanguard.cartesianIndex(elemIdx);
 
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
-        materialLawManager_->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
+        materialLawManager_->initFromDeck(deck, eclState);
+        materialLawManager_->initParamsForElements(eclState, compressedToCartesianElemIdx);
         ////////////////////////////////
     }
 
