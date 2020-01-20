@@ -148,6 +148,11 @@ public:
             }
         }
 
+        const auto& ph = eclState.runspec().phases();
+        hasGas = ph.active(Phase::GAS);
+        hasOil = ph.active(Phase::OIL);
+        hasWater = ph.active(Phase::WATER);
+
         readGlobalEpsOptions_(deck, eclState);
         readGlobalHysteresisOptions_(deck);
         readGlobalThreePhaseOptions_(deck);
@@ -499,12 +504,12 @@ private:
         oilWaterEffectiveParamVector_.resize(numSatRegions);
         for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
             // unscaled points for end-point scaling
-            readGasOilUnscaledPoints_(gasOilUnscaledPointsVector_, gasOilConfig, deck, eclState, satRegionIdx);
-            readOilWaterUnscaledPoints_(oilWaterUnscaledPointsVector_, oilWaterConfig, deck, eclState, satRegionIdx);
+            readGasOilUnscaledPoints_(gasOilUnscaledPointsVector_, gasOilConfig, eclState, satRegionIdx);
+            readOilWaterUnscaledPoints_(oilWaterUnscaledPointsVector_, oilWaterConfig, eclState, satRegionIdx);
 
             // the parameters for the effective two-phase matererial laws
-            readGasOilEffectiveParameters_(gasOilEffectiveParamVector_, deck, eclState, satRegionIdx);
-            readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector_, deck, eclState, satRegionIdx);
+            readGasOilEffectiveParameters_(gasOilEffectiveParamVector_, eclState, satRegionIdx);
+            readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector_, eclState, satRegionIdx);
 
             // read the end point scaling info for the saturation region
             unscaledEpsInfo_[satRegionIdx].extractUnscaled(deck, eclState, satRegionIdx);
@@ -578,10 +583,6 @@ private:
             gasOilImbParams.resize(numCompressedElems);
             oilWaterImbParams.resize(numCompressedElems);
         }
-
-        bool hasGas = deck.hasKeyword("GAS");
-        bool hasOil = deck.hasKeyword("OIL");
-        bool hasWater = deck.hasKeyword("WATER");
 
         assert(numCompressedElems == satnumRegionArray.size());
         assert(!enableHysteresis() || numCompressedElems == imbnumRegionArray.size());
@@ -684,7 +685,7 @@ private:
         FamilyII
     };
 
-    SaturationFunctionFamily getSaturationFunctionFamily(const Opm::Deck& deck, const Opm::EclipseState& eclState) const
+    SaturationFunctionFamily getSaturationFunctionFamily(const Opm::EclipseState& eclState) const
     {
         const auto& tableManager = eclState.getTableManager();
         const TableContainer& swofTables = tableManager.getSwofTables();
@@ -694,11 +695,6 @@ private:
         const TableContainer& sgfnTables = tableManager.getSgfnTables();
         const TableContainer& sof3Tables = tableManager.getSof3Tables();
         const TableContainer& sof2Tables = tableManager.getSof2Tables();
-
-
-        bool hasGas = deck.hasKeyword("GAS");
-        bool hasOil = deck.hasKeyword("OIL");
-        bool hasWater = deck.hasKeyword("WATER");
 
         bool family1 = false;
         bool family2 = false;
@@ -740,13 +736,9 @@ private:
 
     template <class Container>
     void readGasOilEffectiveParameters_(Container& dest,
-                                        const Opm::Deck& deck,
                                         const Opm::EclipseState& eclState,
                                         unsigned satRegionIdx)
     {
-        bool hasGas = deck.hasKeyword("GAS");
-        bool hasOil = deck.hasKeyword("OIL");
-
         if (!hasGas || !hasOil)
             // we don't read anything if either the gas or the oil phase is not active
             return;
@@ -760,7 +752,7 @@ private:
         Scalar Swco = unscaledEpsInfo_[satRegionIdx].Swl;
         const auto& tableManager = eclState.getTableManager();
 
-        switch (getSaturationFunctionFamily(deck, eclState)) {
+        switch (getSaturationFunctionFamily(eclState)) {
         case FamilyI:
         {
             const TableContainer& sgofTables = tableManager.getSgofTables();
@@ -779,7 +771,6 @@ private:
         case FamilyII:
         {
             const SgfnTable& sgfnTable = tableManager.getSgfnTables().getTable<SgfnTable>( satRegionIdx );
-            bool hasWater = deck.hasKeyword("WATER");
             if (!hasWater) {
                 // oil and gas case
                 const Sof2Table& sof2Table = tableManager.getSof2Tables().getTable<Sof2Table>( satRegionIdx );
@@ -877,13 +868,9 @@ private:
 
     template <class Container>
     void readOilWaterEffectiveParameters_(Container& dest,
-                                          const Opm::Deck& deck,
                                           const Opm::EclipseState& eclState,
                                           unsigned satRegionIdx)
     {
-        bool hasWater = deck.hasKeyword("WATER");
-        bool hasOil = deck.hasKeyword("OIL");
-
         if (!hasOil || !hasWater)
             // we don't read anything if either the water or the oil phase is not active
             return;
@@ -893,7 +880,7 @@ private:
         const auto& tableManager = eclState.getTableManager();
         auto& effParams = *dest[satRegionIdx];
 
-        switch (getSaturationFunctionFamily(deck, eclState)) {
+        switch (getSaturationFunctionFamily(eclState)) {
         case FamilyI: {
             const auto& swofTable = tableManager.getSwofTables().getTable<SwofTable>(satRegionIdx);
             std::vector<double> SwColumn = swofTable.getColumn("SW").vectorCopy();
@@ -932,13 +919,9 @@ private:
     template <class Container>
     void readGasOilUnscaledPoints_(Container& dest,
                                    std::shared_ptr<EclEpsConfig> config,
-                                   const Opm::Deck& deck,
                                    const Opm::EclipseState& /* eclState */,
                                    unsigned satRegionIdx)
     {
-        bool hasGas = deck.hasKeyword("GAS");
-        bool hasOil = deck.hasKeyword("OIL");
-
         if (!hasGas || !hasOil)
             // we don't read anything if either the gas or the oil phase is not active
             return;
@@ -950,13 +933,9 @@ private:
     template <class Container>
     void readOilWaterUnscaledPoints_(Container& dest,
                                      std::shared_ptr<EclEpsConfig> config,
-                                     const Opm::Deck& deck,
                                      const Opm::EclipseState& /* eclState */,
                                      unsigned satRegionIdx)
     {
-        bool hasWater = deck.hasKeyword("WATER");
-        bool hasOil = deck.hasKeyword("OIL");
-
         if (!hasOil || !hasWater)
             // we don't read anything if either the water or the oil phase is not active
             return;
@@ -1079,6 +1058,10 @@ private:
     std::vector<int> satnumRegionArray_;
     std::vector<int> imbnumRegionArray_;
     std::vector<Scalar> stoneEtas;
+
+    bool hasGas;
+    bool hasOil;
+    bool hasWater;
 };
 } // namespace Opm
 
