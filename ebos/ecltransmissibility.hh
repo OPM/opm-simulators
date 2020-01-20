@@ -33,7 +33,6 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/GridProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>

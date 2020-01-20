@@ -38,7 +38,6 @@
 
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/GridProperty.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>

@@ -36,7 +36,6 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/GridProperty.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
