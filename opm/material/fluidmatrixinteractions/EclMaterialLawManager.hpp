@@ -123,31 +123,6 @@ public:
         // get the number of saturation regions and the number of cells in the deck
         const size_t numSatRegions = eclState.runspec().tabdims().getNumSatTables();
 
-        // copy the SATNUM grid property. in some cases this is not necessary, but it
-        // should not require much memory anyway...
-        size_t numCompressedElems = compressedToCartesianElemIdx.size();
-        satnumRegionArray_.resize(numCompressedElems);
-        if (eclState.fieldProps().has<int>("SATNUM")) {
-            const auto& satnumRawData = eclState.fieldProps().get_global<int>("SATNUM");
-            for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
-                unsigned cartesianElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx[elemIdx]);
-                satnumRegionArray_[elemIdx] = satnumRawData[cartesianElemIdx] - 1;
-            }
-        }
-        else
-            std::fill(satnumRegionArray_.begin(), satnumRegionArray_.end(), 0);
-
-        // create the information for the imbibition region (IMBNUM). By default this is
-        // the same as the saturation region (SATNUM)
-        imbnumRegionArray_ = satnumRegionArray_;
-        if (eclState.fieldProps().has<int>("IMBNUM")) {
-            const auto& imbnumRawData = eclState.fieldProps().get_global<int>("IMBNUM");
-            for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
-                int cartesianElemIdx = compressedToCartesianElemIdx[elemIdx];
-                imbnumRegionArray_[elemIdx] = imbnumRawData[cartesianElemIdx] - 1;
-            }
-        }
-
         const auto& ph = eclState.runspec().phases();
         hasGas = ph.active(Phase::GAS);
         hasOil = ph.active(Phase::OIL);
@@ -156,6 +131,13 @@ public:
         readGlobalEpsOptions_(deck, eclState);
         readGlobalHysteresisOptions_(deck);
         readGlobalThreePhaseOptions_(deck);
+
+        // read the end point scaling configuration. this needs to be done only once per
+        // deck.
+        gasOilConfig = std::make_shared<Opm::EclEpsConfig>();
+        oilWaterConfig = std::make_shared<Opm::EclEpsConfig>();
+        gasOilConfig->initFromDeck(deck, eclState, Opm::EclGasOilSystem);
+        oilWaterConfig->initFromDeck(deck, eclState, Opm::EclOilWaterSystem);
 
         unscaledEpsInfo_.resize(numSatRegions);
         if (deck.hasKeyword("STONE1EX"))
@@ -166,7 +148,7 @@ public:
                 stoneEtas[satRegionIdx] = deck.getKeyword("STONE1EX").getRecord(satRegionIdx).getItem(0).getSIDouble(0);
         }
 
-        initParamsForElements_(deck, eclState, compressedToCartesianElemIdx, satnumRegionArray_, imbnumRegionArray_);
+        initParamsForElements_(eclState, compressedToCartesianElemIdx, satnumRegionArray_, imbnumRegionArray_);
     }
 
     /*!
@@ -482,22 +464,15 @@ private:
         }
     }
 
-    void initParamsForElements_(const Deck& deck, const EclipseState& eclState,
+    void initParamsForElements_(const EclipseState& eclState,
                                 const std::vector<int>& compressedToCartesianElemIdx,
                                 const std::vector<int>& satnumRegionArray,
                                 const std::vector<int>& imbnumRegionArray)
     {
+        // get the number of saturation regions
         const size_t numSatRegions = eclState.runspec().tabdims().getNumSatTables();
-        unsigned numCompressedElems = static_cast<unsigned>(compressedToCartesianElemIdx.size());
 
-        // read the end point scaling configuration. this needs to be done only once per
-        // deck.
-        auto gasOilConfig = std::make_shared<Opm::EclEpsConfig>();
-        auto oilWaterConfig = std::make_shared<Opm::EclEpsConfig>();
-        gasOilConfig->initFromDeck(deck, eclState, Opm::EclGasOilSystem);
-        oilWaterConfig->initFromDeck(deck, eclState, Opm::EclOilWaterSystem);
-
-        // read the saturation region specific parameters from the deck
+        // setup the saturation region specific parameters
         gasOilUnscaledPointsVector_.resize(numSatRegions);
         oilWaterUnscaledPointsVector_.resize(numSatRegions);
         gasOilEffectiveParamVector_.resize(numSatRegions);
@@ -510,10 +485,31 @@ private:
             // the parameters for the effective two-phase matererial laws
             readGasOilEffectiveParameters_(gasOilEffectiveParamVector_, eclState, satRegionIdx);
             readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector_, eclState, satRegionIdx);
+        }
 
-            // read the end point scaling info for the saturation region
-            unscaledEpsInfo_[satRegionIdx].extractUnscaled(deck, eclState, satRegionIdx);
+        unsigned numCompressedElems = static_cast<unsigned>(compressedToCartesianElemIdx.size());
+        // copy the SATNUM grid property. in some cases this is not necessary, but it
+        // should not require much memory anyway...
+        satnumRegionArray_.resize(numCompressedElems);
+        if (eclState.fieldProps().has<int>("SATNUM")) {
+            const auto& satnumRawData = eclState.fieldProps().get_global<int>("SATNUM");
+            for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+                unsigned cartesianElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx[elemIdx]);
+                satnumRegionArray_[elemIdx] = satnumRawData[cartesianElemIdx] - 1;
+            }
+        }
+        else
+            std::fill(satnumRegionArray_.begin(), satnumRegionArray_.end(), 0);
 
+        // create the information for the imbibition region (IMBNUM). By default this is
+        // the same as the saturation region (SATNUM)
+        imbnumRegionArray_ = satnumRegionArray_;
+        if (eclState.fieldProps().has<int>("IMBNUM")) {
+            const auto& imbnumRawData = eclState.fieldProps().get_global<int>("IMBNUM");
+            for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+                int cartesianElemIdx = compressedToCartesianElemIdx[elemIdx];
+                imbnumRegionArray_[elemIdx] = imbnumRawData[cartesianElemIdx] - 1;
+            }
         }
 
         // read the scaled end point scaling parameters which are specific for each
@@ -1062,6 +1058,9 @@ private:
     bool hasGas;
     bool hasOil;
     bool hasWater;
+
+    std::shared_ptr<Opm::EclEpsConfig> gasOilConfig;
+    std::shared_ptr<Opm::EclEpsConfig> oilWaterConfig;
 };
 } // namespace Opm
 
