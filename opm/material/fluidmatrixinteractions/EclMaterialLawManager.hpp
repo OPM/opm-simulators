@@ -117,8 +117,7 @@ public:
     {}
 
     void initFromDeck(const Opm::Deck& deck,
-                      const Opm::EclipseState& eclState,
-                      const std::vector<int>& compressedToCartesianElemIdx)
+                      const Opm::EclipseState& eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
         const size_t numSatRegions = eclState.runspec().tabdims().getNumSatTables();
@@ -147,8 +146,6 @@ public:
             if (!stoneEtas.empty())
                 stoneEtas[satRegionIdx] = deck.getKeyword("STONE1EX").getRecord(satRegionIdx).getItem(0).getSIDouble(0);
         }
-
-        initParamsForElements(eclState, compressedToCartesianElemIdx);
     }
 
     void initParamsForElements(const EclipseState& eclState,
