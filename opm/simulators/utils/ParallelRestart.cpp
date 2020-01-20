@@ -1323,9 +1323,6 @@ std::size_t packSize(const std::shared_ptr<T>& data,
     return size;
 }
 
-template std::size_t packSize(const std::shared_ptr<SpiralICD>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-
 template<class T>
 std::size_t packSize(const std::unique_ptr<T>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -3142,9 +3139,6 @@ void pack(const std::unique_ptr<T>& data, std::vector<char>& buffer, int& positi
     if (data)
         pack(*data, buffer, position, comm);
 }
-
-template void pack(const std::shared_ptr<SpiralICD>& data, std::vector<char>& buffer,
-                   int& position, Dune::MPIHelper::MPICommunicator comm);
 
 void pack(const Dimension& data,
           std::vector<char>& buffer, int& position,
@@ -5474,10 +5468,6 @@ void unpack(std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
     }
 }
 
-template void unpack(std::shared_ptr<SpiralICD>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
-
 void unpack(Dimension& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -6486,6 +6476,19 @@ INSTANTIATE_PACK_VECTOR(bool)
 INSTANTIATE_PACK_VECTOR(char)
 INSTANTIATE_PACK_VECTOR(Opm::Tabulated1DFunction<double>)
 #undef INSTANTIATE_PACK_VECTOR
+
+#define INSTANTIATE_PACK_SHARED_PTR(...) \
+template std::size_t packSize(const std::shared_ptr<__VA_ARGS__>& data, \
+                              Dune::MPIHelper::MPICommunicator comm); \
+template void pack(const std::shared_ptr<__VA_ARGS__>& data, \
+                   std::vector<char>& buffer, int& position, \
+                   Dune::MPIHelper::MPICommunicator comm); \
+template void unpack(std::shared_ptr<__VA_ARGS__>& data, \
+                     std::vector<char>& buffer, int& position, \
+                     Dune::MPIHelper::MPICommunicator comm);
+
+INSTANTIATE_PACK_SHARED_PTR(SpiralICD)
+#undef INSTANTIATE_PACK_SHARED_PTR
 
 #define INSTANTIATE_PACK(...) \
 template std::size_t packSize(const __VA_ARGS__& data, \
