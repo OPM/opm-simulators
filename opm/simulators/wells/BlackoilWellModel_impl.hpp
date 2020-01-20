@@ -1954,9 +1954,9 @@ namespace Opm {
                 well_state.setCurrentProductionGroupControl(group.name(), newControl);
                 ss << "Switching control mode for group "<< group.name() << " to " << Group::ProductionCMode2String(newControl);
             }
-            // Pass a dummy phase for producer groups. The topPhase is only relevant for injector groups
-            const Phase topPhase = Phase::WATER;
-            wellGroupHelpers::setGroupControl(group, schedule(), topPhase, reportStepIdx, false, well_state, ss);
+            // Pass a dummy phase for producer groups. The topUpPhase is only relevant for injector groups
+            const Phase topUpPhase = Phase::WATER;
+            wellGroupHelpers::setGroupControl(group, schedule(), topUpPhase, reportStepIdx, false, well_state, ss);
             break;
         }
         default:
@@ -1994,8 +1994,8 @@ namespace Opm {
             well_state.setCurrentInjectionGroupControl(group.name(), newControl);
         }
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
-        const Phase& topPhase = group.injectionControls(summaryState).phase;
-        wellGroupHelpers::setGroupControl(group, schedule(), topPhase, reportStepIdx, /*isInjector*/true, well_state, ss);
+        const Phase& topUpPhase = group.injectionControls(summaryState).phase;
+        wellGroupHelpers::setGroupControl(group, schedule(), topUpPhase, reportStepIdx, /*isInjector*/true, well_state, ss);
 
         if (!ss.str().empty())
             deferred_logger.info(ss.str());

@@ -29,13 +29,13 @@ namespace Opm {
     namespace wellGroupHelpers
     {
 
-    inline void setGroupControl(const Group& group, const Schedule& schedule, const Phase& topPhase, const int reportStepIdx, const bool injector, WellStateFullyImplicitBlackoil& wellState, std::ostringstream& ss) {
+    inline void setGroupControl(const Group& group, const Schedule& schedule, const Phase& topUpPhase, const int reportStepIdx, const bool injector, WellStateFullyImplicitBlackoil& wellState, std::ostringstream& ss) {
 
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            setGroupControl(groupTmp, schedule, topPhase, reportStepIdx, injector, wellState, ss);
+            setGroupControl(groupTmp, schedule, topUpPhase, reportStepIdx, injector, wellState, ss);
             if (injector) {
-                if (groupTmp.injection_phase() == topPhase || wellState.currentInjectionGroupControl(groupName) == Group::InjectionCMode::NONE) // only switch sub groups with same face or NONE
+                if (groupTmp.injection_phase() == topUpPhase || wellState.currentInjectionGroupControl(groupName) == Group::InjectionCMode::NONE) // only switch sub groups with same phase or NONE
                     wellState.setCurrentInjectionGroupControl(groupName, Group::InjectionCMode::FLD);
             } else {
                 wellState.setCurrentProductionGroupControl(groupName, Group::ProductionCMode::FLD);
@@ -69,13 +69,13 @@ namespace Opm {
                 // Get the current controls.
                 const Well::InjectorType& injectorType = wellEcl.getInjectionProperties().injectorType;
 
-                if (injectorType == Well::InjectorType::WATER && topPhase != Phase::WATER)
+                if (injectorType == Well::InjectorType::WATER && topUpPhase != Phase::WATER)
                     continue;
 
-                if (injectorType == Well::InjectorType::OIL && topPhase != Phase::OIL)
+                if (injectorType == Well::InjectorType::OIL && topUpPhase != Phase::OIL)
                     continue;
 
-                if (injectorType == Well::InjectorType::GAS && topPhase != Phase::GAS)
+                if (injectorType == Well::InjectorType::GAS && topUpPhase != Phase::GAS)
                     continue;
 
                 if (injectorType == Well::InjectorType::MULTI)
