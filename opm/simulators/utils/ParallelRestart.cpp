@@ -6470,21 +6470,21 @@ void unpack(GuideRateConfig::GroupTarget& data,
     unpack(data.target, buffer, position, comm);
 }
 
-#define INSTANTIATE_PACK_VECTOR(T) \
-template std::size_t packSize(const std::vector<T>& data, \
+#define INSTANTIATE_PACK_VECTOR(...) \
+template std::size_t packSize(const std::vector<__VA_ARGS__>& data, \
                               Dune::MPIHelper::MPICommunicator comm); \
-template void pack(const std::vector<T>& data, \
+template void pack(const std::vector<__VA_ARGS__>& data, \
                    std::vector<char>& buffer, int& position, \
                    Dune::MPIHelper::MPICommunicator comm); \
-template void unpack(std::vector<T>& data, \
+template void unpack(std::vector<__VA_ARGS__>& data, \
                      std::vector<char>& buffer, int& position, \
                      Dune::MPIHelper::MPICommunicator comm);
 
-INSTANTIATE_PACK_VECTOR(double);
-INSTANTIATE_PACK_VECTOR(std::vector<double>);
-INSTANTIATE_PACK_VECTOR(bool);
-INSTANTIATE_PACK_VECTOR(char);
-INSTANTIATE_PACK_VECTOR(Opm::Tabulated1DFunction<double>);
+INSTANTIATE_PACK_VECTOR(double)
+INSTANTIATE_PACK_VECTOR(std::vector<double>)
+INSTANTIATE_PACK_VECTOR(bool)
+INSTANTIATE_PACK_VECTOR(char)
+INSTANTIATE_PACK_VECTOR(Opm::Tabulated1DFunction<double>)
 #undef INSTANTIATE_PACK_VECTOR
 
 #define INSTANTIATE_PACK(T) \
