@@ -6487,20 +6487,20 @@ INSTANTIATE_PACK_VECTOR(char)
 INSTANTIATE_PACK_VECTOR(Opm::Tabulated1DFunction<double>)
 #undef INSTANTIATE_PACK_VECTOR
 
-#define INSTANTIATE_PACK(T) \
-template std::size_t packSize(const T& data, \
+#define INSTANTIATE_PACK(...) \
+template std::size_t packSize(const __VA_ARGS__& data, \
                               Dune::MPIHelper::MPICommunicator comm); \
-template void pack(const T& data,                                                     \
+template void pack(const __VA_ARGS__& data, \
                    std::vector<char>& buffer, int& position, \
                    Dune::MPIHelper::MPICommunicator comm); \
-template void unpack(T& data, \
+template void unpack(__VA_ARGS__& data, \
                      std::vector<char>& buffer, int& position, \
                      Dune::MPIHelper::MPICommunicator comm);
 
-INSTANTIATE_PACK(double);
-INSTANTIATE_PACK(std::size_t);
-INSTANTIATE_PACK(bool);
-INSTANTIATE_PACK(int);
+INSTANTIATE_PACK(double)
+INSTANTIATE_PACK(std::size_t)
+INSTANTIATE_PACK(bool)
+INSTANTIATE_PACK(int)
 #undef INSTANTIATE_PACK
 
 } // end namespace Mpi
