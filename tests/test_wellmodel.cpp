@@ -70,7 +70,6 @@ struct SetupTest {
         ecl_state.reset(new Opm::EclipseState(deck) );
         {
           const Opm::TableManager table ( deck );
-          const Opm::Eclipse3DProperties eclipseProperties ( deck , table, ecl_state->getInputGrid());
           const Opm::Runspec runspec (deck);
           schedule.reset( new Opm::Schedule(deck, *ecl_state));
           summaryState.reset( new Opm::SummaryState(std::chrono::system_clock::from_time_t(schedule->getStartTime())));
