@@ -153,8 +153,13 @@ public:
         readGlobalThreePhaseOptions_(deck);
 
         unscaledEpsInfo_.resize(numSatRegions);
-        for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx)
+        if (deck.hasKeyword("STONE1EX"))
+            stoneEtas.resize(numSatRegions);
+        for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
             unscaledEpsInfo_[satRegionIdx].extractUnscaled(deck, eclState, satRegionIdx);
+            if (!stoneEtas.empty())
+                stoneEtas[satRegionIdx] = deck.getKeyword("STONE1EX").getRecord(satRegionIdx).getItem(0).getSIDouble(0);
+        }
 
         initParamsForElements_(deck, eclState, compressedToCartesianElemIdx, satnumRegionArray_, imbnumRegionArray_);
     }
@@ -658,8 +663,7 @@ private:
             materialLawParams_[elemIdx] = std::make_shared<MaterialLawParams>();
             unsigned satRegionIdx = static_cast<unsigned>(satnumRegionArray[elemIdx]);
 
-            initThreePhaseParams_(deck,
-                                  eclState,
+            initThreePhaseParams_(eclState,
                                   *materialLawParams_[elemIdx],
                                   satRegionIdx,
                                   *oilWaterScaledEpsInfoDrainage_[elemIdx],
@@ -995,8 +999,7 @@ private:
         destPoints[elemIdx]->init(*destInfo[elemIdx], *config, EclOilWaterSystem);
     }
 
-    void initThreePhaseParams_(const Opm::Deck& deck,
-                               const Opm::EclipseState& /* eclState */,
+    void initThreePhaseParams_(const Opm::EclipseState& /* eclState */,
                                MaterialLawParams& materialParams,
                                unsigned satRegionIdx,
                                const EclEpsScalingPointsInfo<Scalar>& epsInfo,
@@ -1012,10 +1015,8 @@ private:
             realParams.setOilWaterParams(oilWaterParams);
             realParams.setSwl(epsInfo.Swl);
 
-            if (deck.hasKeyword("STONE1EX")) {
-                Scalar eta =
-                    deck.getKeyword("STONE1EX").getRecord(satRegionIdx).getItem(0).getSIDouble(0);
-                realParams.setEta(eta);
+            if (!stoneEtas.empty()) {
+                realParams.setEta(stoneEtas[satRegionIdx]);
             }
             else
                 realParams.setEta(1.0);
@@ -1077,6 +1078,7 @@ private:
 
     std::vector<int> satnumRegionArray_;
     std::vector<int> imbnumRegionArray_;
+    std::vector<Scalar> stoneEtas;
 };
 } // namespace Opm
 
