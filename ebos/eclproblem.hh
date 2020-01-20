@@ -2725,18 +2725,6 @@ private:
         // initial reservoir temperature
         tempiData = fp.get_global_double("TEMPI");
 
-
-        // make sure that the size of the data arrays is correct
-#ifndef NDEBUG
-        assert(waterSaturationData.size() == numCartesianCells);
-        assert(gasSaturationData.size() == numCartesianCells);
-        assert(pressureData.size() == numCartesianCells);
-        if (FluidSystem::enableDissolvedGas())
-            assert(rsData.size() == numCartesianCells);
-        if (FluidSystem::enableVaporizedOil())
-            assert(rvData.size() == numCartesianCells);
-#endif
-
         // calculate the initial fluid states
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto& dofFluidState = initialFluidStates_[dofIdx];
