@@ -4664,11 +4664,11 @@ void unpack(GasPvtMultiplexer<Scalar,enableThermal>& data,
         DryGasPvt<Scalar>* realPvt = new DryGasPvt<Scalar>;
         unpack(*realPvt, buffer, position, comm);
         pvt = realPvt;
-    } else if (data.gasPvtApproach() == PvtApproach::WetGasPvt) {
+    } else if (approach == PvtApproach::WetGasPvt) {
         WetGasPvt<Scalar>* realPvt = new WetGasPvt<Scalar>;
         unpack(*realPvt, buffer, position, comm);
         pvt = realPvt;
-    } else if (data.gasPvtApproach() == PvtApproach::ThermalGasPvt) {
+    } else if (approach == PvtApproach::ThermalGasPvt) {
         GasPvtThermal<Scalar>* realPvt = new GasPvtThermal<Scalar>;
         unpack(*realPvt, buffer, position, comm);
         pvt = realPvt;
@@ -4952,7 +4952,7 @@ void unpack(WaterPvtMultiplexer<Scalar,enableThermal>& data,
         auto* realPvt = new ConstantCompressibilityWaterPvt<Scalar>;
         unpack(*realPvt, buffer, position, comm);
         pvt = realPvt;
-    } else if (data.approach() == PvtApproach::ThermalWaterPvt) {
+    } else if (approach == PvtApproach::ThermalWaterPvt) {
         auto* realPvt = new WaterPvtThermal<Scalar>;
         unpack(*realPvt, buffer, position, comm);
         pvt = realPvt;
