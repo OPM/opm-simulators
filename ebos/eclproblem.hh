@@ -3188,11 +3188,10 @@ private:
     EclThresholdPressure<TypeTag> thresholdPressures_;
 
     std::vector<int> pvtnum_;
-    std::vector<unsigned short> satnum_;
-    std::vector<unsigned short> miscnum_;
-    std::vector<unsigned short> plmixnum_;
-
-    std::vector<unsigned short> rockTableIdx_;
+    std::vector<int> satnum_;
+    std::vector<int> miscnum_;
+    std::vector<int> plmixnum_;
+    std::vector<int> rockTableIdx_;
     std::vector<RockParams> rockParams_;
 
     std::vector<Scalar> maxPolymerAdsorption_;
