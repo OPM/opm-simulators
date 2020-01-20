@@ -148,7 +148,7 @@ public:
                 stoneEtas[satRegionIdx] = deck.getKeyword("STONE1EX").getRecord(satRegionIdx).getItem(0).getSIDouble(0);
         }
 
-        initParamsForElements_(eclState, compressedToCartesianElemIdx, satnumRegionArray_, imbnumRegionArray_);
+        initParamsForElements_(eclState, compressedToCartesianElemIdx);
     }
 
     /*!
@@ -465,9 +465,7 @@ private:
     }
 
     void initParamsForElements_(const EclipseState& eclState,
-                                const std::vector<int>& compressedToCartesianElemIdx,
-                                const std::vector<int>& satnumRegionArray,
-                                const std::vector<int>& imbnumRegionArray)
+                                const std::vector<int>& compressedToCartesianElemIdx)
     {
         // get the number of saturation regions
         const size_t numSatRegions = eclState.runspec().tabdims().getNumSatTables();
@@ -580,10 +578,10 @@ private:
             oilWaterImbParams.resize(numCompressedElems);
         }
 
-        assert(numCompressedElems == satnumRegionArray.size());
-        assert(!enableHysteresis() || numCompressedElems == imbnumRegionArray.size());
+        assert(numCompressedElems == satnumRegionArray_.size());
+        assert(!enableHysteresis() || numCompressedElems == imbnumRegionArray_.size());
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
-            unsigned satRegionIdx = static_cast<unsigned>(satnumRegionArray[elemIdx]);
+            unsigned satRegionIdx = static_cast<unsigned>(satnumRegionArray_[elemIdx]);
 
             gasOilParams[elemIdx] = std::make_shared<GasOilTwoPhaseHystParams>();
             oilWaterParams[elemIdx] = std::make_shared<OilWaterTwoPhaseHystParams>();
@@ -618,7 +616,7 @@ private:
             }
 
             if (enableHysteresis()) {
-                unsigned imbRegionIdx = imbnumRegionArray[elemIdx];
+                unsigned imbRegionIdx = imbnumRegionArray_[elemIdx];
 
                 if (hasGas && hasOil) {
                     auto gasOilImbParamsHyst = std::make_shared<GasOilEpsTwoPhaseParams>();
@@ -658,7 +656,7 @@ private:
         materialLawParams_.resize(numCompressedElems);
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
             materialLawParams_[elemIdx] = std::make_shared<MaterialLawParams>();
-            unsigned satRegionIdx = static_cast<unsigned>(satnumRegionArray[elemIdx]);
+            unsigned satRegionIdx = static_cast<unsigned>(satnumRegionArray_[elemIdx]);
 
             initThreePhaseParams_(eclState,
                                   *materialLawParams_[elemIdx],
