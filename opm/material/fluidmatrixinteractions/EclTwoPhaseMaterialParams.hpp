@@ -34,7 +34,7 @@
 #include <opm/material/common/EnsureFinalized.hpp>
 
 namespace Opm {
-enum EclTwoPhaseApproach {
+enum class EclTwoPhaseApproach {
     EclTwoPhaseGasOil,
     EclTwoPhaseOilWater,
     EclTwoPhaseGasWater

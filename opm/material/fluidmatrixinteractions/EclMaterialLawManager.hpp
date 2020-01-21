@@ -449,8 +449,8 @@ public:
 
         // change the sat table it points to.
         switch (mlp.approach()) {
-        case EclStone1Approach: {
-            auto& realParams = mlp.template getRealParams<Opm::EclStone1Approach>();
+        case EclMultiplexerApproach::EclStone1Approach: {
+            auto& realParams = mlp.template getRealParams<EclMultiplexerApproach::EclStone1Approach>();
 
             realParams.oilWaterParams().drainageParams().setUnscaledPoints(oilWaterUnscaledPointsVector_[satRegionIdx]);
             realParams.oilWaterParams().drainageParams().setEffectiveLawParams(oilWaterEffectiveParamVector_[satRegionIdx]);
@@ -465,8 +465,8 @@ public:
         }
             break;
 
-        case EclStone2Approach: {
-            auto& realParams = mlp.template getRealParams<Opm::EclStone2Approach>();
+        case EclMultiplexerApproach::EclStone2Approach: {
+            auto& realParams = mlp.template getRealParams<EclMultiplexerApproach::EclStone2Approach>();
             realParams.oilWaterParams().drainageParams().setUnscaledPoints(oilWaterUnscaledPointsVector_[satRegionIdx]);
             realParams.oilWaterParams().drainageParams().setEffectiveLawParams(oilWaterEffectiveParamVector_[satRegionIdx]);
             realParams.gasOilParams().drainageParams().setUnscaledPoints(gasOilUnscaledPointsVector_[satRegionIdx]);
@@ -480,8 +480,8 @@ public:
         }
             break;
 
-        case EclDefaultApproach: {
-            auto& realParams = mlp.template getRealParams<Opm::EclDefaultApproach>();
+        case EclMultiplexerApproach::EclDefaultApproach: {
+            auto& realParams = mlp.template getRealParams<EclMultiplexerApproach::EclDefaultApproach>();
             realParams.oilWaterParams().drainageParams().setUnscaledPoints(oilWaterUnscaledPointsVector_[satRegionIdx]);
             realParams.oilWaterParams().drainageParams().setEffectiveLawParams(oilWaterEffectiveParamVector_[satRegionIdx]);
             realParams.gasOilParams().drainageParams().setUnscaledPoints(gasOilUnscaledPointsVector_[satRegionIdx]);
@@ -495,8 +495,8 @@ public:
         }
             break;
 
-        case EclTwoPhaseApproach: {
-            auto& realParams = mlp.template getRealParams<Opm::EclTwoPhaseApproach>();
+        case EclMultiplexerApproach::EclTwoPhaseApproach: {
+            auto& realParams = mlp.template getRealParams<EclMultiplexerApproach::EclTwoPhaseApproach>();
             realParams.oilWaterParams().drainageParams().setUnscaledPoints(oilWaterUnscaledPointsVector_[satRegionIdx]);
             realParams.oilWaterParams().drainageParams().setEffectiveLawParams(oilWaterEffectiveParamVector_[satRegionIdx]);
             realParams.gasOilParams().drainageParams().setUnscaledPoints(gasOilUnscaledPointsVector_[satRegionIdx]);
@@ -587,23 +587,23 @@ public:
     {
         auto& materialParams = *materialLawParams_[elemIdx];
         switch (materialParams.approach()) {
-        case EclStone1Approach: {
-            auto& realParams = materialParams.template getRealParams<Opm::EclStone1Approach>();
+        case EclMultiplexerApproach::EclStone1Approach: {
+            auto& realParams = materialParams.template getRealParams<EclMultiplexerApproach::EclStone1Approach>();
             return realParams.oilWaterParams().drainageParams().scaledPoints();
         }
 
-        case EclStone2Approach: {
-            auto& realParams = materialParams.template getRealParams<Opm::EclStone2Approach>();
+        case EclMultiplexerApproach::EclStone2Approach: {
+            auto& realParams = materialParams.template getRealParams<EclMultiplexerApproach::EclStone2Approach>();
             return realParams.oilWaterParams().drainageParams().scaledPoints();
         }
 
-        case EclDefaultApproach: {
-            auto& realParams = materialParams.template getRealParams<Opm::EclDefaultApproach>();
+        case EclMultiplexerApproach::EclDefaultApproach: {
+            auto& realParams = materialParams.template getRealParams<EclMultiplexerApproach::EclDefaultApproach>();
             return realParams.oilWaterParams().drainageParams().scaledPoints();
         }
 
-        case EclTwoPhaseApproach: {
-            auto& realParams = materialParams.template getRealParams<Opm::EclTwoPhaseApproach>();
+        case EclMultiplexerApproach::EclTwoPhaseApproach: {
+            auto& realParams = materialParams.template getRealParams<EclMultiplexerApproach::EclTwoPhaseApproach>();
             return realParams.oilWaterParams().drainageParams().scaledPoints();
         }
         default:
@@ -646,24 +646,24 @@ private:
         if (numEnabled == 0) {
             throw std::runtime_error("At least one fluid phase must be enabled. (Is: "+std::to_string(numEnabled)+")");
         } else if (numEnabled == 1) {
-            threePhaseApproach_ = Opm::EclMultiplexerApproach::EclOnePhaseApproach;
+            threePhaseApproach_ = EclMultiplexerApproach::EclOnePhaseApproach;
         } else if ( numEnabled == 2) {
-            threePhaseApproach_ = Opm::EclTwoPhaseApproach;
+            threePhaseApproach_ = EclMultiplexerApproach::EclTwoPhaseApproach;
             if (!gasEnabled)
-                twoPhaseApproach_ = Opm::EclTwoPhaseOilWater;
+                twoPhaseApproach_ = EclTwoPhaseApproach::EclTwoPhaseOilWater;
             else if (!oilEnabled)
-                twoPhaseApproach_ = Opm::EclTwoPhaseGasWater;
+                twoPhaseApproach_ = EclTwoPhaseApproach::EclTwoPhaseGasWater;
             else if (!waterEnabled)
-                twoPhaseApproach_ = Opm::EclTwoPhaseGasOil;
+                twoPhaseApproach_ = EclTwoPhaseApproach::EclTwoPhaseGasOil;
         }
         else {
             assert(numEnabled == 3);
 
-            threePhaseApproach_ = Opm::EclDefaultApproach;
+            threePhaseApproach_ = EclMultiplexerApproach::EclDefaultApproach;
             if (deck.hasKeyword("STONE") || deck.hasKeyword("STONE2"))
-                threePhaseApproach_ = Opm::EclStone2Approach;
+                threePhaseApproach_ = EclMultiplexerApproach::EclStone2Approach;
             else if (deck.hasKeyword("STONE1"))
-                threePhaseApproach_ = Opm::EclStone1Approach;
+                threePhaseApproach_ = EclMultiplexerApproach::EclStone1Approach;
         }
     }
 
@@ -980,8 +980,8 @@ private:
         materialParams.setApproach(threePhaseApproach_);
 
         switch (materialParams.approach()) {
-        case EclStone1Approach: {
-            auto& realParams = materialParams.template getRealParams<Opm::EclStone1Approach>();
+        case EclMultiplexerApproach::EclStone1Approach: {
+            auto& realParams = materialParams.template getRealParams<EclMultiplexerApproach::EclStone1Approach>();
             realParams.setGasOilParams(gasOilParams);
             realParams.setOilWaterParams(oilWaterParams);
             realParams.setSwl(epsInfo.Swl);
@@ -995,8 +995,8 @@ private:
             break;
         }
 
-        case EclStone2Approach: {
-            auto& realParams = materialParams.template getRealParams<Opm::EclStone2Approach>();
+        case EclMultiplexerApproach::EclStone2Approach: {
+            auto& realParams = materialParams.template getRealParams<EclMultiplexerApproach::EclStone2Approach>();
             realParams.setGasOilParams(gasOilParams);
             realParams.setOilWaterParams(oilWaterParams);
             realParams.setSwl(epsInfo.Swl);
@@ -1004,8 +1004,8 @@ private:
             break;
         }
 
-        case EclDefaultApproach: {
-            auto& realParams = materialParams.template getRealParams<Opm::EclDefaultApproach>();
+        case EclMultiplexerApproach::EclDefaultApproach: {
+            auto& realParams = materialParams.template getRealParams<EclMultiplexerApproach::EclDefaultApproach>();
             realParams.setGasOilParams(gasOilParams);
             realParams.setOilWaterParams(oilWaterParams);
             realParams.setSwl(epsInfo.Swl);
@@ -1013,8 +1013,8 @@ private:
             break;
         }
 
-        case EclTwoPhaseApproach: {
-            auto& realParams = materialParams.template getRealParams<Opm::EclTwoPhaseApproach>();
+        case EclMultiplexerApproach::EclTwoPhaseApproach: {
+            auto& realParams = materialParams.template getRealParams<EclMultiplexerApproach::EclTwoPhaseApproach>();
             realParams.setGasOilParams(gasOilParams);
             realParams.setOilWaterParams(oilWaterParams);
             realParams.setApproach(twoPhaseApproach_);
@@ -1022,7 +1022,7 @@ private:
             break;
         }
 
-        case EclOnePhaseApproach: {
+        case EclMultiplexerApproach::EclOnePhaseApproach: {
             // Nothing to do, no parameters.
             break;
         }
