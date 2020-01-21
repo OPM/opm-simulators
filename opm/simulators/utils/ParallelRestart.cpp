@@ -1323,9 +1323,6 @@ std::size_t packSize(const std::shared_ptr<T>& data,
     return size;
 }
 
-template std::size_t packSize(const std::shared_ptr<SpiralICD>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-
 template<class T>
 std::size_t packSize(const std::unique_ptr<T>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -3143,9 +3140,6 @@ void pack(const std::unique_ptr<T>& data, std::vector<char>& buffer, int& positi
         pack(*data, buffer, position, comm);
 }
 
-template void pack(const std::shared_ptr<SpiralICD>& data, std::vector<char>& buffer,
-                   int& position, Dune::MPIHelper::MPICommunicator comm);
-
 void pack(const Dimension& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -4670,11 +4664,11 @@ void unpack(GasPvtMultiplexer<Scalar,enableThermal>& data,
         DryGasPvt<Scalar>* realPvt = new DryGasPvt<Scalar>;
         unpack(*realPvt, buffer, position, comm);
         pvt = realPvt;
-    } else if (data.gasPvtApproach() == PvtApproach::WetGasPvt) {
+    } else if (approach == PvtApproach::WetGasPvt) {
         WetGasPvt<Scalar>* realPvt = new WetGasPvt<Scalar>;
         unpack(*realPvt, buffer, position, comm);
         pvt = realPvt;
-    } else if (data.gasPvtApproach() == PvtApproach::ThermalGasPvt) {
+    } else if (approach == PvtApproach::ThermalGasPvt) {
         GasPvtThermal<Scalar>* realPvt = new GasPvtThermal<Scalar>;
         unpack(*realPvt, buffer, position, comm);
         pvt = realPvt;
@@ -4958,7 +4952,7 @@ void unpack(WaterPvtMultiplexer<Scalar,enableThermal>& data,
         auto* realPvt = new ConstantCompressibilityWaterPvt<Scalar>;
         unpack(*realPvt, buffer, position, comm);
         pvt = realPvt;
-    } else if (data.approach() == PvtApproach::ThermalWaterPvt) {
+    } else if (approach == PvtApproach::ThermalWaterPvt) {
         auto* realPvt = new WaterPvtThermal<Scalar>;
         unpack(*realPvt, buffer, position, comm);
         pvt = realPvt;
@@ -5473,10 +5467,6 @@ void unpack(std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
         unpack(*data, buffer, position, comm);
     }
 }
-
-template void unpack(std::shared_ptr<SpiralICD>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
 
 void unpack(Dimension& data,
             std::vector<char>& buffer, int& position,
@@ -6470,37 +6460,57 @@ void unpack(GuideRateConfig::GroupTarget& data,
     unpack(data.target, buffer, position, comm);
 }
 
-#define INSTANTIATE_PACK_VECTOR(T) \
-template std::size_t packSize(const std::vector<T>& data, \
+#define INSTANTIATE_PACK_VECTOR(...) \
+template std::size_t packSize(const std::vector<__VA_ARGS__>& data, \
                               Dune::MPIHelper::MPICommunicator comm); \
-template void pack(const std::vector<T>& data, \
+template void pack(const std::vector<__VA_ARGS__>& data, \
                    std::vector<char>& buffer, int& position, \
                    Dune::MPIHelper::MPICommunicator comm); \
-template void unpack(std::vector<T>& data, \
+template void unpack(std::vector<__VA_ARGS__>& data, \
                      std::vector<char>& buffer, int& position, \
                      Dune::MPIHelper::MPICommunicator comm);
 
-INSTANTIATE_PACK_VECTOR(double);
-INSTANTIATE_PACK_VECTOR(std::vector<double>);
-INSTANTIATE_PACK_VECTOR(bool);
-INSTANTIATE_PACK_VECTOR(char);
-INSTANTIATE_PACK_VECTOR(Opm::Tabulated1DFunction<double>);
+INSTANTIATE_PACK_VECTOR(double)
+INSTANTIATE_PACK_VECTOR(std::vector<double>)
+INSTANTIATE_PACK_VECTOR(bool)
+INSTANTIATE_PACK_VECTOR(char)
+INSTANTIATE_PACK_VECTOR(Opm::Tabulated1DFunction<double>)
+INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
 #undef INSTANTIATE_PACK_VECTOR
 
-#define INSTANTIATE_PACK(T) \
-template std::size_t packSize(const T& data, \
+#define INSTANTIATE_PACK_SHARED_PTR(...) \
+template std::size_t packSize(const std::shared_ptr<__VA_ARGS__>& data, \
                               Dune::MPIHelper::MPICommunicator comm); \
-template void pack(const T& data,                                                     \
+template void pack(const std::shared_ptr<__VA_ARGS__>& data, \
                    std::vector<char>& buffer, int& position, \
                    Dune::MPIHelper::MPICommunicator comm); \
-template void unpack(T& data, \
+template void unpack(std::shared_ptr<__VA_ARGS__>& data, \
                      std::vector<char>& buffer, int& position, \
                      Dune::MPIHelper::MPICommunicator comm);
 
-INSTANTIATE_PACK(double);
-INSTANTIATE_PACK(std::size_t);
-INSTANTIATE_PACK(bool);
-INSTANTIATE_PACK(int);
+INSTANTIATE_PACK_SHARED_PTR(Opm::GasPvtMultiplexer<double, true>)
+INSTANTIATE_PACK_SHARED_PTR(Opm::OilPvtMultiplexer<double, true>)
+INSTANTIATE_PACK_SHARED_PTR(Opm::WaterPvtMultiplexer<double, true>)
+INSTANTIATE_PACK_SHARED_PTR(SpiralICD)
+#undef INSTANTIATE_PACK_SHARED_PTR
+
+#define INSTANTIATE_PACK(...) \
+template std::size_t packSize(const __VA_ARGS__& data, \
+                              Dune::MPIHelper::MPICommunicator comm); \
+template void pack(const __VA_ARGS__& data, \
+                   std::vector<char>& buffer, int& position, \
+                   Dune::MPIHelper::MPICommunicator comm); \
+template void unpack(__VA_ARGS__& data, \
+                     std::vector<char>& buffer, int& position, \
+                     Dune::MPIHelper::MPICommunicator comm);
+
+INSTANTIATE_PACK(double)
+INSTANTIATE_PACK(std::size_t)
+INSTANTIATE_PACK(bool)
+INSTANTIATE_PACK(int)
+INSTANTIATE_PACK(std::array<short,3>)
+INSTANTIATE_PACK(std::array<bool,3>)
+INSTANTIATE_PACK(unsigned char)
 #undef INSTANTIATE_PACK
 
 } // end namespace Mpi
