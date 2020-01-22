@@ -23,6 +23,7 @@
 
 #include "ParallelRestart.hpp"
 #include <opm/common/OpmLog/Location.hpp>
+#include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
@@ -1080,6 +1081,33 @@ std::size_t packSize(const WaterPvtThermal<Scalar>& data,
 
 template std::size_t packSize(const WaterPvtThermal<double>& data,
                               Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+std::size_t packSize(const EclEpsScalingPointsInfo<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.Swl, comm) +
+           packSize(data.Sgl, comm) +
+           packSize(data.Sowl, comm) +
+           packSize(data.Sogl, comm) +
+           packSize(data.krCriticalEps, comm) +
+           packSize(data.Swcr, comm) +
+           packSize(data.Sgcr, comm) +
+           packSize(data.Sowcr, comm) +
+           packSize(data.Sogcr, comm) +
+           packSize(data.Swu, comm) +
+           packSize(data.Sgu, comm) +
+           packSize(data.Sowu, comm) +
+           packSize(data.Sogu, comm) +
+           packSize(data.maxPcow, comm) +
+           packSize(data.maxPcgo, comm) +
+           packSize(data.pcowLeverettFactor, comm) +
+           packSize(data.pcgoLeverettFactor, comm) +
+           packSize(data.maxKrw, comm) +
+           packSize(data.maxKrow, comm) +
+           packSize(data.maxKrog, comm) +
+           packSize(data.maxKrg, comm);
+}
 
 std::size_t packSize(const OilVaporizationProperties& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -3932,6 +3960,33 @@ void pack(const FaultCollection& data,
     pack(data.getFaults(), buffer, position, comm);
 }
 
+template<class Scalar>
+void pack(const EclEpsScalingPointsInfo<Scalar>& data, std::vector<char>& buffer,
+          int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.Swl, buffer, position, comm);
+    pack(data.Sgl, buffer, position, comm);
+    pack(data.Sowl, buffer, position, comm);
+    pack(data.Sogl, buffer, position, comm);
+    pack(data.krCriticalEps, buffer, position, comm);
+    pack(data.Swcr, buffer, position, comm);
+    pack(data.Sgcr, buffer, position, comm);
+    pack(data.Sowcr, buffer, position, comm);
+    pack(data.Sogcr, buffer, position, comm);
+    pack(data.Swu, buffer, position, comm);
+    pack(data.Sgu, buffer, position, comm);
+    pack(data.Sowu, buffer, position, comm);
+    pack(data.Sogu, buffer, position, comm);
+    pack(data.maxPcow, buffer, position, comm);
+    pack(data.maxPcgo, buffer, position, comm);
+    pack(data.pcowLeverettFactor, buffer, position, comm);
+    pack(data.pcgoLeverettFactor, buffer, position, comm);
+    pack(data.maxKrw, buffer, position, comm);
+    pack(data.maxKrow, buffer, position, comm);
+    pack(data.maxKrog, buffer, position, comm);
+    pack(data.maxKrg, buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -4127,6 +4182,33 @@ void unpack(DynamicVector<T>& data, std::vector<char>& buffer, int& position,
     std::vector<T> ddata;
     unpack(ddata, buffer, position, comm);
     data = DynamicVector<T>(ddata);
+}
+
+template<class Scalar>
+void unpack(EclEpsScalingPointsInfo<Scalar>& data, std::vector<char>& buffer,
+            int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.Swl, buffer, position, comm);
+    unpack(data.Sgl, buffer, position, comm);
+    unpack(data.Sowl, buffer, position, comm);
+    unpack(data.Sogl, buffer, position, comm);
+    unpack(data.krCriticalEps, buffer, position, comm);
+    unpack(data.Swcr, buffer, position, comm);
+    unpack(data.Sgcr, buffer, position, comm);
+    unpack(data.Sowcr, buffer, position, comm);
+    unpack(data.Sogcr, buffer, position, comm);
+    unpack(data.Swu, buffer, position, comm);
+    unpack(data.Sgu, buffer, position, comm);
+    unpack(data.Sowu, buffer, position, comm);
+    unpack(data.Sogu, buffer, position, comm);
+    unpack(data.maxPcow, buffer, position, comm);
+    unpack(data.maxPcgo, buffer, position, comm);
+    unpack(data.pcowLeverettFactor, buffer, position, comm);
+    unpack(data.pcgoLeverettFactor, buffer, position, comm);
+    unpack(data.maxKrw, buffer, position, comm);
+    unpack(data.maxKrow, buffer, position, comm);
+    unpack(data.maxKrog, buffer, position, comm);
+    unpack(data.maxKrg, buffer, position, comm);
 }
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
@@ -6698,6 +6780,7 @@ INSTANTIATE_PACK_VECTOR(bool)
 INSTANTIATE_PACK_VECTOR(char)
 INSTANTIATE_PACK_VECTOR(Opm::Tabulated1DFunction<double>)
 INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
+INSTANTIATE_PACK_VECTOR(EclEpsScalingPointsInfo<double>)
 #undef INSTANTIATE_PACK_VECTOR
 
 #define INSTANTIATE_PACK_SHARED_PTR(...) \
@@ -6733,6 +6816,7 @@ INSTANTIATE_PACK(int)
 INSTANTIATE_PACK(std::array<short,3>)
 INSTANTIATE_PACK(std::array<bool,3>)
 INSTANTIATE_PACK(unsigned char)
+INSTANTIATE_PACK(EclEpsScalingPointsInfo<double>)
 #undef INSTANTIATE_PACK
 
 } // end namespace Mpi
