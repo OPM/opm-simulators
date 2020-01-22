@@ -258,13 +258,14 @@ public:
 protected:
     void createGrids_()
     {
-        const auto& porv = this->eclState().fieldProps().porv(true);
         grid_.reset(new Dune::CpGrid());
-        grid_->processEclipseFormat(&(this->eclState().getInputGrid()),
+        grid_->processEclipseFormat(mpiRank == 0 ? &this->eclState().getInputGrid()
+                                                 : nullptr,
                                     /*isPeriodic=*/false,
                                     /*flipNormals=*/false,
                                     /*clipZ=*/false,
-                                    porv,
+                                    mpiRank == 0 ? this->eclState().fieldProps().porv(true)
+                                                 : std::vector<double>(),
                                     this->eclState().getInputNNC());
 
         // we use separate grid objects: one for the calculation of the initial condition
