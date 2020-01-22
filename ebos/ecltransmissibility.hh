@@ -861,6 +861,8 @@ private:
         bool opmfil = eclGrid.getMinpvMode() == Opm::MinpvMode::OpmFIL;
         std::vector<double> ntg;
 
+        // ## Warning: this looks broken - in general the global data is not
+        //    really available any longer after it has been compressed.
         ntg = eclState.fieldProps().get_global_double("NTG");
         // just return the unmodified ntg if opmfil is not used
         averageNtg = ntg;
