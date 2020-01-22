@@ -666,10 +666,9 @@ public:
         // disables gravity, else the standard value of the gravity constant at sea level
         // on earth is used
         this->gravity_ = 0.0;
-        const auto& deck = simulator.vanguard().deck();
         if (EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
             this->gravity_[dim - 1] = 9.80665;
-        if (deck.hasKeyword("NOGRAV"))
+        if (!eclState.getInitConfig().hasGravity())
             this->gravity_[dim - 1] = 0.0;
 
         if (enableTuning_) {
@@ -2467,12 +2466,12 @@ private:
     {
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
+        const auto& eclState = vanguard.eclState();
 
-        const auto& deck = vanguard.deck();
-        if (!deck.hasKeyword("EQUIL"))
-            readExplicitInitialCondition_();
-        else
+        if (eclState.getInitConfig().hasEquil())
             readEquilInitialCondition_();
+        else
+            readExplicitInitialCondition_();
 
         readBlackoilExtentionsInitialConditions_();
 
