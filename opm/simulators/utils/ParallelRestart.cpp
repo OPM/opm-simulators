@@ -591,6 +591,7 @@ std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator co
     return packSize(data.getEquil(), comm) +
            packSize(data.getFoamConfig(), comm) +
            packSize(data.filleps(), comm) +
+           packSize(data.hasGravity(), comm) +
            packSize(data.restartRequested(), comm) +
            packSize(data.getRestartStep(), comm) +
            packSize(data.getRestartRootName(), comm);
@@ -2398,6 +2399,7 @@ void pack(const InitConfig& data, std::vector<char>& buffer, int& position,
     pack(data.getEquil(), buffer, position, comm);
     pack(data.getFoamConfig(), buffer, position, comm);
     pack(data.filleps(), buffer, position, comm);
+    pack(data.hasGravity(), buffer, position, comm);
     pack(data.restartRequested(), buffer, position, comm);
     pack(data.getRestartStep(), buffer, position, comm);
     pack(data.getRestartRootName(), buffer, position, comm);
@@ -4379,17 +4381,18 @@ void unpack(InitConfig& data, std::vector<char>& buffer, int& position,
 {
     Equil equil;
     FoamConfig foam;
-    bool filleps, restartRequested;
+    bool filleps, hasGravity, restartRequested;
     int restartStep;
     std::string restartRootName;
     unpack(equil, buffer, position, comm);
     unpack(foam, buffer, position, comm);
     unpack(filleps, buffer, position, comm);
+    unpack(hasGravity, buffer, position, comm);
     unpack(restartRequested, buffer, position, comm);
     unpack(restartStep, buffer, position, comm);
     unpack(restartRootName, buffer, position, comm);
-    data = InitConfig(equil, foam, filleps, restartRequested,
-                      restartStep, restartRootName);
+    data = InitConfig(equil, foam, filleps, hasGravity,
+                      restartRequested, restartStep, restartRootName);
 }
 
 void unpack(SimulationConfig& data, std::vector<char>& buffer, int& position,
