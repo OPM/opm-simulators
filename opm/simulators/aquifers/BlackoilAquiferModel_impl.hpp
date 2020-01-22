@@ -173,7 +173,14 @@ BlackoilAquiferModel<TypeTag>::init()
                 aquifer_connection.at(i), cartesian_to_compressed_, this->simulator_, aquifersData.at(i)));
         }
     }
-    if (deck.hasKeyword("AQUFETP")) {
+    if (comm.rank() == 0)
+        has = deck.hasKeyword("AQUFETP");
+    comm.broadcast(&has, 1, 0);
+
+    if (has) {
+         if (comm.size() > 1)
+             throw std::runtime_error("Aquifers currently do not work in parallel.");
+
         // updateConnectionIntensiveQuantities();
         const auto& eclState = this->simulator_.vanguard().eclState();
 
