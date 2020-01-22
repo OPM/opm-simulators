@@ -27,7 +27,7 @@ namespace Opm {
 
 class EclMpiSerializer {
 public:
-    EclMpiSerializer(Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm) :
+    explicit EclMpiSerializer(Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm) :
         m_comm(comm)
     {}
 
