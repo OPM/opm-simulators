@@ -1079,6 +1079,8 @@ public:
     const Vec& rv() const { return rv_; }
 
 private:
+
+    // ##Warning: This looks extremely suspicious??
     void updateInitialTemperature_(const Opm::EclipseState& eclState)
     {
         // Get the initial temperature data
