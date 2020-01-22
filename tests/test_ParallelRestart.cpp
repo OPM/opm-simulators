@@ -223,9 +223,7 @@ Opm::FoamData getFoamData()
 
 Opm::TimeMap getTimeMap()
 {
-    return Opm::TimeMap({123},
-                        {{1, Opm::TimeStampUTC(123)}},
-                        {{2, Opm::TimeStampUTC(456)}});
+    return Opm::TimeMap({123});
 }
 
 Opm::PvtgTable getPvtgTable()
@@ -788,16 +786,6 @@ BOOST_AUTO_TEST_CASE(RestartSchedule)
 #endif
 }
 
-
-BOOST_AUTO_TEST_CASE(StepData)
-{
-#if HAVE_MPI
-    Opm::TimeMap::StepData val1{1, Opm::TimeStampUTC(123456)};
-    auto val2 = PackUnpack(val1);
-    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
-    BOOST_CHECK(val1 == std::get<0>(val2));
-#endif
-}
 
 
 BOOST_AUTO_TEST_CASE(TimeMap)
