@@ -2415,6 +2415,117 @@ BOOST_AUTO_TEST_CASE(WellBrineProperties)
 }
 
 
+BOOST_AUTO_TEST_CASE(MULTREGTRecord)
+{
+#ifdef HAVE_MPI
+    Opm::MULTREGTRecord val1{1, 2, 3.0, 4, Opm::MULTREGT::ALL, "test"};
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(MULTREGTScanner)
+{
+#ifdef HAVE_MPI
+    std::vector<Opm::MULTREGTRecord> records{{1, 2, 3.0, 4, Opm::MULTREGT::ALL, "test1"}};
+    std::map<std::pair<int, int>, int> searchRecord{{{5,6},0}};
+    Opm::MULTREGTScanner::ExternalSearchMap searchMap;
+    searchMap.insert({"test2", searchRecord});
+    Opm::MULTREGTScanner val1({1, 2, 3},
+                              records,
+                              searchMap,
+                              {{"test3", {7,8}}},
+                              "test4");
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(EclipseConfig)
+{
+#ifdef HAVE_MPI
+    Opm::IOConfig io(true, false, true, false, false, true, 1, "test1", true,
+                     "test2", true, "test3", false);
+    Opm::InitConfig init(Opm::Equil({getEquilRecord(), getEquilRecord()}),
+                         Opm::FoamConfig({getFoamData(), getFoamData()}),
+                         true, true, 20, "test1");
+    Opm::DynamicState<Opm::RestartSchedule> rsched({Opm::RestartSchedule(1, 2, 3)}, 2);
+    Opm::DynamicState<std::map<std::string,int>> rkw({{{"test",3}}}, 3);
+    Opm::RestartConfig restart(getTimeMap(), 1, true, rsched, rkw, {false, true});
+    Opm::EclipseConfig val1{io, init, restart};
+
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(TransMult)
+{
+#ifdef HAVE_MPI
+    std::vector<Opm::MULTREGTRecord> records{{1, 2, 3.0, 4, Opm::MULTREGT::ALL, "test1"}};
+    std::map<std::pair<int, int>, int> searchRecord{{{5,6},0}};
+    Opm::MULTREGTScanner::ExternalSearchMap searchMap;
+    searchMap.insert({"test2", searchRecord});
+    Opm::MULTREGTScanner scanner({1, 2, 3},
+                                 records,
+                                 searchMap,
+                                 {{"test3", {7,8}}},
+                                 "test4");
+
+    Opm::TransMult val1({1, 2, 3},
+                        {{Opm::FaceDir::YPlus, {4.0, 5.0}}},
+                        {{Opm::FaceDir::ZPlus, "test1"}},
+                        scanner);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(FaultFace)
+{
+#ifdef HAVE_MPI
+    Opm::FaultFace val1({1,2,3,4,5,6}, Opm::FaceDir::YPlus);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Fault)
+{
+#ifdef HAVE_MPI
+    Opm::Fault val1("test", 1.0, {{{1,2,3,4,5,6}, Opm::FaceDir::YPlus}});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(FaultCollection)
+{
+#ifdef HAVE_MPI
+    Opm::Fault fault("test", 1.0, {{{1,2,3,4,5,6}, Opm::FaceDir::YPlus}});
+    Opm::OrderedMap<std::string, Opm::Fault> faults;
+    faults.insert({"test2", fault});
+    Opm::FaultCollection val1(faults);
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;
