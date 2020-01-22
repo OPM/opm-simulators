@@ -71,6 +71,31 @@ public:
 #endif
     }
 
+    template<class T>
+    void broadcast(T& data)
+    {
+        if (m_comm.size() == 1)
+            return;
+
+#if HAVE_MPI
+        if (m_comm.rank() == 0) {
+            size_t size = data.packSize(*this);
+            std::vector<char> buffer(size);
+            int position = 0;
+            data.pack(buffer, position, *this);
+            m_comm.broadcast(&position, 1, 0);
+            m_comm.broadcast(buffer.data(), position, 0);
+        } else {
+            int size;
+            m_comm.broadcast(&size, 1, 0);
+            std::vector<char> buffer(size);
+            m_comm.broadcast(buffer.data(), size, 0);
+            int position = 0;
+            data.unpack(buffer, position, *this);
+        }
+#endif
+    }
+
 protected:
     Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm;
 };

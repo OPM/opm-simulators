@@ -2346,6 +2346,7 @@ private:
         const auto& vanguard = simulator.vanguard();
         const auto& deck = vanguard.deck();
         const auto& eclState = vanguard.eclState();
+        const auto& comm = vanguard.gridView().comm();
 
         // the PVT and saturation region numbers
         updatePvtnum_();
@@ -2370,7 +2371,12 @@ private:
             compressedToCartesianElemIdx[elemIdx] = vanguard.cartesianIndex(elemIdx);
 
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
-        materialLawManager_->initFromDeck(deck, eclState);
+        if (comm.rank() == 0)
+            materialLawManager_->initFromDeck(deck, eclState);
+
+        EclMpiSerializer ser(comm);
+        ser.broadcast(*materialLawManager_);
+
         materialLawManager_->initParamsForElements(eclState, compressedToCartesianElemIdx);
         ////////////////////////////////
     }

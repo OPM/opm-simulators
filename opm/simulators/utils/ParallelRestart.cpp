@@ -24,6 +24,8 @@
 #include "ParallelRestart.hpp"
 #include <opm/common/OpmLog/Location.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
+#include <opm/material/fluidmatrixinteractions/EclTwoPhaseMaterialParams.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
@@ -6778,6 +6780,7 @@ INSTANTIATE_PACK_VECTOR(double)
 INSTANTIATE_PACK_VECTOR(std::vector<double>)
 INSTANTIATE_PACK_VECTOR(bool)
 INSTANTIATE_PACK_VECTOR(char)
+INSTANTIATE_PACK_VECTOR(int)
 INSTANTIATE_PACK_VECTOR(Opm::Tabulated1DFunction<double>)
 INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
 INSTANTIATE_PACK_VECTOR(EclEpsScalingPointsInfo<double>)
@@ -6817,6 +6820,8 @@ INSTANTIATE_PACK(std::array<short,3>)
 INSTANTIATE_PACK(std::array<bool,3>)
 INSTANTIATE_PACK(unsigned char)
 INSTANTIATE_PACK(EclEpsScalingPointsInfo<double>)
+INSTANTIATE_PACK(EclTwoPhaseApproach)
+INSTANTIATE_PACK(EclMultiplexerApproach)
 #undef INSTANTIATE_PACK
 
 } // end namespace Mpi
