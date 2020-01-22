@@ -1744,12 +1744,13 @@ private:
 
     void createLocalFipnum_()
     {
-        const std::vector<int> fipnumGlobal = simulator_.vanguard().eclState().fieldProps().get_global_int("FIPNUM");
-        // Get compressed cell fipnum.
+        const auto& fp = simulator_.vanguard().eclState().fieldProps();
+        const std::vector<int>& fipnum_deck = fp.get_int("FIPNUM");
+        const auto& indexmap = fp.indexmap();
         const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
         fipnum_.resize(numElements, 0.0);
-        if (!fipnumGlobal.empty()) {
+        if (!fipnum_deck.empty()) {
             ElementContext elemCtx(simulator_);
             ElementIterator elemIt = gridView.template begin</*codim=*/0>();
             const ElementIterator& elemEndIt = gridView.template end</*codim=*/0>();
@@ -1760,7 +1761,7 @@ private:
 
                 elemCtx.updatePrimaryStencil(elem);
                 const unsigned elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                fipnum_[elemIdx] = fipnumGlobal[simulator_.vanguard().cartesianIndex(elemIdx)];
+                fipnum_[elemIdx] = fipnum_deck[indexmap[simulator_.vanguard().cartesianIndex(elemIdx)]];
             }
         }
     }

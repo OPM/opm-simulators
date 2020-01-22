@@ -2203,18 +2203,20 @@ private:
 
         // If ROCKCOMP is used and ROCKNUM is specified ROCK2D ROCK2DTR ROCKTAB etc. uses ROCKNUM
         // to give the correct table index.
-        if (deck.hasKeyword("ROCKCOMP") && eclState.fieldProps().has_int("ROCKNUM"))
+        const auto& fp = eclState.fieldProps();
+        if (deck.hasKeyword("ROCKCOMP") && fp.has_int("ROCKNUM"))
             propName = "ROCKNUM";
 
-        if (eclState.fieldProps().has_int(propName)) {
-            const auto& tmp = eclState.fieldProps().get_global_int(propName);
+        if (fp.has_int(propName)) {
+            const auto& indexmap = fp.indexmap();
+            const auto& tmp = fp.get_int(propName);
             unsigned numElem = vanguard.gridView().size(0);
             rockTableIdx_.resize(numElem);
             for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
                 unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
 
                 // reminder: Eclipse uses FORTRAN-style indices
-                rockTableIdx_[elemIdx] = tmp[cartElemIdx] - 1;
+                rockTableIdx_[elemIdx] = tmp[indexmap[cartElemIdx]] - 1;
             }
         }
 
@@ -2371,7 +2373,7 @@ private:
 
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         if (comm.rank() == 0)
-            materialLawManager_->initFromDeck(deck, eclState);
+            materialLawManager_->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
 
         EclMpiSerializer ser(comm);
         ser.broadcast(*materialLawManager_);
@@ -2667,6 +2669,7 @@ private:
         const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
         const auto& fp = eclState.fieldProps();
+        const auto& indexmap = fp.indexmap();
         bool has_swat     = fp.has_double("SWAT");
         bool has_sgas     = fp.has_double("SGAS");
         bool has_rs       = fp.has_double("RS");
@@ -2706,24 +2709,24 @@ private:
         std::vector<double> tempiData;
 
         if (FluidSystem::phaseIsActive(waterPhaseIdx))
-            waterSaturationData = fp.get_global_double("SWAT");
+            waterSaturationData = fp.get_double("SWAT");
         else
             waterSaturationData.resize(numCartesianCells);
 
         if (FluidSystem::phaseIsActive(gasPhaseIdx))
-            gasSaturationData = fp.get_global_double("SGAS");
+            gasSaturationData = fp.get_double("SGAS");
         else
             gasSaturationData.resize(numCartesianCells);
 
-        pressureData = fp.get_global_double("PRESSURE");
+        pressureData = fp.get_double("PRESSURE");
         if (FluidSystem::enableDissolvedGas())
-            rsData = fp.get_global_double("RS");
+            rsData = fp.get_double("RS");
 
         if (FluidSystem::enableVaporizedOil())
-            rvData = fp.get_global_double("RV");
+            rvData = fp.get_double("RV");
 
         // initial reservoir temperature
-        tempiData = fp.get_global_double("TEMPI");
+        tempiData = fp.get_double("TEMPI");
 
         // calculate the initial fluid states
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
@@ -2731,8 +2734,7 @@ private:
 
             dofFluidState.setPvtRegionIndex(pvtRegionIndex(dofIdx));
             size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
-            assert(0 <= cartesianDofIdx);
-            assert(cartesianDofIdx <= numCartesianCells);
+            auto prop_index = indexmap[cartesianDofIdx];
 
             //////
             // set temperature
@@ -2747,15 +2749,15 @@ private:
             //////
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
                 dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
-                                            waterSaturationData[cartesianDofIdx]);
+                                            waterSaturationData[prop_index]);
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
                 dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
-                                            gasSaturationData[cartesianDofIdx]);
+                                            gasSaturationData[prop_index]);
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
                 dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
                                             1.0
-                                            - waterSaturationData[cartesianDofIdx]
-                                            - gasSaturationData[cartesianDofIdx]);
+                                            - waterSaturationData[prop_index]
+                                            - gasSaturationData[prop_index]);
 
             //////
             // set phase pressures
@@ -2809,46 +2811,42 @@ private:
         const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
         size_t numDof = this->model().numGridDof();
+        const auto& fp = eclState.fieldProps();
+        const auto& indexmap = fp.indexmap();
 
 
         if (enableSolvent) {
-            std::vector<double> solventSaturationData(eclState.getInputGrid().getCartesianSize(), 0.0);
-            if (eclState.fieldProps().has_double("SSOL"))
-                solventSaturationData = eclState.fieldProps().get_global_double("SSOL");
+            std::vector<double> solventSaturationData(fp.active_size(), 0.0);
+            if (fp.has_double("SSOL"))
+                solventSaturationData = fp.get_double("SSOL");
 
             solventSaturation_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
-                assert(0 <= cartesianDofIdx);
-                assert(cartesianDofIdx <= solventSaturationData.size());
-                solventSaturation_[dofIdx] = solventSaturationData[cartesianDofIdx];
+                solventSaturation_[dofIdx] = solventSaturationData[indexmap[cartesianDofIdx]];
             }
         }
 
         if (enablePolymer) {
-            std::vector<double> polyConcentrationData(eclState.getInputGrid().getCartesianSize(), 0.0);
-            if (eclState.fieldProps().has_double("SPOLY"))
-                polyConcentrationData = eclState.fieldProps().get_global_double("SPOLY");
+            std::vector<double> polyConcentrationData(fp.active_size(), 0.0);
+            if (fp.has_double("SPOLY"))
+                polyConcentrationData = fp.get_double("SPOLY");
 
             polymerConcentration_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
-                assert(0 <= cartesianDofIdx);
-                assert(cartesianDofIdx <= polyConcentrationData.size());
-                polymerConcentration_[dofIdx] = polyConcentrationData[cartesianDofIdx];
+                polymerConcentration_[dofIdx] = polyConcentrationData[indexmap[cartesianDofIdx]];
             }
         }
 
         if (enablePolymerMolarWeight) {
-            std::vector<double> polyMoleWeightData(eclState.getInputGrid().getCartesianSize(), 0.0);
-            if (eclState.fieldProps().has_double("SPOLYMW"))
-                polyMoleWeightData = eclState.fieldProps().get_global_double("SPOLYMW");
+            std::vector<double> polyMoleWeightData(fp.active_size(), 0.0);
+            if (fp.has_double("SPOLYMW"))
+                polyMoleWeightData = fp.get_double("SPOLYMW");
             polymerMoleWeight_.resize(numDof, 0.0);
             for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 const size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
-                assert(0 <= cartesianDofIdx);
-                assert(cartesianDofIdx <= polyMoleWeightData.size());
-                polymerMoleWeight_[dofIdx] = polyMoleWeightData[cartesianDofIdx];
+                polymerMoleWeight_[dofIdx] = polyMoleWeightData[indexmap[cartesianDofIdx]];
             }
         }
     }
@@ -2905,8 +2903,8 @@ private:
         return eclState.fieldProps().has_int(prop);
     }
 
-    static std::vector<int> get_int_prop(const EclipseState& eclState, const std::string& prop) {
-        return eclState.fieldProps().get_global_int(prop);
+    static const std::vector<int>& get_int_prop(const EclipseState& eclState, const std::string& prop) {
+        return eclState.fieldProps().get_int(prop);
     }
 
     template<class T>
@@ -2914,18 +2912,19 @@ private:
     {
         const auto& simulator = this->simulator();
         const auto& eclState = simulator.vanguard().eclState();
+        const auto& fp = eclState.fieldProps();
 
-        if (!has_int_prop(eclState, name))
+        if (!fp.has_int(name))
             return;
 
-        const auto& numData = get_int_prop(eclState, name);
+        const auto& numData = fp.get_int(name);
         const auto& vanguard = simulator.vanguard();
-
+        const auto& indexmap = fp.indexmap();
         unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         numbers.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
-            numbers[elemIdx] = static_cast<T>(std::max(numData[cartElemIdx], 1) - 1);
+            numbers[elemIdx] = static_cast<T>(std::max(numData[indexmap[cartElemIdx]], 1) - 1);
         }
     }
 

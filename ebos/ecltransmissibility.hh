@@ -498,9 +498,10 @@ private:
 #endif
 
         const auto& fp = vanguard_.eclState().fieldProps();
-        const auto& inputTranxData = fp.get_global_double("TRANX");
-        const auto& inputTranyData = fp.get_global_double("TRANY");
-        const auto& inputTranzData = fp.get_global_double("TRANZ");
+        const auto& inputTranxData = fp.get_double("TRANX");
+        const auto& inputTranyData = fp.get_double("TRANY");
+        const auto& inputTranzData = fp.get_double("TRANZ");
+        const auto& indexmap       = fp.indexmap();
         bool tranx_deckAssigned = false;                     // Ohh my ....
         bool trany_deckAssigned = false;
         bool tranz_deckAssigned = false;
@@ -532,26 +533,26 @@ private:
                 if (gc2 - gc1 == 1) {
                     if (tranx_deckAssigned)
                         // set simulator internal transmissibilities to values from inputTranx
-                        trans_[isId] = inputTranxData[gc1];
+                        trans_[isId] = inputTranxData[indexmap[gc1]];
                     else
                         // Scale transmissibilities with scale factor from inputTranx
-                        trans_[isId] *= inputTranxData[gc1];
+                        trans_[isId] *= inputTranxData[indexmap[gc1]];
                 }
                 else if (gc2 - gc1 == cartDims[0]) {
                     if (trany_deckAssigned)
                         // set simulator internal transmissibilities to values from inputTrany
-                        trans_[isId] = inputTranyData[gc1];
+                        trans_[isId] = inputTranyData[indexmap[gc1]];
                     else
                         // Scale transmissibilities with scale factor from inputTrany
-                        trans_[isId] *= inputTranyData[gc1];
+                        trans_[isId] *= inputTranyData[indexmap[gc1]];
                 }
                 else if (gc2 - gc1 == cartDims[0]*cartDims[1]) {
                     if (tranz_deckAssigned)
                         // set simulator internal transmissibilities to values from inputTranz
-                        trans_[isId] = inputTranzData[gc1];
+                        trans_[isId] = inputTranzData[indexmap[gc1]];
                     else
                         // Scale transmissibilities with scale factor from inputTranz
-                        trans_[isId] *= inputTranzData[gc1];
+                        trans_[isId] *= inputTranzData[indexmap[gc1]];
                 }
                 //else.. We don't support modification of NNC at the moment.
             }
@@ -710,22 +711,24 @@ private:
         // over several processes.)
         const auto& fp = vanguard_.eclState().fieldProps();
         if (fp.has_double("PERMX")) {
-            const std::vector<double>& permxData = fp.get_global_double("PERMX");
+            const auto& indexmap = fp.indexmap();
+            const std::vector<double>& permxData = fp.get_double("PERMX");
 
             std::vector<double> permyData(permxData);
             if (fp.has_double("PERMY"))
-                permyData = fp.get_global_double("PERMY");
+                permyData = fp.get_double("PERMY");
 
             std::vector<double> permzData(permxData);
             if (fp.has_double("PERMZ"))
-                permzData = fp.get_global_double("PERMZ");
+                permzData = fp.get_double("PERMZ");
 
             for (size_t dofIdx = 0; dofIdx < numElem; ++ dofIdx) {
                 unsigned cartesianElemIdx = vanguard_.cartesianIndex(dofIdx);
+                const auto& input_index = indexmap[cartesianElemIdx];
                 permeability_[dofIdx] = 0.0;
-                permeability_[dofIdx][0][0] = permxData[cartesianElemIdx];
-                permeability_[dofIdx][1][1] = permyData[cartesianElemIdx];
-                permeability_[dofIdx][2][2] = permzData[cartesianElemIdx];
+                permeability_[dofIdx][0][0] = permxData[input_index];
+                permeability_[dofIdx][1][1] = permyData[input_index];
+                permeability_[dofIdx][2][2] = permzData[input_index];
             }
 
             // for now we don't care about non-diagonal entries

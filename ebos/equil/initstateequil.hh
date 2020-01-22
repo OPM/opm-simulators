@@ -901,16 +901,21 @@ equilnum(const Opm::EclipseState& eclipseState,
          const Grid& grid)
 {
     std::vector<int> eqlnum(grid.size(0), 0);
+    const auto& fp = eclipseState.fieldProps();
 
-    if (eclipseState.fieldProps().has<int>("EQLNUM")) {
+    if (fp.has<int>("EQLNUM")) {
+        const auto& e = fp.get<int>("EQLNUM");
+        const auto& indexmap = fp.indexmap();
         const int nc = grid.size(/*codim=*/0);
         eqlnum.resize(nc);
 
-        const auto& e = eclipseState.fieldProps().get_global<int>("EQLNUM");
-        const int* gc = Opm::UgGridHelpers::globalCell(grid);
+        const int * gc = Opm::UgGridHelpers::globalCell(grid);
         for (int cell = 0; cell < nc; ++cell) {
-            const int deckPos = (gc == NULL) ? cell : gc[cell];
-            eqlnum[cell] = e[deckPos] - 1;
+            int global_index = cell;
+            if (gc)
+                global_index = gc[cell];
+            auto property_index = indexmap[global_index];
+            eqlnum[cell] = e[property_index] - 1;
         }
     }
     return eqlnum;
@@ -941,14 +946,16 @@ public:
         //Check for presence of kw SWATINIT
         if (applySwatInit) {
             const int nc = grid.size(/*codim=*/0);
+            const auto& fp = eclipseState.fieldProps();
 
-            if (eclipseState.fieldProps().has<double>("SWATINIT")) {
-                const std::vector<double>& swatInitEcl = eclipseState.fieldProps().get_global<double>("SWATINIT");
+            if (fp.has<double>("SWATINIT")) {
+                const auto& swatInitEcl = fp.get<double>("SWATINIT");
+                const auto& indexmap = fp.indexmap();
                 const int* gc = Opm::UgGridHelpers::globalCell(grid);
                 swatInit_.resize(nc);
                 for (int c = 0; c < nc; ++c) {
-                    const int deckPos = (gc == NULL) ? c : gc[c];
-                    swatInit_[c] = swatInitEcl[deckPos];
+                    const int global_index = (gc == NULL) ? c : gc[c];
+                    swatInit_[c] = swatInitEcl[indexmap[global_index]];
                 }
             }
         }
@@ -1106,15 +1113,12 @@ private:
         const auto* globalCell = Opm::UgGridHelpers::globalCell(grid);
         std::vector<int> cellPvtRegionIdx(numCompressed);
 
-        //Get the PVTNUM data
-        const auto pvtnumData = eclState.fieldProps().get_global<int>("PVTNUM");
-        // Convert PVTNUM data into an array of indices for compressed cells. Remember
-        // that Eclipse uses Fortran-style indices which start at 1 instead of 0, so we
-        // need to subtract 1.
+        const auto& fp = eclState.fieldProps();
+        const auto& pvtnumData = fp.get<int>("PVTNUM");
+        const auto& indexmap = fp.indexmap();
         for (size_t cellIdx = 0; cellIdx < numCompressed; ++ cellIdx) {
             size_t cartesianCellIdx = globalCell[cellIdx];
-            assert(cartesianCellIdx < pvtnumData.size());
-            size_t pvtRegionIdx = pvtnumData[cartesianCellIdx] - 1;
+            size_t pvtRegionIdx = pvtnumData[indexmap[cartesianCellIdx]] - 1;
             cellPvtRegionIdx[cellIdx] = pvtRegionIdx;
         }
 
