@@ -278,23 +278,11 @@ protected:
         {
             equilGrid_.reset(new Dune::CpGrid(*grid_));
             equilCartesianIndexMapper_.reset(new CartesianIndexMapper(*equilGrid_));
+
+            std::vector<int> actnum = Opm::UgGridHelpers::createACTNUM(*grid_);
+            auto &field_props = this->eclState().fieldProps();
+            const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);
         }
-
-        std::vector<int> actnum;
-        unsigned long actnum_size;
-        if (mpiRank == 0) {
-            actnum = Opm::UgGridHelpers::createACTNUM(*grid_);
-            actnum_size = actnum.size();
-        }
-
-        grid_->comm().broadcast(&actnum_size, 1, 0);
-        if (mpiRank != 0)
-            actnum.resize( actnum_size );
-
-        grid_->comm().broadcast(actnum.data(), actnum_size, 0);
-
-        auto & field_props = this->eclState().fieldProps();
-        const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);
     }
 
     // removing some connection located in inactive grid cells
