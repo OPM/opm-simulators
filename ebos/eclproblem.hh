@@ -2466,12 +2466,12 @@ private:
     {
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
+        const auto& eclState = vanguard.eclState();
 
-        const auto& deck = vanguard.deck();
-        if (!deck.hasKeyword("EQUIL"))
-            readExplicitInitialCondition_();
-        else
+        if (eclState.getInitConfig().hasEquil())
             readEquilInitialCondition_();
+        else
+            readExplicitInitialCondition_();
 
         readBlackoilExtentionsInitialConditions_();
 
