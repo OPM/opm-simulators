@@ -322,7 +322,6 @@ public:
                 Opm::checkDeck(*deck_, parser,  *parseContext_, *errorGuard_);
         }
         else {
-            assert(externalDeck_);
             deck_ = externalDeck_;
         }
 
@@ -331,7 +330,6 @@ public:
             eclState_ = internalEclState_.get();
         }
         else {
-            assert(externalDeck_);
             assert(externalEclState_);
 
             deck_ = externalDeck_;
