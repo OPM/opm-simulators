@@ -2180,6 +2180,7 @@ namespace Opm
             return;
         }
 
+        assert(group.hasInjectionControl(injectionPhase));
         const auto& groupcontrols = group.injectionControls(injectionPhase, summaryState);
 
         const std::vector<double>& groupInjectionReductions = well_state.currentInjectionGroupReductionRates(group.name());

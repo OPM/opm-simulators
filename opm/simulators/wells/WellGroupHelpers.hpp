@@ -262,14 +262,14 @@ namespace Opm {
                 for (Phase phase : all) {
                     const Group::InjectionCMode& currentGroupControl = wellState.currentInjectionGroupControl(phase, groupName);
                     int phasePos;
-                    if (phase == Phase::GAS)
-                        phasePos = pu.phase_pos[ pu.phase_pos[BlackoilPhases::Vapour] ];
-                    else if (phase == Phase::OIL)
-                        phasePos = pu.phase_pos[ pu.phase_pos[BlackoilPhases::Liquid] ];
-                    else if (phase == Phase::WATER)
-                        phasePos = pu.phase_pos[ pu.phase_pos[BlackoilPhases::Aqua] ];
+                    if (phase == Phase::GAS && pu.phase_used[BlackoilPhases::Vapour] )
+                        phasePos = pu.phase_pos[BlackoilPhases::Vapour];
+                    else if (phase == Phase::OIL && pu.phase_used[BlackoilPhases::Liquid])
+                        phasePos = pu.phase_pos[BlackoilPhases::Liquid];
+                    else if (phase == Phase::WATER && pu.phase_used[BlackoilPhases::Aqua] )
+                        phasePos = pu.phase_pos[BlackoilPhases::Aqua];
                     else
-                        throw("invalid phase");
+                        continue;
 
                     if (currentGroupControl != Group::InjectionCMode::FLD) {
                         groupTargetReduction[phasePos] += sumWellRates(groupTmp, schedule, wellStateNupcol, reportStepIdx, phasePos, isInjector);
@@ -347,14 +347,14 @@ namespace Opm {
                         continue;
                     }
                     int phasePos;
-                    if (phase == Phase::GAS)
-                        phasePos = pu.phase_pos[ pu.phase_pos[BlackoilPhases::Vapour] ];
-                    else if (phase == Phase::OIL)
-                        phasePos = pu.phase_pos[ pu.phase_pos[BlackoilPhases::Liquid] ];
-                    else if (phase == Phase::WATER)
-                        phasePos = pu.phase_pos[ pu.phase_pos[BlackoilPhases::Aqua] ];
+                    if (phase == Phase::GAS && pu.phase_used[BlackoilPhases::Vapour] )
+                        phasePos = pu.phase_pos[BlackoilPhases::Vapour];
+                    else if (phase == Phase::OIL && pu.phase_used[BlackoilPhases::Liquid])
+                        phasePos = pu.phase_pos[BlackoilPhases::Liquid];
+                    else if (phase == Phase::WATER && pu.phase_used[BlackoilPhases::Aqua] )
+                        phasePos = pu.phase_pos[BlackoilPhases::Aqua];
                     else
-                        throw("invalid phase");
+                        continue;
 
                     pot[phasePos] += thisPot[phasePos];
                 }
@@ -562,14 +562,14 @@ namespace Opm {
         double groupTotalGuideRate = 0.0;
         const Group& groupParent = schedule.getGroup(group.parent(), reportStepIdx);
         int phasePos;
-        if (injectionPhase == Phase::GAS)
+        if (injectionPhase == Phase::GAS && pu.phase_used[BlackoilPhases::Vapour] )
             phasePos = pu.phase_pos[ pu.phase_pos[BlackoilPhases::Vapour] ];
-        else if (injectionPhase == Phase::OIL)
+        else if (injectionPhase == Phase::OIL && pu.phase_used[BlackoilPhases::Liquid])
             phasePos = pu.phase_pos[ pu.phase_pos[BlackoilPhases::Liquid] ];
-        else if (injectionPhase == Phase::WATER)
+        else if (injectionPhase == Phase::WATER && pu.phase_used[BlackoilPhases::Aqua] )
             phasePos = pu.phase_pos[ pu.phase_pos[BlackoilPhases::Aqua] ];
         else
-            throw("invalid phase");
+            throw("this should not happen");
 
         for (const std::string& groupName : groupParent.groups()) {
             // only count group under group control from its parent

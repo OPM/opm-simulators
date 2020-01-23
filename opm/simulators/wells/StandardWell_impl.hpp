@@ -1013,7 +1013,6 @@ namespace Opm
         default:
             throw("Expected WATER, OIL or GAS as type for injectors " + well.name());
         }
-        const auto& groupcontrols = group.injectionControls(injectionPhase, summaryState);
         const Group::InjectionCMode& currentGroupControl = well_state.currentInjectionGroupControl(injectionPhase, group.name());
 
         if (currentGroupControl == Group::InjectionCMode::FLD) {
@@ -1033,7 +1032,8 @@ namespace Opm
             return;
         }
 
-
+        assert(group.hasInjectionControl(injectionPhase));
+        const auto& groupcontrols = group.injectionControls(injectionPhase, summaryState);
 
 
         const std::vector<double>& groupInjectionReductions = well_state.currentInjectionGroupReductionRates(group.name());
