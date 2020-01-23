@@ -47,11 +47,11 @@ struct SingleGroupState
     Group::ProductionCMode current_production_control = Group::ProductionCMode::NONE;
 
     // Quantities.
-    PhaseRates production_reduction_surface_rates;
-    PhaseRates injection_reduction_surface_rates;
-    PhaseRates injection_potentials;
-    PhaseRates injection_vrep_rates;
-    PhaseRates injection_rein_rates;
+    PhaseRates production_reduction_surface_rates = {0.0};
+    PhaseRates injection_reduction_surface_rates = {0.0};
+    PhaseRates injection_potentials = {0.0};
+    PhaseRates injection_vrep_rates = {0.0};
+    PhaseRates injection_rein_rates = {0.0};
 };
 
 

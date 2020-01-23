@@ -55,17 +55,31 @@ public:
               const std::vector<std::vector<PerforationData>>& well_perf_data,
               const SummaryState& summary_state)
     {
+        assert(wells.size() == well_perf_data.size());
+        well_perf_data_ = well_perf_data;
+
+        // Initialize all wells.
         const int nw = wells.size();
         well_states_.resize(nw);
         well_names_.resize(nw);
         for (int w = 0; w < nw; ++w) {
             well_names_[w] = wells[w].name();
-            initSingleWell(cell_pressures, schedule, wells[w], report_step, phase_usage, well_perf_data[w], summary_state, well_states_[w]);
+            initSingleWell(cell_pressures, schedule, wells[w], report_step, phase_usage, well_perf_data_[w], summary_state, well_states_[w]);
         }
-        static_cast<void>(prev_state);
-        // TODO: deal with previous state.
 
-        // TODO: initialize group state
+        // For wells present in a previous state, override initialization where appropriate.
+        if (prev_state) {
+            for (int w = 0; w < nw; ++w) {
+                well_names_[w] = wells[w].name();
+                auto it = std::find(prev_state->well_names_.begin(), prev_state->well_names_.end(), well_names_[w]);
+                if (it != prev_state->well_names_.end()) {
+                    const int w_in_prev = it - prev_state->well_names_.end();
+                    initSingleWellFromPrevious(prev_state->well_states_[w_in_prev], well_states_[w]);
+                }
+            }
+        }
+
+        // Group states remain default-initialized.
     }
 
     data::Wells report(const PhaseUsage& phase_usage, const int* globalCellIdxMap) const
@@ -77,7 +91,7 @@ public:
                 continue;
             }
             auto& dwell = dwells[well_names_[w]];
-            reportSingleWell(phase_usage, globalCellIdxMap, well_states_[w], dwell);
+            reportSingleWell(phase_usage, globalCellIdxMap, well_perf_data_[w], well_states_[w], dwell);
         }
         return dwells;
     }
@@ -112,9 +126,16 @@ private:
     std::vector<std::string> well_names_;
     std::map<std::string, GroupState> group_states_;
 
+    std::vector<std::vector<PerforationData>> well_perf_data_;
 
 
     // -----------  Private functions  -----------
+
+    template <unsigned long N>
+    static double sum(const std::array<double, N>& x)
+    {
+        return std::accumulate(x.begin(), x.end(), 0.0);
+    }
 
     static void initSingleWell(const std::vector<double>& cell_pressures,
                                const Schedule& schedule,
@@ -140,6 +161,40 @@ private:
         // Initialize multi-segment well parts (the 'segments' member).
         if (well.isMultiSegment()) {
             initMultiSegment(well, wstate);
+        }
+    }
+
+
+
+
+    static void initSingleWellFromPrevious(const SingleWellState<NumActivePhases>& prev_wstate,
+                                           SingleWellState<NumActivePhases>& wstate)
+    {
+        // Flags and statuses.
+        wstate.status = prev_wstate.status;
+        wstate.is_producer = prev_wstate.is_producer;
+        wstate.effective_events_occurred = prev_wstate.effective_events_occurred;
+        wstate.current_injection_control = prev_wstate.current_injection_control;
+        wstate.current_production_control = prev_wstate.current_production_control;
+
+        // Quantities.
+        wstate.bhp = prev_wstate.bhp;
+        wstate.thp = prev_wstate.thp;
+        wstate.temperature = prev_wstate.temperature; // 20 degrees Celcius by default.
+        wstate.surface_rates = prev_wstate.surface_rates;
+        wstate.reservoir_rates = prev_wstate.reservoir_rates;
+        wstate.dissolved_gas_rate = prev_wstate.dissolved_gas_rate;
+        wstate.vaporized_oil_rate = prev_wstate.vaporized_oil_rate;
+        wstate.potentials = prev_wstate.potentials;
+
+        // Connections.
+        if (wstate.connections.size() == prev_wstate.connections.size()) {
+            wstate.connections = prev_wstate.connections;
+        }
+
+        // Segments.
+        if (wstate.segments.size() == prev_wstate.segments.size()) {
+            wstate.segments = prev_wstate.segments;
         }
     }
 
@@ -371,15 +426,43 @@ private:
         }
 
         // Set segment surface_rates.
-        // ...
-        // TODO
-        // ...
+        calculateSegmentRates(segment_inlets, segment_perforations, 0, wstate);
+        assert(wstate.segments[0].surface_rates == wstate.surface_rates);
+    }
+
+
+
+    static void calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets,
+                                      const std::vector<std::vector<int>>& segment_connections,
+                                      const int segment,
+                                      SingleWellState<NumActivePhases>& wstate)
+    {
+        // This assumes that the segment rates have been initialized to zero.
+
+        // the rate of the segment equals to the sum of the contribution from the connections and inlet segment rates.
+        // the first segment is always the top segment, its rates should be equal to the well rates.
+        assert(segment_inlets.size() == segment_connections.size());
+        const int np = wstate.connections.front().surface_rates.size();
+
+        // contributions from the connections belong to this segment
+        for (const int& perf : segment_connections[segment]) {
+            for (int p = 0; p < np; ++p) {
+                wstate.segments[segment].surface_rates[p] += wstate.connections[perf].surface_rates[p];
+            }
+        }
+        for (const int& inlet_seg : segment_inlets[segment]) {
+            calculateSegmentRates(segment_inlets, segment_connections, inlet_seg, wstate);
+            for (int p = 0; p < np; ++p) {
+                wstate.segments[segment].surface_rates[p] += wstate.segments[inlet_seg].surface_rates[p];
+            }
+        }
     }
 
 
 
     static void reportSingleWell(const PhaseUsage& pu,
                                  const int* globalCellIdxMap,
+                                 const std::vector<PerforationData>& perf_data,
                                  const SingleWellState<NumActivePhases>& wstate,
                                  data::Well& dwell)
     {
@@ -404,14 +487,12 @@ private:
         // Make the connections vector.
         const int num_conn = wstate.connections.size();
         dwell.connections.resize(num_conn);
-        for( int i = 0; i < num_conn; ++i ) {
-            auto& connection = dwell.connections[ i ];
-            // TODO
-            // const auto active_index = this->well_perf_data_[well_index][i].cell_index;
-            // connection.index = globalCellIdxMap[active_index];
+        for(int i = 0; i < num_conn; ++i) {
+            auto& connection = dwell.connections[i];
+            const auto active_index = perf_data[i].cell_index;
+            connection.index = globalCellIdxMap[active_index];
             connection.pressure = wstate.connections[i].pressure;
-            // TODO
-            // connection.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
+            connection.reservoir_rate = sum(wstate.connections[i].reservoir_rates);
         }
 
         // Make the segments map.
