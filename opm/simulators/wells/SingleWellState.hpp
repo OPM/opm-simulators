@@ -73,6 +73,7 @@ struct SingleWellState
     double dissolved_gas_rate = 0.0;
     double vaporized_oil_rate = 0.0;
     PhaseRates potentials = {0.0};
+    PhaseRates productivity_index = {0.0};
 
     // Connection and segment data.
     std::vector<Connection> connections;

@@ -466,25 +466,53 @@ private:
                                  const SingleWellState<NumActivePhases>& wstate,
                                  data::Well& dwell)
     {
-        using rt = data::Rates::opt;
-
         dwell.bhp = wstate.bhp;
         dwell.thp = wstate.thp;
         dwell.temperature = wstate.temperature;
 
+        using rt = data::Rates::opt;
+        std::vector<rt> phs(pu.num_phases);
+
         if( pu.phase_used[BlackoilPhases::Aqua] ) {
-            dwell.rates.set( rt::wat, wstate.surface_rates[ pu.phase_pos[BlackoilPhases::Aqua] ] );
+            const int apos = pu.phase_pos[BlackoilPhases::Aqua];
+            phs[apos] = rt::wat;
+            dwell.rates.set( rt::wat, wstate.surface_rates[apos] );
+            dwell.rates.set( rt::reservoir_water, wstate.reservoir_rates[apos] );
+            dwell.rates.set( rt::productivity_index_water, wstate.productivity_index[apos] );
+            dwell.rates.set( rt::well_potential_water, wstate.potentials[apos] );
         }
 
         if( pu.phase_used[BlackoilPhases::Liquid] ) {
-            dwell.rates.set( rt::oil, wstate.surface_rates[ pu.phase_pos[BlackoilPhases::Liquid] ] );
+            const int lpos = pu.phase_pos[BlackoilPhases::Liquid];
+            phs[lpos] = rt::oil;
+            dwell.rates.set( rt::oil, wstate.surface_rates[lpos] );
+            dwell.rates.set( rt::reservoir_oil, wstate.reservoir_rates[lpos] );
+            dwell.rates.set( rt::productivity_index_oil, wstate.productivity_index[lpos] );
+            dwell.rates.set( rt::well_potential_oil, wstate.potentials[lpos] );
         }
 
         if( pu.phase_used[BlackoilPhases::Vapour] ) {
-            dwell.rates.set( rt::gas, wstate.surface_rates[ pu.phase_pos[BlackoilPhases::Vapour] ] );
+            const int vpos = pu.phase_pos[BlackoilPhases::Vapour];
+            phs[vpos] = rt::gas;
+            dwell.rates.set( rt::gas, wstate.surface_rates[vpos] );
+            dwell.rates.set( rt::reservoir_gas, wstate.reservoir_rates[vpos] );
+            dwell.rates.set( rt::productivity_index_gas, wstate.productivity_index[vpos] );
+            dwell.rates.set( rt::well_potential_gas, wstate.potentials[vpos] );
         }
 
+        if ( pu.has_solvent ) {
+            double solvent_rate = 0.0;
+            for (const auto& conn : wstate.connections) {
+                solvent_rate += conn.solvent_rate;
+            }
+            dwell.rates.set( rt::solvent, solvent_rate );
+        }
+
+        dwell.rates.set( rt::dissolved_gas, wstate.dissolved_gas_rate );
+        dwell.rates.set( rt::vaporized_oil, wstate.vaporized_oil_rate );
+
         // Make the connections vector.
+        assert(perf_data.size() == wstate.connections.size());
         const int num_conn = wstate.connections.size();
         dwell.connections.resize(num_conn);
         for(int i = 0; i < num_conn; ++i) {
@@ -493,6 +521,9 @@ private:
             connection.index = globalCellIdxMap[active_index];
             connection.pressure = wstate.connections[i].pressure;
             connection.reservoir_rate = sum(wstate.connections[i].reservoir_rates);
+            for (int ph = 0; ph < pu.num_phases; ++ph) {
+                connection.rates.set(phs[ph], wstate.connections[i].surface_rates[ph]);
+            }
         }
 
         // Make the segments map.
@@ -506,21 +537,20 @@ private:
     static data::Segment
     reportSegmentResults(const PhaseUsage& pu, const typename SingleWellState<NumActivePhases>::Segment& seg)
     {
+        using rt = data::Rates::opt;
+
         auto seg_res = data::Segment{};
 
         seg_res.pressure = seg.pressure;
 
         if (pu.phase_used[BlackoilPhases::Aqua]) {
-            seg_res.rates.set(data::Rates::opt::wat,
-                              seg.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]]);
+            seg_res.rates.set(rt::wat, seg.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]]);
         }
         if (pu.phase_used[BlackoilPhases::Liquid]) {
-            seg_res.rates.set(data::Rates::opt::oil,
-                              seg.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]]);
+            seg_res.rates.set(rt::oil, seg.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]]);
         }
         if (pu.phase_used[BlackoilPhases::Vapour]) {
-            seg_res.rates.set(data::Rates::opt::gas,
-                              seg.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]]);
+            seg_res.rates.set(rt::gas, seg.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]]);
         }
 
         seg_res.segNumber = seg.segment_number;
