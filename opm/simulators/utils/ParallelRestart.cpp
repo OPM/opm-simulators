@@ -611,9 +611,7 @@ std::size_t packSize(const SimulationConfig& data, Dune::MPIHelper::MPICommunica
 
 std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
 {
-    return packSize(data.timeList(), comm) +
-           packSize(data.firstTimeStepMonths(), comm) +
-           packSize(data.firstTimeStepYears(), comm);
+    return packSize(data.timeList(), comm);
 }
 
 std::size_t packSize(const RestartConfig& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1923,13 +1921,6 @@ std::size_t packSize(const TimeStampUTC& data,
            packSize(data.microseconds(), comm);
 }
 
-std::size_t packSize(const TimeMap::StepData& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.stepnumber, comm) +
-           packSize(data.timestamp, comm);
-}
-
 std::size_t packSize(const EclHysterConfig& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -2449,8 +2440,6 @@ void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.timeList(), buffer, position, comm);
-    pack(data.firstTimeStepMonths(), buffer, position, comm);
-    pack(data.firstTimeStepYears(), buffer, position, comm);
 }
 
 void pack(const RestartConfig& data, std::vector<char>& buffer, int& position,
@@ -3831,14 +3820,6 @@ void pack(const TimeStampUTC& data,
     pack(data.microseconds(), buffer, position, comm);
 }
 
-void pack(const TimeMap::StepData& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.stepnumber, buffer, position, comm);
-    pack(data.timestamp, buffer, position, comm);
-}
-
 void pack(const EclHysterConfig& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -4496,13 +4477,9 @@ void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     std::vector<std::time_t> timeList;
-    std::vector<TimeMap::StepData> firstStepMonths;
-    std::vector<TimeMap::StepData> firstStepYears;
     unpack(timeList, buffer, position, comm);
-    unpack(firstStepMonths, buffer, position, comm);
-    unpack(firstStepYears, buffer, position, comm);
 
-    data = TimeMap(timeList, firstStepMonths, firstStepYears);
+    data = TimeMap(timeList);
 }
 
 void unpack(RestartConfig& data, std::vector<char>& buffer, int& position,
@@ -6594,13 +6571,6 @@ void unpack(TimeStampUTC& data,
     data = TimeStampUTC(ymd, hour, minutes, seconds, usec);
 }
 
-void unpack(TimeMap::StepData& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.stepnumber, buffer, position, comm);
-    unpack(data.timestamp, buffer, position, comm);
-}
 
 void unpack(EclHysterConfig& data,
             std::vector<char>& buffer, int& position,
