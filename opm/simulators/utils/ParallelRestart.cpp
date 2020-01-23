@@ -831,6 +831,16 @@ std::size_t packSize(const IntervalTabulated2DFunction<Scalar>& data,
            packSize(data.yExtrapolate(), comm);
 }
 
+template std::size_t packSize(const IntervalTabulated2DFunction<double>& data,
+                              Dune::MPIHelper::MPICommunicator comm);
+
+template
+std::size_t packSize(const std::vector<IntervalTabulated2DFunction<double>>& data,
+                     Dune::MPIHelper::MPICommunicator comm);
+template
+std::size_t packSize(const std::map<int,IntervalTabulated2DFunction<double>>& data,
+                     Dune::MPIHelper::MPICommunicator comm);
+
 template<class Scalar>
 std::size_t packSize(const UniformXTabulated2DFunction<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm)

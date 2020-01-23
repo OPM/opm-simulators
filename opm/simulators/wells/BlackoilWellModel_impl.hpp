@@ -1689,7 +1689,7 @@ namespace Opm {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
-        auto& well_state = well_state_;       
+        auto& well_state = well_state_;
 
         if (group.isInjectionGroup())
         {
@@ -1716,6 +1716,33 @@ namespace Opm {
                 throw("Expected WATER, OIL or GAS as type for group injector: " + group.name());
             }
 
+            for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
+
+                Phase currentPhase;
+                if (phasePos == phase_usage_.phase_pos[BlackoilPhases::Aqua]) {
+                    if (!group.hasInjectionControl(Phase::WATER)) {
+                        continue;
+                    }
+                    currentPhase = Phase::WATER;
+                }
+                else if (phasePos == phase_usage_.phase_pos[BlackoilPhases::Liquid]) {
+                    if (!group.hasInjectionControl(Phase::OIL)) {
+                        continue;
+                    }
+                    currentPhase = Phase::OIL;
+                }
+                else if (phasePos == phase_usage_.phase_pos[BlackoilPhases::Vapour]) {
+                    if (!group.hasInjectionControl(Phase::GAS)) {
+                        continue;
+                    }
+                    currentPhase = Phase::GAS;
+                } else {
+                    throw("Expected oil, gas or water phase for injector " + group.name());
+                }
+
+                const auto& controls = group.injectionControls(currentPhase, summaryState);
+
+
             if (group.has_control(Group::InjectionCMode::RATE))
             {
                 if (checkCurrentControl || currentControl != Group::InjectionCMode::RATE)
@@ -1723,12 +1750,11 @@ namespace Opm {
                     double current_rate = 0.0;
                     current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
 
-                    // sum over all nodes
-                    current_rate = comm.sum(current_rate);
+                // sum over all nodes
+                current_rate = comm.sum(current_rate);
 
-                    if (controls.surface_max_rate < current_rate) {
-                        actionOnBrokenConstraints(group, Group::InjectionCMode::RATE, reportStepIdx, deferred_logger);
-                    }
+                if (controls.surface_max_rate < current_rate) {
+                    actionOnBrokenConstraints(group, Group::InjectionCMode::RATE, currentPhase, reportStepIdx, deferred_logger);
                 }
             }
             if (group.has_control(Group::InjectionCMode::RESV))
@@ -1740,10 +1766,9 @@ namespace Opm {
                     // sum over all nodes
                     current_rate = comm.sum(current_rate);
 
-                    if (controls.resv_max_rate < current_rate) {
-                        actionOnBrokenConstraints(group, Group::InjectionCMode::RESV, reportStepIdx, deferred_logger);
-                    }
-                }}
+                if (controls.resv_max_rate < current_rate) {
+                    actionOnBrokenConstraints(group, Group::InjectionCMode::RESV, currentPhase, reportStepIdx, deferred_logger);
+                }                    }
             if (group.has_control(Group::InjectionCMode::REIN))
             {
                 if (checkCurrentControl || currentControl != Group::InjectionCMode::REIN)
@@ -1752,19 +1777,18 @@ namespace Opm {
                     const Group& groupRein = schedule().getGroup(controls.reinj_group, reportStepIdx);
                     production_Rate += wellGroupHelpers::sumWellRates(groupRein, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/false);
 
-                    // sum over all nodes
-                    production_Rate = comm.sum(production_Rate);
+                // sum over all nodes
+                production_Rate = comm.sum(production_Rate);
 
-                    double current_rate = 0.0;
-                    current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
+                double current_rate = 0.0;
+                current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
 
-                    // sum over all nodes
-                    current_rate = comm.sum(current_rate);
+                // sum over all nodes
+                current_rate = comm.sum(current_rate);
 
-                    if (controls.target_reinj_fraction*production_Rate < current_rate) {
-                        actionOnBrokenConstraints(group, Group::InjectionCMode::REIN, reportStepIdx, deferred_logger);
-                    }
-                }}
+                if (controls.target_reinj_fraction*production_Rate < current_rate) {
+                    actionOnBrokenConstraints(group, Group::InjectionCMode::REIN, currentPhase,reportStepIdx, deferred_logger);
+                }                    }
             if (group.has_control(Group::InjectionCMode::VREP))
             {
                 if (checkCurrentControl || currentControl != Group::InjectionCMode::VREP)
@@ -1775,20 +1799,19 @@ namespace Opm {
                     voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
                     voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
 
-                    // sum over all nodes
-                    voidage_rate = comm.sum(voidage_rate);
+                // sum over all nodes
+                voidage_rate = comm.sum(voidage_rate);
 
-                    double total_rate = 0.0;
-                    total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], true);
-                    total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], true);
-                    total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], true);
+                double total_rate = 0.0;
+                total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], true);
+                total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], true);
+                total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], true);
 
-                    // sum over all nodes
-                    total_rate = comm.sum(total_rate);
+                // sum over all nodes
+                total_rate = comm.sum(total_rate);
 
-                    if (controls.target_void_fraction*voidage_rate < total_rate) {
-                        actionOnBrokenConstraints(group, Group::InjectionCMode::VREP, reportStepIdx, deferred_logger);
-                    }
+                if (controls.target_void_fraction*voidage_rate < total_rate) {
+                    actionOnBrokenConstraints(group, Group::InjectionCMode::VREP, currentPhase, reportStepIdx, deferred_logger);
                 }
             }
             // Handle GCONSALE
@@ -1825,6 +1848,7 @@ namespace Opm {
                     OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate target less then zero. Not implemented in Flow" );
                 }
             }
+            }
 
         }
 
@@ -1832,6 +1856,10 @@ namespace Opm {
             const auto controls = group.productionControls(summaryState);
             const Group::ProductionCMode& currentControl = well_state.currentProductionGroupControl(group.name());
 
+            if (group.has_control(Group::ProductionCMode::NONE))
+            {
+
+            }
             if (group.has_control(Group::ProductionCMode::ORAT))
             {
                 if (checkCurrentControl || currentControl != Group::ProductionCMode::ORAT)
@@ -1850,10 +1878,8 @@ namespace Opm {
 
             if (group.has_control(Group::ProductionCMode::WRAT))
             {
-                if (checkCurrentControl || currentControl != Group::ProductionCMode::WRAT)
-                {
-                    double current_rate = 0.0;
-                    current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
+                double current_rate = 0.0;
+                current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
 
                     // sum over all nodes
                     current_rate = comm.sum(current_rate);
@@ -1996,9 +2022,9 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger) {
+    actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& controlPhase, const int reportStepIdx, Opm::DeferredLogger& deferred_logger) {
         auto& well_state = well_state_;
-        const Group::InjectionCMode& oldControl = well_state.currentInjectionGroupControl(group.name());
+        const Group::InjectionCMode& oldControl = well_state.currentInjectionGroupControl(controlPhase, group.name());
 
         std::ostringstream ss;
         if (oldControl != newControl) {
@@ -2010,11 +2036,9 @@ namespace Opm {
             if (cc.size() > 1) {
                 ss << " on rank " << cc.rank();
             }
-            well_state.setCurrentInjectionGroupControl(group.name(), newControl);
+            well_state.setCurrentInjectionGroupControl(controlPhase, group.name(), newControl);
         }
-        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
-        const Phase& topUpPhase = group.injectionControls(summaryState).phase;
-        wellGroupHelpers::setGroupControl(group, schedule(), topUpPhase, reportStepIdx, /*isInjector*/true, well_state, ss);
+        wellGroupHelpers::setGroupControl(group, schedule(), controlPhase, reportStepIdx, /*isInjector*/true, well_state, ss);
 
         if (!ss.str().empty())
             deferred_logger.info(ss.str());
@@ -2033,7 +2057,7 @@ namespace Opm {
         if (group.isProductionGroup())
             return;
 
-        const Group::InjectionCMode& currentGroupControl = wellState.currentInjectionGroupControl(group.name());
+        const Group::InjectionCMode& currentGroupControl = wellState.currentInjectionGroupControl(Phase::GAS, group.name());
         if( currentGroupControl == Group::InjectionCMode::REIN ) {
             int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
             double gasProductionRate = wellGroupHelpers::sumWellRates(group, schedule, wellState, reportStepIdx, gasPos, /*isInjector*/false);

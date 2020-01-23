@@ -319,8 +319,8 @@ namespace Opm
             return current_production_group_controls_.count(groupName) > 0;
         }
 
-        bool hasInjectionGroupControl(const std::string& groupName) {
-            return current_injection_group_controls_.count(groupName) > 0;
+        bool hasInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName) {
+            return current_injection_group_controls_.count(std::make_pair(phase, groupName)) > 0;
         }
 
         /// One current control per group.
@@ -337,14 +337,14 @@ namespace Opm
         }
 
         /// One current control per group.
-        void setCurrentInjectionGroupControl(const std::string& groupName, const Group::InjectionCMode& groupControl ) {
-            current_injection_group_controls_[groupName] = groupControl;
+        void setCurrentInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName, const Group::InjectionCMode& groupControl ) {
+            current_injection_group_controls_[std::make_pair(phase, groupName)] = groupControl;
         }
-        const Group::InjectionCMode& currentInjectionGroupControl(const std::string& groupName) const {
-            auto it = current_injection_group_controls_.find(groupName);
+        const Group::InjectionCMode& currentInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName) const {
+            auto it = current_injection_group_controls_.find(std::make_pair(phase, groupName));
 
             if (it == current_injection_group_controls_.end())
-                OPM_THROW(std::logic_error, "Could not find any control for injection group " << groupName);
+                OPM_THROW(std::logic_error, "Could not find any control for " << phase << " injection group " << groupName);
 
             return it->second;
         }
@@ -912,7 +912,7 @@ namespace Opm
         std::map<std::string, int> wellNameToGlobalIdx_;
 
         std::map<std::string, Group::ProductionCMode> current_production_group_controls_;
-        std::map<std::string, Group::InjectionCMode> current_injection_group_controls_;
+        std::map<std::pair<Opm::Phase, std::string>, Group::InjectionCMode> current_injection_group_controls_;
 
         std::map<std::string, std::vector<double>> production_group_reduction_rates;
         std::map<std::string, std::vector<double>> injection_group_reduction_rates;

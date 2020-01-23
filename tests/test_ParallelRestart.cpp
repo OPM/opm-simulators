@@ -1710,12 +1710,14 @@ BOOST_AUTO_TEST_CASE(Group)
 {
 #ifdef HAVE_MPI
     Opm::UnitSystem unitSystem;
+
+    std::map<Opm::Phase, Opm::Group::GroupInjectionProperties> injection;
     Opm::Group val1("test1", 1, 2, 3.0, unitSystem,
                     Opm::Group::GroupType::PRODUCTION,
                     4.0, true, 5, "test2",
                     Opm::IOrderSet<std::string>({"test3", "test4"}, {"test3","test4"}),
                     Opm::IOrderSet<std::string>({"test5", "test6"}, {"test5","test6"}),
-                    Opm::Group::GroupInjectionProperties(),
+                    injection,
                     Opm::Group::GroupProductionProperties());
 
     auto val2 = PackUnpack(val1);
@@ -2126,12 +2128,13 @@ BOOST_AUTO_TEST_CASE(Schedule)
     Opm::Schedule::WellMap wells;
     wells.insert({"test", {{std::make_shared<Opm::Well>(getFullWell())},1}});
     Opm::Schedule::GroupMap groups;
+    std::map<Opm::Phase, Opm::Group::GroupInjectionProperties> injection;
     groups.insert({"test", {{std::make_shared<Opm::Group>("test1", 1, 2, 3.0, unitSystem,
                                                           Opm::Group::GroupType::PRODUCTION,
                                                           4.0, true, 5, "test2",
                                                           Opm::IOrderSet<std::string>({"test3", "test4"}, {"test3","test4"}),
                                                           Opm::IOrderSet<std::string>({"test5", "test6"}, {"test5","test6"}),
-                                                          Opm::Group::GroupInjectionProperties(),
+                                                          injection,
                                                           Opm::Group::GroupProductionProperties())},1}});
     using VapType = Opm::OilVaporizationProperties::OilVaporization;
     Opm::DynamicState<Opm::OilVaporizationProperties> oilvap{{Opm::OilVaporizationProperties(VapType::VAPPARS,
