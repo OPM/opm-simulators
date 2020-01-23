@@ -374,6 +374,18 @@ namespace Opm
             return it->second;
         }
 
+        void setCurrentInjectionGroupReservoirRates(const std::string& groupName, const std::vector<double>& target ) {
+            injection_group_reservoir_rates[groupName] = target;
+        }
+        const std::vector<double>& currentInjectionGroupReservoirRates(const std::string& groupName) const {
+            auto it = injection_group_reservoir_rates.find(groupName);
+
+            if (it == injection_group_reservoir_rates.end())
+                OPM_THROW(std::logic_error, "Could not find any reservoir rates for injection group " << groupName);
+
+            return it->second;
+        }
+
         void setCurrentInjectionVREPRates(const std::string& groupName, const double& target ) {
             injection_group_vrep_rates[groupName] = target;
         }
@@ -836,24 +848,22 @@ namespace Opm
         }
 
         template<class Comm>
-        void communicateGroupReductionRates(const Comm& comm) {
-            // sum over all nodes
-            for (auto& x : production_group_reduction_rates) {
-                comm.sum(x.second.data(), x.second.size());
-            }
-            for (auto& x : injection_group_reduction_rates) {
-                comm.sum(x.second.data(), x.second.size());
-            }
-        }
-
-        template<class Comm>
-        void communicateReinVrep(const Comm& comm) {
+        void communicateGroupRates(const Comm& comm) {
             // sum over all nodes
             for (auto& x : injection_group_rein_rates) {
                 comm.sum(x.second.data(), x.second.size());
             }
             for (auto& x : injection_group_vrep_rates) {
                 x.second = comm.sum(x.second);
+            }
+            for (auto& x : production_group_reduction_rates) {
+                comm.sum(x.second.data(), x.second.size());
+            }
+            for (auto& x : injection_group_reduction_rates) {
+                comm.sum(x.second.data(), x.second.size());
+            }
+            for (auto& x : injection_group_reservoir_rates) {
+                comm.sum(x.second.data(), x.second.size());
             }
         }
 
@@ -916,6 +926,7 @@ namespace Opm
 
         std::map<std::string, std::vector<double>> production_group_reduction_rates;
         std::map<std::string, std::vector<double>> injection_group_reduction_rates;
+        std::map<std::string, std::vector<double>> injection_group_reservoir_rates;
         std::map<std::string, std::vector<double>> injection_group_potentials;
         std::map<std::string, double> injection_group_vrep_rates;
         std::map<std::string, std::vector<double>> injection_group_rein_rates;

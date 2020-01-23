@@ -469,6 +469,18 @@ namespace Opm {
         }
         wellState.setCurrentInjectionVREPRates(group.name(), resv);
     }
+    inline void updateReservoirRatesInjectionGroups(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellStateNupcol, WellStateFullyImplicitBlackoil& wellState) {
+        for (const std::string& groupName : group.groups()) {
+            const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
+            updateReservoirRatesInjectionGroups(groupTmp, schedule, reportStepIdx, wellStateNupcol, wellState);
+        }
+        const int np = wellState.numPhases();
+        std::vector<double> resv(np, 0.0);
+        for (int phase = 0; phase < np; ++phase) {
+            resv[phase] = sumWellPhaseRates(wellStateNupcol.wellReservoirRates(), group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ true);
+        }
+        wellState.setCurrentInjectionGroupReservoirRates(group.name(), resv);
+    }
 
     inline void updateREINForGroups(const Group& group, const Schedule& schedule, const int reportStepIdx, const PhaseUsage& pu, const SummaryState& st, const WellStateFullyImplicitBlackoil& wellStateNupcol, WellStateFullyImplicitBlackoil& wellState) {
         const int np = wellState.numPhases();
