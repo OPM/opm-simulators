@@ -2226,15 +2226,15 @@ namespace Opm
             double voidageRate = well_state.currentInjectionVREPRates(groupcontrols.voidage_group)*groupcontrols.target_void_fraction;
 
             double injReduction = 0.0;
-
+            std::vector<double> groupInjectionReservoirRates = well_state.currentInjectionGroupReservoirRates(group.name());
             if (groupcontrols.phase != Phase::WATER)
-                injReduction += groupInjectionReductions[pu.phase_pos[BlackoilPhases::Aqua]]*convert_coeff[pu.phase_pos[BlackoilPhases::Aqua]];
+                injReduction += groupInjectionReservoirRates[pu.phase_pos[BlackoilPhases::Aqua]];
 
             if (groupcontrols.phase != Phase::OIL)
-                injReduction += groupInjectionReductions[pu.phase_pos[BlackoilPhases::Liquid]]*convert_coeff[pu.phase_pos[BlackoilPhases::Liquid]];
+                injReduction += groupInjectionReservoirRates[pu.phase_pos[BlackoilPhases::Liquid]];
 
             if (groupcontrols.phase != Phase::GAS)
-                injReduction += groupInjectionReductions[pu.phase_pos[BlackoilPhases::Vapour]]*convert_coeff[pu.phase_pos[BlackoilPhases::Vapour]];
+                injReduction += groupInjectionReservoirRates[pu.phase_pos[BlackoilPhases::Vapour]];
 
             voidageRate -= injReduction;
 

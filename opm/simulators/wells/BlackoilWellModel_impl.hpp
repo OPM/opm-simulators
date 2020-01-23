@@ -1190,7 +1190,6 @@ namespace Opm {
         wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, well_state_nupcol_, well_state_, groupTargetReductionInj);
 
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
-        well_state_.communicateGroupReductionRates(comm);
         well_state_.updateGlobalIsGrup(schedule(), reportStepIdx, comm);
 
         const double simulationTime = ebosSimulator_.time();
@@ -1202,7 +1201,10 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol_, well_state_);
         wellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
-        well_state_.communicateReinVrep(comm);
+
+        wellGroupHelpers::updateReservoirRatesInjectionGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
+
+        well_state_.communicateGroupRates(comm);
 
         // compute wsolvent fraction for REIN wells
         updateWsolvent(fieldGroup, schedule(), reportStepIdx,  well_state_nupcol_);
