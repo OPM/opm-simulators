@@ -109,6 +109,21 @@ case "$TEST_TYPE" in
         exit 0
         ;;
 
+    "--parallel-program="*)
+        NUM_PROCS="${TEST_TYPE/--parallel-program=/}"
+
+        echo "executing \"mpirun -np \"$NUM_PROCS\" $TEST_BINARY $TEST_ARGS\""
+        mpirun -np "$NUM_PROCS" "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
+        RET="${PIPESTATUS[0]}"
+        if test "$RET" != "0"; then
+            echo "Executing the binary failed!"
+            rm "test-$RND.log"
+            exit 1
+        fi
+
+        exit 0
+        ;;
+
     "--parallel-simulation="*)
         NUM_PROCS="${TEST_TYPE/--parallel-simulation=/}"
 
