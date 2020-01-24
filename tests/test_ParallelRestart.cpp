@@ -922,7 +922,8 @@ BOOST_AUTO_TEST_CASE(Runspec)
                       Opm::WellSegmentDims(1,2,3),
                       Opm::UDQParams(true, 1, 2.0, 3.0, 4.0),
                       Opm::EclHysterConfig(true, 1, 2),
-                      Opm::Actdims(1,2,3,4));
+                      Opm::Actdims(1,2,3,4),
+                      Opm::SatFuncControls(5.0e-7));
 
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
@@ -2262,7 +2263,8 @@ BOOST_AUTO_TEST_CASE(Schedule)
                          Opm::WellSegmentDims(1,2,3),
                          Opm::UDQParams(true, 1, 2.0, 3.0, 4.0),
                          Opm::EclHysterConfig(true, 1, 2),
-                         Opm::Actdims(1,2,3,4));
+                         Opm::Actdims(1,2,3,4),
+                         Opm::SatFuncControls(5.6e-7));
     Opm::Schedule::VFPProdMap vfpProd {{1, {{std::make_shared<Opm::VFPProdTable>(getVFPProdTable())},1}}};
     Opm::Schedule::VFPInjMap vfpIn{{1, {{std::make_shared<Opm::VFPInjTable>(getVFPInjTable())},1}}};
     Opm::WellTestConfig::WTESTWell tw{"test", Opm::WellTestConfig::ECONOMIC,
