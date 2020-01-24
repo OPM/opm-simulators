@@ -181,7 +181,7 @@ public:
         initBegin(numRegions);
 
         numActivePhases_ = 0;
-        std::fill(&phaseIsActive_[0], &phaseIsActive_[numPhases], false);
+        std::fill_n(&phaseIsActive_[0], numPhases, false);
 
         if (deck.hasKeyword("OIL")) {
             phaseIsActive_[oilPhaseIdx] = true;
@@ -268,7 +268,7 @@ public:
         setReservoirTemperature(surfaceTemperature);
 
         numActivePhases_ = numPhases;
-        std::fill(&phaseIsActive_[0], &phaseIsActive_[numPhases], true);
+        std::fill_n(&phaseIsActive_[0], numPhases, true);
 
         resizeArrays_(numPvtRegions);
     }
