@@ -632,7 +632,6 @@ std::size_t packSize(const IOConfig& data, Dune::MPIHelper::MPICommunicator comm
            packSize(data.getUNIFOUT(), comm) +
            packSize(data.getFMTIN(), comm) +
            packSize(data.getFMTOUT(), comm) +
-           packSize(data.getFirstRestartStep(), comm) +
            packSize(data.getDeckFileName(), comm) +
            packSize(data.getOutputEnabled(), comm) +
            packSize(data.getOutputDir(), comm) +
@@ -2462,7 +2461,6 @@ void pack(const IOConfig& data, std::vector<char>& buffer, int& position,
     pack(data.getUNIFOUT(), buffer, position, comm);
     pack(data.getFMTIN(), buffer, position, comm);
     pack(data.getFMTOUT(), buffer, position, comm);
-    pack(data.getFirstRestartStep(), buffer, position, comm);
     pack(data.getDeckFileName(), buffer, position, comm);
     pack(data.getOutputEnabled(), buffer, position, comm);
     pack(data.getOutputDir(), buffer, position, comm);
@@ -4505,7 +4503,6 @@ void unpack(IOConfig& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     bool write_init, write_egrid, unifin, unifout, fmtin, fmtout;
-    int firstRestartStep;
     std::string deck_name, output_dir, base_name;
     bool output_enabled, no_sim, ecl_compatible_rst;
 
@@ -4515,7 +4512,6 @@ void unpack(IOConfig& data, std::vector<char>& buffer, int& position,
     unpack(unifout, buffer, position, comm);
     unpack(fmtin, buffer, position, comm);
     unpack(fmtout, buffer, position, comm);
-    unpack(firstRestartStep, buffer, position, comm);
     unpack(deck_name, buffer, position, comm);
     unpack(output_enabled, buffer, position, comm);
     unpack(output_dir, buffer, position, comm);
@@ -4523,7 +4519,7 @@ void unpack(IOConfig& data, std::vector<char>& buffer, int& position,
     unpack(base_name, buffer, position, comm);
     unpack(ecl_compatible_rst, buffer, position, comm);
     data = IOConfig(write_init, write_egrid, unifin, unifout, fmtin, fmtout,
-                    firstRestartStep, deck_name, output_enabled, output_dir,
+                    deck_name, output_enabled, output_dir,
                     no_sim, base_name, ecl_compatible_rst);
 }
 

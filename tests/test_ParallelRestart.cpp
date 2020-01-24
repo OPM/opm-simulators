@@ -815,7 +815,7 @@ BOOST_AUTO_TEST_CASE(RestartConfig)
 BOOST_AUTO_TEST_CASE(IOConfig)
 {
 #if HAVE_MPI
-    Opm::IOConfig val1(true, false, true, false, false, true, 1, "test1", true,
+    Opm::IOConfig val1(true, false, true, false, false, true, "test1", true,
                        "test2", true, "test3", false);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
@@ -2438,7 +2438,7 @@ BOOST_AUTO_TEST_CASE(MULTREGTScanner)
 BOOST_AUTO_TEST_CASE(EclipseConfig)
 {
 #ifdef HAVE_MPI
-    Opm::IOConfig io(true, false, true, false, false, true, 1, "test1", true,
+    Opm::IOConfig io(true, false, true, false, false, true, "test1", true,
                      "test2", true, "test3", false);
     Opm::InitConfig init(Opm::Equil({getEquilRecord(), getEquilRecord()}),
                          Opm::FoamConfig({getFoamData(), getFoamData()}),
