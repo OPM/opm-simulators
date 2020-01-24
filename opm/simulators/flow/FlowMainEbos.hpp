@@ -450,11 +450,15 @@ namespace Opm
             // Run relperm diagnostics if we have more than one phase.
             if (FluidSystem::numActivePhases() > 1) {
                 RelpermDiagnostics diagnostic;
-                if (mpi_size_ > 1)
+                if (mpi_size_ > 1) {
                     this->grid().switchToGlobalView();
+                    static_cast<ParallelEclipseState&>(this->eclState()).switchToGlobalProps();
+                }
                 diagnostic.diagnosis(eclState(), deck(), this->grid());
-                if (mpi_size_ > 1)
+                if (mpi_size_ > 1) {
                     this->grid().switchToDistributedView();
+                    static_cast<ParallelEclipseState&>(this->eclState()).switchToDistributedProps();
+                }
             }
         }
 

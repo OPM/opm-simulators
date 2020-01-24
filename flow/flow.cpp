@@ -20,6 +20,7 @@
 */
 #include "config.h"
 
+#include <ebos/eclmpiserializer.hh>
 
 #include <flow/flow_ebos_blackoil.hpp>
 
@@ -38,6 +39,7 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
+#include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/simulators/flow/MissingFeatures.hpp>
@@ -348,13 +350,21 @@ int main(int argc, char** argv)
 
             Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout);
 
-            deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
-            Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
-            if ( outputCout )
-                Opm::checkDeck(*deck, parser, parseContext, errorGuard);
-
-            eclipseState.reset( new Opm::EclipseState(*deck));
+#ifdef HAVE_MPI
+            Opm::ParallelEclipseState* parState;
+#endif
             if (mpiRank == 0) {
+                deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
+                Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
+                if ( outputCout )
+                    Opm::checkDeck(*deck, parser, parseContext, errorGuard);
+
+#ifdef HAVE_MPI
+                parState = new Opm::ParallelEclipseState(*deck);
+                eclipseState.reset(parState);
+#else
+                eclipseState.reset(new Opm::EclipseState(*deck);
+#endif
                 /*
                   For the time being initializing wells and groups from the
                   restart file is not possible, but work is underways and it is
@@ -382,9 +392,13 @@ int main(int argc, char** argv)
             else {
                 summaryConfig.reset(new Opm::SummaryConfig);
                 schedule.reset(new Opm::Schedule);
-                Opm::Mpi::receiveAndUnpack(*summaryConfig, Dune::MPIHelper::getCollectiveCommunication());
-                Opm::Mpi::receiveAndUnpack(*schedule, Dune::MPIHelper::getCollectiveCommunication());
+                parState = new Opm::ParallelEclipseState;
+                Opm::Mpi::receiveAndUnpack(*summaryConfig, mpiHelper.getCollectiveCommunication());
+                Opm::Mpi::receiveAndUnpack(*schedule, mpiHelper.getCollectiveCommunication());
+                eclipseState.reset(parState);
             }
+            Opm::EclMpiSerializer ser(mpiHelper.getCollectiveCommunication());
+            ser.broadcast(*parState);
 #endif
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
