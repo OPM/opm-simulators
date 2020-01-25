@@ -64,6 +64,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/BCConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -512,6 +513,12 @@ std::size_t packSize(const ThresholdPressure& data, Dune::MPIHelper::MPICommunic
           packSize(data.pressureTable(), comm);
 }
 
+std::size_t packSize(const BCConfig& bc, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(bc.faces(), comm);
+}
+
+
 std::size_t packSize(const NNC& data, Dune::MPIHelper::MPICommunicator comm)
 {
    return packSize(data.data(), comm);
@@ -603,6 +610,7 @@ std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator co
 std::size_t packSize(const SimulationConfig& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getThresholdPressure(), comm) +
+           packSize(data.bcconfig(), comm) +
            packSize(data.useCPR(), comm) +
            packSize(data.hasDISGAS(), comm) +
            packSize(data.hasVAPOIL(), comm) +
@@ -2322,6 +2330,13 @@ void pack(const ThresholdPressure& data, std::vector<char>& buffer, int& positio
     pack(data.pressureTable(), buffer, position, comm);
 }
 
+
+void pack(const BCConfig& bc, std::vector<char>& buffer, int& position,
+    Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(bc.faces(), buffer, position, comm);
+}
+
 void pack(const NNC& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
@@ -2429,6 +2444,7 @@ void pack(const SimulationConfig& data, std::vector<char>& buffer, int& position
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getThresholdPressure(), buffer, position, comm);
+    pack(data.bcconfig(), buffer, position, comm);
     pack(data.useCPR(), buffer, position, comm);
     pack(data.hasDISGAS(), buffer, position, comm);
     pack(data.hasVAPOIL(), buffer, position, comm);
@@ -4317,6 +4333,16 @@ void unpack(ThresholdPressure& data, std::vector<char>& buffer, int& position,
     data = ThresholdPressure(active, restart, thpTable, pTable);
 }
 
+
+void unpack(BCConfig& bc, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<BCConfig::BCFace> faces;
+
+    unpack(faces, buffer, position, comm);
+    bc = BCConfig(faces);
+}
+
 void unpack(NNC& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
@@ -4462,13 +4488,15 @@ void unpack(SimulationConfig& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     ThresholdPressure thresholdPressure;
+    BCConfig bc;
     bool useCPR, DISGAS, VAPOIL, isThermal;
     unpack(thresholdPressure, buffer, position, comm);
+    unpack(bc, buffer, position, comm);
     unpack(useCPR, buffer, position, comm);
     unpack(DISGAS, buffer, position, comm);
     unpack(VAPOIL, buffer, position, comm);
     unpack(isThermal, buffer, position, comm);
-    data = SimulationConfig(thresholdPressure, useCPR, DISGAS, VAPOIL, isThermal);
+    data = SimulationConfig(thresholdPressure, bc, useCPR, DISGAS, VAPOIL, isThermal);
 }
 
 void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
