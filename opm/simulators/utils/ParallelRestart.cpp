@@ -65,6 +65,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/BCConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/RockConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -520,6 +521,15 @@ std::size_t packSize(const BCConfig& bc, Dune::MPIHelper::MPICommunicator comm)
     return packSize(bc.faces(), comm);
 }
 
+std::size_t packSize(const RockConfig& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.active(), comm) +
+           packSize(data.rocknum_property(), comm) +
+           packSize(data.comp(), comm) +
+           packSize(data.num_rock_tables(), comm) +
+           packSize(data.water_compaction(), comm) +
+           packSize(data.hysteresis_mode(), comm);
+}
 
 std::size_t packSize(const NNC& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -613,6 +623,7 @@ std::size_t packSize(const SimulationConfig& data, Dune::MPIHelper::MPICommunica
 {
     return packSize(data.getThresholdPressure(), comm) +
            packSize(data.bcconfig(), comm) +
+           packSize(data.rock_config(), comm) +
            packSize(data.useCPR(), comm) +
            packSize(data.hasDISGAS(), comm) +
            packSize(data.hasVAPOIL(), comm) +
@@ -2344,6 +2355,18 @@ void pack(const BCConfig& bc, std::vector<char>& buffer, int& position,
     pack(bc.faces(), buffer, position, comm);
 }
 
+void pack(const RockConfig& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.active(), buffer, position, comm);
+    pack(data.rocknum_property(), buffer, position, comm);
+    pack(data.comp(), buffer, position, comm);
+    pack(data.num_rock_tables(), buffer, position, comm);
+    pack(data.water_compaction(), buffer, position, comm);
+    pack(data.hysteresis_mode(), buffer, position, comm);
+}
+
+
 void pack(const NNC& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
@@ -2452,6 +2475,7 @@ void pack(const SimulationConfig& data, std::vector<char>& buffer, int& position
 {
     pack(data.getThresholdPressure(), buffer, position, comm);
     pack(data.bcconfig(), buffer, position, comm);
+    pack(data.rock_config(), buffer, position, comm);
     pack(data.useCPR(), buffer, position, comm);
     pack(data.hasDISGAS(), buffer, position, comm);
     pack(data.hasVAPOIL(), buffer, position, comm);
@@ -4330,6 +4354,26 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.extra, buffer, position, comm);
 }
 
+void unpack(RockConfig& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    RockConfig rock_config;
+    bool active;
+    std::vector<RockConfig::RockComp> rock_comp;
+    std::string rocknum_property;
+    std::size_t num_rock_tables;
+    bool water_compaction;
+    RockConfig::Hysteresis hyst_mode;
+
+    unpack(active, buffer, position, comm);
+    unpack(rocknum_property, buffer, position, comm);
+    unpack(rock_comp, buffer, position, comm);
+    unpack(num_rock_tables, buffer, position, comm);
+    unpack(water_compaction, buffer, position, comm);
+    unpack(hyst_mode, buffer, position, comm);
+    data = RockConfig(active, rock_comp, rocknum_property, num_rock_tables, water_compaction, hyst_mode);
+}
+
 void unpack(ThresholdPressure& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
@@ -4500,14 +4544,16 @@ void unpack(SimulationConfig& data, std::vector<char>& buffer, int& position,
 {
     ThresholdPressure thresholdPressure;
     BCConfig bc;
+    RockConfig rock_config;
     bool useCPR, DISGAS, VAPOIL, isThermal;
     unpack(thresholdPressure, buffer, position, comm);
     unpack(bc, buffer, position, comm);
+    unpack(rock_config, buffer, position, comm);
     unpack(useCPR, buffer, position, comm);
     unpack(DISGAS, buffer, position, comm);
     unpack(VAPOIL, buffer, position, comm);
     unpack(isThermal, buffer, position, comm);
-    data = SimulationConfig(thresholdPressure, bc, useCPR, DISGAS, VAPOIL, isThermal);
+    data = SimulationConfig(thresholdPressure, bc, rock_config, useCPR, DISGAS, VAPOIL, isThermal);
 }
 
 void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
