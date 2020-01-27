@@ -455,6 +455,7 @@ HANDLE_AS_POD(PVTWRecord)
 HANDLE_AS_POD(PVCDORecord)
 HANDLE_AS_POD(Regdims)
 HANDLE_AS_POD(ROCKRecord)
+HANDLE_AS_POD(SatFuncControls)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeStampUTC::YMD)
 HANDLE_AS_POD(VISCREFRecord)
@@ -668,7 +669,8 @@ std::size_t packSize(const Runspec& data, Dune::MPIHelper::MPICommunicator comm)
            packSize(data.wellSegmentDimensions(), comm) +
            packSize(data.udqParams(), comm) +
            packSize(data.hysterPar(), comm) +
-           packSize(data.actdims(), comm);
+           packSize(data.actdims(), comm) +
+           packSize(data.saturationFunctionControls(), comm);
 }
 
 std::size_t packSize(const PvtxTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -2502,6 +2504,7 @@ void pack(const Runspec& data, std::vector<char>& buffer, int& position,
     pack(data.udqParams(), buffer, position, comm);
     pack(data.hysterPar(), buffer, position, comm);
     pack(data.actdims(), buffer, position, comm);
+    pack(data.saturationFunctionControls(), buffer, position, comm);
 }
 
 void pack(const PvtxTable& data, std::vector<char>& buffer, int& position,
@@ -4565,6 +4568,7 @@ void unpack(Runspec& data, std::vector<char>& buffer, int& position,
     UDQParams udqparams;
     EclHysterConfig hystPar;
     Actdims actdims;
+    SatFuncControls sfuncctrl;
     unpack(phases, buffer, position, comm);
     unpack(tabdims, buffer, position, comm);
     unpack(endScale, buffer, position, comm);
@@ -4573,8 +4577,9 @@ void unpack(Runspec& data, std::vector<char>& buffer, int& position,
     unpack(udqparams, buffer, position, comm);
     unpack(hystPar, buffer, position, comm);
     unpack(actdims, buffer, position, comm);
+    unpack(sfuncctrl, buffer, position, comm);
     data = Runspec(phases, tabdims, endScale, wellDims, wsegDims,
-                   udqparams, hystPar, actdims);
+                   udqparams, hystPar, actdims, sfuncctrl);
 }
 
 template<class PVTType>
