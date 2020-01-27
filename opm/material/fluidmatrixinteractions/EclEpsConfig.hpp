@@ -204,14 +204,14 @@ public:
         const auto& fp = eclState.fieldProps();
         // check if we are supposed to scale the Y axis of the capillary pressure
         if (twoPhaseSystemType == EclOilWaterSystem) {
-            enableKrnScaling_ = fp.has<double>("KRO");
-            enableKrwScaling_ = fp.has<double>("KRW");
-            enablePcScaling_  = fp.has<double>("PCW") || fp.has<double>("SWATINIT");
+            enableKrnScaling_ = fp.has_double("KRO");
+            enableKrwScaling_ = fp.has_double("KRW");
+            enablePcScaling_  = fp.has_double("PCW") || fp.has_double("SWATINIT");
         } else {
             assert(twoPhaseSystemType == EclGasOilSystem);
-            enableKrnScaling_ = fp.has<double>("KRG");
-            enableKrwScaling_ = fp.has<double>("KRO");
-            enablePcScaling_  = fp.has<double>("PCG");
+            enableKrnScaling_ = fp.has_double("KRG");
+            enableKrwScaling_ = fp.has_double("KRO");
+            enablePcScaling_  = fp.has_double("PCG");
         }
 
         if (enablePcScaling_ && enableLeverettScaling_)

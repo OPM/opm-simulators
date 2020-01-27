@@ -74,8 +74,8 @@ std::vector<T> compressed_copy(const std::vector<T>& global_vector, const std::v
 
 
 std::vector<double> try_get(const FieldPropsManager& fp, const std::string& keyword, const std::vector<int>& compressedToCartesianElemIdx) {
-    if (fp.has<double>(keyword))
-        return compressed_copy(fp.get_global<double>(keyword), compressedToCartesianElemIdx);
+    if (fp.has_double(keyword))
+        return compressed_copy(fp.get_global_double(keyword), compressedToCartesianElemIdx);
 
     return {};
 }
@@ -99,9 +99,9 @@ public:
         const auto& fp = eclState.fieldProps();
 
         if (useImbibition)
-            compressed_satnum = compressed_copy(fp.get_global<int>("IMBNUM"), compressedToCartesianElemIdx);
+            compressed_satnum = compressed_copy(fp.get_global_int("IMBNUM"), compressedToCartesianElemIdx);
         else
-            compressed_satnum = compressed_copy(fp.get_global<int>("SATNUM"), compressedToCartesianElemIdx);
+            compressed_satnum = compressed_copy(fp.get_global_int("SATNUM"), compressedToCartesianElemIdx);
 
         this->compressed_swl = try_get( fp, kwPrefix+"SWL", compressedToCartesianElemIdx);
         this->compressed_sgl = try_get( fp, kwPrefix+"SGL", compressedToCartesianElemIdx);
@@ -118,21 +118,21 @@ public:
         this->compressed_krg = try_get( fp, kwPrefix+"KRG", compressedToCartesianElemIdx);
 
         // _may_ be needed to calculate the Leverett capillary pressure scaling factor
-        if (fp.has<double>("PORO"))
-            this->compressed_poro = compressed_copy(fp.get_global<double>("PORO"), compressedToCartesianElemIdx);
+        if (fp.has_double("PORO"))
+            this->compressed_poro = compressed_copy(fp.get_global_double("PORO"), compressedToCartesianElemIdx);
 
-        if (fp.has<double>("PERMX"))
-            this->compressed_permx = compressed_copy(fp.get_global<double>("PERMX"), compressedToCartesianElemIdx);
+        if (fp.has_double("PERMX"))
+            this->compressed_permx = compressed_copy(fp.get_global_double("PERMX"), compressedToCartesianElemIdx);
         else
             this->compressed_permx = std::vector<double>(this->compressed_satnum.size());
 
-        if (fp.has<double>("PERMY"))
-            this->compressed_permy= compressed_copy(fp.get_global<double>("PERMY"), compressedToCartesianElemIdx);
+        if (fp.has_double("PERMY"))
+            this->compressed_permy= compressed_copy(fp.get_global_double("PERMY"), compressedToCartesianElemIdx);
         else
             this->compressed_permy= this->compressed_permx;
 
-        if (fp.has<double>("PERMZ"))
-            this->compressed_permz= compressed_copy(fp.get_global<double>("PERMZ"), compressedToCartesianElemIdx);
+        if (fp.has_double("PERMZ"))
+            this->compressed_permz= compressed_copy(fp.get_global_double("PERMZ"), compressedToCartesianElemIdx);
         else
             this->compressed_permz= this->compressed_permx;
     }
