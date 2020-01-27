@@ -447,6 +447,7 @@ std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicat
 
 HANDLE_AS_POD(Actdims)
 HANDLE_AS_POD(Aqudims)
+HANDLE_AS_POD(BCConfig::BCFace)
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
@@ -456,6 +457,7 @@ HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PVTWRecord)
 HANDLE_AS_POD(PVCDORecord)
 HANDLE_AS_POD(Regdims)
+HANDLE_AS_POD(RockConfig::RockComp)
 HANDLE_AS_POD(ROCKRecord)
 HANDLE_AS_POD(SatFuncControls)
 HANDLE_AS_POD(Tabdims)
@@ -466,7 +468,6 @@ HANDLE_AS_POD(WellBrineProperties)
 HANDLE_AS_POD(Welldims)
 HANDLE_AS_POD(WellFoamProperties)
 HANDLE_AS_POD(WellSegmentDims)
-HANDLE_AS_POD(BCConfig::BCFace)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
 {

@@ -86,6 +86,7 @@
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/RockConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionContext.hpp>
@@ -2162,71 +2163,34 @@ private:
     {
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
-        const auto& deck = vanguard.deck();
-        auto& eclState = vanguard.eclState();
+        const auto& eclState = vanguard.eclState();
+        const auto& rock_config = eclState.getSimulationConfig().rock_config();
 
         // read the rock compressibility parameters
-        if (deck.hasKeyword("ROCK")) {
-            const auto& rockKeyword = deck.getKeyword("ROCK");
-            rockParams_.resize(rockKeyword.size());
-            for (size_t rockRecordIdx = 0; rockRecordIdx < rockKeyword.size(); ++ rockRecordIdx) {
-                const auto& rockRecord = rockKeyword.getRecord(rockRecordIdx);
-                rockParams_[rockRecordIdx].referencePressure =
-                        rockRecord.getItem("PREF").getSIDouble(0);
-                rockParams_[rockRecordIdx].compressibility =
-                        rockRecord.getItem("COMPRESSIBILITY").getSIDouble(0);
-            }
+        {
+            const auto& comp = rock_config.comp();
+            rockParams_.clear();
+            for (const auto& c : comp)
+                rockParams_.push_back( { c.pref, c.compressibility } );
         }
 
         // read the parameters for water-induced rock compaction
         readRockCompactionParameters_();
 
-        // check the kind of region which is supposed to be used by checking the ROCKOPTS
-        // keyword. note that for some funny reason, the ROCK keyword uses PVTNUM by
-        // default, *not* ROCKNUM!
-        std::string propName = "PVTNUM";
-        if (deck.hasKeyword("ROCKOPTS")) {
-            const auto& rockoptsKeyword = deck.getKeyword("ROCKOPTS");
-            std::string rockTableType =
-                rockoptsKeyword.getRecord(0).getItem("TABLE_TYPE").getTrimmedString(0);
-            if (rockTableType == "PVTNUM")
-                propName = "PVTNUM";
-            else if (rockTableType == "SATNUM")
-                propName = "SATNUM";
-            else if (rockTableType == "ROCKNUM")
-                propName = "ROCKNUM";
-            else {
-                throw std::runtime_error("Unknown table type '"+rockTableType
-                                         +" for the ROCKOPTS keyword given");
-            }
-        }
+        const auto& num = eclState.fieldProps().get_global_int(rock_config.rocknum_property());
+        unsigned numElem = vanguard.gridView().size(0);
+        rockTableIdx_.resize(numElem);
+        for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
+            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
 
-        // If ROCKCOMP is used and ROCKNUM is specified ROCK2D ROCK2DTR ROCKTAB etc. uses ROCKNUM
-        // to give the correct table index.
-        if (deck.hasKeyword("ROCKCOMP") && eclState.fieldProps().has_int("ROCKNUM"))
-            propName = "ROCKNUM";
-
-        if (eclState.fieldProps().has_int(propName)) {
-            const auto& tmp = eclState.fieldProps().get_global_int(propName);
-            unsigned numElem = vanguard.gridView().size(0);
-            rockTableIdx_.resize(numElem);
-            for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
-                unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
-
-                // reminder: Eclipse uses FORTRAN-style indices
-                rockTableIdx_[elemIdx] = tmp[cartElemIdx] - 1;
-            }
+            rockTableIdx_[elemIdx] = num[cartElemIdx] - 1;
         }
 
         // Store overburden pressure pr element
         const auto& overburdTables = eclState.getTableManager().getOverburdTables();
         if (!overburdTables.empty()) {
-            unsigned numElem = vanguard.gridView().size(0);
             overburdenPressure_.resize(numElem,0.0);
-
-            const auto& rockcomp = deck.getKeyword("ROCKCOMP");
-            const auto& rockcompRecord = rockcomp.getRecord(0);
-            size_t numRocktabTables = rockcompRecord.getItem("NTROCC").template get< int >(0);
+            size_t numRocktabTables = rock_config.num_rock_tables();
 
             if (overburdTables.size() != numRocktabTables)
                 throw std::runtime_error(std::to_string(numRocktabTables) +" OVERBURD tables is expected, but " + std::to_string(overburdTables.size()) +" is provided");
@@ -2251,47 +2215,36 @@ private:
     void readRockCompactionParameters_()
     {
         const auto& vanguard = this->simulator().vanguard();
-        const auto& deck = vanguard.deck();
         const auto& eclState = vanguard.eclState();
+        const auto& rock_config = eclState.getSimulationConfig().rock_config();
 
-        if (!deck.hasKeyword("ROCKCOMP"))
+        if (!rock_config.active())
             return; // deck does not enable rock compaction
 
-        const auto& rockcomp = deck.getKeyword("ROCKCOMP");
-        //for (size_t rockRecordIdx = 0; rockRecordIdx < rockcomp.size(); ++ rockRecordIdx) {
-        assert(rockcomp.size() == 1);
-        const auto& rockcompRecord = rockcomp.getRecord(0);
-        const auto& option = rockcompRecord.getItem("HYSTERESIS").getTrimmedString(0);
-        if (option == "REVERS") {
-            // interpolate the porv volume multiplier using the pressure in the cell
-        }
-        else if (option == "IRREVERS") {
+        unsigned numElem = vanguard.gridView().size(0);
+        switch (rock_config.hysteresis_mode()) {
+        case RockConfig::Hysteresis::REVERS:
+            break;
+        case RockConfig::Hysteresis::IRREVERS:
             // interpolate the porv volume multiplier using the minimum pressure in the cell
             // i.e. don't allow re-inflation.
-            unsigned numElem = vanguard.gridView().size(0);
             minOilPressure_.resize(numElem, 1e99);
+            break;
+        default:
+            throw std::runtime_error("Not support ROCKOMP hysteresis option ");
         }
-        else if (option == "NO")
-            // rock compaction turned on but disabled by ROCKCOMP option
-            return;
-        else
-            throw std::runtime_error("ROCKCOMP option " + option + " not supported for item 1");
 
-        size_t numRocktabTables = rockcompRecord.getItem("NTROCC").template get<int>(0);
-        const auto& waterCompactionItem = rockcompRecord.getItem("WATER_COMPACTION").getTrimmedString(0);
-        bool waterCompaction = false;
-        if (waterCompactionItem == "YES") {
-            waterCompaction = true;
-            unsigned numElem = vanguard.gridView().size(0);
-            maxWaterSaturation_.resize(numElem, 0.0);
-        }
-        else
-            throw std::runtime_error("ROCKCOMP option " + waterCompactionItem + " not supported for item 3. Only YES is supported");
+        size_t numRocktabTables = rock_config.num_rock_tables();
+        bool waterCompaction = rock_config.water_compaction();
+
+        if (!waterCompaction)
+            throw std::runtime_error("Only water compatction allowed");
 
         if (waterCompaction) {
             const auto& rock2dTables = eclState.getTableManager().getRock2dTables();
             const auto& rock2dtrTables = eclState.getTableManager().getRock2dtrTables();
             const auto& rockwnodTables = eclState.getTableManager().getRockwnodTables();
+            maxWaterSaturation_.resize(numElem, 0.0);
 
             if (rock2dTables.size() != numRocktabTables)
                 throw std::runtime_error("Water compation option is selected in ROCKCOMP." + std::to_string(numRocktabTables)
@@ -3022,7 +2975,7 @@ private:
             for (const auto& bcface : bcconfig) {
                 const auto& type = bcface.bctype;
                 if (type == BCType::RATE) {
-                    int compIdx = 0;
+                    int compIdx = 0; // default initialize to avoid -Wmaybe-uninitialized warning
 
                     switch (bcface.component) {
                     case BCComponent::OIL:
@@ -3047,8 +3000,7 @@ private:
                         compIdx = Indices::polymerConcentrationIdx;
                         break;
                     case BCComponent::NONE:
-                        if (type == BCType::RATE)
-                            throw std::logic_error("you need to specify the component when RATE type is set in BC");
+                        throw std::logic_error("you need to specify the component when RATE type is set in BC");
                         break;
                     }
 
