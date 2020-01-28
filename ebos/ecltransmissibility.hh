@@ -137,7 +137,7 @@ public:
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
 
         // get the ntg values, the ntg values are modified for the cells merged with minpv
-        const std::vector<double>& ntg = eclState.fieldProps().get_global_double("NTG");
+        const std::vector<double>& ntg = eclState.fieldProps().get_double("NTG");
 
         unsigned numElements = elemMapper.size();
 
@@ -377,8 +377,8 @@ public:
                                                   axisCentroids),
                                   permeability_[outsideElemIdx]);
 
-                applyNtg_(halfTrans1, insideFaceIdx, insideCartElemIdx, ntg);
-                applyNtg_(halfTrans2, outsideFaceIdx, outsideCartElemIdx, ntg);
+                applyNtg_(halfTrans1, insideFaceIdx, elemIdx, ntg);
+                applyNtg_(halfTrans2, outsideFaceIdx, outsideElemIdx, ntg);
 
                 // convert half transmissibilities to full face
                 // transmissibilities using the harmonic mean
@@ -876,7 +876,7 @@ private:
 
     void applyNtg_(Scalar& trans,
                    unsigned faceIdx,
-                   unsigned cartElemIdx,
+                   unsigned elemIdx,
                    const std::vector<double>& ntg) const
     {
         // apply multiplyer for the transmissibility of the face. (the
@@ -884,17 +884,17 @@ private:
         // contains the intersection of interest.)
         switch (faceIdx) {
         case 0: // left
-            trans *= ntg[cartElemIdx];
+            trans *= ntg[elemIdx];
             break;
         case 1: // right
-            trans *= ntg[cartElemIdx];
+            trans *= ntg[elemIdx];
             break;
 
         case 2: // front
-            trans *= ntg[cartElemIdx];
+            trans *= ntg[elemIdx];
             break;
         case 3: // back
-            trans *= ntg[cartElemIdx];
+            trans *= ntg[elemIdx];
             break;
 
             // NTG does not apply to top and bottom faces
