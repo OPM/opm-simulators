@@ -3023,7 +3023,7 @@ private:
             for (const auto& bcface : bcconfig) {
                 const auto& type = bcface.bctype;
                 if (type == BCType::RATE) {
-                    int compIdx;
+                    int compIdx = 0;
 
                     switch (bcface.component) {
                     case BCComponent::OIL:
