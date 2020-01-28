@@ -2628,9 +2628,6 @@ private:
 
         initialFluidStates_.resize(numDof);
 
-        const auto& cartSize = simulator.vanguard().cartesianDimensions();
-        size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
-
         std::vector<double> waterSaturationData;
         std::vector<double> gasSaturationData;
         std::vector<double> pressureData;
@@ -2639,50 +2636,35 @@ private:
         std::vector<double> tempiData;
 
         if (FluidSystem::phaseIsActive(waterPhaseIdx))
-            waterSaturationData = fp.get_global_double("SWAT");
+            waterSaturationData = fp.get_double("SWAT");
         else
-            waterSaturationData.resize(numCartesianCells);
+            waterSaturationData.resize(numDof);
 
         if (FluidSystem::phaseIsActive(gasPhaseIdx))
-            gasSaturationData = fp.get_global_double("SGAS");
+            gasSaturationData = fp.get_double("SGAS");
         else
-            gasSaturationData.resize(numCartesianCells);
+            gasSaturationData.resize(numDof);
 
-        pressureData = fp.get_global_double("PRESSURE");
+        pressureData = fp.get_double("PRESSURE");
         if (FluidSystem::enableDissolvedGas())
-            rsData = fp.get_global_double("RS");
+            rsData = fp.get_double("RS");
 
         if (FluidSystem::enableVaporizedOil())
-            rvData = fp.get_global_double("RV");
+            rvData = fp.get_double("RV");
 
         // initial reservoir temperature
-        tempiData = fp.get_global_double("TEMPI");
-
-
-        // make sure that the size of the data arrays is correct
-#ifndef NDEBUG
-        assert(waterSaturationData.size() == numCartesianCells);
-        assert(gasSaturationData.size() == numCartesianCells);
-        assert(pressureData.size() == numCartesianCells);
-        if (FluidSystem::enableDissolvedGas())
-            assert(rsData.size() == numCartesianCells);
-        if (FluidSystem::enableVaporizedOil())
-            assert(rvData.size() == numCartesianCells);
-#endif
+        tempiData = fp.get_double("TEMPI");
 
         // calculate the initial fluid states
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto& dofFluidState = initialFluidStates_[dofIdx];
 
             dofFluidState.setPvtRegionIndex(pvtRegionIndex(dofIdx));
-            size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
-            assert(0 <= cartesianDofIdx);
-            assert(cartesianDofIdx <= numCartesianCells);
 
             //////
             // set temperature
             //////
-            Scalar temperatureLoc = tempiData[cartesianDofIdx];
+            Scalar temperatureLoc = tempiData[dofIdx];
             if (!std::isfinite(temperatureLoc) || temperatureLoc <= 0)
                 temperatureLoc = FluidSystem::surfaceTemperature;
             dofFluidState.setTemperature(temperatureLoc);
@@ -2692,20 +2674,20 @@ private:
             //////
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
                 dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
-                                            waterSaturationData[cartesianDofIdx]);
+                                            waterSaturationData[dofIdx]);
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
                 dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
-                                            gasSaturationData[cartesianDofIdx]);
+                                            gasSaturationData[dofIdx]);
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
                 dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
                                             1.0
-                                            - waterSaturationData[cartesianDofIdx]
-                                            - gasSaturationData[cartesianDofIdx]);
+                                            - waterSaturationData[dofIdx]
+                                            - gasSaturationData[dofIdx]);
 
             //////
             // set phase pressures
             //////
-            Scalar oilPressure = pressureData[cartesianDofIdx];
+            Scalar oilPressure = pressureData[dofIdx];
 
             // this assumes that capillary pressures only depend on the phase saturations
             // and possibly on temperature. (this is always the case for ECL problems.)
@@ -2722,12 +2704,12 @@ private:
             }
 
             if (FluidSystem::enableDissolvedGas())
-                dofFluidState.setRs(rsData[cartesianDofIdx]);
+                dofFluidState.setRs(rsData[dofIdx]);
             else if (Indices::gasEnabled && Indices::oilEnabled)
                 dofFluidState.setRs(0.0);
 
             if (FluidSystem::enableVaporizedOil())
-                dofFluidState.setRv(rvData[cartesianDofIdx]);
+                dofFluidState.setRv(rvData[dofIdx]);
             else if (Indices::gasEnabled && Indices::oilEnabled)
                 dofFluidState.setRv(0.0);
 
