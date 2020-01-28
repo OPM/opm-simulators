@@ -464,6 +464,7 @@ HANDLE_AS_POD(WellBrineProperties)
 HANDLE_AS_POD(Welldims)
 HANDLE_AS_POD(WellFoamProperties)
 HANDLE_AS_POD(WellSegmentDims)
+HANDLE_AS_POD(BCConfig::BCFace)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
 {
