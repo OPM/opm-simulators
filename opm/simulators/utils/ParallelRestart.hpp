@@ -75,8 +75,6 @@ namespace Action {
 }
 
 class Aqudims;
-class BCConfig;
-class BCConfig::BCFace;
 class BrineDensityTable;
 class ColumnSchema;
 class Connection;
