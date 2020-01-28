@@ -2326,11 +2326,6 @@ private:
 
         ////////////////////////////////
         // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
-        size_t numDof = this->model().numGridDof();
-        std::vector<int> compressedToCartesianElemIdx(numDof);
-        for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
-            compressedToCartesianElemIdx[elemIdx] = vanguard.cartesianIndex(elemIdx);
-
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         if (comm.rank() == 0)
             materialLawManager_->initFromDeck(deck, eclState);
@@ -2338,7 +2333,7 @@ private:
         EclMpiSerializer ser(comm);
         ser.broadcast(*materialLawManager_);
 
-        materialLawManager_->initParamsForElements(eclState, compressedToCartesianElemIdx);
+        materialLawManager_->initParamsForElements(eclState, this->model().numGridDof());
         ////////////////////////////////
     }
 
