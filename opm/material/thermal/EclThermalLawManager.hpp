@@ -74,9 +74,9 @@ public:
                       const std::vector<int>& compressedToCartesianElemIdx)
     {
         const auto& fp = eclState.fieldProps();
-        bool has_heatcr = fp.has<double>("HEATCR");
-        bool has_thconr = fp.has<double>("THCONR");
-        bool has_thc = fp.has<double>("THCROCK") || fp.has<double>("THCOIL") || fp.has<double>("THCGAS") || fp.has<double>("THCWATER");
+        bool has_heatcr = fp.has_double("HEATCR");
+        bool has_thconr = fp.has_double("THCONR");
+        bool has_thc = fp.has_double("THCROCK") || fp.has_double("THCOIL") || fp.has_double("THCGAS") || fp.has_double("THCWATER");
 
         if (has_heatcr)
             initHeatcr_(deck, eclState, compressedToCartesianElemIdx);
@@ -149,8 +149,8 @@ private:
         HeatcrLawParams::setReferenceTemperature(FluidSystem::surfaceTemperature);
 
         const auto& fp = eclState.fieldProps();
-        const std::vector<double>& heatcrData  = fp.get_global<double>("HEATCR");
-        const std::vector<double>& heatcrtData = fp.get_global<double>("HEATCRT");
+        const std::vector<double>& heatcrData  = fp.get_global_double("HEATCR");
+        const std::vector<double>& heatcrtData = fp.get_global_double("HEATCRT");
         unsigned numElems = compressedToCartesianElemIdx.size();
         solidEnergyLawParams_.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
@@ -176,7 +176,7 @@ private:
 
         // initialize the element index -> SATNUM index mapping
         const auto& fp = eclState.fieldProps();
-        const std::vector<int>& satnumData = fp.get_global<int>("SATNUM");
+        const std::vector<int>& satnumData = fp.get_global_int("SATNUM");
         elemToSatnumIdx_.resize(compressedToCartesianElemIdx.size());
         for (unsigned elemIdx = 0; elemIdx < compressedToCartesianElemIdx.size(); ++ elemIdx) {
             unsigned cartesianElemIdx = compressedToCartesianElemIdx[elemIdx];
@@ -232,11 +232,11 @@ private:
         auto global_size = eclState.getInputGrid().getCartesianSize();
         std::vector<double> thconrData(global_size, 0);
         std::vector<double> thconsfData(global_size, 0);
-        if (fp.has<double>("THCONR"))
-            thconrData  = fp.get_global<double>("THCONR");
+        if (fp.has_double("THCONR"))
+            thconrData  = fp.get_global_double("THCONR");
 
-        if (fp.has<double>("THCONSF"))
-            thconsfData = fp.get_global<double>("THCONSF");
+        if (fp.has_double("THCONSF"))
+            thconsfData = fp.get_global_double("THCONSF");
 
         unsigned numElems = compressedToCartesianElemIdx.size();
         thermalConductionLawParams_.resize(numElems);
@@ -268,21 +268,21 @@ private:
         std::vector<double> thcrockData(global_size,0);
         std::vector<double> thcoilData(global_size,0);
         std::vector<double> thcgasData(global_size,0);
-        std::vector<double> thcwaterData = fp.get_global<double>("THCWATER");
+        std::vector<double> thcwaterData = fp.get_global_double("THCWATER");
 
-        if (fp.has<double>("THCROCK"))
-            thcrockData = fp.get_global<double>("THCROCK");
+        if (fp.has_double("THCROCK"))
+            thcrockData = fp.get_global_double("THCROCK");
 
-        if (fp.has<double>("THCOIL"))
-            thcoilData = fp.get_global<double>("THCOIL");
+        if (fp.has_double("THCOIL"))
+            thcoilData = fp.get_global_double("THCOIL");
 
-        if (fp.has<double>("THCGAS"))
-            thcgasData = fp.get_global<double>("THCGAS");
+        if (fp.has_double("THCGAS"))
+            thcgasData = fp.get_global_double("THCGAS");
 
-        if (fp.has<double>("THCWATER"))
-            thcwaterData = fp.get_global<double>("THCWATER");
+        if (fp.has_double("THCWATER"))
+            thcwaterData = fp.get_global_double("THCWATER");
 
-        const std::vector<double>& poroData = fp.get_global<double>("PORO");
+        const std::vector<double>& poroData = fp.get_global_double("PORO");
 
         unsigned numElems = compressedToCartesianElemIdx.size();
         thermalConductionLawParams_.resize(numElems);
