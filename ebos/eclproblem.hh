@@ -2850,32 +2850,22 @@ private:
         }
     }
 
-
-    static bool has_int_prop(const EclipseState& eclState, const std::string& prop) {
-        return eclState.fieldProps().has_int(prop);
-    }
-
-    static std::vector<int> get_int_prop(const EclipseState& eclState, const std::string& prop) {
-        return eclState.fieldProps().get_global_int(prop);
-    }
-
     template<class T>
     void updateNum(const std::string& name, std::vector<T>& numbers)
     {
         const auto& simulator = this->simulator();
         const auto& eclState = simulator.vanguard().eclState();
 
-        if (!has_int_prop(eclState, name))
+        if (!eclState.fieldProps().has_int(name))
             return;
 
-        const auto& numData = get_int_prop(eclState, name);
+        const auto& numData = eclState.fieldProps().get_int(name);
         const auto& vanguard = simulator.vanguard();
 
         unsigned numElems = vanguard.gridView().size(/*codim=*/0);
         numbers.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
-            numbers[elemIdx] = static_cast<T>(std::max(numData[cartElemIdx], 1) - 1);
+            numbers[elemIdx] = static_cast<T>(numData[elemIdx]) - 1;
         }
     }
 
