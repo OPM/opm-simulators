@@ -902,11 +902,11 @@ equilnum(const Opm::EclipseState& eclipseState,
 {
     std::vector<int> eqlnum(grid.size(0), 0);
 
-    if (eclipseState.fieldProps().has<int>("EQLNUM")) {
+    if (eclipseState.fieldProps().has_int("EQLNUM")) {
         const int nc = grid.size(/*codim=*/0);
         eqlnum.resize(nc);
 
-        const auto& e = eclipseState.fieldProps().get_global<int>("EQLNUM");
+        const auto& e = eclipseState.fieldProps().get_global_int("EQLNUM");
         const int* gc = Opm::UgGridHelpers::globalCell(grid);
         for (int cell = 0; cell < nc; ++cell) {
             const int deckPos = (gc == NULL) ? cell : gc[cell];
@@ -942,8 +942,8 @@ public:
         if (applySwatInit) {
             const int nc = grid.size(/*codim=*/0);
 
-            if (eclipseState.fieldProps().has<double>("SWATINIT")) {
-                const std::vector<double>& swatInitEcl = eclipseState.fieldProps().get_global<double>("SWATINIT");
+            if (eclipseState.fieldProps().has_double("SWATINIT")) {
+                const std::vector<double>& swatInitEcl = eclipseState.fieldProps().get_global_double("SWATINIT");
                 const int* gc = Opm::UgGridHelpers::globalCell(grid);
                 swatInit_.resize(nc);
                 for (int c = 0; c < nc; ++c) {
@@ -1082,7 +1082,7 @@ private:
     void updateInitialTemperature_(const Opm::EclipseState& eclState)
     {
         // Get the initial temperature data
-        std::vector<double> tempiData = eclState.fieldProps().get_global<double>("TEMPI");
+        std::vector<double> tempiData = eclState.fieldProps().get_global_double("TEMPI");
         temperature_ = tempiData;
     }
 
@@ -1105,7 +1105,7 @@ private:
         std::vector<int> cellPvtRegionIdx(numCompressed);
 
         //Get the PVTNUM data
-        const auto pvtnumData = eclState.fieldProps().get_global<int>("PVTNUM");
+        const auto pvtnumData = eclState.fieldProps().get_global_int("PVTNUM");
         // Convert PVTNUM data into an array of indices for compressed cells. Remember
         // that Eclipse uses Fortran-style indices which start at 1 instead of 0, so we
         // need to subtract 1.
