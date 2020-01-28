@@ -3,6 +3,8 @@ RUNSPEC
 START
   26 'MAR' 2014  /
 
+SCHEDULE
+
 TSTEP
 1.0 2*5.0  
   /
