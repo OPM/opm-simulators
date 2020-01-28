@@ -2347,13 +2347,8 @@ private:
         const auto& eclState = vanguard.eclState();
 
         // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
-        size_t numDof = this->model().numGridDof();
-        std::vector<int> compressedToCartesianElemIdx(numDof);
-        for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
-            compressedToCartesianElemIdx[elemIdx] = vanguard.cartesianIndex(elemIdx);
-
         thermalLawManager_ = std::make_shared<EclThermalLawManager>();
-        thermalLawManager_->initParamsForElements(eclState, compressedToCartesianElemIdx);
+        thermalLawManager_->initParamsForElements(eclState, this->model().numGridDof());
     }
 
     void updateReferencePorosity_()
