@@ -2996,13 +2996,13 @@ private:
         nonTrivialBoundaryConditions_ = false;
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
-
-        if (vanguard.deck().hasKeyword("BC")) {
+        const auto& bcconfig = vanguard.eclState().getSimulationConfig().bcconfig();
+        if (bcconfig.size() > 0) {
             nonTrivialBoundaryConditions_ = true;
 
             size_t numCartDof = vanguard.cartesianSize();
             unsigned numElems = vanguard.gridView().size(/*codim=*/0);
-            std::vector<int> cartesianToCompressedElemIdx(numCartDof);
+            std::vector<int> cartesianToCompressedElemIdx(numCartDof, -1);
 
             for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx)
                 cartesianToCompressedElemIdx[vanguard.cartesianIndex(elemIdx)] = elemIdx;
@@ -3020,115 +3020,114 @@ private:
             freebcZ_.resize(numElems, false);
             freebcZMinus_.resize(numElems, false);
 
-            const auto& bcs = vanguard.deck().getKeywordList("BC");
-            for (size_t listIdx = 0; listIdx < bcs.size(); ++listIdx) {
-                const auto& bc = *bcs[listIdx];
+            for (const auto& bcface : bcconfig) {
+                const auto& type = bcface.bctype;
+                if (type == BCType::RATE) {
+                    int compIdx;
 
-                for (size_t record = 0; record < bc.size(); ++record) {
-
-                    std::string type = bc.getRecord(record).getItem("TYPE").getTrimmedString(0);
-                    std::string compName = bc.getRecord(record).getItem("COMPONENT").getTrimmedString(0);
-                    int compIdx = -999;
-
-                    if (compName == "OIL")
+                    switch (bcface.component) {
+                    case BCComponent::OIL:
                         compIdx = oilCompIdx;
-                    else if (compName == "GAS")
+                        break;
+                    case BCComponent::GAS:
                         compIdx = gasCompIdx;
-                    else if (compName == "WATER")
+                        break;
+                    case BCComponent::WATER:
                         compIdx = waterCompIdx;
-                    else if (compName == "SOLVENT")
-                    {
+                        break;
+                    case BCComponent::SOLVENT:
                         if (!enableSolvent)
                             throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
 
                         compIdx = Indices::solventSaturationIdx;
-                    }
-                    else if (compName == "POLYMER")
-                    {
+                        break;
+                    case BCComponent::POLYMER:
                         if (!enablePolymer)
                             throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
 
                         compIdx = Indices::polymerConcentrationIdx;
-                    }
-                    else if (compName == "NONE")
-                    {
-                        if ( type == "RATE")
+                        break;
+                    case BCComponent::NONE:
+                        if (type == BCType::RATE)
                             throw std::logic_error("you need to specify the component when RATE type is set in BC");
+                        break;
                     }
-                    else
-                        throw std::logic_error("invalid component name for BC");
 
-                    int i1 = bc.getRecord(record).getItem("I1").template get< int >(0) - 1;
-                    int i2 = bc.getRecord(record).getItem("I2").template get< int >(0) - 1;
-                    int j1 = bc.getRecord(record).getItem("J1").template get< int >(0) - 1;
-                    int j2 = bc.getRecord(record).getItem("J2").template get< int >(0) - 1;
-                    int k1 = bc.getRecord(record).getItem("K1").template get< int >(0) - 1;
-                    int k2 = bc.getRecord(record).getItem("K2").template get< int >(0) - 1;
-                    std::string direction = bc.getRecord(record).getItem("DIRECTION").getTrimmedString(0);
+                    std::vector<RateVector>* data = nullptr;
+                    switch (bcface.dir) {
+                    case FaceDir::XMinus:
+                        data = &massratebcXMinus_;
+                        break;
+                    case FaceDir::XPlus:
+                        data = &massratebcX_;
+                        break;
+                    case FaceDir::YMinus:
+                        data = &massratebcYMinus_;
+                        break;
+                    case FaceDir::YPlus:
+                        data = &massratebcY_;
+                        break;
+                    case FaceDir::ZMinus:
+                        data = &massratebcZMinus_;
+                        break;
+                    case FaceDir::ZPlus:
+                        data = &massratebcZ_;
+                        break;
+                    }
 
-                    if (type == "RATE") {
-                        assert(compIdx >= 0);
-                        std::vector<RateVector>* data = 0;
-                        if (direction == "X-")
-                            data = &massratebcXMinus_;
-                        else if (direction == "X")
-                            data = &massratebcX_;
-                        else if (direction == "Y-")
-                            data = &massratebcYMinus_;
-                        else if (direction == "Y")
-                            data = &massratebcY_;
-                        else if (direction == "Z-")
-                            data = &massratebcZMinus_;
-                        else if (direction == "Z")
-                            data = &massratebcZ_;
-                        else
-                            throw std::logic_error("invalid direction for BC");
-
-                        const Evaluation rate = bc.getRecord(record).getItem("RATE").getSIDouble(0);
-                        for (int i = i1; i <= i2; ++i) {
-                            for (int j = j1; j <= j2; ++j) {
-                                for (int k = k1; k <= k2; ++k) {
-                                    std::array<int, 3> tmp = {i,j,k};
-                                    size_t elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
+                    const Evaluation rate = bcface.rate;
+                    for (int i = bcface.i1; i <= bcface.i2; ++i) {
+                        for (int j = bcface.j1; j <= bcface.j2; ++j) {
+                            for (int k = bcface.k1; k <= bcface.k2; ++k) {
+                                std::array<int, 3> tmp = {i,j,k};
+                                auto elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
+                                if (elemIdx >= 0)
                                     (*data)[elemIdx][compIdx] = rate;
-                                }
                             }
                         }
-                    } else if (type == "FREE") {
-                        std::vector<bool>* data = 0;
-                        if (direction == "X-")
-                            data = &freebcXMinus_;
-                        else if (direction == "X")
-                            data = &freebcX_;
-                        else if (direction == "Y-")
-                            data = &freebcYMinus_;
-                        else if (direction == "Y")
-                            data = &freebcY_;
-                        else if (direction == "Z-")
-                            data = &freebcZMinus_;
-                        else if (direction == "Z")
-                            data = &freebcZ_;
-                        else
-                            throw std::logic_error("invalid direction for BC");
-
-                        for (int i = i1; i <= i2; ++i) {
-                            for (int j = j1; j <= j2; ++j) {
-                                for (int k = k1; k <= k2; ++k) {
-                                    std::array<int, 3> tmp = {i,j,k};
-                                    size_t elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
-                                    (*data)[elemIdx] = true;
-                                }
-                            }
-                        }
-                        // TODO: either the real initial solution needs to be computed or read from the restart file
-                        const auto& eclState = simulator.vanguard().eclState();
-                        const auto& initconfig = eclState.getInitConfig();
-                        if (initconfig.restartRequested()) {
-                            throw std::logic_error("restart is not compatible with using free boundary conditions");
-                        }
-                    } else {
-                        throw std::logic_error("invalid type for BC. Use FREE or RATE");
                     }
+                } else if (type == BCType::FREE) {
+                    std::vector<bool>* data = nullptr;
+                    switch (bcface.dir) {
+                    case FaceDir::XMinus:
+                        data = &freebcXMinus_;
+                        break;
+                    case FaceDir::XPlus:
+                        data = &freebcX_;
+                        break;
+                    case FaceDir::YMinus:
+                        data = &freebcYMinus_;
+                        break;
+                    case FaceDir::YPlus:
+                        data = &freebcY_;
+                        break;
+                    case FaceDir::ZMinus:
+                        data = &freebcZMinus_;
+                        break;
+                    case FaceDir::ZPlus:
+                        data = &freebcZ_;
+                        break;
+                    }
+
+                    for (int i = bcface.i1; i <= bcface.i2; ++i) {
+                        for (int j = bcface.j1; j <= bcface.j2; ++j) {
+                            for (int k = bcface.k1; k <= bcface.k2; ++k) {
+                                std::array<int, 3> tmp = {i,j,k};
+                                auto elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
+                                if (elemIdx >= 0)
+                                    (*data)[elemIdx] = true;
+                            }
+                        }
+                    }
+
+                    // TODO: either the real initial solution needs to be computed or read from the restart file
+                    const auto& eclState = simulator.vanguard().eclState();
+                    const auto& initconfig = eclState.getInitConfig();
+                    if (initconfig.restartRequested()) {
+                        throw std::logic_error("restart is not compatible with using free boundary conditions");
+                    }
+                } else {
+                    throw std::logic_error("invalid type for BC. Use FREE or RATE");
                 }
             }
         }
