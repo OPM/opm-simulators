@@ -322,7 +322,7 @@ std::size_t packSize(const std::vector<T,A>& data, Dune::MPIHelper::MPICommunica
     std::size_t size = packSize(data.size(), comm);
 
     for (const auto& entry: data)
-        size+=packSize(entry, comm);
+        size += packSize(entry, comm);
 
     return size;
 }
@@ -1026,13 +1026,13 @@ std::size_t packSize(const OilPvtThermal<Scalar>& data,
 template std::size_t packSize(const OilPvtThermal<double>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
-template<class Scalar, bool enableThermal>
-std::size_t packSize(const WaterPvtMultiplexer<Scalar,enableThermal>& data,
+template<class Scalar, bool enableThermal, bool enableBrine>
+std::size_t packSize(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     std::size_t size = packSize(data.approach(), comm);
     const void* realWaterPvt = data.realWaterPvt();
-    using PvtApproach = WaterPvtMultiplexer<Scalar,enableThermal>;
+    using PvtApproach = WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>;
     if (data.approach() == PvtApproach::ConstantCompressibilityWaterPvt) {
         const auto& pvt = *static_cast<const ConstantCompressibilityWaterPvt<Scalar>*>(realWaterPvt);
         size += packSize(pvt, comm);
@@ -1044,9 +1044,9 @@ std::size_t packSize(const WaterPvtMultiplexer<Scalar,enableThermal>& data,
     return size;
 }
 
-template std::size_t packSize(const WaterPvtMultiplexer<double,true>& data,
+template std::size_t packSize(const WaterPvtMultiplexer<double,true,true>& data,
                               Dune::MPIHelper::MPICommunicator comm);
-template std::size_t packSize(const WaterPvtMultiplexer<double,false>& data,
+template std::size_t packSize(const WaterPvtMultiplexer<double,false,true>& data,
                               Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
@@ -1083,9 +1083,13 @@ std::size_t packSize(const WaterPvtThermal<Scalar>& data,
                        packSize(data.enableThermalViscosity(), comm) +
                        packSize(data.enableInternalEnergy(), comm);
     size += packSize(bool(), comm);
+    if (data.isoThermalPvt())
+        size += packSize(data.isoThermalPvt()->approach(), comm);
+
     using PvtApproach = WaterPvtThermal<Scalar>;
-    if (data.isoThermalPvt()->approach() != PvtApproach::IsothermalPvt::NoWaterPvt)
+    if (data.isoThermalPvt()->approach() != PvtApproach::IsothermalPvt::NoWaterPvt) {
         size += packSize(*data.isoThermalPvt(), comm);
+    }
 
     return size;
 }
@@ -2899,14 +2903,14 @@ template void pack(const OilPvtThermal<double>& data,
                    std::vector<char>& buffer, int& position,
                    Dune::MPIHelper::MPICommunicator comm);
 
-template<class Scalar, bool enableThermal>
-void pack(const WaterPvtMultiplexer<Scalar,enableThermal>& data,
+template<class Scalar, bool enableThermal, bool enableBrine>
+void pack(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.approach(), buffer, position, comm);
     const void* realWaterPvt = data.realWaterPvt();
-    using PvtApproach = WaterPvtMultiplexer<Scalar,enableThermal>;
+    using PvtApproach = WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>;
     if (data.approach() == PvtApproach::ConstantCompressibilityWaterPvt) {
         const auto& pvt = *static_cast<const ConstantCompressibilityWaterPvt<Scalar>*>(realWaterPvt);
         pack(pvt, buffer, position, comm);
@@ -2916,10 +2920,10 @@ void pack(const WaterPvtMultiplexer<Scalar,enableThermal>& data,
     }
 }
 
-template void pack(const WaterPvtMultiplexer<double,true>& data,
+template void pack(const WaterPvtMultiplexer<double,true,true>& data,
                    std::vector<char>& buffer, int& position,
                    Dune::MPIHelper::MPICommunicator comm);
-template void pack(const WaterPvtMultiplexer<double,false>& data,
+template void pack(const WaterPvtMultiplexer<double,false,true>& data,
                    std::vector<char>& buffer, int& position,
                    Dune::MPIHelper::MPICommunicator comm);
 
@@ -2962,8 +2966,11 @@ void pack(const WaterPvtThermal<Scalar>& data,
     pack(data.isoThermalPvt() != nullptr, buffer, position, comm);
 
     using PvtApproach = WaterPvtThermal<Scalar>;
-    if (data.isoThermalPvt()->approach() != PvtApproach::IsothermalPvt::NoWaterPvt)
+    if (data.isoThermalPvt())
+        pack(data.isoThermalPvt()->approach(), buffer, position, comm);
+    if (data.isoThermalPvt()->approach() != PvtApproach::IsothermalPvt::NoWaterPvt) {
         pack(*data.isoThermalPvt(), buffer, position, comm);
+    }
 }
 
 template void pack(const WaterPvtThermal<double>& data,
@@ -4064,7 +4071,7 @@ template<class T, class A>
 void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
-    std::size_t length=0;
+    std::size_t length = 0;
     unpack(length, buffer, position, comm);
     data.resize(length);
 
@@ -5158,14 +5165,14 @@ template void unpack(OilPvtThermal<double>& data,
                      std::vector<char>& buffer, int& position,
                      Dune::MPIHelper::MPICommunicator comm);
 
-template<class Scalar, bool enableThermal>
-void unpack(WaterPvtMultiplexer<Scalar,enableThermal>& data,
+template<class Scalar, bool enableThermal, bool enableBrine>
+void unpack(WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
-    typename WaterPvtMultiplexer<Scalar,enableThermal>::WaterPvtApproach approach;
+    typename WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>::WaterPvtApproach approach;
     unpack(approach, buffer, position, comm);
-    using PvtApproach = WaterPvtMultiplexer<Scalar,enableThermal>;
+    using PvtApproach = WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>;
     void* pvt = nullptr;
     if (approach == PvtApproach::ConstantCompressibilityWaterPvt) {
         auto* realPvt = new ConstantCompressibilityWaterPvt<Scalar>;
@@ -5176,7 +5183,7 @@ void unpack(WaterPvtMultiplexer<Scalar,enableThermal>& data,
         unpack(*realPvt, buffer, position, comm);
         pvt = realPvt;
     }
-    data = WaterPvtMultiplexer<Scalar,enableThermal>(approach, pvt);
+    data = WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>(approach, pvt);
 }
 
 template void unpack(WaterPvtMultiplexer<double,true>& data,
@@ -5244,7 +5251,9 @@ void unpack(WaterPvtThermal<Scalar>& data,
     if (isothermal) {
         pvt = new typename WaterPvtThermal<Scalar>::IsothermalPvt;
         using PvtApproach = WaterPvtThermal<Scalar>;
-        if (pvt->approach() != PvtApproach::IsothermalPvt::NoWaterPvt)
+        typename PvtApproach::IsothermalPvt::WaterPvtApproach approach;
+        unpack(approach, buffer, position, comm);
+        if (approach != PvtApproach::IsothermalPvt::NoWaterPvt)
             unpack(*pvt, buffer, position, comm);
     }
     data = WaterPvtThermal<Scalar>(pvt, viscrefPress, watdentRefTemp,

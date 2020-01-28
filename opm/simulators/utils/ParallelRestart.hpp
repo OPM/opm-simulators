@@ -291,8 +291,8 @@ std::size_t packSize(const LiveOilPvt<Scalar>& data,
 template<class Scalar>
 std::size_t packSize(const OilPvtThermal<Scalar>& data, Dune::MPIHelper::MPICommunicator comm);
 
-template<class Scalar, bool enableThermal>
-std::size_t packSize(const WaterPvtMultiplexer<Scalar,enableThermal>& data,
+template<class Scalar, bool enableThermal, bool enableBrine>
+std::size_t packSize(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
                      Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
@@ -451,8 +451,8 @@ template<class Scalar>
 void pack(const OilPvtThermal<Scalar>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm);
 
-template<class Scalar, bool enableThermal>
-void pack(const WaterPvtMultiplexer<Scalar,enableThermal>& data,
+template<class Scalar, bool enableThermal, bool enableBrine>
+void pack(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
           const std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
@@ -615,8 +615,8 @@ template<class Scalar>
 void unpack(OilPvtThermal<Scalar>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm);
 
-template<class Scalar, bool enableThermal>
-void unpack(WaterPvtMultiplexer<Scalar,enableThermal>& data,
+template<class Scalar, bool enableThermal, bool enableBrine>
+void unpack(WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
             const std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
 
