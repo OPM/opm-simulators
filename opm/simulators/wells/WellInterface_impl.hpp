@@ -1224,7 +1224,7 @@ namespace Opm
                               WellState& well_state,
                               Opm::DeferredLogger& deferred_logger)
     {
-        const int max_iter = param_.max_inner_iter_wells_;
+        const int max_iter = param_.max_welleq_iter_;
         int it = 0;
         const double dt = ebosSimulator.timeStepSize();
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
@@ -1306,7 +1306,7 @@ namespace Opm
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + name() +  " converged");
         } else {
-            const int max_iter = param_.max_inner_iter_wells_;
+            const int max_iter = param_.max_welleq_iter_;
             deferred_logger.debug("WellTest: Well equation for well " +name() + " failed converging in "
                           + std::to_string(max_iter) + " iterations");
             well_state = well_state0;
