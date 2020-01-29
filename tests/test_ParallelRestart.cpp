@@ -74,6 +74,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/BCConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/RockConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -182,6 +183,12 @@ Opm::ThresholdPressure getThresholdPressure()
     return Opm::ThresholdPressure(false, true, {{true, 1.0}, {false, 2.0}},
                                   {{{1,2},{false,3.0}},{{2,3},{true,4.0}}});
 }
+
+Opm::RockConfig getRockConfig()
+{
+    return Opm::RockConfig(true, {{100, 0.25}, {200, 0.30}}, "ROCKNUM", 10, false, Opm::RockConfig::Hysteresis::HYSTER);
+}
+
 
 
 Opm::BCConfig getBCConfig()
@@ -604,6 +611,16 @@ BOOST_AUTO_TEST_CASE(ThresholdPressure)
 #endif
 }
 
+BOOST_AUTO_TEST_CASE(RockConfig)
+{
+#if HAVE_MPI
+    Opm::RockConfig val1 = getRockConfig();
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
 
 BOOST_AUTO_TEST_CASE(EDITNNC)
 {
@@ -774,7 +791,7 @@ BOOST_AUTO_TEST_CASE(InitConfig)
 BOOST_AUTO_TEST_CASE(SimulationConfig)
 {
 #if HAVE_MPI
-    Opm::SimulationConfig val1(getThresholdPressure(), getBCConfig(), false, true, false, true);
+    Opm::SimulationConfig val1(getThresholdPressure(), getBCConfig(), getRockConfig(), false, true, false, true);
     auto val2 = PackUnpack(val1);
     BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
     BOOST_CHECK(val1 == std::get<0>(val2));
