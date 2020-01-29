@@ -74,13 +74,14 @@ public:
                       const std::vector<int>& compressedToCartesianElemIdx)
     {
         const auto& fp = eclState.fieldProps();
+        const auto& tableManager = eclState.getTableManager();
         bool has_heatcr = fp.has_double("HEATCR");
         bool has_thconr = fp.has_double("THCONR");
         bool has_thc = fp.has_double("THCROCK") || fp.has_double("THCOIL") || fp.has_double("THCGAS") || fp.has_double("THCWATER");
 
         if (has_heatcr)
             initHeatcr_(deck, eclState, compressedToCartesianElemIdx);
-        else if (deck.hasKeyword("SPECROCK"))
+        else if (tableManager.hasTables("SPECROCK"))
             initSpecrock_(deck, eclState, compressedToCartesianElemIdx);
         else
             initNullRockEnergy_(deck, eclState, compressedToCartesianElemIdx);
