@@ -2387,7 +2387,6 @@ private:
 
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
-        const auto& deck = vanguard.deck();
         const auto& eclState = vanguard.eclState();
 
         // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
@@ -2397,7 +2396,7 @@ private:
             compressedToCartesianElemIdx[elemIdx] = vanguard.cartesianIndex(elemIdx);
 
         thermalLawManager_ = std::make_shared<EclThermalLawManager>();
-        thermalLawManager_->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
+        thermalLawManager_->initParamsForElements(eclState, compressedToCartesianElemIdx);
     }
 
     void updateReferencePorosity_()
