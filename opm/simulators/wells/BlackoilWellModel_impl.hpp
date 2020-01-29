@@ -206,6 +206,7 @@ namespace Opm {
     beginReportStep(const int timeStepIdx)
     {
         Opm::DeferredLogger local_deferredLogger;
+        report_step_starts_ = true;
 
         const Grid& grid = ebosSimulator_.vanguard().grid();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
@@ -438,6 +439,9 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     timeStepSucceeded(const double& simulationTime, const double dt) {
+
+        // time step is finished and we are not any more at the beginning of an report step
+        report_step_starts_ = false;
 
         Opm::DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
@@ -834,10 +838,10 @@ namespace Opm {
                 calculateExplicitQuantities(local_deferredLogger);
                 prepareTimeStep(local_deferredLogger);
             }
-            // also check the current group control the first two iterations. The first itertion is needed for changes in group/well controls and closing of wells etc.
+            // check the current group control in the beginning of an episode for the first two iterations. The first itertion is needed for changes in group/well controls and closing of wells etc.
             // a second check is needed for REIN and VREP controls since they depend on results from other wells.
             // This check can probably be made more sofisticated, but this simple rule seems to work
-            bool checkCurrentGroupControls = (iterationIdx < 2);
+            bool checkCurrentGroupControls = (report_step_starts_ && iterationIdx < 2);
             updateWellControls(local_deferredLogger, /*allow for switching to group controls*/true, checkCurrentGroupControls);
 
             // Set the well primary variables based on the value of well solutions
