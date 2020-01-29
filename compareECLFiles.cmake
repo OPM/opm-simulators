@@ -505,4 +505,11 @@ if(MPI_FOUND)
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol}
                                        REL_TOL ${rel_tol})
+
+  add_test_compare_parallel_simulation(CASENAME spe1_thermal
+                                       FILENAME SPE1CASE2_THERMAL
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL 1e-1
+                                       DIR spe1)
 endif()
