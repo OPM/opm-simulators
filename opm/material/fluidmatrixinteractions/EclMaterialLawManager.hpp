@@ -1099,9 +1099,9 @@ private:
     GasOilEffectiveParamVector gasOilEffectiveParamVector_;
     OilWaterEffectiveParamVector oilWaterEffectiveParamVector_;
 
-    Opm::EclMultiplexerApproach threePhaseApproach_;
+    Opm::EclMultiplexerApproach threePhaseApproach_ = EclMultiplexerApproach::EclDefaultApproach;
     // this attribute only makes sense for twophase simulations!
-    enum EclTwoPhaseApproach twoPhaseApproach_;
+    enum EclTwoPhaseApproach twoPhaseApproach_ = EclTwoPhaseApproach::EclTwoPhaseGasOil;
 
     std::vector<std::shared_ptr<MaterialLawParams> > materialLawParams_;
 

@@ -81,7 +81,7 @@ public:
         , realWaterPvt_(realWaterPvt)
     { }
 
-    WaterPvtMultiplexer(const WaterPvtMultiplexer<Scalar,enableThermal>& data)
+    WaterPvtMultiplexer(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data)
     {
         *this = data;
     }
@@ -274,7 +274,7 @@ public:
 
     const void* realWaterPvt() const { return realWaterPvt_; }
 
-    bool operator==(const WaterPvtMultiplexer<Scalar,enableThermal, enableBrine>& data) const
+    bool operator==(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data) const
     {
         if (this->approach() != data.approach())
             return false;
@@ -294,7 +294,7 @@ public:
         }
     }
 
-    WaterPvtMultiplexer<Scalar,enableThermal, enableBrine>& operator=(const WaterPvtMultiplexer<Scalar,enableThermal>& data)
+    WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& operator=(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data)
     {
         approach_ = data.approach_;
         switch (approach_) {

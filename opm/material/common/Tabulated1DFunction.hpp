@@ -129,16 +129,17 @@ public:
                          bool sortInputs = true)
     {
         assert(x.size() == y.size());
-        assert(x.size() > 1);
 
         resizeArrays_(x.size());
-        std::copy(x.begin(), x.end(), xValues_.begin());
-        std::copy(y.begin(), y.end(), yValues_.begin());
+        if (x.size() > 0) {
+            std::copy(x.begin(), x.end(), xValues_.begin());
+            std::copy(y.begin(), y.end(), yValues_.begin());
 
-        if (sortInputs)
-            sortInput_();
-        else if (xValues_[0] > xValues_[numSamples() - 1])
-            reverseSamplingPoints_();
+            if (sortInputs)
+                sortInput_();
+            else if (xValues_[0] > xValues_[numSamples() - 1])
+                reverseSamplingPoints_();
+        }
     }
 
     /*!
