@@ -83,14 +83,14 @@ public:
         else if (tableManager.hasTables("SPECROCK"))
             initSpecrock_(eclState, compressedToCartesianElemIdx);
         else
-            initNullRockEnergy_(eclState, compressedToCartesianElemIdx);
+            initNullRockEnergy_();
 
         if (has_thconr)
             initThconr_(eclState, compressedToCartesianElemIdx);
         else if (has_thc)
             initThc_(eclState, compressedToCartesianElemIdx);
         else
-            initNullCond_(eclState, compressedToCartesianElemIdx);
+            initNullCond_();
     }
 
     const SolidEnergyLawParams& solidEnergyLawParams(unsigned elemIdx) const
@@ -206,8 +206,7 @@ private:
     /*!
      * \brief Specify the solid energy law by setting heat capacity of rock to 0
      */
-    void initNullRockEnergy_(const Opm::EclipseState& eclState OPM_UNUSED,
-                             const std::vector<int>& compressedToCartesianElemIdx OPM_UNUSED)
+    void initNullRockEnergy_()
     {
         solidEnergyApproach_ = SolidEnergyLawParams::nullApproach;
 
@@ -300,8 +299,7 @@ private:
     /*!
      * \brief Disable thermal conductivity
      */
-    void initNullCond_(const Opm::EclipseState& eclState OPM_UNUSED,
-                       const std::vector<int>& compressedToCartesianElemIdx OPM_UNUSED)
+    void initNullCond_()
     {
         thermalConductivityApproach_ = ThermalConductionLawParams::nullApproach;
 
