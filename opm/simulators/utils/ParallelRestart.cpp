@@ -626,7 +626,8 @@ std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
 
 std::size_t packSize(const RestartConfig& data, Dune::MPIHelper::MPICommunicator comm)
 {
-    return packSize(data.timeMap(), comm) +
+    return packSize(data.ioConfig(), comm) +
+           packSize(data.timeMap(), comm) +
            packSize(data.getFirstRestartStep(), comm) +
            packSize(data.writeInitialRst(), comm) +
            packSize(data.restartSchedule(), comm) +
@@ -2009,7 +2010,6 @@ std::size_t packSize(const EclipseConfig& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.init(), comm) +
-           packSize(data.io(), comm) +
            packSize(data.restart(), comm);
 }
 
@@ -2463,6 +2463,7 @@ void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
 void pack(const RestartConfig& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
+    pack(data.ioConfig(), buffer, position, comm);
     pack(data.timeMap(), buffer, position, comm);
     pack(data.getFirstRestartStep(), buffer, position, comm);
     pack(data.writeInitialRst(), buffer, position, comm);
@@ -3925,7 +3926,6 @@ void pack(const EclipseConfig& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.init(), buffer, position, comm);
-    pack(data.io(), buffer, position, comm);
     pack(data.restart(), buffer, position, comm);
 }
 
@@ -4515,19 +4515,21 @@ void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
 void unpack(RestartConfig& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
+    IOConfig ioConfig;
     TimeMap timemap;
     int firstRstStep;
     bool writeInitialRst;
     DynamicState<RestartSchedule> restart_sched;
     DynamicState<std::map<std::string,int>> restart_keyw;
     std::vector<bool> save_keyw;
+    unpack(ioConfig, buffer, position, comm);
     unpack(timemap, buffer, position, comm);
     unpack(firstRstStep, buffer, position, comm);
     unpack(writeInitialRst, buffer, position, comm);
     unpack(restart_sched, buffer, position, comm);
     unpack(restart_keyw, buffer, position, comm);
     unpack(save_keyw, buffer, position, comm);
-    data = RestartConfig(timemap, firstRstStep, writeInitialRst, restart_sched,
+    data = RestartConfig(ioConfig, timemap, firstRstStep, writeInitialRst, restart_sched,
                          restart_keyw, save_keyw);
 }
 
@@ -6708,13 +6710,11 @@ void unpack(EclipseConfig& data,
             Dune::MPIHelper::MPICommunicator comm)
 {
     InitConfig init;
-    IOConfig io;
     RestartConfig restart;
 
     unpack(init, buffer, position, comm);
-    unpack(io, buffer, position, comm);
     unpack(restart, buffer, position, comm);
-    data = EclipseConfig(io, init, restart);
+    data = EclipseConfig(init, restart);
 }
 
 void unpack(TransMult& data,
