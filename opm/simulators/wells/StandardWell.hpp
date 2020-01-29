@@ -172,14 +172,6 @@ namespace Opm
                                     WellState& well_state,
                                     Opm::DeferredLogger& deferred_logger) override;
 
-        virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
-                                                    const std::vector<Scalar>& B_avg,
-                                                    const double dt,
-                                                    const Well::InjectionControls& inj_controls,
-                                                    const Well::ProductionControls& prod_controls,
-                                                    WellState& well_state,
-                                                    Opm::DeferredLogger& deferred_logger) override;
-
         virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
                                                WellState& well_state,
                                                Opm::DeferredLogger& deferred_logger) const override;
@@ -437,6 +429,14 @@ namespace Opm
         virtual void checkWellOperability(const Simulator& ebos_simulator,
                                           const WellState& well_state,
                                           Opm::DeferredLogger& deferred_logger) override;
+
+        virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
+                                                    const std::vector<Scalar>& B_avg,
+                                                    const double dt,
+                                                    const Well::InjectionControls& inj_controls,
+                                                    const Well::ProductionControls& prod_controls,
+                                                    WellState& well_state,
+                                                    Opm::DeferredLogger& deferred_logger) override;
 
         // check whether the well is operable under the current reservoir condition
         // mostly related to BHP limit and THP limit

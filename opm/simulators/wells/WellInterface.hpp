@@ -168,15 +168,6 @@ namespace Opm
                                     Opm::DeferredLogger& deferred_logger
                                     ) = 0;
 
-        virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
-                                                    const std::vector<Scalar>& B_avg,
-                                                    const double dt,
-                                                    const Well::InjectionControls& inj_controls,
-                                                    const Well::ProductionControls& prod_controls,
-                                                    WellState& well_state,
-                                                    Opm::DeferredLogger& deferred_logger
-                                                    ) = 0;
-
         void updateWellTestState(const WellState& well_state,
                                  const double& simulationTime,
                                  const bool& writeMessageToOPMLog,
@@ -459,6 +450,16 @@ namespace Opm
         virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
                                  const double simulation_time, const int report_step,
                                          WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger) = 0;
+
+
+        virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
+                                                    const std::vector<Scalar>& B_avg,
+                                                    const double dt,
+                                                    const Well::InjectionControls& inj_controls,
+                                                    const Well::ProductionControls& prod_controls,
+                                                    WellState& well_state,
+                                                    Opm::DeferredLogger& deferred_logger
+                                                    ) = 0;
 
         void updateWellTestStateEconomic(const WellState& well_state,
                                          const double simulation_time,
