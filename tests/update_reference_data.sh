@@ -90,6 +90,7 @@ tests[nnc]="flow editnnc NNC_AND_EDITNNC nnc"
 tests[udq]="flow udq_actionx UDQ_WCONPROD udq_wconprod"
 tests[spe1_foam]="flow spe1_foam SPE1FOAM"
 tests[wsegsicd]="flow wsegsicd TEST_WSEGSICD"
+tests[bc_lab]="flow bc_lab BC_LAB"
 
 changed_tests=""
 
