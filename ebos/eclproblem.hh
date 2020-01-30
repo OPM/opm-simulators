@@ -2405,7 +2405,6 @@ private:
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
-        const auto& eclGrid = eclState.getInputGrid();
 
         size_t numDof = this->model().numGridDof();
 
@@ -2414,36 +2413,9 @@ private:
         const auto& fp = eclState.fieldProps();
         const std::vector<double> porvData = fp.porv(true);
         const std::vector<int> actnumData = fp.actnum();
-        int nx = eclGrid.getNX();
-        int ny = eclGrid.getNY();
         for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
             unsigned cartElemIdx = vanguard.cartesianIndex(dofIdx);
             Scalar poreVolume = porvData[cartElemIdx];
-
-            // sum up the pore volume of the active cell and all inactive ones above it
-            // which were disabled due to their pore volume being too small. If energy is
-            // conserved, cells are not disabled due to a too small pore volume because
-            // such cells still store and conduct energy.
-            if (!enableEnergy && eclGrid.getMinpvMode() == Opm::MinpvMode::ModeEnum::OpmFIL) {
-                const std::vector<Scalar>& minPvVector = eclGrid.getMinpvVector();
-                for (int aboveElemCartIdx = static_cast<int>(cartElemIdx) - nx*ny;
-                     aboveElemCartIdx >= 0;
-                     aboveElemCartIdx -= nx*ny)
-                {
-                    if (porvData[aboveElemCartIdx] >= minPvVector[aboveElemCartIdx])
-                        // the cartesian element above exhibits a pore volume which larger or
-                        // equal to the minimum one
-                        break;
-
-                    Scalar aboveElemVolume = eclGrid.getCellVolume(aboveElemCartIdx);
-                    if (actnumData[aboveElemCartIdx] == 0 && aboveElemVolume > 1e-3)
-                        // stop at explicitly disabled elements, but only if their volume is
-                        // greater than 10^-3 m^3
-                        break;
-
-                    poreVolume += porvData[aboveElemCartIdx];
-                }
-            }
 
             // we define the porosity as the accumulated pore volume divided by the
             // geometric volume of the element. Note that -- in pathetic cases -- it can
