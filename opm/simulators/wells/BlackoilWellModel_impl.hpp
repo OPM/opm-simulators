@@ -1701,7 +1701,6 @@ namespace Opm {
                 if (!group.hasInjectionControl(phase)) {
                    continue;
                 }
-
                 int phasePos;
                 if (phase == Phase::GAS && phase_usage_.phase_used[BlackoilPhases::Vapour] )
                     phasePos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
