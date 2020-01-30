@@ -449,6 +449,7 @@ HANDLE_AS_POD(Actdims)
 HANDLE_AS_POD(Aqudims)
 HANDLE_AS_POD(BCConfig::BCFace)
 HANDLE_AS_POD(data::Connection)
+HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(DENSITYRecord)
@@ -478,6 +479,7 @@ std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator co
     size += packSize(data.control, comm);
     size += packSize(data.connections, comm);
     size += packSize(data.segments, comm);
+    size += packSize(data.current_control, comm);
     return size;
 }
 
@@ -2194,6 +2196,7 @@ void pack(const data::Well& data, std::vector<char>& buffer, int& position,
     pack(data.control, buffer, position, comm);
     pack(data.connections, buffer, position, comm);
     pack(data.segments, buffer, position, comm);
+    pack(data.current_control, buffer, position, comm);
 }
 
 void pack(const RestartKey& data, std::vector<char>& buffer, int& position,
@@ -4084,6 +4087,7 @@ void unpack(data::Well& data, std::vector<char>& buffer, int& position,
     unpack(data.control, buffer, position, comm);
     unpack(data.connections, buffer, position, comm);
     unpack(data.segments, buffer, position, comm);
+    unpack(data.current_control, buffer, position, comm);
 }
 
 void unpack(RestartKey& data, std::vector<char>& buffer, int& position,
