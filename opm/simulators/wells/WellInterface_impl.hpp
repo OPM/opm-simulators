@@ -670,6 +670,57 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
+    checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
+                     const WellState& well_state,
+                     RatioLimitCheckReport& report) const
+    {
+
+        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+
+        // function to calculate wgr based on rates
+        auto wgr = [](const std::vector<double>& rates,
+                      const PhaseUsage& pu) {
+
+            const double water_rate = rates[pu.phase_pos[Water]];
+            const double gas_rate = rates[pu.phase_pos[Gas]];
+
+            // both rate should be in the same direction
+            assert(water_rate * gas_rate >= 0.);
+
+            double water_gas_ratio = 0.;
+
+            if (gas_rate != 0.) {
+                water_gas_ratio = water_rate / gas_rate;
+            } else {
+                if (water_rate != 0.) {
+                    water_gas_ratio = 1.e100; // big value to mark it as violated
+                } else {
+                    water_gas_ratio = 0.0;
+                }
+            }
+
+            return water_gas_ratio;
+        };
+
+        const double max_wgr_limit = econ_production_limits.maxWaterGasRatio();
+        assert(max_wgr_limit > 0.);
+
+        const bool wgr_limit_violated = checkMaxRatioLimitWell(well_state, max_wgr_limit, wgr);
+
+        if (wgr_limit_violated) {
+            report.ratio_limit_violated = true;
+            checkMaxRatioLimitCompletions(well_state, max_wgr_limit, wgr, report);
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
     checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                          const WellState& well_state,
                          RatioLimitCheckReport& report,
@@ -692,7 +743,7 @@ namespace Opm
         }
 
         if (econ_production_limits.onMaxWaterGasRatio()) {
-            deferred_logger.warning("NOT_SUPPORTING_MAX_WGR", "the support for max Water-Gas ratio is not implemented yet!");
+            checkMaxWGRLimit(econ_production_limits, well_state, report);
         }
 
         if (econ_production_limits.onMaxGasLiquidRatio()) {
