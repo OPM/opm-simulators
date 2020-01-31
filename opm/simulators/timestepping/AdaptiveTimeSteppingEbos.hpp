@@ -126,12 +126,11 @@ namespace Opm {
         //! \param tuning Pointer to ecl TUNING keyword
         //! \param timeStep current report step
         AdaptiveTimeSteppingEbos(const Tuning& tuning,
-                                 size_t timeStep,
                                  const bool terminalOutput = true)
             : timeStepControl_()
-            , restartFactor_(tuning.getTSFCNV(timeStep))
-            , growthFactor_(tuning.getTFDIFF(timeStep))
-            , maxGrowth_(tuning.getTSFMAX(timeStep))
+            , restartFactor_(tuning.TSFCNV)
+            , growthFactor_(tuning.TFDIFF)
+            , maxGrowth_(tuning.TSFMAX)
             , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60) // 365.25
             , minTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep)) // 0.0
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
@@ -467,14 +466,14 @@ namespace Opm {
         void setSuggestedNextStep(const double x)
         { suggestedNextTimestep_ = x; }
 
-        void updateTUNING(const Tuning& tuning, size_t timeStep)
+        void updateTUNING(const Tuning& tuning)
         {
-            restartFactor_ = tuning.getTSFCNV(timeStep);
-            growthFactor_ = tuning.getTFDIFF(timeStep);
-            maxGrowth_ = tuning.getTSFMAX(timeStep);
-            maxTimeStep_ = tuning.getTSMAXZ(timeStep);
-            suggestedNextTimestep_ = tuning.getTSINIT(timeStep);
-            timestepAfterEvent_ = tuning.getTMAXWC(timeStep);
+            restartFactor_ = tuning.TSFCNV;
+            growthFactor_ = tuning.TFDIFF;
+            maxGrowth_ = tuning.TSFMAX;
+            maxTimeStep_ = tuning.TSMAXZ;
+            suggestedNextTimestep_ = tuning.TSINIT;
+            timestepAfterEvent_ = tuning.TMAXWC;
         }
 
 
