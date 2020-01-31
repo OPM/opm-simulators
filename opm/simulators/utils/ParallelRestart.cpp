@@ -807,9 +807,6 @@ std::size_t packSize(const Tabulated1DFunction<Scalar>& data,
            packSize(data.yValues(), comm);
 }
 
-template std::size_t packSize(const Tabulated1DFunction<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 std::size_t packSize(const SolventPvt<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -819,9 +816,6 @@ std::size_t packSize(const SolventPvt<Scalar>& data,
            packSize(data.solventMu(), comm) +
            packSize(data.inverseSolventBMu(), comm);
 }
-
-template std::size_t packSize(const SolventPvt<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 std::size_t packSize(const IntervalTabulated2DFunction<Scalar>& data,
@@ -834,16 +828,6 @@ std::size_t packSize(const IntervalTabulated2DFunction<Scalar>& data,
            packSize(data.yExtrapolate(), comm);
 }
 
-template std::size_t packSize(const IntervalTabulated2DFunction<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-
-template
-std::size_t packSize(const std::vector<IntervalTabulated2DFunction<double>>& data,
-                     Dune::MPIHelper::MPICommunicator comm);
-template
-std::size_t packSize(const std::map<int,IntervalTabulated2DFunction<double>>& data,
-                     Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 std::size_t packSize(const UniformXTabulated2DFunction<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -854,9 +838,6 @@ std::size_t packSize(const UniformXTabulated2DFunction<Scalar>& data,
            packSize(data.interpolationGuide(), comm);
 }
 
-template std::size_t packSize(const UniformXTabulated2DFunction<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 std::size_t packSize(const DryGasPvt<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -866,9 +847,6 @@ std::size_t packSize(const DryGasPvt<Scalar>& data,
            packSize(data.gasMu(), comm) +
            packSize(data.inverseGasBMu(), comm);
 }
-
-template std::size_t packSize(const DryGasPvt<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 std::size_t packSize(const GasPvtThermal<Scalar>& data,
@@ -888,9 +866,6 @@ std::size_t packSize(const GasPvtThermal<Scalar>& data,
 
     return size;
 }
-
-template std::size_t packSize(const GasPvtThermal<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar, bool enableThermal>
 std::size_t packSize(const GasPvtMultiplexer<Scalar,enableThermal>& data,
@@ -913,11 +888,6 @@ std::size_t packSize(const GasPvtMultiplexer<Scalar,enableThermal>& data,
     return size;
 }
 
-template std::size_t packSize(const GasPvtMultiplexer<double,true>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-template std::size_t packSize(const GasPvtMultiplexer<double,false>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 std::size_t packSize(const WetGasPvt<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -933,9 +903,6 @@ std::size_t packSize(const WetGasPvt<Scalar>& data,
            packSize(data.saturationPressure(), comm) +
            packSize(data.vapPar1(), comm);
 }
-
-template std::size_t packSize(const WetGasPvt<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar, bool enableThermal>
 std::size_t packSize(const OilPvtMultiplexer<Scalar,enableThermal>& data,
@@ -961,11 +928,6 @@ std::size_t packSize(const OilPvtMultiplexer<Scalar,enableThermal>& data,
     return size;
 }
 
-template std::size_t packSize(const OilPvtMultiplexer<double,true>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-template std::size_t packSize(const OilPvtMultiplexer<double,false>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 std::size_t packSize(const ConstantCompressibilityOilPvt<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -978,9 +940,6 @@ std::size_t packSize(const ConstantCompressibilityOilPvt<Scalar>& data,
            packSize(data.oilViscosibility(), comm);
 }
 
-template std::size_t packSize(const ConstantCompressibilityOilPvt<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 std::size_t packSize(const DeadOilPvt<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -990,9 +949,6 @@ std::size_t packSize(const DeadOilPvt<Scalar>& data,
            packSize(data.oilMu(), comm) +
            packSize(data.inverseOilBMu(), comm);
 }
-
-template std::size_t packSize(const DeadOilPvt<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 std::size_t packSize(const LiveOilPvt<Scalar>& data,
@@ -1010,9 +966,6 @@ std::size_t packSize(const LiveOilPvt<Scalar>& data,
            packSize(data.saturationPressure(), comm) +
            packSize(data.vapPar2(), comm);
 }
-
-template std::size_t packSize(const LiveOilPvt<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 std::size_t packSize(const OilPvtThermal<Scalar>& data,
@@ -1036,9 +989,6 @@ std::size_t packSize(const OilPvtThermal<Scalar>& data,
     return size;
 }
 
-template std::size_t packSize(const OilPvtThermal<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar, bool enableThermal, bool enableBrine>
 std::size_t packSize(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -1057,11 +1007,6 @@ std::size_t packSize(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>
     return size;
 }
 
-template std::size_t packSize(const WaterPvtMultiplexer<double,true,true>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-template std::size_t packSize(const WaterPvtMultiplexer<double,false,true>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 std::size_t packSize(const ConstantCompressibilityWaterPvt<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -1073,9 +1018,6 @@ std::size_t packSize(const ConstantCompressibilityWaterPvt<Scalar>& data,
            packSize(data.waterViscosity(), comm) +
            packSize(data.waterViscosibility(), comm);
 }
-
-template std::size_t packSize(const ConstantCompressibilityWaterPvt<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 std::size_t packSize(const WaterPvtThermal<Scalar>& data,
@@ -1106,9 +1048,6 @@ std::size_t packSize(const WaterPvtThermal<Scalar>& data,
 
     return size;
 }
-
-template std::size_t packSize(const WaterPvtThermal<double>& data,
-                              Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 std::size_t packSize(const EclEpsScalingPointsInfo<Scalar>& data,
@@ -2681,9 +2620,6 @@ void pack(const Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
     pack(data.yValues(), buffer, position, comm);
 }
 
-template void pack(const Tabulated1DFunction<double>& data, std::vector<char>& buffer,
-                   int& position, Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void pack(const IntervalTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm)
@@ -2695,20 +2631,6 @@ void pack(const IntervalTabulated2DFunction<Scalar>& data, std::vector<char>& bu
     pack(data.yExtrapolate(), buffer, position, comm);
 }
 
-template void pack(const IntervalTabulated2DFunction<double>& data,
-                   std::vector<char>& buffer,
-                   int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template
-void pack(const std::vector<IntervalTabulated2DFunction<double>>& data,
-          std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template
-void pack(const std::map<int,IntervalTabulated2DFunction<double>>& data,
-          std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void pack(const UniformXTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm)
@@ -2719,10 +2641,6 @@ void pack(const UniformXTabulated2DFunction<Scalar>& data, std::vector<char>& bu
     pack(data.interpolationGuide(), buffer, position, comm);
 }
 
-template void pack(const UniformXTabulated2DFunction<double>& data,
-                   std::vector<char>& buffer,
-                   int& position, Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void pack(const SolventPvt<Scalar>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -2732,10 +2650,6 @@ void pack(const SolventPvt<Scalar>& data, std::vector<char>& buffer, int& positi
     pack(data.solventMu(), buffer, position, comm);
     pack(data.inverseSolventBMu(), buffer, position, comm);
 }
-
-template void pack(const SolventPvt<double>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar, bool enableThermal>
 void pack(const GasPvtMultiplexer<Scalar,enableThermal>& data,
@@ -2757,13 +2671,6 @@ void pack(const GasPvtMultiplexer<Scalar,enableThermal>& data,
     }
 }
 
-template void pack(const GasPvtMultiplexer<double,true>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
-template void pack(const GasPvtMultiplexer<double,false>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void pack(const DryGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -2773,10 +2680,6 @@ void pack(const DryGasPvt<Scalar>& data, std::vector<char>& buffer, int& positio
     pack(data.gasMu(), buffer, position, comm);
     pack(data.inverseGasBMu(), buffer, position, comm);
 }
-
-template void pack(const DryGasPvt<double>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 void pack(const GasPvtThermal<Scalar>& data,
@@ -2796,10 +2699,6 @@ void pack(const GasPvtThermal<Scalar>& data,
         pack(*data.isoThermalPvt(), buffer, position, comm);
 }
 
-template void pack(const GasPvtThermal<double>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void pack(const WetGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -2815,10 +2714,6 @@ void pack(const WetGasPvt<Scalar>& data, std::vector<char>& buffer, int& positio
     pack(data.saturationPressure(), buffer, position, comm);
     pack(data.vapPar1(), buffer, position, comm);
 }
-
-template void pack(const WetGasPvt<double>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar, bool enableThermal>
 void pack(const OilPvtMultiplexer<Scalar,enableThermal>& data,
@@ -2843,13 +2738,6 @@ void pack(const OilPvtMultiplexer<Scalar,enableThermal>& data,
     }
 }
 
-template void pack(const OilPvtMultiplexer<double,true>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
-template void pack(const OilPvtMultiplexer<double,false>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void pack(const ConstantCompressibilityOilPvt<Scalar>& data,
           std::vector<char>& buffer, int& position,
@@ -2863,10 +2751,6 @@ void pack(const ConstantCompressibilityOilPvt<Scalar>& data,
     pack(data.oilViscosibility(), buffer, position, comm);
 }
 
-template void pack(const ConstantCompressibilityOilPvt<double>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void pack(const DeadOilPvt<Scalar>& data,
           std::vector<char>& buffer, int& position,
@@ -2877,10 +2761,6 @@ void pack(const DeadOilPvt<Scalar>& data,
     pack(data.oilMu(), buffer, position, comm);
     pack(data.inverseOilBMu(), buffer, position, comm);
 }
-
-template void pack(const DeadOilPvt<double>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 void pack(const LiveOilPvt<Scalar>& data,
@@ -2899,10 +2779,6 @@ void pack(const LiveOilPvt<Scalar>& data,
     pack(data.saturationPressure(), buffer, position, comm);
     pack(data.vapPar2(), buffer, position, comm);
 }
-
-template void pack(const LiveOilPvt<double>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 void pack(const OilPvtThermal<Scalar>& data,
@@ -2925,10 +2801,6 @@ void pack(const OilPvtThermal<Scalar>& data,
         pack(*data.isoThermalPvt(), buffer, position, comm);
 }
 
-template void pack(const OilPvtThermal<double>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar, bool enableThermal, bool enableBrine>
 void pack(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
           std::vector<char>& buffer, int& position,
@@ -2946,13 +2818,6 @@ void pack(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
     }
 }
 
-template void pack(const WaterPvtMultiplexer<double,true,true>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
-template void pack(const WaterPvtMultiplexer<double,false,true>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void pack(const ConstantCompressibilityWaterPvt<Scalar>& data,
           std::vector<char>& buffer, int& position,
@@ -2965,10 +2830,6 @@ void pack(const ConstantCompressibilityWaterPvt<Scalar>& data,
     pack(data.waterViscosity(), buffer, position, comm);
     pack(data.waterViscosibility(), buffer, position, comm);
 }
-
-template void pack(const ConstantCompressibilityWaterPvt<double>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 void pack(const WaterPvtThermal<Scalar>& data,
@@ -2998,10 +2859,6 @@ void pack(const WaterPvtThermal<Scalar>& data,
         pack(*data.isoThermalPvt(), buffer, position, comm);
     }
 }
-
-template void pack(const WaterPvtThermal<double>& data,
-                   std::vector<char>& buffer, int& position,
-                   Dune::MPIHelper::MPICommunicator comm);
 
 void pack(const OilVaporizationProperties& data,
           std::vector<char>& buffer, int& position,
@@ -4856,9 +4713,6 @@ void unpack(Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
     data = Tabulated1DFunction<Scalar>(xValues, yValues, false);
 }
 
-template void unpack(Tabulated1DFunction<double>& data, std::vector<char>& buffer,
-                     int& position, Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void unpack(IntervalTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm)
@@ -4875,18 +4729,6 @@ void unpack(IntervalTabulated2DFunction<Scalar>& data, std::vector<char>& buffer
                                                xExtrapolate, yExtrapolate);
 }
 
-template void unpack(IntervalTabulated2DFunction<double>& data,
-                     std::vector<char>& buffer,
-                     int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template void unpack(std::vector<IntervalTabulated2DFunction<double>>& data,
-                     std::vector<char>& buffer,
-                     int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template void unpack(std::map<int,IntervalTabulated2DFunction<double>>& data,
-                     std::vector<char>& buffer,
-                     int& position, Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void unpack(UniformXTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm)
@@ -4901,10 +4743,6 @@ void unpack(UniformXTabulated2DFunction<Scalar>& data, std::vector<char>& buffer
     data = UniformXTabulated2DFunction<Scalar>(xPos, yPos, samples,
                                                interpolationGuide);
 }
-
-template void unpack(UniformXTabulated2DFunction<double>& data,
-                     std::vector<char>& buffer,
-                     int& position, Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 void unpack(SolventPvt<Scalar>& data, std::vector<char>& buffer, int& position,
@@ -4921,10 +4759,6 @@ void unpack(SolventPvt<Scalar>& data, std::vector<char>& buffer, int& position,
     data = SolventPvt<Scalar>(solventReferenceDensity, inverseSolventB,
                               solventMu, inverseSolventBMu);
 }
-
-template void unpack(SolventPvt<double>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar, bool enableThermal>
 void unpack(GasPvtMultiplexer<Scalar,enableThermal>& data,
@@ -4951,13 +4785,6 @@ void unpack(GasPvtMultiplexer<Scalar,enableThermal>& data,
     data = GasPvtMultiplexer<Scalar,enableThermal>(approach, pvt);
 }
 
-template void unpack(GasPvtMultiplexer<double,true>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
-template void unpack(GasPvtMultiplexer<double,false>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void unpack(DryGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -4973,10 +4800,6 @@ void unpack(DryGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
     data = DryGasPvt<Scalar>(gasReferenceDensity, inverseGasB,
                                 gasMu, inverseGasBMu);
 }
-
-template void unpack(DryGasPvt<double>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 void unpack(GasPvtThermal<Scalar>& data,
@@ -5010,10 +4833,6 @@ void unpack(GasPvtThermal<Scalar>& data,
                                  enableInternalEnergy);
 }
 
-template void unpack(GasPvtThermal<double>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void unpack(WetGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -5042,10 +4861,6 @@ void unpack(WetGasPvt<Scalar>& data, std::vector<char>& buffer, int& position,
                              inverseSaturatedGasBMu, satOilVapFacTable,
                              saturationPressure, vapPar1);
 }
-
-template void unpack(WetGasPvt<double>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar, bool enableThermal>
 void unpack(OilPvtMultiplexer<Scalar,enableThermal>& data,
@@ -5076,13 +4891,6 @@ void unpack(OilPvtMultiplexer<Scalar,enableThermal>& data,
     data = OilPvtMultiplexer<Scalar,enableThermal>(approach, pvt);
 }
 
-template void unpack(OilPvtMultiplexer<double,true>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
-template void unpack(OilPvtMultiplexer<double,false>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void unpack(ConstantCompressibilityOilPvt<Scalar>& data,
             std::vector<char>& buffer, int& position,
@@ -5106,10 +4914,6 @@ void unpack(ConstantCompressibilityOilPvt<Scalar>& data,
                                                  oilViscosibility);
 }
 
-template void unpack(ConstantCompressibilityOilPvt<double>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void unpack(DeadOilPvt<Scalar>& data,
             std::vector<char>& buffer, int& position,
@@ -5126,10 +4930,6 @@ void unpack(DeadOilPvt<Scalar>& data,
     data = DeadOilPvt<Scalar>(oilReferenceDensity, inverseOilB,
                               oilMu, inverseOilBMu);
 }
-
-template void unpack(DeadOilPvt<double>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 void unpack(LiveOilPvt<Scalar>& data,
@@ -5169,10 +4969,6 @@ void unpack(LiveOilPvt<Scalar>& data,
                               vapPar2);
 }
 
-template void unpack(LiveOilPvt<double>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar>
 void unpack(OilPvtThermal<Scalar>& data,
             std::vector<char>& buffer, int& position,
@@ -5210,10 +5006,6 @@ void unpack(OilPvtThermal<Scalar>& data,
                                  enableInternalEnergy);
 }
 
-template void unpack(OilPvtThermal<double>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
-
 template<class Scalar, bool enableThermal, bool enableBrine>
 void unpack(WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
             std::vector<char>& buffer, int& position,
@@ -5234,13 +5026,6 @@ void unpack(WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
     }
     data = WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>(approach, pvt);
 }
-
-template void unpack(WaterPvtMultiplexer<double,true>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
-template void unpack(WaterPvtMultiplexer<double,false>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 void unpack(ConstantCompressibilityWaterPvt<Scalar>& data,
@@ -5264,10 +5049,6 @@ void unpack(ConstantCompressibilityWaterPvt<Scalar>& data,
                                                    waterViscosity,
                                                    waterViscosibility);
 }
-
-template void unpack(ConstantCompressibilityWaterPvt<double>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
 void unpack(WaterPvtThermal<Scalar>& data,
@@ -5317,10 +5098,6 @@ void unpack(WaterPvtThermal<Scalar>& data,
                                    enableThermalViscosity,
                                    enableInternalEnergy);
 }
-
-template void unpack(WaterPvtThermal<double>& data,
-                     std::vector<char>& buffer, int& position,
-                     Dune::MPIHelper::MPICommunicator comm);
 
 void unpack(OilVaporizationProperties& data,
           std::vector<char>& buffer, int& position,
@@ -6840,9 +6617,10 @@ INSTANTIATE_PACK_VECTOR(std::vector<double>)
 INSTANTIATE_PACK_VECTOR(bool)
 INSTANTIATE_PACK_VECTOR(char)
 INSTANTIATE_PACK_VECTOR(int)
-INSTANTIATE_PACK_VECTOR(Opm::Tabulated1DFunction<double>)
+INSTANTIATE_PACK_VECTOR(Tabulated1DFunction<double>)
 INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
 INSTANTIATE_PACK_VECTOR(EclEpsScalingPointsInfo<double>)
+INSTANTIATE_PACK_VECTOR(IntervalTabulated2DFunction<double>)
 #undef INSTANTIATE_PACK_VECTOR
 
 #define INSTANTIATE_PACK_SHARED_PTR(...) \
@@ -6881,6 +6659,27 @@ INSTANTIATE_PACK(unsigned char)
 INSTANTIATE_PACK(EclEpsScalingPointsInfo<double>)
 INSTANTIATE_PACK(EclTwoPhaseApproach)
 INSTANTIATE_PACK(EclMultiplexerApproach)
+INSTANTIATE_PACK(Tabulated1DFunction<double>)
+INSTANTIATE_PACK(IntervalTabulated2DFunction<double>)
+INSTANTIATE_PACK(UniformXTabulated2DFunction<double>)
+INSTANTIATE_PACK(std::map<int,IntervalTabulated2DFunction<double>>)
+INSTANTIATE_PACK(SolventPvt<double>)
+INSTANTIATE_PACK(GasPvtMultiplexer<double,true>)
+INSTANTIATE_PACK(GasPvtMultiplexer<double,false>)
+INSTANTIATE_PACK(DryGasPvt<double>)
+INSTANTIATE_PACK(GasPvtThermal<double>)
+INSTANTIATE_PACK(WetGasPvt<double>)
+INSTANTIATE_PACK(OilPvtMultiplexer<double,true>)
+INSTANTIATE_PACK(OilPvtMultiplexer<double,false>)
+INSTANTIATE_PACK(ConstantCompressibilityOilPvt<double>)
+INSTANTIATE_PACK(DeadOilPvt<double>)
+INSTANTIATE_PACK(LiveOilPvt<double>)
+INSTANTIATE_PACK(OilPvtThermal<double>)
+INSTANTIATE_PACK(WaterPvtMultiplexer<double,true,true>)
+INSTANTIATE_PACK(WaterPvtMultiplexer<double,false,true>)
+INSTANTIATE_PACK(ConstantCompressibilityWaterPvt<double>)
+INSTANTIATE_PACK(WaterPvtThermal<double>)
+
 #undef INSTANTIATE_PACK
 
 } // end namespace Mpi
