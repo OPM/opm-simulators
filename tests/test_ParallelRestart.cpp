@@ -408,43 +408,10 @@ Opm::DeckRecord getDeckRecord()
 
 Opm::Tuning getTuning()
 {
-    return Opm::Tuning(Opm::DynamicState<double>(std::vector<double>{1.0}, 1),  //TSINIT
-                       Opm::DynamicState<double>(std::vector<double>{2.0}, 1),  //TSMAXZ
-                       Opm::DynamicState<double>(std::vector<double>{3.0}, 1),  //TSMINZ
-                       Opm::DynamicState<double>(std::vector<double>{4.0}, 1),  //TSMCHP
-                       Opm::DynamicState<double>(std::vector<double>{5.0}, 1),  //TSFMAX
-                       Opm::DynamicState<double>(std::vector<double>{6.0}, 1),  //TSFMIN
-                       Opm::DynamicState<double>(std::vector<double>{7.0}, 1),  //TSFCNV
-                       Opm::DynamicState<double>(std::vector<double>{8.0}, 1),  //TFDIFF
-                       Opm::DynamicState<double>(std::vector<double>{9.0}, 1),  //THRUPT
-                       Opm::DynamicState<double>(std::vector<double>{10.0}, 1), //TMAXWC
-                       Opm::DynamicState<int>(std::vector<int>{1}, 1),       //TMAXWC_has_value
-                       Opm::DynamicState<double>(std::vector<double>{11.0}, 1), //TRGTTE
-                       Opm::DynamicState<double>(std::vector<double>{12.0}, 1), //TRGCNV
-                       Opm::DynamicState<double>(std::vector<double>{13.0}, 1), //TRGMBE
-                       Opm::DynamicState<double>(std::vector<double>{14.0}, 1), //TRGLCV
-                       Opm::DynamicState<double>(std::vector<double>{15.0}, 1), //XXXTTE
-                       Opm::DynamicState<double>(std::vector<double>{16.0}, 1), //XXXCNV
-                       Opm::DynamicState<double>(std::vector<double>{17.0}, 1), //XXXMBE
-                       Opm::DynamicState<double>(std::vector<double>{18.0}, 1), //XXXLCV
-                       Opm::DynamicState<double>(std::vector<double>{19.0}, 1), //XXXWFL
-                       Opm::DynamicState<double>(std::vector<double>{20.0}, 1), ///TRGFIP
-                       Opm::DynamicState<double>(std::vector<double>{21.0}, 1), //TRGSFT
-                       Opm::DynamicState<int>(std::vector<int>{2}, 1),       //TRGSFT_has_value
-                       Opm::DynamicState<double>(std::vector<double>{22.0}, 1), // THIONX
-                       Opm::DynamicState<int>(std::vector<int>{3}, 1),       //TRWGHT
-                       Opm::DynamicState<int>(std::vector<int>{4}, 1),       //NEWTMX
-                       Opm::DynamicState<int>(std::vector<int>{5}, 1),       //NEWTMN
-                       Opm::DynamicState<int>(std::vector<int>{6}, 1),       //LITMAX
-                       Opm::DynamicState<int>(std::vector<int>{7}, 1),       //LITMIN
-                       Opm::DynamicState<int>(std::vector<int>{8}, 1),       //MXWSIT
-                       Opm::DynamicState<int>(std::vector<int>{9}, 1),       //MXWPIT
-                       Opm::DynamicState<double>(std::vector<double>{23.0}, 1), //DDPLIM
-                       Opm::DynamicState<double>(std::vector<double>{24.0}, 1), //DDSLIM
-                       Opm::DynamicState<double>(std::vector<double>{25.0}, 1), //TGRDPR
-                       Opm::DynamicState<double>(std::vector<double>{26.0}, 1), //XXXDPR
-                       Opm::DynamicState<int>(std::vector<int>{10}, 1),      //XXDPR_has_value
-                       std::map<std::string,bool>{{"test", false}}); // resetValue
+    return Opm::Tuning{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, true,
+                       11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0,
+                       20.0, 21.0, false, 22.0, 3, 4, 5, 6, 7, 8, 9, 23.0, 24.0,
+                       25.0, 26.0, true};
 }
 
 
@@ -2217,7 +2184,7 @@ BOOST_AUTO_TEST_CASE(Schedule)
                        oilvap,
                        events,
                        modifierDeck,
-                       getTuning(),
+                       Opm::DynamicState<Opm::Tuning>({getTuning()}, 1),
                        messageLimits,
                        runspec,
                        vfpProd,

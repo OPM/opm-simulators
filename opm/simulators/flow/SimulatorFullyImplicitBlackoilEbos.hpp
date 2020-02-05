@@ -146,7 +146,7 @@ public:
         bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
         if (enableAdaptive) {
             if (enableTUNING) {
-                adaptiveTimeStepping.reset(new TimeStepper(schedule().getTuning(), timer.currentStepNum(), terminalOutput_));
+                adaptiveTimeStepping.reset(new TimeStepper(schedule().getTuning(timer.currentStepNum()), terminalOutput_));
             }
             else {
                 adaptiveTimeStepping.reset(new TimeStepper(terminalOutput_));
@@ -216,7 +216,7 @@ public:
             if (adaptiveTimeStepping) {
                 if (enableTUNING) {
                     if (events.hasEvent(ScheduleEvents::TUNING_CHANGE,timer.currentStepNum())) {
-                        adaptiveTimeStepping->updateTUNING(schedule().getTuning(), timer.currentStepNum());
+                        adaptiveTimeStepping->updateTUNING(schedule().getTuning(timer.currentStepNum()));
                     }
                 }
 

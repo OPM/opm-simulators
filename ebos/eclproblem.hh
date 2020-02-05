@@ -675,12 +675,12 @@ public:
         if (enableTuning_) {
             // if support for the TUNING keyword is enabled, we get the initial time
             // steping parameters from it instead of from command line parameters
-            const auto& tuning = schedule.getTuning();
-            initialTimeStepSize_ = tuning.getTSINIT(0);
-            maxTimeStepAfterWellEvent_ = tuning.getTMAXWC(0);
-            maxTimeStepSize_ = tuning.getTSMAXZ(0);
-            restartShrinkFactor_ = 1./tuning.getTSFCNV(0);
-            minTimeStepSize_ = tuning.getTSMINZ(0);
+            const auto& tuning = schedule.getTuning(0);
+            initialTimeStepSize_ = tuning.TSINIT;
+            maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
+            maxTimeStepSize_ = tuning.TSMAXZ;
+            restartShrinkFactor_ = 1./tuning.TSFCNV;
+            minTimeStepSize_ = tuning.TSMINZ;
         }
 
         initFluidSystem_();
@@ -839,12 +839,12 @@ public:
         bool tuningEvent = false;
         if (episodeIdx > 0 && enableTuning_ && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, episodeIdx))
         {
-            const auto& tuning = schedule.getTuning();
-            initialTimeStepSize_ = tuning.getTSINIT(episodeIdx);
-            maxTimeStepAfterWellEvent_ = tuning.getTMAXWC(episodeIdx);
-            maxTimeStepSize_ = tuning.getTSMAXZ(episodeIdx);
-            restartShrinkFactor_ = 1./tuning.getTSFCNV(episodeIdx);
-            minTimeStepSize_ = tuning.getTSMINZ(episodeIdx);
+            const auto& tuning = schedule.getTuning(episodeIdx);
+            initialTimeStepSize_ = tuning.TSINIT;
+            maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
+            maxTimeStepSize_ = tuning.TSMAXZ;
+            restartShrinkFactor_ = 1./tuning.TSFCNV;
+            minTimeStepSize_ = tuning.TSMINZ;
             tuningEvent = true;
         }
 
