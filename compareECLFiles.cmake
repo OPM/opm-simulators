@@ -520,4 +520,11 @@ if(MPI_FOUND)
                                        REL_TOL 1e-1
                                        DIR spe1
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+
+  add_test_compare_parallel_simulation(CASENAME spe1_brine
+                                       FILENAME SPE1CASE1_BRINE
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 endif()
