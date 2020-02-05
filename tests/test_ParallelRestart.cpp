@@ -1314,6 +1314,20 @@ BOOST_AUTO_TEST_CASE(ConstantCompressibilityWaterPvt)
 }
 
 
+BOOST_AUTO_TEST_CASE(ConstantCompressibilityBrinePvt)
+{
+#ifdef HAVE_MPI
+    Opm::Tabulated1DFunction<double> func(2, std::vector<double>{1.0, 2.0},
+                                             std::vector<double>{3.0, 4.0});
+    Opm::ConstantCompressibilityBrinePvt<double> val1({1.0, 2.0}, {3.0, 4.0}, {func},
+                                                      {func}, {func}, {func});
+    auto val2 = PackUnpack(val1);
+    BOOST_CHECK(std::get<1>(val2) == std::get<2>(val2));
+    BOOST_CHECK(val1 == std::get<0>(val2));
+#endif
+}
+
+
 BOOST_AUTO_TEST_CASE(WaterPvtThermal)
 {
 #ifdef HAVE_MPI
