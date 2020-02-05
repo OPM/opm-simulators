@@ -207,10 +207,10 @@ protected:
             return;
         }
 
-        if (!aqufetp_data_.p0) {
+        if (!aqufetp_data_.p0.first) {
             Base::pa0_ = calculateReservoirEquilibrium();
         } else {
-            Base::pa0_ = *(aqufetp_data_.p0);
+            Base::pa0_ = aqufetp_data_.p0.second;
         }
         aquifer_pressure_ = Base::pa0_;
     }
