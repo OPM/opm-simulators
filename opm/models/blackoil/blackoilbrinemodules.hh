@@ -318,6 +318,29 @@ public:
         return !bdensityTable_.empty();
     }
 
+    template<class Serializer>
+    static std::size_t packSize(Serializer& serializer)
+    {
+        return serializer.packSize(bdensityTable_) +
+               serializer.packSize(referencePressure_);
+    }
+
+    template<class Serializer>
+    static void pack(std::vector<char>& buffer, int& position,
+                     Serializer& serializer)
+    {
+        serializer.pack(bdensityTable_, buffer, position);
+        serializer.pack(referencePressure_, buffer, position);
+    }
+
+    template<class Serializer>
+    static void unpack(std::vector<char>& buffer, int& position,
+                       Serializer& serializer)
+    {
+        serializer.unpack(bdensityTable_, buffer, position);
+        serializer.unpack(referencePressure_, buffer, position);
+    }
+
 private:
     static std::vector<TabulatedFunction> bdensityTable_;
     static std::vector<Scalar> referencePressure_;
