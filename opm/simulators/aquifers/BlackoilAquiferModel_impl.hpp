@@ -170,7 +170,7 @@ BlackoilAquiferModel<TypeTag>::init()
 
         for (size_t i = 0; i < aquifersData.size(); ++i) {
             aquifers_CarterTracy.push_back(AquiferCarterTracy<TypeTag>(
-                aquifer_connection.at(i), cartesian_to_compressed_, this->simulator_, aquifersData.at(i)));
+                aquifer_connection[i], cartesian_to_compressed_, this->simulator_, aquifersData[i]));
         }
     }
     if (comm.rank() == 0)
@@ -200,7 +200,7 @@ BlackoilAquiferModel<TypeTag>::init()
 
         for (size_t i = 0; i < aquifersData.size(); ++i) {
             aquifers_Fetkovich.push_back(AquiferFetkovich<TypeTag>(
-                aquifer_connection.at(i), cartesian_to_compressed_, this->simulator_, aquifersData.at(i)));
+                aquifer_connection[i], cartesian_to_compressed_, this->simulator_, aquifersData[i]));
         }
     }
 }
