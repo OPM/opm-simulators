@@ -447,6 +447,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef BlackOilSolventModule<TypeTag> SolventModule;
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
     typedef BlackOilFoamModule<TypeTag> FoamModule;
+    typedef BlackOilBrineModule<TypeTag> BrineModule;
 
     typedef typename EclEquilInitializer<TypeTag>::ScalarFluidState InitialFluidState;
 
@@ -612,12 +613,14 @@ public:
             SolventModule::initFromDeck(vanguard.deck(), vanguard.eclState());
             PolymerModule::initFromDeck(vanguard.deck(), vanguard.eclState());
             FoamModule::initFromDeck(vanguard.deck(), vanguard.eclState());
+            BrineModule::initFromDeck(vanguard.deck(), vanguard.eclState());
         }
 
         EclMpiSerializer ser(comm);
         ser.staticBroadcast<SolventModule>();
         ser.staticBroadcast<PolymerModule>();
         ser.staticBroadcast<FoamModule>();
+        ser.staticBroadcast<BrineModule>();
 
         // create the ECL writer
         eclWriter_.reset(new EclWriterType(simulator));
