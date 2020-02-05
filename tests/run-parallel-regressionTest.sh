@@ -18,12 +18,12 @@ TEST_ARGS="$@"
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --enable-opm-rst-file=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --output-dir=${RESULT_PATH}
+${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-opm-rst-file=true --output-dir=${RESULT_PATH}
 
 test $? -eq 0 || exit 1
 mkdir mpi
 cd mpi
-mpirun -np 4 ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --enable-opm-rst-file=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --output-dir=${RESULT_PATH}/mpi
+mpirun -np 4 ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-opm-rst-file=true --output-dir=${RESULT_PATH}/mpi
 test $? -eq 0 || exit 1
 cd ..
 
