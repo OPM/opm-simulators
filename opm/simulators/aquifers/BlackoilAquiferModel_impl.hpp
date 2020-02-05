@@ -158,7 +158,7 @@ BlackoilAquiferModel<TypeTag>::init()
         const AquiferCT aquiferct = AquiferCT(eclState.getTableManager(), deck);
         const Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
 
-        std::vector<AquiferCT::AQUCT_data> aquifersData = aquiferct.getAquifers();
+        std::vector<AquiferCT::AQUCT_data> aquifersData = aquiferct.data();
         std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
 
         assert(aquifersData.size() == aquifer_connection.size());
@@ -188,7 +188,7 @@ BlackoilAquiferModel<TypeTag>::init()
         const Aquifetp aquifetp = Aquifetp(deck);
         const Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
 
-        std::vector<Aquifetp::AQUFETP_data> aquifersData = aquifetp.getAquifers();
+        std::vector<Aquifetp::AQUFETP_data> aquifersData = aquifetp.data();
         std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
 
         assert(aquifersData.size() == aquifer_connection.size());
