@@ -155,7 +155,7 @@ BlackoilAquiferModel<TypeTag>::init()
         const auto& eclState = this->simulator_.vanguard().eclState();
 
         // Get all the carter tracy aquifer properties data and put it in aquifers vector
-        const AquiferCT aquiferct = AquiferCT(eclState, deck);
+        const AquiferCT aquiferct = AquiferCT(eclState.getTableManager(), deck);
         const Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
 
         std::vector<AquiferCT::AQUCT_data> aquifersData = aquiferct.getAquifers();
