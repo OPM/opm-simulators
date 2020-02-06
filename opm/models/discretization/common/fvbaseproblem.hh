@@ -111,13 +111,8 @@ public:
     FvBaseProblem(Simulator& simulator)
         : nextTimeStepSize_(0.0)
         , gridView_(simulator.gridView())
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         , elementMapper_(gridView_, Dune::mcmgElementLayout())
         , vertexMapper_(gridView_, Dune::mcmgVertexLayout())
-#else
-        , elementMapper_(gridView_)
-        , vertexMapper_(gridView_)
-#endif
         , boundingBoxMin_(std::numeric_limits<double>::max())
         , boundingBoxMax_(-std::numeric_limits<double>::max())
         , simulator_(simulator)

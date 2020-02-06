@@ -191,15 +191,6 @@ public:
             linearize_();
             succeeded = 1;
         }
-#if ! DUNE_VERSION_NEWER(DUNE_COMMON, 2,5)
-        catch (const Dune::Exception& e)
-        {
-            std::cout << "rank " << simulator_().gridView().comm().rank()
-                      << " caught an exception while linearizing:" << e.what()
-                      << "\n"  << std::flush;
-            succeeded = 0;
-        }
-#endif
         catch (const std::exception& e)
         {
             std::cout << "rank " << simulator_().gridView().comm().rank()
@@ -246,16 +237,6 @@ public:
                           << " caught an exception while linearizing:" << e.what()
                           << "\n"  << std::flush;
             }
-#if ! DUNE_VERSION_NEWER(DUNE_COMMON, 2,5)
-            catch (const Dune::Exception& e)
-            {
-                succeeded = false;
-
-                std::cout << "rank " << simulator_().gridView().comm().rank()
-                          << " caught an exception while linearizing:" << e.what()
-                          << "\n"  << std::flush;
-            }
-#endif
 
             succeeded = comm.min(succeeded);
 
