@@ -74,11 +74,11 @@ public:
      * \brief Sets the pressure-dependent water viscosity and density
      *        using a table stemming from the Eclipse PVTWSALT keyword.
      */
-    void initFromDeck(const Deck& deck, const EclipseState& eclState)
+    void initFromDeck(const Deck&, const EclipseState& eclState)
     {
         const auto& tableManager = eclState.getTableManager();
         size_t numRegions = tableManager.getTabdims().getNumPVTTables();
-        const auto& densityKeyword = deck.getKeyword("DENSITY");
+        const auto& densityTable = tableManager.getDensityTable();
 
         formationVolumeTables_.resize(numRegions);
         compressibilityTables_.resize(numRegions);
@@ -116,10 +116,8 @@ public:
         setNumRegions(numPvtwRegions);
 
         for (unsigned regionIdx = 0; regionIdx < numPvtwRegions; ++ regionIdx) {
-            auto densityRecord = densityKeyword.getRecord(regionIdx);
 
-            waterReferenceDensity_[regionIdx] =
-                densityRecord.getItem("WATER").getSIDouble(0);
+            waterReferenceDensity_[regionIdx] = densityTable[regionIdx].water;
         }
 
         initEnd();

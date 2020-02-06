@@ -72,20 +72,20 @@ public:
      *
      * This method assumes that the deck features valid DENSITY and PVDG keywords.
      */
-    void initFromDeck(const Deck& deck, const EclipseState& eclState)
+    void initFromDeck(const Deck&, const EclipseState& eclState)
     {
         const auto& pvdgTables = eclState.getTableManager().getPvdgTables();
-        const auto& densityKeyword = deck.getKeyword("DENSITY");
+        const auto& densityTable = eclState.getTableManager().getDensityTable();
 
-        assert(pvdgTables.size() == densityKeyword.size());
+        assert(pvdgTables.size() == densityTable.size());
 
         size_t numRegions = pvdgTables.size();
         setNumRegions(numRegions);
 
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
-            Scalar rhoRefO = densityKeyword.getRecord(regionIdx).getItem("OIL").getSIDouble(0);
-            Scalar rhoRefG = densityKeyword.getRecord(regionIdx).getItem("GAS").getSIDouble(0);
-            Scalar rhoRefW = densityKeyword.getRecord(regionIdx).getItem("WATER").getSIDouble(0);
+            Scalar rhoRefO = densityTable[regionIdx].oil;
+            Scalar rhoRefG = densityTable[regionIdx].gas;
+            Scalar rhoRefW = densityTable[regionIdx].water;
 
             setReferenceDensities(regionIdx, rhoRefO, rhoRefG, rhoRefW);
 
