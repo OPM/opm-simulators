@@ -305,19 +305,11 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const MILU_VARIANT 
         typedef typename X::field_type field_type;
 
         // define the category
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
         Dune::SolverCategory::Category category() const override
         {
           return std::is_same<P,Dune::Amg::SequentialInformation>::value ?
                  Dune::SolverCategory::sequential : Dune::SolverCategory::overlapping;
         }
-#else
-        enum {
-            //! \brief The category the preconditioner is part of.
-            category = std::is_same<P,Dune::Amg::SequentialInformation>::value?
-            Dune::SolverCategory::sequential:Dune::SolverCategory::overlapping
-        };
-#endif
 
         typedef ISTLUtility::CPRSelector<M,X,X,P>  CPRSelectorType ;
 
@@ -447,15 +439,7 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const MILU_VARIANT 
             Dune::InverseOperatorResult result;
 
             // the scalar product chooser
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             auto sp = Dune::createScalarProduct<X,ParallelInformation>(commAe_, category());
-#else
-            typedef Dune::ScalarProductChooser<X,ParallelInformation,category>
-                ScalarProductChooser;
-            // the scalar product.
-            std::unique_ptr<typename ScalarProductChooser::ScalarProduct>
-                sp(ScalarProductChooser::construct(commAe_));
-#endif
 
             if( amg_ )
             {

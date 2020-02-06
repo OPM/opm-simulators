@@ -133,11 +133,7 @@ public:
         const auto& eclGrid = eclState.getInputGrid();
         const auto& cartDims = cartMapper.cartesianDimensions();
         auto& transMult = eclState.getTransMult();
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
-#else
-        ElementMapper elemMapper(gridView);
-#endif
 
         // get the ntg values, the ntg values are modified for the cells merged with minpv
         std::vector<double> ntg;
@@ -491,11 +487,7 @@ private:
         const auto& gridView = vanguard_.gridView();
         const auto& cartMapper = vanguard_.cartesianIndexMapper();
         const auto& cartDims = cartMapper.cartesianDimensions();
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
-#else
-        ElementMapper elemMapper(gridView);
-#endif
 
         const auto& fp = vanguard_.eclState().fieldProps();
         const auto& inputTranxData = fp.get_global_double("TRANX");

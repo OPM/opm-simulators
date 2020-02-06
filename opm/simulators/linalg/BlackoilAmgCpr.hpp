@@ -95,19 +95,11 @@ namespace Opm
                                          CoarseSolverPolicy,
                                          Smoother>;
     public:
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
         Dune::SolverCategory::Category category() const override
         {
             return std::is_same<Communication, Dune::Amg::SequentialInformation>::value ?
                 Dune::SolverCategory::sequential : Dune::SolverCategory::overlapping;
         }
-#else
-        // define the category
-        enum {
-            //! \brief The category the precondtioner is part of.
-            category = Operator::category
-        };
-#endif
 
         /**
          * \brief Constructor.

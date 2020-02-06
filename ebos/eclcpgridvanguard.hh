@@ -162,11 +162,7 @@ public:
             const auto& gridView = grid_->leafGridView();
             unsigned numFaces = grid_->numFaces();
             std::vector<double> faceTrans(numFaces, 0.0);
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
             ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
-#else
-            ElementMapper elemMapper(this->gridView());
-#endif
             auto elemIt = gridView.template begin</*codim=*/0>();
             const auto& elemEndIt = gridView.template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++ elemIt) {

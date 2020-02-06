@@ -113,20 +113,11 @@ public:
   typedef Dune::CollectiveCommunication< int > communication_type;
 #endif
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
   Dune::SolverCategory::Category category() const override
   {
     return overlapping ?
            Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
   }
-#else
-  enum {
-    //! \brief The solver category.
-    category = overlapping ?
-        Dune::SolverCategory::overlapping :
-        Dune::SolverCategory::sequential
-  };
-#endif
 
   //! constructor: just store a reference to a matrix
   WellModelMatrixAdapter (const M& A,
@@ -390,25 +381,15 @@ protected:
         /// \brief construct the CPR preconditioner and the solver.
         /// \tparam P The type of the parallel information.
         /// \param parallelInformation the information about the parallelization.
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
         template<Dune::SolverCategory::Category category=Dune::SolverCategory::sequential,
                  class LinearOperator, class POrComm>
-#else
-        template<int category=Dune::SolverCategory::sequential, class LinearOperator, class POrComm>
-#endif
         void constructPreconditionerAndSolve(LinearOperator& linearOperator,
                                              Vector& x, Vector& istlb,
                                              const POrComm& parallelInformation_arg,
                                              Dune::InverseOperatorResult& result) const
         {
             // Construct scalar product.
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             auto sp = Dune::createScalarProduct<Vector,POrComm>(parallelInformation_arg, category);
-#else
-            typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
-            typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
-            SPPointer sp(ScalarProductChooser::construct(parallelInformation_arg));
-#endif
 
 #if FLOW_SUPPORT_AMG // activate AMG if either flow_ebos is used or UMFPack is not available
             if( parameters_.linear_solver_use_amg_ || parameters_.use_cpr_)
@@ -509,16 +490,9 @@ protected:
 
 #if HAVE_MPI
         typedef Dune::OwnerOverlapCopyCommunication<int, int> Comm;
-#if DUNE_VERSION_NEWER_REV(DUNE_ISTL, 2 , 5, 1)
         // 3x3 matrix block inversion was unstable from at least 2.3 until and
         // including 2.5.0
         typedef ParallelOverlappingILU0<Matrix,Vector,Vector,Comm> ParPreconditioner;
-#else
-        typedef ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::MatrixBlock<typename Matrix::field_type,
-                                                                           Matrix::block_type::rows,
-                                                                           Matrix::block_type::cols> >,
-                                        Vector, Vector, Comm> ParPreconditioner;
-#endif
         template <class Operator>
         std::unique_ptr<ParPreconditioner>
         constructPrecond(Operator& opA, const Comm& comm) const

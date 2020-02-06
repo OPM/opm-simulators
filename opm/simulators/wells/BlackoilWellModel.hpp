@@ -94,13 +94,7 @@ namespace Opm {
             typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
             typedef Dune::BlockVector<VectorBlockType> BVector;
 
-#if  DUNE_VERSION_NEWER_REV(DUNE_ISTL, 2 , 5, 1)
-            // 3x3 matrix block inversion was unstable from at least 2.3 until and
-            // including 2.5.0
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
-#else
-            typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
-#endif
 
             typedef Opm::BlackOilPolymerModule<TypeTag> PolymerModule;
 
