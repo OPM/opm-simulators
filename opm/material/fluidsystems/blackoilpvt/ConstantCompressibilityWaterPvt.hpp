@@ -70,31 +70,24 @@ public:
      * \brief Sets the pressure-dependent water viscosity and density
      *        using a table stemming from the Eclipse PVTW keyword.
      */
-    void initFromDeck(const Deck& deck, const EclipseState& eclState)
+    void initFromDeck(const Deck&, const EclipseState& eclState)
     {
-        const auto& pvtwKeyword = deck.getKeyword("PVTW");
+        const auto& pvtwTable = eclState.getTableManager().getPvtwTable();
         const auto& densityTable = eclState.getTableManager().getDensityTable();
 
-        assert(pvtwKeyword.size() == densityTable.size());
+        assert(pvtwTable.size() == densityTable.size());
 
-        size_t numRegions = pvtwKeyword.size();
+        size_t numRegions = pvtwTable.size();
         setNumRegions(numRegions);
 
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
-            auto pvtwRecord = pvtwKeyword.getRecord(regionIdx);
-
             waterReferenceDensity_[regionIdx] = densityTable[regionIdx].water;
 
-            waterReferencePressure_[regionIdx] =
-                pvtwRecord.getItem("P_REF").getSIDouble(0);
-            waterReferenceFormationVolumeFactor_[regionIdx] =
-                pvtwRecord.getItem("WATER_VOL_FACTOR").getSIDouble(0);
-            waterCompressibility_[regionIdx] =
-                pvtwRecord.getItem("WATER_COMPRESSIBILITY").getSIDouble(0);
-            waterViscosity_[regionIdx] =
-                pvtwRecord.getItem("WATER_VISCOSITY").getSIDouble(0);
-            waterViscosibility_[regionIdx] =
-                pvtwRecord.getItem("WATER_VISCOSIBILITY").getSIDouble(0);
+            waterReferencePressure_[regionIdx] = pvtwTable[regionIdx].reference_pressure;
+            waterReferenceFormationVolumeFactor_[regionIdx] = pvtwTable[regionIdx].volume_factor;
+            waterCompressibility_[regionIdx] = pvtwTable[regionIdx].compressibility;
+            waterViscosity_[regionIdx] = pvtwTable[regionIdx].viscosity;
+            waterViscosibility_[regionIdx] = pvtwTable[regionIdx].viscosibility;
         }
 
         initEnd();
