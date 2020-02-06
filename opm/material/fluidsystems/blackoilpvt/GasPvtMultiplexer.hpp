@@ -128,15 +128,15 @@ public:
      */
     void initFromDeck(const Deck& deck, const EclipseState& eclState)
     {
-        bool enableGas = deck.hasKeyword("GAS");
-        if (!enableGas)
+        const auto& phases = eclState.runspec().phases();
+        if (!phases.active(Phase::GAS))
             return;
 
-        if (enableThermal && (deck.hasKeyword("THERMAL") || deck.hasKeyword("TEMP")))
+        if (enableThermal && eclState.getSimulationConfig().isThermal())
             setApproach(ThermalGasPvt);
-        else if (deck.hasKeyword("PVTG"))
+        else if (!eclState.getTableManager().getPvtgTables().empty())
             setApproach(WetGasPvt);
-        else if (deck.hasKeyword("PVDG"))
+        else if (eclState.getTableManager().hasTables("PVDG"))
             setApproach(DryGasPvt);
 
         OPM_GAS_PVT_MULTIPLEXER_CALL(pvtImpl.initFromDeck(deck, eclState));
