@@ -164,6 +164,15 @@ Opm::data::Segment getSegment()
 }
 
 
+Opm::data::CurrentControl getCurrentControl()
+{
+    Opm::data::CurrentControl curr;
+    curr.isProducer = true;
+    curr.prod = ::Opm::Well::ProducerCMode::CRAT;
+    return curr;
+}
+
+
 Opm::data::Well getWell()
 {
     Opm::data::Well well1;
@@ -174,6 +183,7 @@ Opm::data::Well getWell()
     well1.control = 4;
     well1.connections.push_back(getConnection());
     well1.segments.insert({0, getSegment()});
+    well1.current_control = getCurrentControl();
     return well1;
 }
 
@@ -494,6 +504,17 @@ BOOST_AUTO_TEST_CASE(dataConnection)
     Opm::data::Connection val1 = getConnection();
     auto val2 = PackUnpack(val1);
     DO_CHECKS(data::Connection)
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(dataCurrentControl)
+{
+#if HAVE_MPI
+    Opm::data::CurrentControl cur1 = getCurrentControl();
+    auto cur2 = PackUnpack(cur1);
+    BOOST_CHECK(std::get<1>(cur2) == std::get<2>(cur2));
+    BOOST_CHECK(cur1 == std::get<0>(cur2));
 #endif
 }
 
