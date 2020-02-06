@@ -50,11 +50,9 @@ class WaterPvtMultiplexer;
 template <class Scalar>
 class ConstantCompressibilityBrinePvt
 {
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
-    typedef typename Opm::Tabulated1DFunction<Scalar> TabulatedFunction;
-    typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
-
 public:
+    typedef typename Opm::Tabulated1DFunction<Scalar> TabulatedFunction;
+
     ConstantCompressibilityBrinePvt() = default;
     ConstantCompressibilityBrinePvt(const std::vector<Scalar>& waterReferenceDensity,
                                     const std::vector<Scalar>& referencePressure,
@@ -238,12 +236,12 @@ public:
     }
 
 private:
+    std::vector<Scalar> waterReferenceDensity_;
+    std::vector<Scalar> referencePressure_;
     std::vector<TabulatedFunction> formationVolumeTables_;
     std::vector<TabulatedFunction> compressibilityTables_;
     std::vector<TabulatedFunction> viscosityTables_;
     std::vector<TabulatedFunction> viscosibilityTables_;
-    std::vector<Scalar> referencePressure_;
-    std::vector<Scalar> waterReferenceDensity_;
 
 };
 
