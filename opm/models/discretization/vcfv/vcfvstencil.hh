@@ -724,11 +724,7 @@ private:
 
 public:
     //! exported Mapper type
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
     typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> Mapper;
-#else
-    typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGVertexLayout> Mapper;
-#endif
 
     class ScvGeometry
     {

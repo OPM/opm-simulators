@@ -45,20 +45,11 @@ public:
     typedef typename OverlappingBlockVector::field_type field_type;
     typedef typename Dune::CollectiveCommunication<typename Dune::MPIHelper::MPICommunicator> CollectiveCommunication;
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 5)
     typedef typename Dune::ScalarProduct<OverlappingBlockVector>::real_type real_type;
-#else
-    typedef double real_type;
-#endif
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,6)
     //! the kind of computations supported by the operator. Either overlapping or non-overlapping
     Dune::SolverCategory::Category category() const override
     { return Dune::SolverCategory::overlapping; }
-#else
-    // redefine the category
-    enum { category = Dune::SolverCategory::overlapping };
-#endif
 
     OverlappingScalarProduct(const Overlap& overlap)
         : overlap_(overlap), comm_( Dune::MPIHelper::getCollectiveCommunication() )

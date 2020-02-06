@@ -63,11 +63,7 @@ class EcfvStencil
     typedef typename GridView::Intersection Intersection;
     typedef typename GridView::template Codim<0>::Entity Element;
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
     typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
-#else
-    typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
-#endif
 
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
 
