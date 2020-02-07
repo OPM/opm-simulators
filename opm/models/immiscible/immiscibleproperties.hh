@@ -36,21 +36,16 @@
 BEGIN_PROPERTIES
 
 //!The fluid systems including the information about the phases
-NEW_PROP_TAG(FluidSystem);
 //! Specify whether energy should be considered as a conservation quantity or not
-NEW_PROP_TAG(EnableEnergy);
 
 // these properties only make sense for the ImmiscibleTwoPhase type tag
 
 //! The wetting phase for two-phase models
-NEW_PROP_TAG(WettingPhase);
 //! The non-wetting phase for two-phase models
-NEW_PROP_TAG(NonwettingPhase);
 
 // these properties only make sense for the ImmiscibleSinglePhase type tag
 
 //! The fluid used by the model
-NEW_PROP_TAG(Fluid);
 
 
 END_PROPERTIES

@@ -35,27 +35,20 @@
 BEGIN_PROPERTIES
 
 //! The fluid system used for the problem
-NEW_PROP_TAG(FluidSystem);
 
 //! The fluid used as the wetting phase (by default, we set the fluid
 //! system to the immiscible one, which requires this property.)
-NEW_PROP_TAG(WettingFluid);
 
 //! The fluid used as the non-wetting phase (by default, we set the
 //! fluid system to the immiscible one, which requires this property.)
-NEW_PROP_TAG(NonWettingFluid);
 
 //! Index of the fluid which represents the wetting phase
-NEW_PROP_TAG(LiquidPhaseIndex);
 
 //! Index of the fluid which represents the non-wetting phase
-NEW_PROP_TAG(GasPhaseIndex);
 
 //! Index of the component which constitutes the liquid
-NEW_PROP_TAG(LiquidComponentIndex);
 
 //! Index of the component which constitutes the gas
-NEW_PROP_TAG(GasComponentIndex);
 
 // \}
 

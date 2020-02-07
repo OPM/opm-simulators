@@ -57,18 +57,9 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(StructuredGridVanguard);
 
 // declare the properties required by the for the structured grid simulator vanguard
-NEW_PROP_TAG(Grid);
-NEW_PROP_TAG(Scalar);
 
-NEW_PROP_TAG(DomainSizeX);
-NEW_PROP_TAG(DomainSizeY);
-NEW_PROP_TAG(DomainSizeZ);
 
-NEW_PROP_TAG(CellsX);
-NEW_PROP_TAG(CellsY);
-NEW_PROP_TAG(CellsZ);
 
-NEW_PROP_TAG(GridGlobalRefinements);
 
 // GRIDDIM is only set by the finger problem
 #ifndef GRIDDIM

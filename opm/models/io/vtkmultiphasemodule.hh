@@ -46,20 +46,6 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkMultiPhase);
 
 // create the property tags needed for the multi phase module
-NEW_PROP_TAG(VtkWriteExtrusionFactor);
-NEW_PROP_TAG(VtkWritePressures);
-NEW_PROP_TAG(VtkWriteDensities);
-NEW_PROP_TAG(VtkWriteSaturations);
-NEW_PROP_TAG(VtkWriteMobilities);
-NEW_PROP_TAG(VtkWriteRelativePermeabilities);
-NEW_PROP_TAG(VtkWriteViscosities);
-NEW_PROP_TAG(VtkWriteAverageMolarMasses);
-NEW_PROP_TAG(VtkWritePorosity);
-NEW_PROP_TAG(VtkWriteIntrinsicPermeabilities);
-NEW_PROP_TAG(VtkWritePotentialGradients);
-NEW_PROP_TAG(VtkWriteFilterVelocities);
-NEW_PROP_TAG(VtkOutputFormat);
-NEW_PROP_TAG(EnableVtkOutput);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(VtkMultiPhase, VtkWriteExtrusionFactor, false);

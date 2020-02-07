@@ -33,7 +33,6 @@
 
 BEGIN_PROPERTIES
 
-NEW_PROP_TAG(PrimaryVariables);
 
 END_PROPERTIES
 

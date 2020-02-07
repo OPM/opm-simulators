@@ -46,19 +46,6 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkBlackOil);
 
 // create the property tags needed for the multi phase module
-NEW_PROP_TAG(EnableVtkOutput);
-NEW_PROP_TAG(VtkOutputFormat);
-NEW_PROP_TAG(VtkWriteGasDissolutionFactor);
-NEW_PROP_TAG(VtkWriteOilVaporizationFactor);
-NEW_PROP_TAG(VtkWriteOilFormationVolumeFactor);
-NEW_PROP_TAG(VtkWriteGasFormationVolumeFactor);
-NEW_PROP_TAG(VtkWriteWaterFormationVolumeFactor);
-NEW_PROP_TAG(VtkWriteOilSaturationPressure);
-NEW_PROP_TAG(VtkWriteGasSaturationPressure);
-NEW_PROP_TAG(VtkWriteSaturationRatios);
-NEW_PROP_TAG(VtkWriteSaturatedOilGasDissolutionFactor);
-NEW_PROP_TAG(VtkWriteSaturatedGasOilVaporizationFactor);
-NEW_PROP_TAG(VtkWritePrimaryVarsMeaning);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(VtkBlackOil, VtkWriteGasDissolutionFactor, false);

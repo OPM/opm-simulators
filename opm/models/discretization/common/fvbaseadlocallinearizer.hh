@@ -51,18 +51,7 @@ BEGIN_PROPERTIES
 // declare the property tags required for the finite differences local linearizer
 NEW_TYPE_TAG(AutoDiffLocalLinearizer);
 
-NEW_PROP_TAG(LocalLinearizer);
-NEW_PROP_TAG(Evaluation);
 
-NEW_PROP_TAG(LocalResidual);
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(Problem);
-NEW_PROP_TAG(Model);
-NEW_PROP_TAG(PrimaryVariables);
-NEW_PROP_TAG(ElementContext);
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Evaluation);
-NEW_PROP_TAG(GridView);
 
 // set the properties to be spliced in
 SET_TYPE_PROP(AutoDiffLocalLinearizer, LocalLinearizer,

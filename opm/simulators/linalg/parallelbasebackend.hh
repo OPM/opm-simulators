@@ -54,30 +54,14 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(ParallelBaseLinearSolver);
 
 // forward declaration of the required property tags
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(NumEq);
-NEW_PROP_TAG(SparseMatrixAdapter);
-NEW_PROP_TAG(GlobalEqVector);
-NEW_PROP_TAG(VertexMapper);
-NEW_PROP_TAG(GridView);
 
-NEW_PROP_TAG(BorderListCreator);
-NEW_PROP_TAG(Overlap);
-NEW_PROP_TAG(OverlappingVector);
-NEW_PROP_TAG(OverlappingMatrix);
-NEW_PROP_TAG(OverlappingScalarProduct);
-NEW_PROP_TAG(OverlappingLinearOperator);
 
 //! The type of the linear solver to be used
-NEW_PROP_TAG(LinearSolverBackend);
 
 //! the preconditioner used by the linear solver
-NEW_PROP_TAG(PreconditionerWrapper);
 
 
 //! The floating point type used internally by the linear solver
-NEW_PROP_TAG(LinearSolverScalar);
 
 /*!
  * \brief The size of the algebraic overlap of the linear solver.
@@ -86,17 +70,14 @@ NEW_PROP_TAG(LinearSolverScalar);
  * of a grid, but it is only existant for the linear system of
  * equations.
  */
-NEW_PROP_TAG(LinearSolverOverlapSize);
 
 /*!
  * \brief Maximum accepted error of the solution of the linear solver.
  */
-NEW_PROP_TAG(LinearSolverTolerance);
 
 /*!
  * \brief Maximum accepted error of the norm of the residual.
  */
-NEW_PROP_TAG(LinearSolverAbsTolerance);
 
 /*!
  * \brief Specifies the verbosity of the linear solver
@@ -105,16 +86,12 @@ NEW_PROP_TAG(LinearSolverAbsTolerance);
  * property to 1 prints aggregated convergence rates, 2 prints the
  * convergence rate of every iteration of the scheme.
  */
-NEW_PROP_TAG(LinearSolverVerbosity);
 
 //! Maximum number of iterations eyecuted by the linear solver
-NEW_PROP_TAG(LinearSolverMaxIterations);
 
 //! The order of the sequential preconditioner
-NEW_PROP_TAG(PreconditionerOrder);
 
 //! The relaxation factor of the preconditioner
-NEW_PROP_TAG(PreconditionerRelaxation);
 
 //! Set the type of a global jacobian matrix for linear solvers that are based on
 //! dune-istl.
