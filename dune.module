@@ -10,5 +10,5 @@ Label: 2020.04-pre
 Maintainer: opm@opm-project.org
 MaintainerName: The Open Porous Media Project
 Url: http://opm-project.org
-Depends: dune-common (>= 2.4)
+Depends: dune-common (>= 2.6)
 Suggests: opm-common
