@@ -695,7 +695,11 @@ public:
                                                 criterion_, true);
 
             using CommunicationArgs = typename Dune::Amg::ConstructionTraits<Communication>::Arguments;
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+            CommunicationArgs commArgs(communication_->communicator(), communication_->category());
+#else
             CommunicationArgs commArgs(communication_->communicator(), communication_->getSolverCategory());
+#endif
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
             coarseLevelCommunication_ = Dune::Amg::ConstructionTraits<Communication>::construct(commArgs);
 #else
