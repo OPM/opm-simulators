@@ -212,10 +212,10 @@ protected:
 
         int pvttableIdx = aquct_data_.pvttableID - 1;
         Base::rhow_.resize(Base::cell_idx_.size(), 0.);
-        if (!aquct_data_.p0) {
+        if (!aquct_data_.p0.first) {
             Base::pa0_ = calculateReservoirEquilibrium();
         } else {
-            Base::pa0_ = *(aquct_data_.p0);
+            Base::pa0_ = aquct_data_.p0.second;
         }
 
         // use the thermodynamic state of the first active cell as a

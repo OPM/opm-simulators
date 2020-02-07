@@ -155,10 +155,10 @@ BlackoilAquiferModel<TypeTag>::init()
         const auto& eclState = this->simulator_.vanguard().eclState();
 
         // Get all the carter tracy aquifer properties data and put it in aquifers vector
-        const AquiferCT aquiferct = AquiferCT(eclState, deck);
+        const AquiferCT aquiferct = AquiferCT(eclState.getTableManager(), deck);
         const Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
 
-        std::vector<AquiferCT::AQUCT_data> aquifersData = aquiferct.getAquifers();
+        std::vector<AquiferCT::AQUCT_data> aquifersData = aquiferct.data();
         std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
 
         assert(aquifersData.size() == aquifer_connection.size());
@@ -170,7 +170,7 @@ BlackoilAquiferModel<TypeTag>::init()
 
         for (size_t i = 0; i < aquifersData.size(); ++i) {
             aquifers_CarterTracy.push_back(AquiferCarterTracy<TypeTag>(
-                aquifer_connection.at(i), cartesian_to_compressed_, this->simulator_, aquifersData.at(i)));
+                aquifer_connection[i], cartesian_to_compressed_, this->simulator_, aquifersData[i]));
         }
     }
     if (comm.rank() == 0)
@@ -188,7 +188,7 @@ BlackoilAquiferModel<TypeTag>::init()
         const Aquifetp aquifetp = Aquifetp(deck);
         const Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
 
-        std::vector<Aquifetp::AQUFETP_data> aquifersData = aquifetp.getAquifers();
+        std::vector<Aquifetp::AQUFETP_data> aquifersData = aquifetp.data();
         std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
 
         assert(aquifersData.size() == aquifer_connection.size());
@@ -200,7 +200,7 @@ BlackoilAquiferModel<TypeTag>::init()
 
         for (size_t i = 0; i < aquifersData.size(); ++i) {
             aquifers_Fetkovich.push_back(AquiferFetkovich<TypeTag>(
-                aquifer_connection.at(i), cartesian_to_compressed_, this->simulator_, aquifersData.at(i)));
+                aquifer_connection[i], cartesian_to_compressed_, this->simulator_, aquifersData[i]));
         }
     }
 }
