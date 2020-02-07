@@ -90,6 +90,111 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 // Implementation for ISTL-matrix based operator
 //=====================================================================
 
+/*!
+   \brief Adapter to turn a matrix into a linear operator.
+
+   Adapts a matrix to the assembled linear operator interface
+ */
+template<class M, class X, class Y, class WellModel, bool overlapping >
+class RestrictedAdditiveSschwartzWellModelMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
+{
+  typedef Dune::AssembledLinearOperator<M,X,Y> BaseType;
+
+public:
+    typedef M matrix_type;
+    typedef X domain_type;
+    typedef Y range_type;
+    typedef typename X::field_type field_type;
+
+#if HAVE_MPI
+    typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
+#else
+    typedef Dune::CollectiveCommunication< int > communication_type;
+#endif
+
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+    Dune::SolverCategory::Category category() const override
+    {
+        return overlapping ?
+            Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
+    }
+#else
+    enum {
+        //! \brief The solver category.
+        category = overlapping ?
+        Dune::SolverCategory::overlapping :
+        Dune::SolverCategory::sequential
+    };
+#endif
+
+    //! constructor: just store a reference to a matrix
+    RestrictedAdditiveSschwartzWellModelMatrixAdapter (const M& A,
+                                                       const M& A_for_precond,
+                                                       const WellModel& wellMod,
+                                                       const std::vector<int> ghostRows,
+                                                       const boost::any& parallelInformation OPM_UNUSED_NOMPI = boost::any() )
+        : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), ghostRows_(ghostRows), comm_()
+    {
+#if HAVE_MPI
+        if( parallelInformation.type() == typeid(ParallelISTLInformation) )
+        {
+            const ParallelISTLInformation& info =
+                boost::any_cast<const ParallelISTLInformation&>( parallelInformation);
+            comm_.reset( new communication_type( info.communicator() ) );
+        }
+#endif
+    }
+    RestrictedAdditiveSschwartzWellModelMatrixAdapter (const M& A,
+                                                       const M& A_for_precond,
+                                                       const WellModel& wellMod,
+                                                       const std::vector<int> ghostRows,
+                                                       std::shared_ptr<communication_type> comm )
+        : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), ghostRows_(ghostRows), comm_(comm)
+    {
+    }
+
+    virtual void apply( const X& x, Y& y ) const override
+    {
+        A_.mv( x, y );
+
+        // add well model modification to y
+        wellMod_.apply(x, y );
+
+        ghostRowsProject(y);
+    }
+
+    // y += \alpha * A * x
+    virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const override
+    {
+        A_.usmv(alpha,x,y);
+
+        // add scaled well model modification to y
+        wellMod_.applyScaleAdd( alpha, x, y );
+
+        ghostRowsProject(y);
+    }
+
+    virtual const matrix_type& getmat() const override { return A_for_precond_; }
+
+    std::shared_ptr<communication_type> comm()
+    {
+        return comm_;
+    }
+
+protected:
+    
+    void ghostRowsProject(Y& y) const
+    {
+        for (auto row = ghostRows_.begin(); row != ghostRows_.end(); ++row) {
+            y[*row] = 0.0;
+        }
+    }
+    const matrix_type& A_ ;
+    const matrix_type& A_for_precond_ ;
+    const WellModel& wellMod_;
+    const std::vector<int> ghostRows_;
+    std::shared_ptr< communication_type > comm_;
+};
 
 /*!
    \brief Adapter to turn a matrix into a linear operator.
@@ -256,10 +361,21 @@ protected:
             const auto& gridForConn = simulator_.vanguard().grid();
             const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
             const bool useWellConn = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-
+            overlapLayers_ = EWOMS_GET_PARAM(TypeTag, int, OverlapLayers);
+            
             detail::setWellConnections(gridForConn, wellsForConn, useWellConn, wellConnectionsGraph_);
             detail::findOverlapAndInterior(gridForConn, overlapRows_, interiorRows_);
             if (gridForConn.comm().size() > 1) {
+                notGhost_.resize(gridForConn.numCells(), false);
+                if (overlapLayers_ > 1) {
+                    
+                    overlapRows_.clear();
+                    interiorRows_.clear();
+                    auto partType = simulator_.vanguard().partitionLevelType();
+                    //detail::findGhostOverlapSeperation(gridForConn, overlapRows_, interiorRows_, notGhost_);
+                    detail::findGhostOverlapSeperation(gridForConn, overlapRows_, interiorRows_, notGhost_,
+                                                       partType, overlapLayers_);
+                }
                 noGhostAdjacency();
                 setGhostsInNoGhost(*noGhostMat_);
             }
@@ -342,19 +458,33 @@ protected:
 
             if( isParallel() )
             {
-                typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
+                if (overlapLayers_ < 2) {
+                    typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
 
-                copyJacToNoGhost(*matrix_, *noGhostMat_);
-                Operator opA(*noGhostMat_, *noGhostMat_, wellModel,
-                             parallelInformation_ );
-                assert( opA.comm() );
-                solve( opA, x, *rhs_, *(opA.comm()) );
+                    copyJacToNoGhost(*matrix_, *noGhostMat_);
+                    Operator opA(*noGhostMat_, *noGhostMat_, wellModel,
+                                 parallelInformation_ );
+                    assert( opA.comm() );
+                    solve( opA, x, *rhs_, *(opA.comm()) );
+                }
+                else {
+                    typedef RestrictedAdditiveSschwartzWellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
+
+                    copyJacToNoGhost(*matrix_, *noGhostMat_);
+                    Operator opA(*noGhostMat_, *noGhostMat_, wellModel, overlapRows_,
+                                 parallelInformation_ );
+                    assert( opA.comm() );
+                    solve( opA, x, *rhs_, *(opA.comm()) );
+                }
             }
             else
             {
+                
                 typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false > Operator;
+                    
                 Operator opA(*matrix_, *matrix_, wellModel);
                 solve( opA, x, *rhs_ );
+                
             }
 
             if (parameters_.scale_linear_system_) {
@@ -688,7 +818,7 @@ protected:
                     pattern[idx].insert(*wc);
 
                 // Add just a single element to ghost rows
-                if (elem.partitionType() != Dune::InteriorEntity)
+                if (elem.partitionType() != Dune::InteriorEntity && !notGhost_[idx])
                 {
                     noGhostMat_->setrowsize(idx, pattern[idx].size());
                 }
@@ -948,7 +1078,9 @@ protected:
 
         std::vector<int> overlapRows_;
         std::vector<int> interiorRows_;
+        std::vector<bool> notGhost_;
         std::vector<std::set<int>> wellConnectionsGraph_;
+        int overlapLayers_;
         FlowLinearSolverParameters parameters_;
         Vector weights_;
         bool scale_variables_;

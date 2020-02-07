@@ -115,7 +115,10 @@ struct SmootherTraits<Opm::ParallelRestrictedOverlappingSchwarz<Range,
 
 } // end namespace Dune
 
+
 namespace Opm{
+
+
 
 /// \brief Block parallel preconditioner.
 ///

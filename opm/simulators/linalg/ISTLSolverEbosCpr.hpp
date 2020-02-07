@@ -286,6 +286,28 @@ namespace Opm
 
     protected:
 
+	/// Zero out off-diagonal blocks on rows corresponding to overlap cells
+	/// Diagonal blocks on ovelap rows are set to diag(1.0).
+	void makeOverlapRowsInvalid(Matrix& matrix) const
+	{
+	    //value to set on diagonal
+	    const int numEq = Matrix::block_type::rows;
+	    typename Matrix::block_type diag_block(0.0);
+	    for (int eq = 0; eq < numEq; ++eq)
+		diag_block[eq][eq] = 1.0;
+	    
+	    //loop over precalculated overlap rows and columns
+	    for (auto row = this->overlapRows_.begin(); row != this->overlapRows_.end(); row++ )
+	    {
+		int lcell = *row;
+		// Zero out row.
+		matrix[lcell] = 0.0;
+
+		//diagonal block set to diag(1.0).
+		matrix[lcell][lcell] = diag_block;
+	    }
+	}
+
       ///! \brief The dune-istl operator (either serial or parallel
       std::unique_ptr< Dune::LinearOperator<Vector, Vector> > opA_;
       ///! \brief Serial well matrix adapter

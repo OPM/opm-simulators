@@ -234,21 +234,23 @@ opm_add_test(flow_blackoil_dunecpr
   DEPENDS "opmsimulators"
   LIBRARIES "opmsimulators")
 
-opm_add_test(flow_onephase
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES flow/flow_onephase.cpp
-  EXE_NAME flow_onephase
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators")
+if (FALSE)
+  opm_add_test(flow_onephase
+    ONLY_COMPILE
+    DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
+    SOURCES flow/flow_onephase.cpp
+    EXE_NAME flow_onephase
+    DEPENDS "opmsimulators"
+    LIBRARIES "opmsimulators")
 
-opm_add_test(flow_onephase_energy
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES flow/flow_onephase_energy.cpp
-  EXE_NAME flow_onephase_energy
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators")
+  opm_add_test(flow_onephase_energy
+    ONLY_COMPILE
+    DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
+    SOURCES flow/flow_onephase_energy.cpp
+    EXE_NAME flow_onephase_energy
+    DEPENDS "opmsimulators"
+    LIBRARIES "opmsimulators")
+endif()
 
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)
@@ -258,6 +260,12 @@ if (BUILD_FLOW)
     COMMAND flow --version)
   set_tests_properties(flow__version PROPERTIES
     PASS_REGULAR_EXPRESSION "${${project}_LABEL}")
+endif()
+
+if (BUILD_FLOW_VARIANTS)
+  install(TARGETS flow_blackoil_dunecpr DESTINATION bin)
+  opm_add_bash_completion(flow_blackoil_dunecpr)
+  
 endif()
 
 if (NOT BUILD_EBOS)

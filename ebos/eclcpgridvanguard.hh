@@ -131,6 +131,16 @@ public:
         equilCartesianIndexMapper_.reset();
     }
 
+    std::vector<int> cellPartition() const
+    {
+        return cell_part_;
+    }
+
+    std::vector<int> partitionLevelType() const
+    {
+        return part_type_;
+    }
+
     /*!
      * \brief Distribute the simulation grid over multiple processes
      *
@@ -138,6 +148,7 @@ public:
      */
     void loadBalance()
     {
+        int overlapLayers = this->overlapLayers();
 #if HAVE_MPI
         int mpiSize = 1;
         MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
@@ -187,7 +198,7 @@ public:
             //distribute the grid and switch to the distributed view.
             {
                 const auto wells = this->schedule().getWellsatEnd();
-                defunctWellNames_ = std::get<1>(grid_->loadBalance(edgeWeightsMethod, &wells, faceTrans.data()));
+                defunctWellNames_ = std::get<1>(grid_->loadBalance(edgeWeightsMethod, &wells, faceTrans.data(), overlapLayers));
             }
             grid_->switchToDistributedView();
 
@@ -201,13 +212,20 @@ public:
                 ActiveGridCells activeCells(grid().logicalCartesianSize(),
                                             grid().globalCell().data(), grid().size(0));
                 this->schedule().filterConnections(activeCells);
-            }
+            }      
         }
 #endif
-
         cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
 
         this->updateGridView_();
+#if HAVE_MPI
+        if (mpiSize > 1) {
+            part_type_.resize(grid_->numCells(), 0);
+            if (overlapLayers > 1) {
+                grid_->sepOverlapAndGhostCells(part_type_, overlapLayers);
+            }
+        }
+#endif
     }
 
     /*!
@@ -305,6 +323,8 @@ protected:
     std::unique_ptr<EclTransmissibility<TypeTag> > globalTrans_;
     std::unordered_set<std::string> defunctWellNames_;
     int mpiRank;
+    std::vector<int> cell_part_;
+    std::vector<int> part_type_;
 };
 
 } // namespace Opm
