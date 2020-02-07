@@ -76,14 +76,14 @@ public:
     /*!
      * \brief Initialize the oil parameters via the data specified by the PVTO ECL keyword.
      */
-    void initFromDeck(const Deck& deck, const EclipseState& eclState)
+    void initFromDeck(const Deck&, const EclipseState& eclState)
     {
-        const auto& pvcdoKeyword = deck.getKeyword("PVCDO");
+        const auto& pvcdoTable = eclState.getTableManager().getPvcdoTable();
         const auto& densityTable = eclState.getTableManager().getDensityTable();
 
-        assert(pvcdoKeyword.size() == densityTable.size());
+        assert(pvcdoTable.size() == densityTable.size());
 
-        size_t numRegions = pvcdoKeyword.size();
+        size_t numRegions = pvcdoTable.size();
         setNumRegions(numRegions);
 
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
@@ -93,17 +93,11 @@ public:
 
             setReferenceDensities(regionIdx, rhoRefO, rhoRefG, rhoRefW);
 
-            auto pvcdoRecord = pvcdoKeyword.getRecord(regionIdx);
-            oilReferencePressure_[regionIdx] =
-                pvcdoRecord.getItem("P_REF").getSIDouble(0);
-            oilReferenceFormationVolumeFactor_[regionIdx] =
-                pvcdoRecord.getItem("OIL_VOL_FACTOR").getSIDouble(0);
-            oilCompressibility_[regionIdx] =
-                pvcdoRecord.getItem("OIL_COMPRESSIBILITY").getSIDouble(0);
-            oilViscosity_[regionIdx] =
-                pvcdoRecord.getItem("OIL_VISCOSITY").getSIDouble(0);
-            oilViscosibility_[regionIdx] =
-                pvcdoRecord.getItem("OIL_VISCOSIBILITY").getSIDouble(0);
+            oilReferencePressure_[regionIdx] = pvcdoTable[regionIdx].reference_pressure;
+            oilReferenceFormationVolumeFactor_[regionIdx] = pvcdoTable[regionIdx].volume_factor;
+            oilCompressibility_[regionIdx] = pvcdoTable[regionIdx].compressibility;
+            oilViscosity_[regionIdx] = pvcdoTable[regionIdx].viscosity;
+            oilViscosibility_[regionIdx] = pvcdoTable[regionIdx].viscosibility;
         }
 
         initEnd();
