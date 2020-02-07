@@ -352,16 +352,16 @@ int main(int argc, char** argv)
                 setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
                 summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
 #ifdef HAVE_MPI
-                Opm::Mpi::packAndSend(*summaryConfig, mpiHelper.getCollectiveCommunication());
-                Opm::Mpi::packAndSend(*schedule, mpiHelper.getCollectiveCommunication());
+                Opm::Mpi::packAndSend(*summaryConfig, Dune::MPIHelper::getCollectiveCommunication());
+                Opm::Mpi::packAndSend(*schedule, Dune::MPIHelper::getCollectiveCommunication());
 #endif
             }
 #ifdef HAVE_MPI
             else {
                 summaryConfig.reset(new Opm::SummaryConfig);
                 schedule.reset(new Opm::Schedule);
-                Opm::Mpi::receiveAndUnpack(*summaryConfig, mpiHelper.getCollectiveCommunication());
-                Opm::Mpi::receiveAndUnpack(*schedule, mpiHelper.getCollectiveCommunication());
+                Opm::Mpi::receiveAndUnpack(*summaryConfig, Dune::MPIHelper::getCollectiveCommunication());
+                Opm::Mpi::receiveAndUnpack(*schedule, Dune::MPIHelper::getCollectiveCommunication());
             }
 #endif
 
