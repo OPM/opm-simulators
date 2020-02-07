@@ -1056,6 +1056,12 @@ public:
             eclWriter_->writeOutput(isSubStep);
     }
 
+    void finalizeOutput() {
+        // this will write all pending output to disk
+        // to avoid corruption of output files
+        eclWriter_.reset();
+    }
+
 
     void applyActions(int reportStep,
                       double sim_time,

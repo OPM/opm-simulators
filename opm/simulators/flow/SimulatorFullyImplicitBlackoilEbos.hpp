@@ -277,6 +277,15 @@ public:
 
         }
 
+        // make sure all output is written to disk before run is finished
+        {
+            Dune::Timer finalOutputTimer;
+            finalOutputTimer.start();
+
+            ebosSimulator_.problem().finalizeOutput();
+            report.output_write_time += finalOutputTimer.stop();
+        }
+
         // Stop timer and create timing report
         totalTimer.stop();
         report.total_time = totalTimer.secsSinceStart();
