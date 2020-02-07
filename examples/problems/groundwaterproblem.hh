@@ -55,14 +55,6 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(GroundWaterBaseProblem);
 
-NEW_PROP_TAG(LensLowerLeftX);
-NEW_PROP_TAG(LensLowerLeftY);
-NEW_PROP_TAG(LensLowerLeftZ);
-NEW_PROP_TAG(LensUpperRightX);
-NEW_PROP_TAG(LensUpperRightY);
-NEW_PROP_TAG(LensUpperRightZ);
-NEW_PROP_TAG(Permeability);
-NEW_PROP_TAG(PermeabilityLens);
 
 SET_PROP(GroundWaterBaseProblem, Fluid)
 {

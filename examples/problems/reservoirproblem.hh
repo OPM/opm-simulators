@@ -62,11 +62,8 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(ReservoirBaseProblem);
 
 // Maximum depth of the reservoir
-NEW_PROP_TAG(MaxDepth);
 // The temperature inside the reservoir
-NEW_PROP_TAG(Temperature);
 // The width of producer/injector wells as a fraction of the width of the spatial domain
-NEW_PROP_TAG(WellWidth);
 
 // Set the grid type
 SET_TYPE_PROP(ReservoirBaseProblem, Grid, Dune::YaspGrid<2>);

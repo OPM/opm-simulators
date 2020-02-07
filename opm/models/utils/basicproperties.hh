@@ -30,9 +30,23 @@
 
 #include <dune/common/parametertree.hh>
 
+// explicitly guard the include so that the property system
+// header doesn't need to be opened and checked all the time
+#ifndef OPM_PROPERTY_SYSTEM_HH
 #include <opm/models/utils/propertysystem.hh>
+
+// remove this after release 3.1 to disable macros per default
+#ifndef OPM_ENABLE_OLD_PROPERTY_MACROS
+#define OPM_ENABLE_OLD_PROPERTY_MACROS 1
+#endif
+
+// remove this after release 3.2 to remove macros completely
+#if OPM_ENABLE_OLD_PROPERTY_MACROS
+#include <opm/models/utils/propertysystemmacros.hh>
+#endif // OPM_ENABLE_OLD_PROPERTY_MACROS
+#endif // OPM_PROPERTY_SYSTEM_HH
+
 #include <opm/models/utils/parametersystem.hh>
-#include <opm/models/io/dgfvanguard.hh>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
@@ -50,6 +64,7 @@ BEGIN_PROPERTIES
 // +-> ImplicitModel
 ///////////////////////////////////
 
+NEW_TYPE_TAG(ParameterSystem);
 //! Type tag for all models.
 NEW_TYPE_TAG(NumericModel, INHERITS_FROM(ParameterSystem));
 
@@ -76,9 +91,237 @@ NEW_PROP_TAG(Vanguard);
 
 NEW_PROP_TAG(GridView);
 
+NEW_PROP_TAG(Simulator);
+NEW_PROP_TAG(Grid);
+NEW_PROP_TAG(GridFile);
+NEW_PROP_TAG(Model);
+NEW_PROP_TAG(Problem);
+NEW_PROP_TAG(ThreadManager);
+NEW_PROP_TAG(NewtonMethod);
+NEW_PROP_TAG(SolutionVector);
+NEW_PROP_TAG(GlobalEqVector);
+NEW_PROP_TAG(VtkOutputFormat);
+
+//! Specifies the type of a solution for a single degee of freedom
+NEW_PROP_TAG(PrimaryVariables);
+
+//! Specifies whether the problem to be simulated exhibits contraint degrees of freedom
+NEW_PROP_TAG(EnableConstraints);
+
+//! Specifies the type of objects which specify constraints for a single degee of freedom
+NEW_PROP_TAG(Constraints);
+
+//! Vector containing a quantity of for equation for a single degee of freedom
+NEW_PROP_TAG(EqVector);
+
+//! The class which linearizes the non-linear system of equations
+NEW_PROP_TAG(Linearizer);
+
+//! Specifies the type of a global Jacobian matrix
+NEW_PROP_TAG(SparseMatrixAdapter);
+
+//! Specifies the type of the linear solver to be used
+NEW_PROP_TAG(LinearSolverBackend);
+
+//! Specifies whether the Newton method should print messages or not
+NEW_PROP_TAG(NewtonVerbose);
+
+//! Specifies the type of the class which writes out the Newton convergence
+NEW_PROP_TAG(NewtonConvergenceWriter);
+
+//! Specifies whether the convergence rate and the global residual
+//! gets written out to disk for every Newton iteration
+NEW_PROP_TAG(NewtonWriteConvergence);
+
+//! Specifies whether the convergence rate and the global residual
+//! gets written out to disk for every Newton iteration
+NEW_PROP_TAG(ConvergenceWriter);
+
+/*!
+ * \brief The value for the error below which convergence is declared
+ *
+ * This value can (and for the porous media models will) be changed to account for grid
+ * scaling and other effects.
+ */
+NEW_PROP_TAG(NewtonTolerance);
+
+//! The maximum error which may occur in a simulation before the
+//! Newton method for the time step is aborted
+NEW_PROP_TAG(NewtonMaxError);
+
+/*!
+ * \brief The number of iterations at which the Newton method
+ *        should aim at.
+ *
+ * This is used to control the time-step size. The heuristic used
+ * is to scale the last time-step size by the deviation of the
+ * number of iterations used from the target steps.
+ */
+NEW_PROP_TAG(NewtonTargetIterations);
+
+//! Number of maximum iterations for the Newton method.
+NEW_PROP_TAG(NewtonMaxIterations);
+
+
+
 #if HAVE_DUNE_FEM
 NEW_PROP_TAG(GridPart);
 #endif
+
+NEW_PROP_TAG(LocalLinearizer);
+NEW_PROP_TAG(Evaluation);
+NEW_PROP_TAG(NumericDifferenceMethod);
+NEW_PROP_TAG(BaseEpsilon);
+NEW_PROP_TAG(LocalResidual);
+NEW_PROP_TAG(ElementContext);
+
+NEW_PROP_TAG(NumPhases);
+NEW_PROP_TAG(NumComponents);
+NEW_PROP_TAG(NumEq);
+NEW_PROP_TAG(FluidSystem);
+NEW_PROP_TAG(DiscBaseOutputModule);
+
+// create new type tag for the VTK primary variables output
+NEW_PROP_TAG(EnableVtkOutput);
+
+// create the property tags needed for the primary variables module
+NEW_PROP_TAG(VtkWritePrimaryVars);
+NEW_PROP_TAG(VtkWriteProcessRank);
+NEW_PROP_TAG(VtkWriteDofIndex);
+NEW_PROP_TAG(VtkWriteExtrusionFactor);
+NEW_PROP_TAG(VtkWritePressures);
+NEW_PROP_TAG(VtkWriteDensities);
+NEW_PROP_TAG(VtkWriteSaturations);
+NEW_PROP_TAG(VtkWriteMobilities);
+NEW_PROP_TAG(VtkWriteRelativePermeabilities);
+NEW_PROP_TAG(VtkWriteViscosities);
+NEW_PROP_TAG(VtkWriteAverageMolarMasses);
+NEW_PROP_TAG(VtkWritePorosity);
+NEW_PROP_TAG(VtkWriteIntrinsicPermeabilities);
+NEW_PROP_TAG(VtkWritePotentialGradients);
+NEW_PROP_TAG(VtkWriteFilterVelocities);
+NEW_PROP_TAG(VtkWriteTemperature);
+NEW_PROP_TAG(VtkWriteSolidInternalEnergy);
+NEW_PROP_TAG(VtkWriteThermalConductivity);
+NEW_PROP_TAG(VtkWriteInternalEnergies);
+NEW_PROP_TAG(VtkWriteEnthalpies);
+NEW_PROP_TAG(IntensiveQuantities);
+
+NEW_PROP_TAG(BoundaryContext);
+NEW_PROP_TAG(BoundaryRateVector);
+NEW_PROP_TAG(CellsX);
+NEW_PROP_TAG(CellsY);
+NEW_PROP_TAG(CellsZ);
+NEW_PROP_TAG(ContinueOnConvergenceError);
+NEW_PROP_TAG(DiscExtensiveQuantities);
+NEW_PROP_TAG(DiscIntensiveQuantities);
+NEW_PROP_TAG(DiscLocalResidual);
+NEW_PROP_TAG(Discretization);
+NEW_PROP_TAG(DofMapper);
+NEW_PROP_TAG(DomainSizeX);
+NEW_PROP_TAG(DomainSizeY);
+NEW_PROP_TAG(DomainSizeZ);
+NEW_PROP_TAG(ElementMapper);
+NEW_PROP_TAG(EnableAsyncVtkOutput);
+NEW_PROP_TAG(EnableEnergy);
+NEW_PROP_TAG(EnableGravity);
+NEW_PROP_TAG(EnableGridAdaptation);
+NEW_PROP_TAG(EnableStorageCache);
+NEW_PROP_TAG(ExtensiveQuantities);
+NEW_PROP_TAG(ExtensiveStorageTerm);
+NEW_PROP_TAG(Fluid);
+NEW_PROP_TAG(FluxModule);
+NEW_PROP_TAG(GradientCalculator);
+NEW_PROP_TAG(GridCommHandleFactory);
+NEW_PROP_TAG(Indices);
+NEW_PROP_TAG(LinearizeNonLocalElements);
+NEW_PROP_TAG(MaterialLaw);
+NEW_PROP_TAG(MaterialLawParams);
+NEW_PROP_TAG(MaxTimeStepDivisions);
+NEW_PROP_TAG(MaxTimeStepSize);
+NEW_PROP_TAG(MinTimeStepSize);
+NEW_PROP_TAG(OutputDir);
+NEW_PROP_TAG(RateVector);
+NEW_PROP_TAG(SolidEnergyLaw);
+NEW_PROP_TAG(Stencil);
+NEW_PROP_TAG(ThermalConductionLaw);
+NEW_PROP_TAG(ThreadsPerProcess);
+NEW_PROP_TAG(TimeDiscHistorySize);
+NEW_PROP_TAG(UseLinearizationLock);
+NEW_PROP_TAG(UseP1FiniteElementGradients);
+NEW_PROP_TAG(UseVolumetricResidual);
+NEW_PROP_TAG(VertexMapper);
+NEW_PROP_TAG(SolidEnergyLawParams);
+NEW_PROP_TAG(ThermalConductionLawParams);
+
+NEW_PROP_TAG(BaseProblem);
+NEW_PROP_TAG(ConstraintsContext);
+NEW_PROP_TAG(ElementEqVector);
+NEW_PROP_TAG(EnableExperiments);
+NEW_PROP_TAG(EnableIntensiveQuantityCache);
+NEW_PROP_TAG(EnableThermodynamicHints);
+NEW_PROP_TAG(NonwettingPhase);
+NEW_PROP_TAG(SpatialDiscretizationSplice);
+NEW_PROP_TAG(WettingPhase);
+
+NEW_PROP_TAG(OverlappingMatrix);
+NEW_PROP_TAG(OverlappingVector);
+NEW_PROP_TAG(PreconditionerOrder);
+NEW_PROP_TAG(PreconditionerRelaxation);
+
+NEW_PROP_TAG(AmgCoarsenTarget);
+
+NEW_PROP_TAG(BorderListCreator);
+NEW_PROP_TAG(Overlap);
+NEW_PROP_TAG(OverlappingScalarProduct);
+NEW_PROP_TAG(OverlappingLinearOperator);
+
+
+//! the preconditioner used by the linear solver
+NEW_PROP_TAG(PreconditionerWrapper);
+
+
+//! The floating point type used internally by the linear solver
+NEW_PROP_TAG(LinearSolverScalar);
+
+/*!
+ * \brief The size of the algebraic overlap of the linear solver.
+ *
+ * Algebraic overlaps can be thought as being the same as the overlap
+ * of a grid, but it is only existant for the linear system of
+ * equations.
+ */
+NEW_PROP_TAG(LinearSolverOverlapSize);
+
+/*!
+ * \brief Maximum accepted error of the solution of the linear solver.
+ */
+NEW_PROP_TAG(LinearSolverTolerance);
+
+/*!
+ * \brief Maximum accepted error of the norm of the residual.
+ */
+NEW_PROP_TAG(LinearSolverAbsTolerance);
+
+/*!
+ * \brief Specifies the verbosity of the linear solver
+ *
+ * By default it is 0, i.e. it doesn't print anything. Setting this
+ * property to 1 prints aggregated convergence rates, 2 prints the
+ * convergence rate of every iteration of the scheme.
+ */
+NEW_PROP_TAG(LinearSolverVerbosity);
+
+//! Maximum number of iterations eyecuted by the linear solver
+NEW_PROP_TAG(LinearSolverMaxIterations);
+
+NEW_PROP_TAG(LinearSolverMaxError);
+
+NEW_PROP_TAG(LinearSolverSplice);
+NEW_PROP_TAG(LocalLinearizerSplice);
+
+//! The discretization specific part of he implementing the Newton algorithm
+NEW_PROP_TAG(DiscNewtonMethod);
 
 //! Property which tells the Vanguard how often the grid should be refined
 //! after creation.
@@ -116,6 +359,8 @@ NEW_PROP_TAG(RestartTime);
 //! The name of the file with a number of forced time step lengths
 NEW_PROP_TAG(PredeterminedTimeStepsFile);
 
+NEW_PROP_TAG(ParameterMetaData);
+
 ///////////////////////////////////
 // Values for the properties
 ///////////////////////////////////
@@ -138,8 +383,6 @@ SET_PROP(NumericModel, ParameterTree)
 //! use the global group as default for the model's parameter group
 SET_STRING_PROP(NumericModel, ModelParameterGroup, "");
 
-//! Use the DgfVanguard by default
-SET_TYPE_PROP(NumericModel, Vanguard, Opm::DgfVanguard<TypeTag>);
 
 //! Set a value for the GridFile property
 SET_STRING_PROP(NumericModel, GridFile, "");

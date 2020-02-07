@@ -40,7 +40,6 @@
 
 BEGIN_PROPERTIES
 
-NEW_PROP_TAG(ThreadsPerProcess);
 
 END_PROPERTIES
 
@@ -126,6 +125,10 @@ public:
 private:
     static int numThreads_;
 };
+
+namespace Properties {
+    SET_TYPE_PROP(NumericModel, ThreadManager, Opm::ThreadManager<TypeTag>);
+}
 
 template <class TypeTag>
 int ThreadManager<TypeTag>::numThreads_ = 1;

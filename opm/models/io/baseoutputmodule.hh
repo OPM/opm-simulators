@@ -47,18 +47,7 @@
 BEGIN_PROPERTIES
 
 // forward definition of property tags
-NEW_PROP_TAG(NumPhases);
-NEW_PROP_TAG(NumComponents);
-NEW_PROP_TAG(NumEq);
 
-NEW_PROP_TAG(Model);
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Evaluation);
-NEW_PROP_TAG(GridView);
-NEW_PROP_TAG(ElementContext);
-NEW_PROP_TAG(FluidSystem);
-NEW_PROP_TAG(DiscBaseOutputModule);
 
 END_PROPERTIES
 

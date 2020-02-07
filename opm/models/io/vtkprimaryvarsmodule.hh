@@ -36,15 +36,9 @@
 BEGIN_PROPERTIES
 
 // create new type tag for the VTK primary variables output
-NEW_PROP_TAG(EnableVtkOutput);
 NEW_TYPE_TAG(VtkPrimaryVars);
 
 // create the property tags needed for the primary variables module
-NEW_PROP_TAG(VtkWritePrimaryVars);
-NEW_PROP_TAG(VtkWriteProcessRank);
-NEW_PROP_TAG(VtkWriteDofIndex);
-NEW_PROP_TAG(VtkOutputFormat);
-NEW_PROP_TAG(EnableVtkOutput);
 
 SET_BOOL_PROP(VtkPrimaryVars, VtkWritePrimaryVars, false);
 SET_BOOL_PROP(VtkPrimaryVars, VtkWriteProcessRank, false);

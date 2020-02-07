@@ -41,12 +41,6 @@
 
 BEGIN_PROPERTIES
 
-NEW_PROP_TAG(Grid);
-NEW_PROP_TAG(GridFile);
-NEW_PROP_TAG(Vanguard);
-NEW_PROP_TAG(GridGlobalRefinements);
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Simulator);
 
 END_PROPERTIES
 
@@ -73,8 +67,13 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, GridFile,
-                             "The file name of the DGF file to load");
+//         #define EWOMS_REGISTER_PARAM(TypeTag, ParamType, ParamName, Description)
+//         ::Opm::Parameters::registerParam<TypeTag, ParamType, PTAG_(ParamName)>( 
+//         #ParamName, #ParamName, Description)
+//         EWOMS_REGISTER_PARAM(TypeTag, std::string, GridFile,
+//                              "The file name of the DGF file to load");
+        ::Opm::Parameters::template registerParam<TypeTag, std::string, Properties::GridFile>
+            ("GridFile", "GridFile", "The file name of the DGF file to load");
         EWOMS_REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements,
                              "The number of global refinements of the grid "
                              "executed after it was loaded");
@@ -197,6 +196,10 @@ private:
     GridPointer    gridPtr_;
     FractureMapper fractureMapper_;
 };
+
+namespace Properties {
+SET_TYPE_PROP(NumericModel, Vanguard, Opm::DgfVanguard<TypeTag>);
+}
 
 } // namespace Opm
 

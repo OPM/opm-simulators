@@ -48,13 +48,9 @@ NEW_TYPE_TAG(FvBaseDiscretization,
 
 
 //! set the splices for the finite volume discretizations
-NEW_PROP_TAG(LinearSolverSplice);
-NEW_PROP_TAG(ParallelBiCGStabLinearSolver);
 
-NEW_PROP_TAG(LocalLinearizerSplice);
-NEW_PROP_TAG(FiniteDifferenceLocalLinearizer);
 
-SET_SPLICES(FvBaseDiscretization, LinearSolverSplice, LocalLinearizerSplice);
+//SET_SPLICES(FvBaseDiscretization, LinearSolverSplice, LocalLinearizerSplice);
 
 //! use a parallel BiCGStab linear solver by default
 SET_TAG_PROP(FvBaseDiscretization, LinearSolverSplice, ParallelBiCGStabLinearSolver);
@@ -70,108 +66,69 @@ SET_TAG_PROP(FvBaseDiscretization, LocalLinearizerSplice, FiniteDifferenceLocalL
  * "Scalar" property (if the finite difference linearizer is used), or it may be more
  * complex (for the linearizer which uses automatic differentiation).
  */
-NEW_PROP_TAG(Evaluation);
 
 //! The type of the DUNE grid
-NEW_PROP_TAG(Grid);
 //! The type of the grid view
-NEW_PROP_TAG(GridView);
 
 //! The class describing the stencil of the spatial discretization
-NEW_PROP_TAG(Stencil);
 
 //! The class describing the discrete function space when dune-fem is used, otherwise it points to the stencil class
-NEW_PROP_TAG(DiscreteFunctionSpace);
 
 //! The type of the problem
-NEW_PROP_TAG(Problem);
 //! The type of the base class for all problems which use this model
-NEW_PROP_TAG(BaseProblem);
 //! The type of the model
-NEW_PROP_TAG(Model);
 //! Number of equations in the system of PDEs
-NEW_PROP_TAG(NumEq);
 
 //! The type of the spatial discretization used by the model
-NEW_PROP_TAG(Discretization);
 //! The discretization specific part of the local residual
-NEW_PROP_TAG(DiscLocalResidual);
 //! The type of the local residual function
-NEW_PROP_TAG(LocalResidual);
 //! The type of the local linearizer
-NEW_PROP_TAG(LocalLinearizer);
 //! Specify if elements that do not belong to the local process' grid partition should be
 //! skipped
-NEW_PROP_TAG(LinearizeNonLocalElements);
 
 //! Linearizes the global non-linear system of equations
-NEW_PROP_TAG(BaseLinearizer);
 //! The class that allows to manipulate sparse matrices
-NEW_PROP_TAG(SparseMatrixAdapter);
 
 //! A vector of holding a quantity for each equation (usually at a given spatial location)
-NEW_PROP_TAG(EqVector);
 //! A vector of holding a quantity for each equation for each DOF of an element
-NEW_PROP_TAG(ElementEqVector);
 //! Vector containing a quantity of for equation for each DOF of the whole grid
-NEW_PROP_TAG(GlobalEqVector);
 
 //! Vector containing volumetric or areal rates of quantities
-NEW_PROP_TAG(RateVector);
 //! Type of object for specifying boundary conditions
-NEW_PROP_TAG(BoundaryRateVector);
 //! The class which represents a constraint degree of freedom
-NEW_PROP_TAG(Constraints);
 
 //! Vector containing all primary variables of the grid
-NEW_PROP_TAG(SolutionVector);
 
 //! A vector of primary variables within a sub-control volume
-NEW_PROP_TAG(PrimaryVariables);
 //! The secondary variables within a sub-control volume
-NEW_PROP_TAG(IntensiveQuantities);
 //! The discretization specific part of the intensive quantities
-NEW_PROP_TAG(DiscIntensiveQuantities);
 
 //! The secondary variables of all degrees of freedom in an element's stencil
-NEW_PROP_TAG(ElementContext);
 //! The secondary variables of a boundary segment
-NEW_PROP_TAG(BoundaryContext);
 //! The secondary variables of a constraint degree of freedom
-NEW_PROP_TAG(ConstraintsContext);
 //! Data required to calculate a flux over a face
-NEW_PROP_TAG(ExtensiveQuantities);
 //! Calculates gradients of arbitrary quantities at flux integration points
-NEW_PROP_TAG(GradientCalculator);
 
 //! The part of the intensive quantities which is specific to the spatial discretization
-NEW_PROP_TAG(DiscBaseIntensiveQuantities);
 
 //! The part of the extensive quantities which is specific to the spatial discretization
-NEW_PROP_TAG(DiscExtensiveQuantities);
 
 //! The part of the VTK ouput modules which is specific to the spatial discretization
-NEW_PROP_TAG(DiscBaseOutputModule);
 
 //! The class to create grid communication handles
-NEW_PROP_TAG(GridCommHandleFactory);
 
 /*!
  * \brief The OpenMP threads manager
  */
-NEW_PROP_TAG(ThreadManager);
-NEW_PROP_TAG(ThreadsPerProcess);
 
 //! use locking to prevent race conditions when linearizing the global system of
 //! equations in multi-threaded mode. (setting this property to true is always save, but
 //! it may slightly deter performance in multi-threaded simlations and some
 //! discretizations do not need this.)
-NEW_PROP_TAG(UseLinearizationLock);
 
 // high-level simulation control
 
 //! Manages the simulation time
-NEW_PROP_TAG(Simulator);
 
 /*!
  * \brief Switch to enable or disable grid adaptation
@@ -179,12 +136,10 @@ NEW_PROP_TAG(Simulator);
  * Currently grid adaptation requires the presence of the dune-FEM module. If it is not
  * available and grid adaptation is enabled, an exception is thrown.
  */
-NEW_PROP_TAG(EnableGridAdaptation);
 
 /*!
  * \brief The directory to which simulation output ought to be written to.
  */
-NEW_PROP_TAG(OutputDir);
 
 /*!
  * \brief Global switch to enable or disable the writing of VTK output files
@@ -192,7 +147,6 @@ NEW_PROP_TAG(OutputDir);
  * If writing VTK files is disabled, then the WriteVtk$FOO options do
  * not have any effect...
  */
-NEW_PROP_TAG(EnableVtkOutput);
 
 /*!
  * \brief Determines if the VTK output is written to disk asynchronously
@@ -203,7 +157,6 @@ NEW_PROP_TAG(EnableVtkOutput);
  * not support multi-threaded multi-process VTK output and even if it would, the result
  * would be slower than when using synchronous output.
  */
-NEW_PROP_TAG(EnableAsyncVtkOutput);
 
 /*!
  * \brief Specify the format the VTK output is written to disk
@@ -214,37 +167,31 @@ NEW_PROP_TAG(EnableAsyncVtkOutput);
  *   - Dune::VTK::appendedraw
  *   - Dune::VTK::appendedbase64
  */
-NEW_PROP_TAG(VtkOutputFormat);
 
 //! Specify whether the some degrees of fredom can be constraint
-NEW_PROP_TAG(EnableConstraints);
 
 /*!
  * \brief Specify the maximum size of a time integration [s].
  *
  * The default is to not limit the step size.
  */
-NEW_PROP_TAG(MaxTimeStepSize);
 
 /*!
  * \brief Specify the minimal size of a time integration [s].
  *
  * The default is to not limit the step size.
  */
-NEW_PROP_TAG(MinTimeStepSize);
 
 /*!
  * \brief The maximum allowed number of timestep divisions for the
  *        Newton solver.
  */
-NEW_PROP_TAG(MaxTimeStepDivisions);
 
 /*!
  * \brief Continue with a non-converged solution instead of giving up
  *        if we encounter a time step size smaller than the minimum time
  *        step size.
  */
-NEW_PROP_TAG(ContinueOnConvergenceError);
 
 /*!
  * \brief Specify whether all intensive quantities for the grid should be
@@ -255,7 +202,6 @@ NEW_PROP_TAG(ContinueOnConvergenceError);
  * may cause the simulation to exhibit worse cache coherence behavior
  * which eats some of the computational benefits again.
  */
-NEW_PROP_TAG(EnableIntensiveQuantityCache);
 
 /*!
  * \brief Specify whether the storage terms for previous solutions should be cached.
@@ -263,7 +209,6 @@ NEW_PROP_TAG(EnableIntensiveQuantityCache);
  * This potentially reduces the CPU time, but comes at the cost of higher memory
  * consumption.
  */
-NEW_PROP_TAG(EnableStorageCache);
 
 /*!
  * \brief Specify whether to use the already calculated solutions as
@@ -273,24 +218,20 @@ NEW_PROP_TAG(EnableStorageCache);
  * very expensive (e.g. for non-linear fugacity functions where the
  * solver converges faster).
  */
-NEW_PROP_TAG(EnableThermodynamicHints);
 
 // mappers from local to global DOF indices
 
 /*!
  * \brief The mapper to find the global index of a vertex.
  */
-NEW_PROP_TAG(VertexMapper);
 
 /*!
  * \brief The mapper to find the global index of an element.
  */
-NEW_PROP_TAG(ElementMapper);
 
 /*!
  * \brief The mapper to find the global index of a degree of freedom.
  */
-NEW_PROP_TAG(DofMapper);
 
 /*!
  * \brief The class which marks the border indices associated with the
@@ -298,26 +239,21 @@ NEW_PROP_TAG(DofMapper);
  *
  * This is required for the algebraic overlap stuff.
  */
-NEW_PROP_TAG(BorderListCreator);
 
 /*!
  * \brief The history size required by the time discretization
  */
-NEW_PROP_TAG(TimeDiscHistorySize);
 
 /*!
  * \brief Specify whether the storage terms use extensive quantities or not.
  *
  * Most models don't need this, but the (Navier-)Stokes ones do...
  */
-NEW_PROP_TAG(ExtensiveStorageTerm);
 
 //! \brief Specify whether to use volumetric residuals or not
-NEW_PROP_TAG(UseVolumetricResidual);
 
 
 //! Specify if experimental features should be enabled or not.
-NEW_PROP_TAG(EnableExperiments);
 
 END_PROPERTIES
 

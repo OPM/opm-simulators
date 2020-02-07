@@ -41,14 +41,6 @@
 
 BEGIN_PROPERTIES
 
-NEW_PROP_TAG(Grid);
-NEW_PROP_TAG(Vanguard);
-NEW_PROP_TAG(GridView);
-NEW_PROP_TAG(GridPart);
-NEW_PROP_TAG(GridViewLevel);
-NEW_PROP_TAG(GridFile);
-NEW_PROP_TAG(GridGlobalRefinements);
-NEW_PROP_TAG(Simulator);
 
 END_PROPERTIES
 

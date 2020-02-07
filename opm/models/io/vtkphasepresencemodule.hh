@@ -39,9 +39,6 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkPhasePresence);
 
 // create the property tags needed for the primary variables module
-NEW_PROP_TAG(VtkWritePhasePresence);
-NEW_PROP_TAG(VtkOutputFormat);
-NEW_PROP_TAG(EnableVtkOutput);
 
 SET_BOOL_PROP(VtkPhasePresence, VtkWritePhasePresence, false);
 

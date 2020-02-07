@@ -77,7 +77,6 @@ SET_TYPE_PROP(FingerBaseProblem,
 #endif
 
 // declare the properties used by the finger problem
-NEW_PROP_TAG(InitialWaterSaturation);
 
 // Set the problem property
 SET_TYPE_PROP(FingerBaseProblem, Problem, Opm::FingerProblem<TypeTag>);

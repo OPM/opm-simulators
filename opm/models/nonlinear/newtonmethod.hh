@@ -66,60 +66,42 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(NewtonMethod);
 
 //! The simulation management class of the simulation
-NEW_PROP_TAG(Simulator);
 
 //! The physical model which we would like to solve
-NEW_PROP_TAG(Problem);
 
 //! The model describing the PDEs for the conservation quantities
-NEW_PROP_TAG(Model);
 
 //! The type of scalar values
-NEW_PROP_TAG(Scalar);
 
 //! Specifies the type of the actual Newton method
-NEW_PROP_TAG(NewtonMethod);
 
 //! Specifies the type of a solution
-NEW_PROP_TAG(SolutionVector);
 
 //! Specifies the type of a solution for a single degee of freedom
-NEW_PROP_TAG(PrimaryVariables);
 
 //! Specifies whether the problem to be simulated exhibits contraint degrees of freedom
-NEW_PROP_TAG(EnableConstraints);
 
 //! Specifies the type of objects which specify constraints for a single degee of freedom
-NEW_PROP_TAG(Constraints);
 
 //! Vector containing a quantity of for equation on the whole grid
-NEW_PROP_TAG(GlobalEqVector);
 
 //! Vector containing a quantity of for equation for a single degee of freedom
-NEW_PROP_TAG(EqVector);
 
 //! The class which linearizes the non-linear system of equations
-NEW_PROP_TAG(Linearizer);
 
 //! Specifies the type of a global Jacobian matrix
-NEW_PROP_TAG(SparseMatrixAdapter);
 
 //! Specifies the type of the linear solver to be used
-NEW_PROP_TAG(LinearSolverBackend);
 
 //! Specifies whether the Newton method should print messages or not
-NEW_PROP_TAG(NewtonVerbose);
 
 //! Specifies the type of the class which writes out the Newton convergence
-NEW_PROP_TAG(NewtonConvergenceWriter);
 
 //! Specifies whether the convergence rate and the global residual
 //! gets written out to disk for every Newton iteration
-NEW_PROP_TAG(NewtonWriteConvergence);
 
 //! Specifies whether the convergence rate and the global residual
 //! gets written out to disk for every Newton iteration
-NEW_PROP_TAG(ConvergenceWriter);
 
 /*!
  * \brief The value for the error below which convergence is declared
@@ -127,11 +109,9 @@ NEW_PROP_TAG(ConvergenceWriter);
  * This value can (and for the porous media models will) be changed to account for grid
  * scaling and other effects.
  */
-NEW_PROP_TAG(NewtonTolerance);
 
 //! The maximum error which may occur in a simulation before the
 //! Newton method for the time step is aborted
-NEW_PROP_TAG(NewtonMaxError);
 
 /*!
  * \brief The number of iterations at which the Newton method
@@ -141,10 +121,8 @@ NEW_PROP_TAG(NewtonMaxError);
  * is to scale the last time-step size by the deviation of the
  * number of iterations used from the target steps.
  */
-NEW_PROP_TAG(NewtonTargetIterations);
 
 //! Number of maximum iterations for the Newton method.
-NEW_PROP_TAG(NewtonMaxIterations);
 
 // set default values for the properties
 SET_TYPE_PROP(NewtonMethod, NewtonMethod, Opm::NewtonMethod<TypeTag>);

@@ -41,9 +41,6 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkTemperature);
 
 // create the property tags needed for the temperature module
-NEW_PROP_TAG(VtkWriteTemperature);
-NEW_PROP_TAG(VtkOutputFormat);
-NEW_PROP_TAG(EnableVtkOutput);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(VtkTemperature, VtkWriteTemperature, true);

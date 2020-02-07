@@ -44,7 +44,6 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(ParallelBiCGStabLinearSolver, INHERITS_FROM(ParallelBaseLinearSolver));
 
-NEW_PROP_TAG(LinearSolverMaxError);
 
 SET_TYPE_PROP(ParallelBiCGStabLinearSolver,
               LinearSolverBackend,

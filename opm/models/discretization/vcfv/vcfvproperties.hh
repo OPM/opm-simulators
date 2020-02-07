@@ -40,7 +40,6 @@ NEW_TYPE_TAG(VcfvDiscretization, INHERITS_FROM(FvBaseDiscretization));
 
 //! Use P1 finite-elements gradients instead of two-point gradients. Note that setting
 //! this property to true requires the dune-localfunctions module to be available.
-NEW_PROP_TAG(UseP1FiniteElementGradients);
 
 END_PROPERTIES
 

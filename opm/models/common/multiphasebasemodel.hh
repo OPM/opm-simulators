@@ -51,10 +51,10 @@ class MultiPhaseBaseModel;
 BEGIN_PROPERTIES
 
 //! The generic type tag for problems using the immiscible multi-phase model
-NEW_TYPE_TAG(MultiPhaseBaseModel, INHERITS_FROM(VtkMultiPhase, VtkTemperature));
+NEW_TYPE_TAG(MultiPhaseBaseModel, INHERITS_FROM(NumericModel, VtkMultiPhase, VtkTemperature));
 
 //! Specify the splices of the MultiPhaseBaseModel type tag
-SET_SPLICES(MultiPhaseBaseModel, SpatialDiscretizationSplice);
+//SET_SPLICES(MultiPhaseBaseModel, SpatialDiscretizationSplice);
 
 //! Set the default spatial discretization
 //!

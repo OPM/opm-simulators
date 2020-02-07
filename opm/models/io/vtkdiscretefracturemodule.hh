@@ -45,17 +45,6 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkDiscreteFracture);
 
 // create the property tags needed for the multi phase module
-NEW_PROP_TAG(Vanguard);
-NEW_PROP_TAG(VtkWriteFractureSaturations);
-NEW_PROP_TAG(VtkWriteFractureMobilities);
-NEW_PROP_TAG(VtkWriteFractureRelativePermeabilities);
-NEW_PROP_TAG(VtkWriteFracturePorosity);
-NEW_PROP_TAG(VtkWriteFractureIntrinsicPermeabilities);
-NEW_PROP_TAG(VtkWriteFractureFilterVelocities);
-NEW_PROP_TAG(VtkWriteFractureVolumeFraction);
-NEW_PROP_TAG(VtkOutputFormat);
-NEW_PROP_TAG(EnableVtkOutput);
-NEW_PROP_TAG(DiscBaseOutputModule);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(VtkDiscreteFracture, VtkWriteFractureSaturations, true);

@@ -61,12 +61,6 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(LensBaseProblem, INHERITS_FROM(StructuredGridVanguard));
 
 // declare the properties specific for the lens problem
-NEW_PROP_TAG(LensLowerLeftX);
-NEW_PROP_TAG(LensLowerLeftY);
-NEW_PROP_TAG(LensLowerLeftZ);
-NEW_PROP_TAG(LensUpperRightX);
-NEW_PROP_TAG(LensUpperRightY);
-NEW_PROP_TAG(LensUpperRightZ);
 
 // Set the problem property
 SET_TYPE_PROP(LensBaseProblem, Problem, Opm::LensProblem<TypeTag>);
