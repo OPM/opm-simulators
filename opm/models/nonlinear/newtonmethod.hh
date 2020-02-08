@@ -628,16 +628,6 @@ protected:
                       << " caught an exception while pre-processing the problem:" << e.what()
                       << "\n"  << std::flush;
         }
-#if ! DUNE_VERSION_NEWER(DUNE_COMMON, 2,5)
-        catch (const Dune::Exception& e)
-        {
-            succeeded = false;
-
-            std::cout << "rank " << simulator_.gridView().comm().rank()
-                      << " caught an exception while pre-processing the problem:" << e.what()
-                      << "\n"  << std::flush;
-        }
-#endif
 
         succeeded = comm.min(succeeded);
 
@@ -733,16 +723,6 @@ protected:
                           << " caught an exception while post processing an auxiliary module:" << e.what()
                           << "\n"  << std::flush;
             }
-#if ! DUNE_VERSION_NEWER(DUNE_COMMON, 2,5)
-            catch (const Dune::Exception& e)
-            {
-                succeeded = false;
-
-                std::cout << "rank " << simulator_.gridView().comm().rank()
-                          << " caught an exception while post processing an auxiliary module:" << e.what()
-                          << "\n"  << std::flush;
-            }
-#endif
 
             succeeded = comm.min(succeeded);
 
@@ -872,16 +852,6 @@ protected:
                       << " caught an exception while letting the problem post-process:" << e.what()
                       << "\n"  << std::flush;
         }
-#if ! DUNE_VERSION_NEWER(DUNE_COMMON, 2,5)
-        catch (const Dune::Exception& e)
-        {
-            succeeded = false;
-
-            std::cout << "rank " << simulator_.gridView().comm().rank()
-                      << " caught an exception while letting the problem post process:" << e.what()
-                      << "\n"  << std::flush;
-        }
-#endif
 
         succeeded = comm.min(succeeded);
 

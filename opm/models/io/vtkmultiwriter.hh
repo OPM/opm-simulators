@@ -96,13 +96,8 @@ class VtkMultiWriter : public BaseOutputWriter
 
     enum { dim = GridView::dimension };
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
     typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> VertexMapper;
     typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
-#else
-    typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
-    typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGVertexLayout> VertexMapper;
-#endif
 
 public:
     typedef BaseOutputWriter::Scalar Scalar;
@@ -113,11 +108,7 @@ public:
     typedef BaseOutputWriter::TensorBuffer TensorBuffer;
 
     typedef Dune::VTKWriter<GridView> VtkWriter;
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,5)
     typedef std::shared_ptr< Dune::VTKFunction< GridView > > FunctionPtr;
-#else
-    typedef typename VtkWriter::VTKFunctionPtr FunctionPtr;
-#endif
 
     VtkMultiWriter(bool asyncWriting,
                    const GridView& gridView,
@@ -125,13 +116,8 @@ public:
                    const std::string& simName = "",
                    std::string multiFileName = "")
         : gridView_(gridView)
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         , elementMapper_(gridView, Dune::mcmgElementLayout())
         , vertexMapper_(gridView, Dune::mcmgVertexLayout())
-#else
-        , elementMapper_(gridView)
-        , vertexMapper_(gridView)
-#endif
         , curWriter_(nullptr)
         , curWriterNum_(0)
         , taskletRunner_(/*numThreads=*/asyncWriting?1:0)

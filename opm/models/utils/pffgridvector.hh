@@ -49,20 +49,12 @@ class PffGridVector
 {
     typedef typename GridView::template Codim<0>::Entity Element;
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
     typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
-#else
-    typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
-#endif
 
 public:
     PffGridVector(const GridView& gridView, const DofMapper& dofMapper)
         : gridView_(gridView)
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         , elementMapper_(gridView_, Dune::mcmgElementLayout())
-#else
-        , elementMapper_(gridView_)
-#endif
         , dofMapper_(dofMapper)
     { }
 

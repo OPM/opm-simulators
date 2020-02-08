@@ -156,13 +156,8 @@ protected:
         LevelGridView gridView = dgfPointer->levelGridView(/*level=*/0);
         const unsigned edgeCodim = Grid::dimension - 1;
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         typedef Dune::MultipleCodimMultipleGeomTypeMapper<LevelGridView> VertexMapper;
         VertexMapper vertexMapper(gridView, Dune::mcmgVertexLayout());
-#else
-        typedef Dune::MultipleCodimMultipleGeomTypeMapper<LevelGridView, Dune::MCMGVertexLayout> VertexMapper;
-        VertexMapper vertexMapper(gridView);
-#endif
 
         // first create a map of the dune to ART vertex indices
         auto eIt = gridView.template begin</*codim=*/0>();

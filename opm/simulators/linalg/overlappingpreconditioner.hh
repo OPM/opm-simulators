@@ -50,14 +50,9 @@ public:
     typedef typename SeqPreCond::domain_type domain_type;
     typedef typename SeqPreCond::range_type range_type;
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,6)
     //! the kind of computations supported by the operator. Either overlapping or non-overlapping
     Dune::SolverCategory::Category category() const override
     { return Dune::SolverCategory::overlapping; }
-#else
-    // redefine the category
-    enum { category = Dune::SolverCategory::overlapping };
-#endif
 
     OverlappingPreconditioner(SeqPreCond& seqPreCond, const Overlap& overlap)
         : seqPreCond_(seqPreCond), overlap_(&overlap)

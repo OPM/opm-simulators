@@ -401,19 +401,6 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         }
         return 0;
     }
-#if ! DUNE_VERSION_NEWER(DUNE_COMMON, 2,5)
-    catch (Dune::Exception& e)
-    {
-        if (myRank == 0) {
-            std::cout << "Dune reported an error: " << e.what() << std::endl  << std::flush;
-
-            std::cout << "Trying to reset TTY.\n";
-            resetTerminal_();
-        }
-
-        return 2;
-    }
-#endif
     catch (std::exception& e)
     {
         if (myRank == 0) {
