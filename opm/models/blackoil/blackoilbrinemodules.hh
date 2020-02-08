@@ -38,7 +38,6 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtwsaltTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/BrineDensityTable.hpp>
 #endif
 
 #include <opm/material/common/Valgrind.hpp>
@@ -125,8 +124,7 @@ public:
                 const auto& bdensityTable = bdensityTables[pvtRegionIdx];
                 const auto& pvtwsaltTable = pvtwsaltTables[pvtRegionIdx];
                 const auto& c = pvtwsaltTable.getSaltConcentrationColumn();
-                const auto& density = bdensityTable.getBrineDensityColumn();
-                bdensityTable_[pvtRegionIdx].setXYContainers(c, density);
+                bdensityTable_[pvtRegionIdx].setXYContainers(c, bdensityTable);
             }
         }
     }

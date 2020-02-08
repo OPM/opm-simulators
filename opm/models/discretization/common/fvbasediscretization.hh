@@ -67,11 +67,7 @@
 #include <dune/istl/bvector.hh>
 
 #if HAVE_DUNE_FEM
-#if DUNE_VERSION_NEWER(DUNE_FEM, 2,6)
 #include <dune/fem/space/common/adaptationmanager.hh>
-#else
-#include <dune/fem/space/common/adaptmanager.hh>
-#endif
 #include <dune/fem/space/common/restrictprolongtuple.hh>
 #include <dune/fem/function/blockvectorfunction.hh>
 #include <dune/fem/misc/capabilities.hh>
@@ -95,22 +91,12 @@ BEGIN_PROPERTIES
 SET_TYPE_PROP(FvBaseDiscretization, Simulator, Opm::Simulator<TypeTag>);
 
 //! Mapper for the grid view's vertices.
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
 SET_TYPE_PROP(FvBaseDiscretization, VertexMapper,
               Dune::MultipleCodimMultipleGeomTypeMapper<typename GET_PROP_TYPE(TypeTag, GridView)>);
-#else
-SET_TYPE_PROP(FvBaseDiscretization, VertexMapper,
-              Dune::MultipleCodimMultipleGeomTypeMapper<typename GET_PROP_TYPE(TypeTag, GridView), Dune::MCMGVertexLayout>);
-#endif
 
 //! Mapper for the grid view's elements.
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
 SET_TYPE_PROP(FvBaseDiscretization, ElementMapper,
               Dune::MultipleCodimMultipleGeomTypeMapper<typename GET_PROP_TYPE(TypeTag, GridView)>);
-#else
-SET_TYPE_PROP(FvBaseDiscretization, ElementMapper,
-              Dune::MultipleCodimMultipleGeomTypeMapper<typename GET_PROP_TYPE(TypeTag, GridView), Dune::MCMGElementLayout>);
-#endif
 
 //! marks the border indices (required for the algebraic overlap stuff)
 SET_PROP(FvBaseDiscretization, BorderListCreator)
@@ -380,13 +366,8 @@ public:
     FvBaseDiscretization(Simulator& simulator)
         : simulator_(simulator)
         , gridView_(simulator.gridView())
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         , elementMapper_(gridView_, Dune::mcmgElementLayout())
         , vertexMapper_(gridView_, Dune::mcmgVertexLayout())
-#else
-        , elementMapper_(gridView_)
-        , vertexMapper_(gridView_)
-#endif
         , newtonMethod_(simulator)
         , localLinearizer_(ThreadManager::maxThreads())
         , linearizer_(new Linearizer())
