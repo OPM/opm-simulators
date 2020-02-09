@@ -73,19 +73,14 @@ protected:
     Scalar mu_w_; // water viscosity
 
     // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer
-    inline void initializeConnections(const Aquancon::AquanconOutput& connection) override
+    inline void initializeConnections() override
     {
         const auto& eclState = Base::ebos_simulator_.vanguard().eclState();
         const auto& ugrid = Base::ebos_simulator_.vanguard().grid();
         const auto& grid = eclState.getInputGrid();
 
-        Base::cell_idx_ = connection.global_index;
+        Base::cell_idx_ = this->connection_.global_index;
         auto globalCellIdx = ugrid.globalCell();
-
-        assert(Base::cell_idx_ == connection.global_index);
-        assert((Base::cell_idx_.size() <= connection.influx_coeff.size()));
-        assert((connection.influx_coeff.size() == connection.influx_multiplier.size()));
-        assert((connection.influx_multiplier.size() == connection.reservoir_face_dir.size()));
 
         // We hack the cell depth values for now. We can actually get it from elementcontext pos
         Base::cell_depth_.resize(Base::cell_idx_.size(), aquct_data_.d0);
@@ -137,9 +132,9 @@ protected:
                               "Initialization of Aquifer Carter Tracy problem. Make sure faceTag is correctly defined");
                 }
 
-                if (faceDirection == connection.reservoir_face_dir.at(idx)) {
-                    Base::faceArea_connected_.at(idx) = Base::getFaceArea(faceCells, ugrid, faceIdx, idx, connection);
-                    denom_face_areas += (connection.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx));
+                if (faceDirection == this->connection_.reservoir_face_dir.at(idx)) {
+                    Base::faceArea_connected_.at(idx) = Base::getFaceArea(faceCells, ugrid, faceIdx, idx);
+                    denom_face_areas += (this->connection_.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx));
                 }
             }
             auto cellCenter = grid.getCellCenter(Base::cell_idx_.at(idx));
@@ -151,7 +146,7 @@ protected:
             Base::alphai_.at(idx) = (denom_face_areas < eps_sqrt)
                 ? // Prevent no connection NaNs due to division by zero
                 0.
-                : (connection.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx)) / denom_face_areas;
+                : (this->connection_.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx)) / denom_face_areas;
         }
     }
 

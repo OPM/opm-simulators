@@ -74,19 +74,15 @@ protected:
     const Aquifetp::AQUFETP_data aqufetp_data_;
     Scalar aquifer_pressure_; // aquifer
 
-    inline void initializeConnections(const Aquancon::AquanconOutput& connection) override
+    inline void initializeConnections() override
     {
         const auto& eclState = Base::ebos_simulator_.vanguard().eclState();
         const auto& ugrid = Base::ebos_simulator_.vanguard().grid();
         const auto& grid = eclState.getInputGrid();
 
-        Base::cell_idx_ = connection.global_index;
+        Base::cell_idx_ = this->connection_.global_index;
         auto globalCellIdx = ugrid.globalCell();
 
-        assert(Base::cell_idx_ == connection.global_index);
-        assert((Base::cell_idx_.size() == connection.influx_coeff.size()));
-        assert((connection.influx_coeff.size() == connection.influx_multiplier.size()));
-        assert((connection.influx_multiplier.size() == connection.reservoir_face_dir.size()));
 
         // We hack the cell depth values for now. We can actually get it from elementcontext pos
         Base::cell_depth_.resize(Base::cell_idx_.size(), aqufetp_data_.d0);
@@ -108,7 +104,7 @@ protected:
             const auto cellCenter = grid.getCellCenter(Base::cell_idx_.at(idx));
             Base::cell_depth_.at(idx) = cellCenter[2];
 
-            if (!connection.influx_coeff[idx]) { // influx_coeff is defaulted
+            if (!this->connection_.influx_coeff[idx]) { // influx_coeff is defaulted
                 const auto cellFacesRange = cell2Faces[cell_index];
                 for (auto cellFaceIter = cellFacesRange.begin(); cellFaceIter != cellFacesRange.end(); ++cellFaceIter) {
                     // The index of the face in the compressed grid
@@ -141,16 +137,16 @@ protected:
                                   "Initialization of Aquifer problem. Make sure faceTag is correctly defined");
                     }
 
-                    if (faceDirection == connection.reservoir_face_dir.at(idx)) {
+                    if (faceDirection == this->connection_.reservoir_face_dir.at(idx)) {
                         Base::faceArea_connected_.at(idx)
-                            = Base::getFaceArea(faceCells, ugrid, faceIdx, idx, connection);
+                            = Base::getFaceArea(faceCells, ugrid, faceIdx, idx);
                         break;
                     }
                 }
             } else {
-                Base::faceArea_connected_.at(idx) = *connection.influx_coeff[idx];
+                Base::faceArea_connected_.at(idx) = *this->connection_.influx_coeff[idx];
             }
-            denom_face_areas += (connection.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx));
+            denom_face_areas += (this->connection_.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx));
         }
 
         const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
@@ -158,7 +154,7 @@ protected:
             Base::alphai_.at(idx) = (denom_face_areas < eps_sqrt)
                 ? // Prevent no connection NaNs due to division by zero
                 0.
-                : (connection.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx)) / denom_face_areas;
+                : (this->connection_.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx)) / denom_face_areas;
         }
     }
 
