@@ -26,6 +26,8 @@
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 #include <opm/material/fluidmatrixinteractions/EclTwoPhaseMaterialParams.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
+#include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
@@ -447,6 +449,8 @@ std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicat
 
 HANDLE_AS_POD(Actdims)
 HANDLE_AS_POD(Aqudims)
+HANDLE_AS_POD(AquiferCT::AQUCT_data)
+HANDLE_AS_POD(Aquifetp::AQUFETP_data)
 HANDLE_AS_POD(BCConfig::BCFace)
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::CurrentControl)
@@ -518,6 +522,14 @@ std::size_t packSize(const ThresholdPressure& data, Dune::MPIHelper::MPICommunic
           packSize(data.restart(), comm) +
           packSize(data.thresholdPressureTable(), comm) +
           packSize(data.pressureTable(), comm);
+}
+
+std::size_t packSize(const Aquifetp& data, Dune::MPIHelper::MPICommunicator comm) {
+    return packSize(data.data(), comm);
+}
+
+std::size_t packSize(const AquiferCT& data, Dune::MPIHelper::MPICommunicator comm) {
+    return packSize(data.data(), comm);
 }
 
 std::size_t packSize(const BCConfig& bc, Dune::MPIHelper::MPICommunicator comm)
@@ -2250,6 +2262,13 @@ void pack(const ThresholdPressure& data, std::vector<char>& buffer, int& positio
     pack(data.pressureTable(), buffer, position, comm);
 }
 
+void pack(const AquiferCT& data, std::vector<char>& buffer, int& position) {
+    pack(data.data(), buffer, position, comm);
+}
+
+void pack(const Aquifetp& data, std::vector<char>& buffer, int& position) {
+    pack(data.data(), buffer, position, comm);
+}
 
 void pack(const BCConfig& bc, std::vector<char>& buffer, int& position,
     Dune::MPIHelper::MPICommunicator comm)
@@ -4164,6 +4183,19 @@ void unpack(ThresholdPressure& data, std::vector<char>& buffer, int& position,
     unpack(pTable, buffer, position, comm);
 
     data = ThresholdPressure(active, restart, thpTable, pTable);
+}
+
+
+void unpack(AquiferCT& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm) {
+    std::vector<AquiferCT::AQUCT_data> internal_data;
+    unpack(internal_data, buffer, position, comm);
+    data = AquiferCT(internal_data);
+}
+
+void unpack(Aquifetp& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm) {
+    std::vector<Aquifetp::AQUFETP_data> internal_data;
+    unpack(internal_data, buffer, position, comm);
+    data = Aquifetp(internal_data);
 }
 
 

@@ -31,6 +31,8 @@
 #include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
+#include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
@@ -1865,6 +1867,22 @@ BOOST_AUTO_TEST_CASE(UDQActive)
     DO_CHECKS(UDQActive)
 #endif
 }
+
+
+BOOST_AUTO_TEST_CASE(AquiferCT)
+{
+#ifdef HAVE_MPI
+#endif
+}
+
+BOOST_AUTO_TEST_CASE(Aquifetp)
+{
+#ifdef HAVE_MPI
+#endif
+}
+
+
+
 
 
 BOOST_AUTO_TEST_CASE(GuideRateModel)
