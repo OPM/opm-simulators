@@ -749,8 +749,8 @@ protected:
         void setGhostsInNoGhost(Matrix& ng)
         {
             ng=0;
-            typedef typename Matrix::block_type MatrixBlockType;
-            MatrixBlockType diag_block(0.0);
+            typedef typename Matrix::block_type MatrixBlockTypeT;
+            MatrixBlockTypeT diag_block(0.0);
             for (int eq = 0; eq < Matrix::block_type::rows; ++eq)
                 diag_block[eq][eq] = 1.0;
 
