@@ -335,7 +335,9 @@ namespace Opm {
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
-            void updateWellControls(Opm::DeferredLogger& deferred_logger, const bool checkGroupControl, const bool checkCurrentGroupControl);
+            void updateWellControls(Opm::DeferredLogger& deferred_logger, const bool checkGroupControls);
+
+            void updateAndCommunicateGroupData();
 
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(Opm::DeferredLogger& deferred_logger);
@@ -408,7 +410,10 @@ namespace Opm {
 
             const Well& getWellEcl(const std::string& well_name) const;
 
-            void checkGroupConstraints(const Group& group, const bool checkCurrentControl, Opm::DeferredLogger& deferred_logger);
+            void updateGroupIndividualControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
+            void checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
+            void updateGroupHigherControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
+            void checkGroupHigherConstraints(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
 
             void actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
 

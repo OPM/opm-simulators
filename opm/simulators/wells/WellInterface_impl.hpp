@@ -461,17 +461,19 @@ namespace Opm
 
 
     template<typename TypeTag>
-    void
+    bool
     WellInterface<TypeTag>::
     updateWellControl(const Simulator& ebos_simulator,
+                      const IndividualOrGroup iog,
                       WellState& well_state,
                       Opm::DeferredLogger& deferred_logger) /* const */
     {
         if (this->wellIsStopped()) {
-            return;
+            return false;
         }
 
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
+        const auto& schedule = ebos_simulator.vanguard().schedule();
         const auto& well = well_ecl_;
         std::string from;
         if (well.isInjector()) {
@@ -480,7 +482,15 @@ namespace Opm
             from = Well::ProducerCMode2String(well_state.currentProductionControls()[index_of_well_]);
         }
 
-        bool changed = checkConstraints(well_state, summaryState);
+        bool changed = false;
+        if (iog == IndividualOrGroup::Individual) {
+            changed = checkIndividualConstraints(well_state, schedule, summaryState, deferred_logger);
+        } else if (iog == IndividualOrGroup::Group) {
+            changed = checkGroupConstraints(well_state, schedule, summaryState, deferred_logger);
+        } else {
+            assert(iog == IndividualOrGroup::Both);
+            changed = checkConstraints(well_state, schedule, summaryState, deferred_logger);
+        }
 
         auto cc = Dune::MPIHelper::getCollectiveCommunication();
 
@@ -503,6 +513,8 @@ namespace Opm
             updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
         }
+
+        return changed;
     }
 
 
@@ -1436,20 +1448,40 @@ namespace Opm
         return operability_status_.isOperable();
     }
 
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    checkConstraints(WellState& well_state, const SummaryState& summaryState) {
 
+
+
+
+    template <typename TypeTag>
+    bool
+    WellInterface<TypeTag>::checkConstraints(WellState& well_state,
+                                             const Schedule& schedule,
+                                             const SummaryState& summaryState,
+                                             DeferredLogger& deferred_logger) const
+    {
+        const bool ind_broken = checkIndividualConstraints(well_state, schedule, summaryState, deferred_logger);
+        if (ind_broken) {
+            return true;
+        } else {
+            return checkGroupConstraints(well_state, schedule, summaryState, deferred_logger);
+        }
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    bool
+    WellInterface<TypeTag>::checkIndividualConstraints(WellState& well_state,
+                                                       const Schedule& schedule,
+                                                       const SummaryState& summaryState,
+                                                       DeferredLogger& deferred_logger) const
+    {
         const auto& well = well_ecl_;
         const PhaseUsage& pu = phaseUsage();
         const int well_index = index_of_well_;
         const auto wellrate_index = well_index * pu.num_phases;
-        // bool changed = false;
-
-//        // Stopped wells can not change control
-//        if (currentControl == "STOP")
-//            return newControl;
 
         if (well.isInjector()) {
             const auto controls = well.injectionControls(summaryState);
@@ -1633,4 +1665,155 @@ namespace Opm
     }
 
 
-}
+
+
+
+    template <typename TypeTag>
+    bool
+    WellInterface<TypeTag>::checkGroupConstraints(WellState& well_state,
+                                                  const Schedule& schedule,
+                                                  const SummaryState& summaryState,
+                                                  DeferredLogger& deferred_logger) const
+    {
+        const auto& well = well_ecl_;
+        const int well_index = index_of_well_;
+
+        if (well.isInjector()) {
+            const auto controls = well.injectionControls(summaryState);
+            Opm::Well::InjectorCMode& currentControl = well_state.currentInjectionControls()[well_index];
+
+	    if (currentControl != Well::InjectorCMode::GRUP) {
+                // This checks only the first encountered group limit,
+                // in theory there could be several, and then we should
+                // test all but the one currently applied. At that point,
+                // this if-statement should be removed and we should always
+                // check, skipping over only the single group parent whose
+                // control is the active one for the well (if any).
+                const auto& group = schedule.getGroup( well.groupName(), current_step_ );
+                const double efficiencyFactor = well.getEfficiencyFactor();
+                const bool group_constraint_broken = checkGroupConstraintsInj(
+                    group, well_state, efficiencyFactor, schedule, summaryState, deferred_logger);
+                // If a group constraint was broken, we set the current well control to
+                // be GRUP.
+                if (group_constraint_broken) {
+                    well_state.currentInjectionControls()[index_of_well_] = Well::InjectorCMode::GRUP;
+                }
+                return group_constraint_broken;
+	    }
+        }
+
+        if (well.isProducer( )) {
+            const auto controls = well.productionControls(summaryState);
+            Well::ProducerCMode& currentControl = well_state.currentProductionControls()[well_index];
+
+	    if (currentControl != Well::ProducerCMode::GRUP) {
+                // This checks only the first encountered group limit,
+                // in theory there could be several, and then we should
+                // test all but the one currently applied. At that point,
+                // this if-statement should be removed and we should always
+                // check, skipping over only the single group parent whose
+                // control is the active one for the well (if any).
+                const auto& group = schedule.getGroup( well.groupName(), current_step_ );
+                const double efficiencyFactor = well.getEfficiencyFactor();
+                const bool group_constraint_broken = checkGroupConstraintsProd(
+                    group, well_state, efficiencyFactor, schedule, summaryState, deferred_logger);
+                // If a group constraint was broken, we set the current well control to
+                // be GRUP.
+                if (group_constraint_broken) {
+                    well_state.currentProductionControls()[index_of_well_] = Well::ProducerCMode::GRUP;
+                }
+                return group_constraint_broken;
+	    }
+        }
+
+        return false;
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    bool
+    WellInterface<TypeTag>::checkGroupConstraintsInj(const Group& group,
+                                                     const WellState& well_state,
+                                                     const double efficiencyFactor,
+                                                     const Schedule& schedule,
+                                                     const SummaryState& summaryState,
+                                                     DeferredLogger& deferred_logger) const
+    {
+        // Translate injector type from control to Phase.
+        const auto& well_controls = well_ecl_.injectionControls(summaryState);
+        auto injectorType = well_controls.injector_type;
+        Phase injectionPhase;
+        switch (injectorType) {
+        case InjectorType::WATER:
+        {
+            injectionPhase = Phase::WATER;
+            break;
+        }
+        case InjectorType::OIL:
+        {
+            injectionPhase = Phase::OIL;
+            break;
+        }
+        case InjectorType::GAS:
+        {
+            injectionPhase = Phase::GAS;
+            break;
+        }
+        default:
+            throw("Expected WATER, OIL or GAS as type for injector " + name());
+        }
+        // Call check for the well's injection phase.
+        return wellGroupHelpers::checkGroupConstraintsInj(name(),
+                                                          well_ecl_.groupName(),
+                                                          group,
+                                                          well_state,
+                                                          current_step_,
+                                                          guide_rate_,
+                                                          well_state.wellRates().data() + index_of_well_ * phaseUsage().num_phases,
+                                                          injectionPhase,
+                                                          phaseUsage(),
+                                                          efficiencyFactor,
+                                                          schedule,
+                                                          summaryState,
+                                                          rateConverter_,
+                                                          pvtRegionIdx_,
+                                                          deferred_logger);
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    bool
+    WellInterface<TypeTag>::checkGroupConstraintsProd(const Group& group,
+                                                      const WellState& well_state,
+                                                      const double efficiencyFactor,
+                                                      const Schedule& schedule,
+                                                      const SummaryState& summaryState,
+                                                      DeferredLogger& deferred_logger) const
+    {
+        return wellGroupHelpers::checkGroupConstraintsProd(name(),
+                                                           well_ecl_.groupName(),
+                                                           group,
+                                                           well_state,
+                                                           current_step_,
+                                                           guide_rate_,
+                                                           well_state.wellRates().data() + index_of_well_ * phaseUsage().num_phases,
+                                                           phaseUsage(),
+                                                           efficiencyFactor,
+                                                           schedule,
+                                                           summaryState,
+                                                           rateConverter_,
+                                                           pvtRegionIdx_,
+                                                           deferred_logger);
+    }
+
+
+
+
+
+} // namespace Opm

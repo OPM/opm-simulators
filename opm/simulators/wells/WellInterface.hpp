@@ -201,7 +201,9 @@ namespace Opm
                                                WellState& well_state,
                                                Opm::DeferredLogger& deferred_logger) const = 0;
 
-        void updateWellControl(const Simulator& ebos_simulator,
+        enum class IndividualOrGroup { Individual, Group, Both };
+        bool updateWellControl(const Simulator& ebos_simulator,
+                               const IndividualOrGroup iog,
                                WellState& well_state,
                                Opm::DeferredLogger& deferred_logger) /* const */;
 
@@ -478,10 +480,34 @@ namespace Opm
         // index calculations
         int well_productivity_index_logger_counter_;
 
-        bool checkConstraints(WellState& well_state, const SummaryState& summaryState);
+        bool checkConstraints(WellState& well_state,
+                              const Schedule& schedule,
+                              const SummaryState& summaryState,
+                              DeferredLogger& deferred_logger) const;
 
+        bool checkIndividualConstraints(WellState& well_state,
+                                        const Schedule& schedule,
+                                        const SummaryState& summaryState,
+                                        DeferredLogger& deferred_logger) const;
 
+        bool checkGroupConstraints(WellState& well_state,
+                                   const Schedule& schedule,
+                                   const SummaryState& summaryState,
+                                   DeferredLogger& deferred_logger) const;
 
+        bool checkGroupConstraintsProd(const Group& group,
+                                       const WellState& well_state,
+                                       const double efficiencyFactor,
+                                       const Schedule& schedule,
+                                       const SummaryState& summaryState,
+                                       DeferredLogger& deferred_logger) const;
+
+        bool checkGroupConstraintsInj(const Group& group,
+                                      const WellState& well_state,
+                                      const double efficiencyFactor,
+                                      const Schedule& schedule,
+                                      const SummaryState& summaryState,
+                                      DeferredLogger& deferred_logger) const;
     };
 
 
