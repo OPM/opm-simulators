@@ -883,24 +883,37 @@ namespace Opm
         }
 
         template<class Comm>
-        void updateGlobalIsGrup(const Schedule& schedule, const int reportStepIdx, const Comm& comm) {
-
-            int global_well_index = -1;
+        void updateGlobalIsGrup(const Schedule& schedule, const int reportStepIdx, const Comm& comm)
+        {
+            std::fill(globalIsInjectionGrup_.begin(), globalIsInjectionGrup_.end(), 0);
+            std::fill(globalIsProductionGrup_.begin(), globalIsProductionGrup_.end(), 0);
+            int global_well_index = 0;
             const auto& end = wellMap().end();
             for (const auto& well : schedule.getWells(reportStepIdx)) {
-                global_well_index ++;
+                // Build global name->index map.
                 wellNameToGlobalIdx_[well.name()] = global_well_index;
 
+                // For wells on this process...
                 const auto& it = wellMap().find( well.name());
-                if (it == end)  // the well is not found
-                    continue;
-
-                int well_index = it->second[0];
-
-                if (well.isInjector())
-                    globalIsInjectionGrup_[global_well_index] = (currentInjectionControls()[well_index] == Well::InjectorCMode::GRUP);
-                else
-                    globalIsProductionGrup_[global_well_index] = (currentProductionControls()[well_index] == Well::ProducerCMode::GRUP);
+                if (it != end) {
+                    // ... set the GRUP/not GRUP states.
+                    const int well_index = it->second[0];
+                    if (!this->open_for_output_[well_index]) {
+                        // Well is shut.
+                        if (well.isInjector()) {
+                            globalIsInjectionGrup_[global_well_index] = 0;
+                        } else {
+                            globalIsProductionGrup_[global_well_index] = 0;
+                        }
+                    } else {
+                        if (well.isInjector()) {
+                            globalIsInjectionGrup_[global_well_index] = (currentInjectionControls()[well_index] == Well::InjectorCMode::GRUP);
+                        } else {
+                            globalIsProductionGrup_[global_well_index] = (currentProductionControls()[well_index] == Well::ProducerCMode::GRUP);
+                        }
+                    }
+                }
+                ++global_well_index;
             }
             comm.sum(globalIsInjectionGrup_.data(), globalIsInjectionGrup_.size());
             comm.sum(globalIsProductionGrup_.data(), globalIsProductionGrup_.size());
