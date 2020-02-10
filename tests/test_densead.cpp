@@ -275,7 +275,7 @@ struct TestEnvBase
             Scalar yStar2 = classicFn(x + eps);
             Scalar yPrime = (yStar2 - yStar1)/(2*eps);
 
-            if (std::abs(y-yEval.value()) > 5e-14)
+            if (std::abs(y-yEval.value()) > std::numeric_limits<Scalar>::epsilon()*1e2)
                 throw std::logic_error("oops: value");
 
             Scalar deltaAbs = std::abs(yPrime - yEval.derivative(0));
