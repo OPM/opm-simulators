@@ -29,6 +29,7 @@ endif()
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
+option(BUILD_FLOW_BLACKOIL_ONLY "Build the production oriented flow simulator only supporting the blackoil model?" OFF)
 option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
 option(BUILD_EBOS "Build the research oriented ebos simulator?" ON)
 option(BUILD_EBOS_EXTENSIONS "Build the variants for various extensions of ebos by default?" OFF)
@@ -174,6 +175,24 @@ opm_add_test(flow
   flow/flow_ebos_energy.cpp
   flow/flow_ebos_oilwater_polymer.cpp
   flow/flow_ebos_oilwater_polymer_injectivity.cpp)
+
+if (NOT BUILD_FLOW_BLACKOIL_ONLY)
+  set(FLOW_BLACKOIL_ONLY_DEFAULT_ENABLE_IF "FALSE")
+else()
+  set(FLOW_BLACKOIL_ONLY_DEFAULT_ENABLE_IF "TRUE")
+endif()
+
+# the production oriented general-purpose ECL simulator
+opm_add_test(flow_blackoil
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEFAULT_ENABLE_IF ${FLOW_BLACKOIL_ONLY_DEFAULT_ENABLE_IF}
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators"
+  SOURCES
+  flow/flow.cpp
+  flow/flow_ebos_blackoil.cpp)
+target_compile_definitions(flow_blackoil PRIVATE "FLOW_BLACKOIL_ONLY")
 
 if (NOT BUILD_FLOW_VARIANTS)
   set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "FALSE")

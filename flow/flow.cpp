@@ -20,7 +20,10 @@
 */
 #include "config.h"
 
+
 #include <flow/flow_ebos_blackoil.hpp>
+
+#ifndef FLOW_BLACKOIL_ONLY
 #include <flow/flow_ebos_gasoil.hpp>
 #include <flow/flow_ebos_oilwater.hpp>
 #include <flow/flow_ebos_solvent.hpp>
@@ -30,6 +33,7 @@
 #include <flow/flow_ebos_energy.hpp>
 #include <flow/flow_ebos_oilwater_polymer.hpp>
 #include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
+#endif
 
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
@@ -381,8 +385,10 @@ int main(int argc, char** argv)
         // TODO: make sure that no illegal combinations like thermal and twophase are
         //       requested.
 
+        if ( false ) {}
+#ifndef FLOW_BLACKOIL_ONLY
         // Twophase cases
-        if( phases.size() == 2 ) {
+        else if( phases.size() == 2 ) {
             // oil-gas
             if (phases.active( Opm::Phase::GAS ))
             {
@@ -447,6 +453,7 @@ int main(int argc, char** argv)
             Opm::flowEbosEnergySetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
             return Opm::flowEbosEnergyMain(argc, argv, outputCout, outputFiles);
         }
+#endif // FLOW_BLACKOIL_ONLY
         // Blackoil case
         else if( phases.size() == 3 ) {
             Opm::flowEbosBlackoilSetDeck(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
