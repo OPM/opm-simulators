@@ -1352,13 +1352,7 @@ std::size_t packSize(const UnitSystem& data,
 std::size_t packSize(const WellSegments& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
-    return packSize(data.wellName(), comm) +
-           packSize(data.depthTopSegment(), comm) +
-           packSize(data.lengthTopSegment(), comm) +
-           packSize(data.volumeTopSegment(), comm) +
-           packSize(data.lengthDepthType(), comm) +
-           packSize(data.compPressureDrop(), comm) +
-           packSize(data.multiPhaseModel(), comm) +
+    return packSize(data.compPressureDrop(), comm) +
            packSize(data.segments(), comm) +
            packSize(data.segmentNumberIndex(), comm);
 
@@ -3113,13 +3107,7 @@ void pack(const WellSegments& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
-    pack(data.wellName(), buffer, position, comm);
-    pack(data.depthTopSegment(), buffer, position, comm);
-    pack(data.lengthTopSegment(), buffer, position, comm);
-    pack(data.volumeTopSegment(), buffer, position, comm);
-    pack(data.lengthDepthType(), buffer, position, comm);
     pack(data.compPressureDrop(), buffer, position, comm);
-    pack(data.multiPhaseModel(), buffer, position, comm);
     pack(data.segments(), buffer, position, comm);
     pack(data.segmentNumberIndex(), buffer, position, comm);
 }
@@ -5475,26 +5463,16 @@ void unpack(WellSegments& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
-    std::string wellName;
-    double depthTopSegment, lengthTopSegment, volumeTopSegment;
     WellSegments::CompPressureDrop compPressureDrop;
-    WellSegments::LengthDepth lengthDepthType;
-    WellSegments::MultiPhaseModel multiPhaseModel;
     std::vector<Segment> segments;
     std::map<int,int> segmentNumberIndex;
 
-    unpack(wellName, buffer, position, comm);
-    unpack(depthTopSegment, buffer, position, comm);
-    unpack(lengthTopSegment, buffer, position, comm);
-    unpack(volumeTopSegment, buffer, position, comm);
-    unpack(lengthDepthType, buffer, position, comm);
     unpack(compPressureDrop, buffer, position, comm);
-    unpack(multiPhaseModel, buffer, position, comm);
     unpack(segments, buffer, position, comm);
     unpack(segmentNumberIndex, buffer, position, comm);
-    data = WellSegments(wellName, depthTopSegment, lengthTopSegment,
-                        volumeTopSegment, lengthDepthType, compPressureDrop,
-                        multiPhaseModel, segments, segmentNumberIndex);
+
+    data = WellSegments(compPressureDrop,
+                        segments, segmentNumberIndex);
 }
 
 void unpack(Well& data,

@@ -1649,11 +1649,9 @@ BOOST_AUTO_TEST_CASE(WellSegments)
                      Opm::Segment::SegmentType::SICD,
                      std::make_shared<Opm::SpiralICD>(),
                      std::make_shared<Opm::Valve>());
-    Opm::WellSegments val1("test", 1.0, 2.0, 3.0,
-                           Opm::WellSegments::LengthDepth::ABS,
-                           Opm::WellSegments::CompPressureDrop::HF_,
-                           Opm::WellSegments::MultiPhaseModel::DF,
-                           {seg, seg}, {{1,2},{3,4}});
+    Opm::WellSegments val1(Opm::WellSegments::CompPressureDrop::HF_,
+                           {seg, seg},
+                           {{1,2},{3,4}});
 
     auto val2 = PackUnpack(val1);
     DO_CHECKS(WellSegments)
