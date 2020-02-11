@@ -306,13 +306,8 @@ public:
             typedef typename Vanguard::GridView LocalGridView;
             const LocalGridView localGridView = vanguard.gridView();
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
             typedef Dune::MultipleCodimMultipleGeomTypeMapper<LocalGridView> ElementMapper;
             ElementMapper elemMapper(localGridView, Dune::mcmgElementLayout());
-#else
-            typedef Dune::MultipleCodimMultipleGeomTypeMapper<LocalGridView, Dune::MCMGElementLayout> ElementMapper;
-            ElementMapper elemMapper(localGridView);
-#endif
 
             localIdxToGlobalIdx_.resize(localGridView.size(0), -1);
 
@@ -325,13 +320,8 @@ public:
                 globalCartesianIndex_.resize(globalSize, -1);
                 const EquilGridView equilGridView = vanguard.equilGrid().leafGridView();
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
                 typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView> EquilElementMapper;
                 EquilElementMapper equilElemMapper(equilGridView, Dune::mcmgElementLayout());
-#else
-                typedef Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView, Dune::MCMGElementLayout> EquilElementMapper;
-                EquilElementMapper equilElemMapper(equilGridView);
-#endif
 
                 // Scatter the global index to local index for lookup during restart
                 ElementIndexScatterHandle<EquilElementMapper,ElementMapper> handle(equilElemMapper, elemMapper, localIdxToGlobalIdx_);

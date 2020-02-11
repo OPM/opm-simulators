@@ -51,21 +51,6 @@ namespace Fem {
 
 ////////////////////////////////////////////////////////////
 //
-//  make_entity for CpGrid entities
-//
-////////////////////////////////////////////////////////////
-#if ! DUNE_VERSION_NEWER(DUNE_GRID, 2, 6)
-template <int codim>
-inline Dune::cpgrid::Entity<codim> make_entity(const Dune::cpgrid::EntityPointer<codim>& entityPointer)
-{ return *entityPointer; }
-
-template <int codim>
-inline Dune::cpgrid::Entity<codim> make_entity(Dune::cpgrid::Entity<codim> entity)
-{ return std::move(entity); }
-#endif
-
-////////////////////////////////////////////////////////////
-//
 //  GridEntityAccess for CpGrid entities
 //
 ////////////////////////////////////////////////////////////

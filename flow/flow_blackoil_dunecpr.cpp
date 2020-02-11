@@ -21,11 +21,7 @@
 #include "config.h"
 #include "flow/flow_tag.hpp"
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
 #include  <opm/simulators/linalg/ISTLSolverEbosFlexible.hpp>
-#else
-#include  <opm/simulators/linalg/ISTLSolverEbosCpr.hpp>
-#endif
 
 BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
@@ -82,11 +78,7 @@ namespace Opm {
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>);//not work
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::Linear::SuperLUBackend<TypeTag>)//not work
     //SET_TAG_PROP(EclFlowProblem, FluidState, Opm::BlackOilFluidState);
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
     SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbosFlexible<TypeTag>);
-#else
-    SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbosCpr<TypeTag>);
-#endif
     SET_BOOL_PROP(EclFlowProblemSimple, EnableStorageCache, true);
     SET_BOOL_PROP(EclFlowProblemSimple, EnableIntensiveQuantityCache, true);
 

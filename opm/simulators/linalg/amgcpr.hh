@@ -26,58 +26,6 @@ namespace Dune
 {
   namespace Amg
   {
-#if !DUNE_VERSION_NEWER(DUNE_ISTL, 2, 5)
-  template<class M, class V>
-  struct DirectSolverSelector
-  {
-#if DISABLE_AMG_DIRECTSOLVER
-    static constexpr bool isDirectSolver = false;
-    using type = void;
-#elif HAVE_SUITESPARSE_UMFPACK
-    using field_type = typename M::field_type;
-    using type = typename std::conditional<std::is_same<double, field_type>::value, UMFPack<M>,
-                                           typename std::conditional<std::is_same<std::complex<double>, field_type>::value,
-                                                                     UMFPack<M>,
-                                                                     void>::type>::type;
-    static constexpr bool isDirectSolver = std::is_same<UMFPack<M>, type>::value;
-#elif HAVE_SUPERLU
-    static constexpr bool isDirectSolver = true;
-    using type = SuperLU<M>;
-#else
-    static constexpr bool isDirectSolver = false;
-    using type = void;
-#endif
-
-    static type* create(const M& mat, bool verbose, bool reusevector )
-    {
-      return create(mat, verbose, reusevector, std::integral_constant<bool, isDirectSolver>());
-    }
-    static type* create(const M& /* mat */, bool /* verbose */, bool /* reusevector */, std::integral_constant<bool, false> )
-    {
-      DUNE_THROW(NotImplemented,"DirectSolver not selected");
-      return nullptr;
-    }
-
-    static type* create(const M& mat, bool verbose, bool reusevector, std::integral_constant<bool, true> )
-    {
-      return new type(mat, verbose, reusevector);
-    }
-    static std::string name()
-    {
-      if(std::is_same<type,void>::value)
-        return "None";
-#if HAVE_SUITESPARSE_UMFPACK
-      if(std::is_same<type, UMFPack<M> >::value)
-        return "UMFPack";
-#endif
-#if HAVE_SUPERLU
-      if(std::is_same<type, SuperLU<M> >::value)
-        return "SuperLU";
-#endif
-    }
-  };
-
-#endif
 
 
 #if HAVE_MPI
@@ -212,19 +160,11 @@ namespace Dune
       /** \copydoc Preconditioner::apply */
       void apply(Domain& v, const Range& d);
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
       //! Category of the preconditioner (see SolverCategory::Category)
       virtual SolverCategory::Category category() const
       {
         return category_;
       }
-#else
-      enum {
-            //! \brief The category the preconditioner is part of.
-            category = std::is_same<PI,Dune::Amg::SequentialInformation>::value?
-            Dune::SolverCategory::sequential:Dune::SolverCategory::overlapping
-        };
-#endif
 
       /** \copydoc Preconditioner::post */
       void post(Domain& x);
@@ -441,10 +381,8 @@ namespace Dune
       bool additive;
       bool coarsesolverconverged;
       std::shared_ptr<Smoother> coarseSmoother_;
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
       /** @brief The solver category. */
       SolverCategory::Category category_;
-#endif
       /** @brief The verbosity level. */
       std::size_t verbosity_;
     };
@@ -459,9 +397,7 @@ namespace Dune
       buildHierarchy_(amg.buildHierarchy_),
       additive(amg.additive), coarsesolverconverged(amg.coarsesolverconverged),
       coarseSmoother_(amg.coarseSmoother_),
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
       category_(amg.category_),
-#endif
       verbosity_(amg.verbosity_)
     {
       if(amg.rhs_)
@@ -483,10 +419,8 @@ namespace Dune
         postSteps_(parms.getNoPostSmoothSteps()), buildHierarchy_(false),
         additive(parms.getAdditive()), coarsesolverconverged(true),
         coarseSmoother_(),
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
 // #warning should category be retrieved from matrices?
         category_(SolverCategory::category(*smoothers_->coarsest())),
-#endif
         verbosity_(parms.debugLevel())
     {
       assert(matrices_->isBuilt());
@@ -508,15 +442,11 @@ namespace Dune
         postSteps_(criterion.getNoPostSmoothSteps()), buildHierarchy_(true),
         additive(criterion.getAdditive()), coarsesolverconverged(true),
         coarseSmoother_(),
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
         category_(SolverCategory::category(pinfo)),
-#endif
         verbosity_(criterion.debugLevel())
     {
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
       if(SolverCategory::category(matrix) != SolverCategory::category(pinfo))
         DUNE_THROW(InvalidSolverCategory, "Matrix and Communication must have the same SolverCategory!");
-#endif
       createHierarchies(criterion, const_cast<Operator&>(matrix), pinfo);
     }
 
@@ -612,14 +542,7 @@ namespace Dune
         coarseSmoother_.reset(ConstructionTraits<Smoother>::construct(cargs));
 #endif
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
         scalarProduct_ = createScalarProduct<X>(cargs.getComm(),category());
-#else
-        typedef Dune::ScalarProductChooser<X,ParallelInformation,category>
-          ScalarProductChooser;
-        // the scalar product.
-        scalarProduct_.reset(ScalarProductChooser::construct(cargs.getComm()));
-#endif
 
 
         typedef DirectSolverSelector< typename M::matrix_type, X > SolverSelector;

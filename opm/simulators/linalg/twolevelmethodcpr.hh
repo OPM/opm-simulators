@@ -302,12 +302,10 @@ private:
       return apply(x,b,1e-8,res);
     }
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
     virtual SolverCategory::Category category() const
     {
       return amg_.category();
     }
-#endif
     
     ~AMGInverseOperator()
     {
@@ -401,16 +399,6 @@ public:
    */
   typedef S SmootherType;
   
-  // define the category
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
-  
-#else  
-  enum {
-    //! \brief The category the preconditioner is part of.
-    category=SolverCategory::sequential
-  };
-#endif
-
   /**
    * @brief Constructs a two level method.
    *
@@ -510,13 +498,12 @@ public:
     postsmooth(context, postSteps_);
 
   }
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)  
 //   //! Category of the preconditioner (see SolverCategory::Category)
     virtual SolverCategory::Category category() const
     {
       return SolverCategory::sequential;
     }
-#endif
+
 private:
   /**
    * @brief Struct containing the level information.

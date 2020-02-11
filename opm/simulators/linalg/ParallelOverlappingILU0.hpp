@@ -605,21 +605,11 @@ protected:
     };
 
 public:
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
     Dune::SolverCategory::Category category() const override
     {
       return std::is_same<ParallelInfoT, Dune::Amg::SequentialInformation>::value ?
               Dune::SolverCategory::sequential : Dune::SolverCategory::overlapping;
     }
-
-#else
-    // define the category
-    enum {
-        //! \brief The category the preconditioner is part of.
-        category = std::is_same<ParallelInfoT, Dune::Amg::SequentialInformation>::value ?
-            Dune::SolverCategory::sequential : Dune::SolverCategory::overlapping
-    };
-#endif
 
     /*! \brief Constructor.
 

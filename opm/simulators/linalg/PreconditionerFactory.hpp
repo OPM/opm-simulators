@@ -156,7 +156,11 @@ private:
         using C = Comm;
         doAddCreator("ILU0", [](const O& op, const P& prm, const C& comm) {
             const double w = prm.get<double>("relaxation");
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+            return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqILU<M, V, V>>>(comm, op.getmat(), w);
+#else
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqILU0<M, V, V>>>(comm, op.getmat(), w);
+#endif
         });
         doAddCreator("ParOverILU0", [](const O& op, const P& prm, const C& comm) {
             const double w = prm.get<double>("relaxation");
@@ -167,7 +171,11 @@ private:
         doAddCreator("ILUn", [](const O& op, const P& prm, const C& comm) {
             const int n = prm.get<int>("ilulevel");
             const double w = prm.get<double>("relaxation");
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+            return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqILU<M, V, V>>>(comm, op.getmat(), n, w);
+#else
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqILUn<M, V, V>>>(comm, op.getmat(), n, w);
+#endif
         });
         doAddCreator("Jac", [](const O& op, const P& prm, const C& comm) {
             const int n = prm.get<int>("repeats");
@@ -221,7 +229,11 @@ private:
         using P = boost::property_tree::ptree;
         doAddCreator("ILU0", [](const O& op, const P& prm) {
             const double w = prm.get<double>("relaxation");
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+            return wrapPreconditioner<SeqILU<M, V, V>>(op.getmat(), w);
+#else
             return wrapPreconditioner<SeqILU0<M, V, V>>(op.getmat(), w);
+#endif
         });
         doAddCreator("ParOverILU0", [](const O& op, const P& prm) {
             const double w = prm.get<double>("relaxation");
@@ -230,7 +242,11 @@ private:
         doAddCreator("ILUn", [](const O& op, const P& prm) {
             const int n = prm.get<int>("ilulevel");
             const double w = prm.get<double>("relaxation");
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+            return wrapPreconditioner<SeqILU<M, V, V>>(op.getmat(), n, w);
+#else
             return wrapPreconditioner<SeqILUn<M, V, V>>(op.getmat(), n, w);
+#endif
         });
         doAddCreator("Jac", [](const O& op, const P& prm) {
             const int n = prm.get<int>("repeats");
@@ -255,7 +271,11 @@ private:
         doAddCreator("amg", [](const O& op, const P& prm) {
             const std::string smoother = prm.get<std::string>("smoother");
             if (smoother == "ILU0") {
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+                using Smoother = SeqILU<M, V, V>;
+#else
                 using Smoother = SeqILU0<M, V, V>;
+#endif
                 return makeAmgPreconditioner<Smoother>(op, prm);
             } else if (smoother == "Jac") {
                 using Smoother = SeqJac<M, V, V>;
@@ -267,7 +287,11 @@ private:
                 using Smoother = SeqSSOR<M, V, V>;
                 return makeAmgPreconditioner<Smoother>(op, prm);
             } else if (smoother == "ILUn") {
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+                using Smoother = SeqILU<M, V, V>;
+#else
                 using Smoother = SeqILUn<M, V, V>;
+#endif
                 return makeAmgPreconditioner<Smoother>(op, prm);
             } else {
                 std::string msg("No such smoother: ");

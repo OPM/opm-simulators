@@ -496,13 +496,8 @@ private:
 
         typedef typename EquilGrid :: LeafGridView  GlobalGridView;
         const GlobalGridView& globalGridView = globalGrid().leafGridView();
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView> ElementMapper;
         ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
-#else
-        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView, Dune::MCMGElementLayout> ElementMapper;
-        ElementMapper globalElemMapper(globalGridView);
-#endif
 
         const EclTransmissibility<TypeTag>* globalTrans;
 
@@ -603,14 +598,8 @@ private:
 
         typedef typename EquilGrid :: LeafGridView  GlobalGridView;
         const GlobalGridView& globalGridView = globalGrid().leafGridView();
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
         typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView> ElementMapper;
         ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
-
-#else
-        typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView, Dune::MCMGElementLayout> ElementMapper;
-        ElementMapper globalElemMapper(globalGridView);
-#endif
 
         const EclTransmissibility<TypeTag>* globalTrans;
         if (!collectToIORank_.isParallel()) {

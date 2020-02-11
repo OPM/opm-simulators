@@ -406,25 +406,18 @@ private:
             amg_->updateSolver(crit_, op_, comm_);
         }
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
         Dune::SolverCategory::Category category() const override
         {
             return std::is_same<Communication, Dune::Amg::SequentialInformation>::value ?
                 Dune::SolverCategory::sequential : Dune::SolverCategory::overlapping;
         }
-#endif
 
         void apply(X& x, X& b, double reduction, Dune::InverseOperatorResult& res) override
         {
             DUNE_UNUSED_PARAMETER(reduction);
             DUNE_UNUSED_PARAMETER(res);
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             auto sp = Dune::createScalarProduct<X,Communication>(comm_, op_.category());
-#else
-            using Chooser = Dune::ScalarProductChooser<X,Communication,AMGType::category>;
-            auto sp = Chooser::construct(comm_);
-#endif
             Dune::Preconditioner<X,X>* prec = amg_.get();
             if ( ! amg_ )
             {
@@ -440,88 +433,27 @@ private:
 
             if ( param_->cpr_ell_solvetype_ == 0)
             {
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
                                                tolerance, maxit, verbosity);
                 solver.apply(x,b,res);
-#else
-                // Category of preconditioner will be checked at compile time. Therefore we need
-                // to cast to the derived class
-                if ( !amg_ )
-                {
-                    Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
-                                                   reinterpret_cast<Smoother&>(*prec),
-                                                   tolerance, maxit, verbosity);
-                    solver.apply(x,b,res);
-                }
-                else
-                {
-                    Dune::BiCGSTABSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
-                                                   reinterpret_cast<AMGType&>(*prec),
-                                                   tolerance, maxit, verbosity);
-                    solver.apply(x,b,res);
-                }
-#endif
             }
             else if (param_->cpr_ell_solvetype_ == 1)
             {
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 Dune::CGSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
                                          tolerance, maxit, verbosity);
                 solver.apply(x,b,res);
-#else
-                // Category of preconditioner will be checked at compile time. Therefore we need
-                // to cast to the derived class
-                if ( !amg_ )
-                {
-                  Dune::CGSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
-                                                 reinterpret_cast<Smoother&>(*prec),
-                                                 tolerance, maxit, verbosity);
-                  solver.apply(x,b,res);
-                }
-                else
-                {
-                    Dune::CGSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
-                                                   reinterpret_cast<AMGType&>(*prec),
-                                                   tolerance, maxit, verbosity);
-                    solver.apply(x,b,res);
-                }
-#endif
             }
             else
             {
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
                 Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp, *prec,
                                          tolerance, maxit, verbosity);
                 solver.apply(x,b,res);
-#else
-                if ( !amg_ )
-                {
-                  Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
-                                                 reinterpret_cast<Smoother&>(*prec),
-                                                 tolerance, maxit, verbosity);
-                  solver.apply(x,b,res);
-                }
-                else
-                {
-                    Dune::LoopSolver<X> solver(const_cast<typename AMGType::Operator&>(op_), *sp,
-                                                   reinterpret_cast<AMGType&>(*prec),
-                                                   tolerance, maxit, verbosity);
-                    solver.apply(x,b,res);
-                }
-
-#endif
             }
 
             // Warn if unknown options.
             if (param_->cpr_ell_solvetype_ > 2 && comm_.communicator().rank() == 0) {
                 OpmLog::warning("cpr_ell_solver_type_unknown", "Unknown CPR elliptic solver type specification, using LoopSolver.");
             }
-
-
-#if ! DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
-            delete sp;
-#endif
         }
 
         void apply(X& x, X& b, Dune::InverseOperatorResult& res) override
@@ -742,11 +674,7 @@ public:
 
         if ( cpr_pressure_aggregation_ )
         {
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
             typedef Dune::Amg::PropertiesGraphCreator<Operator,Communication> GraphCreator;
-#else
-            typedef Dune::Amg::PropertiesGraphCreator<Operator> GraphCreator;
-#endif
             typedef typename GraphCreator::PropertiesGraph PropertiesGraph;
             typedef typename GraphCreator::GraphTuple GraphTuple;
 
@@ -767,7 +695,11 @@ public:
                                                 criterion_, true);
 
             using CommunicationArgs = typename Dune::Amg::ConstructionTraits<Communication>::Arguments;
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+            CommunicationArgs commArgs(communication_->communicator(), communication_->category());
+#else
             CommunicationArgs commArgs(communication_->communicator(), communication_->getSolverCategory());
+#endif
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
             coarseLevelCommunication_ = Dune::Amg::ConstructionTraits<Communication>::construct(commArgs);
 #else
@@ -1025,19 +957,12 @@ protected:
                                      CoarseSolverPolicy,
                                      Smoother>;
 public:
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
     Dune::SolverCategory::Category category() const override
     {
       return std::is_same<Communication, Dune::Amg::SequentialInformation>::value ?
               Dune::SolverCategory::sequential : Dune::SolverCategory::overlapping;
     }
-#else
-    // define the category
-    enum {
-        //! \brief The category the precondtioner is part of.
-        category = Operator::category
-    };
-#endif
+
     /**
      * \brief Constructor.
      * \param param The parameters used for configuring the solver.
