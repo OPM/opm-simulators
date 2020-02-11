@@ -1185,9 +1185,9 @@ namespace Opm {
         // the group target reduction rates needs to be update since wells may have swicthed to/from GRUP control
         // Currently the group targer reduction does not honor NUPCOL
         std::vector<double> groupTargetReduction(numPhases(), 0.0);
-        wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, well_state_nupcol_, well_state_, groupTargetReduction);
+        wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, phase_usage_, well_state_nupcol_, well_state_, groupTargetReduction);
         std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
-        wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, well_state_nupcol_, well_state_, groupTargetReductionInj);
+        wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, well_state_nupcol_, well_state_, groupTargetReductionInj);
 
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         well_state_.updateGlobalIsGrup(schedule(), reportStepIdx, comm);
@@ -1699,7 +1699,7 @@ namespace Opm {
             const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
             for (Phase phase : all) {
                 if (!group.hasInjectionControl(phase)) {
-                   continue;
+                    continue;
                 }
                 int phasePos;
                 if (phase == Phase::GAS && phase_usage_.phase_used[BlackoilPhases::Vapour] )
@@ -1712,144 +1712,150 @@ namespace Opm {
                     continue;
 
                 const auto& controls = group.injectionControls(phase, summaryState);
+                const Group::InjectionCMode& currentControl = well_state.currentInjectionGroupControl(phase, group.name());
 
-            if (group.has_control(Group::InjectionCMode::RATE))
-            {
-                if (checkCurrentControl || currentControl != Group::InjectionCMode::RATE)
+                if (controls.has_control(Group::InjectionCMode::RATE))
                 {
-                    double current_rate = 0.0;
-                    current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
+                    if (checkCurrentControl || currentControl != Group::InjectionCMode::RATE)
+                    {
+                        double current_rate = 0.0;
+                        current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
 
-                    // sum over all nodes
-                    current_rate = comm.sum(current_rate);
+                        // sum over all nodes
+                        current_rate = comm.sum(current_rate);
 
-                    if (controls.surface_max_rate < current_rate) {
-                        actionOnBrokenConstraints(group, Group::InjectionCMode::RATE, phase, reportStepIdx, deferred_logger);
+                        if (controls.surface_max_rate < current_rate) {
+                            actionOnBrokenConstraints(group, Group::InjectionCMode::RATE, phase, reportStepIdx, deferred_logger);
+                        }
                     }
                 }
-            }
-            if (group.has_control(Group::InjectionCMode::RESV))
-            {
-                if (checkCurrentControl || currentControl != Group::InjectionCMode::RESV)
+                if (controls.has_control(Group::InjectionCMode::RESV))
                 {
-                    double current_rate = 0.0;
-                    current_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
-                    // sum over all nodes
-                    current_rate = comm.sum(current_rate);
+                    if (checkCurrentControl || currentControl != Group::InjectionCMode::RESV)
+                    {
+                        double current_rate = 0.0;
+                        current_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
+                        // sum over all nodes
+                        current_rate = comm.sum(current_rate);
 
-                    if (controls.resv_max_rate < current_rate) {
-                        actionOnBrokenConstraints(group, Group::InjectionCMode::RESV, phase, reportStepIdx, deferred_logger);
-                    }                    }
+                        if (controls.resv_max_rate < current_rate) {
+                            actionOnBrokenConstraints(group, Group::InjectionCMode::RESV, phase, reportStepIdx, deferred_logger);
+                        }
+                    }
+                }
                 if (controls.has_control(Group::InjectionCMode::REIN))
                 {
-                    double production_Rate = 0.0;
-                    const Group& groupRein = schedule().getGroup(controls.reinj_group, reportStepIdx);
-                    production_Rate += wellGroupHelpers::sumWellRates(groupRein, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/false);
+                    if (checkCurrentControl || currentControl != Group::InjectionCMode::REIN)
+                    {
+                        double production_Rate = 0.0;
+                        const Group& groupRein = schedule().getGroup(controls.reinj_group, reportStepIdx);
+                        production_Rate += wellGroupHelpers::sumWellRates(groupRein, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/false);
 
-                    // sum over all nodes
-                    production_Rate = comm.sum(production_Rate);
+                        // sum over all nodes
+                        production_Rate = comm.sum(production_Rate);
 
-                    double current_rate = 0.0;
-                    current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
+                        double current_rate = 0.0;
+                        current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
 
-                    // sum over all nodes
-                    current_rate = comm.sum(current_rate);
+                        // sum over all nodes
+                        current_rate = comm.sum(current_rate);
 
-                if (controls.target_reinj_fraction*production_Rate < current_rate) {
-                    actionOnBrokenConstraints(group, Group::InjectionCMode::REIN, phase,reportStepIdx, deferred_logger);
-                }                    }
-            if (group.has_control(Group::InjectionCMode::VREP))
-            {
-                if (checkCurrentControl || currentControl != Group::InjectionCMode::VREP)
+                        if (controls.target_reinj_fraction*production_Rate < current_rate) {
+                            actionOnBrokenConstraints(group, Group::InjectionCMode::REIN, phase,reportStepIdx, deferred_logger);
+                        }
+                    }
+                }
+                if (controls.has_control(Group::InjectionCMode::VREP))
                 {
-                    double voidage_rate = 0.0;
-                    const Group& groupVoidage = schedule().getGroup(controls.voidage_group, reportStepIdx);
-                    voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
-                    voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
-                    voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
+                    if (checkCurrentControl || currentControl != Group::InjectionCMode::VREP)
+                    {
+                        double voidage_rate = 0.0;
+                        const Group& groupVoidage = schedule().getGroup(controls.voidage_group, reportStepIdx);
+                        voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
+                        voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
+                        voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
 
-                    // sum over all nodes
-                    voidage_rate = comm.sum(voidage_rate);
+                        // sum over all nodes
+                        voidage_rate = comm.sum(voidage_rate);
 
-                    double total_rate = 0.0;
-                    total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], true);
-                    total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], true);
-                    total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], true);
+                        double total_rate = 0.0;
+                        total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], true);
+                        total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], true);
+                        total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], true);
 
-                    // sum over all nodes
-                    total_rate = comm.sum(total_rate);
+                        // sum over all nodes
+                        total_rate = comm.sum(total_rate);
 
-                    if (controls.target_void_fraction*voidage_rate < total_rate) {
-                        actionOnBrokenConstraints(group, Group::InjectionCMode::VREP, phase, reportStepIdx, deferred_logger);
+                        if (controls.target_void_fraction*voidage_rate < total_rate) {
+                            actionOnBrokenConstraints(group, Group::InjectionCMode::VREP, phase, reportStepIdx, deferred_logger);
+                        }
                     }
                 }
-            }
-            // Handle GCONSALE
-            if (schedule().gConSale(reportStepIdx).has(group.name())) {
+                // Handle GCONSALE
+                if (schedule().gConSale(reportStepIdx).has(group.name())) {
 
-                if (controls.phase != Phase::GAS)
-                    OPM_THROW(std::runtime_error, "Group " + group.name() + " has GCONSALE control but is not a GAS group" );
+                    if (controls.phase != Phase::GAS)
+                        OPM_THROW(std::runtime_error, "Group " + group.name() + " has GCONSALE control but is not a GAS group" );
 
-                const auto& gconsale = schedule().gConSale(reportStepIdx).get(group.name(), summaryState);
+                    const auto& gconsale = schedule().gConSale(reportStepIdx).get(group.name(), summaryState);
 
-                double sales_rate = 0.0;
-                int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
-                sales_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/false);
-                sales_rate -= wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/true);
+                    double sales_rate = 0.0;
+                    int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
+                    sales_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/false);
+                    sales_rate -= wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/true);
 
-                // sum over all nodes
-                sales_rate = comm.sum(sales_rate);
+                    // sum over all nodes
+                    sales_rate = comm.sum(sales_rate);
 
-                // add import rate and substract consumption rate for group for gas
-                if (schedule().gConSump(reportStepIdx).has(group.name())) {
-                    const auto& gconsump = schedule().gConSump(reportStepIdx).get(group.name(), summaryState);
-                    if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
-                        sales_rate += gconsump.import_rate;
-                        sales_rate -= gconsump.consumption_rate;
+                    // add import rate and substract consumption rate for group for gas
+                    if (schedule().gConSump(reportStepIdx).has(group.name())) {
+                        const auto& gconsump = schedule().gConSump(reportStepIdx).get(group.name(), summaryState);
+                        if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
+                            sales_rate += gconsump.import_rate;
+                            sales_rate -= gconsump.consumption_rate;
+                        }
+                    }
+                    if (sales_rate > gconsale.max_sales_rate) {
+                        OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate more then the maximum permitted value. Not implemented in Flow" );
+                    }
+                    if (sales_rate < gconsale.min_sales_rate) {
+                        OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate less then minimum permitted value. Not implemented in Flow" );
+                    }
+                    if (gconsale.sales_target < 0.0) {
+                        OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate target less then zero. Not implemented in Flow" );
                     }
                 }
-                if (sales_rate > gconsale.max_sales_rate) {
-                    OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate more then the maximum permitted value. Not implemented in Flow" );
-                }
-                if (sales_rate < gconsale.min_sales_rate) {
-                    OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate less then minimum permitted value. Not implemented in Flow" );
-                }
-                if (gconsale.sales_target < 0.0) {
-                    OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate target less then zero. Not implemented in Flow" );
-                }
-            }
-            }
 
+            }
         }
 
         if (group.isProductionGroup()) {
             const auto controls = group.productionControls(summaryState);
             const Group::ProductionCMode& currentControl = well_state.currentProductionGroupControl(group.name());
 
-            if (group.has_control(Group::ProductionCMode::NONE))
-            {
-
-            }
             if (group.has_control(Group::ProductionCMode::ORAT))
             {
                 if (checkCurrentControl || currentControl != Group::ProductionCMode::ORAT)
                 {
-                double current_rate = 0.0;
-                current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
+                    double current_rate = 0.0;
+                    current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
 
-                // sum over all nodes
-                current_rate = comm.sum(current_rate);
+                    // sum over all nodes
+                    current_rate = comm.sum(current_rate);
 
-                if (controls.oil_target < current_rate  ) {
-                    actionOnBrokenConstraints(group, controls.exceed_action, Group::ProductionCMode::ORAT, reportStepIdx, deferred_logger);
-                }
+                    if (controls.oil_target < current_rate  ) {
+                        actionOnBrokenConstraints(group, controls.exceed_action, Group::ProductionCMode::ORAT, reportStepIdx, deferred_logger);
+                    }
                 }
             }
 
             if (group.has_control(Group::ProductionCMode::WRAT))
             {
-                double current_rate = 0.0;
-                current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
+                if (checkCurrentControl || currentControl != Group::ProductionCMode::WRAT)
+                {
+
+                    double current_rate = 0.0;
+                    current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
 
                     // sum over all nodes
                     current_rate = comm.sum(current_rate);
