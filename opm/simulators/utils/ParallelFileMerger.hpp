@@ -26,7 +26,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/regex.hpp>
+#include <regex>
 
 namespace Opm
 {
@@ -70,14 +70,14 @@ public:
 
     void operator()(const fs::path& file)
     {
-        boost::smatch matches;
+        std::smatch matches;
         std::string filename = file.filename().native();
 
-        if ( boost::regex_match(filename, matches, fileWarningRegex_) )
+        if ( std::regex_match(filename, matches, fileWarningRegex_) )
         {
-            std::string rank = boost::regex_replace(filename, fileWarningRegex_, "\\1");
+            std::string rank = std::regex_replace(filename, fileWarningRegex_, "\\1");
 
-            if( boost::regex_match(filename, logFileRegex_) )
+            if( std::regex_match(filename, logFileRegex_) )
             {
                 if ( show_fallout_ ){
                     appendFile(*logStream_, file, rank);
@@ -87,7 +87,7 @@ public:
             }
             else
             {
-                if (boost::regex_match(filename, debugFileRegex_)  )
+                if (std::regex_match(filename, debugFileRegex_)  )
                 {
                     if ( show_fallout_ ){
                         appendFile(*debugStream_, file, rank);
@@ -135,11 +135,11 @@ private:
     }
 
     /// \brief Regex to capture *.DBG
-    boost::regex debugFileRegex_;
+    std::regex debugFileRegex_;
     /// \brief Regex to capture  *.PRT
-    boost::regex logFileRegex_;
+    std::regex logFileRegex_;
     /// \brief Regex to capture  CASENAME.[0-9]+.[A-Z]+
-    boost::regex fileWarningRegex_;
+    std::regex fileWarningRegex_;
     /// \brief Stream to *.DBG file
     std::unique_ptr<fs::ofstream> debugStream_;
     /// \brief Stream to *.PRT file
