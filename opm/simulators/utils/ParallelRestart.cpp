@@ -521,6 +521,61 @@ std::size_t packSize(const ThresholdPressure& data, Dune::MPIHelper::MPICommunic
           packSize(data.pressureTable(), comm);
 }
 
+std::size_t packSize(const Aquifetp& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.data(), comm);
+}
+
+std::size_t packSize(const Aquifetp::AQUFETP_data& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.aquiferID, comm) +
+           packSize(data.pvttableID, comm) +
+           packSize(data.J, comm) +
+           packSize(data.C_t, comm) +
+           packSize(data.V0, comm) +
+           packSize(data.d0, comm) +
+           packSize(data.p0, comm);
+}
+
+std::size_t packSize(const AquiferCT::AQUCT_data& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.aquiferID, comm) +
+           packSize(data.inftableID, comm) +
+           packSize(data.pvttableID, comm) +
+           packSize(data.phi_aq, comm) +
+           packSize(data.d0, comm) +
+           packSize(data.C_t, comm) +
+           packSize(data.r_o, comm) +
+           packSize(data.k_a, comm) +
+           packSize(data.c1, comm) +
+           packSize(data.h, comm) +
+           packSize(data.theta, comm) +
+           packSize(data.c2, comm) +
+           packSize(data.p0, comm) +
+           packSize(data.td, comm) +
+           packSize(data.pi, comm) +
+           packSize(data.cell_id, comm);
+}
+
+std::size_t packSize(const AquiferCT& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.data(), comm);
+}
+
+std::size_t packSize(const Aquancon::AquancCell& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.aquiferID, comm) +
+           packSize(data.global_index, comm) +
+           packSize(data.influx_coeff, comm) +
+           packSize(data.influx_mult, comm) +
+           packSize(data.face_dir, comm);
+}
+
+std::size_t packSize(const Aquancon& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.data(), comm);
+}
+
 std::size_t packSize(const BCConfig& bc, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(bc.faces(), comm);
@@ -2257,6 +2312,61 @@ void pack(const ThresholdPressure& data, std::vector<char>& buffer, int& positio
     pack(data.pressureTable(), buffer, position, comm);
 }
 
+void pack(const AquiferCT::AQUCT_data& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm) {
+    pack(data.aquiferID, buffer, position, comm);
+    pack(data.inftableID, buffer, position, comm);
+    pack(data.pvttableID, buffer, position, comm);
+    pack(data.phi_aq, buffer, position, comm);
+    pack(data.d0, buffer, position, comm);
+    pack(data.C_t, buffer, position, comm);
+    pack(data.r_o, buffer, position, comm);
+    pack(data.k_a, buffer, position, comm);
+    pack(data.c1, buffer, position, comm);
+    pack(data.h, buffer, position, comm);
+    pack(data.theta, buffer, position, comm);
+    pack(data.c2, buffer, position, comm);
+    pack(data.p0, buffer, position, comm);
+    pack(data.td, buffer, position, comm);
+    pack(data.pi, buffer, position, comm);
+    pack(data.cell_id, buffer, position, comm);
+}
+
+void pack(const AquiferCT& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm) {
+    pack(data.data(), buffer, position, comm);
+}
+
+
+void pack(const Aquifetp::AQUFETP_data& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm) {
+    pack(data.aquiferID, buffer, position, comm);
+    pack(data.pvttableID, buffer, position, comm);
+    pack(data.J, buffer, position, comm);
+    pack(data.C_t, buffer, position, comm);
+    pack(data.V0, buffer, position, comm);
+    pack(data.d0, buffer, position, comm);
+    pack(data.p0, buffer, position, comm);
+}
+
+void pack(const Aquifetp& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm) {
+    pack(data.data(), buffer, position, comm);
+}
+
+void pack(const Aquancon::AquancCell& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm) {
+    pack(data.aquiferID, buffer, position, comm);
+    pack(data.global_index, buffer, position, comm);
+    pack(data.influx_coeff, buffer, position, comm);
+    pack(data.influx_mult, buffer, position, comm);
+    pack(data.face_dir, buffer, position, comm);
+}
+
+void pack(const Aquancon& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm) {
+    pack(data.data(), buffer, position, comm);
+}
 
 void pack(const BCConfig& bc, std::vector<char>& buffer, int& position,
     Dune::MPIHelper::MPICommunicator comm)
@@ -4166,6 +4276,107 @@ void unpack(ThresholdPressure& data, std::vector<char>& buffer, int& position,
     data = ThresholdPressure(active, restart, thpTable, pTable);
 }
 
+void unpack(AquiferCT::AQUCT_data& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    int aquiferID;
+    int inftableID, pvttableID;
+    double phi_aq, d0, C_t, r_o, k_a, c1, h, theta, c2;
+    std::pair<bool, double> p0;
+    std::vector<double> td, pi;
+    std::vector<int> cell_id;
+
+    unpack(aquiferID, buffer, position, comm);
+    unpack(inftableID, buffer, position, comm);
+    unpack(pvttableID, buffer, position, comm);
+    unpack(phi_aq, buffer, position, comm);
+    unpack(d0, buffer, position, comm);
+    unpack(C_t, buffer, position, comm);
+    unpack(r_o, buffer, position, comm);
+    unpack(k_a, buffer, position, comm);
+    unpack(c1, buffer, position, comm);
+    unpack(h, buffer, position, comm);
+    unpack(theta, buffer, position, comm);
+    unpack(c2, buffer, position, comm);
+    unpack(p0, buffer, position, comm);
+    unpack(td, buffer, position, comm);
+    unpack(pi, buffer, position, comm);
+    unpack(cell_id, buffer, position, comm);
+
+    data = AquiferCT::AQUCT_data(aquiferID,
+                                 inftableID,
+                                 pvttableID,
+                                 phi_aq,
+                                 d0,
+                                 C_t,
+                                 r_o,
+                                 k_a,
+                                 c1,
+                                 h,
+                                 theta,
+                                 c2,
+                                 p0,
+                                 td,
+                                 pi,
+                                 cell_id);
+}
+
+void unpack(AquiferCT& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<AquiferCT::AQUCT_data> aquiferList;
+    unpack(aquiferList, buffer, position, comm);
+    data = AquiferCT(aquiferList);
+}
+
+void unpack(Aquifetp::AQUFETP_data& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    int aquiferID;
+    int pvttableID;
+    double  J, C_t, V0, d0;
+    std::pair<bool, double> p0;
+
+    unpack(aquiferID, buffer, position, comm);
+    unpack(pvttableID, buffer, position, comm);
+    unpack(J, buffer, position, comm);
+    unpack(C_t, buffer, position, comm);
+    unpack(V0, buffer, position, comm);
+    unpack(d0, buffer, position, comm);
+    unpack(p0, buffer, position, comm);
+    data = Aquifetp::AQUFETP_data(aquiferID, pvttableID, J, C_t, V0, d0, p0);
+}
+
+void unpack(Aquifetp& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Aquifetp::AQUFETP_data> aquiferList;
+    unpack(aquiferList, buffer, position, comm);
+    data = Aquifetp(aquiferList);
+}
+
+
+void unpack(Aquancon::AquancCell& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    int aquiferID;
+    std::size_t globalIndex;
+    std::pair<bool, double> influxCoeff;
+    double influxMult;
+    FaceDir::DirEnum faceDir;
+
+    unpack(aquiferID, buffer, position, comm);
+    unpack(globalIndex, buffer, position, comm);
+    unpack(influxCoeff, buffer, position, comm);
+    unpack(influxMult, buffer, position, comm);
+    unpack(faceDir, buffer, position, comm);
+
+    data = Aquancon::AquancCell(aquiferID, globalIndex, influxCoeff, influxMult, faceDir);
+}
+
+
+
+void unpack(Aquancon& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    std::unordered_map<int, std::vector<Aquancon::AquancCell>> aquiferCells;
+    unpack(aquiferCells, buffer, position, comm);
+    data = Aquancon(aquiferCells);
+}
 
 void unpack(BCConfig& bc, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
