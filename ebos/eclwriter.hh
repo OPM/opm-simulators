@@ -32,6 +32,9 @@
 #include "ecloutputblackoilmodule.hh"
 
 #include <opm/models/blackoil/blackoilmodel.hh>
+
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
+
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include <opm/models/io/baseoutputwriter.hh>
 #include <opm/models/parallel/tasklets.hh>
@@ -39,6 +42,7 @@
 #include <ebos/nncsorter.hpp>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
+
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
@@ -256,6 +260,15 @@ public:
             simulator_.vanguard().externalSetupTime();
 
         Opm::data::Wells localWellData = simulator_.problem().wellModel().wellData();
+
+        /*const Group& fieldGroup = schedule().getGroup("FIELD", reportStepNum);
+        wellGroupHelpers::setCmodeGroup(fieldGroup, simulator_.vanguard().schedule(), simulator_.vanguard().summaryState(), reportStepNum, well_state_);
+
+        Opm::data::Group localGroupData = simulator_.problem().wellModel().groupData(reportStepNum, simulator_.vanguard().schedule());
+
+        for (const auto& cp_constr : localGroupData.currentProdConstraint) {
+             std::cout << "cp_constr.first: " << cp_constr.first << " cp_constr.second: " << static_cast<int>(cp_constr.second) << std::endl;
+        }*/
 
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);

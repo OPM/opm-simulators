@@ -21,6 +21,8 @@
 #ifndef OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 #define OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 
+#include <opm/output/data/Groups.hpp>
+
 #include <vector>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 
@@ -127,6 +129,33 @@ namespace Opm {
             std::ostringstream ss;
             setGroupControl(group, schedule, Phase::GAS, reportStepIdx, /*injector*/true, wellState, ss);
         }
+    }
+
+        Opm::data::Group getActiveCmodeGroup(const Group& group, const Schedule& schedule, const SummaryState& summaryState, const int reportStepIdx, WellStateFullyImplicitBlackoil& wellState) {
+
+        Opm::data::Group cagc;
+        std::pair<const std::string, const Opm::Group::ProductionCMode> groupPCPair;
+        std::pair<const std::string, const Opm::Group::InjectionCMode> groupICPair;
+
+        for (const std::string& groupName : group.groups()) {
+            Opm::data::Group cagc_tmp = getActiveCmodeGroup( schedule.getGroup(groupName, reportStepIdx), schedule, summaryState, reportStepIdx, wellState);
+            for (const auto& item : cagc_tmp.currentInjectionConstraint) {
+                    cagc.currentInjectionConstraint.insert(item);
+            }
+            for (const auto& item : cagc_tmp.currentProdConstraint) {
+                    cagc.currentProdConstraint.insert(item);
+            }
+        }
+
+        if (wellState.hasInjectionGroupControl(group.name())) {
+            groupICPair = std::make_pair(group.name(), wellState.currentInjectionGroupControl(group.name()));
+            cagc.currentInjectionConstraint.insert(groupICPair);
+        }
+        if (wellState.hasProductionGroupControl(group.name())) {
+            groupPCPair = std::make_pair(group.name(), wellState.currentProductionGroupControl(group.name()));
+            cagc.currentProdConstraint.insert(groupPCPair);
+        }
+
     }
 
 

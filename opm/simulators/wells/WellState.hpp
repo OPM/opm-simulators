@@ -22,7 +22,9 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/output/data/Wells.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+//#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 
 #include <array>
@@ -227,6 +229,7 @@ namespace Opm
     protected:
         std::vector<bool>   open_for_output_;
     private:
+
 
         WellMapType wellMap_;
 

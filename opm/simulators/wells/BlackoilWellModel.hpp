@@ -36,6 +36,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
+//#include <opm/output/data/Groups.hpp>
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
@@ -183,8 +184,29 @@ namespace Opm {
 
             void initFromRestartFile(const RestartValue& restartValues);
 
+            /*Opm::data::Group groupData(const int reportStepIdx, Opm::Schedule& sched)
+            {
+                Opm::data::Group dw;
+                std::pair<const std::string, const Opm::Group::ProductionCMode> groupPCPair;
+                std::pair<const std::string, const Opm::Group::InjectionCMode> groupICPair;
+                for (const std::string gname :  sched.groupNames(reportStepIdx))  {
+                    if (this->well_state_.hasProductionGroupControl(gname)) {
+                       groupPCPair = std::make_pair(gname, this->well_state_.currentProductionGroupControl(gname));
+                        dw.currentProdConstraint.insert(groupPCPair);
+                    }
+                    if (this->well_state_.hasInjectionGroupControl(gname)) {
+                        groupICPair = std::make_pair(gname, this->well_state_.currentInjectionGroupControl(gname));
+                        dw.currentInjectionConstraint.insert(groupICPair);
+                    }
+                }
+                return dw;
+            } */
+
             Opm::data::Wells wellData() const
             { return well_state_.report(phase_usage_, Opm::UgGridHelpers::globalCell(grid())); }
+
+            //Opm::data::Group groupData(const int reportStepIdx) const
+            //{ return g_report(reportStepIdx); }
 
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;
@@ -249,6 +271,7 @@ namespace Opm {
             WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, Opm::DeferredLogger& deferred_logger) const;
 
             WellState well_state_;
+
             WellState previous_well_state_;
             WellState well_state_nupcol_;
 
