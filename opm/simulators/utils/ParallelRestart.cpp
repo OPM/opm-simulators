@@ -42,6 +42,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
@@ -5338,7 +5339,7 @@ void unpack(SpiralICD& data,
            widthTransitionRegion, maxViscosityRatio;
     int methodFlowScaling;
     double maxAbsoluteRate;
-    SpiralICD::Status status;
+    ICDStatus status;
     double scalingFactor;
 
     unpack(strength, buffer, position, comm);
@@ -5371,7 +5372,7 @@ void unpack(Valve& data,
     double pipeDiameter;
     double pipeRoughness;
     double pipeCrossArea;
-    Valve::Status status;
+    ICDStatus status;
 
     unpack(conFlowCoefficient, buffer, position, comm);
     unpack(conCrossArea, buffer, position, comm);
