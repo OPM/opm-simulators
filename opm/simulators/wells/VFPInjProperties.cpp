@@ -67,7 +67,6 @@ double VFPInjProperties::thp(int table_id,
                              const double& vapour,
                              const double& bhp_arg) const {
     const VFPInjTable* table = detail::getTable(m_tables, table_id);
-    const VFPInjTable::array_type& data = table->getTable();
 
     //Find interpolation variables
     double flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
@@ -84,7 +83,7 @@ double VFPInjProperties::thp(int table_id,
     std::vector<double> bhp_array(nthp);
     for (int i=0; i<nthp; ++i) {
         auto thp_i = detail::findInterpData(thp_array[i], thp_array);
-        bhp_array[i] = detail::interpolate(data, flo_i, thp_i).value;
+        bhp_array[i] = detail::interpolate(*table, flo_i, thp_i).value;
     }
 
     double retval = detail::findTHP(bhp_array, thp_array, bhp_arg);

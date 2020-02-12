@@ -1115,8 +1115,7 @@ std::size_t packSize(const VFPInjTable& data,
            packSize(data.getFloType(), comm) +
            packSize(data.getFloAxis(), comm) +
            packSize(data.getTHPAxis(), comm) +
-           data.getTable().num_elements() *
-           packSize(double(), comm);
+           packSize(data.getTable(), comm);
 }
 
 std::size_t packSize(const VFPProdTable& data,
@@ -2851,8 +2850,7 @@ void pack(const VFPInjTable& data,
     pack(data.getFloType(), buffer, position, comm);
     pack(data.getFloAxis(), buffer, position, comm);
     pack(data.getTHPAxis(), buffer, position, comm);
-    for (size_t i = 0; i < data.getTable().num_elements(); ++i)
-        pack(*(data.getTable().data() + i), buffer, position, comm);
+    pack(data.getTable(), buffer, position, comm);
 }
 
 void pack(const VFPProdTable& data,
@@ -5042,12 +5040,7 @@ void unpack(VFPInjTable& data,
     unpack(floType, buffer, position, comm);
     unpack(floAxis, buffer, position, comm);
     unpack(thpAxis, buffer, position, comm);
-    VFPInjTable::extents extents;
-    extents[0] = thpAxis.size();
-    extents[1] = floAxis.size();
-    table.resize(extents);
-    for (size_t i = 0; i < table.num_elements(); ++i)
-        unpack(*(table.data() + i), buffer, position, comm);
+    unpack(table, buffer, position, comm);
 
     data = VFPInjTable(tableNum, datumDepth, floType,
                        floAxis, thpAxis, table);

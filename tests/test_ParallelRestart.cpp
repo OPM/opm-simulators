@@ -310,13 +310,9 @@ Opm::Well getFullWell()
 Opm::VFPInjTable getVFPInjTable()
 {
     Opm::VFPInjTable::array_type table;
-    Opm::VFPInjTable::extents shape;
-    shape[0] = 3;
-    shape[1] = 2;
-    table.resize(shape);
-    double foo = 1.0;
-    for (size_t i = 0; i < table.num_elements(); ++i)
-        *(table.data() + i) = foo++;
+    table.resize(3*2);
+    std::iota(table.begin(), table.end(), 1.0);
+
     return Opm::VFPInjTable(1, 2.0, Opm::VFPInjTable::FLO_WAT, {1.0, 2.0},
                             {3.0, 4.0, 5.0}, table);
 }

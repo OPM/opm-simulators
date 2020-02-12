@@ -449,7 +449,7 @@ inline VFPEvaluation interpolate(
  * which performs 5D interpolation, but here for the 2D case only
  */
 inline VFPEvaluation interpolate(
-        const VFPInjTable::array_type& array,
+        const VFPInjTable& table,
         const InterpData& flo_i,
         const InterpData& thp_i) {
 
@@ -466,7 +466,7 @@ inline VFPEvaluation interpolate(
             const int fi = flo_i.ind_[f];
 
             //Copy element
-            nn[t][f].value = array[ti][fi];
+            nn[t][f].value = table(ti,fi);
         }
     }
 
@@ -544,7 +544,7 @@ inline VFPEvaluation bhp(const VFPInjTable* table,
     auto thp_i = detail::findInterpData(thp, table->getTHPAxis());
 
     //Then perform the interpolation itself
-    detail::VFPEvaluation retval = detail::interpolate(table->getTable(), flo_i, thp_i);
+    detail::VFPEvaluation retval = detail::interpolate(*table, flo_i, thp_i);
 
     return retval;
 }
