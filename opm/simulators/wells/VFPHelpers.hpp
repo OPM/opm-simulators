@@ -332,7 +332,7 @@ inline VFPEvaluation operator*(
  * Helper function which interpolates data using the indices etc. given in the inputs.
  */
 inline VFPEvaluation interpolate(
-        const VFPProdTable::array_type& array,
+        const VFPProdTable& table,
         const InterpData& flo_i,
         const InterpData& thp_i,
         const InterpData& wfr_i,
@@ -361,7 +361,7 @@ inline VFPEvaluation interpolate(
                         const int fi = flo_i.ind_[f];
 
                         //Copy element
-                        nn[t][w][g][a][f].value = array[ti][wi][gi][ai][fi];
+                        nn[t][w][g][a][f].value = table(ti,wi,gi,ai,fi);
                     }
                 }
             }
@@ -522,7 +522,7 @@ inline VFPEvaluation bhp(const VFPProdTable* table,
     auto gfr_i = detail::findInterpData( gfr, table->getGFRAxis());
     auto alq_i = detail::findInterpData( alq, table->getALQAxis());
 
-    detail::VFPEvaluation retval = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    detail::VFPEvaluation retval = detail::interpolate(*table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
     return retval;
 }

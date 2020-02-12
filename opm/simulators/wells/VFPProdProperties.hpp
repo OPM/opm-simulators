@@ -102,7 +102,7 @@ public:
             auto gfr_i = detail::findInterpData( gfr.value(), table->getGFRAxis());
             auto alq_i = detail::findInterpData( alq, table->getALQAxis()); //assume constant
 
-            detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+            detail::VFPEvaluation bhp_val = detail::interpolate(*table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
             bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo * flo);
             bhp.setValue(bhp_val.value);
