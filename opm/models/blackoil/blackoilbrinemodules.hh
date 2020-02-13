@@ -258,10 +258,10 @@ public:
     /*!
      * \brief Return how much a Newton-Raphson update is considered an error
      */
-    static Scalar computeUpdateError(const PrimaryVariables& oldPv OPM_OPTIM_UNUSED,
-                                     const EqVector& delta OPM_OPTIM_UNUSED)
+    static Scalar computeUpdateError(const PrimaryVariables& oldPv OPM_UNUSED,
+                                     const EqVector& delta OPM_UNUSED)
     {
-        // do not consider consider the cange of Brine primary variables for
+        // do not consider consider the change of Brine primary variables for
         // convergence
         // TODO: maybe this should be changed
         return static_cast<Scalar>(0.0);
