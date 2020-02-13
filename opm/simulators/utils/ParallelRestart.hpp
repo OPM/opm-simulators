@@ -151,8 +151,6 @@ class UDAValue;
 class UDQASTNode;
 class UDQConfig;
 class UDQDefine;
-class UDQFunction;
-class UDQFunctionTable;
 class UDQIndex;
 class UDQParams;
 class UnitSystem;
@@ -764,8 +762,6 @@ ADD_PACK_PROTOTYPES(UDQAssign::AssignRecord)
 ADD_PACK_PROTOTYPES(UDQASTNode)
 ADD_PACK_PROTOTYPES(UDQConfig)
 ADD_PACK_PROTOTYPES(UDQDefine)
-ADD_PACK_PROTOTYPES(UDQFunction)
-ADD_PACK_PROTOTYPES(UDQFunctionTable)
 ADD_PACK_PROTOTYPES(UDQIndex)
 ADD_PACK_PROTOTYPES(UDQParams)
 ADD_PACK_PROTOTYPES(UnitSystem)
