@@ -49,6 +49,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateModel.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
@@ -1592,7 +1593,7 @@ BOOST_AUTO_TEST_CASE(SpiralICD)
 {
 #ifdef HAVE_MPI
     Opm::SpiralICD val1(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8, 9.0,
-                        Opm::SpiralICD::Status::OPEN, 10.0);
+                        Opm::ICDStatus::OPEN, 10.0);
     auto val2 = PackUnpack(val1);
     DO_CHECKS(SpiralICD)
 #endif
@@ -1602,7 +1603,7 @@ BOOST_AUTO_TEST_CASE(SpiralICD)
 BOOST_AUTO_TEST_CASE(Valve)
 {
 #ifdef HAVE_MPI
-    Opm::Valve val1(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, Opm::Valve::Status::OPEN);
+    Opm::Valve val1(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, Opm::ICDStatus::OPEN);
     auto val2 = PackUnpack(val1);
     DO_CHECKS(Valve)
 #endif
