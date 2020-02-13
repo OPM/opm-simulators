@@ -137,20 +137,20 @@ public:
      * The input can either be the canonical deck file name or the name of the case
      * (i.e., without the .DATA extension)
      */
-    static boost::filesystem::path canonicalDeckPath(const std::string& caseName)
+    static Opm::filesystem::path canonicalDeckPath(const std::string& caseName)
     {
-        const auto fileExists = [](const boost::filesystem::path& f) -> bool
+        const auto fileExists = [](const Opm::filesystem::path& f) -> bool
             {
-                if (!boost::filesystem::exists(f))
+                if (!Opm::filesystem::exists(f))
                     return false;
 
-                if (boost::filesystem::is_regular_file(f))
+                if (Opm::filesystem::is_regular_file(f))
                     return true;
 
-                return boost::filesystem::is_symlink(f) && boost::filesystem::is_regular_file(boost::filesystem::read_symlink(f));
+                return Opm::filesystem::is_symlink(f) && Opm::filesystem::is_regular_file(Opm::filesystem::read_symlink(f));
             };
 
-        auto simcase = boost::filesystem::path(caseName);
+        auto simcase = Opm::filesystem::path(caseName);
         if (fileExists(simcase))
             return simcase;
 
@@ -557,9 +557,9 @@ private:
             outputDir = ioConfig.getOutputDir();
 
         // ensure that the output directory exists and that it is a directory
-        if (!boost::filesystem::is_directory(outputDir)) {
+        if (!Opm::filesystem::is_directory(outputDir)) {
             try {
-                boost::filesystem::create_directories(outputDir);
+                Opm::filesystem::create_directories(outputDir);
             }
             catch (...) {
                  throw std::runtime_error("Creation of output directory '"+outputDir+"' failed\n");

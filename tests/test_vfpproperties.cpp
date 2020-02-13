@@ -31,7 +31,7 @@
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <boost/test/unit_test.hpp>
-#include <boost/filesystem.hpp>
+#include <opm/common/utility/FileSystem.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -650,7 +650,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     Opm::ParseContext parseContext;
     Opm::ErrorGuard errorGuard;
     Opm::Parser parser;
-    boost::filesystem::path file("VFPPROD2");
+    Opm::filesystem::path file("VFPPROD2");
 
     auto deck = parser.parseFile(file.string());
     Opm::checkDeck(deck, parser, parseContext, errorGuard);
