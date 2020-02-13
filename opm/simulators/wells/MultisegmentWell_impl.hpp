@@ -1167,16 +1167,6 @@ namespace Opm
 
 
 
-    template <typename TypeTag>
-    WellSegments::MultiPhaseModel
-    MultisegmentWell<TypeTag>::
-    multiphaseModel() const
-    {
-        return segmentSet().multiPhaseModel();
-    }
-
-
-
 
 
     template <typename TypeTag>
