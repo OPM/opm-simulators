@@ -580,12 +580,17 @@ private:
     ///
     /// To be used with ParallelISTLInformation::computeReduction.
     template<class T>
-    MaskToMinOperator<std::pointer_to_binary_function<const T&,const T&,const T&> >
-    makeGlobalMaxFunctor()
+    auto makeGlobalMaxFunctor()
     {
-        return MaskToMinOperator<std::pointer_to_binary_function<const T&,const T&,const T&> >
-            (std::pointer_to_binary_function<const T&,const T&,const T&>
-             ((const T&(*)(const T&, const T&))std::max<T>));
+        struct MaxOp
+        {
+            using result_type = T;
+            const T& operator()(const T& t1, const T& t2)
+            {
+                return std::max(t1, t2);
+            }
+        };
+        return MaskToMinOperator(MaxOp());
     }
 
     namespace detail
@@ -630,12 +635,18 @@ private:
     ///
     /// To be used with ParallelISTLInformation::computeReduction.
     template<class T>
-    MaskToMaxOperator<std::pointer_to_binary_function<const T&,const T&,const T&> >
+    auto
     makeGlobalMinFunctor()
     {
-        return MaskToMaxOperator<std::pointer_to_binary_function<const T&,const T&,const T&> >
-            (std::pointer_to_binary_function<const T&,const T&,const T&>
-             ((const T&(*)(const T&, const T&))std::min<T>));
+        struct MinOp
+        {
+            using result_type = T;
+            const T& operator()(const T& t1, const T& t2)
+            {
+                return std::min(t1, t2);
+            }
+        };
+        return MaskToMaxOperator(MinOp());
     }
     template<class T>
     InnerProductFunctor<T>
