@@ -1745,28 +1745,6 @@ BOOST_AUTO_TEST_CASE(WListManager)
 }
 
 
-BOOST_AUTO_TEST_CASE(UDQFunction)
-{
-#ifdef HAVE_MPI
-    Opm::UDQFunction val1("test", Opm::UDQTokenType::binary_op_add);
-    auto val2 = PackUnpack(val1);
-    DO_CHECKS(UDQFunction)
-#endif
-}
-
-
-BOOST_AUTO_TEST_CASE(UDQFunctionTable)
-{
-#ifdef HAVE_MPI
-    Opm::UDQFunctionTable::FunctionMap map{{"test",
-                                            std::make_shared<Opm::UDQFunction>()}};
-    Opm::UDQFunctionTable val1(Opm::UDQParams(true, 1, 2.0, 3.0, 4.0), map);
-    auto val2 = PackUnpack(val1);
-    DO_CHECKS(UDQFunctionTable)
-#endif
-}
-
-
 BOOST_AUTO_TEST_CASE(UDQASTNode)
 {
 #ifdef HAVE_MPI

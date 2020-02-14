@@ -1465,19 +1465,7 @@ std::size_t packSize(const WListManager& data,
     return packSize(data.lists(), comm);
 }
 
-std::size_t packSize(const UDQFunction& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.name(), comm) +
-           packSize(data.type(), comm);
-}
 
-std::size_t packSize(const UDQFunctionTable& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getParams(), comm) +
-           packSize(data.functionMap(), comm);
-}
 
 std::size_t packSize(const UDQASTNode& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -3223,21 +3211,6 @@ void pack(const WListManager& data,
     pack(data.lists(), buffer, position, comm);
 }
 
-void pack(const UDQFunction& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.name(), buffer, position, comm);
-    pack(data.type(), buffer, position, comm);
-}
-
-void pack(const UDQFunctionTable& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getParams(), buffer, position, comm);
-    pack(data.functionMap(), buffer, position, comm);
-}
 
 void pack(const UDQASTNode& data,
           std::vector<char>& buffer, int& position,
@@ -5645,27 +5618,6 @@ void unpack(WListManager& data,
     data = WListManager(lists);
 }
 
-void unpack(UDQFunction& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::string name;
-    UDQTokenType type;
-    unpack(name, buffer, position, comm);
-    unpack(type, buffer, position, comm);
-    data = UDQFunction(name, type);
-}
-
-void unpack(UDQFunctionTable& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    UDQParams params;
-    UDQFunctionTable::FunctionMap map;
-    unpack(params, buffer, position, comm);
-    unpack(map, buffer, position, comm);
-    data = UDQFunctionTable(params, map);
-}
 
 void unpack(UDQASTNode& data,
             std::vector<char>& buffer, int& position,
