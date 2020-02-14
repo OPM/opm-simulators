@@ -429,18 +429,19 @@ protected:
                 dnIdx_[phaseIdx] = -1;
             }
 
-            // this is slightly hacky because in the automatic differentiation case, it
-            // only works for the element centered finite volume method. for ebos this
-            // does not matter, though.
-            unsigned upstreamIdx = upstreamIndex_(phaseIdx);
-            const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
-
             Evaluation transModified = trans;
 
-            // deal with water induced rock compaction
-            transModified *= problem.template rockCompTransMultiplier<double>(up, stencil.globalSpaceIndex(upstreamIdx));
-
+            short upstreamIdx = upstreamIndex_(phaseIdx);
             if (upstreamIdx == interiorDofIdx_) {
+
+                // this is slightly hacky because in the automatic differentiation case, it
+                // only works for the element centered finite volume method. for ebos this
+                // does not matter, though.
+                const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
+
+                // deal with water induced rock compaction
+                transModified *= problem.template rockCompTransMultiplier<double>(up, stencil.globalSpaceIndex(upstreamIdx));
+
                 volumeFlux_[phaseIdx] =
                     pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-transModified/faceArea);
 
@@ -494,8 +495,8 @@ private:
     // the local indices of the interior and exterior degrees of freedom
     unsigned short interiorDofIdx_;
     unsigned short exteriorDofIdx_;
-    unsigned short upIdx_[numPhases];
-    unsigned short dnIdx_[numPhases];
+    short upIdx_[numPhases];
+    short dnIdx_[numPhases];
 };
 
 } // namespace Opm
