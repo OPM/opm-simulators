@@ -378,7 +378,7 @@ namespace Opm {
 
             void actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
 
-            void actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
+            void actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& topUpPhase, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
 
             WellInterfacePtr getWell(const std::string& well_name) const;
 

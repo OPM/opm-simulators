@@ -832,6 +832,10 @@ std::size_t packSize(const IntervalTabulated2DFunction<Scalar>& data,
            packSize(data.yExtrapolate(), comm);
 }
 
+template
+std::size_t packSize(const std::map<Phase,Group::GroupInjectionProperties>& data,
+                     Dune::MPIHelper::MPICommunicator comm);
+
 template<class Scalar>
 std::size_t packSize(const UniformXTabulated2DFunction<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -2168,6 +2172,13 @@ void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer
         pack(entry, buffer, position, comm);
     }
 }
+
+
+template void pack(const std::map<Phase, Group::GroupInjectionProperties>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
+
+
 
 void pack(const data::Well& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -5531,6 +5542,10 @@ void unpack(IOrderSet<T>& data, std::vector<char>& buffer, int& position,
     data = IOrderSet<T>(index, storage);
 }
 
+template void unpack(std::map<Phase,Group::GroupInjectionProperties>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm);
+
 void unpack(Group::GroupInjectionProperties& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -5545,6 +5560,7 @@ void unpack(Group::GroupInjectionProperties& data,
     unpack(data.voidage_group, buffer, position, comm);
     unpack(data.injection_controls, buffer, position, comm);
 }
+
 
 void unpack(Group::GroupProductionProperties& data,
             std::vector<char>& buffer, int& position,
@@ -5576,7 +5592,7 @@ void unpack(Group& data,
     int groupNetVFPTable;
     std::string parent;
     IOrderSet<std::string> wells, groups;
-    Group::GroupInjectionProperties injection;
+    std::map<Phase, Group::GroupInjectionProperties> injection;
     Group::GroupProductionProperties production;
 
     unpack(name, buffer, position, comm);

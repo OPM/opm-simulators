@@ -319,14 +319,15 @@ namespace Opm
             return current_production_group_controls_.count(groupName) > 0;
         }
 
-        bool hasInjectionGroupControl(const std::string& groupName) {
-            return current_injection_group_controls_.count(groupName) > 0;
+        bool hasInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName) {
+            return current_injection_group_controls_.count(std::make_pair(phase, groupName)) > 0;
         }
 
         /// One current control per group.
         void setCurrentProductionGroupControl(const std::string& groupName, const Group::ProductionCMode& groupControl ) {
             current_production_group_controls_[groupName] = groupControl;
         }
+
         const Group::ProductionCMode& currentProductionGroupControl(const std::string& groupName) const {
             auto it = current_production_group_controls_.find(groupName);
 
@@ -337,14 +338,15 @@ namespace Opm
         }
 
         /// One current control per group.
-        void setCurrentInjectionGroupControl(const std::string& groupName, const Group::InjectionCMode& groupControl ) {
-            current_injection_group_controls_[groupName] = groupControl;
+        void setCurrentInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName, const Group::InjectionCMode& groupControl ) {
+            current_injection_group_controls_[std::make_pair(phase, groupName)] = groupControl;
         }
-        const Group::InjectionCMode& currentInjectionGroupControl(const std::string& groupName) const {
-            auto it = current_injection_group_controls_.find(groupName);
+
+        const Group::InjectionCMode& currentInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName) const {
+            auto it = current_injection_group_controls_.find(std::make_pair(phase, groupName));
 
             if (it == current_injection_group_controls_.end())
-                OPM_THROW(std::logic_error, "Could not find any control for injection group " << groupName);
+                OPM_THROW(std::logic_error, "Could not find any control for " << phase << " injection group " << groupName);
 
             return it->second;
         }
@@ -353,6 +355,7 @@ namespace Opm
         void setCurrentProductionGroupReductionRates(const std::string& groupName, const std::vector<double>& target ) {
             production_group_reduction_rates[groupName] = target;
         }
+
         const std::vector<double>& currentProductionGroupReductionRates(const std::string& groupName) const {
             auto it = production_group_reduction_rates.find(groupName);
 
@@ -365,6 +368,7 @@ namespace Opm
         void setCurrentInjectionGroupReductionRates(const std::string& groupName, const std::vector<double>& target ) {
             injection_group_reduction_rates[groupName] = target;
         }
+
         const std::vector<double>& currentInjectionGroupReductionRates(const std::string& groupName) const {
             auto it = injection_group_reduction_rates.find(groupName);
 
@@ -374,9 +378,23 @@ namespace Opm
             return it->second;
         }
 
+        void setCurrentInjectionGroupReservoirRates(const std::string& groupName, const std::vector<double>& target ) {
+            injection_group_reservoir_rates[groupName] = target;
+        }
+
+        const std::vector<double>& currentInjectionGroupReservoirRates(const std::string& groupName) const {
+            auto it = injection_group_reservoir_rates.find(groupName);
+
+            if (it == injection_group_reservoir_rates.end())
+                OPM_THROW(std::logic_error, "Could not find any reservoir rates for injection group " << groupName);
+
+            return it->second;
+        }
+
         void setCurrentInjectionVREPRates(const std::string& groupName, const double& target ) {
             injection_group_vrep_rates[groupName] = target;
         }
+
         const double& currentInjectionVREPRates(const std::string& groupName) const {
             auto it = injection_group_vrep_rates.find(groupName);
 
@@ -389,6 +407,7 @@ namespace Opm
         void setCurrentInjectionREINRates(const std::string& groupName, const std::vector<double>& target ) {
             injection_group_rein_rates[groupName] = target;
         }
+
         const std::vector<double>& currentInjectionREINRates(const std::string& groupName) const {
             auto it = injection_group_rein_rates.find(groupName);
 
@@ -401,6 +420,7 @@ namespace Opm
         void setCurrentGroupInjectionPotentials(const std::string& groupName, const std::vector<double>& pot ) {
             injection_group_potentials[groupName] = pot;
         }
+
         const std::vector<double>& currentGroupInjectionPotentials(const std::string& groupName) const {
             auto it = injection_group_potentials.find(groupName);
 
@@ -836,24 +856,22 @@ namespace Opm
         }
 
         template<class Comm>
-        void communicateGroupReductionRates(const Comm& comm) {
-            // sum over all nodes
-            for (auto& x : production_group_reduction_rates) {
-                comm.sum(x.second.data(), x.second.size());
-            }
-            for (auto& x : injection_group_reduction_rates) {
-                comm.sum(x.second.data(), x.second.size());
-            }
-        }
-
-        template<class Comm>
-        void communicateReinVrep(const Comm& comm) {
+        void communicateGroupRates(const Comm& comm) {
             // sum over all nodes
             for (auto& x : injection_group_rein_rates) {
                 comm.sum(x.second.data(), x.second.size());
             }
             for (auto& x : injection_group_vrep_rates) {
                 x.second = comm.sum(x.second);
+            }
+            for (auto& x : production_group_reduction_rates) {
+                comm.sum(x.second.data(), x.second.size());
+            }
+            for (auto& x : injection_group_reduction_rates) {
+                comm.sum(x.second.data(), x.second.size());
+            }
+            for (auto& x : injection_group_reservoir_rates) {
+                comm.sum(x.second.data(), x.second.size());
             }
         }
 
@@ -912,10 +930,11 @@ namespace Opm
         std::map<std::string, int> wellNameToGlobalIdx_;
 
         std::map<std::string, Group::ProductionCMode> current_production_group_controls_;
-        std::map<std::string, Group::InjectionCMode> current_injection_group_controls_;
+        std::map<std::pair<Opm::Phase, std::string>, Group::InjectionCMode> current_injection_group_controls_;
 
         std::map<std::string, std::vector<double>> production_group_reduction_rates;
         std::map<std::string, std::vector<double>> injection_group_reduction_rates;
+        std::map<std::string, std::vector<double>> injection_group_reservoir_rates;
         std::map<std::string, std::vector<double>> injection_group_potentials;
         std::map<std::string, double> injection_group_vrep_rates;
         std::map<std::string, std::vector<double>> injection_group_rein_rates;
