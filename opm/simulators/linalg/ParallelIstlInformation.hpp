@@ -584,7 +584,6 @@ private:
     {
         struct MaxOp
         {
-            using result_type = T;
             const T& operator()(const T& t1, const T& t2)
             {
                 return std::max(t1, t2);
@@ -599,8 +598,7 @@ private:
         template<typename T, typename Enable = void>
         struct MaxAbsFunctor
         {
-            using result_type = T;
-            result_type operator()(const T& t1,
+            T operator()(const T& t1,
                                    const T& t2)
             {
                 return std::max(std::abs(t1), std::abs(t2));
@@ -613,8 +611,7 @@ private:
         template<typename T>
         struct MaxAbsFunctor<T, typename std::enable_if<std::is_unsigned<T>::value>::type>
         {
-            using result_type = T;
-            result_type operator()(const T& t1,
+            T operator()(const T& t1,
                                    const T& t2)
             {
                 return std::max(t1, t2);
@@ -640,7 +637,6 @@ private:
     {
         struct MinOp
         {
-            using result_type = T;
             const T& operator()(const T& t1, const T& t2)
             {
                 return std::min(t1, t2);
