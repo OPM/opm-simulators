@@ -770,6 +770,8 @@ namespace MissingFeatures {
             "WDRILRES",
             "WECONINJ",
             "WECONT",
+            "WEIR",
+            "WEIT",
             "WELCNTL",
             "WELDEBUG",
             "WELDRAW",
