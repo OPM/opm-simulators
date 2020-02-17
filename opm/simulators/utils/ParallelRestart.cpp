@@ -1115,8 +1115,7 @@ std::size_t packSize(const VFPInjTable& data,
            packSize(data.getFloType(), comm) +
            packSize(data.getFloAxis(), comm) +
            packSize(data.getTHPAxis(), comm) +
-           data.getTable().num_elements() *
-           packSize(double(), comm);
+           packSize(data.getTable(), comm);
 }
 
 std::size_t packSize(const VFPProdTable& data,
@@ -1133,8 +1132,7 @@ std::size_t packSize(const VFPProdTable& data,
            packSize(data.getWFRAxis(), comm) +
            packSize(data.getGFRAxis(), comm) +
            packSize(data.getALQAxis(), comm) +
-           data.getTable().num_elements() *
-           packSize(double(), comm);
+           packSize(data.getTable(), comm);
 }
 
 std::size_t packSize(const WellTestConfig::WTESTWell& data,
@@ -2851,8 +2849,7 @@ void pack(const VFPInjTable& data,
     pack(data.getFloType(), buffer, position, comm);
     pack(data.getFloAxis(), buffer, position, comm);
     pack(data.getTHPAxis(), buffer, position, comm);
-    for (size_t i = 0; i < data.getTable().num_elements(); ++i)
-        pack(*(data.getTable().data() + i), buffer, position, comm);
+    pack(data.getTable(), buffer, position, comm);
 }
 
 void pack(const VFPProdTable& data,
@@ -2870,8 +2867,7 @@ void pack(const VFPProdTable& data,
     pack(data.getWFRAxis(), buffer, position, comm);
     pack(data.getGFRAxis(), buffer, position, comm);
     pack(data.getALQAxis(), buffer, position, comm);
-    for (size_t i = 0; i < data.getTable().num_elements(); ++i)
-        pack(*(data.getTable().data() + i), buffer, position, comm);
+    pack(data.getTable(), buffer, position, comm);
 }
 
 void pack(const WellTestConfig::WTESTWell& data,
@@ -5042,12 +5038,7 @@ void unpack(VFPInjTable& data,
     unpack(floType, buffer, position, comm);
     unpack(floAxis, buffer, position, comm);
     unpack(thpAxis, buffer, position, comm);
-    VFPInjTable::extents extents;
-    extents[0] = thpAxis.size();
-    extents[1] = floAxis.size();
-    table.resize(extents);
-    for (size_t i = 0; i < table.num_elements(); ++i)
-        unpack(*(table.data() + i), buffer, position, comm);
+    unpack(table, buffer, position, comm);
 
     data = VFPInjTable(tableNum, datumDepth, floType,
                        floAxis, thpAxis, table);
@@ -5077,15 +5068,7 @@ void unpack(VFPProdTable& data,
     unpack(wfrAxis, buffer, position, comm);
     unpack(gfrAxis, buffer, position, comm);
     unpack(alqAxis, buffer, position, comm);
-    VFPProdTable::extents extents;
-    extents[0] = thpAxis.size();
-    extents[1] = wfrAxis.size();
-    extents[2] = gfrAxis.size();
-    extents[3] = alqAxis.size();
-    extents[4] = floAxis.size();
-    table.resize(extents);
-    for (size_t i = 0; i < table.num_elements(); ++i)
-      unpack(*(table.data() + i), buffer, position, comm);
+    unpack(table, buffer, position, comm);
 
     data = VFPProdTable(tableNum, datumDepth, floType, wfrType,
                         gfrType, alqType, floAxis, thpAxis,

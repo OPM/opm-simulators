@@ -57,7 +57,6 @@ double VFPProdProperties::thp(int table_id,
                               const double& bhp_arg,
                               const double& alq) const {
     const VFPProdTable* table = detail::getTable(m_tables, table_id);
-    const VFPProdTable::array_type& data = table->getTable();
 
     //Find interpolation variables
     double flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
@@ -80,7 +79,7 @@ double VFPProdProperties::thp(int table_id,
     std::vector<double> bhp_array(nthp);
     for (int i=0; i<nthp; ++i) {
         auto thp_i = detail::findInterpData(thp_array[i], thp_array);
-        bhp_array[i] = detail::interpolate(data, flo_i, thp_i, wfr_i, gfr_i, alq_i).value;
+        bhp_array[i] = detail::interpolate(*table, flo_i, thp_i, wfr_i, gfr_i, alq_i).value;
     }
 
     double retval = detail::findTHP(bhp_array, thp_array, bhp_arg);
@@ -131,7 +130,7 @@ bhpwithflo(const std::vector<double>& flos,
     for (size_t i = 0; i < flos.size(); ++i) {
         // Value of FLO is negative in OPM for producers, but positive in VFP table
         const auto flo_i = detail::findInterpData(-flos[i], table->getFloAxis());
-        const detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+        const detail::VFPEvaluation bhp_val = detail::interpolate(*table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
         // TODO: this kind of breaks the conventions for the functions here by putting dp within the function
         bhps[i] = bhp_val.value - dp;

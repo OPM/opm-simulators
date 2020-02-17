@@ -91,7 +91,7 @@ public:
             auto flo_i = detail::findInterpData(flo.value(), table->getFloAxis());
             auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
 
-            detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i);
+            detail::VFPEvaluation bhp_val = detail::interpolate(*table, flo_i, thp_i);
 
             bhp = bhp_val.dflo * flo;
             bhp.setValue(bhp_val.value); // thp is assumed constant i.e.
