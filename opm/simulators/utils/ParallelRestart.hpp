@@ -26,6 +26,7 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/IntervalTabulated2DFunction.hpp>
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityBrinePvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/DeadOilPvt.hpp>
@@ -299,6 +300,10 @@ std::size_t packSize(const ConstantCompressibilityWaterPvt<Scalar>& data,
                      Dune::MPIHelper::MPICommunicator comm);
 
 template<class Scalar>
+std::size_t packSize(const ConstantCompressibilityBrinePvt<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
 std::size_t packSize(const WaterPvtThermal<Scalar>& data, Dune::MPIHelper::MPICommunicator comm);
 
 template<class T>
@@ -457,6 +462,11 @@ void pack(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
 
 template<class Scalar>
 void pack(const ConstantCompressibilityWaterPvt<Scalar>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void pack(const ConstantCompressibilityBrinePvt<Scalar>& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
@@ -625,6 +635,10 @@ void unpack(WaterPvtThermal<Scalar>& data, std::vector<char>& buffer,
 
 template<class Scalar>
 void unpack(ConstantCompressibilityWaterPvt<Scalar>& data, std::vector<char>& buffer,
+            int& position, Dune::MPIHelper::MPICommunicator comm);
+
+template<class Scalar>
+void unpack(ConstantCompressibilityBrinePvt<Scalar>& data, std::vector<char>& buffer,
             int& position, Dune::MPIHelper::MPICommunicator comm);
 
 template<class T>

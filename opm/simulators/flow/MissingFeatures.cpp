@@ -515,7 +515,6 @@ namespace MissingFeatures {
             "PLYVISCS",
             "PLYVISCT",
             "PLYVSCST",
-            "PVTWSALT",
             "PVZG",
             "PMAX",
             "PRIORITY",

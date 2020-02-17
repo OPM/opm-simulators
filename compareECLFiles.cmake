@@ -475,48 +475,63 @@ if(MPI_FOUND)
                                        FILENAME SPE1CASE2
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
-                                       REL_TOL ${rel_tol_parallel})
+                                       REL_TOL ${rel_tol_parallel}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe9
                                        FILENAME SPE9_CP_SHORT
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
-                                       REL_TOL ${rel_tol_parallel})
+                                       REL_TOL ${rel_tol_parallel}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe9group
                                        FILENAME SPE9_CP_GROUP
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
-                                       REL_TOL ${coarse_rel_tol_parallel})
+                                       REL_TOL ${coarse_rel_tol_parallel}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe3
                                        FILENAME SPE3CASE1
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
-                                       REL_TOL ${coarse_rel_tol_parallel})
+                                       REL_TOL ${coarse_rel_tol_parallel}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe1_solvent
                                        FILENAME SPE1CASE2_SOLVENT
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
-                                       REL_TOL ${coarse_rel_tol_parallel})
+                                       REL_TOL ${coarse_rel_tol_parallel}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME polymer_simple2D
                                        FILENAME 2D_THREEPHASE_POLY_HETER
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol}
-                                       REL_TOL ${coarse_rel_tol})
+                                       REL_TOL ${coarse_rel_tol}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe1_foam
                                        FILENAME SPE1FOAM
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol}
-                                       REL_TOL ${rel_tol})
+                                       REL_TOL ${rel_tol}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe1_thermal
                                        FILENAME SPE1CASE2_THERMAL
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL 1e-1
-                                       DIR spe1)
+                                       DIR spe1
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+
+  add_test_compare_parallel_simulation(CASENAME spe1_brine
+                                       FILENAME SPE1CASE1_BRINE
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 endif()

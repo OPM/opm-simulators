@@ -1010,6 +1010,9 @@ std::size_t packSize(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>
     } else if (data.approach() == PvtApproach::ThermalWaterPvt) {
         const auto& pvt = *static_cast<const WaterPvtThermal<Scalar>*>(realWaterPvt);
         size += packSize(pvt, comm);
+    } else if (data.approach() == PvtApproach::ConstantCompressibilityBrinePvt) {
+        const auto& pvt = *static_cast<const ConstantCompressibilityBrinePvt<Scalar>*>(realWaterPvt);
+        size += packSize(pvt, comm);
     }
 
     return size;
@@ -1055,6 +1058,18 @@ std::size_t packSize(const WaterPvtThermal<Scalar>& data,
     }
 
     return size;
+}
+
+template<class Scalar>
+std::size_t packSize(const ConstantCompressibilityBrinePvt<Scalar>& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.waterReferenceDensity(), comm) +
+           packSize(data.referencePressure(), comm) +
+           packSize(data.formationVolumeTables(), comm) +
+           packSize(data.compressibilityTables(), comm) +
+           packSize(data.viscosityTables(), comm) +
+           packSize(data.viscosibilityTables(), comm);
 }
 
 template<class Scalar>
@@ -2769,6 +2784,9 @@ void pack(const WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
     } else if (data.approach() == PvtApproach::ThermalWaterPvt) {
         const auto& pvt = *static_cast<const WaterPvtThermal<Scalar>*>(realWaterPvt);
         pack(pvt, buffer, position, comm);
+    } else if (data.approach() == PvtApproach::ConstantCompressibilityBrinePvt) {
+        const auto& pvt = *static_cast<const ConstantCompressibilityBrinePvt<Scalar>*>(realWaterPvt);
+        pack(pvt, buffer, position, comm);
     }
 }
 
@@ -2783,6 +2801,19 @@ void pack(const ConstantCompressibilityWaterPvt<Scalar>& data,
     pack(data.waterCompressibility(), buffer, position, comm);
     pack(data.waterViscosity(), buffer, position, comm);
     pack(data.waterViscosibility(), buffer, position, comm);
+}
+
+template<class Scalar>
+void pack(const ConstantCompressibilityBrinePvt<Scalar>& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.waterReferenceDensity(), buffer, position, comm);
+    pack(data.referencePressure(), buffer, position, comm);
+    pack(data.formationVolumeTables(), buffer, position, comm);
+    pack(data.compressibilityTables(), buffer, position, comm);
+    pack(data.viscosityTables(), buffer, position, comm);
+    pack(data.viscosibilityTables(), buffer, position, comm);
 }
 
 template<class Scalar>
@@ -4912,6 +4943,10 @@ void unpack(WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>& data,
         auto* realPvt = new WaterPvtThermal<Scalar>;
         unpack(*realPvt, buffer, position, comm);
         pvt = realPvt;
+    } else if (approach == PvtApproach::ConstantCompressibilityBrinePvt) {
+        auto* realPvt = new ConstantCompressibilityBrinePvt<Scalar>;
+        unpack(*realPvt, buffer, position, comm);
+        pvt = realPvt;
     }
     data = WaterPvtMultiplexer<Scalar,enableThermal,enableBrine>(approach, pvt);
 }
@@ -4937,6 +4972,30 @@ void unpack(ConstantCompressibilityWaterPvt<Scalar>& data,
                                                    waterCompressibility,
                                                    waterViscosity,
                                                    waterViscosibility);
+}
+
+template<class Scalar>
+void unpack(ConstantCompressibilityBrinePvt<Scalar>& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    using TabulatedFunction = typename ConstantCompressibilityBrinePvt<Scalar>::TabulatedFunction;
+    std::vector<Scalar> waterReferenceDensity, referencePressure;
+    std::vector<TabulatedFunction> formationVolumeTables, compressibilityTables,
+                                   viscosityTables, viscosibilityTables;
+
+    unpack(waterReferenceDensity, buffer, position, comm);
+    unpack(referencePressure, buffer, position, comm);
+    unpack(formationVolumeTables, buffer, position, comm);
+    unpack(compressibilityTables, buffer, position, comm);
+    unpack(viscosityTables, buffer, position, comm);
+    unpack(viscosibilityTables, buffer, position, comm);
+    data = ConstantCompressibilityBrinePvt<Scalar>(waterReferenceDensity,
+                                                   referencePressure,
+                                                   formationVolumeTables,
+                                                   compressibilityTables,
+                                                   viscosityTables,
+                                                   viscosibilityTables);
 }
 
 template<class Scalar>
@@ -6442,7 +6501,7 @@ INSTANTIATE_PACK(WaterPvtMultiplexer<double,true,true>)
 INSTANTIATE_PACK(WaterPvtMultiplexer<double,false,true>)
 INSTANTIATE_PACK(ConstantCompressibilityWaterPvt<double>)
 INSTANTIATE_PACK(WaterPvtThermal<double>)
-
+INSTANTIATE_PACK(ConstantCompressibilityBrinePvt<double>)
 #undef INSTANTIATE_PACK
 
 } // end namespace Mpi
