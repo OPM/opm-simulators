@@ -1680,7 +1680,7 @@ private:
         return comm.rank() == 0;
     }
 
-    void updateFluidinPlace_(const ElementContext& elemCtx, unsigned dofIdx)
+    void updateFluidInPlace_(const ElementContext& elemCtx, unsigned dofIdx)
     {
 
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
