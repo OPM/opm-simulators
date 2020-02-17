@@ -250,6 +250,17 @@ Opm::TimeMap getTimeMap()
     return Opm::TimeMap({123});
 }
 
+
+Opm::RestartConfig getRestartConfig()
+{
+    Opm::DynamicState<Opm::RestartSchedule> rsched({Opm::RestartSchedule(1, 2, 3)}, 2);
+    Opm::DynamicState<std::map<std::string,int>> rkw({{{"test",3}}}, 3);
+    Opm::IOConfig io(true, false, true, false, false, true, "test1", true,
+                     "test2", true, "test3", false);
+    return Opm::RestartConfig(getTimeMap(), 1, true, rsched, rkw, {false, true});
+}
+
+
 Opm::PvtgTable getPvtgTable()
 {
     return Opm::PvtgTable(Opm::ColumnSchema("test1", Opm::Table::INCREASING,
@@ -804,7 +815,7 @@ BOOST_AUTO_TEST_CASE(RestartConfig)
     Opm::DynamicState<std::map<std::string,int>> rkw({{{"test",3}}}, 3);
     Opm::IOConfig io(true, false, true, false, false, true, "test1", true,
                      "test2", true, "test3", false);
-    Opm::RestartConfig val1(io, getTimeMap(), 1, true, rsched, rkw, {false, true});
+    Opm::RestartConfig val1(getTimeMap(), 1, true, rsched, rkw, {false, true});
     auto val2 = PackUnpack(val1);
     DO_CHECKS(RestartConfig)
 #endif
@@ -2201,6 +2212,7 @@ BOOST_AUTO_TEST_CASE(Schedule)
                        {{std::make_shared<Opm::Action::Actions>(acnts)}, 1},
                        rftc,
                        {std::vector<int>{1}, 1},
+                       getRestartConfig(),
                        {{"test", events}});
 
     auto val2 = PackUnpack(val1);
@@ -2307,10 +2319,7 @@ BOOST_AUTO_TEST_CASE(EclipseConfig)
     Opm::InitConfig init(Opm::Equil({getEquilRecord(), getEquilRecord()}),
                          Opm::FoamConfig({getFoamData(), getFoamData()}),
                          true, true, true, 20, "test1");
-    Opm::DynamicState<Opm::RestartSchedule> rsched({Opm::RestartSchedule(1, 2, 3)}, 2);
-    Opm::DynamicState<std::map<std::string,int>> rkw({{{"test",3}}}, 3);
-    Opm::RestartConfig restart(io, getTimeMap(), 1, true, rsched, rkw, {false, true});
-    Opm::EclipseConfig val1{init, restart};
+    Opm::EclipseConfig val1{init, io};
 
     auto val2 = PackUnpack(val1);
     DO_CHECKS(EclipseConfig)

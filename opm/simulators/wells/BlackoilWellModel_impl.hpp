@@ -1251,7 +1251,7 @@ namespace Opm {
         computeAverageFormationFactor(B_avg);
 
         const Opm::SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
-        const bool write_restart_file = ebosSimulator_.vanguard().eclState().getRestartConfig().getWriteRestartFile(reportStepIdx);
+        const bool write_restart_file = ebosSimulator_.vanguard().schedule().restart().getWriteRestartFile(reportStepIdx);
         int exception_thrown = 0;
         try {
             for (const auto& well : well_container_) {

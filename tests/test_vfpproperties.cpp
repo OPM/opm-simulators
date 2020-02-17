@@ -35,11 +35,9 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
+#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
-
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 
@@ -591,12 +589,7 @@ VFPPROD \n\
     auto units = Opm::UnitSystem::newFIELD();
     Opm::Parser parser;
     auto deck = parser.parseString(table_str);
-
-    BOOST_REQUIRE(deck.hasKeyword("VFPPROD"));
-    BOOST_CHECK_EQUAL(deck.count("VFPPROD"), 1);
-
     Opm::VFPProdTable table(deck.getKeyword("VFPPROD", 0), units);
-
     Opm::VFPProdProperties properties(&table);
 
     const int n = 5; //Number of points to check per axis
@@ -653,7 +646,6 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     Opm::filesystem::path file("VFPPROD2");
 
     auto deck = parser.parseFile(file.string());
-    Opm::checkDeck(deck, parser, parseContext, errorGuard);
 
     BOOST_REQUIRE(deck.hasKeyword("VFPPROD"));
     BOOST_CHECK_EQUAL(deck.count("VFPPROD"), 1);

@@ -350,7 +350,7 @@ int main(int argc, char** argv)
             if ( outputCout )
                 Opm::checkDeck(*deck, parser, parseContext, errorGuard);
 
-            eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
+            eclipseState.reset( new Opm::EclipseState(*deck));
             if (mpiRank == 0) {
                 schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
                 setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");

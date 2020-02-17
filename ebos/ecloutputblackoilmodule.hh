@@ -219,7 +219,7 @@ public:
         const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
 
         // Only output RESTART_AUXILIARY asked for by the user.
-        const Opm::RestartConfig& restartConfig = simulator_.vanguard().eclState().getRestartConfig();
+        const Opm::RestartConfig& restartConfig = simulator_.vanguard().schedule().restart();
         std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
         for (auto& keyValue: rstKeywords) {
             keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);

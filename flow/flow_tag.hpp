@@ -376,7 +376,7 @@ int mainFlow(int argc, char** argv)
             if ( outputCout )
                 Opm::checkDeck(*deck, parser, parseContext, errorGuard);
 
-            eclipseState.reset( new Opm::EclipseState(*deck, parseContext, errorGuard ));
+            eclipseState.reset( new Opm::EclipseState(*deck ));
             schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
             summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
             setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
