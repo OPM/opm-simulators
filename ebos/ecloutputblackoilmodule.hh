@@ -683,7 +683,7 @@ public:
             }
 
             // Add fluid in Place values
-            updateReports_(elemCtx, dofIdx);
+            updateFluidInPlace_(elemCtx, dofIdx);
 
             // Adding block data
             const auto cartesianIdx = elemCtx.simulator().vanguard().grid().globalCell()[globalDofIdx];
@@ -1094,7 +1094,7 @@ public:
                 Scalar fieldHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(fieldPressurePvHydrocarbon[0], fieldPvHydrocarbon[0], fieldPressurePv[0], fieldFipValues[FipDataType::PoreVolume], true);
                 pressureUnitConvert_(fieldHydroCarbonPoreVolumeAveragedPressure);
                 reservoirAveragePressure_ = fieldHydroCarbonPoreVolumeAveragedPressure;
-                outputRegionReports_(origTotalValues_, fieldFipValues, fieldHydroCarbonPoreVolumeAveragedPressure, 0);
+                outputRegionFluidInPlace_(origTotalValues_, fieldFipValues, fieldHydroCarbonPoreVolumeAveragedPressure, 0);
                 for (size_t reg = 0; reg < ntFip; ++reg) {
                     ScalarBuffer tmpO(FipDataType::numFipValues, 0.0);
                     for (int i = 0; i<FipDataType::numFipValues; i++) {
@@ -1108,7 +1108,7 @@ public:
                     fipUnitConvert_(tmp);
                     Scalar regHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(regPressurePvHydrocarbon[reg], regPvHydrocarbon[reg], regPressurePv[reg], regionFipValues[FipDataType::PoreVolume][reg], true);
                     pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure);                    
-                    outputRegionReports_(tmpO, tmp, regHydroCarbonPoreVolumeAveragedPressure, reg + 1);
+                    outputRegionFluidInPlace_(tmpO, tmp, regHydroCarbonPoreVolumeAveragedPressure, reg + 1);
                 }
             }
         }
@@ -1680,7 +1680,7 @@ private:
         return comm.rank() == 0;
     }
 
-    void updateReports_(const ElementContext& elemCtx, unsigned dofIdx)
+    void updateFluidinPlace_(const ElementContext& elemCtx, unsigned dofIdx)
     {
 
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
@@ -1888,7 +1888,7 @@ private:
         }
     }
 
-    void outputRegionReports_(const ScalarBuffer& oip, const ScalarBuffer& cip, const Scalar& pav, const int reg)
+    void outputRegionFluidInPlace_(const ScalarBuffer& oip, const ScalarBuffer& cip, const Scalar& pav, const int reg)
     {
         if (forceDisableReportsOutput_)
             return;
