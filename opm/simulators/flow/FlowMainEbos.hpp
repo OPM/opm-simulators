@@ -363,7 +363,7 @@ namespace Opm
                 return;
             }
 
-            namespace fs = boost::filesystem;
+            namespace fs = Opm::filesystem;
             const std::string& output_dir = eclState().getIOConfig().getOutputDir();
             fs::path output_path(output_dir);
             fs::path deck_filename(EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName));

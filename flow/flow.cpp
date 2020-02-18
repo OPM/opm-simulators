@@ -76,8 +76,8 @@ END_PROPERTIES
 
 namespace detail
 {
-    boost::filesystem::path simulationCaseName( const std::string& casename ) {
-        namespace fs = boost::filesystem;
+    Opm::filesystem::path simulationCaseName( const std::string& casename ) {
+        namespace fs = Opm::filesystem;
 
         const auto exists = []( const fs::path& f ) -> bool {
             if( !fs::exists( f ) ) return false;
@@ -136,9 +136,9 @@ enum class FileOutputMode {
 
 void ensureOutputDirExists(const std::string& cmdline_output_dir)
 {
-    if (!boost::filesystem::is_directory(cmdline_output_dir)) {
+    if (!Opm::filesystem::is_directory(cmdline_output_dir)) {
         try {
-            boost::filesystem::create_directories(cmdline_output_dir);
+            Opm::filesystem::create_directories(cmdline_output_dir);
         }
         catch (...) {
             throw std::runtime_error("Creation of output directory '" + cmdline_output_dir + "' failed\n");
@@ -155,7 +155,7 @@ FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, con
     }
 
     // create logFile
-    using boost::filesystem::path;
+    using Opm::filesystem::path;
     path fpath(deck_filename);
     std::string baseName;
     std::ostringstream debugFileStream;
