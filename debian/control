@@ -1,7 +1,7 @@
 Source: opm-simulators
 Priority: extra
 Maintainer: Arne Morten Kvarving <arne.morten.kvarving@sintef.no>
-Build-Depends: build-essential, debhelper (>= 9), libboost-filesystem-dev,
+Build-Depends: build-essential, debhelper (>= 9),
                libboost-system-dev, libboost-date-time-dev, libboost-test-dev,
                libsuperlu3-dev (>= 3.0) | libsuperlu-dev (>= 4.3), gfortran, libsuitesparse-dev, pkg-config,
                libdune-common-dev, libdune-istl-dev, cmake, libtinyxml-dev, bc,
