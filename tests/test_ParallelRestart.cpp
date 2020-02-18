@@ -1925,6 +1925,19 @@ BOOST_AUTO_TEST_CASE(Aquancon)
 #endif
 }
 
+BOOST_AUTO_TEST_CASE(AquferConfig)
+{
+#ifdef HAVE_MPI
+    Opm::Aquifetp fetp = getAquifetp();
+    Opm::AquiferCT ct = getAquiferCT();
+    Opm::Aquancon conn = getAquancon();
+    Opm::AquiferConfig val1(fetp, ct, conn);
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(AquiferConfig);
+#endif
+}
+
+
 
 
 BOOST_AUTO_TEST_CASE(GuideRateModel)
