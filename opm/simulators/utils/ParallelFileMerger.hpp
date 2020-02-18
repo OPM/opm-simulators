@@ -24,8 +24,7 @@
 #include <memory>
 #include <iostream>
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <opm/common/utility/FileSystem.hpp>
 #include <regex>
 
 namespace Opm
@@ -33,7 +32,7 @@ namespace Opm
 namespace detail
 {
 
-namespace fs = boost::filesystem;
+namespace fs = Opm::filesystem;
 
 /// \brief A functor that merges multiple files of a parallel run to one file.
 ///
@@ -59,11 +58,11 @@ public:
         {
             auto debugPath = output_dir;
             debugPath /= (deckname + ".DBG");
-            debugStream_.reset(new fs::ofstream(debugPath,
+            debugStream_.reset(new std::ofstream(debugPath,
                                                 std::ofstream::app));
             auto logPath = output_dir;
             logPath /= ( deckname + ".PRT");
-            logStream_.reset(new fs::ofstream(logPath,
+            logStream_.reset(new std::ofstream(logPath,
                                               std::ofstream::app));
         }
     }
@@ -112,7 +111,7 @@ private:
     /// \brief of The output stream to use.
     /// \brief file The file whose content to append.
     /// \brief rank The rank that wrote the file.
-    void appendFile(fs::ofstream& of, const fs::path& file, const std::string& rank)
+    void appendFile(std::ofstream& of, const fs::path& file, const std::string& rank)
     {
         if( fs::file_size(file) )
         {
@@ -120,7 +119,7 @@ private:
                       << file.string() <<" by process "
                       << rank << std::endl;
 
-            fs::ifstream in(file);
+            std::ifstream in(file);
             of<<std::endl<< std::endl;
             of<<"=======================================================";
             of<<std::endl<<std::endl;
@@ -141,9 +140,9 @@ private:
     /// \brief Regex to capture  CASENAME.[0-9]+.[A-Z]+
     std::regex fileWarningRegex_;
     /// \brief Stream to *.DBG file
-    std::unique_ptr<fs::ofstream> debugStream_;
+    std::unique_ptr<std::ofstream> debugStream_;
     /// \brief Stream to *.PRT file
-    std::unique_ptr<fs::ofstream> logStream_;
+    std::unique_ptr<std::ofstream> logStream_;
     /// \brief Whether to show any logging fallout
     bool show_fallout_;
 };
