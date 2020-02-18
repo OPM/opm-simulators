@@ -21,10 +21,12 @@
 
 #define BOOST_TEST_MODULE OPM_test_PreconditionerFactory
 #include <boost/test/unit_test.hpp>
+#include <boost/version.hpp>
 
 #include <dune/common/version.hh>
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6) && \
+    BOOST_VERSION / 100 % 1000 > 48
 
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
