@@ -51,19 +51,19 @@ public:
     using Base::waterCompIdx;
     using Base::waterPhaseIdx;
 
-    AquiferFetkovich(const Aquancon::AquanconOutput& connection,
+    AquiferFetkovich(const std::vector<Aquancon::AquancCell>& connections,
                      const std::unordered_map<int, int>& cartesian_to_compressed,
                      const Simulator& ebosSimulator,
                      const Aquifetp::AQUFETP_data& aqufetp_data)
-        : Base(connection, cartesian_to_compressed, ebosSimulator)
+        : Base(aqufetp_data.aquiferID, connections, cartesian_to_compressed, ebosSimulator)
         , aqufetp_data_(aqufetp_data)
     {
     }
 
     void endTimeStep() override
     {
-        for (const auto& Qai : Base::Qai_) {
-            Base::W_flux_ += Qai * Base::ebos_simulator_.timeStepSize();
+        for (const auto& q : this->Qai_) {
+            this->W_flux_ += q * this->ebos_simulator_.timeStepSize();
             aquifer_pressure_ = aquiferPressure();
         }
     }
@@ -76,18 +76,17 @@ protected:
 
     inline void initializeConnections() override
     {
-        const auto& eclState = Base::ebos_simulator_.vanguard().eclState();
-        const auto& ugrid = Base::ebos_simulator_.vanguard().grid();
+        const auto& eclState = this->ebos_simulator_.vanguard().eclState();
+        const auto& ugrid = this->ebos_simulator_.vanguard().grid();
         const auto& grid = eclState.getInputGrid();
 
-        Base::cell_idx_ = this->connection_.global_index;
         auto globalCellIdx = ugrid.globalCell();
 
 
         // We hack the cell depth values for now. We can actually get it from elementcontext pos
-        Base::cell_depth_.resize(Base::cell_idx_.size(), aqufetp_data_.d0);
-        Base::alphai_.resize(Base::cell_idx_.size(), 1.0);
-        Base::faceArea_connected_.resize(Base::cell_idx_.size(), 0.0);
+        this->cell_depth_.resize(this->size(), aqufetp_data_.d0);
+        this->alphai_.resize(this->size(), 1.0);
+        this->faceArea_connected_.resize(this->size(), 0.0);
 
         auto cell2Faces = Opm::UgGridHelpers::cell2Faces(ugrid);
         auto faceCells = Opm::UgGridHelpers::faceCells(ugrid);
@@ -97,14 +96,16 @@ protected:
 
         // denom_face_areas is the sum of the areas connected to an aquifer
         Scalar denom_face_areas = 0.;
-        Base::cellToConnectionIdx_.resize(Base::ebos_simulator_.gridView().size(/*codim=*/0), -1);
-        for (size_t idx = 0; idx < Base::cell_idx_.size(); ++idx) {
-            const int cell_index = Base::cartesian_to_compressed_.at(Base::cell_idx_[idx]);
-            Base::cellToConnectionIdx_[cell_index] = idx;
-            const auto cellCenter = grid.getCellCenter(Base::cell_idx_.at(idx));
-            Base::cell_depth_.at(idx) = cellCenter[2];
+        this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
+        for (size_t idx = 0; idx < this->size(); ++idx) {
+            const auto global_index = this->connections_[idx].global_index;
+            const int cell_index = this->cartesian_to_compressed_.at(global_index);
 
-            if (!this->connection_.influx_coeff[idx]) { // influx_coeff is defaulted
+            this->cellToConnectionIdx_[cell_index] = idx;
+            const auto cellCenter = grid.getCellCenter(global_index);
+            this->cell_depth_.at(idx) = cellCenter[2];
+
+            if (!this->connections_[idx].influx_coeff.first) { // influx_coeff is defaulted
                 const auto cellFacesRange = cell2Faces[cell_index];
                 for (auto cellFaceIter = cellFacesRange.begin(); cellFaceIter != cellFacesRange.end(); ++cellFaceIter) {
                     // The index of the face in the compressed grid
@@ -137,24 +138,23 @@ protected:
                                   "Initialization of Aquifer problem. Make sure faceTag is correctly defined");
                     }
 
-                    if (faceDirection == this->connection_.reservoir_face_dir.at(idx)) {
-                        Base::faceArea_connected_.at(idx)
-                            = Base::getFaceArea(faceCells, ugrid, faceIdx, idx);
+                    if (faceDirection == this->connections_[idx].face_dir) {
+                        this->faceArea_connected_[idx] = this->getFaceArea(faceCells, ugrid, faceIdx, idx);
                         break;
                     }
                 }
             } else {
-                Base::faceArea_connected_.at(idx) = *this->connection_.influx_coeff[idx];
+                this->faceArea_connected_.at(idx) = this->connections_[idx].influx_coeff.second;
             }
-            denom_face_areas += (this->connection_.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx));
+            denom_face_areas += (this->connections_[idx].influx_mult * this->faceArea_connected_.at(idx));
         }
 
         const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
-        for (size_t idx = 0; idx < Base::cell_idx_.size(); ++idx) {
-            Base::alphai_.at(idx) = (denom_face_areas < eps_sqrt)
+        for (size_t idx = 0; idx < this->size(); ++idx) {
+            this->alphai_.at(idx) = (denom_face_areas < eps_sqrt)
                 ? // Prevent no connection NaNs due to division by zero
                 0.
-                : (this->connection_.influx_multiplier.at(idx) * Base::faceArea_connected_.at(idx)) / denom_face_areas;
+                : (this->connections_[idx].influx_mult * this->faceArea_connected_.at(idx)) / denom_face_areas;
         }
     }
 
@@ -170,45 +170,45 @@ protected:
 
     inline Eval dpai(int idx)
     {
-        const Eval dp = aquifer_pressure_ - Base::pressure_current_.at(idx)
-            + Base::rhow_[idx] * Base::gravity_() * (Base::cell_depth_[idx] - aqufetp_data_.d0);
+        const Eval dp = aquifer_pressure_ - this->pressure_current_.at(idx)
+            + this->rhow_[idx] * this->gravity_() * (this->cell_depth_[idx] - aqufetp_data_.d0);
         return dp;
     }
 
     // This function implements Eq 5.12 of the EclipseTechnicalDescription
     inline Scalar aquiferPressure()
     {
-        Scalar Flux = Base::W_flux_.value();
-        Scalar pa_ = Base::pa0_ - Flux / (aqufetp_data_.C_t * aqufetp_data_.V0);
+        Scalar Flux = this->W_flux_.value();
+        Scalar pa_ = this->pa0_ - Flux / (aqufetp_data_.C_t * aqufetp_data_.V0);
         return pa_;
     }
 
     inline void calculateAquiferConstants() override
     {
-        Base::Tc_ = (aqufetp_data_.C_t * aqufetp_data_.V0) / aqufetp_data_.J;
+        this->Tc_ = (aqufetp_data_.C_t * aqufetp_data_.V0) / aqufetp_data_.J;
     }
     // This function implements Eq 5.14 of the EclipseTechnicalDescription
     inline void calculateInflowRate(int idx, const Simulator& simulator) override
     {
-        const Scalar td_Tc_ = simulator.timeStepSize() / Base::Tc_;
+        const Scalar td_Tc_ = simulator.timeStepSize() / this->Tc_;
         const Scalar coef = (1 - exp(-td_Tc_)) / td_Tc_;
-        Base::Qai_.at(idx) = Base::alphai_[idx] * aqufetp_data_.J * dpai(idx) * coef;
+        this->Qai_.at(idx) = this->alphai_[idx] * aqufetp_data_.J * dpai(idx) * coef;
     }
 
     inline void calculateAquiferCondition() override
     {
-        Base::rhow_.resize(Base::cell_idx_.size(), 0.);
+        this->rhow_.resize(this->size(), 0.);
 
         if (this->solution_set_from_restart_) {
             return;
         }
 
         if (!aqufetp_data_.p0.first) {
-            Base::pa0_ = calculateReservoirEquilibrium();
+            this->pa0_ = calculateReservoirEquilibrium();
         } else {
-            Base::pa0_ = aqufetp_data_.p0.second;
+            this->pa0_ = aqufetp_data_.p0.second;
         }
-        aquifer_pressure_ = Base::pa0_;
+        aquifer_pressure_ = this->pa0_;
     }
 
     inline Scalar calculateReservoirEquilibrium() override
@@ -217,15 +217,15 @@ protected:
         std::vector<Scalar> pw_aquifer;
         Scalar water_pressure_reservoir;
 
-        ElementContext elemCtx(Base::ebos_simulator_);
-        const auto& gridView = Base::ebos_simulator_.gridView();
+        ElementContext elemCtx(this->ebos_simulator_);
+        const auto& gridView = this->ebos_simulator_.gridView();
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto& elem = *elemIt;
             elemCtx.updatePrimaryStencil(elem);
             size_t cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            int idx = Base::cellToConnectionIdx_[cellIdx];
+            int idx = this->cellToConnectionIdx_[cellIdx];
             if (idx < 0)
                 continue;
 
@@ -234,11 +234,11 @@ protected:
             const auto& fs = iq0.fluidState();
 
             water_pressure_reservoir = fs.pressure(waterPhaseIdx).value();
-            Base::rhow_[idx] = fs.density(waterPhaseIdx);
+            this->rhow_[idx] = fs.density(waterPhaseIdx);
             pw_aquifer.push_back(
                 (water_pressure_reservoir
-                 - Base::rhow_[idx].value() * Base::gravity_() * (Base::cell_depth_[idx] - aqufetp_data_.d0))
-                * Base::alphai_[idx]);
+                 - this->rhow_[idx].value() * this->gravity_() * (this->cell_depth_[idx] - aqufetp_data_.d0))
+                * this->alphai_[idx]);
         }
 
         // We take the average of the calculated equilibrium pressures.

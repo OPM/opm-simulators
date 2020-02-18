@@ -73,16 +73,15 @@ public:
     static const auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
     // Constructor
-    AquiferInterface(const Aquancon::AquanconOutput& connection,
+    AquiferInterface(int aqID,
+                     const std::vector<Aquancon::AquancCell>& connections,
                      const std::unordered_map<int, int>& cartesian_to_compressed,
                      const Simulator& ebosSimulator)
-        : connection_(connection)
+        : aquiferID(aqID)
+        , connections_(connections)
         , ebos_simulator_(ebosSimulator)
         , cartesian_to_compressed_(cartesian_to_compressed)
     {
-        assert(this->connection_.influx_coeff.size() == this->connection_.global_index.size());
-        assert(this->connection_.influx_coeff.size() == this->connection_.influx_multiplier.size());
-        assert(this->connection_.influx_multiplier.size() == this->connection_.reservoir_face_dir.size());
     }
 
     // Deconstructor
@@ -94,16 +93,13 @@ public:
     {
         auto xaqPos
             = std::find_if(aquiferSoln.begin(), aquiferSoln.end(), [this](const data::AquiferData& xaq) -> bool {
-                  return xaq.aquiferID == this->connection_.aquiferID;
+                   return xaq.aquiferID == this->aquiferID;
               });
 
-        if (xaqPos == aquiferSoln.end()) {
-            // No restart value applies to this aquifer.  Nothing to do.
+        if (xaqPos == aquiferSoln.end())
             return;
-        }
 
         this->assignRestartData(*xaqPos);
-
         this->W_flux_ = xaqPos->volume;
         this->pa0_ = xaqPos->initPressure;
         this->solution_set_from_restart_ = true;
@@ -155,6 +151,12 @@ public:
             += Qai_[idx] / context.dofVolume(spaceIdx, timeIdx);
     }
 
+
+    std::size_t size() const {
+        return this->connections_.size();
+    }
+
+
 protected:
     inline Scalar gravity_() const
     {
@@ -174,9 +176,9 @@ protected:
         calculateAquiferCondition();
         calculateAquiferConstants();
 
-        pressure_previous_.resize(cell_idx_.size(), 0.);
-        pressure_current_.resize(cell_idx_.size(), 0.);
-        Qai_.resize(cell_idx_.size(), 0.0);
+        pressure_previous_.resize(this->connections_.size(), 0.);
+        pressure_current_.resize(this->connections_.size(), 0.);
+        Qai_.resize(this->connections_.size(), 0.0);
     }
 
     inline void
@@ -214,7 +216,7 @@ protected:
         const auto cellNeighbour1 = faceCells(faceIdx, 1);
         const auto defaultFaceArea = Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
         const auto calculatedFaceArea
-            = (!this->connection_.influx_coeff.at(idx)) ? defaultFaceArea : *(this->connection_.influx_coeff.at(idx));
+            = (!this->connections_[idx].influx_coeff.first) ? defaultFaceArea : this->connections_[idx].influx_coeff.second;
         faceArea = (cellNeighbour0 * cellNeighbour1 > 0) ? 0. : calculatedFaceArea;
         if (cellNeighbour1 == 0) {
             faceArea = (cellNeighbour0 < 0) ? faceArea : 0.;
@@ -226,12 +228,12 @@ protected:
 
     virtual void endTimeStep() = 0;
 
-    const Aquancon::AquanconOutput connection_;
+    const int aquiferID;
+    const std::vector<Aquancon::AquancCell> connections_;
     const Simulator& ebos_simulator_;
     const std::unordered_map<int, int> cartesian_to_compressed_;
 
     // Grid variables
-    std::vector<size_t> cell_idx_;
     std::vector<Scalar> faceArea_connected_;
     std::vector<int> cellToConnectionIdx_;
     // Quantities at each grid id

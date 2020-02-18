@@ -158,20 +158,15 @@ BlackoilAquiferModel<TypeTag>::init()
         const AquiferCT aquiferct = AquiferCT(eclState.getTableManager(), deck);
         const Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
 
-        std::vector<AquiferCT::AQUCT_data> aquifersData = aquiferct.data();
-        std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
-
-        assert(aquifersData.size() == aquifer_connection.size());
         const auto& ugrid = simulator_.vanguard().grid();
         const auto& gridView = simulator_.gridView();
         const int number_of_cells = gridView.size(0);
 
         cartesian_to_compressed_ = cartesianToCompressed(number_of_cells, Opm::UgGridHelpers::globalCell(ugrid));
 
-        for (size_t i = 0; i < aquifersData.size(); ++i) {
-            aquifers_CarterTracy.push_back(AquiferCarterTracy<TypeTag>(
-                aquifer_connection[i], cartesian_to_compressed_, this->simulator_, aquifersData[i]));
-        }
+        for (const auto& aquifer : aquiferct)
+            aquifers_CarterTracy.push_back(AquiferCarterTracy<TypeTag>(aquifer_connect[aquifer.aquiferID], cartesian_to_compressed_, this->simulator_, aquifer));
+
     }
     if (comm.rank() == 0)
         has = deck.hasKeyword("AQUFETP");
@@ -188,20 +183,15 @@ BlackoilAquiferModel<TypeTag>::init()
         const Aquifetp aquifetp = Aquifetp(deck);
         const Aquancon aquifer_connect = Aquancon(eclState.getInputGrid(), deck);
 
-        std::vector<Aquifetp::AQUFETP_data> aquifersData = aquifetp.data();
-        std::vector<Aquancon::AquanconOutput> aquifer_connection = aquifer_connect.getAquOutput();
-
-        assert(aquifersData.size() == aquifer_connection.size());
         const auto& ugrid = simulator_.vanguard().grid();
         const auto& gridView = simulator_.gridView();
         const int number_of_cells = gridView.size(0);
 
         cartesian_to_compressed_ = cartesianToCompressed(number_of_cells, Opm::UgGridHelpers::globalCell(ugrid));
 
-        for (size_t i = 0; i < aquifersData.size(); ++i) {
-            aquifers_Fetkovich.push_back(AquiferFetkovich<TypeTag>(
-                aquifer_connection[i], cartesian_to_compressed_, this->simulator_, aquifersData[i]));
-        }
+        for (const auto& aquifer : aquifetp)
+            aquifers_Fetkovich.push_back(AquiferFetkovich<TypeTag>(aquifer_connect[aquifer.aquiferID], cartesian_to_compressed_, this->simulator_, aquifer));
+
     }
 }
 template <typename TypeTag>

@@ -31,9 +31,13 @@
 #include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
+#include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
@@ -441,6 +445,49 @@ Opm::Action::ActionX getActionX()
                                                   true, false)},
                                 ast, {getCondition()}, 4, 5);
 }
+
+
+Opm::AquiferCT getAquiferCT() {
+    Opm::AquiferCT::AQUCT_data data;
+    data.aquiferID = 1;
+    data.inftableID = 2;
+    data.pvttableID = 3;
+    data.phi_aq = 100;
+    data.d0 = 1;
+    data.C_t = 10;
+    data.r_o = 1.5;
+    data.k_a = 100;
+    data.c1 = 0.78;
+    data.h = 1;
+    data.c2 = 45;
+    data.p0 = std::make_pair(true, 98);
+    data.td = {1,2,3};
+    data.pi = {4,5,6};
+    data.cell_id = {0,10,100};
+
+    return Opm::AquiferCT( { data } );
+}
+
+Opm::Aquifetp getAquifetp() {
+    Opm::Aquifetp::AQUFETP_data data;
+
+    data.aquiferID = 1;
+    data.pvttableID = 3;
+    data.C_t = 10;
+    data.p0 = std::make_pair(true, 98);
+    data.V0 = 0;
+    data.d0 = 0;
+
+    return Opm::Aquifetp( { data } );
+}
+
+
+
+Opm::Aquancon getAquancon() {
+    Opm::Aquancon::AquancCell cell(1, 100, std::make_pair(false, 0), 100, Opm::FaceDir::XPlus);
+    return Opm::Aquancon( std::unordered_map<int, std::vector<Opm::Aquancon::AquancCell>>{{1, {cell}}});
+}
+
 #endif
 
 
@@ -1847,6 +1894,37 @@ BOOST_AUTO_TEST_CASE(UDQActive)
     DO_CHECKS(UDQActive)
 #endif
 }
+
+
+BOOST_AUTO_TEST_CASE(AquiferCT)
+{
+#ifdef HAVE_MPI
+    Opm::AquiferCT val1 = getAquiferCT();
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(AquiferCT);
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Aquifetp)
+{
+#ifdef HAVE_MPI
+    Opm::Aquifetp val1 = getAquifetp();
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(Aquifetp);
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(Aquancon)
+{
+#ifdef HAVE_MPI
+    Opm::Aquancon val1 = getAquancon();
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(Aquancon);
+#endif
+}
+
 
 
 BOOST_AUTO_TEST_CASE(GuideRateModel)
