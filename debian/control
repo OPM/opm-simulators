@@ -1,14 +1,13 @@
 Source: opm-material
 Priority: extra
 Maintainer: Arne Morten Kvarving <arne.morten.kvarving@sintef.no>
-Build-Depends: build-essential, debhelper (>= 9), libboost-filesystem-dev,
+Build-Depends: build-essential, debhelper (>= 9),
                libboost-system-dev, libboost-date-time-dev, libboost-test-dev,
                gfortran, pkg-config, libopm-common-dev,
                libdune-common-dev, libdune-istl-dev, cmake, bc,
                git, zlib1g-dev, libtool, doxygen,
                texlive-latex-extra, texlive-latex-recommended, ghostscript,
-               libboost-iostreams-dev, mpi-default-dev,
-               mpi-default-bin
+               mpi-default-dev, mpi-default-bin
 Standards-Version: 3.9.2
 Section: libs
 Homepage: http://opm-project.org
