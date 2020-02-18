@@ -139,6 +139,19 @@ template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::init()
 {
+    /*
+    const auto& comm = this->simulator_.vanguard().gridView().comm();
+    const auto& aquifer = this->simulator_.vanguard().eclState().aquifer();
+    const auto& connections = aquifer.connections();
+
+
+    for (const auto& aq : aquifer.fetp())
+        aquifers_Fetkovich.push_back(AquiferFetkovich<TypeTag>(connections[aq.aquiferID], cartesian_to_compressed_, this->simulator_, aq));
+
+    for (const auto& aq : aquifer.ct())
+        aquifers_CarterTracy.push_back(AquiferCarterTracy<TypeTag>(connections[aq.aquiferID], cartesian_to_compressed_, this->simulator_, aq));
+    */
+
     const auto& deck = this->simulator_.vanguard().deck();
     const auto& comm = this->simulator_.vanguard().gridView().comm();
 
