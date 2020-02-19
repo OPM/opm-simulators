@@ -32,7 +32,7 @@
 #include <unordered_set>
 #include <string>
 #include <map>
-#include <boost/lexical_cast.hpp>
+#include <type_traits>
 
 namespace Opm {
 
@@ -58,7 +58,13 @@ namespace MissingFeatures {
             const auto& record = keyword.getRecord(0);
             if (record.getItem(it->second.item).template get<T>(0) != it->second.item_value) {
                 const auto& location = keyword.location();
-                std::string msg = "For keyword '" + it->first + "' only value " + boost::lexical_cast<std::string>(it->second.item_value)
+                std::string val;
+                if constexpr (std::is_arithmetic<T>::value)
+                    val = std::to_string(it->second.item_value);
+                else
+                    val = it->second.item_value;
+
+                std::string msg = "For keyword '" + it->first + "' only value " + val
                     + " in item " + it->second.item + " is supported by flow.\n"
                     + "In file " + location.filename + ", line " + std::to_string(location.lineno) + "\n";
                 parseContext.handleError(ParseContext::SIMULATOR_KEYWORD_ITEM_NOT_SUPPORTED, msg, errorGuard);
