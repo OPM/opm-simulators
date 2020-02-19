@@ -585,7 +585,7 @@ private:
         struct MaxOp
         {
             using result_type = T;
-            const T& operator()(const T& t1, const T& t2)
+            const result_type& operator()(const T& t1, const T& t2)
             {
                 return std::max(t1, t2);
             }
@@ -641,7 +641,7 @@ private:
         struct MinOp
         {
             using result_type = T;
-            const T& operator()(const T& t1, const T& t2)
+            const result_type& operator()(const T& t1, const T& t2)
             {
                 return std::min(t1, t2);
             }
