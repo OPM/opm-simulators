@@ -537,7 +537,7 @@ namespace Opm
         std::unique_ptr<EbosSimulator> ebosSimulator_;
         int  mpi_rank_ = 0;
         int  mpi_size_ = 1;
-        boost::any parallel_information_;
+        std::any parallel_information_;
         std::unique_ptr<Simulator> simulator_;
     };
 } // namespace Opm

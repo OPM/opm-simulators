@@ -27,6 +27,8 @@
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
+#include <any>
+
 namespace Opm {
 namespace detail {
 
@@ -103,7 +105,7 @@ namespace detail {
         /// \param pinfo           In a parallel this holds the information about the data distribution.
         template <class Iterator>
         inline
-        double euclidianNormSquared( Iterator it, const Iterator end, int num_components, const boost::any& pinfo = boost::any() )
+        double euclidianNormSquared( Iterator it, const Iterator end, int num_components, const std::any& pinfo = std::any() )
         {
             static_cast<void>(num_components); // Suppress warning in the serial case.
             static_cast<void>(pinfo); // Suppress warning in non-MPI case.
@@ -111,7 +113,7 @@ namespace detail {
             if ( pinfo.type() == typeid(ParallelISTLInformation) )
             {
                 const ParallelISTLInformation& info =
-                    boost::any_cast<const ParallelISTLInformation&>(pinfo);
+                    std::any_cast<const ParallelISTLInformation&>(pinfo);
                 typedef typename Iterator::value_type Scalar;
                 Scalar product = 0.0;
                 int size_per_component = (end - it);

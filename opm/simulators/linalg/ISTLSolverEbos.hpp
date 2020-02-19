@@ -123,14 +123,14 @@ public:
   WellModelMatrixAdapter (const M& A,
                           const M& A_for_precond,
                           const WellModel& wellMod,
-                          const boost::any& parallelInformation OPM_UNUSED_NOMPI = boost::any() )
+                          const std::any& parallelInformation OPM_UNUSED_NOMPI = std::any() )
       : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_()
   {
 #if HAVE_MPI
     if( parallelInformation.type() == typeid(ParallelISTLInformation) )
     {
       const ParallelISTLInformation& info =
-          boost::any_cast<const ParallelISTLInformation&>( parallelInformation);
+          std::any_cast<const ParallelISTLInformation&>( parallelInformation);
       comm_.reset( new communication_type( info.communicator() ) );
     }
 #endif
@@ -375,7 +375,7 @@ protected:
         int iterations () const { return iterations_; }
 
         /// \copydoc NewtonIterationBlackoilInterface::parallelInformation
-        const boost::any& parallelInformation() const { return parallelInformation_; }
+        const std::any& parallelInformation() const { return parallelInformation_; }
 
     protected:
         /// \brief construct the CPR preconditioner and the solver.
@@ -568,7 +568,7 @@ protected:
             if (parallelInformation_.type() == typeid(ParallelISTLInformation))
             {
                 const ParallelISTLInformation& info =
-                    boost::any_cast<const ParallelISTLInformation&>( parallelInformation_);
+                    std::any_cast<const ParallelISTLInformation&>( parallelInformation_);
                 Comm istlComm(info.communicator());
 
                 // Construct operator, scalar product and vectors needed.
@@ -604,7 +604,7 @@ protected:
             {
                 const size_t size = opA.getmat().N();
                 const ParallelISTLInformation& info =
-                    boost::any_cast<const ParallelISTLInformation&>( parallelInformation_);
+                    std::any_cast<const ParallelISTLInformation&>( parallelInformation_);
 
                 // As we use a dune-istl with block size np the number of components
                 // per parallel is only one.
@@ -939,7 +939,7 @@ protected:
         const Simulator& simulator_;
         mutable int iterations_;
         mutable bool converged_;
-        boost::any parallelInformation_;
+        std::any parallelInformation_;
 
         std::unique_ptr<Matrix> matrix_;
         std::unique_ptr<Matrix> noGhostMat_;
