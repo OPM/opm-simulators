@@ -462,15 +462,15 @@ namespace Opm
         bool allDrawDownWrongDirection(const Simulator& ebos_simulator) const;
 
 
-        boost::optional<double> computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
-                                                         const std::vector<Scalar>& B_avg,
-                                                         const SummaryState& summary_state,
-                                                         DeferredLogger& deferred_logger) const;
+        std::optional<double> computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
+                                                       const std::vector<Scalar>& B_avg,
+                                                       const SummaryState& summary_state,
+                                                       DeferredLogger& deferred_logger) const;
 
-        boost::optional<double> computeBhpAtThpLimitInj(const Simulator& ebos_simulator,
-                                                        const std::vector<Scalar>& B_avg,
-                                                        const SummaryState& summary_state,
-                                                        DeferredLogger& deferred_logger) const;
+        std::optional<double> computeBhpAtThpLimitInj(const Simulator& ebos_simulator,
+                                                      const std::vector<Scalar>& B_avg,
+                                                      const SummaryState& summary_state,
+                                                      DeferredLogger& deferred_logger) const;
 
         double maxPerfPress(const Simulator& ebos_simulator) const;
 

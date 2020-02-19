@@ -38,7 +38,7 @@
 #include <dune/common/dynvector.hh>
 #include <dune/common/dynmatrix.hh>
 
-#include <boost/optional.hpp>
+#include <optional>
 
 namespace Opm
 {
@@ -509,13 +509,13 @@ namespace Opm
                                         DeferredLogger& deferred_logger);
 
 
-        boost::optional<double> computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
-                                                         const SummaryState& summary_state,
-                                                         DeferredLogger& deferred_logger) const;
+        std::optional<double> computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
+                                                       const SummaryState& summary_state,
+                                                       DeferredLogger& deferred_logger) const;
 
-        boost::optional<double> computeBhpAtThpLimitInj(const Simulator& ebos_simulator,
-                                                        const SummaryState& summary_state,
-                                                        DeferredLogger& deferred_logger) const;
+        std::optional<double> computeBhpAtThpLimitInj(const Simulator& ebos_simulator,
+                                                      const SummaryState& summary_state,
+                                                      DeferredLogger& deferred_logger) const;
 
     };
 
