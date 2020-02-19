@@ -132,7 +132,7 @@ opm_add_test(test_gatherconvergencereport
   SOURCES
     tests/test_gatherconvergencereport.cpp
   CONDITION
-    MPI_FOUND
+    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
     5 ${CMAKE_BINARY_DIR}
 )
@@ -143,7 +143,7 @@ opm_add_test(test_gatherdeferredlogger
   SOURCES
     tests/test_gatherdeferredlogger.cpp
   CONDITION
-    MPI_FOUND
+    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
     5 ${CMAKE_BINARY_DIR}
 )
