@@ -261,14 +261,11 @@ public:
 
         Opm::data::Wells localWellData = simulator_.problem().wellModel().wellData();
 
-        /*const Group& fieldGroup = schedule().getGroup("FIELD", reportStepNum);
-        wellGroupHelpers::setCmodeGroup(fieldGroup, simulator_.vanguard().schedule(), simulator_.vanguard().summaryState(), reportStepNum, well_state_);
-
         Opm::data::Group localGroupData = simulator_.problem().wellModel().groupData(reportStepNum, simulator_.vanguard().schedule());
 
-        for (const auto& cp_constr : localGroupData.currentProdConstraint) {
-             std::cout << "cp_constr.first: " << cp_constr.first << " cp_constr.second: " << static_cast<int>(cp_constr.second) << std::endl;
-        }*/
+        for (const auto& cp_constr : localGroupData) {
+             std::cout << "cp_constr.first: " << cp_constr.first << " cp_constr.second.currentProdConstraint: " << static_cast<int>(cp_constr.second.currentProdConstraint) << std::endl;
+        }
 
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
@@ -286,7 +283,7 @@ public:
         }
 
         if (collectToIORank_.isParallel())
-            collectToIORank_.collect({}, eclOutputModule_.getBlockData(), localWellData);
+            collectToIORank_.collect({}, eclOutputModule_.getBlockData(), localWellData, localGroupData);
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
@@ -309,6 +306,7 @@ public:
                 miscSummaryData["TCPU"] = totalCpuTime;
 
             const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
+            const Opm::data::Group& groupData = collectToIORank_.isParallel() ? collectToIORank_.globalGroupData() : localGroupData;
 
             const std::map<std::pair<std::string, int>, double>& blockData
                 = collectToIORank_.isParallel()
@@ -321,6 +319,7 @@ public:
                          eclState,
                          schedule(),
                          wellData,
+                         groupData,
                          miscSummaryData,
                          regionData,
                          blockData);
@@ -346,13 +345,14 @@ public:
 
     void writeOutput(bool isSubStep)
     {
+        int reportStepNum = simulator_.episodeIndex() + 1;
         Scalar curTime = simulator_.time() + simulator_.timeStepSize();
         Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
 
         // output using eclWriter if enabled
         Opm::data::Wells localWellData = simulator_.problem().wellModel().wellData();
+        Opm::data::Group localGroupData = simulator_.problem().wellModel().groupData(reportStepNum, simulator_.vanguard().schedule());
 
-        int reportStepNum = simulator_.episodeIndex() + 1;
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
@@ -379,7 +379,7 @@ public:
             eclOutputModule_.addRftDataToWells(localWellData, reportStepNum);
 
         if (collectToIORank_.isParallel())
-            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(), localWellData);
+            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(), localWellData, localGroupData);
 
 
         if (collectToIORank_.isIORank()) {
@@ -389,6 +389,7 @@ public:
             bool enableDoublePrecisionOutput = EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
             const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
             const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
+            const Opm::data::Group& groupData = collectToIORank_.isParallel() ? collectToIORank_.globalGroupData() : localGroupData;
             Opm::RestartValue restartValue(cellData, wellData);
 
             if (simConfig.useThresholdPressure())
