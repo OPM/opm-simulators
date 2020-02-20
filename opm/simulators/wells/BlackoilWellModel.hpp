@@ -193,7 +193,6 @@ namespace Opm {
                 for (const std::string gname :  sched.groupNames(reportStepIdx))  {
                     const auto& grup = sched.getGroup(gname, reportStepIdx);
                     const auto& grup_type = grup.getGroupType();
-                    const auto& i_phase = grup.injection_phase();
                     Opm::data::currentGroupConstraints cgc;
                     cgc.currentProdConstraint =  Opm::Group::ProductionCMode::NONE;
                     cgc.currentGasInjectionConstraint = Opm::Group::InjectionCMode::NONE;
@@ -202,15 +201,11 @@ namespace Opm {
                         cgc.currentProdConstraint = this->well_state_.currentProductionGroupControl(gname);
                     }
                     if ((grup_type == Opm::Group::GroupType::INJECTION) || (grup_type == Opm::Group::GroupType::MIXED))  {
-                        if (i_phase == Opm::Phase::WATER) {
-                            if (this->well_state_.hasInjectionGroupControl(gname)) {
-                                cgc.currentWaterInjectionConstraint = this->well_state_.currentInjectionGroupControl(gname);
-                            }
+                        if (this->well_state_.hasInjectionGroupControl(Opm::Phase::WATER, gname)) {
+                            cgc.currentWaterInjectionConstraint = this->well_state_.currentInjectionGroupControl(Opm::Phase::WATER, gname);
                         }
-                        if (i_phase == Opm::Phase::GAS) {
-                            if (this->well_state_.hasInjectionGroupControl(gname)) {
-                                cgc.currentGasInjectionConstraint = this->well_state_.currentInjectionGroupControl(gname);
-                            }
+                        if (this->well_state_.hasInjectionGroupControl(Opm::Phase::GAS, gname)) {
+                            cgc.currentGasInjectionConstraint = this->well_state_.currentInjectionGroupControl(Opm::Phase::GAS, gname);
                         }
                     }
                     dw.emplace(gname, cgc);
