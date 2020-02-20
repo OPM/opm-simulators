@@ -697,8 +697,7 @@ std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
 
 std::size_t packSize(const RestartConfig& data, Dune::MPIHelper::MPICommunicator comm)
 {
-    return packSize(data.ioConfig(), comm) +
-           packSize(data.timeMap(), comm) +
+    return packSize(data.timeMap(), comm) +
            packSize(data.getFirstRestartStep(), comm) +
            packSize(data.writeInitialRst(), comm) +
            packSize(data.restartSchedule(), comm) +
@@ -1822,6 +1821,7 @@ std::size_t packSize(const Schedule& data,
            packSizeDynState(data.getActions(), comm) +
            packSize(data.rftConfig(), comm) +
            packSize(data.getNupCol(), comm) +
+           packSize(data.restart(), comm) +
            packSize(data.getWellGroupEvents(), comm);
 }
 
@@ -1981,7 +1981,7 @@ std::size_t packSize(const EclipseConfig& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.init(), comm) +
-           packSize(data.restart(), comm);
+           packSize(data.io(), comm);
 }
 
 std::size_t packSize(const TransMult& data,
@@ -2510,7 +2510,6 @@ void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
 void pack(const RestartConfig& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
-    pack(data.ioConfig(), buffer, position, comm);
     pack(data.timeMap(), buffer, position, comm);
     pack(data.getFirstRestartStep(), buffer, position, comm);
     pack(data.writeInitialRst(), buffer, position, comm);
@@ -3668,6 +3667,7 @@ void pack(const Schedule& data,
     packDynState(data.getActions(), buffer, position, comm);
     pack(data.rftConfig(), buffer, position, comm);
     pack(data.getNupCol(), buffer, position, comm);
+    pack(data.restart(), buffer, position, comm);
     pack(data.getWellGroupEvents(), buffer, position, comm);
 }
 
@@ -3844,7 +3844,7 @@ void pack(const EclipseConfig& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.init(), buffer, position, comm);
-    pack(data.restart(), buffer, position, comm);
+    pack(data.io(), buffer, position, comm);
 }
 
 void pack(const TransMult& data,
@@ -4557,21 +4557,19 @@ void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
 void unpack(RestartConfig& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
-    IOConfig ioConfig;
     TimeMap timemap;
     int firstRstStep;
     bool writeInitialRst;
     DynamicState<RestartSchedule> restart_sched;
     DynamicState<std::map<std::string,int>> restart_keyw;
     std::vector<bool> save_keyw;
-    unpack(ioConfig, buffer, position, comm);
     unpack(timemap, buffer, position, comm);
     unpack(firstRstStep, buffer, position, comm);
     unpack(writeInitialRst, buffer, position, comm);
     unpack(restart_sched, buffer, position, comm);
     unpack(restart_keyw, buffer, position, comm);
     unpack(save_keyw, buffer, position, comm);
-    data = RestartConfig(ioConfig, timemap, firstRstStep, writeInitialRst, restart_sched,
+    data = RestartConfig(timemap, firstRstStep, writeInitialRst, restart_sched,
                          restart_keyw, save_keyw);
 }
 
@@ -6306,6 +6304,7 @@ void unpack(Schedule& data, std::vector<char>& buffer, int& position,
     DynamicState<std::shared_ptr<Action::Actions>> actions;
     RFTConfig rftConfig;
     DynamicState<int> nupCol;
+    RestartConfig restartConfig;
     std::map<std::string,Events> wellGroupEvents;
 
     unpack(timeMap, buffer, position, comm);
@@ -6331,13 +6330,14 @@ void unpack(Schedule& data, std::vector<char>& buffer, int& position,
 
     unpack(rftConfig, buffer, position, comm);
     unpack(nupCol, buffer, position, comm);
+    unpack(restartConfig, buffer, position, comm);
     unpack(wellGroupEvents, buffer, position, comm);
     data = Schedule(timeMap, staticWells, groups, oilVapProps, events,
                     modifierDeck, tuning, messageLimits, runspec,
                     vfpProdTables, vfpInjTables, wellTestConfig,
                     wListManager, udqConfig, udqActive, guideRateConfig,
                     gconSale, gconSump, globalWhistCtlMode, actions,
-                    rftConfig, nupCol, wellGroupEvents);
+                    rftConfig, nupCol, restartConfig, wellGroupEvents);
 }
 
 void unpack(BrineDensityTable& data, std::vector<char>& buffer, int& position,
@@ -6576,11 +6576,11 @@ void unpack(EclipseConfig& data,
             Dune::MPIHelper::MPICommunicator comm)
 {
     InitConfig init;
-    RestartConfig restart;
+    IOConfig io;
 
     unpack(init, buffer, position, comm);
-    unpack(restart, buffer, position, comm);
-    data = EclipseConfig(init, restart);
+    unpack(io, buffer, position, comm);
+    data = EclipseConfig(init, io);
 }
 
 void unpack(TransMult& data,

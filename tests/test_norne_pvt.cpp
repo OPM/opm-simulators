@@ -279,7 +279,7 @@ BOOST_AUTO_TEST_CASE( Test_Norne_PVT) {
 
     auto deck = parser.parseFile("norne_pvt.data", parseContext, errorGuard);
 
-    Opm::EclipseState eclState(deck, parseContext, errorGuard);
+    Opm::EclipseState eclState(deck);
 
     verify_norne_oil_pvt_region1( deck, eclState );
     verify_norne_oil_pvt_region2( deck, eclState );

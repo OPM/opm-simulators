@@ -327,7 +327,7 @@ public:
         }
 
         if (!externalEclState_) {
-            internalEclState_.reset(new Opm::EclipseState(*deck_, *parseContext_, *errorGuard_));
+            internalEclState_.reset(new Opm::EclipseState(*deck_));
             eclState_ = internalEclState_.get();
         }
         else {
@@ -375,7 +375,7 @@ public:
         // written to disk (every N report step)
         int outputInterval = EWOMS_GET_PARAM(TypeTag, int, EclOutputInterval);
         if (outputInterval >= 0)
-            eclState_->getRestartConfig().overrideRestartWriteInterval(outputInterval);
+            schedule().restart().overrideRestartWriteInterval(outputInterval);
     }
 
     /*!
