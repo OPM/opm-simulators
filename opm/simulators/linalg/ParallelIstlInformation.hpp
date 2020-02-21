@@ -24,7 +24,7 @@
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/common/ErrorMacros.hpp>
-#include <boost/any.hpp>
+#include <any>
 #include <exception>
 
 #include <algorithm>
@@ -671,7 +671,7 @@ namespace Opm
 /// then this will ecapsulate an instance of ParallelISTLInformation.
 /// \param grid The grid to inspect.
 
-inline void extractParallelGridInformationToISTL(boost::any& anyComm, const UnstructuredGrid& grid)
+inline void extractParallelGridInformationToISTL(std::any& anyComm, const UnstructuredGrid& grid)
 {
     (void)anyComm; (void)grid;
 }

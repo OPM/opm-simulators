@@ -3759,7 +3759,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    boost::optional<double>
+    std::optional<double>
     StandardWell<TypeTag>::
     computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
                              const SummaryState& summary_state,
@@ -3923,7 +3923,7 @@ namespace Opm
 
         // Handle the no solution case.
         if (sign_change_index == -1) {
-            return boost::optional<double>();
+            return std::optional<double>();
         }
 
         // Solve for the proper solution in the given interval.
@@ -3942,7 +3942,7 @@ namespace Opm
             assert(low == controls.bhp_limit);
             deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                     "Robust bhp(thp) solve failed for well " + name());
-            return boost::optional<double>();
+            return std::optional<double>();
         }
         try {
             const double solved_bhp = RegulaFalsiBisection<>::
@@ -3956,7 +3956,7 @@ namespace Opm
         catch (...) {
             deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                     "Robust bhp(thp) solve failed for well " + name());
-            return boost::optional<double>();
+            return std::optional<double>();
         }
 
     }
@@ -3964,7 +3964,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    boost::optional<double>
+    std::optional<double>
     StandardWell<TypeTag>::
     computeBhpAtThpLimitInj(const Simulator& ebos_simulator,
                             const SummaryState& summary_state,
@@ -4123,7 +4123,7 @@ namespace Opm
 
         // Handle the no solution case.
         if (sign_change_index == -1) {
-            return boost::optional<double>();
+            return std::optional<double>();
         }
 
         // Solve for the proper solution in the given interval.
@@ -4142,7 +4142,7 @@ namespace Opm
             assert(low == controls.bhp_limit);
             deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                     "Robust bhp(thp) solve failed for well " + name());
-            return boost::optional<double>();
+            return std::optional<double>();
         }
         try {
             const double solved_bhp = RegulaFalsiBisection<>::
@@ -4156,7 +4156,7 @@ namespace Opm
         catch (...) {
             deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                     "Robust bhp(thp) solve failed for well " + name());
-            return boost::optional<double>();
+            return std::optional<double>();
         }
 
     }

@@ -22,7 +22,7 @@
 #ifdef HAVE_OPM_GRID
 
 #include<opm/grid/CpGrid.hpp>
-#include<boost/any.hpp>
+#include <any>
 
 namespace Opm
 {
@@ -37,11 +37,11 @@ namespace Opm
 /// \param[out] anyComm The handle to to store the information in. If grid is a parallel grid
 /// then this will ecapsulate an instance of ParallelISTLInformation.
 
-void extractParallelGridInformationToISTL(const Dune::CpGrid& grid, boost::any& anyComm);
+void extractParallelGridInformationToISTL(const Dune::CpGrid& grid, std::any& anyComm);
 
 // Grid is not CpGrid --> do nothing.
 template <class Grid>
-void extractParallelGridInformationToISTL(const Grid&, boost::any&)
+void extractParallelGridInformationToISTL(const Grid&, std::any&)
 {}
 
 } // end namespace Opm
