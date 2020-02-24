@@ -268,9 +268,21 @@ public:
 
     int run()
     {
+        if (prepareRun_()) {
+            return Opm::flowEbosBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
+        }
+        else {
+            return EXIT_FAILURE;
+        }
+    }
+
+
+private:
+
+    bool prepareRun_()
+    {
         int argc = argc_;
         char **argv = argv_;
-
         Dune::Timer externalSetupTimer;
         externalSetupTimer.start();
 
@@ -315,9 +327,9 @@ public:
         }
 
         FileOutputMode outputMode = FileOutputMode::OUTPUT_NONE;
-        bool outputCout = false;
+        outputCout_ = false;
         if (mpiRank == 0)
-            outputCout = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
+            outputCout_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
 
         std::string deckFilename;
         std::string outputDir;
@@ -343,7 +355,7 @@ public:
             }
         }
 
-        if (outputCout) {
+        if (outputCout_) {
             Opm::FlowMainEbos<PreTypeTag>::printBanner();
         }
 
@@ -354,7 +366,7 @@ public:
                                     deckFilename,
                                     outputDir,
                                     EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
-                                    outputCout, "STDOUT_LOGGER");
+                                    outputCout_, "STDOUT_LOGGER");
 
             if (mpiRank == 0) {
                 setupMessageLimiter(schedule_->getMessageLimits(), "STDOUT_LOGGER");
@@ -372,16 +384,16 @@ public:
                                       deckFilename,
                                       EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir),
                                       EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
-                                      outputCout, "STDOUT_LOGGER");
+                                      outputCout_, "STDOUT_LOGGER");
 
             if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
                 parseContext.update( Opm::InputError::DELAYED_EXIT1);
 
-            Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout);
+            Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
 
             deck_.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
             Opm::MissingFeatures::checkKeywords(*deck_, parseContext, errorGuard);
-            if ( outputCout )
+            if ( outputCout_ )
                 Opm::checkDeck(*deck_, parser, parseContext, errorGuard);
 
             eclipseState_.reset( new Opm::EclipseState(*deck_, parseContext, errorGuard ));
@@ -402,26 +414,26 @@ public:
         }
 
         const auto& phases = Opm::Runspec(*deck_).phases();
-        bool outputFiles = (outputMode != FileOutputMode::OUTPUT_NONE);
+        outputFiles_ = (outputMode != FileOutputMode::OUTPUT_NONE);
 
         // Blackoil case
         if( phases.size() == 3 ) {
             Opm::flowEbosBlackoilSetDeck(externalSetupTimer.elapsed(), *deck_, *eclipseState_, *schedule_, *summaryConfig_);
-            return Opm::flowEbosBlackoilMain(argc, argv, outputCout, outputFiles);
+            return true;
         }
         else
         {
-            if (outputCout)
+            if (outputCout_)
                 std::cerr << "Only blackoil configuration is supported!" << std::endl;
-            return EXIT_FAILURE;
+            return false;
         }
-        
-        return EXIT_SUCCESS;
     }
 
-private:
+
     int argc_;
     char **argv_;
+    bool outputCout_; // copy of EWOMS parameter "EnableTerminalOutput"
+    bool outputFiles_; // output files?
 
     std::shared_ptr<Opm::Deck>          deck_;
     std::shared_ptr<Opm::EclipseState>  eclipseState_;
