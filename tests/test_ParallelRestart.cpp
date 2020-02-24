@@ -87,6 +87,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/DenT.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PlymwinjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
@@ -228,6 +229,13 @@ Opm::TableColumn getTableColumn()
                             "test2", {1.0, 2.0}, {false, true}, 2);
 }
 
+
+Opm::DenT getDenT() {
+    std::vector<Opm::DenT::entry> records;
+    records.emplace_back(1,2,3);
+    records.emplace_back(4,5,6);
+    return Opm::DenT(records);
+}
 
 Opm::SimpleTable getSimpleTable()
 {
@@ -1208,6 +1216,9 @@ BOOST_AUTO_TEST_CASE(TableManager)
                            true,
                            true,
                            true,
+                           getDent(),
+                           getDenT(),
+                           getDenT(),
                            jfunc,
                            1.0);
     auto val2 = PackUnpack(val1);
@@ -2463,6 +2474,14 @@ BOOST_AUTO_TEST_CASE(Fault)
 #endif
 }
 
+BOOST_AUTO_TEST_CASE(DenT)
+{
+#ifdef HAVE_MPI
+    Opm::DenT val1 = getDenT();
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(DenT)
+#endif
+}
 
 BOOST_AUTO_TEST_CASE(FaultCollection)
 {
