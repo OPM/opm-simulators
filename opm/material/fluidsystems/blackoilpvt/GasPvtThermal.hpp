@@ -111,8 +111,8 @@ public:
         const auto& tables = eclState.getTableManager();
 
         enableThermalDensity_ = deck.hasKeyword("GASDENT");
-        enableThermalViscosity_ = deck.hasKeyword("GASVISCT");
-        enableInternalEnergy_ = deck.hasKeyword("SPECHEAT");
+        enableThermalViscosity_ = tables.hasTables("GASVISCT");
+        enableInternalEnergy_ = tables.hasTables("SPECHEAT");
 
         unsigned numRegions = isothermalPvt_->numRegions();
         setNumRegions(numRegions);
@@ -144,7 +144,7 @@ public:
             }
         }
 
-        if (deck.hasKeyword("SPECHEAT")) {
+        if (enableInternalEnergy_) {
             // the specific internal energy of gas. be aware that ecl only specifies the heat capacity
             // (via the SPECHEAT keyword) and we need to integrate it ourselfs to get the
             // internal energy

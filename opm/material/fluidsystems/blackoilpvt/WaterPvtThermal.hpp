@@ -123,8 +123,8 @@ public:
         const auto& tables = eclState.getTableManager();
 
         enableThermalDensity_ = deck.hasKeyword("WATDENT");
-        enableThermalViscosity_ = deck.hasKeyword("WATVISCT");
-        enableInternalEnergy_ = deck.hasKeyword("SPECHEAT");
+        enableThermalViscosity_ = tables.hasTables("WATVISCT");
+        enableInternalEnergy_ = tables.hasTables("SPECHEAT");
 
         unsigned numRegions = isothermalPvt_->numRegions();
         setNumRegions(numRegions);
@@ -144,37 +144,33 @@ public:
 
         if (enableThermalViscosity_) {
 
-            if (!deck.hasKeyword("VISCREF"))
+            if (tables.getViscrefTable().empty())
                 throw std::runtime_error("VISCREF is required when WATVISCT is present");
 
-            const auto& viscrefKeyword = deck.getKeyword("VISCREF");
             const auto& watvisctTables = tables.getWatvisctTables();
+            const auto& viscrefTables = tables.getViscrefTable();
 
-            const auto& pvtwKeyword = deck.getKeyword("PVTW");
+            const auto& pvtwTables = tables.getPvtwTable();
 
-            assert(pvtwKeyword.size() == numRegions);
+            assert(pvtwTables.size() == numRegions);
             assert(watvisctTables.size() == numRegions);
-            assert(viscrefKeyword.size() == numRegions);
+            assert(viscrefTables.size() == numRegions);
 
             for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
                 const auto& T = watvisctTables[regionIdx].getColumn("Temperature").vectorCopy();
                 const auto& mu = watvisctTables[regionIdx].getColumn("Viscosity").vectorCopy();
                 watvisctCurves_[regionIdx].setXYContainers(T, mu);
 
-                const auto& viscrefRecord = viscrefKeyword.getRecord(regionIdx);
-                viscrefPress_[regionIdx] = viscrefRecord.getItem("REFERENCE_PRESSURE").getSIDouble(0);
+                viscrefPress_[regionIdx] = viscrefTables[regionIdx].reference_pressure;
             }
 
             for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
-                auto pvtwRecord = pvtwKeyword.getRecord(regionIdx);
-                pvtwViscosity_[regionIdx] =
-                        pvtwRecord.getItem("WATER_VISCOSITY").getSIDouble(0);
-                pvtwViscosibility_[regionIdx] =
-                        pvtwRecord.getItem("WATER_VISCOSIBILITY").getSIDouble(0);
+                pvtwViscosity_[regionIdx] = pvtwTables[regionIdx].viscosity;
+                pvtwViscosibility_[regionIdx] = pvtwTables[regionIdx].viscosibility;
             }
         }
 
-        if (deck.hasKeyword("SPECHEAT")) {
+        if (enableInternalEnergy_) {
             // the specific internal energy of liquid water. be aware that ecl only specifies the heat capacity
             // (via the SPECHEAT keyword) and we need to integrate it ourselfs to get the
             // internal energy
