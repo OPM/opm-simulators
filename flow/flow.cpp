@@ -47,6 +47,9 @@
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/OpmLog/LogUtil.hpp>
 
+#include <opm/io/eclipse/rst/state.hpp>
+#include <opm/io/eclipse/ERst.hpp>
+
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
@@ -352,7 +355,22 @@ int main(int argc, char** argv)
 
             eclipseState.reset( new Opm::EclipseState(*deck));
             if (mpiRank == 0) {
-                schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
+                /*
+                  For the time being initializing wells and groups from the
+                  restart file is not possible, but work is underways and it is
+                  included here as a switch.
+                */
+                const bool init_from_restart_file = false;
+                const auto& init_config = eclipseState->getInitConfig();
+                if (init_config.restartRequested() && init_from_restart_file) {
+                    int report_step = init_config.getRestartStep();
+                    const auto& rst_filename = eclipseState->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
+                    Opm::EclIO::ERst rst_file(rst_filename);
+                    const auto& rst_state = Opm::RestartIO::RstState::load(rst_file, report_step);
+                    schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard, &rst_state) );
+                } else
+                    schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
+
                 setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
                 summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
 #ifdef HAVE_MPI
