@@ -155,9 +155,10 @@ private:
             auto& elemParam = solidEnergyLawParams_[elemIdx];
             elemParam.setSolidEnergyApproach(SolidEnergyLawParams::heatcrApproach);
             auto& heatcrElemParams = elemParam.template getRealParams<SolidEnergyLawParams::heatcrApproach>();
+            unsigned cartesianElemIdx = compressedToCartesianElemIdx[elemIdx];
 
-            heatcrElemParams.setReferenceRockHeatCapacity(heatcrData[elemIdx]);
-            heatcrElemParams.setDRockHeatCapacity_dT(heatcrtData[elemIdx]);
+            heatcrElemParams.setReferenceRockHeatCapacity(heatcrData[cartesianElemIdx]);
+            heatcrElemParams.setDRockHeatCapacity_dT(heatcrtData[cartesianElemIdx]);
             heatcrElemParams.finalize();
             elemParam.finalize();
         }
