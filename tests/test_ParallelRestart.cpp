@@ -1216,10 +1216,11 @@ BOOST_AUTO_TEST_CASE(TableManager)
                            true,
                            true,
                            true,
-                           getDent(),
-                           getDenT(),
-                           getDenT(),
                            jfunc,
+                           getDenT(),
+                           getDenT(),
+                           getDenT(),
+                           77,
                            1.0);
     auto val2 = PackUnpack(val1);
     DO_CHECKS(TableManager)
