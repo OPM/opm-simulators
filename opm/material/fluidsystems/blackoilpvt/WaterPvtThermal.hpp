@@ -122,7 +122,7 @@ public:
         //////
         const auto& tables = eclState.getTableManager();
 
-        enableThermalDensity_ = deck.hasKeyword("WATDENT");
+        enableThermalDensity_ = tables.WatDenT().size() > 0;
         enableThermalViscosity_ = tables.hasTables("WATVISCT");
         enableInternalEnergy_ = tables.hasTables("SPECHEAT");
 
@@ -130,20 +130,19 @@ public:
         setNumRegions(numRegions);
 
         if (enableThermalDensity_) {
-            const auto& watdentKeyword = deck.getKeyword("WATDENT");
+            const auto& watDenT = tables.WatDenT();
 
-            assert(watdentKeyword.size() == numRegions);
+            assert(watDenT.size() == numRegions);
             for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-                const auto& watdentRecord = watdentKeyword.getRecord(regionIdx);
+                const auto& record = watDenT[regionIdx];
 
-                watdentRefTemp_[regionIdx] = watdentRecord.getItem("REFERENCE_TEMPERATURE").getSIDouble(0);
-                watdentCT1_[regionIdx] = watdentRecord.getItem("EXPANSION_COEFF_LINEAR").getSIDouble(0);
-                watdentCT2_[regionIdx] = watdentRecord.getItem("EXPANSION_COEFF_QUADRATIC").getSIDouble(0);
+                watdentRefTemp_[regionIdx] = record.T0;
+                watdentCT1_[regionIdx] = record.C1;
+                watdentCT2_[regionIdx] = record.C2;
             }
         }
 
         if (enableThermalViscosity_) {
-
             if (tables.getViscrefTable().empty())
                 throw std::runtime_error("VISCREF is required when WATVISCT is present");
 
