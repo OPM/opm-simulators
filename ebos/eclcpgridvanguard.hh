@@ -131,16 +131,6 @@ public:
         equilCartesianIndexMapper_.reset();
     }
 
-    std::vector<int> cellPartition() const
-    {
-        return cell_part_;
-    }
-
-    std::vector<int> partitionLevelType() const
-    {
-        return part_type_;
-    }
-
     /*!
      * \brief Distribute the simulation grid over multiple processes
      *
@@ -148,7 +138,6 @@ public:
      */
     void loadBalance()
     {
-        int overlapLayers = this->overlapLayers();
 #if HAVE_MPI
         int mpiSize = 1;
         MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
@@ -166,6 +155,7 @@ public:
             }
 
             Dune::EdgeWeightMethod edgeWeightsMethod = this->edgeWeightsMethod();
+            int overlapLayers = this->overlapLayers();
 
             // convert to transmissibility for faces
             // TODO: grid_->numFaces() is not generic. use grid_->size(1) instead? (might
@@ -212,20 +202,13 @@ public:
                 ActiveGridCells activeCells(grid().logicalCartesianSize(),
                                             grid().globalCell().data(), grid().size(0));
                 this->schedule().filterConnections(activeCells);
-            }      
-        }
-#endif
-        cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
-
-        this->updateGridView_();
-#if HAVE_MPI
-        if (mpiSize > 1) {
-            part_type_.resize(grid_->numCells(), 0);
-            if (overlapLayers > 1) {
-                grid_->sepOverlapAndGhostCells(part_type_, overlapLayers);
             }
         }
 #endif
+
+        cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
+
+        this->updateGridView_();
     }
 
     /*!
@@ -323,8 +306,6 @@ protected:
     std::unique_ptr<EclTransmissibility<TypeTag> > globalTrans_;
     std::unordered_set<std::string> defunctWellNames_;
     int mpiRank;
-    std::vector<int> cell_part_;
-    std::vector<int> part_type_;
 };
 
 } // namespace Opm

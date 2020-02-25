@@ -132,7 +132,7 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, int, EdgeWeightsMethod,
                              "Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
         EWOMS_REGISTER_PARAM(TypeTag, int, OverlapLayers,
-                             "Number of overlap layers added between subdomains in the parallel grid.");
+                             "Number of overlap layers added between subdomains in the parallel grid. If set to larger then 1, Restricted Additive Schwarz (RAS) will be used as parallel preconditioner instead of the default Block-Jacobi method. Expect lower number of linear solver iterations at the cost of increased parallel overhead.");
     }
 
     /*!
@@ -455,11 +455,12 @@ public:
     Dune::EdgeWeightMethod edgeWeightsMethod() const
     { return edgeWeightsMethod_; }
 
-    /*!
-     * \brief Number of blocks in the Block-Jacobi preconditioner.
+    /*
+     * \brief Parameter deciding the number of overlap layers between subdomains in parallel runs.
      */
     int overlapLayers() const
     {return overlapLayers_;}
+
     /*!
      * \brief Returns the name of the case.
      *

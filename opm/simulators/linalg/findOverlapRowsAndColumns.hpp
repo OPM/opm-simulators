@@ -41,7 +41,7 @@ namespace detail
     template<class Grid, class W>
     void setWellConnections(const Grid& grid, const W& wells, bool useWellConn, std::vector<std::set<int>>& wellGraph)
     {
-        if ( grid.comm().size() > 1  )
+        if ( grid.comm().size() > 1 )
         {
             Dune::CartesianIndexMapper< Grid > cartMapper( grid );
             const int numCells = cartMapper.compressedSize(); // grid.numCells()
@@ -102,51 +102,12 @@ namespace detail
                 const auto& elem = *elemIt;
                 int lcell = lid.id(elem);
 
-                if (elem.partitionType() != Dune::InteriorEntity)
+                if (elem.partitionType() == Dune::GhostEntity)
                 {
                     //add row to list
                     overlapRows.push_back(lcell);
                 } else {
                     interiorRows.push_back(lcell);
-                }
-            }
-        }
-    }
-    
-    /// \brief Find overlap cells without an interior neighbor
-    ///
-    /// Useful for restricted additive schwarz when overlapLayers=2.
-    /// \param grid The grid where we look for overlap cells.
-    /// \param ghostpRows List where ghost rows are stored.
-    /// \param interiorRows List where overlap rows are stored.
-    /// \param partType precalculated list of cell overlap layer value (1=interior,2=first layer, ...)
-    /// \param layers number of layers in the gris.
-    template<class Grid>
-    void findGhostOverlapSeperation(const Grid& grid, std::vector<int>& ghostRows,
-                                    std::vector<int>& interiorRows, std::vector<bool>& notGhost,
-                                    const std::vector<int>& partType, int layers)
-    {
-        if ( grid.comm().size() > 1)
-        {
-            //Numbering of cells
-            const auto& lid = grid.localIdSet();
-
-            const auto& gridView = grid.leafGridView();
-            auto elemIt = gridView.template begin<0>();
-            const auto& elemEndIt = gridView.template end<0>();
-
-            //loop over cells in mesh
-            for (; elemIt != elemEndIt; ++elemIt)
-            {
-                const auto& elem = *elemIt;
-                int lcell = lid.id(elem);
-                if (partType[lcell] == layers + 1) {
-                    ghostRows.push_back(lcell);
-                    notGhost[lcell] = false;
-                }
-                else {
-                    interiorRows.push_back(lcell);
-                    notGhost[lcell] = true;
                 }
             }
         }

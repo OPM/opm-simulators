@@ -49,7 +49,6 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/simulators/linalg/ParallelRestrictedAdditiveSchwarz.hpp>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 namespace Opm
 {

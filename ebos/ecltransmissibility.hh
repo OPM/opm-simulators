@@ -139,6 +139,7 @@ public:
         const std::vector<double>& ntg = eclState.fieldProps().get_global_double("NTG");
 
         unsigned numElements = elemMapper.size();
+
         extractPermeability_();
 
         // calculate the axis specific centroids of all elements
@@ -179,6 +180,7 @@ public:
 
             thermalHalfTransBoundary_.clear();
         }
+
         // compute the transmissibilities for all intersections
         elemIt = gridView.template begin</*codim=*/ 0>();
         for (; elemIt != elemEndIt; ++elemIt) {
