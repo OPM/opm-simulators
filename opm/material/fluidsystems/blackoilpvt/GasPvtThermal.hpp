@@ -120,7 +120,7 @@ public:
         // viscosity
         if (enableThermalViscosity_) {
             const auto& gasvisctTables = tables.getGasvisctTables();
-            int gasCompIdx = deck.getKeyword("GCOMPIDX").getRecord(0).getItem("GAS_COMPONENT_INDEX").get< int >(0) - 1;
+            auto gasCompIdx = tables.gas_comp_index();
             std::string gasvisctColumnName = "Viscosity" + std::to_string(static_cast<long long>(gasCompIdx));
 
             for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
