@@ -547,9 +547,9 @@ private:
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
 
         const auto& fp = vanguard_.eclState().fieldProps();
-        const auto& inputTranxData = fp.get_global_double("TRANX");
-        const auto& inputTranyData = fp.get_global_double("TRANY");
-        const auto& inputTranzData = fp.get_global_double("TRANZ");
+        const auto& inputTranxData = fp.get_double("TRANX");
+        const auto& inputTranyData = fp.get_double("TRANY");
+        const auto& inputTranzData = fp.get_double("TRANZ");
         bool tranx_deckAssigned = false;                     // Ohh my ....
         bool trany_deckAssigned = false;
         bool tranz_deckAssigned = false;
@@ -575,8 +575,8 @@ private:
 
                 auto isId = isId_(c1, c2);
 
-                int gc1 = std::min(cartMapper.cartesianIndex(c1), cartMapper.cartesianIndex(c2));
-                int gc2 = std::max(cartMapper.cartesianIndex(c1), cartMapper.cartesianIndex(c2));
+                int gc1 = std::min(c1, c2);
+                int gc2 = std::max(c1, c2);
 
                 if (gc2 - gc1 == 1) {
                     if (tranx_deckAssigned)
