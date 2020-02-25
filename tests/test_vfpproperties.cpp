@@ -35,8 +35,6 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
@@ -642,8 +640,6 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
 {
     auto units = Opm::UnitSystem::newMETRIC();
 
-    Opm::ParseContext parseContext;
-    Opm::ErrorGuard errorGuard;
     Opm::Parser parser;
     Opm::filesystem::path file("VFPPROD2");
 
