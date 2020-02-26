@@ -116,7 +116,7 @@ public:
         //////
         const auto& tables = eclState.getTableManager();
 
-        enableThermalDensity_ = deck.hasKeyword("OILDENT");
+        enableThermalDensity_ = tables.OilDenT().size() > 0;
         enableThermalViscosity_ = tables.hasTables("OILVISCT");
         enableInternalEnergy_ = tables.hasTables("SPECHEAT");
 
@@ -157,16 +157,15 @@ public:
         }
 
         // temperature dependence of oil density
-        if (enableThermalDensity_) {
-            const auto& oildentKeyword = deck.getKeyword("OILDENT");
-
-            assert(oildentKeyword.size() == numRegions);
+        const auto& oilDenT = tables.OilDenT();
+        if (oilDenT.size() > 0) {
+            assert(oilDenT.size() == numRegions);
             for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-                const auto& oildentRecord = oildentKeyword.getRecord(regionIdx);
+                const auto& record = oilDenT[regionIdx];
 
-                oildentRefTemp_[regionIdx] = oildentRecord.getItem("REFERENCE_TEMPERATURE").getSIDouble(0);
-                oildentCT1_[regionIdx] = oildentRecord.getItem("EXPANSION_COEFF_LINEAR").getSIDouble(0);
-                oildentCT2_[regionIdx] = oildentRecord.getItem("EXPANSION_COEFF_QUADRATIC").getSIDouble(0);
+                oildentRefTemp_[regionIdx] = record.T0;
+                oildentCT1_[regionIdx] = record.C1;
+                oildentCT2_[regionIdx] = record.C2;
             }
         }
 
