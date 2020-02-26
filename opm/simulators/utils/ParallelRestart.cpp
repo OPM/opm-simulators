@@ -855,6 +855,7 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.getWatdentTable(), comm) +
            packSize(data.getPvtwSaltTables(), comm) +
            packSize(data.getBrineDensityTables(), comm) +
+           packSize(data.getSolventDensityTables(), comm) +
            packSize(data.getPlymwinjTables(), comm) +
            packSize(data.getSkprwatTables(), comm) +
            packSize(data.getSkprpolyTables(), comm) +
@@ -2029,6 +2030,12 @@ std::size_t packSize(const FaultCollection& data,
     return packSize(data.getFaults(), comm);
 }
 
+std::size_t packSize(const SolventDensityTable& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getSolventDensityColumn(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -2702,6 +2709,7 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
     pack(data.getWatdentTable(), buffer, position, comm);
     pack(data.getPvtwSaltTables(), buffer, position, comm);
     pack(data.getBrineDensityTables(), buffer, position, comm);
+    pack(data.getSolventDensityTables(), buffer, position, comm);
     pack(data.getPlymwinjTables(), buffer, position, comm);
     pack(data.getSkprwatTables(), buffer, position, comm);
     pack(data.getSkprpolyTables(), buffer, position, comm);
@@ -3939,6 +3947,13 @@ void pack(const EclEpsScalingPointsInfo<Scalar>& data, std::vector<char>& buffer
     pack(data.maxKrg, buffer, position, comm);
 }
 
+void pack(const SolventDensityTable& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getSolventDensityColumn(), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -4833,6 +4848,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     WatdentTable watdentTable;
     std::vector<PvtwsaltTable> pvtwsaltTables;
     std::vector<BrineDensityTable> bdensityTables;
+    std::vector<SolventDensityTable> sdensityTables;
     std::map<int, PlymwinjTable> plymwinjTables;
     std::map<int, SkprwatTable> skprwatTables;
     std::map<int, SkprpolyTable> skprpolyTables;
@@ -4860,6 +4876,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     unpack(watdentTable, buffer, position, comm);
     unpack(pvtwsaltTables, buffer, position, comm);
     unpack(bdensityTables, buffer, position, comm);
+    unpack(sdensityTables, buffer, position, comm);
     unpack(plymwinjTables, buffer, position, comm);
     unpack(skprwatTables, buffer, position, comm);
     unpack(skprpolyTables, buffer, position, comm);
@@ -4885,7 +4902,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     data = TableManager(simpleTables, pvtgTables, pvtoTables, rock2dTables,
                         rock2dtrTables, pvtwTable, pvcdoTable, densityTable,
                         rockTable, viscrefTable, watdentTable, pvtwsaltTables,
-                        bdensityTables, plymwinjTables,
+                        bdensityTables, sdensityTables, plymwinjTables,
                         skprwatTables, skprpolyTables, tabdims, regdims, eqldims,
                         aqudims, hasImptvd, hasEntpvd, hasEqlnum, jfunc, oilDenT, gasDenT,
                         watDenT, gas_comp_index, rtemp);
@@ -6689,6 +6706,15 @@ void unpack(FaultCollection& data,
 
     unpack(faults, buffer, position, comm);
     data = FaultCollection(faults);
+}
+
+void unpack(SolventDensityTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<double> tableValues;
+
+    unpack(tableValues, buffer, position, comm);
+    data = SolventDensityTable(tableValues);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \

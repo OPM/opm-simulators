@@ -1206,6 +1206,7 @@ BOOST_AUTO_TEST_CASE(TableManager)
                            Opm::WatdentTable({Opm::WATDENTRecord{1.0, 2.0, 3.0}}),
                            {{1.0, 2.0, {1.0, 2.0, 3.0}}},
                            {{{1.0, 2.0, 3.0}}},
+                           {{{4.0, 5.0, 6.0}}},
                            {{1, Opm::PlymwinjTable({1.0}, {2.0}, 1, {{1.0}, {2.0}})}},
                            {{2, Opm::SkprwatTable({1.0}, {2.0}, 1, {{1.0}, {2.0}})}},
                            {{3, Opm::SkprpolyTable({1.0}, {2.0}, 1, {{1.0}, {2.0}}, 3.0)}},
@@ -2505,6 +2506,16 @@ BOOST_AUTO_TEST_CASE(EclEpsScalingPointsInfo)
                                               16.0, 17.0, 18.0, 19.0, 20.0, 21};
     auto val2 = PackUnpack(val1);
     DO_CHECKS(EclEpsScalingPointsInfo<double>)
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(SolventDensityTable)
+{
+#ifdef HAVE_MPI
+    Opm::SolventDensityTable val1({1.0, 2.0, 3.0});
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(SolventDensityTable)
 #endif
 }
 

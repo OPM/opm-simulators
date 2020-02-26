@@ -141,6 +141,7 @@ class SimulationConfig;
 class SimpleTable;
 class SkprpolyTable;
 class SkprwatTable;
+class SolventDensityTable;
 class SpiralICD;
 class SummaryConfig;
 class SummaryNode;
@@ -767,6 +768,7 @@ ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(SkprpolyTable)
 ADD_PACK_PROTOTYPES(SkprwatTable)
+ADD_PACK_PROTOTYPES(SolventDensityTable)
 ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(SummaryConfig)
