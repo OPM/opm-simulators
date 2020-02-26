@@ -128,8 +128,7 @@ public:
      */
     void initFromDeck(const Deck& deck, const EclipseState& eclState)
     {
-        const auto& phases = eclState.runspec().phases();
-        if (!phases.active(Phase::GAS))
+        if (!eclState.runspec().phases().active(Phase::GAS))
             return;
 
         if (enableThermal && eclState.getSimulationConfig().isThermal())
