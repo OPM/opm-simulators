@@ -454,6 +454,7 @@ HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(DENSITYRecord)
+HANDLE_AS_POD(DenT::entry)
 HANDLE_AS_POD(Eqldims)
 HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PVTWRecord)
@@ -519,6 +520,11 @@ std::size_t packSize(const ThresholdPressure& data, Dune::MPIHelper::MPICommunic
           packSize(data.restart(), comm) +
           packSize(data.thresholdPressureTable(), comm) +
           packSize(data.pressureTable(), comm);
+}
+
+std::size_t packSize(const DenT& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.records(), comm);
 }
 
 std::size_t packSize(const Aquifetp& data, Dune::MPIHelper::MPICommunicator comm)
@@ -860,7 +866,11 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.useEnptvd(), comm) +
            packSize(data.useEqlnum(), comm) +
            packSize(data.useJFunc(), comm) +
-           (data.useJFunc() ? packSize(data.getJFunc(), comm) : 0) +
+          (data.useJFunc() ? packSize(data.getJFunc(), comm) : 0) +
+           packSize(data.OilDenT(), comm) +
+           packSize(data.GasDenT(), comm) +
+           packSize(data.WatDenT(), comm) +
+           packSize(data.gas_comp_index(), comm) +
            packSize(data.rtemp(), comm);
 }
 
@@ -2354,6 +2364,12 @@ void pack(const Aquifetp::AQUFETP_data& data, std::vector<char>& buffer, int& po
     pack(data.p0, buffer, position, comm);
 }
 
+void pack(const DenT& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm) {
+    pack(data.records(), buffer, position, comm);
+}
+
+
 void pack(const Aquifetp& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.data(), buffer, position, comm);
@@ -2699,6 +2715,10 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
     pack(data.useJFunc(), buffer, position, comm);
     if (data.useJFunc())
         pack(data.getJFunc(), buffer, position, comm);
+    pack(data.OilDenT(), buffer, position, comm);
+    pack(data.GasDenT(), buffer, position, comm);
+    pack(data.WatDenT(), buffer, position, comm);
+    pack(data.gas_comp_index(), buffer, position, comm);
     pack(data.rtemp(), buffer, position, comm);
 }
 
@@ -4331,6 +4351,15 @@ void unpack(AquiferCT::AQUCT_data& data, std::vector<char>& buffer, int& positio
                                  cell_id);
 }
 
+
+void unpack(DenT& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<DenT::entry> records;
+    unpack(records, buffer, position, comm);
+    data = DenT( records );
+}
+
+
 void unpack(AquiferCT& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
 {
     std::vector<AquiferCT::AQUCT_data> aquiferList;
@@ -4814,6 +4843,8 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     bool hasImptvd;
     bool hasEntpvd;
     bool hasEqlnum;
+    DenT oilDenT, gasDenT, watDenT;
+    std::size_t gas_comp_index;
     std::shared_ptr<JFunc> jfunc;
     double rtemp;
     unpack(simpleTables, buffer, position, comm);
@@ -4845,13 +4876,19 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
         jfunc = std::make_shared<JFunc>();
         unpack(*jfunc, buffer, position, comm);
     }
+    unpack(oilDenT, buffer, position, comm);
+    unpack(gasDenT, buffer, position, comm);
+    unpack(watDenT, buffer, position, comm);
+    unpack(gas_comp_index, buffer, position, comm);
     unpack(rtemp, buffer, position, comm);
+
     data = TableManager(simpleTables, pvtgTables, pvtoTables, rock2dTables,
                         rock2dtrTables, pvtwTable, pvcdoTable, densityTable,
                         rockTable, viscrefTable, watdentTable, pvtwsaltTables,
                         bdensityTables, plymwinjTables,
                         skprwatTables, skprpolyTables, tabdims, regdims, eqldims,
-                        aqudims, hasImptvd, hasEntpvd, hasEqlnum, jfunc, rtemp);
+                        aqudims, hasImptvd, hasEntpvd, hasEqlnum, jfunc, oilDenT, gasDenT,
+                        watDenT, gas_comp_index, rtemp);
 }
 
 template<class Scalar>

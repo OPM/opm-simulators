@@ -86,6 +86,7 @@ class Connection;
 class DeckItem;
 class DeckRecord;
 class DENSITYRecord;
+class DenT;
 class DensityTable;
 class Dimension;
 class EclHysterConfig;
@@ -699,6 +700,8 @@ ADD_PACK_PROTOTYPES(DeckKeyword)
 ADD_PACK_PROTOTYPES(DeckRecord)
 ADD_PACK_PROTOTYPES(DENSITYRecord)
 ADD_PACK_PROTOTYPES(DensityTable)
+ADD_PACK_PROTOTYPES(DenT)
+ADD_PACK_PROTOTYPES(DenT::entry)
 ADD_PACK_PROTOTYPES(Dimension)
 ADD_PACK_PROTOTYPES(EclHysterConfig)
 ADD_PACK_PROTOTYPES(EclipseConfig)
