@@ -245,44 +245,10 @@ namespace Opm
         /// input.
         int execute(int argc, char** argv, bool output_cout, bool output_to_files)
         {
-            try {
-                // deal with some administrative boilerplate
-
-                int status = setupParameters_(argc, argv);
-                if (status)
-                    return status;
-
-                setupParallelism();
-                setupEbosSimulator(output_cout);
-                runDiagnostics(output_cout);
-                createSimulator();
-
-                // do the actual work
-                runSimulator(output_cout);
-
-                // clean up
-                mergeParallelLogFiles(output_to_files);
-
-                return EXIT_SUCCESS;
-            }
-            catch (const std::exception& e) {
-                std::ostringstream message;
-                message  << "Program threw an exception: " << e.what();
-
-                if (output_cout) {
-                    // in some cases exceptions are thrown before the logging system is set
-                    // up.
-                    if (OpmLog::hasBackend("STREAMLOG")) {
-                        OpmLog::error(message.str());
-                    }
-                    else {
-                        std::cout << message.str() << "\n";
-                    }
-                }
-
-                return EXIT_FAILURE;
-            }
+            return execute_(argc, argv, output_cout, output_to_files,
+                &FlowMainEbos::runSimulator, /*cleanup=*/true);
         }
+
 
         // Print an ASCII-art header to the PRT and DEBUG files.
         // \return Whether unkown keywords were seen during parsing.
@@ -326,6 +292,54 @@ namespace Opm
 
               OpmLog::note(ss.str());
           }
+        }
+
+    private:
+        // called by execute() or executeInitStep()
+        int execute_(int argc, char** argv, bool output_cout, bool output_to_files,
+            void (FlowMainEbos::* runOrInitFunc)(bool), bool cleanup)
+        {
+            try {
+                // deal with some administrative boilerplate
+
+                int status = setupParameters_(argc, argv);
+                if (status)
+                    return status;
+
+                setupParallelism();
+                setupEbosSimulator(output_cout);
+                runDiagnostics(output_cout);
+                createSimulator();
+
+                // if run, do the actual work, else just initialize
+                (this->*runOrInitFunc)(output_cout);
+                if (cleanup) {
+                    executeCleanup_(output_to_files);
+                }
+                return EXIT_SUCCESS;
+            }
+            catch (const std::exception& e) {
+                std::ostringstream message;
+                message  << "Program threw an exception: " << e.what();
+
+                if (output_cout) {
+                    // in some cases exceptions are thrown before the logging system is set
+                    // up.
+                    if (OpmLog::hasBackend("STREAMLOG")) {
+                        OpmLog::error(message.str());
+                    }
+                    else {
+                        std::cout << message.str() << "\n";
+                    }
+                }
+
+                return EXIT_FAILURE;
+            }
+        }
+
+        void executeCleanup_(bool output_to_files) {
+            // clean up
+            mergeParallelLogFiles(output_to_files);
         }
 
     protected:
