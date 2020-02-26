@@ -73,18 +73,18 @@ public:
      *
      * This method assumes that the deck features valid SDENSITY and PVDS keywords.
      */
-    void initFromDeck(const Deck& deck, const EclipseState& eclState)
+    void initFromDeck(const Deck&, const EclipseState& eclState)
     {
         const auto& pvdsTables = eclState.getTableManager().getPvdsTables();
-        const auto& sdensityKeyword = deck.getKeyword("SDENSITY");
+        const auto& sdensityTables = eclState.getTableManager().getSolventDensityTables();
 
-        assert(pvdsTables.size() == sdensityKeyword.size());
+        assert(pvdsTables.size() == sdensityTables.size());
 
         size_t numRegions = pvdsTables.size();
         setNumRegions(numRegions);
 
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
-            Scalar rhoRefS = sdensityKeyword.getRecord(regionIdx).getItem("SOLVENT_DENSITY").getSIDouble(0);
+            Scalar rhoRefS = sdensityTables[regionIdx].getSolventDensityColumn().front();
 
             setReferenceDensity(regionIdx, rhoRefS);
 
