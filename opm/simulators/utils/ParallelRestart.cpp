@@ -1532,6 +1532,7 @@ std::size_t packSize(const Group& data,
            packSize(data.type(), comm) +
            packSize(data.getGroupEfficiencyFactor(), comm) +
            packSize(data.getTransferGroupEfficiencyFactor(), comm) +
+           packSize(data.isAvailableForGroupControl(), comm) +
            packSize(data.getGroupNetVFPTable(), comm) +
            packSize(data.parent(), comm) +
            packSize(data.iwells(), comm) +
@@ -3375,6 +3376,7 @@ void pack(const Group& data,
     pack(data.type(), buffer, position, comm);
     pack(data.getGroupEfficiencyFactor(), buffer, position, comm);
     pack(data.getTransferGroupEfficiencyFactor(), buffer, position, comm);
+    pack(data.isAvailableForGroupControl(), buffer, position, comm);
     pack(data.getGroupNetVFPTable(), buffer, position, comm);
     pack(data.parent(), buffer, position, comm);
     pack(data.iwells(), buffer, position, comm);
@@ -5913,6 +5915,7 @@ void unpack(Group& data,
     Group::GroupType type;
     double groupEfficiencyFactor;
     bool transferGroupEfficiencyFactor;
+    bool availableForGroupControl;
     int groupNetVFPTable;
     std::string parent;
     IOrderSet<std::string> wells, groups;
@@ -5927,6 +5930,7 @@ void unpack(Group& data,
     unpack(type, buffer, position, comm);
     unpack(groupEfficiencyFactor, buffer, position, comm);
     unpack(transferGroupEfficiencyFactor, buffer, position, comm);
+    unpack(availableForGroupControl, buffer, position, comm);
     unpack(groupNetVFPTable, buffer, position, comm);
     unpack(parent, buffer, position, comm);
     unpack(wells, buffer, position, comm);
@@ -5936,6 +5940,7 @@ void unpack(Group& data,
     data = Group(name, insert_index, initStep, udqUndefined,
                  units, type, groupEfficiencyFactor,
                  transferGroupEfficiencyFactor,
+                 availableForGroupControl,
                  groupNetVFPTable, parent, wells, groups,
                  injection, production);
 }
