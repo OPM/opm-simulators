@@ -474,14 +474,48 @@ namespace Opm
         // Run the simulator.
         void runSimulator(bool output_cout)
         {
+            runSimulatorInitOrRun_(output_cout, &FlowMainEbos::runSimulatorRunCallback_);
+        }
+
+    private:
+        // Callback that will be called from runSimulatorInitOrRun_().
+        void runSimulatorRunCallback_(bool output_cout)
+        {
+            SimulatorReport successReport = simulator_->run(*simtimer_);
+            runSimulatorAfterSim_(output_cout, successReport);
+        }
+
+        // Output summary after simulation has completed
+        void runSimulatorAfterSim_(bool output_cout, SimulatorReport &successReport)
+        {
+            SimulatorReport failureReport = simulator_->failureReport();
+            if (output_cout) {
+                std::ostringstream ss;
+                ss << "\n\n================    End of simulation     ===============\n\n";
+                ss << "Number of MPI processes: " << std::setw(6) << mpi_size_ << "\n";
+#if _OPENMP
+                int threads = omp_get_max_threads();
+#else
+                int threads = 1;
+#endif
+                ss << "Threads per MPI process:  " << std::setw(5) << threads << "\n";
+                successReport.reportFullyImplicit(ss, &failureReport);
+                OpmLog::info(ss.str());
+            }
+        }
+
+        // Run the simulator.
+        void runSimulatorInitOrRun_(
+             bool output_cout, void (FlowMainEbos::* initOrRunFunc)(bool))
+        {
             const auto& schedule = this->schedule();
             const auto& timeMap = schedule.getTimeMap();
             auto& ioConfig = eclState().getIOConfig();
-            SimulatorTimer simtimer;
+            simtimer_ = std::make_unique<SimulatorTimer>();
 
             // initialize variables
             const auto& initConfig = eclState().getInitConfig();
-            simtimer.init(timeMap, (size_t)initConfig.getRestartStep());
+            simtimer_->init(timeMap, (size_t)initConfig.getRestartStep());
 
             if (output_cout) {
                 std::ostringstream oss;
@@ -501,31 +535,16 @@ namespace Opm
                     msg = "\n\n================ Starting main simulation loop ===============\n";
                     OpmLog::info(msg);
                 }
-
-                SimulatorReport successReport = simulator_->run(simtimer);
-                SimulatorReport failureReport = simulator_->failureReport();
-                if (output_cout) {
-                    std::ostringstream ss;
-                    ss << "\n\n================    End of simulation     ===============\n\n";
-                    ss << "Number of MPI processes: " << std::setw(6) << mpi_size_ << "\n";
-#if _OPENMP
-                    int threads = omp_get_max_threads();
-#else
-                    int threads = 1;
-#endif
-                    ss << "Threads per MPI process:  " << std::setw(5) << threads << "\n";
-                    successReport.reportFullyImplicit(ss, &failureReport);
-                    OpmLog::info(ss.str());
-                }
-
-            } else {
+                (this->*initOrRunFunc)(output_cout);
+            }
+            else {
                 if (output_cout) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }
-
             }
         }
 
+    protected:
         /// This is the main function of Flow.
         // Create simulator instance.
         // Writes to:
@@ -553,6 +572,7 @@ namespace Opm
         int  mpi_size_ = 1;
         boost::any parallel_information_;
         std::unique_ptr<Simulator> simulator_;
+        std::unique_ptr<SimulatorTimer> simtimer_;
     };
 } // namespace Opm
 
