@@ -2405,9 +2405,9 @@ namespace Opm
                     mix[component] = std::fabs(q_out_perf[perf*num_comp + component]/tot_surf_rate);
                 }
             } else {
-                std::fill(mix.begin(), mix.end(), 0.0);
                 // No flow => use well specified fractions for mix.
                 if (this->isInjector()) {
+                    std::fill(mix.begin(), mix.end(), 0.0);
                     switch (this->wellEcl().injectorType()) {
                     case Well::InjectorType::WATER:
                         mix[FluidSystem::waterCompIdx] = 1.0;
@@ -2426,22 +2426,7 @@ namespace Opm
                     }
                 } else {
                     assert(this->isProducer());
-                    // Using the preferred phase to decide the mix initialization.
-                    switch (this->wellEcl().getPreferredPhase()) {
-                    case Phase::OIL:
-                        mix[FluidSystem::oilCompIdx] = 1.0;
-                        break;
-                    case Phase::GAS:
-                        mix[FluidSystem::gasCompIdx] = 1.0;
-                        break;
-                    case Phase::WATER:
-                        mix[FluidSystem::waterCompIdx] = 1.0;
-                        break;
-                    default:
-                        // No others supported.
-                        break;
-                    }
-
+                    std::fill(mix.begin(), mix.end(), 1.0/3.0);
                 }
             }
             // Compute volume ratio.
