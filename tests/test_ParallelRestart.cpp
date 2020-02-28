@@ -1431,12 +1431,12 @@ BOOST_AUTO_TEST_CASE(OilVaporizationProperties)
 #ifdef HAVE_MPI
     using VapType = Opm::OilVaporizationProperties::OilVaporization;
     Opm::OilVaporizationProperties val1(VapType::VAPPARS,
-                                        {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0},
+                                        1.0, 2.0, {5.0, 6.0},
                                         {false, true}, {7.0, 8.0});
     auto val2 = PackUnpack(val1);
     DO_CHECKS(OilVaporizationProperties)
     val1 = Opm::OilVaporizationProperties(VapType::DRDT,
-                                          {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0},
+                                          1.0, 2.0, {5.0, 6.0},
                                           {false, true}, {7.0, 8.0});
     val2 = PackUnpack(val1);
     DO_CHECKS(OilVaporizationProperties)
@@ -2232,7 +2232,7 @@ BOOST_AUTO_TEST_CASE(Schedule)
                                                           Opm::Group::GroupProductionProperties())},1}});
     using VapType = Opm::OilVaporizationProperties::OilVaporization;
     Opm::DynamicState<Opm::OilVaporizationProperties> oilvap{{Opm::OilVaporizationProperties(VapType::VAPPARS,
-                                                                                   {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0},
+                                                                                   1.0, 2.0, {5.0, 6.0},
                                                                                    {false, true}, {7.0, 8.0})},1};
     Opm::Events events(Opm::DynamicVector<uint64_t>({1,2,3,4,5}));
     std::unique_ptr<Opm::UnitSystem> unitSys(new Opm::UnitSystem);
