@@ -363,7 +363,7 @@ int main(int argc, char** argv)
                 parState = new Opm::ParallelEclipseState(*deck);
                 eclipseState.reset(parState);
 #else
-                eclipseState.reset(new Opm::EclipseState(*deck);
+                eclipseState.reset(new Opm::EclipseState(*deck));
 #endif
                 /*
                   For the time being initializing wells and groups from the
