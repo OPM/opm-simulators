@@ -109,6 +109,7 @@ public:
     //! \details Only called on root process
     ParallelEclipseState(const Deck& deck);
 
+#if HAVE_MPI
     //! \brief Calculates the size of serialized data.
     //! \param serializer The serializer to use
     std::size_t packSize(EclMpiSerializer& serializer) const;
@@ -123,6 +124,7 @@ public:
     //! \param Position in buffer
     //! \param serializer The serializer to use
     void unpack(std::vector<char>& buffer, int& position, EclMpiSerializer& serializer);
+#endif
 
     //! \brief Switch to global field properties.
     //! \details Called on root process to use the global field properties
@@ -133,10 +135,12 @@ public:
     //!          setupLocalProps must be called prior to this.
     void switchToDistributedProps();
 
+#if HAVE_MPI
     //! \brief Setup local properties.
     //! \param localToGlobal Map from local cells on calling process to global cartesian cell
     //! \details Must be called after grid has been paritioned
     void setupLocalProps(const std::vector<int>& localToGlobal);
+#endif
 
     //! \brief Returns a const ref to current field properties.
     const FieldPropsManager& fieldProps() const override;

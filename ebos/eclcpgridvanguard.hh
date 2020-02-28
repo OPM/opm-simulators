@@ -208,6 +208,7 @@ public:
 
         cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
         this->updateGridView_();
+#if HAVE_MPI
         if (mpiSize > 1) {
             std::vector<int> cartIndices;
             cartIndices.reserve(grid_->numCells());
@@ -219,6 +220,7 @@ public:
             static_cast<ParallelEclipseState&>(this->eclState()).setupLocalProps(cartIndices);
             static_cast<ParallelEclipseState&>(this->eclState()).switchToDistributedProps();
         }
+#endif
     }
 
     /*!

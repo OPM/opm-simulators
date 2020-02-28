@@ -136,6 +136,7 @@ ParallelEclipseState::ParallelEclipseState(const Deck& deck)
 }
 
 
+#if HAVE_MPI
 std::size_t ParallelEclipseState::packSize(EclMpiSerializer& serializer) const
 {
     return serializer.packSize(m_tables) +
@@ -185,6 +186,7 @@ void ParallelEclipseState::unpack(std::vector<char>& buffer, int& position,
     serializer.unpack(m_faults, buffer, position);
     serializer.unpack(m_title, buffer, position);
 }
+#endif
 
 
 const FieldPropsManager& ParallelEclipseState::fieldProps() const
@@ -231,6 +233,7 @@ void ParallelEclipseState::switchToDistributedProps()
 }
 
 
+#if HAVE_MPI
 namespace {
 
 
@@ -294,7 +297,6 @@ void packProps(const std::vector<int>& l2gCell,
 
 void ParallelEclipseState::setupLocalProps(const std::vector<int>& localToGlobal)
 {
-#if HAVE_MPI
     const auto& comm = Dune::MPIHelper::getCollectiveCommunication();
     if (comm.rank() == 0) {
         extractRootProps(localToGlobal, this->globalFieldProps().keys<int>(),
@@ -347,8 +349,8 @@ void ParallelEclipseState::setupLocalProps(const std::vector<int>& localToGlobal
             Mpi::unpack(m_fieldProps.m_doubleProps[key], buffer, position, comm);
         }
     }
-#endif
 }
+#endif
 
 
 } // end namespace Opm
