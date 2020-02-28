@@ -1786,7 +1786,7 @@ BOOST_AUTO_TEST_CASE(Group)
     std::map<Opm::Phase, Opm::Group::GroupInjectionProperties> injection;
     Opm::Group val1("test1", 1, 2, 3.0, unitSystem,
                     Opm::Group::GroupType::PRODUCTION,
-                    4.0, true, 5, "test2",
+                    4.0, true, false, 5, "test2",
                     Opm::IOrderSet<std::string>({"test3", "test4"}, {"test3","test4"}),
                     Opm::IOrderSet<std::string>({"test5", "test6"}, {"test5","test6"}),
                     injection,
@@ -2225,7 +2225,7 @@ BOOST_AUTO_TEST_CASE(Schedule)
     std::map<Opm::Phase, Opm::Group::GroupInjectionProperties> injection;
     groups.insert({"test", {{std::make_shared<Opm::Group>("test1", 1, 2, 3.0, unitSystem,
                                                           Opm::Group::GroupType::PRODUCTION,
-                                                          4.0, true, 5, "test2",
+                                                          4.0, true, false, 5, "test2",
                                                           Opm::IOrderSet<std::string>({"test3", "test4"}, {"test3","test4"}),
                                                           Opm::IOrderSet<std::string>({"test5", "test6"}, {"test5","test6"}),
                                                           injection,
