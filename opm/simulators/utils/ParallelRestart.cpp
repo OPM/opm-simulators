@@ -2037,6 +2037,12 @@ std::size_t packSize(const SolventDensityTable& data,
     return packSize(data.getSolventDensityColumn(), comm);
 }
 
+std::size_t packSize(const GridDims& data,
+                     Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.getNXYZ(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -3954,6 +3960,13 @@ void pack(const SolventDensityTable& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getSolventDensityColumn(), buffer, position, comm);
+}
+
+void pack(const GridDims& data,
+          std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.getNXYZ(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -6720,6 +6733,16 @@ void unpack(SolventDensityTable& data, std::vector<char>& buffer, int& position,
 
     unpack(tableValues, buffer, position, comm);
     data = SolventDensityTable(tableValues);
+}
+
+void unpack(GridDims& data,
+            std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::array<int,3> NXYZ;
+
+    unpack(NXYZ, buffer, position, comm);
+    data = GridDims(NXYZ);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \

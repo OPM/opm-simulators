@@ -103,6 +103,7 @@ class FaultCollection;
 class FaultFace;
 class FoamConfig;
 class FoamData;
+class GridDims;
 class InitConfig;
 class IOConfig;
 template<class T> class IOrderSet;
@@ -721,6 +722,7 @@ ADD_PACK_PROTOTYPES(GConSale)
 ADD_PACK_PROTOTYPES(GConSale::GCONSALEGroup)
 ADD_PACK_PROTOTYPES(GConSump)
 ADD_PACK_PROTOTYPES(GConSump::GCONSUMPGroup)
+ADD_PACK_PROTOTYPES(GridDims)
 ADD_PACK_PROTOTYPES(GuideRateConfig)
 ADD_PACK_PROTOTYPES(GuideRateConfig::GroupTarget)
 ADD_PACK_PROTOTYPES(GuideRateConfig::WellTarget)

@@ -2520,6 +2520,16 @@ BOOST_AUTO_TEST_CASE(SolventDensityTable)
 }
 
 
+BOOST_AUTO_TEST_CASE(GridDims)
+{
+#ifdef HAVE_MPI
+    Opm::GridDims val1{ 1,  2,  3};
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(GridDims)
+#endif
+}
+
+
 bool init_unit_test_func()
 {
     return true;

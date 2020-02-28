@@ -24,7 +24,7 @@
 
 
 namespace Opm {
-void flowEbosFoamSetDeck(double setupTime, Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
+void flowEbosFoamSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
 int flowEbosFoamMain(int argc, char** argv, bool outputCout, bool outputFiles);
 }
 

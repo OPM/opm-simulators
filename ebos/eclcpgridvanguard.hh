@@ -33,6 +33,7 @@
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
+#include <opm/simulators/utils/ParallelEclipseState.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
 
@@ -151,7 +152,7 @@ public:
             if (grid_->size(0))
             {
                 globalTrans_.reset(new EclTransmissibility<TypeTag>(*this));
-                globalTrans_->update();
+                globalTrans_->update(false);
             }
 
             Dune::EdgeWeightMethod edgeWeightsMethod = this->edgeWeightsMethod();
@@ -206,8 +207,18 @@ public:
 #endif
 
         cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
-
         this->updateGridView_();
+        if (mpiSize > 1) {
+            std::vector<int> cartIndices;
+            cartIndices.reserve(grid_->numCells());
+            auto locElemIt = this->gridView().template begin</*codim=*/0>();
+            const auto& locElemEndIt = this->gridView().template end</*codim=*/0>();
+            for (; locElemIt != locElemEndIt; ++locElemIt) {
+                cartIndices.push_back(cartesianIndexMapper_->cartesianIndex(locElemIt->index()));
+            }
+            static_cast<ParallelEclipseState&>(this->eclState()).setupLocalProps(cartIndices);
+            static_cast<ParallelEclipseState&>(this->eclState()).switchToDistributedProps();
+        }
     }
 
     /*!

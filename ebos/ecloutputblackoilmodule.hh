@@ -272,7 +272,7 @@ public:
                     const size_t i = size_t(connection.getI());
                     const size_t j = size_t(connection.getJ());
                     const size_t k = size_t(connection.getK());
-                    const size_t index = simulator_.vanguard().eclState().getInputGrid().getGlobalIndex(i, j, k);
+                    const size_t index = simulator_.vanguard().eclState().gridDims().getGlobalIndex(i, j, k);
 
                     oilConnectionPressures_.emplace(std::make_pair(index, 0.0));
                     waterConnectionSaturations_.emplace(std::make_pair(index, 0.0));
@@ -840,7 +840,7 @@ public:
                     const size_t j = size_t(connection.getJ());
                     const size_t k = size_t(connection.getK());
 
-                    const size_t index = simulator_.vanguard().eclState().getInputGrid().getGlobalIndex(i, j, k);
+                    const size_t index = simulator_.vanguard().eclState().gridDims().getGlobalIndex(i, j, k);
                     auto& connectionData = wellData.connections[count];
                     connectionData.index = index;
                     count++;
