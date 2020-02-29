@@ -276,7 +276,6 @@ public:
         }
     }
 
-
 private:
 
     bool prepareRun_()
@@ -447,8 +446,8 @@ PYBIND11_MODULE(simulators, m)
         .def(py::init< const std::string& >())
         .def(py::init< const Opm::Deck&, const Opm::EclipseState&, const Opm::Schedule&, const Opm::SummaryConfig& >())
         .def("run", &BlackOilSimulator::run)
-        .def("setDeck", &BlackOilSimulator::setDeck)
-        .def("setEclipseState", &BlackOilSimulator::setEclipseState)
-        .def("setSchedule", &BlackOilSimulator::setSchedule)
-        .def("setSummaryConfig", &BlackOilSimulator::setSummaryConfig);
+        .def("set_deck", &BlackOilSimulator::setDeck)
+        .def("set_eclipse_state", &BlackOilSimulator::setEclipseState)
+        .def("set_schedule", &BlackOilSimulator::setSchedule)
+        .def("set_summary_config", &BlackOilSimulator::setSummaryConfig);
 }
