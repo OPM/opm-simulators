@@ -447,14 +447,10 @@ inline void testAll()
         const auto& eclGrid = eclState.getInputGrid();
 
         size_t n = eclGrid.getCartesianSize();
-        std::vector<int> compressedToCartesianIdx(n);
-
-        for (size_t i = 0; i < n; ++ i)
-            compressedToCartesianIdx[i] = static_cast<int>(i);
 
         MaterialLawManager materialLawManager;
         materialLawManager.initFromDeck(deck, eclState);
-        materialLawManager.initParamsForElements(eclState, compressedToCartesianIdx);
+        materialLawManager.initParamsForElements(eclState, n);
 
         if (materialLawManager.enableEndPointScaling())
             throw std::logic_error("Discrepancy between the deck and the EclMaterialLawManager");
@@ -468,7 +464,7 @@ inline void testAll()
 
             Opm::EclMaterialLawManager<MaterialTraits> fam2MaterialLawManager;
             fam2MaterialLawManager.initFromDeck(fam2Deck, fam2EclState);
-            fam2MaterialLawManager.initParamsForElements(fam2EclState, compressedToCartesianIdx);
+            fam2MaterialLawManager.initParamsForElements(fam2EclState, n);
 
             if (fam2MaterialLawManager.enableEndPointScaling())
                 throw std::logic_error("Discrepancy between the deck and the EclMaterialLawManager");
@@ -481,7 +477,7 @@ inline void testAll()
 
             Opm::EclMaterialLawManager<MaterialTraits> hysterMaterialLawManager;
             hysterMaterialLawManager.initFromDeck(hysterDeck, hysterEclState);
-            hysterMaterialLawManager.initParamsForElements(hysterEclState, compressedToCartesianIdx);
+            hysterMaterialLawManager.initParamsForElements(hysterEclState, n);
 
             if (hysterMaterialLawManager.enableEndPointScaling())
                 throw std::logic_error("Discrepancy between the deck and the EclMaterialLawManager");
@@ -574,14 +570,14 @@ inline void testAll()
 
             MaterialLawManager fam1materialLawManager;
             fam1materialLawManager.initFromDeck(fam1Deck, fam1EclState);
-            fam1materialLawManager.initParamsForElements(fam1EclState, compressedToCartesianIdx);
+            fam1materialLawManager.initParamsForElements(fam1EclState, n);
 
             const auto fam2Deck = parser.parseString(fam2DeckStringGasOil);
             const Opm::EclipseState fam2EclState(fam2Deck);
 
             Opm::EclMaterialLawManager<MaterialTraits> fam2MaterialLawManager;
             fam2MaterialLawManager.initFromDeck(fam2Deck, fam2EclState);
-            fam2MaterialLawManager.initParamsForElements(fam2EclState, compressedToCartesianIdx);
+            fam2MaterialLawManager.initParamsForElements(fam2EclState, n);
 
             for (unsigned elemIdx = 0; elemIdx < n; ++ elemIdx) {
                 for (int i = 0; i < 100; ++ i) {
