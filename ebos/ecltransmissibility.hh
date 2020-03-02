@@ -759,22 +759,25 @@ private:
         // over several processes.)
         const auto& fp = vanguard_.eclState().fieldProps();
         if (fp.has_double("PERMX")) {
-            const std::vector<double>& permxData = fp.get_global_double("PERMX");
+            const std::vector<double>& permxData = fp.get_double("PERMX");
 
-            std::vector<double> permyData(permxData);
+            std::vector<double> permyData;
             if (fp.has_double("PERMY"))
-                permyData = fp.get_global_double("PERMY");
+                permyData = fp.get_double("PERMY");
+            else
+                permyData = permxData;
 
-            std::vector<double> permzData(permxData);
+            std::vector<double> permzData;
             if (fp.has_double("PERMZ"))
-                permzData = fp.get_global_double("PERMZ");
+                permzData = fp.get_double("PERMZ");
+            else
+                permzData = permxData;
 
             for (size_t dofIdx = 0; dofIdx < numElem; ++ dofIdx) {
-                unsigned cartesianElemIdx = vanguard_.cartesianIndex(dofIdx);
                 permeability_[dofIdx] = 0.0;
-                permeability_[dofIdx][0][0] = permxData[cartesianElemIdx];
-                permeability_[dofIdx][1][1] = permyData[cartesianElemIdx];
-                permeability_[dofIdx][2][2] = permzData[cartesianElemIdx];
+                permeability_[dofIdx][0][0] = permxData[dofIdx];
+                permeability_[dofIdx][1][1] = permyData[dofIdx];
+                permeability_[dofIdx][2][2] = permzData[dofIdx];
             }
 
             // for now we don't care about non-diagonal entries
