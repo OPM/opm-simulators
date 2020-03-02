@@ -456,6 +456,18 @@ add_test_compareECLFiles(CASENAME norne
                          PREFIX compareECLInitFiles
                          DIR_PREFIX /init)
 
+
+# Restart norne test
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTestWithData.sh "")
+add_test_compare_restarted_simulation(CASENAME norne
+                                      FILENAME NORNE_ATW2013
+                                      SIMULATOR flow
+                                      SCHED_RESTART true
+                                      ABS_TOL ${abs_tol}
+                                      REL_TOL ${rel_tol}
+                                      TEST_ARGS --sched-restart=true)
+
+
 # Parallel tests
 if(MPI_FOUND)
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
