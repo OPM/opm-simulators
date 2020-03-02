@@ -2186,13 +2186,13 @@ private:
         // read the parameters for water-induced rock compaction
         readRockCompactionParameters_();
 
-        const auto& num = eclState.fieldProps().get_global_int(rock_config.rocknum_property());
         unsigned numElem = vanguard.gridView().size(0);
         rockTableIdx_.resize(numElem);
-        for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
-            unsigned cartElemIdx = vanguard.cartesianIndex(elemIdx);
-
-            rockTableIdx_[elemIdx] = num[cartElemIdx] - 1;
+        if (eclState.fieldProps().has_int(rock_config.rocknum_property())) {
+            const auto& num = eclState.fieldProps().get_int(rock_config.rocknum_property());
+            for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
+                rockTableIdx_[elemIdx] = num[elemIdx] - 1;
+            }
         }
 
         // Store overburden pressure pr element
