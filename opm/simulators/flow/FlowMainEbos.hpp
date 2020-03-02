@@ -243,12 +243,17 @@ namespace Opm
         /// This is the main function of Flow.  It runs a complete simulation with the
         /// given grid and simulator classes, based on the user-specified command-line
         /// input.
-        int execute(int argc, char** argv, bool output_cout, bool output_to_files)
+        int execute(int argc, char** argv, bool outputCout, bool outputToFiles)
         {
-            return execute_(argc, argv, output_cout, output_to_files,
+            return execute_(argc, argv, outputCout, outputToFiles,
                 &FlowMainEbos::runSimulator, /*cleanup=*/true);
         }
 
+        int executeInitStep(int argc, char** argv, bool outputCout, bool outputToFiles)
+        {
+            return execute_(argc, argv, outputCout, outputToFiles,
+                &FlowMainEbos::runSimulatorInit);
+        }
 
         // Print an ASCII-art header to the PRT and DEBUG files.
         // \return Whether unkown keywords were seen during parsing.
@@ -296,7 +301,7 @@ namespace Opm
 
     private:
         // called by execute() or executeInitStep()
-        int execute_(int argc, char** argv, bool output_cout, bool output_to_files,
+        int execute_(int argc, char** argv, bool outputCout, bool outputToFiles,
             void (FlowMainEbos::* runOrInitFunc)(bool), bool cleanup)
         {
             try {
@@ -307,14 +312,14 @@ namespace Opm
                     return status;
 
                 setupParallelism();
-                setupEbosSimulator(output_cout);
-                runDiagnostics(output_cout);
+                setupEbosSimulator(outputCout);
+                runDiagnostics(outputCout);
                 createSimulator();
 
                 // if run, do the actual work, else just initialize
-                (this->*runOrInitFunc)(output_cout);
+                (this->*runOrInitFunc)(outputCout);
                 if (cleanup) {
-                    executeCleanup_(output_to_files);
+                    executeCleanup_(outputToFiles);
                 }
                 return EXIT_SUCCESS;
             }
@@ -322,7 +327,7 @@ namespace Opm
                 std::ostringstream message;
                 message  << "Program threw an exception: " << e.what();
 
-                if (output_cout) {
+                if (outputCout) {
                     // in some cases exceptions are thrown before the logging system is set
                     // up.
                     if (OpmLog::hasBackend("STREAMLOG")) {
@@ -472,24 +477,35 @@ namespace Opm
         }
 
         // Run the simulator.
-        void runSimulator(bool output_cout)
+        void runSimulator(bool outputCout)
         {
-            runSimulatorInitOrRun_(output_cout, &FlowMainEbos::runSimulatorRunCallback_);
+            runSimulatorInitOrRun_(outputCout, &FlowMainEbos::runSimulatorRunCallback_);
+        }
+
+        void runSimulatorInit(bool outputCout)
+        {
+            runSimulatorInitOrRun_(outputCout, &FlowMainEbos::runSimulatorInitCallback_);
         }
 
     private:
         // Callback that will be called from runSimulatorInitOrRun_().
-        void runSimulatorRunCallback_(bool output_cout)
+        void runSimulatorRunCallback_(bool outputCout)
         {
             SimulatorReport successReport = simulator_->run(*simtimer_);
-            runSimulatorAfterSim_(output_cout, successReport);
+            runSimulatorAfterSim_(outputCout, successReport);
+        }
+
+        // Callback that will be called from runSimulatorInitOrRun_().
+        void runSimulatorInitCallback_(bool outputCout)
+        {
+            simulator_->runInit(*simtimer_);
         }
 
         // Output summary after simulation has completed
-        void runSimulatorAfterSim_(bool output_cout, SimulatorReport &successReport)
+        void runSimulatorAfterSim_(bool outputCout, SimulatorReport &successReport)
         {
             SimulatorReport failureReport = simulator_->failureReport();
-            if (output_cout) {
+            if (outputCout) {
                 std::ostringstream ss;
                 ss << "\n\n================    End of simulation     ===============\n\n";
                 ss << "Number of MPI processes: " << std::setw(6) << mpi_size_ << "\n";
@@ -506,7 +522,7 @@ namespace Opm
 
         // Run the simulator.
         void runSimulatorInitOrRun_(
-             bool output_cout, void (FlowMainEbos::* initOrRunFunc)(bool))
+             bool outputCout, void (FlowMainEbos::* initOrRunFunc)(bool))
         {
             const auto& schedule = this->schedule();
             const auto& timeMap = schedule.getTimeMap();
@@ -517,7 +533,7 @@ namespace Opm
             const auto& initConfig = eclState().getInitConfig();
             simtimer_->init(timeMap, (size_t)initConfig.getRestartStep());
 
-            if (output_cout) {
+            if (outputCout) {
                 std::ostringstream oss;
 
                 // This allows a user to catch typos and misunderstandings in the
@@ -530,15 +546,15 @@ namespace Opm
             }
 
             if (!ioConfig.initOnly()) {
-                if (output_cout) {
+                if (outputCout) {
                     std::string msg;
                     msg = "\n\n================ Starting main simulation loop ===============\n";
                     OpmLog::info(msg);
                 }
-                (this->*initOrRunFunc)(output_cout);
+                (this->*initOrRunFunc)(outputCout);
             }
             else {
-                if (output_cout) {
+                if (outputCout) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }
             }

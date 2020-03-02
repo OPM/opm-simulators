@@ -47,7 +47,7 @@ void flowEbosBlackoilSetDeck(double setupTime, Deck &deck, EclipseState& eclStat
 }
 
 std::unique_ptr<Opm::FlowMainEbos<TTAG(EclFlowProblem)>>
-flowEbosBlackoilMain_init(int argc, char** argv, bool outputCout, bool outputFiles)
+flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -65,7 +65,7 @@ flowEbosBlackoilMain_init(int argc, char** argv, bool outputCout, bool outputFil
 // ----------------- Main program -----------------
 int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
-    auto mainfunc = flowEbosBlackoilMain_init(argc, argv, outputCout, outputFiles);
+    auto mainfunc = flowEbosBlackoilMainInit(argc, argv, outputCout, outputFiles);
     return mainfunc->execute(argc, argv, outputCout, outputFiles);
 }
 
