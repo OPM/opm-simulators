@@ -276,6 +276,25 @@ public:
         }
     }
 
+    int step_init()
+    {
+        if (hasRunInit_) {
+            // Running step_init() multiple times is not implemented yet,
+            // currently we just do nothing and return
+            return EXIT_SUCCESS;
+        }
+        if (prepareRun_()) {
+            mainfunc_ = Opm::flowEbosBlackoilMainInit(
+                argc_, argv_, outputCout_, outputFiles_);
+            int result = mainfunc_->executeInitStep(
+                argc_, argv_, outputCout_, outputFiles_);
+            hasRunInit_ = true;
+            return result;
+        }
+        else {
+            return EXIT_FAILURE;
+        }
+    }
 private:
 
     bool prepareRun_()
@@ -433,11 +452,14 @@ private:
     char **argv_;
     bool outputCout_; // copy of EWOMS parameter "EnableTerminalOutput"
     bool outputFiles_; // output files?
+    bool hasRunInit_{false};
 
     std::shared_ptr<Opm::Deck>          deck_;
     std::shared_ptr<Opm::EclipseState>  eclipseState_;
     std::shared_ptr<Opm::Schedule>      schedule_;
     std::shared_ptr<Opm::SummaryConfig> summaryConfig_;
+
+    std::unique_ptr<Opm::FlowMainEbos<TTAG(EclFlowProblem)>> mainfunc_;
 };
 
 PYBIND11_MODULE(simulators, m)
@@ -449,5 +471,6 @@ PYBIND11_MODULE(simulators, m)
         .def("set_deck", &BlackOilSimulator::setDeck)
         .def("set_eclipse_state", &BlackOilSimulator::setEclipseState)
         .def("set_schedule", &BlackOilSimulator::setSchedule)
-        .def("set_summary_config", &BlackOilSimulator::setSummaryConfig);
+        .def("set_summary_config", &BlackOilSimulator::setSummaryConfig)
+        .def("step_init", &BlackOilSimulator::step_init);
 }
