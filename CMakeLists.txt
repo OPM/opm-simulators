@@ -25,8 +25,11 @@ cmake_minimum_required (VERSION 2.8)
 # out. It seems to ignore CMAKE_NVCC_FLAGS and CMAKE. Additionally
 # our way of specifying cuda source files never worked for CMake
 # version < 3.8. Hence we deactivate cuda for these versions.
+# We use "CMAKE_VERSION VERSION_GREATER 3.7.9" instead of
+# CMAKE_VERSION VERSION_GREATER_EQUAL 3.8, because of backwards
+# compatibility to cmake 3.6 and lower.
 if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
-    CMAKE_VERSION VERSION_GREATER_EQUAL 3.8)
+    CMAKE_VERSION VERSION_GREATER 3.7.9)
   if(NOT DEFINED ENV{CUDAHOSTCXX} AND
       (NOT CMAKE_CUDA_FLAGS OR NOT CMAKE_CUDA_FLAGS MATCHES ".*-ccbin .*"))
     set(CMAKE_CUDA_FLAGS "-ccbin ${CMAKE_CXX_COMPILER} ${CMAKE_CUDA_FLAGS}")
