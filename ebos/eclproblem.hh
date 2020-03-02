@@ -2743,53 +2743,27 @@ private:
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
-        const auto& comm = vanguard.gridView().comm();
         size_t numDof = this->model().numGridDof();
 
-        size_t globalSize;
-        if (comm.rank() == 0)
-            globalSize = eclState.getInputGrid().getCartesianSize();
-        comm.broadcast(&globalSize, 1, 0);
-
         if (enableSolvent) {
-            std::vector<double> solventSaturationData(globalSize, 0.0);
             if (eclState.fieldProps().has_double("SSOL"))
-                solventSaturationData = eclState.fieldProps().get_global_double("SSOL");
-
-            solventSaturation_.resize(numDof, 0.0);
-            for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
-                size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
-                assert(0 <= cartesianDofIdx);
-                assert(cartesianDofIdx <= solventSaturationData.size());
-                solventSaturation_[dofIdx] = solventSaturationData[cartesianDofIdx];
-            }
+                solventSaturation_ = eclState.fieldProps().get_double("SSOL");
+            else
+                solventSaturation_.resize(numDof, 0.0);
         }
 
         if (enablePolymer) {
-            std::vector<double> polyConcentrationData(globalSize, 0.0);
             if (eclState.fieldProps().has_double("SPOLY"))
-                polyConcentrationData = eclState.fieldProps().get_global_double("SPOLY");
-
-            polymerConcentration_.resize(numDof, 0.0);
-            for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
-                size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
-                assert(0 <= cartesianDofIdx);
-                assert(cartesianDofIdx <= polyConcentrationData.size());
-                polymerConcentration_[dofIdx] = polyConcentrationData[cartesianDofIdx];
-            }
+                polymerConcentration_ = eclState.fieldProps().get_double("SPOLY");
+            else
+                polymerConcentration_.resize(numDof, 0.0);
         }
 
         if (enablePolymerMolarWeight) {
-            std::vector<double> polyMoleWeightData(globalSize, 0.0);
             if (eclState.fieldProps().has_double("SPOLYMW"))
-                polyMoleWeightData = eclState.fieldProps().get_global_double("SPOLYMW");
-            polymerMoleWeight_.resize(numDof, 0.0);
-            for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
-                const size_t cartesianDofIdx = vanguard.cartesianIndex(dofIdx);
-                assert(0 <= cartesianDofIdx);
-                assert(cartesianDofIdx <= polyMoleWeightData.size());
-                polymerMoleWeight_[dofIdx] = polyMoleWeightData[cartesianDofIdx];
-            }
+                polymerMoleWeight_ = eclState.fieldProps().get_double("SPOLYMW");
+            else
+                polymerMoleWeight_.resize(numDof, 0.0);
         }
     }
 
