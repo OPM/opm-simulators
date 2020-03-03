@@ -185,16 +185,16 @@ public:
                 well->setWellType(Well::Injector);
                 const auto controls = deckWell.injectionControls(summaryState);
                 switch (controls.injector_type) {
-                case Opm::Well::InjectorType::WATER:
+                case Opm::InjectorType::WATER:
                     well->setInjectedPhaseIndex(FluidSystem::waterPhaseIdx);
                     break;
-                case Opm::Well::InjectorType::GAS:
+                case Opm::InjectorType::GAS:
                     well->setInjectedPhaseIndex(FluidSystem::gasPhaseIdx);
                     break;
-                case Opm::Well::InjectorType::OIL:
+                case Opm::InjectorType::OIL:
                     well->setInjectedPhaseIndex(FluidSystem::oilPhaseIdx);
                     break;
-                case Opm::Well::InjectorType::MULTI:
+                case Opm::InjectorType::MULTI:
                     throw std::runtime_error("Not implemented: Multi-phase injector wells");
                 }
 
@@ -226,19 +226,19 @@ public:
                 }
 
                 switch (controls.injector_type) {
-                case Opm::Well::InjectorType::WATER:
+                case Opm::InjectorType::WATER:
                     well->setVolumetricPhaseWeights(/*oil=*/0.0, /*gas=*/0.0, /*water=*/1.0);
                     break;
 
-                case Opm::Well::InjectorType::OIL:
+                case Opm::InjectorType::OIL:
                     well->setVolumetricPhaseWeights(/*oil=*/1.0, /*gas=*/0.0, /*water=*/0.0);
                     break;
 
-                case Opm::Well::InjectorType::GAS:
+                case Opm::InjectorType::GAS:
                     well->setVolumetricPhaseWeights(/*oil=*/0.0, /*gas=*/1.0, /*water=*/0.0);
                     break;
 
-                case Opm::Well::InjectorType::MULTI:
+                case Opm::InjectorType::MULTI:
                     throw std::runtime_error("Not implemented: Multi-phase injection wells");
                 }
 

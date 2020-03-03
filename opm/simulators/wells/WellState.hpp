@@ -296,19 +296,19 @@ namespace Opm
                 if (well.isInjector()) {
                     if (inj_controls.cmode == Well::InjectorCMode::RATE) {
                         switch (inj_controls.injector_type) {
-                        case Well::InjectorType::WATER:
+                        case InjectorType::WATER:
                             assert(pu.phase_used[BlackoilPhases::Aqua]);
                             wellrates_[np*w + pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
                             break;
-                        case Well::InjectorType::GAS:
+                        case InjectorType::GAS:
                             assert(pu.phase_used[BlackoilPhases::Vapour]);
                             wellrates_[np*w + pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
                             break;
-                        case Well::InjectorType::OIL:
+                        case InjectorType::OIL:
                             assert(pu.phase_used[BlackoilPhases::Liquid]);
                             wellrates_[np*w + pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
                             break;
-                        case Well::InjectorType::MULTI:
+                        case InjectorType::MULTI:
                             // Not currently handled, keep zero init.
                             break;
                         }
