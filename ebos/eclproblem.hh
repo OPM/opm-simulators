@@ -610,7 +610,7 @@ public:
         const auto& vanguard = simulator.vanguard();
         const auto& comm = this->gridView().comm();
         if (comm.rank() == 0) {
-            SolventModule::initFromDeck(vanguard.deck(), vanguard.eclState());
+            SolventModule::initFromDeck(vanguard.deck(), vanguard.eclState(), vanguard.schedule());
             PolymerModule::initFromDeck(vanguard.deck(), vanguard.eclState());
             FoamModule::initFromDeck(vanguard.deck(), vanguard.eclState());
             BrineModule::initFromDeck(vanguard.deck(), vanguard.eclState());
@@ -2380,15 +2380,10 @@ private:
     void initFluidSystem_()
     {
         const auto& simulator = this->simulator();
-        const auto& deck = simulator.vanguard().deck();
         const auto& eclState = simulator.vanguard().eclState();
-        const auto& comm = simulator.gridView().comm();
+        const auto& schedule = simulator.vanguard().schedule();
 
-        if (comm.rank() == 0)
-            FluidSystem::initFromDeck(deck, eclState);
-
-        EclMpiSerializer ser(comm);
-        ser.staticBroadcast<FluidSystem>();
+        FluidSystem::initFromState(eclState, schedule);
    }
 
     void readInitialCondition_()
