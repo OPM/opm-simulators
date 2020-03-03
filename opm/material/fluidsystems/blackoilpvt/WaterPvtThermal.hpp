@@ -35,7 +35,6 @@
 #include <opm/material/common/Spline.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
@@ -108,14 +107,13 @@ public:
     /*!
      * \brief Implement the temperature part of the water PVT properties.
      */
-    void initFromDeck(const Deck& deck,
-                      const EclipseState& eclState)
+    void initFromState(const EclipseState& eclState, const Schedule& schedule)
     {
         //////
         // initialize the isothermal part
         //////
         isothermalPvt_ = new IsothermalPvt;
-        isothermalPvt_->initFromDeck(deck, eclState);
+        isothermalPvt_->initFromState(eclState, schedule);
 
         //////
         // initialize the thermal part

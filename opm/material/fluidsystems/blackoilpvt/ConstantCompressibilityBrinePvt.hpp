@@ -30,11 +30,8 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
-#include <opm/parser/eclipse/Deck/DeckRecord.hpp>
-#include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtwsaltTable.hpp>
 #endif
 
@@ -72,7 +69,7 @@ public:
      * \brief Sets the pressure-dependent water viscosity and density
      *        using a table stemming from the Eclipse PVTWSALT keyword.
      */
-    void initFromDeck(const Deck&, const EclipseState& eclState)
+    void initFromState(const EclipseState& eclState, const Schedule&)
     {
         const auto& tableManager = eclState.getTableManager();
         size_t numRegions = tableManager.getTabdims().getNumPVTTables();

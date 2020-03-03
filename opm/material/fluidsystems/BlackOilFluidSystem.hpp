@@ -181,7 +181,7 @@ public:
     /*!
      * \brief Initialize the fluid system using an ECL deck object
      */
-    static void initFromDeck(const Deck& deck, const EclipseState& eclState)
+    static void initFromState(const EclipseState& eclState, const Schedule& schedule)
     {
         const auto& densityTable = eclState.getTableManager().getDensityTable();
         size_t numRegions = densityTable.size();
@@ -230,17 +230,17 @@ public:
 
         if (phaseIsActive(gasPhaseIdx)) {
             gasPvt_ = std::make_shared<GasPvt>();
-            gasPvt_->initFromDeck(deck, eclState);
+            gasPvt_->initFromState(eclState, schedule);
         }
 
         if (phaseIsActive(oilPhaseIdx)) {
             oilPvt_ = std::make_shared<OilPvt>();
-            oilPvt_->initFromDeck(deck, eclState);
+            oilPvt_->initFromState(eclState, schedule);
         }
 
         if (phaseIsActive(waterPhaseIdx)) {
             waterPvt_ = std::make_shared<WaterPvt>();
-            waterPvt_->initFromDeck(deck, eclState);
+            waterPvt_->initFromState(eclState, schedule);
         }
 
         initEnd();

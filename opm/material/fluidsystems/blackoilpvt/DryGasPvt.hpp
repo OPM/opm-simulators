@@ -32,12 +32,10 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvdgTable.hpp>
-#include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
-#include <opm/parser/eclipse/Deck/DeckRecord.hpp>
 #endif
 
 #include <vector>
@@ -72,7 +70,7 @@ public:
      *
      * This method assumes that the deck features valid DENSITY and PVDG keywords.
      */
-    void initFromDeck(const Deck&, const EclipseState& eclState)
+    void initFromState(const EclipseState& eclState, const Schedule&)
     {
         const auto& pvdgTables = eclState.getTableManager().getPvdgTables();
         const auto& densityTable = eclState.getTableManager().getDensityTable();

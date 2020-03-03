@@ -226,6 +226,7 @@ inline void testAll()
 
     auto deck = parser.parseString(deckString1);
     Opm::EclipseState eclState(deck);
+    Opm::Schedule schedule(deck, eclState);
 
     const auto& pvtwKeyword = deck.getKeyword("PVTW");
     size_t numPvtRegions = pvtwKeyword.size();
@@ -238,7 +239,7 @@ inline void testAll()
     // constant compressibility water
     //////////
     Opm::ConstantCompressibilityWaterPvt<Scalar> constCompWaterPvt;
-    constCompWaterPvt.initFromDeck(deck, eclState);
+    constCompWaterPvt.initFromState(eclState, schedule);
 
     // make sure that the values at the reference points are the ones specified in the
     // deck.
@@ -271,9 +272,9 @@ inline void testAll()
     Opm::OilPvtMultiplexer<Scalar> oilPvt;
     Opm::WaterPvtMultiplexer<Scalar> waterPvt;
 
-    gasPvt.initFromDeck(deck, eclState);
-    oilPvt.initFromDeck(deck, eclState);
-    waterPvt.initFromDeck(deck, eclState);
+    gasPvt.initFromState(eclState, schedule);
+    oilPvt.initFromState(eclState, schedule);
+    waterPvt.initFromState(eclState, schedule);
 
     typedef Opm::DenseAd::Evaluation<Scalar, 1> FooEval;
     ensurePvtApi<Scalar>(oilPvt, gasPvt, waterPvt);

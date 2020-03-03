@@ -34,9 +34,8 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #endif
 
@@ -91,7 +90,7 @@ public:
     /*!
      * \brief Initialize the oil parameters via the data specified by the PVTO ECL keyword.
      */
-    void initFromDeck(const Deck& deck, const EclipseState& eclState)
+    void initFromState(const EclipseState& eclState, const Schedule& schedule)
     {
         const auto& pvtoTables = eclState.getTableManager().getPvtoTables();
         const auto& densityTable = eclState.getTableManager().getDensityTable();
@@ -196,9 +195,9 @@ public:
         }
 
         vapPar2_ = 0.0;
-        if (deck.hasKeyword("VAPPARS")) {
-            const auto& vapParsKeyword = deck.getKeyword("VAPPARS");
-            vapPar2_ = vapParsKeyword.getRecord(0).getItem("OIL_DENSITY_PROPENSITY").template get<double>(0);
+        const auto& oilVap = schedule.getOilVaporizationProperties(0);
+        if (oilVap.getType() == OilVaporizationProperties::OilVaporization::VAPPARS) {
+            vapPar2_ = oilVap.vap2();
         }
 
         initEnd();

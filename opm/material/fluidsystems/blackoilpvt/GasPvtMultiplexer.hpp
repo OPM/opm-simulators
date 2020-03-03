@@ -32,10 +32,7 @@
 #include "GasPvtThermal.hpp"
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
-#include <opm/parser/eclipse/Deck/DeckRecord.hpp>
 #endif
 
 namespace Opm {
@@ -126,7 +123,7 @@ public:
      *
      * This method assumes that the deck features valid DENSITY and PVDG keywords.
      */
-    void initFromDeck(const Deck& deck, const EclipseState& eclState)
+    void initFromState(const EclipseState& eclState, const Schedule& schedule)
     {
         if (!eclState.runspec().phases().active(Phase::GAS))
             return;
@@ -138,7 +135,7 @@ public:
         else if (eclState.getTableManager().hasTables("PVDG"))
             setApproach(DryGasPvt);
 
-        OPM_GAS_PVT_MULTIPLEXER_CALL(pvtImpl.initFromDeck(deck, eclState));
+        OPM_GAS_PVT_MULTIPLEXER_CALL(pvtImpl.initFromState(eclState, schedule));
     }
 #endif // HAVE_ECL_INPUT
 
