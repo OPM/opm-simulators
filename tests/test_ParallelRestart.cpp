@@ -56,6 +56,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
@@ -2293,6 +2294,15 @@ BOOST_AUTO_TEST_CASE(Fault)
     Opm::Fault val1("test", 1.0, {{{1,2,3,4,5,6}, Opm::FaceDir::YPlus}});
     auto val2 = PackUnpack(val1);
     DO_CHECKS(Fault)
+#endif
+}
+
+BOOST_AUTO_TEST_CASE(WellType)
+{
+#ifdef HAVE_MPI
+    Opm::WellType val1(true, Phase::OIL);
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(WellType)
 #endif
 }
 

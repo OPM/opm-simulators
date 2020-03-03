@@ -48,6 +48,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
@@ -529,6 +530,12 @@ std::size_t packSize(const ThresholdPressure& data, Dune::MPIHelper::MPICommunic
           packSize(data.restart(), comm) +
           packSize(data.thresholdPressureTable(), comm) +
           packSize(data.pressureTable(), comm);
+}
+
+std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.producer(), comm) +
+           packSize(data.preferred_phase(), comm);
 }
 
 std::size_t packSize(const DenT& data, Dune::MPIHelper::MPICommunicator comm)
@@ -2218,6 +2225,12 @@ void pack(const Aquifetp::AQUFETP_data& data, std::vector<char>& buffer, int& po
     pack(data.V0, buffer, position, comm);
     pack(data.d0, buffer, position, comm);
     pack(data.p0, buffer, position, comm);
+}
+
+void pack(const WellType& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm) {
+    pack(data.producer(), buffer, position, comm);
+    pack(data.preferred_phase(), buffer, position, comm);
 }
 
 void pack(const DenT& data, std::vector<char>& buffer, int& position,
@@ -4022,6 +4035,17 @@ void unpack(AquiferCT::AQUCT_data& data, std::vector<char>& buffer, int& positio
                                  pi,
                                  cell_id);
 }
+
+
+void unpack(WellType& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    Phase preferred_phase;
+    bool producer;
+    unpack(producer, buffer, position, comm);
+    unpack(preferred_phase, buffer, position, comm);
+    data = WellType( producer, phase );
+}
+
 
 
 void unpack(DenT& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
