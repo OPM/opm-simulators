@@ -200,12 +200,8 @@ public:
         }
 
         // set the surface conditions using the STCOND keyword
-        if (deck.hasKeyword("STCOND")) {
-            auto stcondKeyword = deck.getKeyword("STCOND");
-
-            surfaceTemperature = stcondKeyword.getRecord(0).getItem("TEMPERATURE").getSIDouble(0);
-            surfacePressure = stcondKeyword.getRecord(0).getItem("PRESSURE").getSIDouble(0);
-        }
+        surfaceTemperature = eclState.getTableManager().stCond().temperature;
+        surfacePressure = eclState.getTableManager().stCond().pressure;
 
         // The reservoir temperature does not really belong into the table manager. TODO:
         // change this in opm-parser
