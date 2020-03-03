@@ -263,20 +263,22 @@ add_test_compareECLFiles(CASENAME polymer_oilwater
                          FILENAME 2D_OILWATER_POLYMER
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
+                         REL_TOL ${rel_tol}
+                         TEST_ARGS --tolerance-mb=1.e-7 --tolerance-cnv=1.e-3)
 
 add_test_compareECLFiles(CASENAME polymer_injectivity
                          FILENAME 2D_POLYMER_INJECTIVITY
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
+                         REL_TOL ${rel_tol}
+                         TEST_ARGS --tolerance-mb=1.e-7 --tolerance-cnv=1.e-3)
 
 add_test_compareECLFiles(CASENAME polymer_simple2D
                          FILENAME 2D_THREEPHASE_POLY_HETER
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --flow-newton-max-iterations=20)
+                         TEST_ARGS --tolerance-mb=1.e-7 --tolerance-cnv=1.e-3 --flow-newton-max-iterations=20)
 
 add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
