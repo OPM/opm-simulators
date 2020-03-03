@@ -5352,7 +5352,8 @@ void unpack(OilVaporizationProperties& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     OilVaporizationProperties::OilVaporization type;
-    std::vector<double> vap1, vap2, maxDRSDT, maxDRVDT;
+    double vap1, vap2;
+    std::vector<double> maxDRSDT, maxDRVDT;
     std::vector<bool> maxDRSDT_allCells;
     unpack(type, buffer, position, comm);
     unpack(vap1, buffer, position, comm);
