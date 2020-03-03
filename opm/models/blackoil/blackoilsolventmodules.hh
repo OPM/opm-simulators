@@ -286,27 +286,21 @@ public:
             }
 
 
-            if (deck.hasKeyword("TLMIXPAR")) {
+            if (!eclState.getTableManager().getTlmixparTable().empty()) {
                 // resize the attributes of the object
                 tlMixParamViscosity_.resize(numMiscRegions);
                 tlMixParamDensity_.resize(numMiscRegions);
 
-                assert(numMiscRegions == deck.getKeyword("TLMIXPAR").size());
+                const auto& tlmixparTable = eclState.getTableManager().getTlmixparTable();
 
+                assert(numMiscRegions == tlmixparTable.size());
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                    const auto& tlmixparRecord = deck.getKeyword("TLMIXPAR").getRecord(regionIdx);
-                    const auto& mixParamsViscosityItem  = tlmixparRecord.getItem("TL_VISCOSITY_PARAMETER");
-                    const auto& mixParamsDensityItem    = tlmixparRecord.getItem("TL_DENSITY_PARAMETER");
-
-                    if (mixParamsViscosityItem.hasValue(0))
-                        tlMixParamViscosity_[regionIdx] = mixParamsViscosityItem.getSIDouble(0);
-                    else
-                        throw std::invalid_argument("The TL_VISCOSITY parameter can not be defaulted");
-
-                    if (mixParamsDensityItem.hasValue(0))
-                        tlMixParamDensity_[regionIdx] = mixParamsDensityItem.getSIDouble(0);
-                    else
+                    // Copy data
+                    tlMixParamViscosity_[regionIdx] = tlmixparTable[regionIdx].viscosity;
+                    if (tlmixparTable[regionIdx].density == 0.0)
                         tlMixParamDensity_[regionIdx] = tlMixParamViscosity_[regionIdx];
+                    else
+                        tlMixParamDensity_[regionIdx] = tlmixparTable[regionIdx].density;
                 }
             }
             else
