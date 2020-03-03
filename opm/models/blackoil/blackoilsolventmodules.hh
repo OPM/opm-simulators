@@ -96,8 +96,7 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the solvent module
      */
-    static void initFromDeck(const Opm::Deck& deck, const Opm::EclipseState& eclState,
-                             const Schedule& schedule)
+    static void initFromState(const Opm::EclipseState& eclState, const Schedule& schedule)
     {
         // some sanity checks: if solvents are enabled, the SOLVENT keyword must be
         // present, if solvents are disabled the keyword must not be present.
