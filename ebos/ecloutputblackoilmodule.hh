@@ -1278,7 +1278,7 @@ public:
                                 const auto ctlMode = controls.cmode;
                                 const auto injType = controls.injector_type;                            
                                 using CMode = ::Opm::Well::InjectorCMode;
-                                using WType = ::Opm::Well::InjectorType;
+                                using WType = ::Opm::InjectorType;
                                 
                                 auto ftype = [](const auto wtype) -> std::string
                                 {
@@ -1404,7 +1404,7 @@ public:
                                         const auto ctlMode = controls.cmode;
                                         const auto injType = controls.injector_type;                            
                                         using CMode = ::Opm::Well::InjectorCMode;
-                                        using WType = ::Opm::Well::InjectorType;
+                                        using WType = ::Opm::InjectorType;
                                         
                                         auto ftype = [](const auto wtype) -> std::string
                                         {

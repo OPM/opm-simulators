@@ -22,6 +22,7 @@
 #define OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 
 #include <vector>
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 
 namespace Opm {
 
@@ -66,18 +67,18 @@ namespace Opm {
             if (wellEcl.isInjector() && injector) {
                 // only switch if the well phase is the same as the group phase
                 // Get the current controls.
-                const Well::InjectorType& injectorType = wellEcl.getInjectionProperties().injectorType;
+                const InjectorType& injectorType = wellEcl.getInjectionProperties().injectorType;
 
-                if (injectorType == Well::InjectorType::WATER && groupInjectionPhase != Phase::WATER)
+                if (injectorType == InjectorType::WATER && groupInjectionPhase != Phase::WATER)
                     continue;
 
-                if (injectorType == Well::InjectorType::OIL && groupInjectionPhase != Phase::OIL)
+                if (injectorType == InjectorType::OIL && groupInjectionPhase != Phase::OIL)
                     continue;
 
-                if (injectorType == Well::InjectorType::GAS && groupInjectionPhase != Phase::GAS)
+                if (injectorType == InjectorType::GAS && groupInjectionPhase != Phase::GAS)
                     continue;
 
-                if (injectorType == Well::InjectorType::MULTI)
+                if (injectorType == InjectorType::MULTI)
                     throw("Expected WATER, OIL or GAS as type for injectors " + wellEcl.name());
 
                 if (wellState.currentInjectionControls()[well_index] != Well::InjectorCMode::GRUP) {

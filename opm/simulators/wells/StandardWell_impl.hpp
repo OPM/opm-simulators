@@ -193,24 +193,24 @@ namespace Opm
         if (this->isInjector()) { // only single phase injection
             double inj_frac = 0.0;
             switch (this->wellEcl().injectorType()) {
-            case Well::InjectorType::WATER:
+            case InjectorType::WATER:
                 if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx))) {
                     inj_frac = 1.0;
                 }
                 break;
-            case Well::InjectorType::GAS:
+            case InjectorType::GAS:
                 if (has_solvent && comp_idx == contiSolventEqIdx) { // solvent
                     inj_frac = wsolvent();
                 } else if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx))) {
                     inj_frac = has_solvent ? 1.0 - wsolvent() : 1.0;
                 }
                 break;
-            case Well::InjectorType::OIL:
+            case InjectorType::OIL:
                 if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx))) {
                     inj_frac = 1.0;
                 }
                 break;
-            case Well::InjectorType::MULTI:
+            case InjectorType::MULTI:
                 // Not supported.
                 // deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
                 //                         "Multi phase injectors are not supported, requested for well " + name());
@@ -643,7 +643,7 @@ namespace Opm
                     // change temperature for injecting fluids
                     if (this->isInjector() && cq_s[activeCompIdx] > 0.0){
                         // only handles single phase injection now
-                        assert(this->well_ecl_.injectorType() != Well::InjectorType::MULTI);
+                        assert(this->well_ecl_.injectorType() != InjectorType::MULTI);
                         fs.setTemperature(this->well_ecl_.temperature());
                         typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
                         typename FluidSystem::template ParameterCache<FsScalar> paramCache;
@@ -791,21 +791,21 @@ namespace Opm
                 Base::rateConverter_.calcCoeff(/*fipreg*/ 0, Base::pvtRegionIdx_, convert_coeff);
                 const auto& pu = phaseUsage();
 
-                Well::InjectorType injectorType = controls.injector_type;
+                InjectorType injectorType = controls.injector_type;
                 double coeff = 1.0;
 
                 switch (injectorType) {
-                case Well::InjectorType::WATER:
+                case InjectorType::WATER:
                 {
                     coeff = convert_coeff[pu.phase_pos[BlackoilPhases::Aqua]];
                     break;
                 }
-                case Well::InjectorType::OIL:
+                case InjectorType::OIL:
                 {
                     coeff = convert_coeff[pu.phase_pos[BlackoilPhases::Liquid]];
                     break;
                 }
-                case Well::InjectorType::GAS:
+                case InjectorType::GAS:
                 {
                     coeff = convert_coeff[pu.phase_pos[BlackoilPhases::Vapour]];
                     break;
@@ -979,7 +979,7 @@ namespace Opm
     template <typename TypeTag>
     void
     StandardWell<TypeTag>::
-    assembleGroupInjectionControl(const Group& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, const Well::InjectorType& injectorType, EvalWell& control_eq, double efficiencyFactor, Opm::DeferredLogger& deferred_logger)
+    assembleGroupInjectionControl(const Group& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, const InjectorType& injectorType, EvalWell& control_eq, double efficiencyFactor, Opm::DeferredLogger& deferred_logger)
     {
         const auto& well = well_ecl_;
         const auto pu = phaseUsage();
@@ -989,21 +989,21 @@ namespace Opm
         Phase injectionPhase;
 
         switch (injectorType) {
-        case Well::InjectorType::WATER:
+        case InjectorType::WATER:
         {
             phasePos = pu.phase_pos[BlackoilPhases::Aqua];
             wellTarget = Well::GuideRateTarget::WAT;
             injectionPhase = Phase::WATER;
             break;
         }
-        case Well::InjectorType::OIL:
+        case InjectorType::OIL:
         {
             phasePos = pu.phase_pos[BlackoilPhases::Liquid];
             wellTarget = Well::GuideRateTarget::OIL;
             injectionPhase = Phase::OIL;
             break;
         }
-        case Well::InjectorType::GAS:
+        case InjectorType::GAS:
         {
             phasePos = pu.phase_pos[BlackoilPhases::Vapour];
             wellTarget = Well::GuideRateTarget::GAS;
@@ -1587,16 +1587,16 @@ namespace Opm
                 well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = 0.0;
             }
             switch (this->wellEcl().injectorType()) {
-            case Well::InjectorType::WATER:
+            case InjectorType::WATER:
                 well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[Water]] = primary_variables_[WQTotal];
                 break;
-            case Well::InjectorType::GAS:
+            case InjectorType::GAS:
                 well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[Gas]] = primary_variables_[WQTotal];
                 break;
-            case Well::InjectorType::OIL:
+            case InjectorType::OIL:
                 well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[Oil]] = primary_variables_[WQTotal];
                 break;
-            case Well::InjectorType::MULTI:
+            case InjectorType::MULTI:
                 // Not supported.
                 deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
                                         "Multi phase injectors are not supported, requested for well " + name());
@@ -1681,20 +1681,20 @@ namespace Opm
         {
             const auto& controls = well.injectionControls(summaryState);
 
-            Well::InjectorType injectorType = controls.injector_type;
+            InjectorType injectorType = controls.injector_type;
             int phasePos;
             switch (injectorType) {
-            case Well::InjectorType::WATER:
+            case InjectorType::WATER:
             {
                 phasePos = pu.phase_pos[BlackoilPhases::Aqua];
                 break;
             }
-            case Well::InjectorType::OIL:
+            case InjectorType::OIL:
             {
                 phasePos = pu.phase_pos[BlackoilPhases::Liquid];
                 break;
             }
-            case Well::InjectorType::GAS:
+            case InjectorType::GAS:
             {
                 phasePos = pu.phase_pos[BlackoilPhases::Vapour];
                 break;
@@ -2409,16 +2409,16 @@ namespace Opm
                 // No flow => use well specified fractions for mix.
                 if (this->isInjector()) {
                     switch (this->wellEcl().injectorType()) {
-                    case Well::InjectorType::WATER:
+                    case InjectorType::WATER:
                         mix[FluidSystem::waterCompIdx] = 1.0;
                         break;
-                    case Well::InjectorType::GAS:
+                    case InjectorType::GAS:
                         mix[FluidSystem::gasCompIdx] = 1.0;
                         break;
-                    case Well::InjectorType::OIL:
+                    case InjectorType::OIL:
                         mix[FluidSystem::oilCompIdx] = 1.0;
                         break;
-                    case Well::InjectorType::MULTI:
+                    case InjectorType::MULTI:
                         // Not supported.
                         // deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
                         //                         "Multi phase injectors are not supported, requested for well " + name());
@@ -2968,16 +2968,16 @@ namespace Opm
         // under surface condition is used here
         if (this->isInjector()) {
             switch (this->wellEcl().injectorType()) {
-            case Well::InjectorType::WATER:
+            case InjectorType::WATER:
                 primary_variables_[WQTotal] = well_state.wellRates()[np * well_index + pu.phase_pos[Water]];
                 break;
-            case Well::InjectorType::GAS:
+            case InjectorType::GAS:
                 primary_variables_[WQTotal] = well_state.wellRates()[np * well_index + pu.phase_pos[Gas]];
                 break;
-            case Well::InjectorType::OIL:
+            case InjectorType::OIL:
                 primary_variables_[WQTotal] = well_state.wellRates()[np * well_index + pu.phase_pos[Oil]];
                 break;
-            case Well::InjectorType::MULTI:
+            case InjectorType::MULTI:
                 // Not supported.
                 deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
                                         "Multi phase injectors are not supported, requested for well " + name());
@@ -3004,7 +3004,7 @@ namespace Opm
                 auto phase = well_ecl_.getInjectionProperties().injectorType;
                 // only single phase injection handled
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    if (phase == Well::InjectorType::WATER) {
+                    if (phase == InjectorType::WATER) {
                         primary_variables_[WFrac] = 1.0;
                     } else {
                         primary_variables_[WFrac] = 0.0;
@@ -3012,7 +3012,7 @@ namespace Opm
                 }
 
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    if (phase == Well::InjectorType::GAS) {
+                    if (phase == InjectorType::GAS) {
                         primary_variables_[GFrac] = 1.0 - wsolvent();
                         if (has_solvent) {
                             primary_variables_[SFrac] = wsolvent();
