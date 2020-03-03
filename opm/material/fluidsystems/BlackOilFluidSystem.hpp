@@ -40,6 +40,12 @@
 #include <opm/material/common/HasMemberGeneratorMacros.hpp>
 #include <opm/material/common/Exceptions.hpp>
 
+#if HAVE_ECL_INPUT
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
+#endif
+
 #include <memory>
 #include <vector>
 #include <array>
@@ -177,24 +183,25 @@ public:
      */
     static void initFromDeck(const Deck& deck, const EclipseState& eclState)
     {
-        auto densityKeyword = deck.getKeyword("DENSITY");
-        size_t numRegions = densityKeyword.size();
+        const auto& densityTable = eclState.getTableManager().getDensityTable();
+        size_t numRegions = densityTable.size();
         initBegin(numRegions);
 
         numActivePhases_ = 0;
         std::fill_n(&phaseIsActive_[0], numPhases, false);
 
-        if (deck.hasKeyword("OIL")) {
+
+        if (eclState.runspec().phases().active(Phase::OIL)) {
             phaseIsActive_[oilPhaseIdx] = true;
             ++ numActivePhases_;
         }
 
-        if (deck.hasKeyword("GAS")) {
+        if (eclState.runspec().phases().active(Phase::GAS)) {
             phaseIsActive_[gasPhaseIdx] = true;
             ++ numActivePhases_;
         }
 
-        if (deck.hasKeyword("WATER")) {
+        if (eclState.runspec().phases().active(Phase::WATER)) {
             phaseIsActive_[waterPhaseIdx] = true;
             ++ numActivePhases_;
         }
@@ -214,15 +221,14 @@ public:
         // this fluidsystem only supports two or three phases
         assert(numActivePhases_ >= 1 && numActivePhases_ <= 3);
 
-        setEnableDissolvedGas(deck.hasKeyword("DISGAS"));
-        setEnableVaporizedOil(deck.hasKeyword("VAPOIL"));
+        setEnableDissolvedGas(eclState.getSimulationConfig().hasDISGAS());
+        setEnableVaporizedOil(eclState.getSimulationConfig().hasVAPOIL());
 
         // set the reference densities of all PVT regions
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-            const auto& densityRecord = densityKeyword.getRecord(regionIdx);
-            setReferenceDensities(densityRecord.getItem("OIL").getSIDouble(0),
-                                  densityRecord.getItem("WATER").getSIDouble(0),
-                                  densityRecord.getItem("GAS").getSIDouble(0),
+            setReferenceDensities(densityTable[regionIdx].oil,
+                                  densityTable[regionIdx].water,
+                                  densityTable[regionIdx].gas,
                                   regionIdx);
         }
 
