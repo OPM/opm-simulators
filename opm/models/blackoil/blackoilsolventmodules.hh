@@ -101,14 +101,14 @@ public:
     {
         // some sanity checks: if solvents are enabled, the SOLVENT keyword must be
         // present, if solvents are disabled the keyword must not be present.
-        if (enableSolvent && !deck.hasKeyword("SOLVENT"))
+        if (enableSolvent && !eclState.runspec().phases().active(Phase::SOLVENT))
             throw std::runtime_error("Non-trivial solvent treatment requested at compile "
                                      "time, but the deck does not contain the SOLVENT keyword");
-        else if (!enableSolvent && deck.hasKeyword("SOLVENT"))
+        else if (!enableSolvent && eclState.runspec().phases().active(Phase::SOLVENT))
             throw std::runtime_error("Solvent treatment disabled at compile time, but the deck "
                                      "contains the SOLVENT keyword");
 
-        if (!deck.hasKeyword("SOLVENT"))
+        if (!eclState.runspec().phases().active(Phase::SOLVENT))
             return; // solvent treatment is supposed to be disabled
 
         solventPvt_.initFromState(eclState, schedule);
@@ -130,7 +130,7 @@ public:
 
         // initialize the objects needed for miscible solvent and oil simulations
         isMiscible_ = false;
-        if (deck.hasKeyword("MISCIBLE")) {
+        if (!eclState.getTableManager().getMiscTables().empty()) {
             isMiscible_ = true;
 
             unsigned numMiscRegions = 1;
@@ -308,7 +308,7 @@ public:
 
             // resize the attributes of the object
             tlPMixTable_.resize(numMiscRegions);
-            if (deck.hasKeyword("TLPMIXPA")) {
+            if (!eclState.getTableManager().getTlpmixpaTables().empty()) {
                 const auto& tlpmixparTables = tableManager.getTlpmixpaTables();
                 if (!tlpmixparTables.empty()) {
 
