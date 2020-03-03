@@ -1221,6 +1221,7 @@ BOOST_AUTO_TEST_CASE(TableManager)
                            getDenT(),
                            getDenT(),
                            getDenT(),
+                           {7.0, 8.0},
                            77,
                            1.0);
     auto val2 = PackUnpack(val1);

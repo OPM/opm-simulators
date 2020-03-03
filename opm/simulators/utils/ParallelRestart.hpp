@@ -144,6 +144,7 @@ class SkprpolyTable;
 class SkprwatTable;
 class SolventDensityTable;
 class SpiralICD;
+class StandardCond;
 class SummaryConfig;
 class SummaryNode;
 class Tabdims;

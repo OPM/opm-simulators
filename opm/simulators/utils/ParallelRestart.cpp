@@ -85,6 +85,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprwatTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/StandardCond.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
@@ -463,6 +464,7 @@ HANDLE_AS_POD(Regdims)
 HANDLE_AS_POD(RockConfig::RockComp)
 HANDLE_AS_POD(ROCKRecord)
 HANDLE_AS_POD(SatFuncControls)
+HANDLE_AS_POD(StandardCond)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeStampUTC::YMD)
 HANDLE_AS_POD(Tuning)
@@ -871,6 +873,7 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.OilDenT(), comm) +
            packSize(data.GasDenT(), comm) +
            packSize(data.WatDenT(), comm) +
+           packSize(data.stCond(), comm) +
            packSize(data.gas_comp_index(), comm) +
            packSize(data.rtemp(), comm);
 }
@@ -2733,6 +2736,7 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
     pack(data.OilDenT(), buffer, position, comm);
     pack(data.GasDenT(), buffer, position, comm);
     pack(data.WatDenT(), buffer, position, comm);
+    pack(data.stCond(), buffer, position, comm);
     pack(data.gas_comp_index(), buffer, position, comm);
     pack(data.rtemp(), buffer, position, comm);
 }
@@ -4875,6 +4879,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     bool hasEntpvd;
     bool hasEqlnum;
     DenT oilDenT, gasDenT, watDenT;
+    StandardCond stcond;
     std::size_t gas_comp_index;
     std::shared_ptr<JFunc> jfunc;
     double rtemp;
@@ -4911,6 +4916,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     unpack(oilDenT, buffer, position, comm);
     unpack(gasDenT, buffer, position, comm);
     unpack(watDenT, buffer, position, comm);
+    unpack(stcond, buffer, position, comm);
     unpack(gas_comp_index, buffer, position, comm);
     unpack(rtemp, buffer, position, comm);
 
@@ -4920,7 +4926,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
                         bdensityTables, sdensityTables, plymwinjTables,
                         skprwatTables, skprpolyTables, tabdims, regdims, eqldims,
                         aqudims, hasImptvd, hasEntpvd, hasEqlnum, jfunc, oilDenT, gasDenT,
-                        watDenT, gas_comp_index, rtemp);
+                        watDenT, stcond, gas_comp_index, rtemp);
 }
 
 template<class Scalar>
