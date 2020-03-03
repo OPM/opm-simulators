@@ -547,9 +547,9 @@ private:
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
 
         const auto& fp = vanguard_.eclState().fieldProps();
-        const auto& inputTranxData = fp.get_global_double("TRANX");
-        const auto& inputTranyData = fp.get_global_double("TRANY");
-        const auto& inputTranzData = fp.get_global_double("TRANZ");
+        const auto& inputTranxData = fp.get_double("TRANX");
+        const auto& inputTranyData = fp.get_double("TRANY");
+        const auto& inputTranzData = fp.get_double("TRANZ");
         bool tranx_deckAssigned = false;                     // Ohh my ....
         bool trany_deckAssigned = false;
         bool tranz_deckAssigned = false;
@@ -581,26 +581,26 @@ private:
                 if (gc2 - gc1 == 1) {
                     if (tranx_deckAssigned)
                         // set simulator internal transmissibilities to values from inputTranx
-                        trans_[isId] = inputTranxData[gc1];
+                        trans_[isId] = inputTranxData[c1];
                     else
                         // Scale transmissibilities with scale factor from inputTranx
-                        trans_[isId] *= inputTranxData[gc1];
+                        trans_[isId] *= inputTranxData[c1];
                 }
                 else if (gc2 - gc1 == cartDims[0]) {
                     if (trany_deckAssigned)
                         // set simulator internal transmissibilities to values from inputTrany
-                        trans_[isId] = inputTranyData[gc1];
+                        trans_[isId] = inputTranyData[c1];
                     else
                         // Scale transmissibilities with scale factor from inputTrany
-                        trans_[isId] *= inputTranyData[gc1];
+                        trans_[isId] *= inputTranyData[c1];
                 }
                 else if (gc2 - gc1 == cartDims[0]*cartDims[1]) {
                     if (tranz_deckAssigned)
                         // set simulator internal transmissibilities to values from inputTranz
-                        trans_[isId] = inputTranzData[gc1];
+                        trans_[isId] = inputTranzData[c1];
                     else
                         // Scale transmissibilities with scale factor from inputTranz
-                        trans_[isId] *= inputTranzData[gc1];
+                        trans_[isId] *= inputTranzData[c1];
                 }
                 //else.. We don't support modification of NNC at the moment.
             }
