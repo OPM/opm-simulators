@@ -119,29 +119,26 @@ public:
     {
         // some sanity checks: if foam is enabled, the FOAM keyword must be
         // present, if foam is disabled the keyword must not be present.
-        if (enableFoam && !deck.hasKeyword("FOAM")) {
+        if (enableFoam && !eclState.runspec().phases().active(Phase::FOAM)) {
             throw std::runtime_error("Non-trivial foam treatment requested at compile time, but "
                                      "the deck does not contain the FOAM keyword");
         }
-        else if (!enableFoam && deck.hasKeyword("FOAM")) {
+        else if (!enableFoam && eclState.runspec().phases().active(Phase::FOAM)) {
             throw std::runtime_error("Foam treatment disabled at compile time, but the deck "
                                      "contains the FOAM keyword");
         }
 
-        if (!deck.hasKeyword("FOAM")) {
+        if (!eclState.runspec().phases().active(Phase::FOAM)) {
             return; // foam treatment is supposed to be disabled
         }
 
         // Check that only implemented options are used.
         // We only support the default values of FOAMOPTS (GAS, TAB).
-        if (deck.hasKeyword("FOAMOPTS")) {
-            const auto kw = deck.getKeyword("FOAMOPTS");
-            if (kw.getRecord(0).getItem("TRANSPORT_PHASE").get<std::string>(0) != "GAS") {
-                throw std::runtime_error("In FOAMOPTS, only GAS is allowed for the transport phase.");
-            }
-            if (kw.getRecord(0).getItem("MODEL").get<std::string>(0) != "TAB") {
-                throw std::runtime_error("In FOAMOPTS, only TAB is allowed for the gas mobility factor reduction model.");
-            }
+        if (eclState.getInitConfig().getFoamConfig().getTransportPhase() != Phase::GAS) {
+            throw std::runtime_error("In FOAMOPTS, only GAS is allowed for the transport phase.");
+        }
+        if (eclState.getInitConfig().getFoamConfig().getMobilityModel() != FoamConfig::MobilityModel::TAB) {
+            throw std::runtime_error("In FOAMOPTS, only TAB is allowed for the gas mobility factor reduction model.");
         }
 
         const auto& tableManager = eclState.getTableManager();
