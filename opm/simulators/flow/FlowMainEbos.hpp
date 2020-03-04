@@ -252,7 +252,13 @@ namespace Opm
         int executeInitStep(int argc, char** argv, bool outputCout, bool outputToFiles)
         {
             return execute_(argc, argv, outputCout, outputToFiles,
-                &FlowMainEbos::runSimulatorInit);
+                &FlowMainEbos::runSimulatorInit, /*cleanup=*/false);
+        }
+
+        int executeStep()
+        {
+            simulator_->runStep(*simtimer_);
+            return EXIT_SUCCESS;
         }
 
         // Print an ASCII-art header to the PRT and DEBUG files.
@@ -342,9 +348,9 @@ namespace Opm
             }
         }
 
-        void executeCleanup_(bool output_to_files) {
+        void executeCleanup_(bool outputToFiles) {
             // clean up
-            mergeParallelLogFiles(output_to_files);
+            mergeParallelLogFiles(outputToFiles);
         }
 
     protected:

@@ -295,6 +295,14 @@ public:
             return EXIT_FAILURE;
         }
     }
+
+    int step()
+    {
+        if (!hasRunInit_) {
+            throw std::logic_error("step() called before step_init()");
+        }
+        return mainfunc_->executeStep();
+    }
 private:
 
     bool prepareRun_()
@@ -472,5 +480,6 @@ PYBIND11_MODULE(simulators, m)
         .def("set_eclipse_state", &BlackOilSimulator::setEclipseState)
         .def("set_schedule", &BlackOilSimulator::setSchedule)
         .def("set_summary_config", &BlackOilSimulator::setSummaryConfig)
+        .def("step", &BlackOilSimulator::step)
         .def("step_init", &BlackOilSimulator::step_init);
 }
