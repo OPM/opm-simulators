@@ -154,6 +154,8 @@ class TableManager;
 class TableSchema;
 class ThresholdPressure;
 class TimeStampUTC;
+class TlmixparRecord;
+class TlmixparTable;
 class TransMult;
 class Tuning;
 class UDAValue;
@@ -784,6 +786,8 @@ ADD_PACK_PROTOTYPES(TableSchema)
 ADD_PACK_PROTOTYPES(ThresholdPressure)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeStampUTC)
+ADD_PACK_PROTOTYPES(TlmixparRecord)
+ADD_PACK_PROTOTYPES(TlmixparTable)
 ADD_PACK_PROTOTYPES(TransMult)
 ADD_PACK_PROTOTYPES(Tuning)
 ADD_PACK_PROTOTYPES(UDAValue)

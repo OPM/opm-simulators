@@ -1202,6 +1202,7 @@ BOOST_AUTO_TEST_CASE(TableManager)
                            Opm::PvcdoTable({Opm::PVCDORecord{1.0, 2.0, 3.0, 4.0, 5.0}}),
                            Opm::DensityTable({Opm::DENSITYRecord{1.0, 2.0, 3.0}}),
                            Opm::RockTable({Opm::ROCKRecord{1.0,2.0}}),
+                           Opm::TlmixparTable({Opm::TlmixparRecord{1.0, 2.0}}),
                            Opm::ViscrefTable({Opm::VISCREFRecord{1.0, 2.0}}),
                            Opm::WatdentTable({Opm::WATDENTRecord{1.0, 2.0, 3.0}}),
                            {{1.0, 2.0, {1.0, 2.0, 3.0}}},
