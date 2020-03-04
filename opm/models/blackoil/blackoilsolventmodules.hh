@@ -96,7 +96,8 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the solvent module
      */
-    static void initFromDeck(const Opm::Deck& deck, const Opm::EclipseState& eclState)
+    static void initFromDeck(const Opm::Deck& deck, const Opm::EclipseState& eclState,
+                             const Schedule& schedule)
     {
         // some sanity checks: if solvents are enabled, the SOLVENT keyword must be
         // present, if solvents are disabled the keyword must not be present.
@@ -110,7 +111,7 @@ public:
         if (!deck.hasKeyword("SOLVENT"))
             return; // solvent treatment is supposed to be disabled
 
-        solventPvt_.initFromDeck(deck, eclState);
+        solventPvt_.initFromState(eclState, schedule);
 
         const auto& tableManager = eclState.getTableManager();
         // initialize the objects which deal with the SSFN keyword
