@@ -34,6 +34,7 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
+#include <opm/simulators/utils/FieldPropsDataHandle.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
 
@@ -188,7 +189,9 @@ public:
             //distribute the grid and switch to the distributed view.
             {
                 const auto wells = this->schedule().getWellsatEnd();
-                defunctWellNames_ = std::get<1>(grid_->loadBalance(edgeWeightsMethod, &wells, faceTrans.data()));
+                auto& eclState = static_cast<ParallelEclipseState&>(this->eclState());
+                FieldPropsDataHandle<Dune::CpGrid> handle(*grid_, eclState);
+                defunctWellNames_ = std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, faceTrans.data()));
             }
             grid_->switchToDistributedView();
 
@@ -210,14 +213,6 @@ public:
         this->updateGridView_();
 #if HAVE_MPI
         if (mpiSize > 1) {
-            std::vector<int> cartIndices;
-            cartIndices.reserve(grid_->numCells());
-            auto locElemIt = this->gridView().template begin</*codim=*/0>();
-            const auto& locElemEndIt = this->gridView().template end</*codim=*/0>();
-            for (; locElemIt != locElemEndIt; ++locElemIt) {
-                cartIndices.push_back(cartesianIndexMapper_->cartesianIndex(locElemIt->index()));
-            }
-            static_cast<ParallelEclipseState&>(this->eclState()).setupLocalProps(cartIndices);
             static_cast<ParallelEclipseState&>(this->eclState()).switchToDistributedProps();
         }
 #endif
