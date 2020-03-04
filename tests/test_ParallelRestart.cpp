@@ -197,17 +197,18 @@ Opm::ThresholdPressure getThresholdPressure()
                                   {{{1,2},{false,3.0}},{{2,3},{true,4.0}}});
 }
 
+
 Opm::RockConfig getRockConfig()
 {
     return Opm::RockConfig(true, {{100, 0.25}, {200, 0.30}}, "ROCKNUM", 10, false, Opm::RockConfig::Hysteresis::HYSTER);
 }
 
 
-
 Opm::BCConfig getBCConfig()
 {
     return Opm::BCConfig({{10,11,12,13,14,15,Opm::BCType::RATE,Opm::FaceDir::XPlus, Opm::BCComponent::GAS, 100.0}});
 }
+
 
 Opm::TableSchema getTableSchema()
 {
@@ -227,7 +228,8 @@ Opm::TableColumn getTableColumn()
 }
 
 
-Opm::DenT getDenT() {
+Opm::DenT getDenT()
+{
     std::vector<Opm::DenT::entry> records;
     records.emplace_back(1,2,3);
     records.emplace_back(4,5,6);
@@ -251,6 +253,14 @@ Opm::EquilRecord getEquilRecord()
 Opm::FoamData getFoamData()
 {
     return Opm::FoamData(1.0, 2.0, 3.0, true, 4.0);
+}
+
+
+Opm::FoamConfig getFoamConfig()
+{
+    return Opm::FoamConfig({getFoamData(), getFoamData()},
+                           Opm::Phase::GAS,
+                           Opm::FoamConfig::MobilityModel::TAB);
 }
 
 
@@ -789,7 +799,7 @@ BOOST_AUTO_TEST_CASE(FoamData)
 BOOST_AUTO_TEST_CASE(FoamConfig)
 {
 #if HAVE_MPI
-    Opm::FoamConfig val1({getFoamData(), getFoamData()});
+    Opm::FoamConfig val1 = getFoamConfig();
     auto val2 = PackUnpack(val1);
     DO_CHECKS(FoamConfig)
 #endif
@@ -800,7 +810,7 @@ BOOST_AUTO_TEST_CASE(InitConfig)
 {
 #if HAVE_MPI
     Opm::InitConfig val1(Opm::Equil({getEquilRecord(), getEquilRecord()}),
-                         Opm::FoamConfig({getFoamData(), getFoamData()}),
+                         getFoamConfig(),
                          true, true, true, 20, "test1");
     auto val2 = PackUnpack(val1);
     DO_CHECKS(InitConfig)
@@ -2265,7 +2275,7 @@ BOOST_AUTO_TEST_CASE(EclipseConfig)
     Opm::IOConfig io(true, false, true, false, false, true, "test1", true,
                      "test2", true, "test3", false);
     Opm::InitConfig init(Opm::Equil({getEquilRecord(), getEquilRecord()}),
-                         Opm::FoamConfig({getFoamData(), getFoamData()}),
+                         getFoamConfig(),
                          true, true, true, 20, "test1");
     Opm::EclipseConfig val1{init, io};
 
