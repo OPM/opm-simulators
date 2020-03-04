@@ -42,6 +42,7 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 
 #include <opm/output/data/Wells.hpp>
+#include <opm/output/data/Groups.hpp>
 #include <opm/material/common/Exceptions.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
@@ -565,6 +566,10 @@ public:
         }
 
         return wellDat;
+    }
+
+    Opm::data::Group groupData(const int reportStepIdx, Opm::Schedule& sched) const {
+        return {};
     }
 
     /*!
