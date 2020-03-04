@@ -467,6 +467,7 @@ HANDLE_AS_POD(SatFuncControls)
 HANDLE_AS_POD(StandardCond)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeStampUTC::YMD)
+HANDLE_AS_POD(TlmixparRecord)
 HANDLE_AS_POD(Tuning)
 HANDLE_AS_POD(VISCREFRecord)
 HANDLE_AS_POD(WATDENTRecord)
@@ -853,6 +854,7 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.getPvcdoTable(), comm) +
            packSize(data.getDensityTable(), comm) +
            packSize(data.getRockTable(), comm) +
+           packSize(data.getTlmixparTable(), comm) +
            packSize(data.getViscrefTable(), comm) +
            packSize(data.getWatdentTable(), comm) +
            packSize(data.getPvtwSaltTables(), comm) +
@@ -2046,6 +2048,11 @@ std::size_t packSize(const GridDims& data,
     return packSize(data.getNXYZ(), comm);
 }
 
+std::size_t packSize(const TlmixparTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<TlmixparRecord>&>(data), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -2715,6 +2722,7 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
     pack(data.getPvcdoTable(), buffer, position, comm);
     pack(data.getDensityTable(), buffer, position, comm);
     pack(data.getRockTable(), buffer, position, comm);
+    pack(data.getTlmixparTable(), buffer, position, comm);
     pack(data.getViscrefTable(), buffer, position, comm);
     pack(data.getWatdentTable(), buffer, position, comm);
     pack(data.getPvtwSaltTables(), buffer, position, comm);
@@ -3973,6 +3981,12 @@ void pack(const GridDims& data,
     pack(data.getNXYZ(), buffer, position, comm);
 }
 
+void pack(const TlmixparTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<TlmixparRecord>&>(data), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -4864,6 +4878,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     DensityTable densityTable;
     RockTable rockTable;
     ViscrefTable viscrefTable;
+    TlmixparTable tlmixparTable;
     WatdentTable watdentTable;
     std::vector<PvtwsaltTable> pvtwsaltTables;
     std::vector<BrineDensityTable> bdensityTables;
@@ -4892,6 +4907,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     unpack(pvcdoTable, buffer, position, comm);
     unpack(densityTable, buffer, position, comm);
     unpack(rockTable, buffer, position, comm);
+    unpack(tlmixparTable, buffer, position, comm);
     unpack(viscrefTable, buffer, position, comm);
     unpack(watdentTable, buffer, position, comm);
     unpack(pvtwsaltTables, buffer, position, comm);
@@ -4922,7 +4938,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
 
     data = TableManager(simpleTables, pvtgTables, pvtoTables, rock2dTables,
                         rock2dtrTables, pvtwTable, pvcdoTable, densityTable,
-                        rockTable, viscrefTable, watdentTable, pvtwsaltTables,
+                        rockTable, tlmixparTable, viscrefTable, watdentTable, pvtwsaltTables,
                         bdensityTables, sdensityTables, plymwinjTables,
                         skprwatTables, skprpolyTables, tabdims, regdims, eqldims,
                         aqudims, hasImptvd, hasEntpvd, hasEqlnum, jfunc, oilDenT, gasDenT,
@@ -6750,6 +6766,14 @@ void unpack(GridDims& data,
 
     unpack(NXYZ, buffer, position, comm);
     data = GridDims(NXYZ);
+}
+
+void unpack(TlmixparTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<TlmixparRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = TlmixparTable(pdata);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \
