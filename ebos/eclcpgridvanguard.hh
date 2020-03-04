@@ -34,7 +34,7 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
-#include <opm/simulators/utils/FieldPropsDataHandle.hpp>
+#include <opm/simulators/utils/PropsCentroidsDataHandle.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
 
@@ -190,7 +190,15 @@ public:
             {
                 const auto wells = this->schedule().getWellsatEnd();
                 auto& eclState = static_cast<ParallelEclipseState&>(this->eclState());
-                FieldPropsDataHandle<Dune::CpGrid> handle(*grid_, eclState);
+                const EclipseGrid* eclGrid = nullptr;
+
+                if (grid_->comm().rank() == 0)
+                {
+                    eclGrid = &this->eclState().getInputGrid();
+                }
+
+                PropsCentroidsDataHandle<Dune::CpGrid> handle(*grid_, eclState, eclGrid, this->centroids_,
+                                                              cartesianIndexMapper());
                 defunctWellNames_ = std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, faceTrans.data()));
             }
             grid_->switchToDistributedView();

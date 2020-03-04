@@ -20,7 +20,6 @@
 #define PARALLEL_ECLIPSE_STATE_HPP
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-//#include <opm/simulators/utils/FieldPropsDataHandle.hpp>
 #include <dune/common/parallel/mpihelper.hh>
 
 namespace Opm {
@@ -41,7 +40,7 @@ public:
     friend class ParallelEclipseState; //!< Friend so props can be setup.
     //! \brief Friend to set up props
     template<class Grid>
-    friend class FieldPropsDataHandle;
+    friend class PropsCentroidsDataHandle;
 
     //! \brief Constructor.
     //! \param manager The field property manager to wrap.
@@ -106,7 +105,7 @@ protected:
 class ParallelEclipseState : public EclipseState {
     //! \brief Friend to set up props
     template<class Grid>
-    friend class FieldPropsDataHandle;
+    friend class PropsCentroidsDataHandle;
 public:
     //! \brief Default constructor.
     ParallelEclipseState();

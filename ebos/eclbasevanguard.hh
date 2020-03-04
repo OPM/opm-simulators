@@ -533,6 +533,15 @@ public:
     std::unordered_set<std::string> defunctWellNames() const
     { return std::unordered_set<std::string>(); }
 
+    /*!
+     * \brief Get the cell centroids for a distributed grid.
+     *
+     * Currently this only non-empty for a loadbalanced CpGrid.
+     */
+    const std::vector<double>& cellCentroids() const
+    {
+        return centroids_;
+    }
 protected:
     void callImplementationInit()
     {
@@ -610,6 +619,12 @@ private:
     Opm::SummaryConfig* eclSummaryConfig_;
 
     Dune::EdgeWeightMethod edgeWeightsMethod_;
+
+protected:
+    /*! \brief The cell centroids after loadbalance was called.
+     * Empty otherwise. Used by EclTransmissibilty.
+     */
+    std::vector<double> centroids_;
 };
 
 template <class TypeTag>
