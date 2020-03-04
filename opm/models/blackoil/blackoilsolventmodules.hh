@@ -96,19 +96,18 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the solvent module
      */
-    static void initFromDeck(const Opm::Deck& deck, const Opm::EclipseState& eclState,
-                             const Schedule& schedule)
+    static void initFromState(const Opm::EclipseState& eclState, const Schedule& schedule)
     {
         // some sanity checks: if solvents are enabled, the SOLVENT keyword must be
         // present, if solvents are disabled the keyword must not be present.
-        if (enableSolvent && !deck.hasKeyword("SOLVENT"))
+        if (enableSolvent && !eclState.runspec().phases().active(Phase::SOLVENT))
             throw std::runtime_error("Non-trivial solvent treatment requested at compile "
                                      "time, but the deck does not contain the SOLVENT keyword");
-        else if (!enableSolvent && deck.hasKeyword("SOLVENT"))
+        else if (!enableSolvent && eclState.runspec().phases().active(Phase::SOLVENT))
             throw std::runtime_error("Solvent treatment disabled at compile time, but the deck "
                                      "contains the SOLVENT keyword");
 
-        if (!deck.hasKeyword("SOLVENT"))
+        if (!eclState.runspec().phases().active(Phase::SOLVENT))
             return; // solvent treatment is supposed to be disabled
 
         solventPvt_.initFromState(eclState, schedule);
@@ -130,7 +129,7 @@ public:
 
         // initialize the objects needed for miscible solvent and oil simulations
         isMiscible_ = false;
-        if (deck.hasKeyword("MISCIBLE")) {
+        if (!eclState.getTableManager().getMiscTables().empty()) {
             isMiscible_ = true;
 
             unsigned numMiscRegions = 1;
@@ -308,7 +307,7 @@ public:
 
             // resize the attributes of the object
             tlPMixTable_.resize(numMiscRegions);
-            if (deck.hasKeyword("TLPMIXPA")) {
+            if (!eclState.getTableManager().getTlpmixpaTables().empty()) {
                 const auto& tlpmixparTables = tableManager.getTlpmixpaTables();
                 if (!tlpmixparTables.empty()) {
 
@@ -780,65 +779,6 @@ public:
     static bool isMiscible()
     {
         return isMiscible_;
-    }
-
-    template<class Serializer>
-    static std::size_t packSize(Serializer& serializer)
-    {
-        return serializer.packSize(solventPvt_) +
-               serializer.packSize(ssfnKrg_) +
-               serializer.packSize(ssfnKrs_) +
-               serializer.packSize(sof2Krn_) +
-               serializer.packSize(misc_) +
-               serializer.packSize(pmisc_) +
-               serializer.packSize(msfnKrsg_) +
-               serializer.packSize(msfnKro_) +
-               serializer.packSize(sorwmis_) +
-               serializer.packSize(sgcwmis_) +
-               serializer.packSize(tlMixParamViscosity_) +
-               serializer.packSize(tlMixParamDensity_) +
-               serializer.packSize(tlPMixTable_) +
-               serializer.packSize(isMiscible_);
-    }
-
-    template<class Serializer>
-    static void pack(std::vector<char>& buffer, int& position,
-                     Serializer& serializer)
-    {
-        serializer.pack(solventPvt_, buffer, position);
-        serializer.pack(ssfnKrg_, buffer, position);
-        serializer.pack(ssfnKrs_, buffer, position);
-        serializer.pack(sof2Krn_, buffer, position);
-        serializer.pack(misc_, buffer, position);
-        serializer.pack(pmisc_, buffer, position);
-        serializer.pack(msfnKrsg_, buffer, position);
-        serializer.pack(msfnKro_, buffer, position);
-        serializer.pack(sorwmis_, buffer, position);
-        serializer.pack(sgcwmis_, buffer, position);
-        serializer.pack(tlMixParamViscosity_, buffer, position);
-        serializer.pack(tlMixParamDensity_, buffer, position);
-        serializer.pack(tlPMixTable_, buffer, position);
-        serializer.pack(isMiscible_, buffer, position);
-    }
-
-    template<class Serializer>
-    static void unpack(std::vector<char>& buffer, int& position,
-                       Serializer& serializer)
-    {
-        serializer.unpack(solventPvt_, buffer, position);
-        serializer.unpack(ssfnKrg_, buffer, position);
-        serializer.unpack(ssfnKrs_, buffer, position);
-        serializer.unpack(sof2Krn_, buffer, position);
-        serializer.unpack(misc_, buffer, position);
-        serializer.unpack(pmisc_, buffer, position);
-        serializer.unpack(msfnKrsg_, buffer, position);
-        serializer.unpack(msfnKro_, buffer, position);
-        serializer.unpack(sorwmis_, buffer, position);
-        serializer.unpack(sgcwmis_, buffer, position);
-        serializer.unpack(tlMixParamViscosity_, buffer, position);
-        serializer.unpack(tlMixParamDensity_, buffer, position);
-        serializer.unpack(tlPMixTable_, buffer, position);
-        serializer.unpack(isMiscible_, buffer, position);
     }
 
 private:
