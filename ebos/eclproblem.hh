@@ -610,14 +610,11 @@ public:
         const auto& vanguard = simulator.vanguard();
         const auto& comm = this->gridView().comm();
         SolventModule::initFromState(vanguard.eclState(), vanguard.schedule());
+        PolymerModule::initFromState(vanguard.eclState());
         FoamModule::initFromState(vanguard.eclState());
         BrineModule::initFromState(vanguard.eclState());
-        if (comm.rank() == 0) {
-            PolymerModule::initFromDeck(vanguard.deck(), vanguard.eclState());
-        }
 
         EclMpiSerializer ser(comm);
-        ser.staticBroadcast<PolymerModule>();
 
         // create the ECL writer
         eclWriter_.reset(new EclWriterType(simulator));
