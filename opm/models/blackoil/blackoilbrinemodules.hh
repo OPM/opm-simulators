@@ -95,17 +95,17 @@ public:
     {
         // some sanity checks: if brine are enabled, the BRINE keyword must be
         // present, if brine are disabled the keyword must not be present.
-        if (enableBrine && !deck.hasKeyword("BRINE")) {
+        if (enableBrine && !eclState.runspec().phases().active(Phase::BRINE)) {
             throw std::runtime_error("Non-trivial brine treatment requested at compile time, but "
                                      "the deck does not contain the BRINE keyword");
         }
-        else if (!enableBrine && deck.hasKeyword("BRINE")) {
+        else if (!enableBrine && eclState.runspec().phases().active(Phase::BRINE)) {
             throw std::runtime_error("Brine treatment disabled at compile time, but the deck "
                                      "contains the BRINE keyword");
         }
 
 
-        if (!deck.hasKeyword("BRINE"))
+        if (!eclState.runspec().phases().active(Phase::BRINE))
             return; // brine treatment is supposed to be disabled
 
         const auto& tableManager = eclState.getTableManager();
