@@ -113,6 +113,8 @@ class PolyInjTable;
 class PVCDORecord;
 class PvcdoTable;
 class PolymerConfig;
+class PlmixparRecord;
+class PlmixparTable;
 class PvtgTable;
 class PvtoTable;
 class PVTWRecord;
@@ -563,6 +565,8 @@ ADD_PACK_PROTOTYPES(NNC)
 ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
 ADD_PACK_PROTOTYPES(Phases)
+ADD_PACK_PROTOTYPES(PlmixparRecord)
+ADD_PACK_PROTOTYPES(PlmixparTable)
 ADD_PACK_PROTOTYPES(PlymwinjTable)
 ADD_PACK_PROTOTYPES(PolyInjTable)
 ADD_PACK_PROTOTYPES(PolymerConfig)
