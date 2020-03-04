@@ -91,7 +91,7 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the brine module
      */
-    static void initFromDeck(const Opm::Deck& deck, const Opm::EclipseState& eclState)
+    static void initFromState(const Opm::EclipseState& eclState)
     {
         // some sanity checks: if brine are enabled, the BRINE keyword must be
         // present, if brine are disabled the keyword must not be present.
