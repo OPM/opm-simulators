@@ -193,6 +193,7 @@ public:
             {
                 const auto wells = this->schedule().getWellsatEnd();
 
+
                 auto& eclState = static_cast<ParallelEclipseState&>(this->eclState());
                 const EclipseGrid* eclGrid = nullptr;
 

@@ -208,34 +208,26 @@ public:
     typedef Dune::CollectiveCommunication< int > communication_type;
 #endif
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6)
+
     Dune::SolverCategory::Category category() const override
     {
         return overlapping ?
             Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
     }
-#else
-    enum {
-        //! \brief The solver category.
-        category = overlapping ?
-        Dune::SolverCategory::overlapping :
-        Dune::SolverCategory::sequential
-    };
-#endif
     
     //! constructor: just store a reference to a matrix
     WellModelGhostLastMatrixAdapter (const M& A,
                                      const M& A_for_precond,
                                      const WellModel& wellMod,
                                      const size_t interiorSize,
-                                     const boost::any& parallelInformation = boost::any() )
+                                     const std::any& parallelInformation OPM_UNUSED_NOMPI = std::any() )
         : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), interiorSize_(interiorSize), comm_()
     {
 #if HAVE_MPI
         if( parallelInformation.type() == typeid(ParallelISTLInformation) )
         {
             const ParallelISTLInformation& info =
-                boost::any_cast<const ParallelISTLInformation&>( parallelInformation);
+                std::any_cast<const ParallelISTLInformation&>( parallelInformation);
             comm_.reset( new communication_type( info.communicator() ) );
         }
 #endif
@@ -243,8 +235,7 @@ public:
     
     virtual void apply( const X& x, Y& y ) const
     {
-        unsigned row_count = 0;
-        for (auto row = A_.begin(); row_count < interiorSize_; ++row, ++row_count)
+        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
         {
             y[row.index()]=0;
             auto endc = (*row).end();
@@ -261,9 +252,7 @@ public:
     // y += \alpha * A * x
     virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
     {
-        //auto first_row = A_.begin();
-        unsigned row_count = 0;
-        for (auto row = A_.begin(); row_count < interiorSize_; ++row, ++row_count)
+        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
         {
             auto endc = (*row).end();
             for (auto col = (*row).begin(); col != endc; ++col)
@@ -670,11 +659,11 @@ struct GhostLastSPChooser<X,C,Dune::SolverCategory::overlapping>
                     solve(linearOperator, x, istlb, *sp, *precond, result);
                 } // end Dune call
 #else
-		// Construct preconditioner.
-		auto precond = constructPrecond(linearOperator, parallelInformation_arg);
+                // Construct preconditioner.
+                auto precond = constructPrecond(linearOperator, parallelInformation_arg);
 
-		// Solve.
-		solve(linearOperator, x, istlb, *sp, *precond, result);
+                // Solve.
+                solve(linearOperator, x, istlb, *sp, *precond, result);
 #endif
 
             }
