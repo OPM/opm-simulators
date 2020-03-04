@@ -33,11 +33,8 @@
 #include <opm/material/common/Spline.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Deck/DeckItem.hpp>
-#include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
-#include <opm/parser/eclipse/Deck/DeckRecord.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #endif
 
 namespace Opm {
@@ -76,7 +73,7 @@ public:
     /*!
      * \brief Initialize the oil parameters via the data specified by the PVTO ECL keyword.
      */
-    void initFromDeck(const Deck&, const EclipseState& eclState)
+    void initFromState(const EclipseState& eclState, const Schedule&)
     {
         const auto& pvcdoTable = eclState.getTableManager().getPvcdoTable();
         const auto& densityTable = eclState.getTableManager().getDensityTable();

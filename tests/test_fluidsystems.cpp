@@ -74,7 +74,8 @@ void ensureBlackoilApi()
 #if HAVE_ECL_INPUT
         Opm::Deck deck;
         Opm::EclipseState eclState(deck);
-        FluidSystem::initFromDeck(deck, eclState);
+        Opm::Schedule schedule(deck, eclState);
+        FluidSystem::initFromState(eclState, schedule);
 #endif
 
         typedef typename FluidSystem::Scalar Scalar;

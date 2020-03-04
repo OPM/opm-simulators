@@ -181,7 +181,7 @@ public:
     /*!
      * \brief Initialize the fluid system using an ECL deck object
      */
-    static void initFromDeck(const Deck& deck, const EclipseState& eclState)
+    static void initFromState(const EclipseState& eclState, const Schedule& schedule)
     {
         const auto& densityTable = eclState.getTableManager().getDensityTable();
         size_t numRegions = densityTable.size();
@@ -230,17 +230,17 @@ public:
 
         if (phaseIsActive(gasPhaseIdx)) {
             gasPvt_ = std::make_shared<GasPvt>();
-            gasPvt_->initFromDeck(deck, eclState);
+            gasPvt_->initFromState(eclState, schedule);
         }
 
         if (phaseIsActive(oilPhaseIdx)) {
             oilPvt_ = std::make_shared<OilPvt>();
-            oilPvt_->initFromDeck(deck, eclState);
+            oilPvt_->initFromState(eclState, schedule);
         }
 
         if (phaseIsActive(waterPhaseIdx)) {
             waterPvt_ = std::make_shared<WaterPvt>();
-            waterPvt_->initFromDeck(deck, eclState);
+            waterPvt_->initFromState(eclState, schedule);
         }
 
         initEnd();
@@ -1268,62 +1268,6 @@ public:
         assert(phaseIdx<numPhases);
         assert(phaseIsActive(phaseIdx));
         return canonicalToActivePhaseIdx_[phaseIdx];
-    }
-
-    template<class Serializer>
-    static std::size_t packSize(Serializer& serializer)
-    {
-        return serializer.packSize(numActivePhases_) +
-               serializer.packSize(phaseIsActive_) +
-               serializer.packSize(reservoirTemperature_) +
-               serializer.packSize(gasPvt_) +
-               serializer.packSize(oilPvt_) +
-               serializer.packSize(waterPvt_) +
-               serializer.packSize(enableDissolvedGas_) +
-               serializer.packSize(enableVaporizedOil_) +
-               serializer.packSize(referenceDensity_) +
-               serializer.packSize(molarMass_) +
-               serializer.packSize(activeToCanonicalPhaseIdx_) +
-               serializer.packSize(canonicalToActivePhaseIdx_) +
-               serializer.packSize(isInitialized_);
-    }
-
-    template<class Serializer>
-    static void pack(std::vector<char>& buffer, int& position,
-                     Serializer& serializer)
-    {
-        serializer.pack(numActivePhases_, buffer, position);
-        serializer.pack(phaseIsActive_, buffer, position);
-        serializer.pack(reservoirTemperature_, buffer, position);
-        serializer.pack(gasPvt_, buffer, position);
-        serializer.pack(oilPvt_, buffer, position);
-        serializer.pack(waterPvt_, buffer, position);
-        serializer.pack(enableDissolvedGas_, buffer, position);
-        serializer.pack(enableVaporizedOil_, buffer, position);
-        serializer.pack(referenceDensity_, buffer, position);
-        serializer.pack(molarMass_, buffer, position);
-        serializer.pack(activeToCanonicalPhaseIdx_, buffer, position);
-        serializer.pack(canonicalToActivePhaseIdx_, buffer, position);
-        serializer.pack(isInitialized_, buffer, position);
-    }
-
-    template<class Serializer>
-    static void unpack(std::vector<char>& buffer, int& position,
-                       Serializer& serializer)
-    {
-        serializer.unpack(numActivePhases_, buffer, position);
-        serializer.unpack(phaseIsActive_, buffer, position);
-        serializer.unpack(reservoirTemperature_, buffer, position);
-        serializer.unpack(gasPvt_, buffer, position);
-        serializer.unpack(oilPvt_, buffer, position);
-        serializer.unpack(waterPvt_, buffer, position);
-        serializer.unpack(enableDissolvedGas_, buffer, position);
-        serializer.unpack(enableVaporizedOil_, buffer, position);
-        serializer.unpack(referenceDensity_, buffer, position);
-        serializer.unpack(molarMass_, buffer, position);
-        serializer.unpack(activeToCanonicalPhaseIdx_, buffer, position);
-        serializer.unpack(canonicalToActivePhaseIdx_, buffer, position);
-        serializer.unpack(isInitialized_, buffer, position);
     }
 
 private:

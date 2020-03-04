@@ -88,7 +88,7 @@ public:
      *
      * This method assumes that the deck features valid DENSITY and PVTG keywords.
      */
-    void initFromDeck(const Deck& deck, const EclipseState& eclState)
+    void initFromState(const EclipseState& eclState, const Schedule& schedule)
     {
         const auto& pvtgTables = eclState.getTableManager().getPvtgTables();
         const auto& densityTable = eclState.getTableManager().getDensityTable();
@@ -193,9 +193,9 @@ public:
         }
 
         vapPar1_ = 0.0;
-        if (deck.hasKeyword("VAPPARS")) {
-            const auto& vapParsKeyword = deck.getKeyword("VAPPARS");
-            vapPar1_ = vapParsKeyword.getRecord(0).getItem("OIL_VAP_PROPENSITY").template get<double>(0);
+        const auto& oilVap = schedule.getOilVaporizationProperties(0);
+        if (oilVap.getType() == OilVaporizationProperties::OilVaporization::VAPPARS) {
+            vapPar1_ = oilVap.vap1();
         }
 
         initEnd();

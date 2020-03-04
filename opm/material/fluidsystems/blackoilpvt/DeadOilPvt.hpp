@@ -65,7 +65,7 @@ public:
     /*!
      * \brief Initialize the oil parameters via the data specified by the PVDO ECL keyword.
      */
-    void initFromDeck(const Deck&, const EclipseState& eclState)
+    void initFromState(const EclipseState& eclState, const Schedule&)
     {
         const auto& pvdoTables = eclState.getTableManager().getPvdoTables();
         const auto& densityTable = eclState.getTableManager().getDensityTable();

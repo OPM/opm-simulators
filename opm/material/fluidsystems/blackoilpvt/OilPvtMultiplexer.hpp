@@ -133,11 +133,11 @@ public:
 
 #if HAVE_ECL_INPUT
     /*!
-     * \brief Initialize the parameters for water using an ECL deck.
+     * \brief Initialize the parameters for water using an ECL state.
      *
      * This method assumes that the deck features valid DENSITY and PVTO/PVDO/PVCDO keywords.
      */
-    void initFromDeck(const Deck& deck, const EclipseState& eclState)
+    void initFromState(const EclipseState& eclState, const Schedule& schedule)
     {
         if (!eclState.runspec().phases().active(Phase::OIL))
             return;
@@ -151,7 +151,7 @@ public:
         else if (!eclState.getTableManager().getPvtoTables().empty())
             setApproach(LiveOilPvt);
 
-        OPM_OIL_PVT_MULTIPLEXER_CALL(pvtImpl.initFromDeck(deck, eclState));
+        OPM_OIL_PVT_MULTIPLEXER_CALL(pvtImpl.initFromState(eclState, schedule));
     }
 #endif // HAVE_ECL_INPUT
 
