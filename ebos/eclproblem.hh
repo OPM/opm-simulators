@@ -2296,9 +2296,7 @@ private:
     {
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
-        const auto& deck = vanguard.deck();
         const auto& eclState = vanguard.eclState();
-        const auto& comm = vanguard.gridView().comm();
 
         // the PVT and saturation region numbers
         updatePvtnum_();
@@ -2318,12 +2316,7 @@ private:
         ////////////////////////////////
         // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
-        if (comm.rank() == 0)
-            materialLawManager_->initFromDeck(deck, eclState);
-
-        EclMpiSerializer ser(comm);
-        ser.broadcast(*materialLawManager_);
-
+        materialLawManager_->initFromState(eclState);
         materialLawManager_->initParamsForElements(eclState, this->model().numGridDof());
         ////////////////////////////////
     }
