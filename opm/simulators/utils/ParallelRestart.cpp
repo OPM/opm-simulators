@@ -681,7 +681,9 @@ std::size_t packSize(const Equil& data, Dune::MPIHelper::MPICommunicator comm)
 
 std::size_t packSize(const FoamConfig& data, Dune::MPIHelper::MPICommunicator comm)
 {
-    return packSize(data.records(), comm);
+    return packSize(data.records(), comm) +
+           packSize(data.getTransportPhase(), comm) +
+           packSize(data.getMobilityModel(), comm);
 }
 
 std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator comm)
@@ -2527,6 +2529,8 @@ void pack(const FoamConfig& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.records(), buffer, position, comm);
+    pack(data.getTransportPhase(), buffer, position, comm);
+    pack(data.getMobilityModel(), buffer, position, comm);
 }
 
 void pack(const InitConfig& data, std::vector<char>& buffer, int& position,
@@ -4604,8 +4608,12 @@ void unpack(FoamConfig& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     std::vector<FoamData> records;
+    Phase transport_phase;
+    FoamConfig::MobilityModel mobility_model;
     unpack(records, buffer, position, comm);
-    data = FoamConfig(records);
+    unpack(transport_phase, buffer, position, comm);
+    unpack(mobility_model, buffer, position, comm);
+    data = FoamConfig(records, transport_phase, mobility_model);
 }
 
 void unpack(InitConfig& data, std::vector<char>& buffer, int& position,
