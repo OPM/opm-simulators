@@ -115,7 +115,7 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the foam module
      */
-    static void initFromDeck(const Opm::Deck& deck, const Opm::EclipseState& eclState)
+    static void initFromState(const Opm::EclipseState& eclState)
     {
         // some sanity checks: if foam is enabled, the FOAM keyword must be
         // present, if foam is disabled the keyword must not be present.
