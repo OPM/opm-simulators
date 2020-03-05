@@ -31,7 +31,6 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/InitConfig/PolymerConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
@@ -689,16 +688,10 @@ std::size_t packSize(const FoamConfig& data, Dune::MPIHelper::MPICommunicator co
            packSize(data.getMobilityModel(), comm);
 }
 
-std::size_t packSize(const PolymerConfig& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.shrate(), comm);
-}
-
 std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getEquil(), comm) +
            packSize(data.getFoamConfig(), comm) +
-           packSize(data.getPolymerConfig(), comm) +
            packSize(data.filleps(), comm) +
            packSize(data.hasGravity(), comm) +
            packSize(data.restartRequested(), comm) +
@@ -2318,18 +2311,11 @@ void pack(const FoamConfig& data, std::vector<char>& buffer, int& position,
     pack(data.getMobilityModel(), buffer, position, comm);
 }
 
-void pack(const PolymerConfig& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.shrate(), buffer, position, comm);
-}
-
 void pack(const InitConfig& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getEquil(), buffer, position, comm);
     pack(data.getFoamConfig(), buffer, position, comm);
-    pack(data.getPolymerConfig(), buffer, position, comm);
     pack(data.filleps(), buffer, position, comm);
     pack(data.hasGravity(), buffer, position, comm);
     pack(data.restartRequested(), buffer, position, comm);
@@ -4187,32 +4173,22 @@ void unpack(FoamConfig& data, std::vector<char>& buffer, int& position,
     data = FoamConfig(records, transport_phase, mobility_model);
 }
 
-void unpack(PolymerConfig& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    bool shrate;
-    unpack(shrate, buffer, position, comm);
-    data = PolymerConfig(shrate);
-}
-
 void unpack(InitConfig& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     Equil equil;
     FoamConfig foam;
-    PolymerConfig polymer;
     bool filleps, hasGravity, restartRequested;
     int restartStep;
     std::string restartRootName;
     unpack(equil, buffer, position, comm);
     unpack(foam, buffer, position, comm);
-    unpack(polymer, buffer, position, comm);
     unpack(filleps, buffer, position, comm);
     unpack(hasGravity, buffer, position, comm);
     unpack(restartRequested, buffer, position, comm);
     unpack(restartStep, buffer, position, comm);
     unpack(restartRootName, buffer, position, comm);
-    data = InitConfig(equil, foam, polymer, filleps, hasGravity,
+    data = InitConfig(equil, foam, filleps, hasGravity,
                       restartRequested, restartStep, restartRootName);
 }
 

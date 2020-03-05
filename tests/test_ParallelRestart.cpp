@@ -38,7 +38,6 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/InitConfig/PolymerConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
@@ -807,21 +806,11 @@ BOOST_AUTO_TEST_CASE(FoamConfig)
 }
 
 
-BOOST_AUTO_TEST_CASE(PolymerConfig)
-{
-#if HAVE_MPI
-    Opm::PolymerConfig val1(true);
-    auto val2 = PackUnpack(val1);
-    DO_CHECKS(PolymerConfig)
-#endif
-}
-
-
 BOOST_AUTO_TEST_CASE(InitConfig)
 {
 #if HAVE_MPI
     Opm::InitConfig val1(Opm::Equil({getEquilRecord(), getEquilRecord()}),
-                         getFoamConfig(), Opm::PolymerConfig(true),
+                         getFoamConfig(),
                          true, true, true, 20, "test1");
     auto val2 = PackUnpack(val1);
     DO_CHECKS(InitConfig)
@@ -2288,7 +2277,7 @@ BOOST_AUTO_TEST_CASE(EclipseConfig)
     Opm::IOConfig io(true, false, true, false, false, true, "test1", true,
                      "test2", true, "test3", false);
     Opm::InitConfig init(Opm::Equil({getEquilRecord(), getEquilRecord()}),
-                         getFoamConfig(), Opm::PolymerConfig(true),
+                         getFoamConfig(),
                          true, true, true, 20, "test1");
     Opm::EclipseConfig val1{init, io};
 
