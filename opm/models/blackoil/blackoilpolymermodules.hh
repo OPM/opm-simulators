@@ -36,7 +36,6 @@
 #include <opm/material/common/IntervalTabulated2DFunction.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PlyadsTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PlymaxTable.hpp>
@@ -115,7 +114,7 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the polymer module
      */
-    static void initFromDeck(const Opm::Deck& deck, const Opm::EclipseState& eclState)
+    static void initFromState(const Opm::EclipseState& eclState)
     {
         // some sanity checks: if polymers are enabled, the POLYMER keyword must be
         // present, if polymers are disabled the keyword must not be present.
