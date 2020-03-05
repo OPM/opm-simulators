@@ -1203,8 +1203,7 @@ std::size_t packSize(const std::unique_ptr<T>& data,
 std::size_t packSize(const Dimension& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
-    return packSize(data.getName(), comm) +
-           packSize(data.getSIScalingRaw(), comm) +
+    return packSize(data.getSIScalingRaw(), comm) +
            packSize(data.getSIOffset(), comm);
 }
 
@@ -2830,7 +2829,6 @@ void pack(const Dimension& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
-    pack(data.getName(), buffer, position, comm);
     pack(data.getSIScalingRaw(), buffer, position, comm);
     pack(data.getSIOffset(), buffer, position, comm);
 }
@@ -4962,13 +4960,11 @@ void unpack(Dimension& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
-    std::string name;
     double siScaling, siOffset;
 
-    unpack(name, buffer, position, comm);
     unpack(siScaling, buffer, position, comm);
     unpack(siOffset, buffer, position, comm);
-    data = Dimension(name, siScaling, siOffset, false);
+    data = Dimension(siScaling, siOffset);
 }
 
 void unpack(UnitSystem& data,
