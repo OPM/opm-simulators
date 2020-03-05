@@ -41,7 +41,7 @@ namespace detail
     template<class Grid, class W>
     void setWellConnections(const Grid& grid, const W& wells, bool useWellConn, std::vector<std::set<int>>& wellGraph)
     {
-        if ( grid.comm().size() > 1)
+        if ( grid.comm().size() > 1 )
         {
             Dune::CartesianIndexMapper< Grid > cartMapper( grid );
             const int numCells = cartMapper.compressedSize(); // grid.numCells()
@@ -102,7 +102,7 @@ namespace detail
                 const auto& elem = *elemIt;
                 int lcell = lid.id(elem);
 
-                if (elem.partitionType() != Dune::InteriorEntity)
+                if (elem.partitionType() == Dune::GhostEntity)
                 {
                     //add row to list
                     overlapRows.push_back(lcell);

@@ -24,7 +24,6 @@
 #include <opm/simulators/linalg/MatrixBlock.hpp>
 #include <opm/simulators/linalg/BlackoilAmg.hpp>
 #include <opm/simulators/linalg/CPRPreconditioner.hpp>
-#include <opm/simulators/linalg/ParallelRestrictedAdditiveSchwarz.hpp>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
@@ -257,6 +256,8 @@ protected:
             const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
             const bool useWellConn = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
 
+            overlapLayers_ = EWOMS_GET_PARAM(TypeTag, int, OverlapLayers);
+            
             detail::setWellConnections(gridForConn, wellsForConn, useWellConn, wellConnectionsGraph_);
             detail::findOverlapAndInterior(gridForConn, overlapRows_, interiorRows_);
             if (gridForConn.comm().size() > 1) {
@@ -390,6 +391,11 @@ protected:
         {
             // Construct scalar product.
             auto sp = Dune::createScalarProduct<Vector,POrComm>(parallelInformation_arg, category);
+
+            // If overlapLayers_ > 1 we are using Restricted Additive Schwarz and therefore need
+            // the residual at overlap DoFs.
+            if (overlapLayers_ > 1)
+                parallelInformation_arg.copyOwnerToAll(istlb, istlb);
 
 #if FLOW_SUPPORT_AMG // activate AMG if either flow_ebos is used or UMFPack is not available
             if( parameters_.linear_solver_use_amg_ || parameters_.use_cpr_)
@@ -688,7 +694,7 @@ protected:
                     pattern[idx].insert(*wc);
 
                 // Add just a single element to ghost rows
-                if (elem.partitionType() != Dune::InteriorEntity)
+                if (elem.partitionType() == Dune::GhostEntity)
                 {
                     noGhostMat_->setrowsize(idx, pattern[idx].size());
                 }
@@ -949,6 +955,7 @@ protected:
         std::vector<int> overlapRows_;
         std::vector<int> interiorRows_;
         std::vector<std::set<int>> wellConnectionsGraph_;
+        int overlapLayers_;
         FlowLinearSolverParameters parameters_;
         Vector weights_;
         bool scale_variables_;

@@ -509,7 +509,7 @@ namespace Opm
             if( j.index() == iIndex )
             {
               inv[ row ] = (*j);
-	      break;
+              break;
             }
             else if ( j.index() >= i.index() )
             {

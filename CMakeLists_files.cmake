@@ -155,7 +155,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/OwningBlockPreconditioner.hpp
   opm/simulators/linalg/OwningTwoLevelPreconditioner.hpp
   opm/simulators/linalg/ParallelOverlappingILU0.hpp
-  opm/simulators/linalg/ParallelRestrictedAdditiveSchwarz.hpp
   opm/simulators/linalg/ParallelIstlInformation.hpp
   opm/simulators/linalg/PressureSolverPolicy.hpp
   opm/simulators/linalg/PressureTransferPolicy.hpp
