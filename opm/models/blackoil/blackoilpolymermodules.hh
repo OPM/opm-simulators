@@ -119,20 +119,20 @@ public:
     {
         // some sanity checks: if polymers are enabled, the POLYMER keyword must be
         // present, if polymers are disabled the keyword must not be present.
-        if (enablePolymer && !deck.hasKeyword("POLYMER")) {
+        if (enablePolymer && !eclState.runspec().phases().active(Phase::POLYMER)) {
             throw std::runtime_error("Non-trivial polymer treatment requested at compile time, but "
                                      "the deck does not contain the POLYMER keyword");
         }
-        else if (!enablePolymer && deck.hasKeyword("POLYMER")) {
+        else if (!enablePolymer && eclState.runspec().phases().active(Phase::POLYMER)) {
             throw std::runtime_error("Polymer treatment disabled at compile time, but the deck "
                                      "contains the POLYMER keyword");
         }
 
-        if (enablePolymerMolarWeight && !deck.hasKeyword("POLYMW")) {
+        if (enablePolymerMolarWeight && !eclState.runspec().phases().active(Phase::POLYMW)) {
             throw std::runtime_error("Polymer molecular weight tracking is enabled at compile time, but "
                                      "the deck does not contain the POLYMW keyword");
         }
-        else if (!enablePolymerMolarWeight && deck.hasKeyword("POLYMW")) {
+        else if (!enablePolymerMolarWeight && eclState.runspec().phases().active(Phase::POLYMW)) {
             throw std::runtime_error("Polymer molecular weight tracking is disabled at compile time, but the deck "
                                      "contains the POLYMW keyword");
         }
@@ -142,7 +142,7 @@ public:
                                      "is disabled at compile time");
         }
 
-        if (!deck.hasKeyword("POLYMER"))
+        if (!eclState.runspec().phases().active(Phase::POLYMER))
             return; // polymer treatment is supposed to be disabled
 
         const auto& tableManager = eclState.getTableManager();
@@ -226,15 +226,15 @@ public:
             throw std::runtime_error("PLYMAX must be specified in POLYMER runs\n");
         }
 
-        if (deck.hasKeyword("PLMIXPAR")) {
+        if (!eclState.getTableManager().getPlmixparTable().empty()) {
             if (enablePolymerMolarWeight) {
                 Opm::OpmLog::warning("PLMIXPAR should not be used in POLYMW runs, it will have no effect.\n");
             }
             else {
+                const auto& plmixparTable = eclState.getTableManager().getPlmixparTable();
                 // initialize the objects which deal with the PLMIXPAR keyword
                 for (unsigned mixRegionIdx = 0; mixRegionIdx < numMixRegions; ++ mixRegionIdx) {
-                    const auto& plmixparRecord = deck.getKeyword("PLMIXPAR").getRecord(mixRegionIdx);
-                    setPlmixpar(mixRegionIdx, plmixparRecord.getItem("TODD_LONGSTAFF").getSIDouble(0));
+                    setPlmixpar(mixRegionIdx, plmixparTable[mixRegionIdx].todd_langstaff);
                 }
             }
         }
@@ -242,8 +242,8 @@ public:
             throw std::runtime_error("PLMIXPAR must be specified in POLYMER runs\n");
         }
 
-        hasPlyshlog_ = deck.hasKeyword("PLYSHLOG");
-        hasShrate_ = deck.hasKeyword("SHRATE");
+        hasPlyshlog_ = eclState.getTableManager().hasTables("PLYSHLOG");
+        hasShrate_ = eclState.getTableManager().useShrate();
 
         if ((hasPlyshlog_ || hasShrate_) && enablePolymerMolarWeight) {
             Opm::OpmLog::warning("PLYSHLOG and SHRATE should not be used in POLYMW runs, they will have no effect.\n");
@@ -262,7 +262,7 @@ public:
                 auto shearMultiplier = plyshlogTable.getShearMultiplierColumn().vectorCopy();
 
                 // do the unit version here for the waterVelocity
-                Opm::UnitSystem unitSystem = deck.getActiveUnitSystem();
+                Opm::UnitSystem unitSystem = eclState.getDeckUnitSystem();
                 double siFactor = hasShrate_? unitSystem.parse("1/Time").getSIScaling() : unitSystem.parse("Length/Time").getSIScaling();
                 for (size_t i = 0; i < waterVelocity.size(); ++i) {
                     waterVelocity[i] *= siFactor;
@@ -293,15 +293,14 @@ public:
             if(!hasPlyshlog_) {
                 throw std::runtime_error("PLYSHLOG must be specified if SHRATE is used in POLYMER runs\n");
             }
-            const auto& shrateKeyword = deck.getKeyword("SHRATE");
-            const std::vector<double>& shrateFromDeck = shrateKeyword.getSIDoubleData();
+            const auto& shrateTable = eclState.getTableManager().getShrateTable();
             shrate_.resize(numPvtRegions);
             for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++ pvtRegionIdx) {
-                if (shrateFromDeck.empty()) {
+                if (shrateTable.empty()) {
                     shrate_[pvtRegionIdx] = 4.8; //default;
                 }
-                else if (shrateFromDeck.size() == numPvtRegions) {
-                    shrate_[pvtRegionIdx] = shrateKeyword.getSIDoubleData()[pvtRegionIdx];
+                else if (shrateTable.size() == numPvtRegions) {
+                    shrate_[pvtRegionIdx] = shrateTable[pvtRegionIdx].rate;
                 }
                 else {
                     throw std::runtime_error("SHRATE must either have 0 or number of NUMPVT entries\n");
@@ -310,15 +309,14 @@ public:
         }
 
         if (enablePolymerMolarWeight) {
-            const Opm::DeckKeyword& plyvmhKeyword = deck.getKeyword("PLYVMH");
-            assert(plyvmhKeyword.size() == numMixRegions);
-            if (plyvmhKeyword.size() > 0) {
-                for (size_t regionIdx = 0; regionIdx < plyvmhKeyword.size(); ++regionIdx) {
-                    const Opm::DeckRecord& record = plyvmhKeyword.getRecord(regionIdx);
-                    plyvmhCoefficients_[regionIdx].k_mh = record.getItem("K_MH").getSIDouble(0);
-                    plyvmhCoefficients_[regionIdx].a_mh = record.getItem("A_MH").getSIDouble(0);
-                    plyvmhCoefficients_[regionIdx].gamma = record.getItem("GAMMA").getSIDouble(0);
-                    plyvmhCoefficients_[regionIdx].kappa = record.getItem("KAPPA").getSIDouble(0);
+            const auto& plyvmhTable = eclState.getTableManager().getPlyvmhTable();
+            if (!plyvmhTable.empty()) {
+                assert(plyvmhTable.size() == numMixRegions);
+                for (size_t regionIdx = 0; regionIdx < numMixRegions; ++regionIdx) {
+                    plyvmhCoefficients_[regionIdx].k_mh = plyvmhTable[regionIdx].k_mh;
+                    plyvmhCoefficients_[regionIdx].a_mh = plyvmhTable[regionIdx].a_mh;
+                    plyvmhCoefficients_[regionIdx].gamma = plyvmhTable[regionIdx].gamma;
+                    plyvmhCoefficients_[regionIdx].kappa = plyvmhTable[regionIdx].kappa;
                 }
             }
             else {
