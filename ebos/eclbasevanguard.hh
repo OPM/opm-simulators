@@ -73,6 +73,7 @@ NEW_PROP_TAG(EclDeckFileName);
 NEW_PROP_TAG(OutputDir);
 NEW_PROP_TAG(EnableOpmRstFile);
 NEW_PROP_TAG(EclStrictParsing);
+NEW_PROP_TAG(SchedRestart);
 NEW_PROP_TAG(EclOutputInterval);
 NEW_PROP_TAG(IgnoreKeywords);
 NEW_PROP_TAG(EnableExperiments);
@@ -83,6 +84,7 @@ SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
 SET_INT_PROP(EclBaseVanguard, EclOutputInterval, -1); // use the deck-provided value
 SET_BOOL_PROP(EclBaseVanguard, EnableOpmRstFile, false);
 SET_BOOL_PROP(EclBaseVanguard, EclStrictParsing, false);
+SET_BOOL_PROP(EclBaseVanguard, SchedRestart, true);
 SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
 
 END_PROPERTIES
@@ -127,6 +129,8 @@ public:
                              "List of Eclipse keywords which should be ignored. As a ':' separated string.");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclStrictParsing,
                              "Use strict mode for parsing - all errors are collected before the applicaton exists.");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, SchedRestart,
+                             "When restarting: should we try to initialize wells and groups from historical SCHEDULE section.");
         EWOMS_REGISTER_PARAM(TypeTag, int, EdgeWeightsMethod,
                              "Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
     }
