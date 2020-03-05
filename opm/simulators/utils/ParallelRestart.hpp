@@ -109,6 +109,8 @@ struct NNCdata;
 class OilVaporizationProperties;
 class Phases;
 class PlymwinjTable;
+class PlyvmhRecord;
+class PlyvmhTable;
 class PolyInjTable;
 class PVCDORecord;
 class PvcdoTable;
@@ -568,6 +570,8 @@ ADD_PACK_PROTOTYPES(Phases)
 ADD_PACK_PROTOTYPES(PlmixparRecord)
 ADD_PACK_PROTOTYPES(PlmixparTable)
 ADD_PACK_PROTOTYPES(PlymwinjTable)
+ADD_PACK_PROTOTYPES(PlyvmhRecord)
+ADD_PACK_PROTOTYPES(PlyvmhTable)
 ADD_PACK_PROTOTYPES(PolyInjTable)
 ADD_PACK_PROTOTYPES(PolymerConfig)
 ADD_PACK_PROTOTYPES(PVCDORecord)
