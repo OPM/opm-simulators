@@ -112,6 +112,7 @@ class PlymwinjTable;
 class PolyInjTable;
 class PVCDORecord;
 class PvcdoTable;
+class PolymerConfig;
 class PvtgTable;
 class PvtoTable;
 class PVTWRecord;
@@ -564,6 +565,7 @@ ADD_PACK_PROTOTYPES(OilVaporizationProperties)
 ADD_PACK_PROTOTYPES(Phases)
 ADD_PACK_PROTOTYPES(PlymwinjTable)
 ADD_PACK_PROTOTYPES(PolyInjTable)
+ADD_PACK_PROTOTYPES(PolymerConfig)
 ADD_PACK_PROTOTYPES(PVCDORecord)
 ADD_PACK_PROTOTYPES(PvcdoTable)
 ADD_PACK_PROTOTYPES(PvtgTable)
