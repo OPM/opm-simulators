@@ -460,6 +460,7 @@ HANDLE_AS_POD(DenT::entry)
 HANDLE_AS_POD(Eqldims)
 HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PlmixparRecord)
+HANDLE_AS_POD(PlyvmhRecord)
 HANDLE_AS_POD(PVTWRecord)
 HANDLE_AS_POD(PVCDORecord)
 HANDLE_AS_POD(Regdims)
@@ -863,6 +864,7 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.getPvtwTable(), comm) +
            packSize(data.getPvcdoTable(), comm) +
            packSize(data.getDensityTable(), comm) +
+           packSize(data.getPlyvmhTable(), comm) +
            packSize(data.getRockTable(), comm) +
            packSize(data.getPlmixparTable(), comm) +
            packSize(data.getTlmixparTable(), comm) +
@@ -1833,6 +1835,11 @@ std::size_t packSize(const PlmixparTable& data, Dune::MPIHelper::MPICommunicator
     return packSize(static_cast<const std::vector<PlmixparRecord>&>(data), comm);
 }
 
+std::size_t packSize(const PlyvmhTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<PlyvmhRecord>&>(data), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -2510,6 +2517,7 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
     pack(data.getPvtwTable(), buffer, position, comm);
     pack(data.getPvcdoTable(), buffer, position, comm);
     pack(data.getDensityTable(), buffer, position, comm);
+    pack(data.getPlyvmhTable(), buffer, position, comm);
     pack(data.getRockTable(), buffer, position, comm);
     pack(data.getPlmixparTable(), buffer, position, comm);
     pack(data.getTlmixparTable(), buffer, position, comm);
@@ -3548,6 +3556,12 @@ void pack(const PlmixparTable& data, std::vector<char>& buffer, int& position,
     pack(static_cast<const std::vector<PlmixparRecord>&>(data), buffer, position, comm);
 }
 
+void pack(const PlyvmhTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<PlyvmhRecord>&>(data), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -4451,6 +4465,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     PvtwTable pvtwTable;
     PvcdoTable pvcdoTable;
     DensityTable densityTable;
+    PlyvmhTable plyvmhTable;
     RockTable rockTable;
     ViscrefTable viscrefTable;
     PlmixparTable plmixparTable;
@@ -4482,6 +4497,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     unpack(pvtwTable, buffer, position, comm);
     unpack(pvcdoTable, buffer, position, comm);
     unpack(densityTable, buffer, position, comm);
+    unpack(plyvmhTable, buffer, position, comm);
     unpack(rockTable, buffer, position, comm);
     unpack(plmixparTable, buffer, position, comm);
     unpack(tlmixparTable, buffer, position, comm);
@@ -4515,7 +4531,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
 
     data = TableManager(simpleTables, pvtgTables, pvtoTables, rock2dTables,
                         rock2dtrTables, pvtwTable, pvcdoTable, densityTable,
-                        rockTable, plmixparTable, tlmixparTable, viscrefTable,
+                        plyvmhTable, rockTable, plmixparTable, tlmixparTable, viscrefTable,
                         watdentTable, pvtwsaltTables, bdensityTables, sdensityTables,
                         plymwinjTables, skprwatTables, skprpolyTables, tabdims,
                         regdims, eqldims, aqudims, hasImptvd, hasEntpvd, hasEqlnum,
@@ -5977,6 +5993,14 @@ void unpack(PlmixparTable& data, std::vector<char>& buffer, int& position,
     std::vector<PlmixparRecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = PlmixparTable(pdata);
+}
+
+void unpack(PlyvmhTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<PlyvmhRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = PlyvmhTable(pdata);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \

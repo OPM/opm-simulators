@@ -1219,6 +1219,7 @@ BOOST_AUTO_TEST_CASE(TableManager)
                            Opm::PvtwTable({Opm::PVTWRecord{1.0, 2.0, 3.0, 4.0, 5.0}}),
                            Opm::PvcdoTable({Opm::PVCDORecord{1.0, 2.0, 3.0, 4.0, 5.0}}),
                            Opm::DensityTable({Opm::DENSITYRecord{1.0, 2.0, 3.0}}),
+                           Opm::PlyvmhTable({Opm::PlyvmhRecord{1.0, 2.0, 3.0, 4.0}}),
                            Opm::RockTable({Opm::ROCKRecord{1.0,2.0}}),
                            Opm::PlmixparTable({Opm::PlmixparRecord{1.0}}),
                            Opm::TlmixparTable({Opm::TlmixparRecord{1.0, 2.0}}),
