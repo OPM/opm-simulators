@@ -82,6 +82,8 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PlyshlogTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprwatTable.hpp>
@@ -849,9 +851,57 @@ std::size_t packSize(const RockTable& data, Dune::MPIHelper::MPICommunicator com
     return packSize(static_cast<const std::vector<ROCKRecord>&>(data), comm);
 }
 
+namespace {
+
+struct SplitSimpleTables {
+    size_t plyshMax = 0;
+    size_t rockMax = 0;
+    std::map<size_t, std::shared_ptr<PlyshlogTable>> plyshMap;
+    std::map<size_t, std::shared_ptr<RocktabTable>> rockMap;
+};
+
+SplitSimpleTables
+splitSimpleTable(std::map<std::string, TableContainer>& simpleTables)
+{
+    SplitSimpleTables result;
+
+    // PlyshlogTable need special treatment
+    auto it = simpleTables.find("PLYSHLOG");
+    if (it != simpleTables.end()) {
+        result.plyshMax = it->second.max();
+        for (const auto& mapIt : it->second.tables()) {
+            auto ptr = std::static_pointer_cast<PlyshlogTable>(mapIt.second);
+            result.plyshMap.insert(std::make_pair(mapIt.first, ptr));
+        }
+        simpleTables.erase(it);
+    }
+
+    // RocktabTable need special treatment
+    it = simpleTables.find("ROCKMAP");
+    if (it != simpleTables.end()) {
+        result.rockMax = it->second.max();
+        for (const auto& mapIt : it->second.tables()) {
+            auto ptr = std::static_pointer_cast<RocktabTable>(mapIt.second);
+            result.rockMap.insert(std::make_pair(mapIt.first,  ptr));
+        }
+        simpleTables.erase(it);
+    }
+
+    return result;
+}
+
+}
+
 std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator comm)
 {
-    return packSize(data.getSimpleTables(), comm) +
+    auto simpleTables = data.getSimpleTables();
+    auto splitTab = splitSimpleTable(simpleTables);
+
+    return packSize(simpleTables, comm) +
+           packSize(splitTab.plyshMax, comm) +
+           packSize(splitTab.plyshMap, comm) +
+           packSize(splitTab.rockMax, comm) +
+           packSize(splitTab.rockMap, comm) +
            packSize(data.getPvtgTables(), comm) +
            packSize(data.getPvtoTables(), comm) +
            packSize(data.getRock2dTables(), comm) +
@@ -1848,6 +1898,22 @@ std::size_t packSize(const Stone1exTable& data, Dune::MPIHelper::MPICommunicator
     return packSize(static_cast<const std::vector<Stone1exRecord>&>(data), comm);
 }
 
+std::size_t packSize(const PlyshlogTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const SimpleTable&>(data), comm) +
+           packSize(data.getRefPolymerConcentration(), comm) +
+           packSize(data.getRefSalinity(), comm) +
+           packSize(data.getRefTemperature(), comm) +
+           packSize(data.hasRefSalinity(), comm) +
+           packSize(data.hasRefTemperature(), comm);
+}
+
+std::size_t packSize(const RocktabTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const SimpleTable&>(data), comm) +
+           packSize(data.isDirectional(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -2510,7 +2576,14 @@ void pack(const RockTable& data, std::vector<char>& buffer, int& position,
 void pack(const TableManager& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
-    pack(data.getSimpleTables(), buffer, position, comm);
+    auto simpleTables = data.getSimpleTables();
+    auto splitTab = splitSimpleTable(simpleTables);
+
+    pack(simpleTables, buffer, position, comm);
+    pack(splitTab.plyshMax, buffer, position, comm);
+    pack(splitTab.plyshMap, buffer, position, comm);
+    pack(splitTab.rockMax, buffer, position, comm);
+    pack(splitTab.rockMap, buffer, position, comm);
     pack(data.getPvtgTables(), buffer, position, comm);
     pack(data.getPvtoTables(), buffer, position, comm);
     pack(data.getRock2dTables(), buffer, position, comm);
@@ -3578,6 +3651,24 @@ void pack(const Stone1exTable& data, std::vector<char>& buffer, int& position,
     pack(static_cast<const std::vector<Stone1exRecord>&>(data), buffer, position, comm);
 }
 
+void pack(const PlyshlogTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const SimpleTable&>(data), buffer, position, comm);
+    pack(data.getRefPolymerConcentration(), buffer, position, comm);
+    pack(data.getRefSalinity(), buffer, position, comm);
+    pack(data.getRefTemperature(), buffer, position, comm);
+    pack(data.hasRefSalinity(), buffer, position, comm);
+    pack(data.hasRefTemperature(), buffer, position, comm);
+}
+
+void pack(const RocktabTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const SimpleTable&>(data), buffer, position, comm);
+    pack(data.isDirectional(), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -4179,7 +4270,7 @@ void unpack(TableContainer& data, std::vector<char>& buffer, int& position,
         unpack(id, buffer, position, comm);
         SimpleTable table;
         unpack(table, buffer, position, comm);
-        data.addTable(id, std::make_shared<const SimpleTable>(table));
+        data.addTable(id, std::make_shared<SimpleTable>(table));
     }
 }
 
@@ -4464,6 +4555,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     std::map<std::string, TableContainer> simpleTables;
+    SplitSimpleTables split;
     std::vector<PvtgTable> pvtgTables;
     std::vector<PvtoTable> pvtoTables;
     std::vector<Rock2dTable> rock2dTables;
@@ -4498,7 +4590,12 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     std::size_t gas_comp_index;
     std::shared_ptr<JFunc> jfunc;
     double rtemp;
+
     unpack(simpleTables, buffer, position, comm);
+    unpack(split.plyshMax, buffer, position, comm);
+    unpack(split.plyshMap, buffer, position, comm);
+    unpack(split.rockMax, buffer, position, comm);
+    unpack(split.rockMap, buffer, position, comm);
     unpack(pvtgTables, buffer, position, comm);
     unpack(pvtoTables, buffer, position, comm);
     unpack(rock2dTables, buffer, position, comm);
@@ -4540,6 +4637,21 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     unpack(stcond, buffer, position, comm);
     unpack(gas_comp_index, buffer, position, comm);
     unpack(rtemp, buffer, position, comm);
+
+    if (split.plyshMax > 0) {
+        TableContainer container(split.plyshMax);
+        for (const auto& it : split.plyshMap) {
+            container.addTable(it.first, it.second);
+        }
+        simpleTables.insert(std::make_pair("PLYSHLOG", container));
+    }
+    if (split.rockMax > 0) {
+        TableContainer container(split.rockMax);
+        for (const auto& it : split.rockMap) {
+            container.addTable(it.first, it.second);
+        }
+        simpleTables.insert(std::make_pair("ROCKTAB", container));
+    }
 
     data = TableManager(simpleTables, pvtgTables, pvtoTables, rock2dTables,
                         rock2dtrTables, pvtwTable, pvcdoTable, densityTable,
@@ -6029,6 +6141,48 @@ void unpack(Stone1exTable& data, std::vector<char>& buffer, int& position,
     std::vector<Stone1exRecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = Stone1exTable(pdata);
+}
+
+void unpack(PlyshlogTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TableSchema schema;
+    OrderedMap<std::string, TableColumn> columns;
+    bool jfunc;
+    double refPolymerConcentration;
+    double refSalinity;
+    double refTemperature;
+    bool hasRefSalinity;
+    bool hasRefTemperature;
+
+    unpack(schema, buffer, position, comm);
+    unpack(columns, buffer, position, comm);
+    unpack(jfunc, buffer, position, comm);
+    unpack(refPolymerConcentration, buffer, position, comm);
+    unpack(refSalinity, buffer, position, comm);
+    unpack(refTemperature, buffer, position, comm);
+    unpack(hasRefSalinity, buffer, position, comm);
+    unpack(hasRefTemperature, buffer, position, comm);
+
+    data = PlyshlogTable(schema, columns, jfunc,
+                         refPolymerConcentration, refSalinity,
+                         refTemperature, hasRefSalinity, hasRefTemperature);
+}
+
+void unpack(RocktabTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TableSchema schema;
+    OrderedMap<std::string, TableColumn> columns;
+    bool jfunc;
+    bool isDirectional;
+
+    unpack(schema, buffer, position, comm);
+    unpack(columns, buffer, position, comm);
+    unpack(jfunc, buffer, position, comm);
+    unpack(isDirectional, buffer, position, comm);
+
+    data = RocktabTable(schema, columns, jfunc, isDirectional);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \

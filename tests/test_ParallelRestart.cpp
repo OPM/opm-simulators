@@ -87,11 +87,13 @@
 #include <opm/parser/eclipse/EclipseState/Tables/DenT.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PlymwinjTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PlyshlogTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprwatTable.hpp>
@@ -310,8 +312,8 @@ Opm::TableContainer getTableContainer()
     data.insert({"test3", getTableColumn()});
     Opm::SimpleTable tab1(getTableSchema(), data, true);
     Opm::TableContainer result(2);
-    result.addTable(0, std::make_shared<const Opm::SimpleTable>(tab1));
-    result.addTable(1, std::make_shared<const Opm::SimpleTable>(tab1));
+    result.addTable(0, std::make_shared<Opm::SimpleTable>(tab1));
+    result.addTable(1, std::make_shared<Opm::SimpleTable>(tab1));
     return result;
 }
 
@@ -758,8 +760,8 @@ BOOST_AUTO_TEST_CASE(TableContainer)
     data.insert({"test3", getTableColumn()});
     Opm::SimpleTable tab1(getTableSchema(), data, true);
     Opm::TableContainer val1(2);
-    val1.addTable(0, std::make_shared<const Opm::SimpleTable>(tab1));
-    val1.addTable(1, std::make_shared<const Opm::SimpleTable>(tab1));
+    val1.addTable(0, std::make_shared<Opm::SimpleTable>(tab1));
+    val1.addTable(1, std::make_shared<Opm::SimpleTable>(tab1));
     auto val2 = PackUnpack(val1);
     DO_CHECKS(TableContainer)
 #endif
@@ -2383,6 +2385,30 @@ BOOST_AUTO_TEST_CASE(GridDims)
     Opm::GridDims val1{ 1,  2,  3};
     auto val2 = PackUnpack(val1);
     DO_CHECKS(GridDims)
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(PlyshlogTable)
+{
+#ifdef HAVE_MPI
+    Opm::OrderedMap<std::string, Opm::TableColumn> data;
+    data.insert({"test3", getTableColumn()});
+    Opm::PlyshlogTable val1(getTableSchema(), data, true, 1.0, 2.0, 3.0, true, true);
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(PlyshlogTable)
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(RocktabTable)
+{
+#ifdef HAVE_MPI
+    Opm::OrderedMap<std::string, Opm::TableColumn> data;
+    data.insert({"test3", getTableColumn()});
+    Opm::RocktabTable val1(getTableSchema(), data, true, true);
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(RocktabTable)
 #endif
 }
 
