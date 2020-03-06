@@ -26,6 +26,7 @@
 #ifndef FIELDPROPS_DATAHANDLE_HPP
 #define FIELDPROPS_DATAHANDLE_HPP
 
+#if HAVE_MPI
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <dune/grid/common/datahandleif.hh>
@@ -198,4 +199,6 @@ private:
 };
 
 } // end namespace Opm
+#endif // HAVE_MPI
 #endif // FIELDPROPS_DATAHANDLE_HPP
+
