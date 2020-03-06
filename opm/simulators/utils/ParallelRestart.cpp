@@ -466,8 +466,9 @@ HANDLE_AS_POD(Regdims)
 HANDLE_AS_POD(RockConfig::RockComp)
 HANDLE_AS_POD(ROCKRecord)
 HANDLE_AS_POD(SatFuncControls)
-HANDLE_AS_POD(StandardCond)
 HANDLE_AS_POD(ShrateRecord)
+HANDLE_AS_POD(StandardCond)
+HANDLE_AS_POD(Stone1exRecord)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeStampUTC::YMD)
 HANDLE_AS_POD(TlmixparRecord)
@@ -862,6 +863,7 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.getRockTable(), comm) +
            packSize(data.getPlmixparTable(), comm) +
            packSize(data.getShrateTable(), comm) +
+           packSize(data.getStone1exTable(), comm) +
            packSize(data.getTlmixparTable(), comm) +
            packSize(data.getViscrefTable(), comm) +
            packSize(data.getWatdentTable(), comm) +
@@ -1841,6 +1843,11 @@ std::size_t packSize(const PlyvmhTable& data, Dune::MPIHelper::MPICommunicator c
     return packSize(static_cast<const std::vector<PlyvmhRecord>&>(data), comm);
 }
 
+std::size_t packSize(const Stone1exTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<Stone1exRecord>&>(data), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -2515,6 +2522,7 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
     pack(data.getRockTable(), buffer, position, comm);
     pack(data.getPlmixparTable(), buffer, position, comm);
     pack(data.getShrateTable(), buffer, position, comm);
+    pack(data.getStone1exTable(), buffer, position, comm);
     pack(data.getTlmixparTable(), buffer, position, comm);
     pack(data.getViscrefTable(), buffer, position, comm);
     pack(data.getWatdentTable(), buffer, position, comm);
@@ -3564,6 +3572,12 @@ void pack(const PlyvmhTable& data, std::vector<char>& buffer, int& position,
     pack(static_cast<const std::vector<PlyvmhRecord>&>(data), buffer, position, comm);
 }
 
+void pack(const Stone1exTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<Stone1exRecord>&>(data), buffer, position, comm);
+}
+
 /// unpack routines
 
 template<class T>
@@ -4462,6 +4476,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     ViscrefTable viscrefTable;
     PlmixparTable plmixparTable;
     ShrateTable shrateTable;
+    Stone1exTable stone1exTable;
     TlmixparTable tlmixparTable;
     WatdentTable watdentTable;
     std::vector<PvtwsaltTable> pvtwsaltTables;
@@ -4495,6 +4510,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     unpack(rockTable, buffer, position, comm);
     unpack(plmixparTable, buffer, position, comm);
     unpack(shrateTable, buffer, position, comm);
+    unpack(stone1exTable, buffer, position, comm);
     unpack(tlmixparTable, buffer, position, comm);
     unpack(viscrefTable, buffer, position, comm);
     unpack(watdentTable, buffer, position, comm);
@@ -4527,7 +4543,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
 
     data = TableManager(simpleTables, pvtgTables, pvtoTables, rock2dTables,
                         rock2dtrTables, pvtwTable, pvcdoTable, densityTable,
-                        plyvmhTable, rockTable, plmixparTable, shrateTable,
+                        plyvmhTable, rockTable, plmixparTable, shrateTable, stone1exTable,
                         tlmixparTable, viscrefTable, watdentTable, pvtwsaltTables,
                         bdensityTables, sdensityTables, plymwinjTables, skprwatTables,
                         skprpolyTables, tabdims, regdims, eqldims, aqudims, hasImptvd,
@@ -6005,6 +6021,14 @@ void unpack(PlyvmhTable& data, std::vector<char>& buffer, int& position,
     std::vector<PlyvmhRecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = PlyvmhTable(pdata);
+}
+
+void unpack(Stone1exTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<Stone1exRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = Stone1exTable(pdata);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \
