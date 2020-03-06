@@ -87,6 +87,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/DenT.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PlymwinjTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PlyshlogTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
@@ -2383,6 +2384,18 @@ BOOST_AUTO_TEST_CASE(GridDims)
     Opm::GridDims val1{ 1,  2,  3};
     auto val2 = PackUnpack(val1);
     DO_CHECKS(GridDims)
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(PlyshlogTable)
+{
+#ifdef HAVE_MPI
+    Opm::OrderedMap<std::string, Opm::TableColumn> data;
+    data.insert({"test3", getTableColumn()});
+    Opm::PlyshlogTable val1(getTableSchema(), data, true, 1.0, 2.0, 3.0, true, true);
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(PlyshlogTable)
 #endif
 }
 

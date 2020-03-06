@@ -82,6 +82,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PlyshlogTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprwatTable.hpp>
@@ -1848,6 +1849,16 @@ std::size_t packSize(const Stone1exTable& data, Dune::MPIHelper::MPICommunicator
     return packSize(static_cast<const std::vector<Stone1exRecord>&>(data), comm);
 }
 
+std::size_t packSize(const PlyshlogTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const SimpleTable&>(data), comm) +
+           packSize(data.getRefPolymerConcentration(), comm) +
+           packSize(data.getRefSalinity(), comm) +
+           packSize(data.getRefTemperature(), comm) +
+           packSize(data.hasRefSalinity(), comm) +
+           packSize(data.hasRefTemperature(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -3576,6 +3587,17 @@ void pack(const Stone1exTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const std::vector<Stone1exRecord>&>(data), buffer, position, comm);
+}
+
+void pack(const PlyshlogTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const SimpleTable&>(data), buffer, position, comm);
+    pack(data.getRefPolymerConcentration(), buffer, position, comm);
+    pack(data.getRefSalinity(), buffer, position, comm);
+    pack(data.getRefTemperature(), buffer, position, comm);
+    pack(data.hasRefSalinity(), buffer, position, comm);
+    pack(data.hasRefTemperature(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -6029,6 +6051,32 @@ void unpack(Stone1exTable& data, std::vector<char>& buffer, int& position,
     std::vector<Stone1exRecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = Stone1exTable(pdata);
+}
+
+void unpack(PlyshlogTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TableSchema schema;
+    OrderedMap<std::string, TableColumn> columns;
+    bool jfunc;
+    double refPolymerConcentration;
+    double refSalinity;
+    double refTemperature;
+    bool hasRefSalinity;
+    bool hasRefTemperature;
+
+    unpack(schema, buffer, position, comm);
+    unpack(columns, buffer, position, comm);
+    unpack(jfunc, buffer, position, comm);
+    unpack(refPolymerConcentration, buffer, position, comm);
+    unpack(refSalinity, buffer, position, comm);
+    unpack(refTemperature, buffer, position, comm);
+    unpack(hasRefSalinity, buffer, position, comm);
+    unpack(hasRefTemperature, buffer, position, comm);
+
+    data = PlyshlogTable(schema, columns, jfunc,
+                         refPolymerConcentration, refSalinity,
+                         refTemperature, hasRefSalinity, hasRefTemperature);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \
