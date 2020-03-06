@@ -100,7 +100,7 @@ NEW_PROP_TAG(ThreadManager);
 NEW_PROP_TAG(NewtonMethod);
 NEW_PROP_TAG(SolutionVector);
 NEW_PROP_TAG(GlobalEqVector);
-NEW_PROP_TAG(VtkOutputFormat);
+//NEW_PROP_TAG(VtkOutputFormat);
 
 //! Specifies the type of a solution for a single degee of freedom
 NEW_PROP_TAG(PrimaryVariables);
@@ -261,7 +261,6 @@ NEW_PROP_TAG(EnableExperiments);
 NEW_PROP_TAG(EnableIntensiveQuantityCache);
 NEW_PROP_TAG(EnableThermodynamicHints);
 NEW_PROP_TAG(NonwettingPhase);
-NEW_PROP_TAG(SpatialDiscretizationSplice);
 NEW_PROP_TAG(WettingPhase);
 
 NEW_PROP_TAG(OverlappingMatrix);

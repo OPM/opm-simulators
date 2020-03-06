@@ -54,7 +54,13 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(MultiPhaseBaseModel, INHERITS_FROM(NumericModel, VtkMultiPhase, VtkTemperature));
 
 //! Specify the splices of the MultiPhaseBaseModel type tag
+//NEW_PROP_TAG(SpatialDiscretizationSplice);
 //SET_SPLICES(MultiPhaseBaseModel, SpatialDiscretizationSplice);
+template<class TypeTag>
+struct Splices<TypeTag, TTag::MultiPhaseBaseModel>
+{
+    using tuple = std::tuple<GetPropType<TypeTag, Properties::SpatialDiscretizationSplice>>;
+};
 
 //! Set the default spatial discretization
 //!

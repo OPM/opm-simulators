@@ -316,7 +316,7 @@ struct GetTypeTagInheritance<std::tuple<FirstTypeTag, OtherTypeTags...>>
      * NEW_TYPE_TAG(ProblemTypeTag, INHERITS_FROM(ModelTypeTag));
      * SET_TAG_PROP(ProblemTypeTag, LinearSolver, SuperLUSolver);
      * \endcode
-*/
+     */
 
     // template class to revert the order or a std::tuple's arguments. This is required to
     // make the properties of children defined on the right overwrite the properties of the
@@ -345,25 +345,18 @@ struct GetTypeTagInheritance<std::tuple<FirstTypeTag, OtherTypeTags...>>
         typedef typename RevertedTupleOuter<sizeof...(Args)>::template RevertedTupleInner<Args...>::type type;
     };
     
-namespace PTag {
-// this class needs to be located in the PTag namespace for reasons
-// you don't really want to know...
-template <class TypeTag>
+template <class TypeTag, class MyTypeTag>
 struct Splices
 {
-     typedef typename std::tuple<> tuple;
+     using tuple = std::tuple<>;
 };
-} // namespace PTag
     
 #define SET_SPLICES(TypeTagName, ...)                               \
-namespace PTag {                                                \
-template<>                                                      \
-struct Splices<TTAG(TypeTagName)>                               \
+template<class TypeTag>                                                      \
+struct Splices<TypeTag, TTAG(TypeTagName)>                               \
 {                                                               \
     typedef RevertedTuple<__VA_ARGS__>::type tuple;             \
 };                                                              \
-SPLICE_INFO_(TypeTagName, __VA_ARGS__)                    \
-}                                                               \
 extern int semicolonHack_
     
 #define SET_PROP_(EffTypeTagName, PropKind, PropTagName, ...)   \

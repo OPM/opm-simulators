@@ -36,6 +36,26 @@ namespace Properties {
 //! a tag to mark properties as undefined
 struct UndefinedProperty {};
 
+template<class TypeTag, class MyTypeTag>
+struct SpatialDiscretizationSplice { using type = UndefinedProperty; };
+
+namespace TTag {
+struct MyTTag {};
+struct MySDTTag {};
+}
+
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::MyTTag>
+{ using type = TTag::MySDTTag; };
+
+template<class TypeTag, class MyTypeTag>
+struct VtkOutputFormat { using type = UndefinedProperty; };
+
+template<class TypeTag>
+struct VtkOutputFormat<TypeTag, TTag::MySDTTag>
+{ static constexpr auto value = 2; };
+
+
 //! implementation details for template meta programming
 namespace Detail {
 
@@ -69,7 +89,7 @@ using ConCatTuples = decltype(std::tuple_cat(std::declval<Tuples>()...));
 template<class TypeTag, template<class,class> class Property, class TTagList>
 struct GetDefined;
 
-//! helper struct to iteratre over the TypeTag hierarchy
+//! helper struct to iterate over the TypeTag hierarchy
 template<class TypeTag, template<class,class> class Property, class TTagList, class Enable>
 struct GetNextTypeTag;
 
@@ -129,7 +149,23 @@ struct GetDefined<TypeTag, Property, std::tuple<FirstTypeTag, Args...>>
 template<class TypeTag, template<class,class> class Property>
 struct GetPropImpl
 {
-    using type = typename Detail::GetDefined<TypeTag, Property, std::tuple<TypeTag>>::type;
+    using PType = Properties::SpatialDiscretizationSplice<TypeTag, TTag::MyTTag>;
+    using testtype = std::conditional_t<isDefinedProperty<PType>(int{}), PType, UndefinedProperty>;
+    static_assert(!std::is_same<testtype, UndefinedProperty>::value, "SpatialDiscretizationSplice is undefined in MyTTag!");
+
+    using QType = Properties::VtkOutputFormat<TypeTag, TTag::MySDTTag>;
+    using testtype2 = std::conditional_t<isDefinedProperty<QType>(int{}), QType, UndefinedProperty>;
+    static_assert(!std::is_same<testtype2, UndefinedProperty>::value, "VtkOutputFormat is undefined in MySDTTag!");
+
+//     using testtype = typename Detail::GetDefined<TTag::MyTTag,
+//                                                  Properties::SpatialDiscretizationSplice,
+//                                                  std::tuple<TTag::MyTTag>
+//                                                 >::type;
+
+    using type = typename Detail::GetDefined<TypeTag,
+                                             Property,
+                                             std::tuple<TypeTag, TTag::MySDTTag>
+                                            >::type;
     static_assert(!std::is_same<type, UndefinedProperty>::value, "Property is undefined!");
 };
 
