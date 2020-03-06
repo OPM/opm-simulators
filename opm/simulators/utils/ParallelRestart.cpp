@@ -82,6 +82,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PlyshlogTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
@@ -1859,6 +1860,12 @@ std::size_t packSize(const PlyshlogTable& data, Dune::MPIHelper::MPICommunicator
            packSize(data.hasRefTemperature(), comm);
 }
 
+std::size_t packSize(const RocktabTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const SimpleTable&>(data), comm) +
+           packSize(data.isDirectional(), comm);
+}
+
 ////// pack routines
 
 template<class T>
@@ -3598,6 +3605,13 @@ void pack(const PlyshlogTable& data, std::vector<char>& buffer, int& position,
     pack(data.getRefTemperature(), buffer, position, comm);
     pack(data.hasRefSalinity(), buffer, position, comm);
     pack(data.hasRefTemperature(), buffer, position, comm);
+}
+
+void pack(const RocktabTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const SimpleTable&>(data), buffer, position, comm);
+    pack(data.isDirectional(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -6077,6 +6091,22 @@ void unpack(PlyshlogTable& data, std::vector<char>& buffer, int& position,
     data = PlyshlogTable(schema, columns, jfunc,
                          refPolymerConcentration, refSalinity,
                          refTemperature, hasRefSalinity, hasRefTemperature);
+}
+
+void unpack(RocktabTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    TableSchema schema;
+    OrderedMap<std::string, TableColumn> columns;
+    bool jfunc;
+    bool isDirectional;
+
+    unpack(schema, buffer, position, comm);
+    unpack(columns, buffer, position, comm);
+    unpack(jfunc, buffer, position, comm);
+    unpack(isDirectional, buffer, position, comm);
+
+    data = RocktabTable(schema, columns, jfunc, isDirectional);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \

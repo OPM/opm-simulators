@@ -93,6 +93,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprwatTable.hpp>
@@ -2396,6 +2397,18 @@ BOOST_AUTO_TEST_CASE(PlyshlogTable)
     Opm::PlyshlogTable val1(getTableSchema(), data, true, 1.0, 2.0, 3.0, true, true);
     auto val2 = PackUnpack(val1);
     DO_CHECKS(PlyshlogTable)
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(RocktabTable)
+{
+#ifdef HAVE_MPI
+    Opm::OrderedMap<std::string, Opm::TableColumn> data;
+    data.insert({"test3", getTableColumn()});
+    Opm::RocktabTable val1(getTableSchema(), data, true, true);
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(RocktabTable)
 #endif
 }
 
