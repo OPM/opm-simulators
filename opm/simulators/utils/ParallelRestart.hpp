@@ -114,7 +114,6 @@ class PlyvmhTable;
 class PolyInjTable;
 class PVCDORecord;
 class PvcdoTable;
-class PolymerConfig;
 class PlmixparRecord;
 class PlmixparTable;
 class PvtgTable;
@@ -133,6 +132,8 @@ class Rock2dtrTable;
 class Runspec;
 class Schedule;
 class Segment;
+class ShrateRecord;
+class ShrateTable;
 class SimulationConfig;
 class SimpleTable;
 class SkprpolyTable;
@@ -573,7 +574,6 @@ ADD_PACK_PROTOTYPES(PlymwinjTable)
 ADD_PACK_PROTOTYPES(PlyvmhRecord)
 ADD_PACK_PROTOTYPES(PlyvmhTable)
 ADD_PACK_PROTOTYPES(PolyInjTable)
-ADD_PACK_PROTOTYPES(PolymerConfig)
 ADD_PACK_PROTOTYPES(PVCDORecord)
 ADD_PACK_PROTOTYPES(PvcdoTable)
 ADD_PACK_PROTOTYPES(PvtgTable)
@@ -596,6 +596,8 @@ ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(Runspec)
 ADD_PACK_PROTOTYPES(Schedule)
 ADD_PACK_PROTOTYPES(Segment)
+ADD_PACK_PROTOTYPES(ShrateRecord)
+ADD_PACK_PROTOTYPES(ShrateTable)
 ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(SkprpolyTable)

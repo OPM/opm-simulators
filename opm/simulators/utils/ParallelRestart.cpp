@@ -31,7 +31,6 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/InitConfig/PolymerConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
@@ -468,6 +467,7 @@ HANDLE_AS_POD(RockConfig::RockComp)
 HANDLE_AS_POD(ROCKRecord)
 HANDLE_AS_POD(SatFuncControls)
 HANDLE_AS_POD(StandardCond)
+HANDLE_AS_POD(ShrateRecord)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeStampUTC::YMD)
 HANDLE_AS_POD(TlmixparRecord)
@@ -689,16 +689,10 @@ std::size_t packSize(const FoamConfig& data, Dune::MPIHelper::MPICommunicator co
            packSize(data.getMobilityModel(), comm);
 }
 
-std::size_t packSize(const PolymerConfig& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.shrate(), comm);
-}
-
 std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getEquil(), comm) +
            packSize(data.getFoamConfig(), comm) +
-           packSize(data.getPolymerConfig(), comm) +
            packSize(data.filleps(), comm) +
            packSize(data.hasGravity(), comm) +
            packSize(data.restartRequested(), comm) +
@@ -867,6 +861,7 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.getPlyvmhTable(), comm) +
            packSize(data.getRockTable(), comm) +
            packSize(data.getPlmixparTable(), comm) +
+           packSize(data.getShrateTable(), comm) +
            packSize(data.getTlmixparTable(), comm) +
            packSize(data.getViscrefTable(), comm) +
            packSize(data.getWatdentTable(), comm) +
@@ -883,6 +878,7 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.useImptvd(), comm) +
            packSize(data.useEnptvd(), comm) +
            packSize(data.useEqlnum(), comm) +
+           packSize(data.useShrate(), comm) +
            packSize(data.useJFunc(), comm) +
           (data.useJFunc() ? packSize(data.getJFunc(), comm) : 0) +
            packSize(data.OilDenT(), comm) +
@@ -1825,6 +1821,11 @@ std::size_t packSize(const GridDims& data,
     return packSize(data.getNXYZ(), comm);
 }
 
+std::size_t packSize(const ShrateTable& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(static_cast<const std::vector<ShrateRecord>&>(data), comm);
+}
+
 std::size_t packSize(const TlmixparTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const std::vector<TlmixparRecord>&>(data), comm);
@@ -2318,18 +2319,11 @@ void pack(const FoamConfig& data, std::vector<char>& buffer, int& position,
     pack(data.getMobilityModel(), buffer, position, comm);
 }
 
-void pack(const PolymerConfig& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.shrate(), buffer, position, comm);
-}
-
 void pack(const InitConfig& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getEquil(), buffer, position, comm);
     pack(data.getFoamConfig(), buffer, position, comm);
-    pack(data.getPolymerConfig(), buffer, position, comm);
     pack(data.filleps(), buffer, position, comm);
     pack(data.hasGravity(), buffer, position, comm);
     pack(data.restartRequested(), buffer, position, comm);
@@ -2520,6 +2514,7 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
     pack(data.getPlyvmhTable(), buffer, position, comm);
     pack(data.getRockTable(), buffer, position, comm);
     pack(data.getPlmixparTable(), buffer, position, comm);
+    pack(data.getShrateTable(), buffer, position, comm);
     pack(data.getTlmixparTable(), buffer, position, comm);
     pack(data.getViscrefTable(), buffer, position, comm);
     pack(data.getWatdentTable(), buffer, position, comm);
@@ -2536,6 +2531,7 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
     pack(data.useImptvd(), buffer, position, comm);
     pack(data.useEnptvd(), buffer, position, comm);
     pack(data.useEqlnum(), buffer, position, comm);
+    pack(data.useShrate(), buffer, position, comm);
     pack(data.useJFunc(), buffer, position, comm);
     if (data.useJFunc())
         pack(data.getJFunc(), buffer, position, comm);
@@ -3544,6 +3540,12 @@ void pack(const GridDims& data,
     pack(data.getNXYZ(), buffer, position, comm);
 }
 
+void pack(const ShrateTable& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(static_cast<const std::vector<ShrateRecord>&>(data), buffer, position, comm);
+}
+
 void pack(const TlmixparTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
@@ -4187,32 +4189,22 @@ void unpack(FoamConfig& data, std::vector<char>& buffer, int& position,
     data = FoamConfig(records, transport_phase, mobility_model);
 }
 
-void unpack(PolymerConfig& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    bool shrate;
-    unpack(shrate, buffer, position, comm);
-    data = PolymerConfig(shrate);
-}
-
 void unpack(InitConfig& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     Equil equil;
     FoamConfig foam;
-    PolymerConfig polymer;
     bool filleps, hasGravity, restartRequested;
     int restartStep;
     std::string restartRootName;
     unpack(equil, buffer, position, comm);
     unpack(foam, buffer, position, comm);
-    unpack(polymer, buffer, position, comm);
     unpack(filleps, buffer, position, comm);
     unpack(hasGravity, buffer, position, comm);
     unpack(restartRequested, buffer, position, comm);
     unpack(restartStep, buffer, position, comm);
     unpack(restartRootName, buffer, position, comm);
-    data = InitConfig(equil, foam, polymer, filleps, hasGravity,
+    data = InitConfig(equil, foam, filleps, hasGravity,
                       restartRequested, restartStep, restartRootName);
 }
 
@@ -4469,6 +4461,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     RockTable rockTable;
     ViscrefTable viscrefTable;
     PlmixparTable plmixparTable;
+    ShrateTable shrateTable;
     TlmixparTable tlmixparTable;
     WatdentTable watdentTable;
     std::vector<PvtwsaltTable> pvtwsaltTables;
@@ -4484,6 +4477,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     bool hasImptvd;
     bool hasEntpvd;
     bool hasEqlnum;
+    bool hasShrate;
     DenT oilDenT, gasDenT, watDenT;
     StandardCond stcond;
     std::size_t gas_comp_index;
@@ -4500,6 +4494,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     unpack(plyvmhTable, buffer, position, comm);
     unpack(rockTable, buffer, position, comm);
     unpack(plmixparTable, buffer, position, comm);
+    unpack(shrateTable, buffer, position, comm);
     unpack(tlmixparTable, buffer, position, comm);
     unpack(viscrefTable, buffer, position, comm);
     unpack(watdentTable, buffer, position, comm);
@@ -4516,6 +4511,7 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
     unpack(hasImptvd, buffer, position, comm);
     unpack(hasEntpvd, buffer, position, comm);
     unpack(hasEqlnum, buffer, position, comm);
+    unpack(hasShrate, buffer, position, comm);
     bool hasJf;
     unpack(hasJf, buffer, position, comm);
     if (hasJf) {
@@ -4531,11 +4527,11 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
 
     data = TableManager(simpleTables, pvtgTables, pvtoTables, rock2dTables,
                         rock2dtrTables, pvtwTable, pvcdoTable, densityTable,
-                        plyvmhTable, rockTable, plmixparTable, tlmixparTable, viscrefTable,
-                        watdentTable, pvtwsaltTables, bdensityTables, sdensityTables,
-                        plymwinjTables, skprwatTables, skprpolyTables, tabdims,
-                        regdims, eqldims, aqudims, hasImptvd, hasEntpvd, hasEqlnum,
-                        jfunc, oilDenT, gasDenT,
+                        plyvmhTable, rockTable, plmixparTable, shrateTable,
+                        tlmixparTable, viscrefTable, watdentTable, pvtwsaltTables,
+                        bdensityTables, sdensityTables, plymwinjTables, skprwatTables,
+                        skprpolyTables, tabdims, regdims, eqldims, aqudims, hasImptvd,
+                        hasEntpvd, hasEqlnum, hasShrate, jfunc, oilDenT, gasDenT,
                         watDenT, stcond, gas_comp_index, rtemp);
 }
 
@@ -5977,6 +5973,14 @@ void unpack(GridDims& data,
 
     unpack(NXYZ, buffer, position, comm);
     data = GridDims(NXYZ);
+}
+
+void unpack(ShrateTable& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::vector<ShrateRecord> pdata;
+    unpack(pdata, buffer, position, comm);
+    data = ShrateTable(pdata);
 }
 
 void unpack(TlmixparTable& data, std::vector<char>& buffer, int& position,
