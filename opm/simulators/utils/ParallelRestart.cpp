@@ -4215,7 +4215,7 @@ void unpack(TableContainer& data, std::vector<char>& buffer, int& position,
         unpack(id, buffer, position, comm);
         SimpleTable table;
         unpack(table, buffer, position, comm);
-        data.addTable(id, std::make_shared<const SimpleTable>(table));
+        data.addTable(id, std::make_shared<SimpleTable>(table));
     }
 }
 

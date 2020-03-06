@@ -312,8 +312,8 @@ Opm::TableContainer getTableContainer()
     data.insert({"test3", getTableColumn()});
     Opm::SimpleTable tab1(getTableSchema(), data, true);
     Opm::TableContainer result(2);
-    result.addTable(0, std::make_shared<const Opm::SimpleTable>(tab1));
-    result.addTable(1, std::make_shared<const Opm::SimpleTable>(tab1));
+    result.addTable(0, std::make_shared<Opm::SimpleTable>(tab1));
+    result.addTable(1, std::make_shared<Opm::SimpleTable>(tab1));
     return result;
 }
 
@@ -760,8 +760,8 @@ BOOST_AUTO_TEST_CASE(TableContainer)
     data.insert({"test3", getTableColumn()});
     Opm::SimpleTable tab1(getTableSchema(), data, true);
     Opm::TableContainer val1(2);
-    val1.addTable(0, std::make_shared<const Opm::SimpleTable>(tab1));
-    val1.addTable(1, std::make_shared<const Opm::SimpleTable>(tab1));
+    val1.addTable(0, std::make_shared<Opm::SimpleTable>(tab1));
+    val1.addTable(1, std::make_shared<Opm::SimpleTable>(tab1));
     auto val2 = PackUnpack(val1);
     DO_CHECKS(TableContainer)
 #endif
