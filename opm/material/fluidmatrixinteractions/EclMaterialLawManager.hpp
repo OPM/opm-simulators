@@ -139,12 +139,13 @@ public:
         oilWaterConfig->initFromDeck(deck, eclState, Opm::EclOilWaterSystem);
 
         unscaledEpsInfo_.resize(numSatRegions);
-        if (deck.hasKeyword("STONE1EX"))
+        const auto& stone1exTable = eclState.getTableManager().getStone1exTable();
+        if (!stone1exTable.empty())
             stoneEtas.resize(numSatRegions);
         for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
             unscaledEpsInfo_[satRegionIdx].extractUnscaled(deck, eclState, satRegionIdx);
             if (!stoneEtas.empty())
-                stoneEtas[satRegionIdx] = deck.getKeyword("STONE1EX").getRecord(satRegionIdx).getItem(0).getSIDouble(0);
+                stoneEtas[satRegionIdx] = stone1exTable[satRegionIdx].eta;
         }
     }
 
