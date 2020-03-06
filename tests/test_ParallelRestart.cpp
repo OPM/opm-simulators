@@ -1212,6 +1212,7 @@ BOOST_AUTO_TEST_CASE(TableManager)
                            Opm::RockTable({Opm::ROCKRecord{1.0,2.0}}),
                            Opm::PlmixparTable({Opm::PlmixparRecord{1.0}}),
                            Opm::ShrateTable({Opm::ShrateRecord{1.0}}),
+                           Opm::Stone1exTable({Opm::Stone1exRecord{1.0}}),
                            Opm::TlmixparTable({Opm::TlmixparRecord{1.0, 2.0}}),
                            Opm::ViscrefTable({Opm::VISCREFRecord{1.0, 2.0}}),
                            Opm::WatdentTable({Opm::WATDENTRecord{1.0, 2.0, 3.0}}),
