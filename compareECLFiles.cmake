@@ -257,7 +257,8 @@ add_test_compareECLFiles(CASENAME msw_3d_hfa
                          FILENAME 3D_MSW
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
+                         REL_TOL ${rel_tol}
+                         TEST_ARGS --tolerance-pressure-ms-wells=10.)
 
 add_test_compareECLFiles(CASENAME polymer_oilwater
                          FILENAME 2D_OILWATER_POLYMER
@@ -298,7 +299,8 @@ add_test_compareECLFiles(CASENAME msw_model_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR model1)
+                         DIR model1
+                         TEST_ARGS --tolerance-pressure-ms-wells=10.)
 
 add_test_compareECLFiles(CASENAME base_model_1
                          FILENAME BASE_MODEL_1
@@ -312,7 +314,8 @@ add_test_compareECLFiles(CASENAME faults_model_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR model1)
+                         DIR model1
+                         TEST_ARGS --tolerance-pressure-ms-wells=10.)
 
 add_test_compareECLFiles(CASENAME base_model2
                          FILENAME 0_BASE_MODEL2
@@ -395,7 +398,8 @@ add_test_compareECLFiles(CASENAME wsegsicd
 			  FILENAME TEST_WSEGSICD
 			  SIMULATOR flow
 			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol})
+			  REL_TOL ${rel_tol}
+              TEST_ARGS --tolerance-pressure-ms-wells=10.)
 
 add_test_compareECLFiles(CASENAME nnc
                          FILENAME NNC_AND_EDITNNC
