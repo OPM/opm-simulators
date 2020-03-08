@@ -309,8 +309,9 @@ private:
                 // store intersection, this might be costly
                 const auto& intersection = *isIt;
 
-                // ignore boundary intersections for now (TODO?)
-                if (!intersection.neighbor())
+                if (intersection.boundary())
+                    continue; // ignore boundary intersections for now (TODO?)
+                else if (!intersection.neighbor()) //processor boundary but not domain boundary
                     continue;
 
                 const auto& inside = intersection.inside();

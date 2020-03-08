@@ -78,7 +78,7 @@ NEW_PROP_TAG(EclOutputInterval);
 NEW_PROP_TAG(IgnoreKeywords);
 NEW_PROP_TAG(EnableExperiments);
 NEW_PROP_TAG(EdgeWeightsMethod);
-NEW_PROP_TAG(OwnersFirst);
+NEW_PROP_TAG(OwnerCellsFirst);
 
 SET_STRING_PROP(EclBaseVanguard, IgnoreKeywords, "");
 SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
@@ -87,7 +87,7 @@ SET_BOOL_PROP(EclBaseVanguard, EnableOpmRstFile, false);
 SET_BOOL_PROP(EclBaseVanguard, EclStrictParsing, false);
 SET_BOOL_PROP(EclBaseVanguard, SchedRestart, true);
 SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
-SET_BOOL_PROP(EclBaseVanguard, OwnersFirst, false);
+SET_BOOL_PROP(EclBaseVanguard, OwnerCellsFirst, false);
 
 END_PROPERTIES
 
@@ -135,7 +135,7 @@ public:
                              "When restarting: should we try to initialize wells and groups from historical SCHEDULE section.");
         EWOMS_REGISTER_PARAM(TypeTag, int, EdgeWeightsMethod,
                              "Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, OwnersFirst,
+        EWOMS_REGISTER_PARAM(TypeTag, bool, OwnerCellsFirst,
                              "Order cells owned by rank before ghost/overlap cells.");
     }
 
@@ -269,7 +269,7 @@ public:
 
         std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         edgeWeightsMethod_   = Dune::EdgeWeightMethod(EWOMS_GET_PARAM(TypeTag, int, EdgeWeightsMethod));
-        ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnersFirst);
+        ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
 
         // Skip processing of filename if external deck already exists.
         if (!externalDeck_)

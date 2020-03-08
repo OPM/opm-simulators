@@ -112,11 +112,17 @@ namespace detail
             }
         }
     }
+
+    /// \brief If ownerFirst=true, returns the number of interior cells in grid, else just numCells().
+    ///
+    /// If cells in grid is ordered so that interior/owner cells come before overlap/copy cells, the method
+    /// returns the number of interior cells numInterior. In the linear solver only the first numInterior rows of
+    /// the matrix are needed.
     template <class Grid>
-    size_t numInteriorCells(const Grid& grid, bool ownerFirst)
+    size_t numMatrixRowsToUseInSolver(const Grid& grid, bool ownerFirst)
     {
         size_t numInterior = 0;
-        if (!ownerFirst)
+        if (!ownerFirst || grid.comm().size()==1)
             return grid.numCells();
         const auto& gridView = grid.leafGridView();
         auto elemIt = gridView.template begin<0>();
@@ -124,10 +130,9 @@ namespace detail
 
         // loop over cells in mesh
         for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& elem = *elemIt;
 
-            // If cell has partition type not equal to interior save row
-            if (elem.partitionType() == Dune::InteriorEntity) {
+            // Count only the interior cells.
+            if (elemIt->partitionType() == Dune::InteriorEntity) {
                 numInterior++;
             }
         }
