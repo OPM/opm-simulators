@@ -36,7 +36,6 @@
 #include <opm/material/common/IntervalTabulated2DFunction.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PlyadsTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PlymaxTable.hpp>
@@ -115,24 +114,24 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the polymer module
      */
-    static void initFromDeck(const Opm::Deck& deck, const Opm::EclipseState& eclState)
+    static void initFromState(const Opm::EclipseState& eclState)
     {
         // some sanity checks: if polymers are enabled, the POLYMER keyword must be
         // present, if polymers are disabled the keyword must not be present.
-        if (enablePolymer && !deck.hasKeyword("POLYMER")) {
+        if (enablePolymer && !eclState.runspec().phases().active(Phase::POLYMER)) {
             throw std::runtime_error("Non-trivial polymer treatment requested at compile time, but "
                                      "the deck does not contain the POLYMER keyword");
         }
-        else if (!enablePolymer && deck.hasKeyword("POLYMER")) {
+        else if (!enablePolymer && eclState.runspec().phases().active(Phase::POLYMER)) {
             throw std::runtime_error("Polymer treatment disabled at compile time, but the deck "
                                      "contains the POLYMER keyword");
         }
 
-        if (enablePolymerMolarWeight && !deck.hasKeyword("POLYMW")) {
+        if (enablePolymerMolarWeight && !eclState.runspec().phases().active(Phase::POLYMW)) {
             throw std::runtime_error("Polymer molecular weight tracking is enabled at compile time, but "
                                      "the deck does not contain the POLYMW keyword");
         }
-        else if (!enablePolymerMolarWeight && deck.hasKeyword("POLYMW")) {
+        else if (!enablePolymerMolarWeight && eclState.runspec().phases().active(Phase::POLYMW)) {
             throw std::runtime_error("Polymer molecular weight tracking is disabled at compile time, but the deck "
                                      "contains the POLYMW keyword");
         }
@@ -142,7 +141,7 @@ public:
                                      "is disabled at compile time");
         }
 
-        if (!deck.hasKeyword("POLYMER"))
+        if (!eclState.runspec().phases().active(Phase::POLYMER))
             return; // polymer treatment is supposed to be disabled
 
         const auto& tableManager = eclState.getTableManager();
@@ -226,15 +225,15 @@ public:
             throw std::runtime_error("PLYMAX must be specified in POLYMER runs\n");
         }
 
-        if (deck.hasKeyword("PLMIXPAR")) {
+        if (!eclState.getTableManager().getPlmixparTable().empty()) {
             if (enablePolymerMolarWeight) {
                 Opm::OpmLog::warning("PLMIXPAR should not be used in POLYMW runs, it will have no effect.\n");
             }
             else {
+                const auto& plmixparTable = eclState.getTableManager().getPlmixparTable();
                 // initialize the objects which deal with the PLMIXPAR keyword
                 for (unsigned mixRegionIdx = 0; mixRegionIdx < numMixRegions; ++ mixRegionIdx) {
-                    const auto& plmixparRecord = deck.getKeyword("PLMIXPAR").getRecord(mixRegionIdx);
-                    setPlmixpar(mixRegionIdx, plmixparRecord.getItem("TODD_LONGSTAFF").getSIDouble(0));
+                    setPlmixpar(mixRegionIdx, plmixparTable[mixRegionIdx].todd_langstaff);
                 }
             }
         }
@@ -242,8 +241,8 @@ public:
             throw std::runtime_error("PLMIXPAR must be specified in POLYMER runs\n");
         }
 
-        hasPlyshlog_ = deck.hasKeyword("PLYSHLOG");
-        hasShrate_ = deck.hasKeyword("SHRATE");
+        hasPlyshlog_ = eclState.getTableManager().hasTables("PLYSHLOG");
+        hasShrate_ = eclState.getTableManager().useShrate();
 
         if ((hasPlyshlog_ || hasShrate_) && enablePolymerMolarWeight) {
             Opm::OpmLog::warning("PLYSHLOG and SHRATE should not be used in POLYMW runs, they will have no effect.\n");
@@ -262,7 +261,7 @@ public:
                 auto shearMultiplier = plyshlogTable.getShearMultiplierColumn().vectorCopy();
 
                 // do the unit version here for the waterVelocity
-                Opm::UnitSystem unitSystem = deck.getActiveUnitSystem();
+                Opm::UnitSystem unitSystem = eclState.getDeckUnitSystem();
                 double siFactor = hasShrate_? unitSystem.parse("1/Time").getSIScaling() : unitSystem.parse("Length/Time").getSIScaling();
                 for (size_t i = 0; i < waterVelocity.size(); ++i) {
                     waterVelocity[i] *= siFactor;
@@ -293,15 +292,14 @@ public:
             if(!hasPlyshlog_) {
                 throw std::runtime_error("PLYSHLOG must be specified if SHRATE is used in POLYMER runs\n");
             }
-            const auto& shrateKeyword = deck.getKeyword("SHRATE");
-            const std::vector<double>& shrateFromDeck = shrateKeyword.getSIDoubleData();
+            const auto& shrateTable = eclState.getTableManager().getShrateTable();
             shrate_.resize(numPvtRegions);
             for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++ pvtRegionIdx) {
-                if (shrateFromDeck.empty()) {
+                if (shrateTable.empty()) {
                     shrate_[pvtRegionIdx] = 4.8; //default;
                 }
-                else if (shrateFromDeck.size() == numPvtRegions) {
-                    shrate_[pvtRegionIdx] = shrateKeyword.getSIDoubleData()[pvtRegionIdx];
+                else if (shrateTable.size() == numPvtRegions) {
+                    shrate_[pvtRegionIdx] = shrateTable[pvtRegionIdx].rate;
                 }
                 else {
                     throw std::runtime_error("SHRATE must either have 0 or number of NUMPVT entries\n");
@@ -310,15 +308,14 @@ public:
         }
 
         if (enablePolymerMolarWeight) {
-            const Opm::DeckKeyword& plyvmhKeyword = deck.getKeyword("PLYVMH");
-            assert(plyvmhKeyword.size() == numMixRegions);
-            if (plyvmhKeyword.size() > 0) {
-                for (size_t regionIdx = 0; regionIdx < plyvmhKeyword.size(); ++regionIdx) {
-                    const Opm::DeckRecord& record = plyvmhKeyword.getRecord(regionIdx);
-                    plyvmhCoefficients_[regionIdx].k_mh = record.getItem("K_MH").getSIDouble(0);
-                    plyvmhCoefficients_[regionIdx].a_mh = record.getItem("A_MH").getSIDouble(0);
-                    plyvmhCoefficients_[regionIdx].gamma = record.getItem("GAMMA").getSIDouble(0);
-                    plyvmhCoefficients_[regionIdx].kappa = record.getItem("KAPPA").getSIDouble(0);
+            const auto& plyvmhTable = eclState.getTableManager().getPlyvmhTable();
+            if (!plyvmhTable.empty()) {
+                assert(plyvmhTable.size() == numMixRegions);
+                for (size_t regionIdx = 0; regionIdx < numMixRegions; ++regionIdx) {
+                    plyvmhCoefficients_[regionIdx].k_mh = plyvmhTable[regionIdx].k_mh;
+                    plyvmhCoefficients_[regionIdx].a_mh = plyvmhTable[regionIdx].a_mh;
+                    plyvmhCoefficients_[regionIdx].gamma = plyvmhTable[regionIdx].gamma;
+                    plyvmhCoefficients_[regionIdx].kappa = plyvmhTable[regionIdx].kappa;
                 }
             }
             else {
@@ -908,116 +905,6 @@ public:
     const Scalar molarMass() const
     {
         return 0.25; // kg/mol
-    }
-
-    template<class Serializer>
-    static std::size_t packSize(Serializer& serializer)
-    {
-         std::size_t size = serializer.packSize(plyrockDeadPoreVolume_) +
-                            serializer.packSize(plyrockResidualResistanceFactor_) +
-                            serializer.packSize(plyrockRockDensityFactor_) +
-                            serializer.packSize(plyrockAdsorbtionIndex_) +
-                            serializer.packSize(plyrockMaxAdsorbtion_) +
-                            serializer.packSize(plyadsAdsorbedPolymer_) +
-                            serializer.packSize(plyviscViscosityMultiplierTable_) +
-                            serializer.packSize(plymaxMaxConcentration_) +
-                            serializer.packSize(plymixparToddLongstaff_) +
-                            serializer.packSize(plyshlogShearEffectRefMultiplier_) +
-                            serializer.packSize(plyshlogShearEffectRefLogVelocity_) +
-                            serializer.packSize(shrate_) +
-                            serializer.packSize(hasShrate_) +
-                            serializer.packSize(hasPlyshlog_) +
-                            serializer.packSize(plymwinjTables_) +
-                            serializer.packSize(skprwatTables_);
-        size += serializer.packSize(plyvmhCoefficients_.size());
-        for (const auto& it : plyvmhCoefficients_) {
-            size += serializer.packSize(it.k_mh);
-            size += serializer.packSize(it.a_mh);
-            size += serializer.packSize(it.gamma);
-            size += serializer.packSize(it.kappa);
-        }
-        size += serializer.packSize(skprpolyTables_.size());
-        for (const auto& it : skprpolyTables_) {
-            size += serializer.packSize(it.first);
-            size += serializer.packSize(it.second.refConcentration);
-            size += serializer.packSize(it.second.table_func);
-        }
-
-        return size;
-    }
-
-    template<class Serializer>
-    static void pack(std::vector<char>& buffer, int& position,
-                     Serializer& serializer)
-    {
-        serializer.pack(plyrockDeadPoreVolume_, buffer, position);
-        serializer.pack(plyrockResidualResistanceFactor_, buffer, position);
-        serializer.pack(plyrockRockDensityFactor_, buffer, position);
-        serializer.pack(plyrockAdsorbtionIndex_, buffer, position);
-        serializer.pack(plyrockMaxAdsorbtion_, buffer, position);
-        serializer.pack(plyadsAdsorbedPolymer_, buffer, position);
-        serializer.pack(plyviscViscosityMultiplierTable_, buffer, position);
-        serializer.pack(plymaxMaxConcentration_, buffer, position);
-        serializer.pack(plymixparToddLongstaff_, buffer, position);
-        serializer.pack(plyshlogShearEffectRefMultiplier_, buffer, position);
-        serializer.pack(plyshlogShearEffectRefLogVelocity_, buffer, position);
-        serializer.pack(shrate_, buffer, position);
-        serializer.pack(hasShrate_, buffer, position);
-        serializer.pack(hasPlyshlog_, buffer, position);
-        serializer.pack(plymwinjTables_, buffer, position);
-        serializer.pack(skprwatTables_, buffer, position);
-        serializer.pack(plyvmhCoefficients_.size(), buffer, position);
-        for (const auto& it : plyvmhCoefficients_) {
-            serializer.pack(it.k_mh, buffer, position);
-            serializer.pack(it.a_mh, buffer, position);
-            serializer.pack(it.gamma, buffer, position);
-            serializer.pack(it.kappa, buffer, position);
-        }
-        serializer.pack(skprpolyTables_.size(), buffer, position);
-        for (const auto& it : skprpolyTables_) {
-            serializer.pack(it.first, buffer, position);
-            serializer.pack(it.second.refConcentration, buffer, position);
-            serializer.pack(it.second.table_func, buffer, position);
-        }
-    }
-
-    template<class Serializer>
-    static void unpack(std::vector<char>& buffer, int& position,
-                       Serializer& serializer)
-    {
-        serializer.unpack(plyrockDeadPoreVolume_, buffer, position);
-        serializer.unpack(plyrockResidualResistanceFactor_, buffer, position);
-        serializer.unpack(plyrockRockDensityFactor_, buffer, position);
-        serializer.unpack(plyrockAdsorbtionIndex_, buffer, position);
-        serializer.unpack(plyrockMaxAdsorbtion_, buffer, position);
-        serializer.unpack(plyadsAdsorbedPolymer_, buffer, position);
-        serializer.unpack(plyviscViscosityMultiplierTable_, buffer, position);
-        serializer.unpack(plymaxMaxConcentration_, buffer, position);
-        serializer.unpack(plymixparToddLongstaff_, buffer, position);
-        serializer.unpack(plyshlogShearEffectRefMultiplier_, buffer, position);
-        serializer.unpack(plyshlogShearEffectRefLogVelocity_, buffer, position);
-        serializer.unpack(shrate_, buffer, position);
-        serializer.unpack(hasShrate_, buffer, position);
-        serializer.unpack(hasPlyshlog_, buffer, position);
-        serializer.unpack(plymwinjTables_, buffer, position);
-        serializer.unpack(skprwatTables_, buffer, position);
-        size_t size;
-        serializer.unpack(size, buffer, position);
-        plyvmhCoefficients_.resize(size);
-        for (auto& it : plyvmhCoefficients_) {
-            serializer.unpack(it.k_mh, buffer, position);
-            serializer.unpack(it.a_mh, buffer, position);
-            serializer.unpack(it.gamma, buffer, position);
-            serializer.unpack(it.kappa, buffer, position);
-        }
-        serializer.unpack(size, buffer, position);
-        skprpolyTables_.clear();
-        for (size_t i = 0; i < size; ++i) {
-            int key;
-            serializer.unpack(key, buffer, position);
-            serializer.unpack(skprpolyTables_[key].refConcentration, buffer, position);
-            serializer.unpack(skprpolyTables_[key].table_func, buffer, position);
-        }
     }
 
 private:
