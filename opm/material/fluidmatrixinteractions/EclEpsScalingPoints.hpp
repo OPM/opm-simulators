@@ -156,18 +156,13 @@ struct EclEpsScalingPointsInfo
      * I.e., the values which are used for the nested Fluid-Matrix interactions and which
      * are produced by them.
      */
-    void extractUnscaled(const Opm::Deck& deck,
-                         const Opm::EclipseState& eclState,
+    void extractUnscaled(const Opm::EclipseState& eclState,
                          unsigned satRegionIdx)
     {
         // determine the value of the relative permeability below which the corresponding
         // saturation is considered to be critical
-        krCriticalEps = Opm::ParserKeywords::TOLCRIT::VALUE::defaultValue;
-        if (deck.hasKeyword("TOLCRIT")) {
-            const Opm::DeckKeyword& tolcritKeyword = deck.getKeyword("TOLCRIT");
-
-            krCriticalEps = tolcritKeyword.getRecord(0).getItem("VALUE").getSIDouble(0);
-        }
+        const auto& satFuncCtrls = eclState.runspec().saturationFunctionControls();
+        krCriticalEps = satFuncCtrls.minimumRelpermMobilityThreshold();
 
         const auto& tables = eclState.getTableManager();
         const TableContainer&  swofTables = tables.getSwofTables();
@@ -179,9 +174,9 @@ struct EclEpsScalingPointsInfo
         const TableContainer&  sof2Tables = tables.getSof2Tables();
 
 
-        bool hasWater = deck.hasKeyword("WATER");
-        bool hasGas = deck.hasKeyword("GAS");
-        bool hasOil = deck.hasKeyword("OIL");
+        bool hasWater = eclState.runspec().phases().active(Phase::WATER);
+        bool hasGas = eclState.runspec().phases().active(Phase::GAS);
+        bool hasOil = eclState.runspec().phases().active(Phase::OIL);
 
         if (!hasWater) {
             Swl = 0.0;

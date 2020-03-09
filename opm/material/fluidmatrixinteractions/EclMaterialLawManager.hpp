@@ -143,7 +143,7 @@ public:
         if (!stone1exTable.empty())
             stoneEtas.resize(numSatRegions);
         for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
-            unscaledEpsInfo_[satRegionIdx].extractUnscaled(deck, eclState, satRegionIdx);
+            unscaledEpsInfo_[satRegionIdx].extractUnscaled(eclState, satRegionIdx);
             if (!stoneEtas.empty())
                 stoneEtas[satRegionIdx] = stone1exTable[satRegionIdx].eta;
         }
