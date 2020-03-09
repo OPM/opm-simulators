@@ -129,7 +129,7 @@ public:
 
         readGlobalEpsOptions_(deck, eclState);
         readGlobalHysteresisOptions_(eclState);
-        readGlobalThreePhaseOptions_(deck);
+        readGlobalThreePhaseOptions_(eclState.runspec());
 
         // read the end point scaling configuration. this needs to be done only once per
         // deck.
@@ -687,11 +687,11 @@ private:
         hysteresisConfig_->initFromState(state.runspec());
     }
 
-    void readGlobalThreePhaseOptions_(const Opm::Deck& deck)
+    void readGlobalThreePhaseOptions_(const Opm::Runspec& runspec)
     {
-        bool gasEnabled = deck.hasKeyword("GAS");
-        bool oilEnabled = deck.hasKeyword("OIL");
-        bool waterEnabled = deck.hasKeyword("WATER");
+        bool gasEnabled = runspec.phases().active(Phase::GAS);
+        bool oilEnabled = runspec.phases().active(Phase::OIL);
+        bool waterEnabled = runspec.phases().active(Phase::WATER);
 
         int numEnabled =
             (gasEnabled?1:0)
@@ -715,9 +715,9 @@ private:
             assert(numEnabled == 3);
 
             threePhaseApproach_ = EclMultiplexerApproach::EclDefaultApproach;
-            if (deck.hasKeyword("STONE") || deck.hasKeyword("STONE2"))
+            if (runspec.stoneType() == Runspec::StoneType::STONE2)
                 threePhaseApproach_ = EclMultiplexerApproach::EclStone2Approach;
-            else if (deck.hasKeyword("STONE1"))
+            else if (runspec.stoneType() == Runspec::StoneType::STONE1)
                 threePhaseApproach_ = EclMultiplexerApproach::EclStone1Approach;
         }
     }
