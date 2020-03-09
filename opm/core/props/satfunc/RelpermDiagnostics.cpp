@@ -606,8 +606,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::unscaledEndPointsCheck_(const Deck& deck,
-                                                     const EclipseState& eclState)
+    void RelpermDiagnostics::unscaledEndPointsCheck_(const EclipseState& eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
         const int numSatRegions = eclState.runspec().tabdims().getNumSatTables();
@@ -621,7 +620,7 @@ namespace Opm{
 
         // std::cout << "***************\nEnd-Points In all the Tables\n";
         for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
-             unscaledEpsInfo_[satnumIdx].extractUnscaled(deck, eclState, satnumIdx);
+             unscaledEpsInfo_[satnumIdx].extractUnscaled(eclState, satnumIdx);
              const std::string regionIdx = std::to_string(satnumIdx + 1);
              ///Consistency check.
              if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
