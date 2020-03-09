@@ -426,12 +426,14 @@ add_test_compare_restarted_simulation(CASENAME spe1
                                       FILENAME SPE1CASE2_ACTNUM
                                       SIMULATOR flow
                                       ABS_TOL ${abs_tol_restart}
-                                      REL_TOL ${rel_tol_restart})
+                                      REL_TOL ${rel_tol_restart}
+                                      TEST_ARGS --sched-restart=true)
 add_test_compare_restarted_simulation(CASENAME spe9
                                       FILENAME SPE9_CP_SHORT
                                       SIMULATOR flow
                                       ABS_TOL ${abs_tol_restart}
-                                      REL_TOL ${rel_tol_restart})
+                                      REL_TOL ${rel_tol_restart}
+                                      TEST_ARGS --sched-restart=true)
 
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
@@ -461,7 +463,8 @@ if(MPI_FOUND)
                                                  FILENAME SPE1CASE2_ACTNUM
                                                  SIMULATOR flow
                                                  ABS_TOL ${abs_tol_restart}
-                                                 REL_TOL ${rel_tol_restart})
+                                                 REL_TOL ${rel_tol_restart}
+                                                 TEST_ARGS --sched-restart=true)
 
 
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-regressionTest.sh "")
