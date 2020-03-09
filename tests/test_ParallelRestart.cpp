@@ -424,15 +424,15 @@ Opm::DeckRecord getDeckRecord()
                        Opm::type_tag::string, "test5",
                        {Opm::value::status::deck_value},
                        true,
-                       {Opm::Dimension("DimensionLess", 7.0, 8.0)},
-                       {Opm::Dimension("Metric", 10.0, 11.0)});
+                       {Opm::Dimension(7.0, 8.0)},
+                       {Opm::Dimension(10.0, 11.0)});
 
     Opm::DeckItem item2({1.0}, {2}, {"test3"}, {Opm::UDAValue(4)},
                        Opm::type_tag::string, "test6",
                        {Opm::value::status::deck_value},
                        true,
-                       {Opm::Dimension("DimensionLess", 7.0, 8.0)},
-                       {Opm::Dimension("Metric", 10.0, 11.0)});
+                       {Opm::Dimension(7.0, 8.0)},
+                       {Opm::Dimension(10.0, 11.0)});
 
     return Opm::DeckRecord({item1, item2});
 }
@@ -1520,7 +1520,7 @@ BOOST_AUTO_TEST_CASE(Segment)
 BOOST_AUTO_TEST_CASE(Dimension)
 {
 #ifdef HAVE_MPI
-    Opm::Dimension val1("test", 1.0, 2.0);
+    Opm::Dimension val1(1.0, 2.0);
     auto val2 = PackUnpack(val1);
     DO_CHECKS(Dimension)
 #endif
@@ -1905,8 +1905,8 @@ BOOST_AUTO_TEST_CASE(DeckItem)
                        Opm::type_tag::string, "test5",
                        {Opm::value::status::deck_value},
                        true,
-                       {Opm::Dimension("DimensionLess", 7.0, 8.0)},
-                       {Opm::Dimension("Metric", 10.0, 11.0)});
+                       {Opm::Dimension(7.0, 8.0)},
+                       {Opm::Dimension(10.0, 11.0)});
 
     auto val2 = PackUnpack(val1);
     DO_CHECKS(DeckItem)
