@@ -127,7 +127,7 @@ public:
         hasOil = ph.active(Phase::OIL);
         hasWater = ph.active(Phase::WATER);
 
-        readGlobalEpsOptions_(deck, eclState);
+        readGlobalEpsOptions_(eclState);
         readGlobalHysteresisOptions_(eclState);
         readGlobalThreePhaseOptions_(eclState.runspec());
 
@@ -135,8 +135,8 @@ public:
         // deck.
         gasOilConfig = std::make_shared<Opm::EclEpsConfig>();
         oilWaterConfig = std::make_shared<Opm::EclEpsConfig>();
-        gasOilConfig->initFromDeck(deck, eclState, Opm::EclGasOilSystem);
-        oilWaterConfig->initFromDeck(deck, eclState, Opm::EclOilWaterSystem);
+        gasOilConfig->initFromState(eclState, Opm::EclGasOilSystem);
+        oilWaterConfig->initFromState(eclState, Opm::EclOilWaterSystem);
 
         unscaledEpsInfo_.resize(numSatRegions);
         const auto& stone1exTable = eclState.getTableManager().getStone1exTable();
@@ -673,12 +673,12 @@ public:
     }
 
 private:
-    void readGlobalEpsOptions_(const Opm::Deck& deck, const Opm::EclipseState& eclState)
+    void readGlobalEpsOptions_(const Opm::EclipseState& eclState)
     {
         oilWaterEclEpsConfig_ = std::make_shared<Opm::EclEpsConfig>();
-        oilWaterEclEpsConfig_-> initFromDeck(deck, eclState, Opm::EclOilWaterSystem);
+        oilWaterEclEpsConfig_->initFromState(eclState, Opm::EclOilWaterSystem);
 
-        enableEndPointScaling_ = deck.hasKeyword("ENDSCALE");
+        enableEndPointScaling_ = eclState.getTableManager().hasTables("ENKRVD");
     }
 
     void readGlobalHysteresisOptions_(const Opm::EclipseState& state)

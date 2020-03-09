@@ -161,9 +161,8 @@ public:
      *
      * This requires that the opm-parser module is available.
      */
-    void initFromDeck(const Opm::Deck& deck OPM_UNUSED,
-                      const Opm::EclipseState& eclState,
-                      Opm::EclTwoPhaseSystemType twoPhaseSystemType)
+    void initFromState(const Opm::EclipseState& eclState,
+                       Opm::EclTwoPhaseSystemType twoPhaseSystemType)
     {
         const auto& endscale = eclState.runspec().endpointScaling();
         // find out if endpoint scaling is used in the first place
