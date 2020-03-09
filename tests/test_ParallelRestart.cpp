@@ -25,16 +25,21 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/common/OpmLog/Location.hpp>
-#include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
 #include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/Fault.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/FaultCollection.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/FaultFace.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/MULTREGTScanner.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
@@ -2314,19 +2319,6 @@ BOOST_AUTO_TEST_CASE(FaultCollection)
     Opm::FaultCollection val1(faults);
     auto val2 = PackUnpack(val1);
     DO_CHECKS(FaultCollection)
-#endif
-}
-
-
-BOOST_AUTO_TEST_CASE(EclEpsScalingPointsInfo)
-{
-#ifdef HAVE_MPI
-    Opm::EclEpsScalingPointsInfo<double> val1{ 1.0,  2.0,  3.0,  4.0,  5.0,
-                                               6.0,  7.0,  8.0,  9.0, 10.0,
-                                              11.0, 12.0, 13.0, 14.0, 15.0,
-                                              16.0, 17.0, 18.0, 19.0, 20.0, 21};
-    auto val2 = PackUnpack(val1);
-    DO_CHECKS(EclEpsScalingPointsInfo<double>)
 #endif
 }
 

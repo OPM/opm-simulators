@@ -92,8 +92,7 @@ namespace Opm {
         void tableCheck_(const EclipseState& eclState);
 
         ///Check endpoints in the saturation tables.
-        void unscaledEndPointsCheck_(const Deck& deck,
-                                     const EclipseState& eclState);
+        void unscaledEndPointsCheck_(const EclipseState& eclState);
 
         template <class GridT>
         void scaledEndPointsCheck_(const Deck& deck,
