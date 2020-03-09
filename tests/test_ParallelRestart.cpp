@@ -61,6 +61,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
@@ -327,9 +328,9 @@ Opm::Well getFullWell()
 {
     Opm::UnitSystem unitSystem;
     return Opm::Well("test1", "test2", 1, 2, 3, 4, 5.0,
-                     Opm::Phase::WATER, Opm::Connection::Order::DEPTH,
+                     Opm::WellType(Opm::Phase::WATER), Opm::Connection::Order::DEPTH,
                      unitSystem, 6.0, Opm::Well::Status::SHUT,
-                     7.0, true, true, false,
+                     7.0, true, false,
                      Opm::Well::WellGuideRate{true, 1.0, Opm::Well::GuideRateTarget::COMB, 2.0},
                      8.0, 9.0, false,
                      std::make_shared<Opm::WellEconProductionLimits>(),
@@ -2298,6 +2299,15 @@ BOOST_AUTO_TEST_CASE(Fault)
     Opm::Fault val1("test", 1.0, {{{1,2,3,4,5,6}, Opm::FaceDir::YPlus}});
     auto val2 = PackUnpack(val1);
     DO_CHECKS(Fault)
+#endif
+}
+
+BOOST_AUTO_TEST_CASE(WellType)
+{
+#ifdef HAVE_MPI
+    Opm::WellType val1(true, Opm::Phase::OIL);
+    auto val2 = PackUnpack(val1);
+    DO_CHECKS(WellType)
 #endif
 }
 

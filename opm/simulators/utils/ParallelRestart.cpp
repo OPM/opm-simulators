@@ -51,6 +51,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
@@ -532,6 +533,12 @@ std::size_t packSize(const ThresholdPressure& data, Dune::MPIHelper::MPICommunic
           packSize(data.restart(), comm) +
           packSize(data.thresholdPressureTable(), comm) +
           packSize(data.pressureTable(), comm);
+}
+
+std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.producer(), comm) +
+           packSize(data.preferred_phase(), comm);
 }
 
 std::size_t packSize(const DenT& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1233,7 +1240,7 @@ std::size_t packSize(const Well& data,
                        packSize(data.getHeadI(), comm) +
                        packSize(data.getHeadJ(), comm) +
                        packSize(data.getRefDepth(), comm) +
-                       packSize(data.getPreferredPhase(), comm) +
+                       packSize(data.wellType(), comm) +
                        packSize(data.getWellConnectionOrdering(), comm) +
                        packSize(data.units(), comm) +
                        packSize(data.udqUndefined(), comm) +
@@ -1241,7 +1248,6 @@ std::size_t packSize(const Well& data,
                        packSize(data.getDrainageRadius(), comm) +
                        packSize(data.getAllowCrossFlow(), comm) +
                        packSize(data.getAutomaticShutIn(), comm) +
-                       packSize(data.isProducer(), comm) +
                        packSize(data.wellGuideRate(), comm) +
                        packSize(data.getEfficiencyFactor(), comm) +
                        packSize(data.getSolventFraction(), comm) +
@@ -2196,6 +2202,12 @@ void pack(const Aquifetp::AQUFETP_data& data, std::vector<char>& buffer, int& po
     pack(data.p0, buffer, position, comm);
 }
 
+void pack(const WellType& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm) {
+    pack(data.producer(), buffer, position, comm);
+    pack(data.preferred_phase(), buffer, position, comm);
+}
+
 void pack(const DenT& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.records(), buffer, position, comm);
@@ -2875,7 +2887,7 @@ void pack(const Well& data,
     pack(data.getHeadI(), buffer, position, comm);
     pack(data.getHeadJ(), buffer, position, comm);
     pack(data.getRefDepth(), buffer, position, comm);
-    pack(data.getPreferredPhase(), buffer, position, comm);
+    pack(data.wellType(), buffer, position, comm);
     pack(data.getWellConnectionOrdering(), buffer, position, comm);
     pack(data.units(), buffer, position, comm);
     pack(data.udqUndefined(), buffer, position, comm);
@@ -2883,7 +2895,6 @@ void pack(const Well& data,
     pack(data.getDrainageRadius(), buffer, position, comm);
     pack(data.getAllowCrossFlow(), buffer, position, comm);
     pack(data.getAutomaticShutIn(), buffer, position, comm);
-    pack(data.isProducer(), buffer, position, comm);
     pack(data.wellGuideRate(), buffer, position, comm);
     pack(data.getEfficiencyFactor(), buffer, position, comm);
     pack(data.getSolventFraction(), buffer, position, comm);
@@ -3946,6 +3957,17 @@ void unpack(AquiferCT::AQUCT_data& data, std::vector<char>& buffer, int& positio
 }
 
 
+void unpack(WellType& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
+{
+    Phase preferred_phase;
+    bool producer;
+    unpack(producer, buffer, position, comm);
+    unpack(preferred_phase, buffer, position, comm);
+    data = WellType( producer, preferred_phase );
+}
+
+
+
 void unpack(DenT& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
 {
     std::vector<DenT::entry> records;
@@ -4989,13 +5011,13 @@ void unpack(Well& data,
     std::size_t firstTimeStep, seqIndex;
     int headI, headJ;
     double ref_depth;
-    Phase phase;
+    WellType wtype;
     Connection::Order ordering;
     UnitSystem units;
     double udq_undefined;
     Well::Status status;
     double drainageRadius;
-    bool allowCrossFlow, automaticShutIn, isProducer;
+    bool allowCrossFlow, automaticShutIn;
     Well::WellGuideRate guideRate;
     double efficiencyFactor;
     double solventFraction;
@@ -5017,7 +5039,7 @@ void unpack(Well& data,
     unpack(headI, buffer, position, comm);
     unpack(headJ, buffer, position, comm);
     unpack(ref_depth, buffer, position, comm);
-    unpack(phase, buffer, position, comm);
+    unpack(wtype, buffer, position, comm);
     unpack(ordering, buffer, position, comm);
     unpack(units, buffer, position, comm);
     unpack(udq_undefined, buffer, position, comm);
@@ -5025,7 +5047,6 @@ void unpack(Well& data,
     unpack(drainageRadius, buffer, position, comm);
     unpack(allowCrossFlow, buffer, position, comm);
     unpack(automaticShutIn, buffer, position, comm);
-    unpack(isProducer, buffer, position, comm);
     unpack(guideRate, buffer, position, comm);
     unpack(efficiencyFactor, buffer, position, comm);
     unpack(solventFraction, buffer, position, comm);
@@ -5045,8 +5066,8 @@ void unpack(Well& data,
         unpack(*segments, buffer, position, comm);
     }
     data = Well(name, groupName, firstTimeStep, seqIndex, headI, headJ,
-                ref_depth, phase, ordering, units, udq_undefined, status,
-                drainageRadius, allowCrossFlow, automaticShutIn, isProducer,
+                ref_depth, wtype, ordering, units, udq_undefined, status,
+                drainageRadius, allowCrossFlow, automaticShutIn,
                 guideRate, efficiencyFactor, solventFraction, prediction_mode,
                 econLimits, foamProperties, polymerProperties, brineProperties,
                 tracerProperties, connection, production, injection, segments);
