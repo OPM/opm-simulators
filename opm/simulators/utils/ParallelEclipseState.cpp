@@ -66,7 +66,19 @@ const std::vector<int>& ParallelFieldPropsManager::get_int(const std::string& ke
 {
     auto it = m_intProps.find(keyword);
     if (it == m_intProps.end())
-        OPM_THROW(std::runtime_error, "No integer property field: " + keyword);
+    {
+        // Some of the keywords might be defaulted.
+        // We will let rank 0 create them and distribute them using get_global_int
+        auto data = get_global_int(keyword);
+        auto& local_data = const_cast<std::map<std::string, std::vector<int>>&>(m_intProps)[keyword];
+        local_data.resize(m_activeSize());
+
+        for (int i = 0; i < m_activeSize(); ++i)
+        {
+            local_data[i] = data[m_local2Global(i)];
+        }
+        return local_data;
+    }
 
     return it->second;
 }
@@ -107,7 +119,18 @@ const std::vector<double>& ParallelFieldPropsManager::get_double(const std::stri
 {
     auto it = m_doubleProps.find(keyword);
     if (it == m_doubleProps.end())
-        OPM_THROW(std::runtime_error, "No double property field: " + keyword);
+    {
+        // Some of the keywords might be defaulted.
+        // We will let rank 0 create them and distribute them using get_global_int
+        auto data = get_global_double(keyword);
+        auto& local_data = const_cast<std::map<std::string, std::vector<double>>&>(m_doubleProps)[keyword];
+        local_data.resize(m_activeSize());
+        for (int i = 0; i < m_activeSize(); ++i)
+        {
+            local_data[i] = data[m_local2Global(i)];
+        }
+        return local_data;
+    }
 
     return it->second;
 }

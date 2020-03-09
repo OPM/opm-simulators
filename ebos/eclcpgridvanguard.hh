@@ -218,6 +218,8 @@ public:
 #endif
 
         cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
+        // reset cartesian index mapper for auto creation of field properties
+        static_cast<ParallelEclipseState&>(this->eclState()).resetCartesianMapper(cartesianIndexMapper_.get());
         this->updateGridView_();
 #if HAVE_MPI
         if (mpiSize > 1) {

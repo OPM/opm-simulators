@@ -22,6 +22,8 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <dune/common/parallel/mpihelper.hh>
 
+#include <functional>
+
 namespace Opm {
 
 
@@ -83,11 +85,25 @@ public:
     //! \param keyword Name of property
     bool has_double(const std::string& keyword) const override;
 
+    //! \brief Resets the underlying cartesian mapper
+    //! \detail This has to be the cartesian mapper of the distributed grid.
+    //! It will be used to autocreate properties not explicitly stored.
+    //! \tparam T The type of the cartesian mapper
+    //! \param mapper The cartesian mapper of the distributed grid
+    template<class T>
+    void resetCartesianMapper(const T* mapper)
+    {
+        m_activeSize = std::bind(&T::compressedSize, mapper);
+        m_local2Global = std::bind(&T::cartesianIndex, mapper,
+                                   std::placeholders::_1);
+    }
 protected:
     std::map<std::string, std::vector<int>> m_intProps; //!< Map of integer properties in process-local compressed indices.
     std::map<std::string, std::vector<double>> m_doubleProps; //!< Map of double properties in process-local compressed indices.
     FieldPropsManager& m_manager; //!< Underlying field property manager (only used on root process).
     Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm; //!< Collective communication handler.
+    std::function<int(void)> m_activeSize; //!< active size function of the grid
+    std::function<int(const int)> m_local2Global; //!< mapping from local to global cartesian indices
 };
 
 
@@ -152,6 +168,16 @@ public:
     //! \details Can only be called on root process.
     const EclipseGrid& getInputGrid() const override;
 
+    //! \brief Resets the underlying cartesian mapper
+    //! \detail This has to be the cartesian mapper of the distributed grid.
+    //! It will be used to autocreate properties not explicitly stored.
+    //! \tparam T The type of the cartesian mapper
+    //! \param mapper The cartesian mapper of the distributed grid
+    template<class T>
+    void resetCartesianMapper(const T* mapper)
+    {
+        m_fieldProps.resetCartesianMapper(mapper);
+    }
 private:
     bool m_parProps = false; //! True to use distributed properties on root process
     ParallelFieldPropsManager m_fieldProps; //!< The parallel field properties
