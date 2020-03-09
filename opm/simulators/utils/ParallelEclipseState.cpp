@@ -149,7 +149,8 @@ std::size_t ParallelEclipseState::packSize(EclMpiSerializer& serializer) const
            serializer.packSize(m_simulationConfig) +
            serializer.packSize(m_transMult) +
            serializer.packSize(m_faults) +
-           serializer.packSize(m_title);
+           serializer.packSize(m_title) +
+           serializer.packSize(aquifer_config);
 
 }
 
@@ -168,6 +169,7 @@ void ParallelEclipseState::pack(std::vector<char>& buffer, int& position,
     serializer.pack(m_transMult, buffer, position);
     serializer.pack(m_faults, buffer, position);
     serializer.pack(m_title, buffer, position);
+    serializer.pack(aquifer_config, buffer, position);
 }
 
 
@@ -185,6 +187,7 @@ void ParallelEclipseState::unpack(std::vector<char>& buffer, int& position,
     serializer.unpack(m_transMult, buffer, position);
     serializer.unpack(m_faults, buffer, position);
     serializer.unpack(m_title, buffer, position);
+    serializer.unpack(aquifer_config, buffer, position);
 }
 #endif
 
