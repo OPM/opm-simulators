@@ -116,20 +116,9 @@ public:
     ParallelEclipseState(const Deck& deck);
 
 #if HAVE_MPI
-    //! \brief Calculates the size of serialized data.
+    //! \brief Perform serialization operation.
     //! \param serializer The serializer to use
-    std::size_t packSize(EclMpiSerializer& serializer) const;
-
-    //! \brief Serialize data.
-    //! \param buffer Buffer to write serialized data into
-    //! \param Position in buffer
-    //! \param serializer The serializer to use
-    void pack(std::vector<char>& buffer, int& position, EclMpiSerializer& serializer) const;
-    //! \brief Deserialize data.
-    //! \param buffer Buffer to read serialized data from
-    //! \param Position in buffer
-    //! \param serializer The serializer to use
-    void unpack(std::vector<char>& buffer, int& position, EclMpiSerializer& serializer);
+    void serializeOp(EclMpiSerializer& serializer);
 #endif
 
     //! \brief Switch to global field properties.
