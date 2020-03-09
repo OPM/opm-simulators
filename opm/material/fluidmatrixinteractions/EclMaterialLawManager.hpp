@@ -128,7 +128,7 @@ public:
         hasWater = ph.active(Phase::WATER);
 
         readGlobalEpsOptions_(deck, eclState);
-        readGlobalHysteresisOptions_(deck);
+        readGlobalHysteresisOptions_(eclState);
         readGlobalThreePhaseOptions_(deck);
 
         // read the end point scaling configuration. this needs to be done only once per
@@ -681,10 +681,10 @@ private:
         enableEndPointScaling_ = deck.hasKeyword("ENDSCALE");
     }
 
-    void readGlobalHysteresisOptions_(const Opm::Deck& deck)
+    void readGlobalHysteresisOptions_(const Opm::EclipseState& state)
     {
         hysteresisConfig_ = std::make_shared<Opm::EclHysteresisConfig>();
-        hysteresisConfig_->initFromDeck(deck);
+        hysteresisConfig_->initFromState(state.runspec());
     }
 
     void readGlobalThreePhaseOptions_(const Opm::Deck& deck)
