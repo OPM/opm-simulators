@@ -1245,46 +1245,6 @@ BOOST_AUTO_TEST_CASE(TableManager)
 }
 
 
-BOOST_AUTO_TEST_CASE(TabulatedOneDFunction)
-{
-#ifdef HAVE_MPI
-    Opm::Tabulated1DFunction<double> val1(2, std::vector<double>{1.0, 2.0},
-                                             std::vector<double>{3.0, 4.0});
-    auto val2 = PackUnpack(val1);
-    DO_CHECKS(Tabulated1DFunction<double>)
-#endif
-}
-
-
-BOOST_AUTO_TEST_CASE(IntervalTabulatedTwoDFunction)
-{
-#ifdef HAVE_MPI
-    std::vector<double> xPos{1.0, 2.0};
-    std::vector<double> yPos{3.0, 4.0};
-    std::vector<std::vector<double>> samples{{1.0, 2.0}, {3.0, 4.0}};
-    Opm::IntervalTabulated2DFunction<double> val1(xPos, yPos, samples, true, true);
-    auto val2 = PackUnpack(val1);
-    DO_CHECKS(IntervalTabulated2DFunction<double>)
-#endif
-}
-
-
-BOOST_AUTO_TEST_CASE(UniformXTabulatedTwoDFunction)
-{
-#ifdef HAVE_MPI
-    std::vector<double> xPos{1.0, 2.0};
-    std::vector<double> yPos{3.0, 4.0};
-    using SampleType = std::vector<std::vector<std::tuple<double,double,double>>>;
-    SampleType samples{{std::make_tuple(1.0, 2.0, 3.0)},
-                       {std::make_tuple(4.0, 5.0, 6.0)}};
-    using FFuncType = Opm::UniformXTabulated2DFunction<double>;
-    FFuncType val1(xPos, yPos, samples, FFuncType::Vertical);
-    auto val2 = PackUnpack(val1);
-    DO_CHECKS(UniformXTabulated2DFunction<double>)
-#endif
-}
-
-
 BOOST_AUTO_TEST_CASE(OilVaporizationProperties)
 {
 #ifdef HAVE_MPI

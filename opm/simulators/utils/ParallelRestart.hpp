@@ -23,9 +23,6 @@
 #include <mpi.h>
 #endif
 
-#include <opm/material/common/Tabulated1DFunction.hpp>
-#include <opm/material/common/IntervalTabulated2DFunction.hpp>
-#include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>
@@ -257,15 +254,6 @@ std::size_t packSize(const DynamicVector<T>& data, Dune::MPIHelper::MPICommunica
 template<class T>
 std::size_t packSize(const DynamicState<T>& data, Dune::MPIHelper::MPICommunicator comm);
 
-template<class Scalar>
-std::size_t packSize(const Tabulated1DFunction<Scalar>& data, Dune::MPIHelper::MPICommunicator comm);
-
-template<class Scalar>
-std::size_t packSize(const IntervalTabulated2DFunction<Scalar>& data, Dune::MPIHelper::MPICommunicator comm);
-
-template<class Scalar>
-std::size_t packSize(const UniformXTabulated2DFunction<Scalar>& data, Dune::MPIHelper::MPICommunicator comm);
-
 template<class T>
 std::size_t packSize(const IOrderSet<T>& data, Dune::MPIHelper::MPICommunicator comm);
 
@@ -356,18 +344,6 @@ void pack(const DynamicState<T>& data, std::vector<char>& buffer,
 
 template<class T>
 void pack(const DynamicVector<T>& data, std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template<class Scalar>
-void pack(const Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template<class Scalar>
-void pack(const IntervalTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template<class Scalar>
-void pack(const UniformXTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm);
 
 template<class T>
@@ -465,18 +441,6 @@ void unpack(DynamicState<T>& data, std::vector<char>& buffer, int& position,
 template<class T>
 void unpack(DynamicVector<T>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
-
-template<class Scalar>
-void unpack(Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
-            int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template<class Scalar>
-void unpack(IntervalTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
-            int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template<class Scalar>
-void unpack(UniformXTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
-            int& position, Dune::MPIHelper::MPICommunicator comm);
 
 template<class T>
 void unpack(IOrderSet<T>& data, std::vector<char>& buffer,

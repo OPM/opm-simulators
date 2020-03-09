@@ -941,38 +941,9 @@ std::size_t packSize(const TableManager& data, Dune::MPIHelper::MPICommunicator 
            packSize(data.rtemp(), comm);
 }
 
-template<class Scalar>
-std::size_t packSize(const Tabulated1DFunction<Scalar>& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.xValues(), comm) +
-           packSize(data.yValues(), comm);
-}
-
-template<class Scalar>
-std::size_t packSize(const IntervalTabulated2DFunction<Scalar>& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.xPos(), comm) +
-           packSize(data.yPos(), comm) +
-           packSize(data.samples(), comm) +
-           packSize(data.xExtrapolate(), comm) +
-           packSize(data.yExtrapolate(), comm);
-}
-
 template
 std::size_t packSize(const std::map<Phase,Group::GroupInjectionProperties>& data,
                      Dune::MPIHelper::MPICommunicator comm);
-
-template<class Scalar>
-std::size_t packSize(const UniformXTabulated2DFunction<Scalar>& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.xPos(), comm) +
-           packSize(data.yPos(), comm) +
-           packSize(data.samples(), comm) +
-           packSize(data.interpolationGuide(), comm);
-}
 
 template<class Scalar>
 std::size_t packSize(const EclEpsScalingPointsInfo<Scalar>& data,
@@ -2622,35 +2593,6 @@ void pack(const TableManager& data, std::vector<char>& buffer, int& position,
     pack(data.stCond(), buffer, position, comm);
     pack(data.gas_comp_index(), buffer, position, comm);
     pack(data.rtemp(), buffer, position, comm);
-}
-
-template<class Scalar>
-void pack(const Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.xValues(), buffer, position, comm);
-    pack(data.yValues(), buffer, position, comm);
-}
-
-template<class Scalar>
-void pack(const IntervalTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.xPos(), buffer, position, comm);
-    pack(data.yPos(), buffer, position, comm);
-    pack(data.samples(), buffer, position, comm);
-    pack(data.xExtrapolate(), buffer, position, comm);
-    pack(data.yExtrapolate(), buffer, position, comm);
-}
-
-template<class Scalar>
-void pack(const UniformXTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.xPos(), buffer, position, comm);
-    pack(data.yPos(), buffer, position, comm);
-    pack(data.samples(), buffer, position, comm);
-    pack(data.interpolationGuide(), buffer, position, comm);
 }
 
 void pack(const OilVaporizationProperties& data,
@@ -4663,47 +4605,6 @@ void unpack(TableManager& data, std::vector<char>& buffer, int& position,
                         watDenT, stcond, gas_comp_index, rtemp);
 }
 
-template<class Scalar>
-void unpack(Tabulated1DFunction<Scalar>& data, std::vector<char>& buffer,
-            int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<Scalar> xValues, yValues;
-    unpack(xValues, buffer, position, comm);
-    unpack(yValues, buffer, position, comm);
-    data = Tabulated1DFunction<Scalar>(xValues, yValues, false);
-}
-
-template<class Scalar>
-void unpack(IntervalTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
-            int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<Scalar> xPos, yPos;
-    std::vector<std::vector<Scalar>> samples;
-    bool xExtrapolate, yExtrapolate;
-    unpack(xPos, buffer, position, comm);
-    unpack(yPos, buffer, position, comm);
-    unpack(samples, buffer, position, comm);
-    unpack(xExtrapolate, buffer, position, comm);
-    unpack(yExtrapolate, buffer, position, comm);
-    data = IntervalTabulated2DFunction<Scalar>(xPos, yPos, samples,
-                                               xExtrapolate, yExtrapolate);
-}
-
-template<class Scalar>
-void unpack(UniformXTabulated2DFunction<Scalar>& data, std::vector<char>& buffer,
-            int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<Scalar> xPos, yPos;
-    std::vector<std::vector<typename UniformXTabulated2DFunction<Scalar>::SamplePoint>> samples;
-    typename UniformXTabulated2DFunction<Scalar>::InterpolationPolicy interpolationGuide;
-    unpack(xPos, buffer, position, comm);
-    unpack(yPos, buffer, position, comm);
-    unpack(samples, buffer, position, comm);
-    unpack(interpolationGuide, buffer, position, comm);
-    data = UniformXTabulated2DFunction<Scalar>(xPos, yPos, samples,
-                                               interpolationGuide);
-}
-
 void unpack(OilVaporizationProperties& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -6200,10 +6101,8 @@ INSTANTIATE_PACK_VECTOR(std::vector<double>)
 INSTANTIATE_PACK_VECTOR(bool)
 INSTANTIATE_PACK_VECTOR(char)
 INSTANTIATE_PACK_VECTOR(int)
-INSTANTIATE_PACK_VECTOR(Tabulated1DFunction<double>)
 INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
 INSTANTIATE_PACK_VECTOR(EclEpsScalingPointsInfo<double>)
-INSTANTIATE_PACK_VECTOR(IntervalTabulated2DFunction<double>)
 #undef INSTANTIATE_PACK_VECTOR
 
 #define INSTANTIATE_PACK_SHARED_PTR(...) \
@@ -6239,10 +6138,6 @@ INSTANTIATE_PACK(unsigned char)
 INSTANTIATE_PACK(EclEpsScalingPointsInfo<double>)
 INSTANTIATE_PACK(EclTwoPhaseApproach)
 INSTANTIATE_PACK(EclMultiplexerApproach)
-INSTANTIATE_PACK(Tabulated1DFunction<double>)
-INSTANTIATE_PACK(IntervalTabulated2DFunction<double>)
-INSTANTIATE_PACK(UniformXTabulated2DFunction<double>)
-INSTANTIATE_PACK(std::map<int,IntervalTabulated2DFunction<double>>)
 #undef INSTANTIATE_PACK
 
 } // end namespace Mpi
