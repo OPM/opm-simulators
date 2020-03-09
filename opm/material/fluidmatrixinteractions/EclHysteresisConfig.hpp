@@ -127,32 +127,6 @@ public:
     }
 #endif
 
-    template<class Serializer>
-    std::size_t packSize(Serializer& serializer) const
-    {
-        return serializer.packSize(enableHysteresis_) +
-               serializer.packSize(pcHysteresisModel_) +
-               serializer.packSize(krHysteresisModel_);
-    }
-
-    template<class Serializer>
-    void pack(std::vector<char>& buffer, int& position,
-              Serializer& serializer) const
-    {
-        serializer.pack(enableHysteresis_, buffer, position);
-        serializer.pack(pcHysteresisModel_, buffer, position);
-        serializer.pack(krHysteresisModel_, buffer, position);
-    }
-
-    template<class Serializer>
-    void unpack(std::vector<char>& buffer, int& position,
-                Serializer& serializer)
-    {
-        serializer.unpack(enableHysteresis_, buffer, position);
-        serializer.unpack(pcHysteresisModel_, buffer, position);
-        serializer.unpack(krHysteresisModel_, buffer, position);
-    }
-
 private:
     // enable hysteresis at all
     bool enableHysteresis_;

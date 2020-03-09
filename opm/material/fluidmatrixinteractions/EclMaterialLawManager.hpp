@@ -612,64 +612,6 @@ public:
     std::shared_ptr<EclEpsScalingPointsInfo<Scalar> >& oilWaterScaledEpsInfoDrainagePointerReferenceHack(unsigned elemIdx)
     { return oilWaterScaledEpsInfoDrainage_[elemIdx]; }
 
-    template<class Serializer>
-    std::size_t packSize(Serializer& serializer) const
-    {
-        return serializer.packSize(enableEndPointScaling_) +
-               hysteresisConfig_->packSize(serializer) +
-               oilWaterEclEpsConfig_->packSize(serializer) +
-               serializer.packSize(unscaledEpsInfo_) +
-               serializer.packSize(threePhaseApproach_) +
-               serializer.packSize(twoPhaseApproach_) +
-               gasOilConfig->packSize(serializer) +
-               oilWaterConfig->packSize(serializer) +
-               serializer.packSize(stoneEtas) +
-               serializer.packSize(hasGas) +
-               serializer.packSize(hasOil) +
-               serializer.packSize(hasWater);
-    }
-
-    template<class Serializer>
-    void pack(std::vector<char>& buffer, int& position,
-               Serializer& serializer) const
-    {
-        serializer.pack(enableEndPointScaling_, buffer, position);
-        hysteresisConfig_->pack(buffer, position, serializer);
-        oilWaterEclEpsConfig_->pack(buffer, position, serializer);
-        serializer.pack(unscaledEpsInfo_, buffer, position);
-        serializer.pack(threePhaseApproach_, buffer, position);
-        serializer.pack(twoPhaseApproach_, buffer, position);
-        gasOilConfig->pack(buffer, position, serializer);
-        oilWaterConfig->pack(buffer, position, serializer);
-        serializer.pack(stoneEtas, buffer, position);
-        serializer.pack(hasGas, buffer, position);
-        serializer.pack(hasOil, buffer, position);
-        serializer.pack(hasWater, buffer, position);
-    }
-
-    template<class Serializer>
-    void unpack(std::vector<char>& buffer, int& position,
-                Serializer& serializer)
-    {
-        oilWaterEclEpsConfig_ = std::make_shared<Opm::EclEpsConfig>();
-        hysteresisConfig_ = std::make_shared<Opm::EclHysteresisConfig>();
-        gasOilConfig = std::make_shared<Opm::EclEpsConfig>();
-        oilWaterConfig = std::make_shared<Opm::EclEpsConfig>();
-
-        serializer.unpack(enableEndPointScaling_, buffer, position);
-        hysteresisConfig_->unpack(buffer, position, serializer);
-        oilWaterEclEpsConfig_->unpack(buffer, position, serializer);
-        serializer.unpack(unscaledEpsInfo_, buffer, position);
-        serializer.unpack(threePhaseApproach_, buffer, position);
-        serializer.unpack(twoPhaseApproach_, buffer, position);
-        gasOilConfig->unpack(buffer, position, serializer);
-        oilWaterConfig->unpack(buffer, position, serializer);
-        serializer.unpack(stoneEtas, buffer, position);
-        serializer.unpack(hasGas, buffer, position);
-        serializer.unpack(hasOil, buffer, position);
-        serializer.unpack(hasWater, buffer, position);
-    }
-
 private:
     void readGlobalEpsOptions_(const Opm::EclipseState& eclState)
     {
