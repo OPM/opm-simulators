@@ -449,7 +449,7 @@ inline void testAll()
         size_t n = eclGrid.getCartesianSize();
 
         MaterialLawManager materialLawManager;
-        materialLawManager.initFromDeck(deck, eclState);
+        materialLawManager.initFromState(eclState);
         materialLawManager.initParamsForElements(eclState, n);
 
         if (materialLawManager.enableEndPointScaling())
@@ -463,7 +463,7 @@ inline void testAll()
             const Opm::EclipseState fam2EclState(fam2Deck);
 
             Opm::EclMaterialLawManager<MaterialTraits> fam2MaterialLawManager;
-            fam2MaterialLawManager.initFromDeck(fam2Deck, fam2EclState);
+            fam2MaterialLawManager.initFromState(fam2EclState);
             fam2MaterialLawManager.initParamsForElements(fam2EclState, n);
 
             if (fam2MaterialLawManager.enableEndPointScaling())
@@ -476,7 +476,7 @@ inline void testAll()
             const Opm::EclipseState hysterEclState(hysterDeck);
 
             Opm::EclMaterialLawManager<MaterialTraits> hysterMaterialLawManager;
-            hysterMaterialLawManager.initFromDeck(hysterDeck, hysterEclState);
+            hysterMaterialLawManager.initFromState(hysterEclState);
             hysterMaterialLawManager.initParamsForElements(hysterEclState, n);
 
             if (hysterMaterialLawManager.enableEndPointScaling())
@@ -569,14 +569,14 @@ inline void testAll()
             const Opm::EclipseState fam1EclState(fam1Deck);
 
             MaterialLawManager fam1materialLawManager;
-            fam1materialLawManager.initFromDeck(fam1Deck, fam1EclState);
+            fam1materialLawManager.initFromState(fam1EclState);
             fam1materialLawManager.initParamsForElements(fam1EclState, n);
 
             const auto fam2Deck = parser.parseString(fam2DeckStringGasOil);
             const Opm::EclipseState fam2EclState(fam2Deck);
 
             Opm::EclMaterialLawManager<MaterialTraits> fam2MaterialLawManager;
-            fam2MaterialLawManager.initFromDeck(fam2Deck, fam2EclState);
+            fam2MaterialLawManager.initFromState(fam2EclState);
             fam2MaterialLawManager.initParamsForElements(fam2EclState, n);
 
             for (unsigned elemIdx = 0; elemIdx < n; ++ elemIdx) {

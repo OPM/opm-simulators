@@ -113,90 +113,19 @@ public:
      *
      * This requires that the opm-parser module is available.
      */
-    void initFromDeck(const Opm::Deck& deck)
+    void initFromState(const Opm::Runspec& runspec)
     {
         enableHysteresis_ = false;
 
-        if (!deck.hasKeyword("SATOPTS"))
-            return;
-
-        const auto& satoptsItem = deck.getKeyword("SATOPTS").getRecord(0).getItem(0);
-        for (unsigned i = 0; i < satoptsItem.data_size(); ++i) {
-            std::string satoptsValue = satoptsItem.get< std::string >(0);
-            std::transform(satoptsValue.begin(),
-                           satoptsValue.end(),
-                           satoptsValue.begin(),
-                           ::toupper);
-
-            if (satoptsValue == "HYSTER")
-                enableHysteresis_ = true;
-        }
-
-        // check for the (deprecated) HYST keyword
-        if (deck.hasKeyword("HYST"))
-            enableHysteresis_ = true;
+        enableHysteresis_ = runspec.hysterPar().active();
 
         if (!enableHysteresis_)
             return;
 
-        if (!deck.hasKeyword("EHYSTR"))
-            throw std::runtime_error("Enabling hysteresis via the HYST parameter for SATOPTS requires the "
-                                     "presence of the EHYSTR keyword");
-
-        const auto& ehystrKeyword = deck.getKeyword("EHYSTR");
-        if (deck.hasKeyword("NOHYKR"))
-            krHysteresisModel_ = -1;
-        else {
-            krHysteresisModel_ = ehystrKeyword.getRecord(0).getItem("relative_perm_hyst").get<int>(0);
-
-            if (krHysteresisModel_ != 0 && krHysteresisModel_ != 1)
-                throw std::runtime_error(
-                    "Only the Carlson relative permeability hystersis models (indicated by '0' or "
-                    "'1' for the second item of the 'EHYSTR' keyword) are supported");
-        }
-
-        // this is slightly screwed: it is possible to specify contradicting hysteresis
-        // models with HYPC/NOHYPC and the fifth item of EHYSTR. Let's ignore that for
-        // now.
-        std::string whereFlag =
-            ehystrKeyword.getRecord(0).getItem("limiting_hyst_flag").getTrimmedString(0);
-        if (deck.hasKeyword("NOHYPC") || whereFlag == "KR")
-            pcHysteresisModel_ = -1;
-        else {
-            // if capillary pressure hysteresis is enabled, Eclipse always uses the
-            // Killough model
-            pcHysteresisModel_ = 0;
-
-            throw std::runtime_error("Capillary pressure hysteresis is not supported yet");
-        }
+        krHysteresisModel_ = runspec.hysterPar().krHysteresisModel();
+        pcHysteresisModel_ = runspec.hysterPar().pcHysteresisModel();
     }
 #endif
-
-    template<class Serializer>
-    std::size_t packSize(Serializer& serializer) const
-    {
-        return serializer.packSize(enableHysteresis_) +
-               serializer.packSize(pcHysteresisModel_) +
-               serializer.packSize(krHysteresisModel_);
-    }
-
-    template<class Serializer>
-    void pack(std::vector<char>& buffer, int& position,
-              Serializer& serializer) const
-    {
-        serializer.pack(enableHysteresis_, buffer, position);
-        serializer.pack(pcHysteresisModel_, buffer, position);
-        serializer.pack(krHysteresisModel_, buffer, position);
-    }
-
-    template<class Serializer>
-    void unpack(std::vector<char>& buffer, int& position,
-                Serializer& serializer)
-    {
-        serializer.unpack(enableHysteresis_, buffer, position);
-        serializer.unpack(pcHysteresisModel_, buffer, position);
-        serializer.unpack(krHysteresisModel_, buffer, position);
-    }
 
 private:
     // enable hysteresis at all
