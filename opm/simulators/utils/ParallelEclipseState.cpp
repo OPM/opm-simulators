@@ -74,8 +74,26 @@ const std::vector<int>& ParallelFieldPropsManager::get_int(const std::string& ke
 std::vector<int> ParallelFieldPropsManager::get_global_int(const std::string& keyword) const
 {
     std::vector<int> result;
+    int exceptionThrown{};
+
     if (m_comm.rank() == 0)
-        result = m_manager.get_global_int(keyword);
+    {
+        try
+        {
+            result = m_manager.get_global_int(keyword);
+        }catch(std::exception& e) {
+            exceptionThrown = 1;
+            OpmLog::error("No integer property field: " + keyword + " ("+e.what()+")");
+            m_comm.broadcast(&exceptionThrown, 1, 0);
+            throw e;
+        }
+    }
+
+    m_comm.broadcast(&exceptionThrown, 1, 0);
+
+    if (exceptionThrown)
+        OPM_THROW_NOLOG(std::runtime_error, "No integer property field: " + keyword);
+
     size_t size = result.size();
     m_comm.broadcast(&size, 1, 0);
     result.resize(size);
@@ -98,8 +116,26 @@ const std::vector<double>& ParallelFieldPropsManager::get_double(const std::stri
 std::vector<double> ParallelFieldPropsManager::get_global_double(const std::string& keyword) const
 {
     std::vector<double> result;
+    int exceptionThrown{};
+
     if (m_comm.rank() == 0)
-        result = m_manager.get_global_double(keyword);
+    {
+        try
+        {
+            result = m_manager.get_global_double(keyword);
+        }catch(std::exception& e) {
+            exceptionThrown = 1;
+            OpmLog::error("No double property field: " + keyword + " ("+e.what()+")");
+            m_comm.broadcast(&exceptionThrown, 1, 0);
+            throw e;
+        }
+    }
+
+    m_comm.broadcast(&exceptionThrown, 1, 0);
+
+    if (exceptionThrown)
+        OPM_THROW_NOLOG(std::runtime_error, "No double property field: " + keyword);
+
     size_t size = result.size();
     m_comm.broadcast(&size, 1, 0);
     result.resize(size);
