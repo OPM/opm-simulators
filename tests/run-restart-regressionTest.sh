@@ -17,7 +17,7 @@ EXE_NAME="${10}"
 shift 10
 TEST_ARGS="$@"
 
-BASE_NAME=`basename ${TEST_ARGS}_RESTART.DATA`
+BASE_NAME=${FILENAME}_RESTART.DATA
 
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
@@ -28,13 +28,13 @@ then
 else
   CMD_PREFIX=""
 fi
- ${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA --enable-adaptive-time-stepping=false --output-dir=${RESULT_PATH}
+ ${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} --enable-adaptive-time-stepping=false --output-dir=${RESULT_PATH} ${TEST_ARGS}
 
 test $? -eq 0 || exit 1
 
-${OPM_PACK_COMMAND} -o ${BASE_NAME} ${TEST_ARGS}_RESTART.DATA
+${OPM_PACK_COMMAND} -o ${BASE_NAME} ${INPUT_DATA_PATH}/${FILENAME}_RESTART.DATA
 
-${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${BASE_NAME} --enable-adaptive-time-stepping=false --output-dir=${RESULT_PATH}
+${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${BASE_NAME} --enable-adaptive-time-stepping=false --output-dir=${RESULT_PATH} ${TEST_ARGS}
 test $? -eq 0 || exit 1
 
 ecode=0

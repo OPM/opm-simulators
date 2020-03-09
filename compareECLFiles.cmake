@@ -58,7 +58,6 @@ function(add_test_compare_restarted_simulation)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
-  set(TEST_ARGS ${OPM_TESTS_ROOT}/${PARAM_CASENAME}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
 
   opm_add_test(compareRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
@@ -69,7 +68,7 @@ function(add_test_compare_restarted_simulation)
                            ${COMPARE_ECL_COMMAND}
                            ${OPM_PACK_COMMAND}
                            0
-               TEST_ARGS ${TEST_ARGS})
+               TEST_ARGS ${PARAM_TEST_ARGS})
 endfunction()
 
 ###########################################################################
@@ -124,7 +123,6 @@ function(add_test_compare_parallel_restarted_simulation)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallelRestart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
-  set(TEST_ARGS ${OPM_TESTS_ROOT}/${PARAM_CASENAME}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
 
   opm_add_test(compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
@@ -135,7 +133,7 @@ function(add_test_compare_parallel_restarted_simulation)
                            ${COMPARE_ECL_COMMAND}
                            ${OPM_PACK_COMMAND}
                            1
-               TEST_ARGS ${TEST_ARGS})
+               TEST_ARGS ${PARAM_TEST_ARGS})
   set_tests_properties(compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}
                        PROPERTIES RUN_SERIAL 1)
 endfunction()
