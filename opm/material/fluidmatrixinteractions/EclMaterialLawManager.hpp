@@ -50,7 +50,6 @@
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <algorithm>
 
@@ -116,8 +115,7 @@ public:
     EclMaterialLawManager()
     {}
 
-    void initFromDeck(const Opm::Deck& deck,
-                      const Opm::EclipseState& eclState)
+    void initFromState(const Opm::EclipseState& eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
         const size_t numSatRegions = eclState.runspec().tabdims().getNumSatTables();
@@ -355,7 +353,7 @@ public:
      * \brief Modify the initial condition according to the SWATINIT keyword.
      *
      * The method returns the water saturation which yields a givenn capillary
-     * pressure. The reason this method is not folded directly into initFromDeck() is
+     * pressure. The reason this method is not folded directly into initFromState() is
      * that the capillary pressure given depends on the particuars of how the simulator
      * calculates its initial condition.
      */
