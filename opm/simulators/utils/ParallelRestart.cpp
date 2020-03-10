@@ -1651,14 +1651,6 @@ std::size_t packSize(const SummaryNode& data,
            packSize(data.isUserDefined(), comm);
 }
 
-std::size_t packSize(const SummaryConfig& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getKwds(), comm) +
-           packSize(data.getShortKwds(), comm) +
-           packSize(data.getSmryKwds(), comm);
-}
-
 std::size_t packSize(const EquilRecord& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -3326,15 +3318,6 @@ void pack(const SummaryNode& data,
     pack(data.namedEntity(), buffer, position, comm);
     pack(data.number(), buffer, position, comm);
     pack(data.isUserDefined(), buffer, position, comm);
-}
-
-void pack(const SummaryConfig& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getKwds(), buffer, position, comm);
-    pack(data.getShortKwds(), buffer, position, comm);
-    pack(data.getSmryKwds(), buffer, position, comm);
 }
 
 void pack(const EquilRecord& data,
@@ -5681,19 +5664,6 @@ void unpack(SummaryNode& data,
            .isUserDefined(isUserDefined);
 }
 
-void unpack(SummaryConfig& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    SummaryConfig::keyword_list kwds;
-    std::set<std::string> shortKwds, smryKwds;
-
-    unpack(kwds, buffer, position, comm);
-    unpack(shortKwds, buffer, position, comm);
-    unpack(smryKwds, buffer, position, comm);
-    data = SummaryConfig(kwds, shortKwds, smryKwds);
-}
-
 void unpack(EquilRecord& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -6046,7 +6016,23 @@ INSTANTIATE_PACK_VECTOR(bool)
 INSTANTIATE_PACK_VECTOR(char)
 INSTANTIATE_PACK_VECTOR(int)
 INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
+INSTANTIATE_PACK_VECTOR(SummaryNode)
+
 #undef INSTANTIATE_PACK_VECTOR
+
+#define INSTANTIATE_PACK_SET(...) \
+template std::size_t packSize(const std::set<__VA_ARGS__>& data, \
+                              Dune::MPIHelper::MPICommunicator comm); \
+template void pack(const std::set<__VA_ARGS__>& data, \
+                   std::vector<char>& buffer, int& position, \
+                   Dune::MPIHelper::MPICommunicator comm); \
+template void unpack(std::set<__VA_ARGS__>& data, \
+                     std::vector<char>& buffer, int& position, \
+                     Dune::MPIHelper::MPICommunicator comm);
+
+INSTANTIATE_PACK_SET(std::string)
+
+#undef INSTANTIATE_PACK_SET
 
 #define INSTANTIATE_PACK_SHARED_PTR(...) \
 template std::size_t packSize(const std::shared_ptr<__VA_ARGS__>& data, \
@@ -6078,6 +6064,7 @@ INSTANTIATE_PACK(int)
 INSTANTIATE_PACK(std::array<short,3>)
 INSTANTIATE_PACK(std::array<bool,3>)
 INSTANTIATE_PACK(unsigned char)
+INSTANTIATE_PACK(SummaryNode)
 #undef INSTANTIATE_PACK
 
 } // end namespace Mpi

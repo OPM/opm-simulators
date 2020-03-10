@@ -110,6 +110,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <ebos/eclmpiserializer.hh>
 
 
 namespace {
@@ -539,6 +540,20 @@ std::tuple<T,int,int> PackUnpack(const T& in)
     int pos2 = 0;
     T out;
     Opm::Mpi::unpack(out, buffer, pos2, comm);
+
+    return std::make_tuple(out, pos1, pos2);
+}
+
+template<class T>
+std::tuple<T,int,int> PackUnpack2(T& in)
+{
+    auto comm = Dune::MPIHelper::getCollectiveCommunication();
+    Opm::EclMpiSerializer ser(comm);
+    ser.pack(in);
+    size_t pos1 = ser.position();
+    T out;
+    ser.unpack(out);
+    size_t pos2 = ser.position();
 
     return std::make_tuple(out, pos1, pos2);
 }
@@ -2189,7 +2204,7 @@ BOOST_AUTO_TEST_CASE(SummaryConfig)
                                  .isUserDefined(true);
     Opm::SummaryConfig val1({node}, {"test1", "test2"}, {"test3", "test4"});
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(SummaryConfig)
 #endif
 }
