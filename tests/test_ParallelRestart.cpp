@@ -983,8 +983,7 @@ BOOST_AUTO_TEST_CASE(Runspec)
                       Opm::UDQParams(true, 1, 2.0, 3.0, 4.0),
                       Opm::EclHysterConfig(true, 1, 2),
                       Opm::Actdims(1,2,3,4),
-                      Opm::SatFuncControls(5.0e-7),
-                      Opm::Runspec::StoneType::STONE2);
+                      Opm::SatFuncControls(5.0e-7, Opm::SatFuncControls::ThreePhaseOilKrModel::Stone2));
 
     auto val2 = PackUnpack(val1);
     DO_CHECKS(Runspec)
@@ -2077,8 +2076,7 @@ BOOST_AUTO_TEST_CASE(Schedule)
                          Opm::UDQParams(true, 1, 2.0, 3.0, 4.0),
                          Opm::EclHysterConfig(true, 1, 2),
                          Opm::Actdims(1,2,3,4),
-                         Opm::SatFuncControls(5.6e-7),
-                         Opm::Runspec::StoneType::STONE1);
+                         Opm::SatFuncControls(5.6e-7, Opm::SatFuncControls::ThreePhaseOilKrModel::Stone1));
     Opm::Schedule::VFPProdMap vfpProd {{1, {{std::make_shared<Opm::VFPProdTable>(getVFPProdTable())},1}}};
     Opm::Schedule::VFPInjMap vfpIn{{1, {{std::make_shared<Opm::VFPInjTable>(getVFPInjTable())},1}}};
     Opm::WellTestConfig::WTESTWell tw{"test", Opm::WellTestConfig::ECONOMIC,
