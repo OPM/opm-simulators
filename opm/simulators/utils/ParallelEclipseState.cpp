@@ -137,57 +137,20 @@ ParallelEclipseState::ParallelEclipseState(const Deck& deck)
 
 
 #if HAVE_MPI
-std::size_t ParallelEclipseState::packSize(EclMpiSerializer& serializer) const
+void ParallelEclipseState::serializeOp(EclMpiSerializer& serializer)
 {
-    return serializer.packSize(m_tables) +
-           serializer.packSize(m_runspec) +
-           serializer.packSize(m_eclipseConfig) +
-           serializer.packSize(m_deckUnitSystem) +
-           serializer.packSize(m_inputNnc) +
-           serializer.packSize(m_inputEditNnc) +
-           serializer.packSize(m_gridDims) +
-           serializer.packSize(m_simulationConfig) +
-           serializer.packSize(m_transMult) +
-           serializer.packSize(m_faults) +
-           serializer.packSize(m_title) +
-           serializer.packSize(aquifer_config);
-
-}
-
-
-void ParallelEclipseState::pack(std::vector<char>& buffer, int& position,
-                                EclMpiSerializer& serializer) const
-{
-    serializer.pack(m_tables, buffer, position);
-    serializer.pack(m_runspec, buffer, position);
-    serializer.pack(m_eclipseConfig, buffer, position);
-    serializer.pack(m_deckUnitSystem, buffer, position);
-    serializer.pack(m_inputNnc, buffer, position);
-    serializer.pack(m_inputEditNnc, buffer, position);
-    serializer.pack(m_gridDims, buffer, position);
-    serializer.pack(m_simulationConfig, buffer, position);
-    serializer.pack(m_transMult, buffer, position);
-    serializer.pack(m_faults, buffer, position);
-    serializer.pack(m_title, buffer, position);
-    serializer.pack(aquifer_config, buffer, position);
-}
-
-
-void ParallelEclipseState::unpack(std::vector<char>& buffer, int& position,
-                                  EclMpiSerializer& serializer)
-{
-    serializer.unpack(m_tables, buffer, position);
-    serializer.unpack(m_runspec, buffer, position);
-    serializer.unpack(m_eclipseConfig, buffer, position);
-    serializer.unpack(m_deckUnitSystem, buffer, position);
-    serializer.unpack(m_inputNnc, buffer, position);
-    serializer.unpack(m_inputEditNnc, buffer, position);
-    serializer.unpack(m_gridDims, buffer, position);
-    serializer.unpack(m_simulationConfig, buffer, position);
-    serializer.unpack(m_transMult, buffer, position);
-    serializer.unpack(m_faults, buffer, position);
-    serializer.unpack(m_title, buffer, position);
-    serializer.unpack(aquifer_config, buffer, position);
+    serializer(m_tables);
+    serializer(m_runspec);
+    serializer(m_eclipseConfig);
+    serializer(m_deckUnitSystem);
+    serializer(m_inputNnc);
+    serializer(m_inputEditNnc);
+    serializer(m_gridDims);
+    serializer(m_simulationConfig);
+    serializer(m_transMult);
+    serializer(m_faults);
+    serializer(m_title);
+    serializer(aquifer_config);
 }
 #endif
 

@@ -27,23 +27,45 @@ namespace Opm {
 
 class EclMpiSerializer {
 public:
+    enum class Operation {
+        PACKSIZE,
+        PACK,
+        UNPACK
+    };
+
     explicit EclMpiSerializer(Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm) :
         m_comm(comm)
     {}
 
     template<class T>
-    std::size_t packSize(const T& data) {
-        return Mpi::packSize(data, m_comm);
+    void operator()(const T& data)
+    {
+        if (m_op == Operation::PACKSIZE)
+            m_packSize += Mpi::packSize(data, m_comm);
+        else if (m_op == Operation::PACK)
+            Mpi::pack(data, m_buffer, m_position, m_comm);
+        else if (m_op == Operation::UNPACK)
+            Mpi::unpack(const_cast<T&>(data), m_buffer, m_position, m_comm);
     }
 
     template<class T>
-    void pack(const T& data, std::vector<char>& buffer, int& pos) {
-        Mpi::pack(data, buffer, pos, m_comm);
+    void pack(T& data)
+    {
+        m_op = Operation::PACKSIZE;
+        m_packSize = 0;
+        data.serializeOp(*this);
+        m_position = 0;
+        m_buffer.resize(m_packSize);
+        m_op = Operation::PACK;
+        data.serializeOp(*this);
     }
 
     template<class T>
-    void unpack(T& data, std::vector<char>& buffer, int& pos) {
-        Mpi::unpack(data, buffer, pos, m_comm);
+    void unpack(T& data)
+    {
+        m_position = 0;
+        m_op = Operation::UNPACK;
+        data.serializeOp(*this);
     }
 
     template<class T>
@@ -54,25 +76,30 @@ public:
 
 #if HAVE_MPI
         if (m_comm.rank() == 0) {
-            size_t size = data.packSize(*this);
-            std::vector<char> buffer(size);
-            int position = 0;
-            data.pack(buffer, position, *this);
-            m_comm.broadcast(&position, 1, 0);
-            m_comm.broadcast(buffer.data(), position, 0);
+            pack(data);
+            m_comm.broadcast(&m_position, 1, 0);
+            m_comm.broadcast(m_buffer.data(), m_position, 0);
         } else {
-            int size;
-            m_comm.broadcast(&size, 1, 0);
-            std::vector<char> buffer(size);
-            m_comm.broadcast(buffer.data(), size, 0);
-            int position = 0;
-            data.unpack(buffer, position, *this);
+            m_comm.broadcast(&m_packSize, 1, 0);
+            m_buffer.resize(m_packSize);
+            m_comm.broadcast(m_buffer.data(), m_packSize, 0);
+            unpack(data);
         }
 #endif
     }
 
+    size_t position() const
+    {
+        return m_position;
+    }
+
 protected:
     Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm;
+
+    Operation m_op = Operation::PACKSIZE;
+    size_t m_packSize = 0;
+    int m_position = 0;
+    std::vector<char> m_buffer;
 };
 
 }
