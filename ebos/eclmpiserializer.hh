@@ -49,6 +49,31 @@ public:
     }
 
     template<class T>
+    void vector(std::vector<T>& data)
+    {
+        static_assert(!std::is_pod<T>::value, "Do not call this for POD vectors");
+        auto handle = [&](auto& d)
+        {
+            for (auto& it : d) {
+                it.serializeOp(*this);
+            }
+        };
+
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.size(), m_comm);
+            handle(data);
+        } else if (m_op == Operation::PACK) {
+            Mpi::pack(data.size(), m_buffer, m_position, m_comm);
+            handle(data);
+        } else if (m_op == Operation::UNPACK) {
+            size_t size;
+            Mpi::unpack(size, m_buffer, m_position, m_comm);
+            data.resize(size);
+            handle(data);
+        }
+    }
+
+    template<class T>
     void pack(T& data)
     {
         m_op = Operation::PACKSIZE;
