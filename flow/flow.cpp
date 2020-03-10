@@ -373,8 +373,6 @@ int main(int argc, char** argv)
                 const bool init_from_restart_file = !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart);
                 const auto& init_config = eclipseState->getInitConfig();
                 if (init_config.restartRequested() && init_from_restart_file) {
-                    throw std::logic_error("Sorry - the ability to initialize wells and groups from the restart file is currently not ready");
-
                     int report_step = init_config.getRestartStep();
                     const auto& rst_filename = eclipseState->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
                     Opm::EclIO::ERst rst_file(rst_filename);
