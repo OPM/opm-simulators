@@ -655,9 +655,10 @@ private:
             assert(numEnabled == 3);
 
             threePhaseApproach_ = EclMultiplexerApproach::EclDefaultApproach;
-            if (runspec.stoneType() == Runspec::StoneType::STONE2)
+            const auto& satctrls = runspec.saturationFunctionControls();
+            if (satctrls.krModel() == SatFuncControls::ThreePhaseOilKrModel::Stone2)
                 threePhaseApproach_ = EclMultiplexerApproach::EclStone2Approach;
-            else if (runspec.stoneType() == Runspec::StoneType::STONE1)
+            else if (satctrls.krModel() == SatFuncControls::ThreePhaseOilKrModel::Stone1)
                 threePhaseApproach_ = EclMultiplexerApproach::EclStone1Approach;
         }
     }
