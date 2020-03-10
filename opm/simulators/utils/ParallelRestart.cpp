@@ -196,26 +196,6 @@ std::size_t packSizeDynMap(const Map<Key, Opm::DynamicState<Type>>& data,
            Opm::Mpi::packSize(split.second, comm);
 }
 
-template<class T>
-std::size_t packSizeDynState(const Opm::DynamicState<T>& data,
-                             Dune::MPIHelper::MPICommunicator comm)
-{
-    auto split = splitDynState(data);
-    return Opm::Mpi::packSize(split.first, comm) +
-           Opm::Mpi::packSize(split.second, comm);
-}
-
-template<class T>
-void packDynState(const Opm::DynamicState<T>& data,
-                  std::vector<char>& buffer,
-                  int& position,
-                  Dune::MPIHelper::MPICommunicator comm)
-{
-    auto split = splitDynState(data);
-    Opm::Mpi::pack(split.first, buffer, position, comm);
-    Opm::Mpi::pack(split.second, buffer, position, comm);
-}
-
 template<template<class, class> class Map, class Type, class Key>
 void packDynMap(const Map<Key, Opm::DynamicState<Type>>& data,
                 std::vector<char>& buffer,
@@ -225,19 +205,6 @@ void packDynMap(const Map<Key, Opm::DynamicState<Type>>& data,
     auto split = splitDynMap<Map,Type,Key>(data);
     Opm::Mpi::pack(split.first, buffer, position, comm);
     Opm::Mpi::pack(split.second, buffer, position, comm);
-}
-
-template<class T>
-void unpackDynState(Opm::DynamicState<T>& data,
-                    std::vector<char>& buffer,
-                    int& position,
-                    Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<T> unique;
-    std::vector<int> indices;
-    Opm::Mpi::unpack(unique, buffer, position, comm);
-    Opm::Mpi::unpack(indices, buffer, position, comm);
-    reconstructDynState(unique, indices, data);
 }
 
 template<template<class, class> class Map, class Type, class Key>
@@ -396,7 +363,9 @@ std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPIComm
 template<class T>
 std::size_t packSize(const DynamicState<T>& data, Dune::MPIHelper::MPICommunicator comm)
 {
-    return packSize(data.data(), comm) + packSize(data.initialRange(), comm);
+
+    auto split = splitDynState(data);
+    return packSize(split.first, comm) + packSize(split.second, comm);
 }
 
 template<class T>
@@ -1610,15 +1579,15 @@ std::size_t packSize(const Schedule& data,
            packSize(data.getRunspec(), comm) +
            packSizeDynMap<Map2>(data.getVFPProdTables(), comm) +
            packSizeDynMap<Map2>(data.getVFPInjTables(), comm) +
-           packSizeDynState(data.getWellTestConfig(), comm) +
-           packSizeDynState(data.getWListManager(), comm) +
-           packSizeDynState(data.getUDQConfig(), comm) +
-           packSizeDynState(data.getUDQActive(), comm) +
-           packSizeDynState(data.getGuideRateConfig(), comm) +
-           packSizeDynState(data.getGConSale(), comm) +
-           packSizeDynState(data.getGConSump(), comm) +
+           packSize(data.getWellTestConfig(), comm) +
+           packSize(data.getWListManager(), comm) +
+           packSize(data.getUDQConfig(), comm) +
+           packSize(data.getUDQActive(), comm) +
+           packSize(data.getGuideRateConfig(), comm) +
+           packSize(data.getGConSale(), comm) +
+           packSize(data.getGConSump(), comm) +
            packSize(data.getGlobalWhistCtlMode(), comm) +
-           packSizeDynState(data.getActions(), comm) +
+           packSize(data.getActions(), comm) +
            packSize(data.rftConfig(), comm) +
            packSize(data.getNupCol(), comm) +
            packSize(data.restart(), comm) +
@@ -2036,8 +2005,9 @@ template<class T>
 void pack(const DynamicState<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
-    pack(data.data(), buffer, position, comm);
-    pack(data.initialRange(), buffer, position, comm);
+    auto split = splitDynState(data);
+    pack(split.first, buffer, position, comm);
+    pack(split.second, buffer, position, comm);
 }
 
 template<class T>
@@ -3284,15 +3254,15 @@ void pack(const Schedule& data,
     pack(data.getRunspec(), buffer, position, comm);
     packDynMap<Map2>(data.getVFPProdTables(), buffer, position, comm);
     packDynMap<Map2>(data.getVFPInjTables(), buffer, position, comm);
-    packDynState(data.getWellTestConfig(), buffer, position, comm);
-    packDynState(data.getWListManager(), buffer, position, comm);
-    packDynState(data.getUDQConfig(), buffer, position, comm);
-    packDynState(data.getUDQActive(), buffer, position, comm);
-    packDynState(data.getGuideRateConfig(), buffer, position, comm);
-    packDynState(data.getGConSale(), buffer, position, comm);
-    packDynState(data.getGConSump(), buffer, position, comm);
+    pack(data.getWellTestConfig(), buffer, position, comm);
+    pack(data.getWListManager(), buffer, position, comm);
+    pack(data.getUDQConfig(), buffer, position, comm);
+    pack(data.getUDQActive(), buffer, position, comm);
+    pack(data.getGuideRateConfig(), buffer, position, comm);
+    pack(data.getGConSale(), buffer, position, comm);
+    pack(data.getGConSump(), buffer, position, comm);
     pack(data.getGlobalWhistCtlMode(), buffer, position, comm);
-    packDynState(data.getActions(), buffer, position, comm);
+    pack(data.getActions(), buffer, position, comm);
     pack(data.rftConfig(), buffer, position, comm);
     pack(data.getNupCol(), buffer, position, comm);
     pack(data.restart(), buffer, position, comm);
@@ -3752,11 +3722,11 @@ template<class T>
 void unpack(DynamicState<T>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
-    std::vector<T> ddata;
-    size_t initial_range;
-    unpack(ddata, buffer, position, comm);
-    unpack(initial_range, buffer, position, comm);
-    data = DynamicState<T>(ddata, initial_range);
+    std::vector<T> unique;
+    std::vector<int> indices;
+    Opm::Mpi::unpack(unique, buffer, position, comm);
+    Opm::Mpi::unpack(indices, buffer, position, comm);
+    reconstructDynState(unique, indices, data);
 }
 
 template<class T>
@@ -5612,15 +5582,15 @@ void unpack(Schedule& data, std::vector<char>& buffer, int& position,
     unpack(runspec, buffer, position, comm);
     unpackDynMap<Map2>(vfpProdTables, buffer, position, comm);
     unpackDynMap<Map2>(vfpInjTables, buffer, position, comm);
-    unpackDynState(wellTestConfig, buffer, position, comm);
-    unpackDynState(wListManager, buffer, position, comm);
-    unpackDynState(udqConfig, buffer, position, comm);
-    unpackDynState(udqActive, buffer, position, comm);
-    unpackDynState(guideRateConfig, buffer, position, comm);
-    unpackDynState(gconSale, buffer, position, comm);
-    unpackDynState(gconSump, buffer, position, comm);
+    unpack(wellTestConfig, buffer, position, comm);
+    unpack(wListManager, buffer, position, comm);
+    unpack(udqConfig, buffer, position, comm);
+    unpack(udqActive, buffer, position, comm);
+    unpack(guideRateConfig, buffer, position, comm);
+    unpack(gconSale, buffer, position, comm);
+    unpack(gconSump, buffer, position, comm);
     unpack(globalWhistCtlMode, buffer, position, comm);
-    unpackDynState(actions, buffer, position, comm);
+    unpack(actions, buffer, position, comm);
 
     unpack(rftConfig, buffer, position, comm);
     unpack(nupCol, buffer, position, comm);
