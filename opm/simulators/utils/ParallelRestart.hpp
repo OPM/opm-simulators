@@ -141,7 +141,6 @@ class SpiralICD;
 class StandardCond;
 class Stone1exRecord;
 class Stone1exTable;
-class SummaryConfig;
 class SummaryNode;
 class Tabdims;
 class TableColumn;
@@ -564,7 +563,6 @@ ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(Stone1exRecord)
 ADD_PACK_PROTOTYPES(Stone1exTable)
-ADD_PACK_PROTOTYPES(SummaryConfig)
 ADD_PACK_PROTOTYPES(SummaryNode)
 ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableColumn)
