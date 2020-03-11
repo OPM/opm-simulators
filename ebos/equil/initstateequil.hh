@@ -906,12 +906,8 @@ equilnum(const Opm::EclipseState& eclipseState,
         const int nc = grid.size(/*codim=*/0);
         eqlnum.resize(nc);
 
-        const auto& e = eclipseState.fieldProps().get_global_int("EQLNUM");
-        const int* gc = Opm::UgGridHelpers::globalCell(grid);
-        for (int cell = 0; cell < nc; ++cell) {
-            const int deckPos = (gc == NULL) ? cell : gc[cell];
-            eqlnum[cell] = e[deckPos] - 1;
-        }
+        const auto& e = eclipseState.fieldProps().get_int("EQLNUM");
+        std::transform(e.begin(), e.end(), eqlnum.begin(), [](int n){ return n - 1;});
     }
     return eqlnum;
 }
@@ -940,16 +936,8 @@ public:
     {
         //Check for presence of kw SWATINIT
         if (applySwatInit) {
-            const int nc = grid.size(/*codim=*/0);
-
             if (eclipseState.fieldProps().has_double("SWATINIT")) {
-                const std::vector<double>& swatInitEcl = eclipseState.fieldProps().get_global_double("SWATINIT");
-                const int* gc = Opm::UgGridHelpers::globalCell(grid);
-                swatInit_.resize(nc);
-                for (int c = 0; c < nc; ++c) {
-                    const int deckPos = (gc == NULL) ? c : gc[c];
-                    swatInit_[c] = swatInitEcl[deckPos];
-                }
+                swatInit_ = eclipseState.fieldProps().get_double("SWATINIT");
             }
         }
 
@@ -1101,25 +1089,20 @@ private:
     void setRegionPvtIdx(const Grid& grid, const Opm::EclipseState& eclState, const RMap& reg)
     {
         size_t numCompressed = grid.size(/*codim=*/0);
-        const auto* globalCell = Opm::UgGridHelpers::globalCell(grid);
         std::vector<int> cellPvtRegionIdx(numCompressed);
 
         //Get the PVTNUM data
-        const auto pvtnumData = eclState.fieldProps().get_global_int("PVTNUM");
-        // Convert PVTNUM data into an array of indices for compressed cells. Remember
+        const auto& pvtnumData = eclState.fieldProps().get_int("PVTNUM");
+        // Save pvt indices of regions. Remember
         // that Eclipse uses Fortran-style indices which start at 1 instead of 0, so we
         // need to subtract 1.
-        for (size_t cellIdx = 0; cellIdx < numCompressed; ++ cellIdx) {
-            size_t cartesianCellIdx = globalCell[cellIdx];
-            assert(cartesianCellIdx < pvtnumData.size());
-            size_t pvtRegionIdx = pvtnumData[cartesianCellIdx] - 1;
-            cellPvtRegionIdx[cellIdx] = pvtRegionIdx;
-        }
+        std::transform(pvtnumData.begin(), pvtnumData.end(),
+                       cellPvtRegionIdx.begin(), [](int n){ return n - 1;});
 
         for (const auto& r : reg.activeRegions()) {
             const auto& cells = reg.cells(r);
             const int cell = *(cells.begin());
-            regionPvtIdx_[r] = cellPvtRegionIdx[cell];
+            regionPvtIdx_[r] = pvtnumData[cell] - 1;
         }
     }
 
