@@ -36,25 +36,12 @@ namespace Properties {
 //! a tag to mark properties as undefined
 struct UndefinedProperty {};
 
-template<class TypeTag, class MyTypeTag>
-struct SpatialDiscretizationSplice { using type = UndefinedProperty; };
-
-namespace TTag {
-struct MyTTag {};
-struct MySDTTag {};
-}
-
-template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::MyTTag>
-{ using type = TTag::MySDTTag; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkOutputFormat { using type = UndefinedProperty; };
-
-template<class TypeTag>
-struct VtkOutputFormat<TypeTag, TTag::MySDTTag>
-{ static constexpr auto value = 2; };
-
+template <class TypeTag, class MyTypeTag>
+struct Splices
+{
+     using tuple = std::tuple<>;
+};
+    
 
 //! implementation details for template meta programming
 namespace Detail {
@@ -145,7 +132,97 @@ struct GetDefined<TypeTag, Property, std::tuple<FirstTypeTag, Args...>>
                                      typename GetNextTypeTag<TypeTag, Property, std::tuple<FirstTypeTag, Args...>, void>::type>;
 };
 
-//! helper struct to extract get the Property specilization given a TypeTag, asserts that the property is defined
+
+//! check if a splice S is defined
+template<class S>
+constexpr auto isDefinedSplice(int)
+-> decltype(std::integral_constant<bool, !std::is_same<typename S::tuple, std::tuple<>>::value>{})
+{ return {}; }
+
+//! fall back if a splice is defined
+template<class S>
+constexpr std::true_type isDefinedSplice(...) { return {}; }
+
+template<class TypeTag, class TTagList>
+struct GetSplicesTypeTags;
+
+template<class TypeTag, class TTagList, class Enable>
+struct GetNextSplicesTypeTag;
+
+template<class TypeTag, class LastTypeTag>
+struct GetNextSplicesTypeTag<TypeTag, std::tuple<LastTypeTag>, std::enable_if_t<hasParentTypeTag<LastTypeTag>(int{}), void>>
+{ using tuple = typename GetSplicesTypeTags<TypeTag, typename LastTypeTag::InheritsFrom>::tuple; };
+
+template<class TypeTag, class LastTypeTag>
+struct GetNextSplicesTypeTag<TypeTag, std::tuple<LastTypeTag>, std::enable_if_t<!hasParentTypeTag<LastTypeTag>(int{}), void>>
+{ using tuple = std::tuple<>; };
+
+template<class TypeTag, class FirstTypeTag, class ...Args>
+struct GetNextSplicesTypeTag<TypeTag, std::tuple<FirstTypeTag, Args...>, std::enable_if_t<hasParentTypeTag<FirstTypeTag>(int{}), void>>
+{ using tuple = typename GetSplicesTypeTags<TypeTag, ConCatTuples<typename FirstTypeTag::InheritsFrom, std::tuple<Args...>>>::tuple; };
+
+template<class TypeTag, class FirstTypeTag, class ...Args>
+struct GetNextSplicesTypeTag<TypeTag, std::tuple<FirstTypeTag, Args...>, std::enable_if_t<!hasParentTypeTag<FirstTypeTag>(int{}), void>>
+{ using tuple = typename GetSplicesTypeTags<TypeTag, std::tuple<Args...>>::tuple; };
+
+template<class TypeTag, class LastTypeTag>
+struct GetSplicesTypeTags<TypeTag, std::tuple<LastTypeTag>>
+{
+     using LastSplices = Splices<TypeTag, LastTypeTag>;
+     using nexttuple = typename GetNextSplicesTypeTag<TypeTag, std::tuple<LastTypeTag>, void>::tuple;
+     // originally intended
+//      using tuple = std::conditional_t<isDefinedSplice<LastSplices>(int{}),
+//                                       typename ConCatTuples<nexttuple, typename LastSplices::tuple>::tuple,
+//                                       nexttuple>;
+     using tuple = std::conditional_t<isDefinedSplice<LastSplices>(int{}),
+                                      typename LastSplices::tuple,
+                                      typename GetNextSplicesTypeTag<TypeTag, std::tuple<LastTypeTag>, void>::tuple>;
+};
+
+template<class TypeTag, class FirstTypeTag, class ...Args>
+struct GetSplicesTypeTags<TypeTag, std::tuple<FirstTypeTag, Args...>>
+{
+     using FirstSplices = Splices<TypeTag, FirstTypeTag>;
+     using nexttuple = typename GetNextSplicesTypeTag<TypeTag, std::tuple<FirstTypeTag, Args...>, void>::tuple;
+     // originally intended
+//      using tuple = std::conditional_t<isDefinedSplice<FirstSplices>(int{}),
+//                                       typename ConCatTuples<typename FirstSplices::tuple, nexttuple>::tuple,
+//                                       nexttuple>;
+     using tuple = std::conditional_t<isDefinedSplice<FirstSplices>(int{}),
+                                      typename FirstSplices::tuple,
+                                      typename GetNextSplicesTypeTag<TypeTag, std::tuple<FirstTypeTag, Args...>, void>::tuple>;
+};
+
+} // end namespace Detail
+
+template<class TypeTag, class MyTypeTag>
+struct SpatialDiscretizationSplice { using type = UndefinedProperty; };
+
+namespace TTag {
+struct MyTTag {};
+struct MySDTTag {};
+}
+
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::MyTTag>
+{ using type = TTag::MySDTTag; };
+
+template<class TypeTag, class MyTypeTag>
+struct VtkOutputFormat { using type = UndefinedProperty; };
+
+template<class TypeTag>
+struct VtkOutputFormat<TypeTag, TTag::MySDTTag>
+{ static constexpr auto value = 2; };
+
+namespace TTag {
+struct FvBaseDiscretization;
+struct VcfvDiscretization;
+struct MultiPhaseBaseModel;
+}
+
+namespace Detail {
+
+    //! helper struct to extract get the Property specilization given a TypeTag, asserts that the property is defined
 template<class TypeTag, template<class,class> class Property>
 struct GetPropImpl
 {
@@ -157,14 +234,19 @@ struct GetPropImpl
     using testtype2 = std::conditional_t<isDefinedProperty<QType>(int{}), QType, UndefinedProperty>;
     static_assert(!std::is_same<testtype2, UndefinedProperty>::value, "VtkOutputFormat is undefined in MySDTTag!");
 
-//     using testtype = typename Detail::GetDefined<TTag::MyTTag,
-//                                                  Properties::SpatialDiscretizationSplice,
-//                                                  std::tuple<TTag::MyTTag>
-//                                                 >::type;
+    using RType = Properties::VtkOutputFormat<TypeTag, TTag::FvBaseDiscretization>;
+    using testtype3 = std::conditional_t<isDefinedProperty<RType>(int{}), RType, UndefinedProperty>;
+    static_assert(!std::is_same<testtype3, UndefinedProperty>::value, "VtkOutputFormat is undefined in FvBaseDiscretization!");
 
+    // works:
+//     using type = typename Detail::GetDefined<TypeTag,
+//                                              Property,
+//                                              std::tuple<TypeTag, TTag::VcfvDiscretization>
+//                                             >::type;
+    using tuple = typename GetSplicesTypeTags<TypeTag, std::tuple<TypeTag>>::tuple;
     using type = typename Detail::GetDefined<TypeTag,
                                              Property,
-                                             std::tuple<TypeTag, TTag::MySDTTag>
+                                             typename ConCatTuples<std::tuple<TypeTag>, tuple>::type
                                             >::type;
     static_assert(!std::is_same<type, UndefinedProperty>::value, "Property is undefined!");
 };
