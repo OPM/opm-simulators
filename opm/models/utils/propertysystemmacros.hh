@@ -345,12 +345,6 @@ struct GetTypeTagInheritance<std::tuple<FirstTypeTag, OtherTypeTags...>>
         typedef typename RevertedTupleOuter<sizeof...(Args)>::template RevertedTupleInner<Args...>::type type;
     };
     
-template <class TypeTag, class MyTypeTag>
-struct Splices
-{
-     using tuple = std::tuple<>;
-};
-    
 #define SET_SPLICES(TypeTagName, ...)                               \
 template<class TypeTag>                                                      \
 struct Splices<TypeTag, TTAG(TypeTagName)>                               \
