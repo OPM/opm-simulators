@@ -263,10 +263,6 @@ public:
 
         Opm::data::Group localGroupData = simulator_.problem().wellModel().groupData(reportStepNum, simulator_.vanguard().schedule());
 
-        for (const auto& cp_constr : localGroupData) {
-             std::cout << "cp_constr.first: " << cp_constr.first << " cp_constr.second.currentProdConstraint: " << static_cast<int>(cp_constr.second.currentProdConstraint) << std::endl;
-        }
-
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();

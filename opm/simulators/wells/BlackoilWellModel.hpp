@@ -39,7 +39,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
-//#include <opm/output/data/Groups.hpp>
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
@@ -279,7 +278,6 @@ namespace Opm {
             WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, Opm::DeferredLogger& deferred_logger) const;
 
             WellState well_state_;
-
             WellState previous_well_state_;
             WellState well_state_nupcol_;
 
