@@ -131,12 +131,6 @@ public:
     //! \details Only called on root process
     ParallelEclipseState(const Deck& deck);
 
-#if HAVE_MPI
-    //! \brief Perform serialization operation.
-    //! \param serializer The serializer to use
-    void serializeOp(EclMpiSerializer& serializer);
-#endif
-
     //! \brief Switch to global field properties.
     //! \details Called on root process to use the global field properties
     void switchToGlobalProps();

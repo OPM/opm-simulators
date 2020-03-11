@@ -195,25 +195,6 @@ ParallelEclipseState::ParallelEclipseState(const Deck& deck)
 }
 
 
-#if HAVE_MPI
-void ParallelEclipseState::serializeOp(EclMpiSerializer& serializer)
-{
-    serializer(m_tables);
-    serializer(m_runspec);
-    serializer(m_eclipseConfig);
-    serializer(m_deckUnitSystem);
-    serializer(m_inputNnc);
-    serializer(m_inputEditNnc);
-    serializer(m_gridDims);
-    serializer(m_simulationConfig);
-    serializer(m_transMult);
-    serializer(m_faults);
-    serializer(m_title);
-    serializer(aquifer_config);
-}
-#endif
-
-
 const FieldPropsManager& ParallelEclipseState::fieldProps() const
 {
     if (!m_parProps && Dune::MPIHelper::getCollectiveCommunication().rank() != 0)
